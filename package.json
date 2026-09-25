@@ -34,7 +34,7 @@
     "esbuild": "^0.25.0",
     "firebase-tools": "^15.31.0",
     "tailwindcss": "^4.1.14",
-    "typescript": "~5.8.2",
+    "typescript": "~7.0.2",
     "vite": "^6.2.3"
   },
   "description": "ManStyle — интернет-магазин мужской одежды (React + Vite + Firebase)",
