@@ -274,7 +274,7 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
                           {product.title}
                         </span>
                         {product.badge && (
-                          <span className="text-[9px] font-black text-white neu-button-accent px-1.5 py-0.5 rounded-md shrink-0">
+                          <span className="text-[9px] font-black text-white neu-fill-accent px-1.5 py-0.5 rounded-md shrink-0">
                             {product.badge}
                           </span>
                         )}
@@ -282,10 +282,6 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
 
                       <div className="flex items-center gap-2 text-[11px] text-[#5C6B80] font-medium">
                         <span className="truncate">{product.categoryLabel}</span>
-                        <span>•</span>
-                        <span className="font-mono text-[10px] text-[#5C6B80]">
-                          Арт: {product.id}
-                        </span>
                       </div>
 
                       {/* Color dots preview */}

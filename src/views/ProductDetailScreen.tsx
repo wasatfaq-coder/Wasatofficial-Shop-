@@ -26,6 +26,7 @@ import {
   Leaf,
   Maximize2,
 } from 'lucide-react';
+import { formatDays } from '../utils/pluralize';
 import { Product, ProductReview, ActiveTab, UserProfile, BodyMeasurements, CartItem } from '../types';
 import { SizeCalculatorModal } from '../components/SizeCalculatorModal';
 import { RecentlyViewed } from '../components/RecentlyViewed';
@@ -68,6 +69,9 @@ interface ProductDetailScreenProps {
     totalPrice: number;
   }) => void | Promise<boolean>;
   onShowToast?: (msg: string, type?: 'success' | 'info' | 'error') => void;
+  /** Store policies from Admin → «Витрина» */
+  returnPeriodDays?: number;
+  freeDeliveryThreshold?: number;
 }
 
 export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
@@ -86,6 +90,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   setActiveTab,
   onCompleteOrder,
   onShowToast,
+  returnPeriodDays = 14,
+  freeDeliveryThreshold = 5000,
 }) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -436,7 +442,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                           ? 'neu-inset text-[#5C6B80]/70 bg-[#E3E8EF] border border-[#BAC5D5]/60'
                           : 'neu-flat text-[#5C6B80]/40 opacity-70 hover:opacity-100 line-through'
                         : isSelected
-                        ? 'neu-inset text-[#5F6ED0]'
+                        ? 'neu-pill-active'
                         : 'neu-button text-[#2D3A4E] hover:text-[#5F6ED0]'
                     }`}
                   >
@@ -578,12 +584,12 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
       {/* Neumorphic Product Information Tabs (Description, Fabric Specs, Care) */}
       <div className="neu-flat rounded-3xl p-4 border border-white/60 space-y-3">
         {/* Tab Switcher Bar */}
-        <div className="neu-inset p-1.5 rounded-2xl flex items-center justify-between gap-1">
+        <div className="neu-flat-sm p-1.5 rounded-2xl flex items-center justify-between gap-1">
           <button
             onClick={() => setDetailTab('description')}
             className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
               detailTab === 'description'
-                ? 'neu-flat text-[#5F6ED0] border border-white/80 scale-[0.98]'
+                ? 'neu-pill-active'
                 : 'text-[#5C6B80] hover:text-[#2D3A4E]'
             }`}
           >
@@ -595,7 +601,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             onClick={() => setDetailTab('specs')}
             className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
               detailTab === 'specs'
-                ? 'neu-flat text-[#5F6ED0] border border-white/80 scale-[0.98]'
+                ? 'neu-pill-active'
                 : 'text-[#5C6B80] hover:text-[#2D3A4E]'
             }`}
           >
@@ -607,7 +613,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             onClick={() => setDetailTab('care')}
             className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
               detailTab === 'care'
-                ? 'neu-flat text-[#5F6ED0] border border-white/80 scale-[0.98]'
+                ? 'neu-pill-active'
                 : 'text-[#5C6B80] hover:text-[#2D3A4E]'
             }`}
           >
@@ -696,7 +702,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-2 py-1.5 border-b border-[#BAC5D5]/40">
-                  <span className="text-[#5C6B80] shrink-0">Артикул SKU:</span>
+                  <span className="text-[#5C6B80] shrink-0">Артикул:</span>
                   <span className="font-mono font-bold text-[#5F6ED0] text-[11px] bg-slate-100/90 px-2 py-0.5 rounded-lg neu-inset border border-white/60">
                     {currentSKU?.skuCode || `MS-${product.id.slice(0, 4).toUpperCase()}-${selectedSize}`}
                   </span>
@@ -754,7 +760,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               </div>
               <div>
                 <p className="text-sm font-bold text-[#2D3A4E]">Доставка</p>
-                <p className="text-xs text-[#5C6B80]">Бесплатная доставка от 5 000 ₽</p>
+                <p className="text-xs text-[#5C6B80]">Бесплатная доставка от {freeDeliveryThreshold.toLocaleString('ru-RU')} ₽</p>
               </div>
             </div>
             <ChevronRight
@@ -765,7 +771,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           </button>
           {openAccordion === 'shipping' && (
             <div className="px-4 pb-4 pt-1 text-xs text-[#5C6B80] leading-relaxed border-t border-[#BAC5D5]/40">
-              Курьерская доставка до двери (1-2 дня) или примерка в пунктах выдачи СДЭК/Boxberry. Оплата после примерки.
+              Курьерская доставка до двери с примеркой (1–2 дня), экспресс-доставка по Москве, пункты выдачи, СДЭК и Почта России. Сроки и стоимость для вашего адреса видны при оформлении заказа.
             </div>
           )}
         </div>
@@ -801,7 +807,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               </div>
               <div>
                 <p className="text-sm font-bold text-[#2D3A4E]">Возврат</p>
-                <p className="text-xs text-[#5C6B80]">30 дней на возврат</p>
+                <p className="text-xs text-[#5C6B80]">{formatDays(returnPeriodDays)} на возврат</p>
               </div>
             </div>
             <ChevronRight
@@ -812,7 +818,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           </button>
           {openAccordion === 'returns' && (
             <div className="px-4 pb-4 pt-1 text-xs text-[#5C6B80] leading-relaxed border-t border-[#BAC5D5]/40">
-              Легкий возврат в течение 30 дней в любом пункте выдачи или вызов курьера за возвратом.
+              Возврат в течение {formatDays(returnPeriodDays)} с момента получения в пункте выдачи или с вызовом курьера. Главное условие — сохранение товарного вида и ярлыков.
             </div>
           )}
         </div>

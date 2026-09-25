@@ -108,7 +108,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.93, opacity: 0, y: 12 }}
             transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-            className={`neu-modal rounded-3xl p-5 sm:p-7 max-w-md w-full border border-white/90 text-[#2D3A4E] shadow-2xl relative transition-transform z-10 ${
+            className={`neu-modal rounded-3xl p-5 sm:p-7 max-w-md w-full border border-white/90 text-[#2D3A4E] relative transition-transform z-10 ${
               shake ? 'animate-bounce' : ''
             }`}
           >
@@ -231,7 +231,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
             <button
               id="admin-auth-submit-btn"
               type="submit"
-              className="w-full py-3 px-5 neu-button-accent rounded-2xl text-xs sm:text-sm font-black text-white flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer shadow-md"
+              className="w-full py-3 px-5 neu-button-accent rounded-2xl text-xs sm:text-sm font-black text-white flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer"
             >
               <span>Войти в админ-панель</span>
               <ArrowRight className="w-4 h-4" />

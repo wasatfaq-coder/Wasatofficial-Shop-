@@ -25,9 +25,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ChatMessage, Product } from '../types';
 import { copyToClipboard } from '../utils/clipboard';
 import { compressChatImageFile } from '../utils/imageUpload';
+import { telHref } from '../utils/storeContacts';
 
 interface SupportChatModalProps {
   isOpen: boolean;
+  /** Store phone from Admin → «Витрина»; call button and hotline banner are hidden when empty */
+  storePhone?: string;
   onClose: () => void;
   onOpenMySizes?: () => void;
   onNavigateTab?: (tab: 'catalog' | 'profile' | 'cart') => void;
@@ -41,6 +44,7 @@ interface SupportChatModalProps {
 
 export const SupportChatModal: React.FC<SupportChatModalProps> = ({
   isOpen,
+  storePhone = '',
   onClose,
   onOpenMySizes,
   onNavigateTab,
@@ -149,7 +153,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
           <div className="p-3.5 sm:p-4 bg-[#E3E8EF] border-b border-[#BAC5D5]/50 flex items-center justify-between gap-2.5 shrink-0 shadow-sm">
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
               <div className="relative shrink-0">
-                <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-[#5F6ED0] border border-white/80 shadow-inner">
+                <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-[#5F6ED0] border border-white/80">
                   <Headphones className="w-5 h-5 text-[#5F6ED0] stroke-[2.2]" />
                 </div>
                 <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-[#E3E8EF] rounded-full shadow-sm" />
@@ -159,7 +163,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                   <h3 className="text-xs sm:text-sm font-extrabold tracking-tight text-[#2D3A4E] truncate">
                     Служба заботы
                   </h3>
-                  <span className="text-[9px] sm:text-[10px] neu-inset bg-[#E3E8EF] text-[#5F6ED0] px-2.5 py-0.5 rounded-full font-black border border-white/70 shadow-inner shrink-0">
+                  <span className="text-[9px] sm:text-[10px] neu-inset bg-[#E3E8EF] text-[#5F6ED0] px-2.5 py-0.5 rounded-full font-black border border-white/70 shrink-0">
                     24/7
                   </span>
                 </div>
@@ -171,33 +175,38 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
+              {storePhone && (
               <a
-                href="tel:88005553535"
-                title="Позвонить 8 (800) 555-35-35"
-                className="w-9 h-9 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#2D3A4E] hover:text-[#5F6ED0] transition-all border border-white/70 active:scale-95 cursor-pointer shadow-inner"
+                href={telHref(storePhone)}
+                title={`Позвонить: ${storePhone}`}
+                className="w-9 h-9 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#2D3A4E] hover:text-[#5F6ED0] transition-all border border-white/70 active:scale-95 cursor-pointer"
               >
                 <Phone className="w-4 h-4 text-[#2D3A4E]" />
               </a>
+              )}
               <button
                 type="button"
                 onClick={onClose}
                 title="Закрыть чат"
-                className="w-9 h-9 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#2D3A4E] hover:text-rose-600 transition-all border border-white/70 active:scale-95 cursor-pointer shadow-inner"
+                className="w-9 h-9 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#2D3A4E] hover:text-rose-600 transition-all border border-white/70 active:scale-95 cursor-pointer"
               >
                 <X className="w-4 h-4 text-[#2D3A4E]" />
               </button>
             </div>
           </div>
 
-          {/* Hotline Neumorphic Banner with Muted Badge */}
-          <div className="mx-3 mt-3 p-3 rounded-2xl neu-inset flex items-center justify-between text-xs font-semibold text-[#2D3A4E] shrink-0 border border-white/60 shadow-inner">
-            <span className="text-[#2D3A4E] font-bold">
-              Горячая линия: 8 (800) 555-35-35
-            </span>
-            <span className="text-[10px] text-[#5C6B80] neu-inset bg-[#E3E8EF] px-2.5 py-1 rounded-full font-extrabold uppercase tracking-wider border border-white/60 shadow-inner">
-              Бесплатно
-            </span>
+          {/* Store phone banner (only when the phone is set in Admin → «Витрина») */}
+          {storePhone && (
+          <div className="mx-3 mt-3 p-3 rounded-2xl neu-inset flex items-center justify-between text-xs font-semibold text-[#2D3A4E] shrink-0 border border-white/60">
+            <span className="text-[#2D3A4E] font-bold">Телефон магазина: {storePhone}</span>
+            <a
+              href={telHref(storePhone)}
+              className="text-[10px] text-[#5F6ED0] neu-button px-2.5 py-1 rounded-full font-extrabold uppercase tracking-wider"
+            >
+              Позвонить
+            </a>
           </div>
+          )}
 
           {/* Messages Area */}
           <div className="flex-1 p-3.5 overflow-y-auto space-y-3.5 bg-[#E3E8EF] no-scrollbar">
@@ -244,7 +253,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                             : 'p-3.5 space-y-2.5'
                         } ${
                           isUser
-                            ? 'neu-button-primary rounded-tr-none text-white'
+                            ? 'neu-bubble-own rounded-tr-none'
                             : isAgent
                             ? 'neu-flat rounded-tl-none text-[#2D3A4E] border border-emerald-300/60 bg-emerald-50/20'
                             : 'neu-flat rounded-tl-none text-[#2D3A4E] border border-white/80'
@@ -322,7 +331,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                                         );
                                       }
                                     }}
-                                    className="flex-1 py-2 px-2.5 neu-button-accent rounded-xl text-white font-black text-[10px] flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+                                    className="flex-1 py-2 px-2.5 neu-button rounded-xl text-[#5F6ED0] font-black text-[10px] flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer"
                                   >
                                     <ShoppingBag className="w-3 h-3" />
                                     <span>В корзину</span>
@@ -408,7 +417,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                                       }
                                     }
                                   }}
-                                  className="px-2 py-1 neu-button rounded-lg text-[10px] font-black text-[#5F6ED0] hover:text-[#4d5cb8] active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                                  className="px-2 py-1 neu-button rounded-lg text-[10px] font-black text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
                                   title="Скопировать и применить промокод"
                                 >
                                   <Copy className="w-3 h-3" />
@@ -431,7 +440,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                               onClose();
                               if (onOpenMySizes) onOpenMySizes();
                             }}
-                            className="w-full py-2.5 px-3.5 rounded-xl neu-accent-button font-extrabold text-xs flex items-center justify-center gap-2 transition-all hover:scale-[1.01] cursor-pointer"
+                            className="w-full py-2.5 px-3.5 rounded-xl neu-button-accent font-extrabold text-xs flex items-center justify-center gap-2 transition-all hover:scale-[1.01] cursor-pointer"
                           >
                             <Ruler className="w-4 h-4 text-white" />
                             <span>Открыть «Мои размеры»</span>
@@ -490,7 +499,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                   key={idx}
                   type="button"
                   onClick={() => handleSubmit(q.text)}
-                  className="neu-inset bg-[#E3E8EF] rounded-xl py-2 px-3.5 text-[#2D3A4E] text-[11px] font-bold shrink-0 flex items-center gap-1.5 hover:text-[#5F6ED0] border border-white/70 active:scale-95 transition-all cursor-pointer whitespace-nowrap shadow-inner"
+                  className="neu-inset bg-[#E3E8EF] rounded-xl py-2 px-3.5 text-[#2D3A4E] text-[11px] font-bold shrink-0 flex items-center gap-1.5 hover:text-[#5F6ED0] border border-white/70 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
                 >
                   <span>{q.label}</span>
                 </button>
@@ -519,7 +528,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
               <button
                 type="button"
                 onClick={() => setAttachedImage(null)}
-                className="w-7 h-7 rounded-xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-rose-500 hover:text-rose-700 active:scale-90 transition-all border border-white/70 cursor-pointer shadow-inner"
+                className="w-7 h-7 rounded-xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-rose-500 hover:text-rose-700 active:scale-90 transition-all border border-white/70 cursor-pointer"
                 title="Удалить прикрепленное фото"
               >
                 <X className="w-4 h-4" />
@@ -547,13 +556,13 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="w-11 h-11 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#5F6ED0] hover:text-[#4A58B8] border border-white/70 active:scale-95 transition-all shrink-0 cursor-pointer shadow-inner"
+              className="w-11 h-11 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] border border-white/70 active:scale-95 transition-all shrink-0 cursor-pointer"
               title="Прикрепить фото для возврата или консультации"
             >
               <Camera className="w-5 h-5 text-[#5F6ED0] stroke-[2.2]" />
             </button>
 
-            <div className="flex-1 neu-inset rounded-2xl px-3.5 py-2.5 flex items-center gap-2 border border-white/70 bg-[#E3E8EF] shadow-inner">
+            <div className="flex-1 neu-inset rounded-2xl px-3.5 py-2.5 flex items-center gap-2 border border-white/70 bg-[#E3E8EF]">
               <input
                 type="text"
                 value={inputText}
@@ -567,7 +576,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
             <button
               type="submit"
               disabled={!inputText.trim() && !attachedImage}
-              className="w-11 h-11 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#5F6ED0] hover:text-[#4A58B8] border border-white/70 active:scale-95 transition-all shrink-0 cursor-pointer shadow-inner disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-11 h-11 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] border border-white/70 active:scale-95 transition-all shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               title="Отправить сообщение"
             >
               <Send className="w-5 h-5 text-[#5F6ED0] stroke-[2.2]" />
@@ -582,13 +591,13 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
             onClick={() => setPreviewImageModal(null)}
           >
             <div
-              className="relative max-w-2xl max-h-[88vh] bg-[#E3E8EF] p-2.5 sm:p-3 rounded-3xl neu-flat overflow-hidden flex flex-col items-center justify-center shadow-2xl"
+              className="relative max-w-2xl max-h-[88vh] bg-[#E3E8EF] p-2.5 sm:p-3 rounded-3xl neu-flat overflow-hidden flex flex-col items-center justify-center"
               onClick={(e) => e.stopPropagation()}
             >
               <button
                 type="button"
                 onClick={() => setPreviewImageModal(null)}
-                className="absolute top-3.5 right-3.5 z-10 w-9 h-9 rounded-2xl bg-[#2D3A4E]/85 hover:bg-[#2D3A4E] text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-90"
+                className="absolute top-3.5 right-3.5 z-10 w-9 h-9 rounded-2xl bg-[#2D3A4E]/85 hover:bg-[#2D3A4E] text-white flex items-center justify-center transition-all cursor-pointer shadow-[var(--neu-on-photo)] active:scale-90"
                 title="Закрыть просмотр"
               >
                 <X className="w-5 h-5" />

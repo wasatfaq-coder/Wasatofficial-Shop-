@@ -38,7 +38,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({
         </div>
         <button
           onClick={() => setActiveTab('catalog')}
-          className="neu-button-primary rounded-full px-6 py-3 font-bold text-xs inline-flex items-center gap-2 cursor-pointer"
+          className="neu-button-accent rounded-full px-6 py-3 font-bold text-xs inline-flex items-center gap-2 cursor-pointer"
         >
           <span>В каталог</span>
           <ArrowRight className="w-4 h-4" />

@@ -115,7 +115,8 @@ firebase.json     настройки Hosting, Firestore и Functions для Fire
    для небольшого магазина обычно укладывается в бесплатные лимиты).
 2. GitHub → Settings → Secrets and variables → Actions → **Variables** → создайте переменную
    `DEPLOY_FUNCTIONS` со значением `true`. Сервисному аккаунту деплоя дополнительно нужны
-   роли **Cloud Functions Admin**, **Artifact Registry Administrator** и **Cloud Build Editor**.
+   роли **Cloud Functions Admin**, **Artifact Registry Administrator** и **Cloud Build Editor**
+   (эта конфигурация ещё не проверена реальным деплоем — при ошибке 403 смотрите, какой API указан в логе).
 3. Дождитесь деплоя из `main` (или запустите workflow «Deploy to Firebase» вручную) и
    убедитесь, что функция `placeOrder` появилась в Firebase Console → Functions.
 4. Firestore → база `ai-studio-manstyle-…` → коллекция `settings` → документ `server` →
@@ -159,11 +160,18 @@ Google, пишет от своего аккаунта. Гость при пер�
    `FIREBASE_SERVICE_ACCOUNT_…`. На вопросы о создании workflow-файлов ответьте **No**
    (они уже есть в `.github/workflows/`), а затем добавьте секрет с тем же значением
    под именем `FIREBASE_SERVICE_ACCOUNT`. Или создайте всё вручную:
-   - Google Cloud Console → IAM → Service Accounts → создать аккаунт с ролями
-     **Firebase Hosting Admin**, **Firebase Rules Admin**, **Cloud Datastore Index Admin**,
-     **Service Account User** и **API Keys Viewer**; скачать ключ в формате JSON;
+   - Google Cloud Console → IAM → Service Accounts → создать аккаунт и скачать ключ в формате JSON;
+   - в **IAM проекта** `ai-studio-applet-webapp-e9574` выдать этому аккаунту (email из поля
+     `client_email` в JSON) роли, с которыми деплой проверен:
+     **Firebase Admin**, **Service Usage Consumer** и **Service Account User**;
    - GitHub → Settings → Secrets and variables → Actions → **New repository secret**,
      имя `FIREBASE_SERVICE_ACCOUNT`, значение — содержимое JSON-ключа.
+
+   Если деплой падает с `HTTP Error: 403`, в логе видно, на каком шаге не хватило прав:
+   `serviceusage.googleapis.com` — нет роли Service Usage Consumer;
+   `firebaserules.googleapis.com` — нет прав на правила Firestore (роль Firebase Admin);
+   `firebasehosting.googleapis.com` — нет прав на Hosting (роль Firebase Admin).
+   Роли выдаются в IAM именно того проекта, куда идёт деплой, и применяются в течение нескольких минут.
 
 Пока секрет не задан, шаги деплоя пропускаются с предупреждением (статус job при этом
 зелёный), а сборка всё равно проверяется. Перед публикацией в продакшен также

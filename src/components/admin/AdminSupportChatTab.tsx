@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { ConfirmDialog } from '../ConfirmDialog';
 import {
   MessageSquare,
   Send,
@@ -137,6 +138,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   });
 
   const [activeThreadId, setActiveThreadId] = useState<string>('thread-main');
+  const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
+  const [isClearChatConfirmOpen, setIsClearChatConfirmOpen] = useState(false);
   const [threadSearch, setThreadSearch] = useState<string>('');
   const [threadFilterTab, setThreadFilterTab] = useState<'all' | 'waiting' | 'in_progress' | 'vip' | 'resolved'>('all');
   const [isInboxDrawerOpen, setIsInboxDrawerOpen] = useState<boolean>(true);
@@ -1110,8 +1113,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
           {onClearChat && (
             <button
               type="button"
-              onClick={onClearChat}
-              className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-[#5C6B80] hover:text-[#7E525E] active:scale-95 transition-all cursor-pointer shrink-0 bg-[#E3E8EF] border border-transparent"
+              onClick={() => setIsClearChatConfirmOpen(true)}
+              className="w-9 h-9 rounded-xl neu-button-danger flex items-center justify-center active:scale-95 transition-all cursor-pointer shrink-0 border border-transparent"
               title="Очистить историю диалога"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -1248,7 +1251,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               )}
               <button
                 type="submit"
-                className="px-5 py-2.5 neu-button-primary rounded-xl text-xs font-black text-white active:scale-95 transition-transform cursor-pointer"
+                className="px-5 py-2.5 neu-button-accent rounded-xl text-xs font-black text-white active:scale-95 transition-transform cursor-pointer"
               >
                 {editingTplId ? 'Сохранить изменения' : 'Добавить в базу быстрых ответов'}
               </button>
@@ -1286,8 +1289,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDeleteTemplate(tpl.id)}
-                      className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#7E525E] active:scale-95 transition-all cursor-pointer"
+                      onClick={() => setTemplateToDelete(tpl.id)}
+                      className="w-8 h-8 rounded-xl neu-button-danger flex items-center justify-center active:scale-95 transition-all cursor-pointer"
                       title="Удалить"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -1304,7 +1307,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 w-full min-w-0 max-w-full">
         {/* LEFT COLUMN: MULTI-DIALOG INBOX LIST */}
         <div className="lg:col-span-4 space-y-3 w-full min-w-0">
-          <div className="neu-card rounded-2xl sm:rounded-3xl p-3.5 space-y-3 bg-[#E3E8EF] border border-white/80">
+          <div className="neu-flat rounded-2xl sm:rounded-3xl p-3.5 space-y-3 bg-[#E3E8EF] border border-white/80">
             {/* Inbox Header & Quick Controls */}
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1317,13 +1320,13 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
 
                 <div className="flex items-center gap-1.5 shrink-0">
                   {/* View Mode Toggle: Dropdown vs Cards */}
-                  <div className="neu-inset rounded-xl p-0.5 flex gap-0.5 bg-[#E3E8EF] text-[10px] font-bold">
+                  <div className="neu-flat-sm rounded-xl p-0.5 flex gap-0.5 bg-[#E3E8EF] text-[10px] font-bold">
                     <button
                       type="button"
                       onClick={() => setViewMode('dropdown')}
                       className={`px-2 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                         viewMode === 'dropdown'
-                          ? 'neu-inset text-[#5F6ED0] font-black bg-[#E3E8EF]'
+                          ? 'neu-pill-active font-black'
                           : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                       }`}
                       title="Выбор клиента в виде выпадающего списка"
@@ -1335,7 +1338,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                       onClick={() => setViewMode('cards')}
                       className={`px-2 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                         viewMode === 'cards'
-                          ? 'neu-inset text-[#5F6ED0] font-black bg-[#E3E8EF]'
+                          ? 'neu-pill-active font-black'
                           : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                       }`}
                       title="Отобразить все карточки диалогов"
@@ -1609,8 +1612,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                         onClick={() => handleSelectThread(thread.id)}
                         className={`p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl transition-all cursor-pointer border relative overflow-hidden bg-[#E3E8EF] ${
                           isSelected
-                            ? 'neu-inset border-[#5F6ED0]/60 ring-2 ring-[#5F6ED0]/25'
-                            : 'neu-inset border-transparent hover:border-[#5F6ED0]/30 active:scale-[0.99]'
+                            ? 'neu-pill-active border-transparent'
+                            : 'neu-flat border-transparent hover:border-[#5F6ED0]/30 active:scale-[0.99]'
                         }`}
                       >
                         {/* Top Header: Avatar + Customer Details + Time/Badges */}
@@ -1759,7 +1762,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
 
         {/* RIGHT COLUMN: ACTIVE CHAT CONTEXT & MESSAGING WORKSPACE */}
         <div className="lg:col-span-8 space-y-4 w-full min-w-0 max-w-full">
-          <div className="neu-card rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 space-y-4 w-full min-w-0 max-w-full overflow-hidden bg-[#E3E8EF] border border-white/80">
+          <div className="neu-flat rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 space-y-4 w-full min-w-0 max-w-full overflow-hidden bg-[#E3E8EF] border border-white/80">
             {/* THREAD HEADER: CUSTOMER DETAILS, PRIORITY, REMINDER, AND TICKET STATUS */}
             <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] border border-transparent space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1789,7 +1792,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 {/* Status & Priority Controls */}
                 <div className="flex items-center gap-1.5 flex-wrap shrink-0">
                   {/* Priority Selector */}
-                  <div className="neu-inset rounded-xl p-1 flex gap-1 bg-[#E3E8EF] text-[10px] font-bold">
+                  <div className="neu-flat-sm rounded-xl p-1 flex gap-1 bg-[#E3E8EF] text-[10px] font-bold">
                     {[
                       { id: 'standard', label: 'Стандарт' },
                       { id: 'urgent', label: 'Срочно' },
@@ -1801,7 +1804,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                         onClick={() => handleUpdateThreadPriority(p.id as any)}
                         className={`px-2 py-0.5 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                           currentThread.priority === p.id
-                            ? 'neu-inset text-[#5F6ED0] font-black bg-[#E3E8EF]'
+                            ? 'neu-pill-active font-black'
                             : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                         }`}
                       >
@@ -1826,7 +1829,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                   </button>
 
                   {/* Status Dropdown / Buttons */}
-                  <div className="neu-inset rounded-xl p-1 flex gap-1 bg-[#E3E8EF] text-[10px] font-bold">
+                  <div className="neu-flat-sm rounded-xl p-1 flex gap-1 bg-[#E3E8EF] text-[10px] font-bold">
                     {[
                       { id: 'in_progress', label: 'В работе', color: 'text-[#8C733E]' },
                       { id: 'resolved', label: 'Решен', color: 'text-[#3F6E58]' },
@@ -1838,7 +1841,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                         onClick={() => handleUpdateThreadStatus(st.id as any)}
                         className={`px-2 py-0.5 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                           currentThread.status === st.id
-                            ? `neu-inset ${st.color} font-black bg-[#E3E8EF]`
+                            ? 'neu-pill-active font-black'
                             : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                         }`}
                       >
@@ -2053,7 +2056,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                             ? 'neu-inset bg-[#E3E8EF] border border-[#8C733E]/40 text-[#2D3A4E] font-medium'
                             : isUser
                             ? 'neu-inset bg-[#E3E8EF] text-[#2D3A4E] border border-transparent'
-                            : 'neu-button-primary text-white font-medium'
+                            : 'neu-bubble-own font-medium'
                         }`}
                       >
                         {msg.text && <p className="whitespace-pre-line">{msg.text}</p>}
@@ -2289,8 +2292,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                   disabled={!replyText.trim() && !selectedPhoto}
                   className={`w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 ${
                     isInternalNote
-                      ? 'neu-button bg-amber-50/50 text-[#8C733E] font-black border border-[#8C733E]/40 shadow-sm'
-                      : 'neu-button-accent text-white shadow-md border border-white/40'
+                      ? 'neu-button bg-amber-50/50 text-[#8C733E] font-black border border-[#8C733E]/40'
+                      : 'neu-button-accent text-white border border-white/40'
                   }`}
                 >
                   <Send className="w-3.5 h-3.5" />
@@ -2342,7 +2345,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 />
               </div>
 
-              <div className="neu-inset rounded-xl p-1 flex gap-1 bg-[#E3E8EF] text-[10px] font-bold overflow-x-auto no-scrollbar">
+              <div className="neu-flat-sm rounded-xl p-1 flex gap-1 bg-[#E3E8EF] text-[10px] font-bold overflow-x-auto no-scrollbar">
                 {[
                   { id: 'all', label: 'Все товары' },
                   { id: 'shirts', label: 'Рубашки' },
@@ -2355,7 +2358,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                     type="button"
                     onClick={() => setProductCategoryFilter(cat.id)}
                     className={`py-1 px-2.5 rounded-lg whitespace-nowrap cursor-pointer ${
-                      productCategoryFilter === cat.id ? 'neu-button text-[#5F6ED0] font-black' : 'text-[#5C6B80]'
+                      productCategoryFilter === cat.id ? 'neu-pill-active font-black' : 'text-[#5C6B80]'
                     }`}
                   >
                     {cat.label}
@@ -2383,7 +2386,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                       }}
                       className={`p-2 rounded-xl flex items-center gap-2 cursor-pointer transition-all border ${
                         isSelected
-                          ? 'neu-button border-[#5F6ED0] bg-[#E3E8EF]'
+                          ? 'neu-pill-active border-transparent'
                           : 'neu-flat border-transparent bg-[#E3E8EF] hover:border-white/60'
                       }`}
                     >
@@ -2459,7 +2462,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 type="button"
                 onClick={handleSendProductCard}
                 disabled={!selectedProductToRecommend}
-                className="px-5 py-2.5 neu-button-primary rounded-xl text-xs font-black text-white flex items-center gap-1.5 active:scale-95 cursor-pointer disabled:opacity-50"
+                className="px-5 py-2.5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center gap-1.5 active:scale-95 cursor-pointer disabled:opacity-50"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>Отправить карточку в чат</span>
@@ -2549,7 +2552,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 neu-button-primary rounded-xl text-xs font-black text-white active:scale-95 cursor-pointer"
+                  className="px-5 py-2.5 neu-button-accent rounded-xl text-xs font-black text-white active:scale-95 cursor-pointer"
                 >
                   Обновить статус
                 </button>
@@ -2616,7 +2619,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 neu-button-primary rounded-xl text-xs font-black text-white active:scale-95 cursor-pointer"
+                  className="px-5 py-2.5 neu-button-accent rounded-xl text-xs font-black text-white active:scale-95 cursor-pointer"
                 >
                   Оформить заявку
                 </button>
@@ -2778,7 +2781,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 neu-button-primary rounded-xl text-xs font-black text-white active:scale-95 cursor-pointer"
+                  className="px-5 py-2.5 neu-button-accent rounded-xl text-xs font-black text-white active:scale-95 cursor-pointer"
                 >
                   Установить напоминание
                 </button>
@@ -2880,7 +2883,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 neu-button-primary rounded-xl text-xs font-black text-white active:scale-95 cursor-pointer"
+                  className="px-5 py-2.5 neu-button-accent rounded-xl text-xs font-black text-white active:scale-95 cursor-pointer"
                 >
                   Выписать и отправить
                 </button>
@@ -2912,6 +2915,22 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={templateToDelete !== null}
+        title="Удалить шаблон?"
+        message="Шаблон быстрого ответа будет удалён из списка."
+        onConfirm={() => templateToDelete && handleDeleteTemplate(templateToDelete)}
+        onClose={() => setTemplateToDelete(null)}
+      />
+      <ConfirmDialog
+        isOpen={isClearChatConfirmOpen}
+        title="Очистить историю диалога?"
+        message="Все сообщения этого диалога будут удалены и у покупателя, и в панели администратора. Это действие нельзя отменить."
+        confirmLabel="Очистить"
+        onConfirm={() => onClearChat?.()}
+        onClose={() => setIsClearChatConfirmOpen(false)}
+      />
     </div>
   );
 };

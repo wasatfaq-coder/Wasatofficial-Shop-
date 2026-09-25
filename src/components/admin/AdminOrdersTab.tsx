@@ -33,7 +33,7 @@ import {
   Layers,
   Trash2,
 } from 'lucide-react';
-import { Order, Product, OrderAdjustmentLog, OrderStatusHistoryStep, DeliveryStage } from '../../types';
+import { Order, Product, OrderAdjustmentLog, OrderStatusHistoryStep, DeliveryStage, StorefrontSettings } from '../../types';
 import { exportOrdersToCSV } from '../../utils/csvHelpers';
 import { copyToClipboard } from '../../utils/clipboard';
 import { returnStockWithLogs } from '../../utils/inventory';
@@ -53,6 +53,7 @@ import { NeumorphicSelect } from '../NeumorphicSelect';
 
 interface AdminOrdersTabProps {
   orders: Order[];
+  storefrontSettings?: StorefrontSettings;
   products: Product[];
   onUpdateOrders: (updated: Order[]) => void;
   onUpdateProducts?: (updated: Product[]) => void;
@@ -196,6 +197,7 @@ const TRACKING_CARRIERS: TrackingCarrierConfig[] = [
 
 export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   orders,
+  storefrontSettings,
   products = [],
   onUpdateOrders,
   onUpdateProducts,
@@ -774,7 +776,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
               <div
                 className={`w-4 h-4 rounded-md flex items-center justify-center transition-all ${
                   selectedOrderIds.length > 0 && selectedOrderIds.length === filteredOrders.length
-                    ? 'neu-button-accent text-white'
+                    ? 'neu-fill-accent text-white'
                     : selectedOrderIds.length > 0
                     ? 'neu-button text-[#5F6ED0] bg-white/70'
                     : 'neu-button bg-white/40 text-transparent border border-white/60'
@@ -794,7 +796,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
       {/* Floating Sticky Bulk Operations Toolbar */}
       {selectedOrderIds.length > 0 && (
-        <div className="p-3.5 sm:p-4 neu-card rounded-2xl sm:rounded-3xl bg-[#E3E8EF] border border-white/80 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="p-3.5 sm:p-4 neu-flat rounded-2xl sm:rounded-3xl bg-[#E3E8EF] border border-white/80 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
           {/* Top Info & Actions Bar */}
           <div className="flex items-center justify-between gap-2.5 flex-wrap">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -1162,7 +1164,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                                     onClick={() => handleUpdatePaymentStatus(ord.id, pst)}
                                     className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
                                       payStatus === pst
-                                        ? 'neu-inset text-[#5F6ED0] font-black bg-[#E3E8EF]'
+                                        ? 'neu-pill-active font-black'
                                         : 'text-[#2D3A4E] hover:bg-white/40'
                                     }`}
                                   >
@@ -1208,7 +1210,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                                     onClick={() => handleUpdateOrderStatus(ord.id, st)}
                                     className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
                                       ord.status === st
-                                        ? 'neu-inset text-[#5F6ED0] font-black bg-[#E3E8EF]'
+                                        ? 'neu-pill-active font-black'
                                         : 'text-[#2D3A4E] hover:bg-white/40'
                                     }`}
                                   >
@@ -1380,7 +1382,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                             </div>
 
                             {isEditingTrack ? (
-                              <div className="neu-card rounded-2xl p-3 bg-[#E3E8EF] border border-white/80 space-y-3 pt-2.5 animate-in fade-in duration-150">
+                              <div className="neu-flat rounded-2xl p-3 bg-[#E3E8EF] border border-white/80 space-y-3 pt-2.5 animate-in fade-in duration-150">
                                 {/* Neumorphic Carrier Selector (Clean inline grid with no overlapping popover) */}
                                 <div className="space-y-1.5">
                                   <label className="text-[10px] font-black text-[#5C6B80] uppercase tracking-wider block">
@@ -1397,7 +1399,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                                           onClick={() => setTempCarrierValue(c.id)}
                                           className={`p-2 rounded-xl text-left transition-all flex items-center justify-between gap-2 cursor-pointer ${
                                             isSelected
-                                              ? 'neu-inset text-[#5F6ED0] bg-[#E3E8EF] border border-[#5F6ED0]/40 font-black'
+                                              ? 'neu-pill-active font-black'
                                               : 'neu-button text-[#2D3A4E] hover:text-[#5F6ED0] bg-[#E3E8EF] border border-white/70'
                                           }`}
                                         >
@@ -1405,7 +1407,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                                             <div
                                               className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
                                                 isSelected
-                                                  ? 'neu-inset text-[#5F6ED0] bg-[#E3E8EF]'
+                                                  ? 'neu-pill-active'
                                                   : 'neu-button text-[#5C6B80] bg-[#E3E8EF]'
                                               }`}
                                             >
@@ -1428,7 +1430,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
                                           {/* Tactile indicator */}
                                           {isSelected ? (
-                                            <div className="w-4 h-4 rounded-full neu-button-accent text-white flex items-center justify-center shrink-0 shadow-xs">
+                                            <div className="w-4 h-4 rounded-full neu-fill-accent text-white flex items-center justify-center shrink-0">
                                               <Check className="w-2.5 h-2.5 stroke-[3]" />
                                             </div>
                                           ) : (
@@ -1484,7 +1486,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                                       handleSaveTracking(ord.id);
                                       setOpenCarrierDropdownOrderId(null);
                                     }}
-                                    className="px-4 py-1.5 neu-button-accent rounded-xl text-xs font-black text-white hover:scale-102 active:neu-inset-deep active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                                    className="px-4 py-1.5 neu-button-accent rounded-xl text-xs font-black text-white hover:scale-102 active:neu-inset-deep active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
                                   >
                                     <Save className="w-3.5 h-3.5" />
                                     <span>Сохранить</span>
@@ -1595,10 +1597,10 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                   {/* Delete Order Button */}
                   <button
                     onClick={() => setOrderToDelete(ord)}
-                    className="h-8 px-2.5 neu-inset rounded-xl text-xs font-bold text-[#5C6B80] hover:text-rose-600 hover:bg-rose-50/50 flex items-center gap-1 cursor-pointer active:scale-95 transition-all bg-[#E3E8EF] border border-white/60"
+                    className="h-8 px-2.5 neu-button-danger rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer active:scale-95 transition-all border border-white/60"
                     title="Удалить этот заказ из базы данных"
                   >
-                    <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                    <Trash2 className="w-3.5 h-3.5" />
                     <span>Удалить</span>
                   </button>
 
@@ -1695,6 +1697,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         isOpen={!!selectedOrderForInvoice}
         onClose={() => setSelectedOrderForInvoice(null)}
         order={selectedOrderForInvoice}
+        storefrontSettings={storefrontSettings}
         onShowToast={onShowToast}
       />
 
@@ -1785,7 +1788,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       {/* ================= MODAL: SINGLE ORDER DELETE CONFIRMATION ================= */}
       {orderToDelete && (
         <div className="admin-no-glow fixed inset-0 z-[100] bg-[#2D3A4E]/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in">
-          <div className="neu-modal rounded-3xl max-w-sm w-full p-5 space-y-4 my-auto bg-[#E3E8EF] border border-white/80 shadow-2xl">
+          <div className="neu-modal rounded-3xl max-w-sm w-full p-5 space-y-4 my-auto bg-[#E3E8EF] border border-white/80">
             <div className="flex items-center gap-3 border-b border-[#BAC5D5]/40 pb-3">
               <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-rose-600 shrink-0">
                 <Trash2 className="w-4 h-4" />
@@ -1813,7 +1816,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                 type="button"
                 onClick={handleDeleteSingleOrder}
                 disabled={isDeletingOrder}
-                className="px-4 py-2 rounded-xl text-xs font-black text-white bg-rose-600 hover:bg-rose-700 active:scale-95 transition-all shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="neu-button-danger px-4 py-2 rounded-xl text-xs font-black active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 {isDeletingOrder ? (
                   <>

@@ -220,7 +220,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                       onClick={() => setSelectedSize(sz)}
                       className={`min-w-[38px] h-9 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
                         isSelected
-                          ? 'neu-inset text-[#1E293B] font-black border border-[#5F6ED0]/40'
+                          ? 'neu-pill-active font-black'
                           : 'neu-button text-[#2D3A4E] hover:text-[#1E293B]'
                       }`}
                     >
@@ -237,7 +237,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                 onClick={handleAdd}
                 disabled={isAdded}
                 className={`flex-1 py-3.5 px-4 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer ${
-                  isAdded ? 'neu-success-button' : 'neu-accent-button'
+                  isAdded ? 'neu-button-success' : 'neu-button-accent'
                 }`}
               >
                 {isAdded ? (

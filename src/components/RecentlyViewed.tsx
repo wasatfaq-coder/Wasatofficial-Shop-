@@ -45,7 +45,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
         {onClearRecentlyViewed && (
           <button
             onClick={onClearRecentlyViewed}
-            className="neu-inset rounded-xl px-2.5 py-1 text-[11px] font-bold text-[#5C6B80] hover:text-rose-600 transition-colors flex items-center gap-1.5 active:scale-95 bg-[#E3E8EF]"
+            className="neu-button-danger rounded-xl px-2.5 py-1 text-[11px] font-bold transition-colors flex items-center gap-1.5 active:scale-95"
             title="Очистить историю просмотров"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -126,9 +126,6 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
                   <h4 className="text-xs font-bold text-[#2D3A4E] truncate leading-tight group-hover:text-[#5F6ED0] transition-colors">
                     {product.title}
                   </h4>
-                  <p className="text-[10px] text-[#5C6B80] font-mono">
-                    Арт: {product.id.substring(0, 10)}
-                  </p>
                 </div>
               </div>
 

@@ -216,7 +216,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           onClick={handleOpenFilterModal}
           className={`relative w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-all active:scale-95 cursor-pointer bg-[#E3E8EF] ${
             activeFiltersCount > 0
-              ? 'neu-inset text-[#5F6ED0] border border-[#5F6ED0]/40 font-bold'
+              ? 'neu-pill-active font-bold'
               : 'neu-button text-[#2D3A4E] hover:text-[#5F6ED0]'
           }`}
           title="Параметры фильтрации"
@@ -224,7 +224,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
         >
           <SlidersHorizontal className="w-5 h-5 stroke-[2]" />
           {activeFiltersCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 bg-[#5F6ED0] text-white font-black text-[10px] w-5 h-5 rounded-full flex items-center justify-center shadow-md ring-2 ring-[#E3E8EF]">
+            <span className="absolute -top-1.5 -right-1.5 bg-[#5F6ED0] text-white font-black text-[10px] w-5 h-5 rounded-full flex items-center justify-center shadow-[var(--neu-fill-accent-shadow)] ring-2 ring-[#E3E8EF]">
               {activeFiltersCount}
             </span>
           )}
@@ -260,7 +260,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                 onClick={() => onSelectCategory(cat.id)}
                 className={`relative px-4 py-2.5 rounded-2xl text-[13px] transition-all whitespace-nowrap shrink-0 flex items-center gap-2 cursor-pointer select-none bg-[#E3E8EF] ${
                   isSelected
-                    ? 'neu-inset font-bold text-[#5F6ED0] border border-[#5F6ED0]/40'
+                    ? 'neu-pill-active font-bold'
                     : 'neu-button font-semibold text-[#2D3A4E] hover:text-[#5F6ED0] active:scale-95'
                 }`}
               >
@@ -300,7 +300,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
       {activeFiltersCount > 0 && (
         <div className="flex items-center gap-2 flex-wrap py-1">
           {filterState.onlyInStock && (
-            <span className="neu-inset text-[11px] font-bold text-[#5F6ED0] px-3 py-1.5 rounded-full flex items-center gap-1.5 bg-[#E3E8EF] border border-[#5F6ED0]/30 shadow-xs">
+            <span className="neu-inset text-[11px] font-bold text-[#5F6ED0] px-3 py-1.5 rounded-full flex items-center gap-1.5 bg-[#E3E8EF] border border-[#5F6ED0]/30">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
               Только в наличии
               <button
@@ -315,7 +315,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           )}
 
           {(filterState.minPrice > 0 || filterState.maxPrice < 35000) && (
-            <span className="neu-inset text-[11px] font-bold text-[#2D3A4E] px-3 py-1.5 rounded-full flex items-center gap-1.5 bg-[#E3E8EF] border border-[#5F6ED0]/30 shadow-xs">
+            <span className="neu-inset text-[11px] font-bold text-[#2D3A4E] px-3 py-1.5 rounded-full flex items-center gap-1.5 bg-[#E3E8EF] border border-[#5F6ED0]/30">
               Цена: {filterState.minPrice > 0 ? `от ${filterState.minPrice.toLocaleString('ru-RU')} ` : ''}до {filterState.maxPrice.toLocaleString('ru-RU')} ₽
               <button
                 onClick={() =>
@@ -337,7 +337,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
             return (
               <span
                 key={matId}
-                className="neu-inset text-[11px] font-bold text-[#2D3A4E] px-3 py-1.5 rounded-full flex items-center gap-1.5 bg-[#E3E8EF] border border-[#5F6ED0]/30 shadow-xs"
+                className="neu-inset text-[11px] font-bold text-[#2D3A4E] px-3 py-1.5 rounded-full flex items-center gap-1.5 bg-[#E3E8EF] border border-[#5F6ED0]/30"
               >
                 Ткань: {matObj ? matObj.name : matId}
                 <button
@@ -358,7 +358,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           {filterState.selectedSizes.map((sz) => (
             <span
               key={sz}
-              className="neu-inset text-[11px] font-bold text-[#2D3A4E] px-3 py-1.5 rounded-full flex items-center gap-1.5 bg-[#E3E8EF] border border-[#5F6ED0]/30 shadow-xs"
+              className="neu-inset text-[11px] font-bold text-[#2D3A4E] px-3 py-1.5 rounded-full flex items-center gap-1.5 bg-[#E3E8EF] border border-[#5F6ED0]/30"
             >
               Размер: {sz}
               <button
@@ -376,7 +376,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           ))}
 
           {filterState.onlyNew && (
-            <span className="neu-inset text-[11px] font-bold text-[#2D3A4E] px-3 py-1.5 rounded-full flex items-center gap-1.5 bg-[#E3E8EF] border border-[#5F6ED0]/30 shadow-xs">
+            <span className="neu-inset text-[11px] font-bold text-[#2D3A4E] px-3 py-1.5 rounded-full flex items-center gap-1.5 bg-[#E3E8EF] border border-[#5F6ED0]/30">
               Только новинки
               <button
                 onClick={() =>
@@ -390,7 +390,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           )}
 
           {filterState.onlyDiscount && (
-            <span className="neu-inset text-[11px] font-bold text-[#2D3A4E] px-3 py-1.5 rounded-full flex items-center gap-1.5 bg-[#E3E8EF] border border-[#5F6ED0]/30 shadow-xs">
+            <span className="neu-inset text-[11px] font-bold text-[#2D3A4E] px-3 py-1.5 rounded-full flex items-center gap-1.5 bg-[#E3E8EF] border border-[#5F6ED0]/30">
               Со скидкой
               <button
                 onClick={() =>
@@ -446,7 +446,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
 
           {/* Sort Dropdown */}
           {showSortMenu && (
-            <div className="absolute right-0 mt-2 w-48 bg-[#E3E8EF] rounded-2xl p-1.5 z-30 neu-dropdown border border-white/80 space-y-1 shadow-lg">
+            <div className="absolute right-0 mt-2 w-48 bg-[#E3E8EF] rounded-2xl p-1.5 z-30 neu-dropdown border border-white/80 space-y-1">
               <button
                 onClick={() => {
                   setSortBy('popular');
@@ -454,7 +454,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                 }}
                 className={`w-full text-left px-3 py-2 text-xs rounded-xl transition-colors cursor-pointer ${
                   sortBy === 'popular'
-                    ? 'neu-inset font-bold text-[#5F6ED0] border border-white/60'
+                    ? 'neu-pill-active font-bold'
                     : 'text-[#2D3A4E] font-semibold hover:bg-white/60'
                 }`}
               >
@@ -467,7 +467,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                 }}
                 className={`w-full text-left px-3 py-2 text-xs rounded-xl transition-colors cursor-pointer ${
                   sortBy === 'price-asc'
-                    ? 'neu-inset font-bold text-[#5F6ED0] border border-white/60'
+                    ? 'neu-pill-active font-bold'
                     : 'text-[#2D3A4E] font-semibold hover:bg-white/60'
                 }`}
               >
@@ -480,7 +480,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                 }}
                 className={`w-full text-left px-3 py-2 text-xs rounded-xl transition-colors cursor-pointer ${
                   sortBy === 'price-desc'
-                    ? 'neu-inset font-bold text-[#5F6ED0] border border-white/60'
+                    ? 'neu-pill-active font-bold'
                     : 'text-[#2D3A4E] font-semibold hover:bg-white/60'
                 }`}
               >
@@ -493,7 +493,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                 }}
                 className={`w-full text-left px-3 py-2 text-xs rounded-xl transition-colors cursor-pointer ${
                   sortBy === 'newest'
-                    ? 'neu-inset font-bold text-[#5F6ED0] border border-white/60'
+                    ? 'neu-pill-active font-bold'
                     : 'text-[#2D3A4E] font-semibold hover:bg-white/60'
                 }`}
               >

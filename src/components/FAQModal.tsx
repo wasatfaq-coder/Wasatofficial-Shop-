@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FAQAccordion, FAQAccordionItem } from './FAQAccordion';
+import { telHref } from '../utils/storeContacts';
+import { formatDays } from '../utils/pluralize';
 
 type FAQCategory = 'delivery' | 'fitting' | 'returns' | 'payment' | 'warranty' | 'sizing';
 
@@ -27,15 +29,15 @@ const FAQ_DATA: FAQItem[] = [
     category: 'delivery',
     question: 'Какие варианты доставки доступны и сколько это занимает?',
     answer:
-      'Мы доставляем заказы двумя удобными способами: собственной экспресс-курьерской службой с примеркой (1-2 дня по Москве и Санкт-Петербургу, 2-4 дня по РФ) и в пункты выдачи заказов СДЭК и Boxberry (от 2 до 5 рабочих дней). При заказе от 15 000 ₽ курьерская доставка осуществляется бесплатно.',
-    highlights: ['Бесплатно от 15 000 ₽', '1-2 дня экспресс-курьер', 'СДЭК и Boxberry по всей России'],
+      'Доставляем курьером до двери с примеркой, экспресс-доставкой день в день по Москве, в пункты выдачи, службой СДЭК и Почтой России. Точные сроки и стоимость для вашего адреса видны на шаге оформления заказа. При заказе от {FREE_DELIVERY} ₽ доставка бесплатная.',
+    highlights: ['Бесплатно от {FREE_DELIVERY} ₽', 'Экспресс день в день по Москве', 'СДЭК и Почта России по всей стране'],
   },
   {
     id: 'del-2',
     category: 'delivery',
     question: 'Как отслеживать статус и передвижение курьера в реальном времени?',
     answer:
-      'Каждому заказу присваивается уникальный трек-номер (формата MS-XXXX). В разделе «История заказов» доступна интерактивная карта трекинга с точным отображением маршрута автомобиля курьера, дорожной обстановки и расчетного времени прибытия.',
+      'Каждому заказу присваивается уникальный номер (формата MS-XXXXXXXX). В разделе «История заказов» доступна интерактивная карта трекинга с точным отображением маршрута автомобиля курьера, дорожной обстановки и расчетного времени прибытия.',
     highlights: ['Интерактивная карта', 'Прямой контакт с курьером', 'Обновление статуса в реальном времени'],
   },
   {
@@ -49,10 +51,10 @@ const FAQ_DATA: FAQItem[] = [
   {
     id: 'ret-1',
     category: 'returns',
-    question: 'Каковы условия и сроки возврата товара (гарантия 14 дней)?',
+    question: 'Каковы условия и сроки возврата товара (гарантия {RETURN_DAYS} дней)?',
     answer:
-      'В соответствии с законодательством РФ и стандартами MANSTYLE, вы можете вернуть или обменять неподошедший товар надлежащего качества в течение 14 дней с момента получения. Главное условие — сохранение товарного вида, фабричных пломб, ярлыков и оригинальной упаковки.',
-    highlights: ['14 дней на возврат', 'Быстрое оформление онлайн', 'Возврат средств на карту за 1-3 рабочих дня'],
+      'В соответствии с законодательством РФ и стандартами MANSTYLE, вы можете вернуть или обменять неподошедший товар надлежащего качества в течение {RETURN_DAYS} дней с момента получения. Главное условие — сохранение товарного вида, фабричных пломб, ярлыков и оригинальной упаковки.',
+    highlights: ['{RETURN_DAYS} дней на возврат', 'Быстрое оформление онлайн', 'Возврат средств на карту за 1-3 рабочих дня'],
   },
   {
     id: 'ret-2',
@@ -117,6 +119,11 @@ const CATEGORIES = [
 interface FAQModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Store policies substituted into the answers ({FREE_DELIVERY}, {RETURN_DAYS}) */
+  freeDeliveryThreshold?: number;
+  returnPeriodDays?: number;
+  /** Store phone from Admin → «Витрина»; the call button is hidden when empty */
+  storePhone?: string;
   onOpenSupportChat?: () => void;
   onShowToast?: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
@@ -126,7 +133,22 @@ export const FAQModal: React.FC<FAQModalProps> = ({
   onClose,
   onOpenSupportChat,
   onShowToast,
+  freeDeliveryThreshold = 5000,
+  returnPeriodDays = 14,
+  storePhone = '',
 }) => {
+  const faqData = useMemo<FAQItem[]>(() => {
+    const fill = (text: string) =>
+      text
+        .split('{FREE_DELIVERY}').join(freeDeliveryThreshold.toLocaleString('ru-RU'))
+        .split('{RETURN_DAYS} дней').join(formatDays(returnPeriodDays));
+    return FAQ_DATA.map((item) => ({
+      ...item,
+      question: fill(item.question),
+      answer: fill(item.answer),
+      highlights: item.highlights?.map(fill),
+    }));
+  }, [freeDeliveryThreshold, returnPeriodDays]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({
@@ -139,7 +161,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
   };
 
   const filteredQuestions = useMemo(() => {
-    return FAQ_DATA.filter((item) => {
+    return faqData.filter((item) => {
       const matchesCategory =
         selectedCategory === 'all' ||
         item.category === selectedCategory ||
@@ -151,7 +173,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
         item.highlights?.some((h) => h.toLowerCase().includes(searchQuery.toLowerCase()));
       return matchesCategory && matchesSearch;
     });
-  }, [selectedCategory, searchQuery]);
+  }, [faqData, selectedCategory, searchQuery]);
 
   if (!isOpen) return null;
 
@@ -186,7 +208,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
                   Часто задаваемые вопросы (FAQ)
                 </h3>
                 <p className="text-[11px] text-[#5C6B80]">
-                  Всё о доставке, примерке, возврате 14 дней и гарантиях качества
+                  Всё о доставке, примерке, возврате и гарантиях качества
                 </p>
               </div>
             </div>
@@ -232,7 +254,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
                   onClick={() => setSelectedCategory(cat.id)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all cursor-pointer active:scale-95 ${
                     isActive
-                      ? 'neu-button text-[#5F6ED0] bg-white/70 shadow-sm'
+                      ? 'neu-pill-active'
                       : 'text-[#5C6B80] hover:text-[#2D3A4E] hover:bg-white/30'
                   }`}
                 >
@@ -254,7 +276,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
           </div>
 
           {/* Footer Call to Action (Support Chat & Call) */}
-          <div className="neu-card rounded-2xl p-3.5 flex items-center justify-between gap-3 shrink-0 bg-gradient-to-r from-[#E3E8EF] to-[#D8E1EC] border border-white/80">
+          <div className="neu-flat rounded-2xl p-3.5 flex items-center justify-between gap-3 shrink-0 bg-gradient-to-r from-[#E3E8EF] to-[#D8E1EC] border border-white/80">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] shrink-0">
                 <MessageSquare className="w-4 h-4" />
@@ -266,13 +288,15 @@ export const FAQModal: React.FC<FAQModalProps> = ({
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              <a
-                href="tel:88005553535"
-                className="w-8 h-8 rounded-xl neu-button text-[#2D3A4E] hover:text-[#5F6ED0] flex items-center justify-center cursor-pointer transition-colors"
-                title="Позвонить на горячую линию"
-              >
-                <PhoneCall className="w-3.5 h-3.5" />
-              </a>
+              {storePhone && (
+                <a
+                  href={telHref(storePhone)}
+                  className="w-8 h-8 rounded-xl neu-button text-[#2D3A4E] hover:text-[#5F6ED0] flex items-center justify-center cursor-pointer transition-colors"
+                  title={`Позвонить: ${storePhone}`}
+                >
+                  <PhoneCall className="w-3.5 h-3.5" />
+                </a>
+              )}
 
               {onOpenSupportChat ? (
                 <button

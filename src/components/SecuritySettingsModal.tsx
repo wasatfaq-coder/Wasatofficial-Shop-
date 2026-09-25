@@ -360,7 +360,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
           </div>
 
           {/* Section 1: Two-Factor Authentication */}
-          <div className="neu-card rounded-2xl p-4 space-y-3">
+          <div className="neu-flat rounded-2xl p-4 space-y-3">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3">
                 <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] shrink-0 mt-0.5">
@@ -385,7 +385,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
                 type="button"
                 onClick={handleToggle2FA}
                 className={`w-12 h-6 rounded-full p-0.5 transition-colors duration-200 cursor-pointer shrink-0 ${
-                  local2FA ? 'neu-button-accent text-white' : 'neu-inset bg-[#BAC5D5]/50'
+                  local2FA ? 'neu-fill-accent text-white' : 'neu-inset bg-[#BAC5D5]/50'
                 }`}
               >
                 <div
@@ -398,7 +398,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
           </div>
 
           {/* Section 2: Critical Credentials Management (Password & Email) */}
-          <div className="neu-card rounded-2xl p-4 space-y-3">
+          <div className="neu-flat rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <KeyRound className="w-4 h-4 text-[#5F6ED0]" />
@@ -409,13 +409,13 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
 
               {/* Sub-tabs for Password / Email */}
               {!isGoogleUser && (
-                <div className="flex items-center gap-1.5 neu-inset p-1 rounded-xl bg-[#E3E8EF]">
+                <div className="flex items-center gap-1.5 neu-flat-sm p-1 rounded-xl bg-[#E3E8EF]">
                   <button
                     type="button"
                     onClick={() => setActiveSection('password')}
                     className={`py-1 px-2.5 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer ${
                       activeSection === 'password'
-                        ? 'neu-button-accent text-white'
+                        ? 'neu-pill-active'
                         : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                     }`}
                   >
@@ -426,7 +426,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
                     onClick={() => setActiveSection('email')}
                     className={`py-1 px-2.5 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer ${
                       activeSection === 'email'
-                        ? 'neu-button-accent text-white'
+                        ? 'neu-pill-active'
                         : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                     }`}
                   >
@@ -561,7 +561,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
           </div>
 
           {/* Section 3: Active Sessions Management */}
-          <div className="neu-card rounded-2xl p-4 space-y-3">
+          <div className="neu-flat rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Laptop className="w-4 h-4 text-[#5F6ED0]" />
@@ -599,9 +599,9 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
             <button
               type="button"
               onClick={() => handleRevokeAndRenewAllSessions('manual_revoke', true)}
-              className="w-full py-2.5 neu-button rounded-xl text-xs font-bold text-[#5C6B80] hover:text-rose-600 flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-98"
+              className="w-full py-2.5 neu-button-danger rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-98"
             >
-              <LogOut className="w-3.5 h-3.5 text-rose-500" />
+              <LogOut className="w-3.5 h-3.5" />
               <span>Завершить все остальные сеансы</span>
             </button>
           </div>

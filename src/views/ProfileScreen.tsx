@@ -1,6 +1,9 @@
 import React, { useState, useMemo } from 'react';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { motion, AnimatePresence } from 'motion/react';
 import { SecuritySettingsModal } from '../components/SecuritySettingsModal';
+import { getStoreContacts, telHref } from '../utils/storeContacts';
+import { GUEST_USER_PROFILE } from '../data/products';
 import { FAQModal } from '../components/FAQModal';
 import {
   User,
@@ -66,7 +69,7 @@ import {
 import { NeumorphicSlider } from '../components/NeumorphicSlider';
 import { calculateRussianPattern, RUSSIAN_SIZE_TABLE_ROWS } from '../utils/russianSizing';
 import { useAuth } from '../context/AuthContext';
-import { UserProfile, Order, OrderStatusHistoryStep, ActiveTab, SavedAddress, SavedCard, Product, PromoCode, BannerSlide, ChatMessage, StorefrontSettings, AdminCredentials, DeliveryMethod, PickupPoint } from '../types';
+import { UserProfile, Order, CartItem, OrderStatusHistoryStep, ActiveTab, SavedAddress, SavedCard, Product, PromoCode, BannerSlide, ChatMessage, StorefrontSettings, AdminCredentials, DeliveryMethod, PickupPoint } from '../types';
 import { formatAddress } from '../utils/addressFormat';
 import { PRODUCTS } from '../data/products';
 import { INITIAL_PROMO_CODES, INITIAL_BANNER_SLIDES, INITIAL_CHAT_MESSAGES } from '../data/marketingAndSupport';
@@ -118,6 +121,7 @@ interface ProfileScreenProps {
   onToggleFavorite?: (product: Product, e: React.MouseEvent) => void;
   onUpdateProfile: (updated: UserProfile) => void;
   setActiveTab: (tab: ActiveTab) => void;
+  onRepeatOrder?: (items: CartItem[]) => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   onOpenSupportChat?: () => void;
   onUpdateProducts?: (products: Product[]) => void;
@@ -160,6 +164,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onToggleFavorite,
   onUpdateProfile,
   setActiveTab,
+  onRepeatOrder,
   onShowToast,
   onOpenSupportChat,
   onUpdateProducts,
@@ -180,6 +185,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onUpdatePickupPoints,
 }) => {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [addressToDelete, setAddressToDelete] = useState<string | null>(null);
+  const [cardToDelete, setCardToDelete] = useState<string | null>(null);
   const [name, setName] = useState(profile.name);
   const [email, setEmail] = useState(profile.email);
   const [phone, setPhone] = useState(profile.phone);
@@ -666,17 +673,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       sessionStorage.removeItem('manstyle_admin_auth');
     } catch {}
     setIsAdminAuthenticated(false);
-    onUpdateProfile({
-      name: 'Гость MANSTYLE',
-      email: '',
-      phone: '',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
-      address: { street: '', city: 'Москва', postalCode: '' },
-      savedAddresses: [],
-      savedCards: [],
-      notificationsEnabled: true,
-      bonusPoints: 0,
-    });
+    onUpdateProfile(GUEST_USER_PROFILE);
     onShowToast('Вы успешно вышли из аккаунта', 'info');
   };
 
@@ -899,32 +896,41 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   // Storefront & Boutique settings values with defaults
   const storeName = storefrontSettings?.storeName || 'MANSTYLE';
   const storeSlogan = storefrontSettings?.storeSlogan || 'Бутик мужской одежды & аксессуаров';
-  const storePhone = storefrontSettings?.phone || '+7 (495) 123-45-67';
-  const storeTelegram = storefrontSettings?.telegram || '@manstyle_official';
-  const pickupAddress =
-    storefrontSettings?.pickupAddress ||
-    'Москва, Пресненская наб. 12, Башня Федерация Восток, 2 этаж';
+  // Demo template contacts are never shown to customers (see storeContacts.ts)
+  const {
+    phone: storePhone,
+    telegram: storeTelegram,
+    pickupAddress,
+  } = getStoreContacts(storefrontSettings);
   const workingHours = storefrontSettings?.workingHours || 'Ежедневно с 10:00 до 22:00';
 
   return (
     <div className="space-y-5 pb-28 animate-in fade-in duration-300">
       {/* Profile Card Header */}
-      <div className="neu-card rounded-3xl p-3.5">
+      <div className="neu-flat rounded-3xl p-3.5">
         {!isEditingProfile ? (
           <div className="neu-inset rounded-2xl p-4 flex items-center gap-4">
             <div className="relative w-16 h-16 rounded-full neu-flat p-1 shrink-0 overflow-hidden">
-              <img
-                src={profile.avatar}
-                alt={profile.name}
-                className="w-full h-full object-cover rounded-full"
-              />
+              {profile.avatar ? (
+                <img
+                  src={profile.avatar}
+                  alt={profile.name}
+                  className="w-full h-full object-cover rounded-full"
+                />
+              ) : (
+                <div className="w-full h-full rounded-full flex items-center justify-center text-[#5F6ED0] text-xl font-black">
+                  {profile.name?.trim() ? profile.name.trim()[0].toUpperCase() : <User className="w-7 h-7" />}
+                </div>
+              )}
             </div>
 
             <div className="flex-1 min-w-0 space-y-1">
               <h2 className="text-lg font-bold text-[#2D3A4E] leading-tight truncate">
-                {profile.name}
+                {profile.name?.trim() || 'Гость'}
               </h2>
-              <p className="text-xs text-[#5C6B80] truncate">{profile.email}</p>
+              <p className="text-xs text-[#5C6B80] truncate">
+                {profile.email || 'Заполните профиль, чтобы оформлять заказы быстрее'}
+              </p>
 
               <button
                 onClick={() => setIsEditingProfile(true)}
@@ -988,7 +994,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase px-1">
           Мои заказы
         </h3>
-        <div className="neu-card rounded-3xl p-3">
+        <div className="neu-flat rounded-3xl p-3">
           <button
             onClick={() => setActiveModal('orders')}
             className="w-full p-3.5 neu-inset rounded-2xl flex items-center justify-between text-left hover:opacity-95 transition-all cursor-pointer active:scale-[0.98]"
@@ -1014,43 +1020,49 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </div>
       </div>
 
-      {/* Firebase Cloud Synchronization & Auth Section */}
-      <div className="neu-card rounded-3xl p-3.5 space-y-3">
+      {/* Account & sign-in (cloud sync details are shown to admins only) */}
+      <div className="neu-flat rounded-3xl p-3.5 space-y-3">
         <div className="neu-inset rounded-2xl p-3.5 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] shrink-0">
-                <Database className="w-5 h-5 stroke-[2.2]" />
+                {isFirebaseAdmin ? <Database className="w-5 h-5 stroke-[2.2]" /> : <User className="w-5 h-5 stroke-[2.2]" />}
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-sm font-bold text-[#2D3A4E]">Firebase Cloud</h3>
-                  <span className="neu-button px-2 py-0.5 rounded-full text-[10px] font-black text-emerald-600 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    Firestore активен
-                  </span>
+                  <h3 className="text-sm font-bold text-[#2D3A4E]">{isFirebaseAdmin ? 'Синхронизация данных' : 'Аккаунт'}</h3>
                   {isFirebaseAdmin && (
-                    <span className="neu-button-accent text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                    <span className="neu-button px-2 py-0.5 rounded-full text-[10px] font-black text-emerald-600 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      База данных подключена
+                    </span>
+                  )}
+                  {isFirebaseAdmin && (
+                    <span className="neu-fill-accent text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
                       <ShieldCheck className="w-3 h-3" />
                       Админ
                     </span>
                   )}
                 </div>
                 <p className="text-xs text-[#5C6B80]">
-                  Синхронизация каталога, заказов, акций и чата с Firestore
+                  {isFirebaseAdmin
+                    ? 'Каталог, заказы, акции и чат хранятся в облаке'
+                    : 'Заказы, адреса и переписка сохраняются на всех ваших устройствах'}
                 </p>
               </div>
             </div>
 
+            {isFirebaseAdmin && (
             <button
               type="button"
               onClick={handleTriggerSync}
               disabled={isSyncingFirebase}
-              title="Принудительно синхронизировать все данные с Firestore"
+              title="Принудительно синхронизировать все данные с облаком"
               className="neu-button rounded-xl p-2.5 text-[#5F6ED0] hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0 disabled:opacity-60"
             >
               <RefreshCw className={`w-4 h-4 ${isSyncingFirebase ? 'animate-spin text-[#5F6ED0]' : ''}`} />
             </button>
+            )}
           </div>
 
           {/* User Auth Status Details */}
@@ -1070,7 +1082,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 )}
                 <div className="min-w-0">
                   <p className="font-bold text-[#2D3A4E] truncate">
-                    {currentUser.displayName || 'Google Пользователь'}
+                    {currentUser.displayName || 'Пользователь Google'}
                   </p>
                   <p className="text-[11px] text-[#5C6B80] truncate">{currentUser.email}</p>
                 </div>
@@ -1079,7 +1091,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               <button
                 type="button"
                 onClick={handleGoogleLogoutClick}
-                className="neu-button px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 shrink-0 active:scale-95 transition-transform"
+                className="neu-button-danger px-2.5 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 shrink-0 active:scale-95 transition-transform"
               >
                 <LogOut className="w-3 h-3" />
                 <span>Выйти</span>
@@ -1088,7 +1100,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           ) : (
             <div className="p-2.5 rounded-xl bg-[#BAC5D5]/20 space-y-2 text-xs">
               <p className="text-[#5C6B80] text-[11px] leading-relaxed">
-                Войдите через Google для привязки заказов и автоматической синхронизации личных данных с облаком:
+                Войдите через Google, чтобы видеть историю заказов и переписку с поддержкой на любом устройстве:
               </p>
               <button
                 type="button"
@@ -1114,7 +1126,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                   />
                 </svg>
-                <span>{isGoogleSigningIn ? 'Авторизация...' : 'Войти через Google (Firebase Auth)'}</span>
+                <span>{isGoogleSigningIn ? 'Вход…' : 'Войти через Google'}</span>
               </button>
             </div>
           )}
@@ -1136,7 +1148,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           </button>
         </div>
 
-        <div className="neu-card rounded-3xl p-4 space-y-2.5">
+        <div className="neu-flat rounded-3xl p-4 space-y-2.5">
           {profile.savedAddresses.length === 0 ? (
             <div className="text-center py-3 text-xs text-[#5C6B80]">
               Сохраненных адресов нет.{' '}
@@ -1210,7 +1222,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           </button>
         </div>
 
-        <div className="neu-card rounded-3xl p-4 space-y-2.5">
+        <div className="neu-flat rounded-3xl p-4 space-y-2.5">
           {profile.savedCards.length === 0 ? (
             <div className="text-center py-3 text-xs text-[#5C6B80]">
               Сохраненных карт нет.{' '}
@@ -1295,6 +1307,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           </button>
         </div>
 
+        {profile.bodyMeasurements ? (
         <div className="neu-inset rounded-3xl p-4 space-y-3.5 bg-[#E3E8EF] border border-white/60">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -1378,6 +1391,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </div>
           </div>
         </div>
+        ) : (
+          <div className="neu-inset rounded-3xl p-4 bg-[#E3E8EF] border border-white/60 text-center space-y-1">
+            <p className="text-xs font-bold text-[#2D3A4E]">Мерки ещё не указаны</p>
+            <p className="text-[11px] text-[#5C6B80]">
+              Нажмите «Изменить» и укажите рост, вес и обхваты — подберём размер по российским лекалам.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Section 4: Избранное */}
@@ -1385,7 +1406,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase px-1">
           Избранное
         </h3>
-        <div className="neu-card rounded-3xl p-3">
+        <div className="neu-flat rounded-3xl p-3">
           <button
             onClick={() => setActiveTab('favorites')}
             className="w-full p-3.5 neu-inset rounded-2xl flex items-center justify-between text-left hover:opacity-95 transition-all cursor-pointer active:scale-[0.98]"
@@ -1431,10 +1452,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
           <div className="space-y-2 text-xs text-[#2D3A4E] pt-1">
             <div className="neu-inset rounded-2xl p-3 space-y-1 bg-[#E3E8EF]">
+              {pickupAddress && (
               <div className="flex items-start gap-2">
                 <MapPin className="w-3.5 h-3.5 text-[#5F6ED0] shrink-0 mt-0.5" />
                 <span className="font-semibold text-[11px] leading-relaxed">{pickupAddress}</span>
               </div>
+              )}
               <div className="flex items-center gap-2 pt-1">
                 <Clock className="w-3.5 h-3.5 text-[#5C6B80] shrink-0" />
                 <span className="text-[11px] text-[#5C6B80] font-medium">{workingHours}</span>
@@ -1442,13 +1465,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </div>
 
             <div className="flex items-center gap-2 pt-1 flex-wrap">
+              {storePhone && (
               <a
-                href={`tel:${storePhone.replace(/[^\d+]/g, '')}`}
+                href={telHref(storePhone)}
                 className="flex-1 min-w-[130px] py-2.5 px-3 neu-inset rounded-xl text-[11px] font-black text-[#2D3A4E] hover:text-[#5F6ED0] flex items-center justify-center gap-1.5 transition-all bg-[#E3E8EF] border border-transparent hover:border-[#5F6ED0]/30"
               >
                 <Phone className="w-3.5 h-3.5 text-[#5F6ED0]" />
                 <span>{storePhone}</span>
               </a>
+              )}
 
               {onOpenSupportChat ? (
                 <button
@@ -1459,7 +1484,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   <MessageCircle className="w-3.5 h-3.5" />
                   <span>Чат с консьержем</span>
                 </button>
-              ) : (
+              ) : storeTelegram ? (
                 <a
                   href={`https://t.me/${storeTelegram.replace('@', '')}`}
                   target="_blank"
@@ -1469,7 +1494,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   <Send className="w-3.5 h-3.5" />
                   <span>{storeTelegram}</span>
                 </a>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -1480,7 +1505,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase px-1">
           Поддержка
         </h3>
-        <div className="neu-card rounded-3xl p-3 space-y-2">
+        <div className="neu-flat rounded-3xl p-3 space-y-2">
           <button
             onClick={() => {
               if (onOpenSupportChat) {
@@ -1526,8 +1551,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase px-1">
           Настройки
         </h3>
-        <div className="neu-card rounded-3xl p-3 space-y-2">
+        <div className="neu-flat rounded-3xl p-3 space-y-2">
           {/* Admin Panel Item Trigger */}
+          {/* Admin entry is only shown to verified admins (Google sign-in) */}
+          {isFirebaseAdmin && (
           <button
             id="admin-panel-trigger-btn"
             type="button"
@@ -1541,7 +1568,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-sm font-bold text-[#2D3A4E]">Панель администратора</p>
-                  <span className="neu-button-accent text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="neu-fill-accent text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
                     Управление
                   </span>
                   {isAdminAuthenticated && isFirebaseAdmin ? (
@@ -1563,6 +1590,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               <ChevronRight className="w-4 h-4 text-[#5C6B80] group-hover:text-[#5F6ED0] transition-colors" />
             </div>
           </button>
+          )}
 
           <div className="p-3.5 neu-inset rounded-2xl flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -1578,7 +1606,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <button
               onClick={toggleNotifications}
               className={`w-12 h-6 rounded-full p-0.5 transition-colors duration-200 cursor-pointer ${
-                notifications ? 'neu-button-accent text-white' : 'neu-inset bg-[#BAC5D5]/50'
+                notifications ? 'neu-fill-accent text-white' : 'neu-inset bg-[#BAC5D5]/50'
               }`}
             >
               <div
@@ -1607,19 +1635,21 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </div>
       </div>
 
-      {/* Logout Action Button */}
+      {/* Logout Action Button (only for a signed-in customer) */}
+      {currentUser && (
       <button
         onClick={handleFullLogout}
-        className="w-full neu-inset rounded-2xl p-4 flex items-center justify-center gap-2 text-[#5C6B80] hover:text-[#7E525E] font-bold text-sm active:scale-[0.99] transition-all cursor-pointer bg-[#E3E8EF] border border-transparent hover:border-[#7E525E]/30"
+        className="w-full neu-button-danger rounded-2xl p-4 flex items-center justify-center gap-2 font-bold text-sm active:scale-[0.99] transition-all cursor-pointer border-transparent"
       >
         <LogOut className="w-5 h-5 stroke-[2]" />
         <span>Выйти из аккаунта</span>
       </button>
+      )}
 
       {/* ================= MODAL: ORDER HISTORY & TRACKING ================= */}
       {activeModal === 'orders' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="neu-modal rounded-3xl max-w-lg w-full max-h-[88vh] flex flex-col border border-white/80 text-[#2D3A4E] shadow-2xl overflow-hidden transform-gpu">
+          <div className="neu-modal rounded-3xl max-w-lg w-full max-h-[88vh] flex flex-col border border-white/80 text-[#2D3A4E] overflow-hidden transform-gpu">
             {/* Sticky Fixed Header */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 p-4 sm:p-5 shrink-0 bg-[#E3E8EF]">
               <div className="flex items-center gap-2.5">
@@ -1651,7 +1681,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   onClick={() => setOrderFilter(f.id as any)}
                   className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     orderFilter === f.id
-                      ? 'neu-button-accent text-white font-extrabold'
+                      ? 'neu-pill-active font-extrabold'
                       : 'neu-button text-[#5C6B80] hover:text-[#2D3A4E]'
                   }`}
                 >
@@ -1854,7 +1884,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
                           <button
                             onClick={() => setSelectedOrderIdForTracking(ord.id)}
-                            className="neu-button-accent px-3 py-2 rounded-xl text-xs font-bold text-white flex items-center gap-1 shrink-0 active:scale-95 transition-transform cursor-pointer"
+                            className="neu-button px-3 py-2 rounded-xl text-xs font-bold text-[#5F6ED0] flex items-center gap-1 shrink-0 active:scale-95 transition-transform cursor-pointer"
                           >
                             <span>Детали</span>
                             <ChevronRight className="w-3.5 h-3.5" />
@@ -1874,7 +1904,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       {/* ================= DETAILED ORDER TRACKING MODAL ================= */}
       {selectedOrderForTracking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="neu-modal rounded-3xl max-w-md w-full max-h-[90vh] flex flex-col border border-white/80 text-[#2D3A4E] shadow-2xl overflow-hidden transform-gpu">
+          <div className="neu-modal rounded-3xl max-w-md w-full max-h-[90vh] flex flex-col border border-white/80 text-[#2D3A4E] overflow-hidden transform-gpu">
             {/* Sticky Fixed Header */}
             <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[#BAC5D5]/50 shrink-0 bg-[#E3E8EF]">
               <div>
@@ -2098,7 +2128,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                             <div
                               className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black transition-all shrink-0 ${
                                 isStepDone
-                                  ? 'neu-button-accent text-white shadow-sm'
+                                  ? 'neu-fill-accent text-white'
                                   : isStepActive
                                   ? 'neu-inset-deep text-[#5F6ED0] bg-[#E3E8EF] border border-[#5F6ED0] ring-1 ring-[#5F6ED0]/30 font-black'
                                   : 'neu-inset text-[#5C6B80]/70 bg-[#E3E8EF]'
@@ -2178,7 +2208,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                             <div
                               className={`w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-[10px] font-black transition-all z-10 ${
                                 isCompleted
-                                  ? 'neu-button-accent text-white shadow-sm'
+                                  ? 'neu-fill-accent text-white'
                                   : isActive
                                   ? 'neu-inset-deep text-[#5F6ED0] bg-[#E3E8EF] border border-[#5F6ED0] ring-2 ring-[#5F6ED0]/20'
                                   : 'neu-inset text-[#5C6B80] bg-[#E3E8EF]'
@@ -2445,7 +2475,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 return (
                   <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-blue-50/40 border border-blue-200/60 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center bg-white text-blue-700 font-black text-xs shrink-0 shadow-sm border border-blue-200/80">
+                      <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center bg-white text-blue-700 font-black text-xs shrink-0 border border-blue-200/80">
                         ПР
                       </div>
                       <div className="min-w-0">
@@ -2479,7 +2509,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 return (
                   <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-[#E3E8EF] flex items-center justify-between gap-3 border border-white/70">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center bg-white text-[#5F6ED0] font-black text-xs shrink-0 shadow-sm border border-white/90">
+                      <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center bg-white text-[#5F6ED0] font-black text-xs shrink-0 border border-white/90">
                         MS
                       </div>
                       <div className="min-w-0">
@@ -2513,7 +2543,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 return (
                   <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-[#E3E8EF] flex items-center justify-between gap-3 border border-white/70">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center bg-white text-[#5F6ED0] font-black text-xs shrink-0 shadow-sm border border-white/90">
+                      <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center bg-white text-[#5F6ED0] font-black text-xs shrink-0 border border-white/90">
                         АС
                       </div>
                       <div className="min-w-0">
@@ -2570,7 +2600,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               return (
                 <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-[#E3E8EF] flex items-center justify-between gap-3 border border-white/70">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center bg-white text-emerald-600 font-black text-xs shrink-0 shadow-sm border border-emerald-200/80">
+                    <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center bg-white text-emerald-600 font-black text-xs shrink-0 border border-emerald-200/80">
                       ТК
                     </div>
                     <div className="min-w-0">
@@ -2607,7 +2637,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  onShowToast('Товары заказа снова добавлены в корзину', 'success');
+                  if (!onRepeatOrder) return;
+                  onRepeatOrder(selectedOrderForTracking.items);
+                  setSelectedOrderIdForTracking(null);
                 }}
                 className="w-full neu-button-accent py-3 px-4 rounded-2xl text-xs font-extrabold text-white flex items-center justify-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
               >
@@ -2622,7 +2654,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       {/* ================= MODAL: SAVED ADDRESSES MANAGEMENT ================= */}
       {activeModal === 'addresses' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="neu-modal rounded-3xl max-w-md w-full max-h-[85vh] flex flex-col border border-white/80 text-[#2D3A4E] shadow-2xl overflow-hidden transform-gpu">
+          <div className="neu-modal rounded-3xl max-w-md w-full max-h-[85vh] flex flex-col border border-white/80 text-[#2D3A4E] overflow-hidden transform-gpu">
             {/* Sticky Fixed Header */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 p-4 sm:p-5 shrink-0 bg-[#E3E8EF]">
               <div className="flex items-center gap-2">
@@ -2659,8 +2691,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => handleDeleteAddress(addr.id)}
-                        className="p-1.5 neu-button rounded-xl text-[#5C6B80] hover:text-[#7E525E]"
+                        onClick={() => setAddressToDelete(addr.id)}
+                        className="p-1.5 neu-button-danger rounded-xl"
                         title="Удалить"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -2894,7 +2926,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 <div
                   className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
                     addrIsDefault
-                      ? 'neu-button-accent text-white'
+                      ? 'neu-fill-accent text-white'
                       : 'neu-inset text-transparent bg-[#E3E8EF]'
                   }`}
                 >
@@ -2928,7 +2960,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       {/* ================= MODAL: SAVED CARDS MANAGEMENT ================= */}
       {activeModal === 'cards' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="neu-modal rounded-3xl max-w-md w-full max-h-[85vh] flex flex-col border border-white/80 text-[#2D3A4E] shadow-2xl overflow-hidden transform-gpu">
+          <div className="neu-modal rounded-3xl max-w-md w-full max-h-[85vh] flex flex-col border border-white/80 text-[#2D3A4E] overflow-hidden transform-gpu">
             {/* Sticky Fixed Header */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 p-4 sm:p-5 shrink-0 bg-[#E3E8EF]">
               <div className="flex items-center gap-2">
@@ -2968,8 +3000,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => handleDeleteCard(card.id)}
-                        className="p-1.5 neu-button rounded-xl text-[#5C6B80] hover:text-[#7E525E] cursor-pointer"
+                        onClick={() => setCardToDelete(card.id)}
+                        className="p-1.5 neu-button-danger rounded-xl cursor-pointer"
                         title="Удалить"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -3071,7 +3103,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                   Платежная система
                 </label>
-                <div className="grid grid-cols-3 gap-1.5 p-1 neu-inset rounded-xl bg-[#E3E8EF]">
+                <div className="grid grid-cols-3 gap-1.5 p-1 neu-flat-sm rounded-xl bg-[#E3E8EF]">
                   {[
                     { id: 'mir', label: 'МИР' },
                     { id: 'visa', label: 'Visa' },
@@ -3083,7 +3115,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                       onClick={() => setCardType(t.id as any)}
                       className={`py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
                         cardType === t.id
-                          ? 'neu-button text-[#5F6ED0] bg-[#E3E8EF]'
+                          ? 'neu-pill-active'
                           : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                       }`}
                     >
@@ -3115,7 +3147,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 <div
                   className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${
                     cardIsDefault
-                      ? 'neu-button-accent text-white'
+                      ? 'neu-fill-accent text-white'
                       : 'neu-inset text-transparent'
                   }`}
                 >
@@ -3149,7 +3181,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       {/* ================= MODAL: EDIT BODY MEASUREMENTS & RUSSIAN PATTERN ================= */}
       {isEditingMeasurements && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="neu-modal rounded-3xl max-w-lg w-full max-h-[92vh] flex flex-col border border-white/80 text-[#2D3A4E] shadow-2xl overflow-hidden transform-gpu">
+          <div className="neu-modal rounded-3xl max-w-lg w-full max-h-[92vh] flex flex-col border border-white/80 text-[#2D3A4E] overflow-hidden transform-gpu">
             {/* Sticky Fixed Header */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 p-4 sm:p-5 shrink-0 bg-[#E3E8EF]">
               <div className="flex items-center gap-2.5">
@@ -3386,7 +3418,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         onClick={() => setMeasFit(pref.id as any)}
                         className={`py-2 px-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                           isActive
-                            ? 'neu-inset-deep text-[#5F6ED0] font-black bg-[#E3E8EF] border border-[#5F6ED0]/40'
+                            ? 'neu-pill-active font-black'
                             : 'neu-button text-[#5C6B80] hover:text-[#2D3A4E]'
                         }`}
                       >
@@ -3411,7 +3443,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 neu-button-accent rounded-xl font-extrabold text-xs text-white cursor-pointer active:scale-95 transition-transform flex items-center justify-center gap-1.5 shadow-md"
+                  className="flex-1 py-3 neu-button-accent rounded-xl font-extrabold text-xs text-white cursor-pointer active:scale-95 transition-transform flex items-center justify-center gap-1.5"
                 >
                   <Check className="w-4 h-4 stroke-[2.5]" />
                   <span>Сохранить лекало</span>
@@ -3479,7 +3511,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   id="admin-logout-btn"
                   type="button"
                   onClick={handleAdminLogout}
-                  className="h-9 px-3 rounded-xl neu-button flex items-center gap-1.5 text-xs font-bold text-rose-600 hover:text-rose-700 active:scale-95 transition-all cursor-pointer"
+                  className="h-9 px-3 rounded-xl neu-button-danger flex items-center gap-1.5 text-xs font-bold active:scale-95 transition-all cursor-pointer"
                   title="Выйти из сессии администратора"
                 >
                   <LogOut className="w-3.5 h-3.5" />
@@ -3590,6 +3622,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               {adminTab === 'orders' && (
                 <AdminOrdersTab
                   orders={orders}
+                  storefrontSettings={storefrontSettings}
                   products={productsList}
                   onUpdateOrders={handleUpdateOrders}
                   onUpdateProducts={handleUpdateProductsList}
@@ -3670,7 +3703,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                             onClick={() => setActiveChatThreadKey(thread.key)}
                             className={`shrink-0 max-w-[220px] text-left rounded-xl px-3 py-2 transition-all cursor-pointer ${
                               thread.key === activeChatThreadKey
-                                ? 'neu-button-accent text-white'
+                                ? 'neu-pill-active'
                                 : 'neu-button text-[#2D3A4E]'
                             }`}
                             title={thread.lastText}
@@ -3719,6 +3752,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       {/* ================= MODAL: FAQ ACCORDION ================= */}
       <FAQModal
         isOpen={activeModal === 'faq'}
+        freeDeliveryThreshold={storefrontSettings?.freeDeliveryThreshold}
+        returnPeriodDays={storefrontSettings?.returnPeriodDays}
+        storePhone={storePhone}
         onClose={() => setActiveModal(null)}
         onOpenSupportChat={onOpenSupportChat}
         onShowToast={onShowToast}
@@ -3768,27 +3804,29 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
               <div className="space-y-3 text-xs text-[#5C6B80] leading-relaxed">
                 <p className="font-bold text-[#2D3A4E]">Мы на связи и готовы помочь с любым вопросом!</p>
+                {storePhone && (
                 <div className="neu-inset rounded-2xl p-3.5 space-y-2 bg-[#E3E8EF]">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-bold text-[#2D3A4E]">Бесплатная горячая линия:</p>
+                      <p className="font-bold text-[#2D3A4E]">Телефон магазина:</p>
                       <a
-                        href="tel:88005553535"
+                        href={telHref(storePhone)}
                         className="text-[#5F6ED0] font-black text-base hover:underline block"
                       >
-                        8 (800) 555-35-35
+                        {storePhone}
                       </a>
                     </div>
                     <a
-                      href="tel:88005553535"
+                      href={telHref(storePhone)}
                       className="neu-button p-2.5 rounded-xl text-[#5F6ED0] hover:scale-105 active:scale-95 transition-transform"
-                      title="Позвонить прямо сейчас"
+                      title="Позвонить"
                     >
                       <Phone className="w-4 h-4" />
                     </a>
                   </div>
-                  <p className="text-[11px] text-[#5C6B80]">Ежедневно с 09:00 до 21:00 (звонок по РФ бесплатный)</p>
+                  <p className="text-[11px] text-[#5C6B80]">{workingHours}</p>
                 </div>
+                )}
 
                 <div className="space-y-2 pt-1">
                   {onOpenSupportChat && (
@@ -3865,6 +3903,21 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           });
         }}
         onShowToast={onShowToast}
+      />
+
+      <ConfirmDialog
+        isOpen={addressToDelete !== null}
+        title="Удалить адрес?"
+        message="Адрес будет удалён из сохранённых."
+        onConfirm={() => addressToDelete && handleDeleteAddress(addressToDelete)}
+        onClose={() => setAddressToDelete(null)}
+      />
+      <ConfirmDialog
+        isOpen={cardToDelete !== null}
+        title="Удалить карту?"
+        message="Карта будет удалена из сохранённых."
+        onConfirm={() => cardToDelete && handleDeleteCard(cardToDelete)}
+        onClose={() => setCardToDelete(null)}
       />
     </div>
   );

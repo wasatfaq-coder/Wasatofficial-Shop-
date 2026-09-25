@@ -153,7 +153,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.94, opacity: 0, y: 12 }}
             transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-            className="neu-modal rounded-3xl max-w-2xl w-full text-[#2D3A4E] my-auto relative border border-white/80 max-h-[92vh] flex flex-col z-10 bg-[#E3E8EF] overflow-hidden shadow-2xl"
+            className="neu-modal rounded-3xl max-w-2xl w-full text-[#2D3A4E] my-auto relative border border-white/80 max-h-[92vh] flex flex-col z-10 bg-[#E3E8EF] overflow-hidden"
           >
             {/* Top Header - Sticky */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 p-4 sm:p-5 gap-2 shrink-0 bg-[#E3E8EF]">
@@ -436,7 +436,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
               </svg>
 
               {/* Floating Live Courier Status Badge on Map */}
-              <div className="absolute bottom-2 left-2 right-2 bg-[#E3E8EF]/95 rounded-2xl p-2.5 sm:p-3 neu-flat-sm flex items-center justify-between text-xs border border-white/90 shadow-sm">
+              <div className="absolute bottom-2 left-2 right-2 bg-[#E3E8EF]/95 rounded-2xl p-2.5 sm:p-3 neu-flat-sm flex items-center justify-between text-xs border border-white/90">
                 <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
                   <div className="w-8 h-8 rounded-xl bg-[#5F6ED0] text-white flex items-center justify-center shrink-0">
                     <Truck className="w-4 h-4" />
@@ -479,7 +479,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
             return (
               <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-blue-50/50 border border-blue-200/70 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-11 h-11 rounded-2xl neu-flat flex items-center justify-center bg-white text-blue-700 shrink-0 font-black text-sm border border-blue-200/90 shadow-sm">
+                  <div className="w-11 h-11 rounded-2xl neu-flat flex items-center justify-center bg-white text-blue-700 shrink-0 font-black text-sm border border-blue-200/90">
                     ПР
                   </div>
                   <div className="min-w-0 flex-1 space-y-0.5">
@@ -521,7 +521,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
             return (
               <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-[#E3E8EF] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border border-white/70">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-11 h-11 rounded-2xl neu-flat flex items-center justify-center bg-white text-[#5F6ED0] shrink-0 font-black text-sm border border-white/90 shadow-sm">
+                  <div className="w-11 h-11 rounded-2xl neu-flat flex items-center justify-center bg-white text-[#5F6ED0] shrink-0 font-black text-sm border border-white/90">
                     MS
                   </div>
                   <div className="min-w-0 flex-1 space-y-0.5">
@@ -557,7 +557,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
           return (
             <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-[#E3E8EF] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border border-white/70">
               <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="w-11 h-11 rounded-2xl neu-flat flex items-center justify-center bg-white text-[#5F6ED0] shrink-0 font-black text-sm border border-white/90 shadow-sm">
+                <div className="w-11 h-11 rounded-2xl neu-flat flex items-center justify-center bg-white text-[#5F6ED0] shrink-0 font-black text-sm border border-white/90">
                   АС
                 </div>
                 <div className="min-w-0 flex-1 space-y-0.5">
@@ -631,7 +631,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                   key={step.id || `track-step-${idx}`}
                   className={`p-3 rounded-2xl flex items-start gap-3 transition-all ${
                     isCompleted
-                      ? 'neu-flat bg-[#E3E8EF] border border-emerald-400/40 shadow-xs'
+                      ? 'neu-flat bg-[#E3E8EF] border border-emerald-400/40'
                       : isActive
                       ? 'neu-inset-deep bg-[#E3E8EF] border border-[#5F6ED0]/70 ring-1 ring-[#5F6ED0]/30'
                       : 'neu-flat bg-[#E3E8EF]/60 opacity-65 border border-white/50'

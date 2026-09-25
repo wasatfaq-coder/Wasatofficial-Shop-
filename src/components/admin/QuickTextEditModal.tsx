@@ -85,7 +85,7 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg neu-flat rounded-3xl bg-[#E3E8EF] p-5 sm:p-6 space-y-4 border border-white/80 shadow-2xl relative animate-in zoom-in-95 duration-150"
+        className="w-full max-w-lg neu-flat rounded-3xl bg-[#E3E8EF] p-5 sm:p-6 space-y-4 border border-white/80 relative animate-in zoom-in-95 duration-150"
         role="dialog"
         aria-modal="true"
       >
@@ -212,7 +212,7 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
           <button
             type="button"
             onClick={handleSave}
-            className="py-2.5 px-5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform shadow-md"
+            className="py-2.5 px-5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
           >
             <Check className="w-4 h-4" />
             <span>Сохранить изменения</span>
