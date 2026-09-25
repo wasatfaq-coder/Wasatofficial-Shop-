@@ -16,10 +16,23 @@ import {
 import { Product, ProductReview, UserProfile } from '../types';
 import { getProductRating } from '../utils/productRating';
 
+const HELPFUL_VOTES_KEY = 'manstyle_review_helpful';
+
+function loadHelpfulVotes(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(HELPFUL_VOTES_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+  } catch {
+    return {};
+  }
+}
+
 interface ProductReviewsSectionProps {
   product: Product;
   userProfile?: UserProfile;
   onAddReview: (review: ProductReview) => void;
+  /** Saves the product's reviews (the «Полезно» counter) */
+  onUpdateReviews?: (reviews: ProductReview[]) => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
@@ -27,6 +40,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
   product,
   userProfile,
   onAddReview,
+  onUpdateReviews,
   onShowToast,
 }) => {
   const [isWriteReviewOpen, setIsWriteReviewOpen] = useState(false);
@@ -39,7 +53,8 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
   const [selectedSize, setSelectedSize] = useState(product.sizes[0] || 'M');
   const [selectedColor, setSelectedColor] = useState(product.colors[0]?.name || '');
   const [sortBy, setSortBy] = useState<'newest' | 'helpful'>('newest');
-  const [helpfulLikedIds, setHelpfulLikedIds] = useState<Record<string, boolean>>({});
+  // Reviews this browser marked «Полезно»; the count itself is stored with the product
+  const [helpfulLikedIds, setHelpfulLikedIds] = useState<Record<string, boolean>>(loadHelpfulVotes);
 
   // Dropdown states for custom neumorphic pickers
   const [isSizeDropdownOpen, setIsSizeDropdownOpen] = useState(false);
@@ -82,8 +97,22 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
   };
 
   const handleToggleHelpful = (reviewId: string) => {
-    const isLiked = helpfulLikedIds[reviewId];
-    setHelpfulLikedIds((prev) => ({ ...prev, [reviewId]: !isLiked }));
+    if (!onUpdateReviews) return;
+    const isLiked = Boolean(helpfulLikedIds[reviewId]);
+    onUpdateReviews(
+      (product.reviews || []).map((r) =>
+        r.id === reviewId ? { ...r, helpfulCount: Math.max(0, (r.helpfulCount || 0) + (isLiked ? -1 : 1)) } : r
+      )
+    );
+    const next = { ...helpfulLikedIds };
+    if (isLiked) delete next[reviewId];
+    else next[reviewId] = true;
+    setHelpfulLikedIds(next);
+    try {
+      localStorage.setItem(HELPFUL_VOTES_KEY, JSON.stringify(next));
+    } catch {
+      // Storage unavailable: the vote is saved, only the mark is not remembered
+    }
     onShowToast(
       isLiked ? 'Вы отменили голос' : 'Спасибо! Ваш голос учтен',
       'info'
@@ -121,8 +150,8 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
 
   const sortedReviews = [...reviews].sort((a, b) => {
     if (sortBy === 'helpful') {
-      const aCount = (a.helpfulCount || 0) + (helpfulLikedIds[a.id] ? 1 : 0);
-      const bCount = (b.helpfulCount || 0) + (helpfulLikedIds[b.id] ? 1 : 0);
+      const aCount = a.helpfulCount || 0;
+      const bCount = b.helpfulCount || 0;
       return bCount - aCount;
     }
     return 0; // default order
@@ -221,7 +250,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
       <div className="space-y-3">
         {sortedReviews.map((rev) => {
           const isLiked = !!helpfulLikedIds[rev.id];
-          const currentHelpful = (rev.helpfulCount || 0) + (isLiked ? 1 : 0);
+          const currentHelpful = rev.helpfulCount || 0;
 
           return (
             <div key={rev.id} className="neu-flat rounded-2xl p-4 space-y-3">

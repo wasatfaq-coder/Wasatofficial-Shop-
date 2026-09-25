@@ -833,6 +833,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
         product={product}
         userProfile={userProfile}
         onAddReview={handleAddReview}
+        onUpdateReviews={onUpdateProduct ? (reviews) => onUpdateProduct({ ...product, reviews }) : undefined}
         onShowToast={onShowToast || (() => {})}
       />
 

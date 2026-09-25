@@ -76,6 +76,7 @@ interface AdminSupportChatTabProps {
 }
 
 const TEMPLATES_STORAGE_KEY = 'manstyle_admin_reply_templates';
+const THREAD_META_STORAGE_KEY = 'manstyle_admin_thread_meta';
 
 export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   messages,
@@ -92,6 +93,17 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   // --- 1. DIALOG STATE ---
   // ProfileScreen passes the messages of one real customer dialog (grouped by threadId).
   // Name, contacts and order context come from that customer's own orders, never from another buyer's.
+  // Status, priority, reminder and tags of a dialog are the admin's notes: kept in this browser per
+  // customer (threadId), so they survive a reload (earlier they were lost and only looked saved)
+  const threadMetaKey = messages.find((m) => m.threadId)?.threadId ?? 'legacy';
+  const loadThreadMeta = (): Partial<CustomerThread> => {
+    try {
+      return JSON.parse(localStorage.getItem(THREAD_META_STORAGE_KEY) || '{}')[threadMetaKey] ?? {};
+    } catch {
+      return {};
+    }
+  };
+
   const buildMainThread = (prev?: CustomerThread): CustomerThread => {
     const customerUid = messages.find((m) => m.threadId)?.threadId;
     const threadName = [...messages].reverse().find((m) => m.threadName)?.threadName;
@@ -101,7 +113,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
       priority: 'standard',
       unreadCount: 0,
       tags: ['consultation'],
-      ...prev,
+      ...(prev ?? loadThreadMeta()),
       id: 'thread-main',
       customerName: threadName || lastOrder?.customerName || 'Покупатель',
       customerPhone: lastOrder?.customerPhone || '',
@@ -121,6 +133,23 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   const [threadFilterTab, setThreadFilterTab] = useState<'all' | 'waiting' | 'in_progress' | 'vip' | 'resolved'>('all');
   const [isInboxDrawerOpen, setIsInboxDrawerOpen] = useState<boolean>(true);
   const [viewMode, setViewMode] = useState<'dropdown' | 'cards'>('dropdown');
+
+  useEffect(() => {
+    const main = threads.find((t) => t.id === 'thread-main');
+    if (!main) return;
+    try {
+      const all = JSON.parse(localStorage.getItem(THREAD_META_STORAGE_KEY) || '{}');
+      all[threadMetaKey] = {
+        status: main.status,
+        priority: main.priority,
+        tags: main.tags,
+        followUpReminder: main.followUpReminder,
+      };
+      localStorage.setItem(THREAD_META_STORAGE_KEY, JSON.stringify(all));
+    } catch {
+      // Storage unavailable: kept for this session only
+    }
+  }, [threads, threadMetaKey]);
 
   // Keep the dialog in sync with live messages and orders
   useEffect(() => {

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { motion, AnimatePresence } from 'motion/react';
-import { SecuritySettingsModal } from '../components/SecuritySettingsModal';
+import { AccountDataModal } from '../components/AccountDataModal';
 import { currentStoreName, getStoreContacts, getStoreName, storeInitials, telHref } from '../utils/storeContacts';
 import { GUEST_USER_PROFILE } from '../data/products';
 import { FAQModal } from '../components/FAQModal';
@@ -69,7 +69,7 @@ import {
 import { NeumorphicSlider } from '../components/NeumorphicSlider';
 import { calculateRussianPattern, RUSSIAN_SIZE_TABLE_ROWS } from '../utils/russianSizing';
 import { useAuth } from '../context/AuthContext';
-import { UserProfile, Order, CartItem, OrderStatusHistoryStep, ActiveTab, SavedAddress, SavedCard, Product, PromoCode, BannerSlide, ChatMessage, StorefrontSettings, AdminCredentials, DeliveryMethod, PickupPoint } from '../types';
+import { UserProfile, Order, CartItem, OrderStatusHistoryStep, ActiveTab, SavedAddress, Product, PromoCode, BannerSlide, ChatMessage, StorefrontSettings, AdminCredentials, DeliveryMethod, PickupPoint } from '../types';
 import { formatAddress } from '../utils/addressFormat';
 import { AdminAnalyticsTab } from '../components/admin/AdminAnalyticsTab';
 import { AdminPromoConstructorTab } from '../components/admin/AdminPromoConstructorTab';
@@ -188,7 +188,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 }) => {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [addressToDelete, setAddressToDelete] = useState<string | null>(null);
-  const [cardToDelete, setCardToDelete] = useState<string | null>(null);
   const [name, setName] = useState(profile.name);
   const [email, setEmail] = useState(profile.email);
   const [phone, setPhone] = useState(profile.phone);
@@ -196,7 +195,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // Modals state
   const [activeModal, setActiveModal] = useState<
-    'orders' | 'addresses' | 'cards' | 'support' | 'faq' | 'admin' | 'security' | null
+    'orders' | 'addresses' | 'support' | 'faq' | 'admin' | 'security' | null
   >(null);
 
   // Local products list state (backed by props)
@@ -529,16 +528,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [addrPostal, setAddrPostal] = useState('');
   const [addrIsDefault, setAddrIsDefault] = useState(false);
 
-  // Card edit modal state
-  const [editingCard, setEditingCard] = useState<SavedCard | null>(null);
-  const [isAddingCard, setIsAddingCard] = useState(false);
-  const [cardBank, setCardBank] = useState('Т-Банк');
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardHolder, setCardHolder] = useState('IVAN PETROV');
-  const [cardExpiry, setCardExpiry] = useState('08/28');
-  const [cardType, setCardType] = useState<'mir' | 'visa' | 'mastercard'>('mir');
-  const [cardIsDefault, setCardIsDefault] = useState(false);
-
   // Body measurements modal state
   const [isEditingMeasurements, setIsEditingMeasurements] = useState(false);
   const [showGostTable, setShowGostTable] = useState(false);
@@ -783,90 +772,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     }));
     onUpdateProfile({ ...profile, savedAddresses: updated });
     onShowToast('Основной адрес сохранен', 'success');
-  };
-
-  // --- Card Handlers ---
-  const handleOpenAddCard = () => {
-    setEditingCard(null);
-    setCardBank('Т-Банк');
-    setCardNumber('');
-    setCardHolder(profile.name.toUpperCase() || 'IVAN PETROV');
-    setCardExpiry('08/28');
-    setCardType('mir');
-    setCardIsDefault(profile.savedCards.length === 0);
-    setIsAddingCard(true);
-  };
-
-  const handleOpenEditCard = (card: SavedCard) => {
-    setEditingCard(card);
-    setCardBank(card.bankName);
-    setCardNumber(card.cardNumber);
-    setCardHolder(card.cardHolder);
-    setCardExpiry(card.expiryDate);
-    setCardType(card.cardType);
-    setCardIsDefault(card.isDefault || false);
-    setIsAddingCard(true);
-  };
-
-  const handleSaveCard = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!cardNumber.trim()) {
-      onShowToast('Укажите номер карты', 'error');
-      return;
-    }
-
-    const maskedNum = cardNumber.length > 4 ? `•••• ${cardNumber.slice(-4)}` : cardNumber;
-    let updatedCards = [...profile.savedCards];
-
-    if (editingCard) {
-      updatedCards = updatedCards.map((c) => {
-        if (c.id === editingCard.id) {
-          return {
-            ...c,
-            bankName: cardBank,
-            cardNumber: maskedNum,
-            cardHolder: cardHolder,
-            expiryDate: cardExpiry,
-            cardType: cardType,
-            isDefault: cardIsDefault,
-          };
-        }
-        return cardIsDefault ? { ...c, isDefault: false } : c;
-      });
-    } else {
-      const newCard: SavedCard = {
-        id: `card-${Date.now()}`,
-        bankName: cardBank,
-        cardNumber: maskedNum,
-        cardHolder: cardHolder,
-        expiryDate: cardExpiry,
-        cardType: cardType,
-        isDefault: cardIsDefault || updatedCards.length === 0,
-      };
-      if (cardIsDefault) {
-        updatedCards = updatedCards.map((c) => ({ ...c, isDefault: false }));
-      }
-      updatedCards.push(newCard);
-    }
-
-    onUpdateProfile({ ...profile, savedCards: updatedCards });
-    setIsAddingCard(false);
-    onShowToast(editingCard ? 'Карта обновлена' : 'Способ оплаты сохранен', 'success');
-  };
-
-  const handleDeleteCard = (id: string) => {
-    const updated = profile.savedCards.filter((c) => c.id !== id);
-    onUpdateProfile({ ...profile, savedCards: updated });
-    onShowToast('Карта удалена', 'info');
-  };
-
-  const handleSetDefaultCard = (id: string) => {
-    const updated = profile.savedCards.map((c) => ({
-      ...c,
-      isDefault: c.id === id,
-    }));
-    onUpdateProfile({ ...profile, savedCards: updated });
-    onShowToast('Основная карта выбрана', 'success');
   };
 
   // Helper for tracking progress % and stage colors
@@ -1214,82 +1119,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </div>
       </div>
 
-      {/* Section 3: Способы оплаты (Saved Cards) */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between px-1">
-          <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase">
-            Способы оплаты
-          </h3>
-          <button
-            onClick={() => setActiveModal('cards')}
-            className="text-[11px] font-bold text-accent hover:underline flex items-center gap-1 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Управление ({profile.savedCards.length})</span>
-          </button>
-        </div>
-
-        <div className="neu-flat rounded-3xl p-4 space-y-2.5">
-          {profile.savedCards.length === 0 ? (
-            <div className="text-center py-3 text-xs text-[#4E5C70]">
-              Сохраненных карт нет.{' '}
-              <button
-                onClick={handleOpenAddCard}
-                className="text-accent font-bold underline ml-1 cursor-pointer"
-              >
-                Привязать карту
-              </button>
-            </div>
-          ) : (
-            profile.savedCards.map((card) => (
-              <div
-                key={card.id}
-                className="neu-inset rounded-2xl p-3 flex items-center justify-between gap-2"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-accent shrink-0 font-bold text-xs uppercase">
-                    <CreditCard className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0 space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-[#2D3A4E]">{card.bankName}</span>
-                      <span className="text-[11px] uppercase font-bold text-[#4E5C70]">
-                        {card.cardNumber}
-                      </span>
-                      {card.isDefault && (
-                        <span className="text-[11px] font-bold text-success neu-inset px-2 py-0.5 rounded-full">
-                          Основная
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-[#4E5C70]">
-                      Срок до {card.expiryDate} • {card.cardHolder}
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => handleOpenEditCard(card)}
-                  className="p-2 neu-button rounded-xl text-[#4E5C70] hover:text-[#2D3A4E] shrink-0 cursor-pointer"
-                  title="Изменить карту"
-                  aria-label="Изменить карту"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))
-          )}
-
-          <button
-            onClick={handleOpenAddCard}
-            className="w-full py-3 neu-button rounded-2xl text-xs font-bold text-accent flex items-center justify-center gap-1.5 hover:opacity-95 active:scale-[0.98] transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>Привязать новую карту</span>
-          </button>
-        </div>
-      </div>
-
       {/* Section: Параметры фигуры & Лекало РФ */}
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1">
@@ -1633,8 +1462,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 <Lock className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-sm font-bold text-[#2D3A4E]">Безопасность данных</p>
-                <p className="text-xs text-[#4E5C70]">Конфиденциальность, пароль и 2FA</p>
+                <p className="text-sm font-bold text-[#2D3A4E]">Аккаунт и данные</p>
+                <p className="text-xs text-[#4E5C70]">Вход через Google, выгрузка данных</p>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-[#4E5C70]" />
@@ -2968,231 +2797,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </div>
       )}
 
-      {/* ================= MODAL: SAVED CARDS MANAGEMENT ================= */}
-      {activeModal === 'cards' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="neu-modal rounded-3xl max-w-md w-full max-h-[85vh] flex flex-col border border-white/80 text-[#2D3A4E] overflow-hidden transform-gpu">
-            {/* Sticky Fixed Header */}
-            <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 p-4 sm:p-5 shrink-0 bg-[#E3E8EF]">
-              <div className="flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-accent" />
-                <h3 className="text-base font-extrabold text-[#2D3A4E]">Способы оплаты</h3>
-              </div>
-              <button
-                onClick={() => setActiveModal(null)}
-                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer active:scale-95 transition-transform"
-                aria-label="Закрыть"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Smooth Scrollable Body */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3 no-scrollbar overscroll-contain transform-gpu">
-              {profile.savedCards.map((card) => (
-                <div key={card.id} className="neu-inset rounded-2xl p-3.5 space-y-2 bg-[#E3E8EF]">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-black text-[#2D3A4E]">{card.bankName}</span>
-                      <span className="text-[11px] uppercase font-bold text-[#4E5C70]">
-                        {card.cardNumber}
-                      </span>
-                      {card.isDefault && (
-                        <span className="text-[11px] font-bold text-success neu-inset px-2 py-0.5 rounded-full">
-                          Основная
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleOpenEditCard(card)}
-                        className="p-1.5 neu-button rounded-xl text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
-                        title="Редактировать"
-                        aria-label="Редактировать"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => setCardToDelete(card.id)}
-                        className="p-1.5 neu-button-danger rounded-xl cursor-pointer"
-                        title="Удалить"
-                        aria-label="Удалить"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <p className="text-[11px] text-[#4E5C70]">
-                    Владелец: {card.cardHolder} • Действует до: {card.expiryDate}
-                  </p>
-
-                  {!card.isDefault && (
-                    <button
-                      onClick={() => handleSetDefaultCard(card.id)}
-                      className="text-[11px] font-bold text-accent hover:underline pt-1 block cursor-pointer"
-                    >
-                      Сделать основной картой
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Sticky Action Footer */}
-            <div className="p-3.5 sm:p-4 border-t border-[#BAC5D5]/50 shrink-0 bg-[#E3E8EF]">
-              <button
-                type="button"
-                onClick={handleOpenAddCard}
-                className="w-full neu-button-accent rounded-2xl py-3 text-xs font-extrabold text-white flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
-              >
-                <Plus className="w-4 h-4 stroke-[3]" />
-                <span>Привязать карту</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ================= MODAL: ADD / EDIT CARD FORM ================= */}
-      {isAddingCard && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in">
-          <div className="neu-modal rounded-3xl p-5 max-w-md w-full space-y-4 border border-white/80 text-[#2D3A4E]">
-            <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-2">
-              <h3 className="text-sm font-extrabold text-[#2D3A4E]">
-                {editingCard ? 'Изменить карту' : 'Привязка новой карты'}
-              </h3>
-              <button
-                onClick={() => setIsAddingCard(false)}
-                className="w-7 h-7 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
-                aria-label="Закрыть"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveCard} className="space-y-3 text-xs">
-              <div>
-                <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
-                  Название банка
-                </label>
-                <input
-                  type="text"
-                  value={cardBank}
-                  onChange={(e) => setCardBank(e.target.value)}
-                  className="w-full neu-inset rounded-xl py-2.5 px-3 text-[#2D3A4E] placeholder:text-[#56647A]"
-                  placeholder="Т-Банк, Сбербанк, Альфа-Банк"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
-                  Номер карты (16 цифр)
-                </label>
-                <input
-                  type="text"
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(e.target.value)}
-                  className="w-full neu-inset rounded-xl py-2.5 px-3 text-[#2D3A4E] font-mono placeholder:text-[#56647A]"
-                  placeholder="2200 7000 0000 4821"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
-                  Срок действия (ММ/ГГ)
-                </label>
-                <input
-                  type="text"
-                  value={cardExpiry}
-                  onChange={(e) => setCardExpiry(e.target.value)}
-                  className="w-full neu-inset rounded-xl py-2.5 px-3 text-[#2D3A4E] placeholder:text-[#56647A]"
-                  placeholder="08/28"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
-                  Платежная система
-                </label>
-                <div className="grid grid-cols-3 gap-1.5 p-1 neu-flat-sm rounded-xl bg-[#E3E8EF]">
-                  {[
-                    { id: 'mir', label: 'МИР' },
-                    { id: 'visa', label: 'Visa' },
-                    { id: 'mastercard', label: 'Mastercard' },
-                  ].map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setCardType(t.id as any)}
-                      className={`py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
-                        cardType === t.id
-                          ? 'neu-pill-active'
-                          : 'text-[#4E5C70] hover:text-[#2D3A4E]'
-                      }`}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
-                  Имя владельца на карте
-                </label>
-                <input
-                  type="text"
-                  value={cardHolder}
-                  onChange={(e) => setCardHolder(e.target.value.toUpperCase())}
-                  className="w-full neu-inset rounded-xl py-2.5 px-3 text-[#2D3A4E] uppercase placeholder:text-[#56647A]"
-                  placeholder="IVAN PETROV"
-                  required
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setCardIsDefault(!cardIsDefault)}
-                className="flex items-center gap-2.5 pt-1 text-left w-full group cursor-pointer"
-              >
-                <div
-                  className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${
-                    cardIsDefault
-                      ? 'neu-fill-accent text-white'
-                      : 'neu-inset text-transparent'
-                  }`}
-                >
-                  <Check className="w-3.5 h-3.5 stroke-[3]" />
-                </div>
-                <span className="font-bold text-xs text-[#2D3A4E] group-hover:text-accent">
-                  Сделать основной картой
-                </span>
-              </button>
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAddingCard(false)}
-                  className="flex-1 py-2.5 neu-button rounded-xl text-[#4E5C70] font-bold hover:text-[#2D3A4E] cursor-pointer"
-                >
-                  Отмена
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 neu-button-accent rounded-xl font-extrabold text-white cursor-pointer"
-                >
-                  Сохранить
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* ================= MODAL: EDIT BODY MEASUREMENTS & RUSSIAN PATTERN ================= */}
       {isEditingMeasurements && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in duration-200">
@@ -3954,24 +3558,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       />
 
       {/* Neumorphic Security Settings Modal */}
-      <SecuritySettingsModal
+      <AccountDataModal
         isOpen={activeModal === 'security'}
         onClose={() => setActiveModal(null)}
-        userEmail={profile.email}
-        isGoogleUser={!!currentUser}
-        twoFactorEnabled={profile.notificationsEnabled}
-        onToggleTwoFactor={(enabled) => {
-          onUpdateProfile({
-            ...profile,
-            notificationsEnabled: enabled,
-          });
-        }}
-        onUpdateEmail={(newEmail) => {
-          onUpdateProfile({
-            ...profile,
-            email: newEmail,
-          });
-        }}
+        profile={profile}
+        orders={orders}
+        googleEmail={currentUser?.email}
+        onSignOut={handleGoogleLogoutClick}
         onShowToast={onShowToast}
       />
 
@@ -3981,13 +3574,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         message="Адрес будет удален из сохраненных."
         onConfirm={() => addressToDelete && handleDeleteAddress(addressToDelete)}
         onClose={() => setAddressToDelete(null)}
-      />
-      <ConfirmDialog
-        isOpen={cardToDelete !== null}
-        title="Удалить карту?"
-        message="Карта будет удалена из сохраненных."
-        onConfirm={() => cardToDelete && handleDeleteCard(cardToDelete)}
-        onClose={() => setCardToDelete(null)}
       />
     </div>
   );
