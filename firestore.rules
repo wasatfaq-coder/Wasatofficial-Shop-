@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    // Products catalog: public read & write with valid ID
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isValidId(productId);
+    }
+
+    // Promo codes: public read & write with valid ID
+    match /promos/{promoId} {
+      allow read: if true;
+      allow write: if isValidId(promoId);
+    }
+
+    // Storefront banners: public read & write with valid ID
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow write: if isValidId(bannerId);
+    }
+
+    // Storefront & brand settings: public read & write with valid ID
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isValidId(settingId);
+    }
+
+    // Delivery shipping methods: public read & write with valid ID
+    match /delivery_methods/{methodId} {
+      allow read: if true;
+      allow write: if isValidId(methodId);
+    }
+
+    // Pickup points: public read & write with valid ID
+    match /pickup_points/{pointId} {
+      allow read: if true;
+      allow write: if isValidId(pointId);
+    }
+
+    // Orders collection: public read & write with valid ID
+    match /orders/{orderId} {
+      allow read: if true;
+      allow write: if isValidId(orderId);
+    }
+
+    // Customer support chat messages: public read & write with valid ID
+    match /chat_messages/{messageId} {
+      allow read: if true;
+      allow write: if isValidId(messageId);
+    }
+
+    // User profiles: public read & write with valid ID
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isValidId(userId);
+    }
+
+    // Admins registry: public read & write with valid ID
+    match /admins/{adminId} {
+      allow read: if true;
+      allow write: if isValidId(adminId);
+    }
+
+    // Test connectivity probe
+    match /test/{testId} {
+      allow read, write: if true;
+    }
+  }
+}

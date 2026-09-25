@@ -1,0 +1,194 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Storefront product with variants, SKUs and pricing",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "category": { "type": "string", "maxLength": 128 },
+        "price": { "type": "number" },
+        "originalPrice": { "type": "number" },
+        "description": { "type": "string", "maxLength": 4096 },
+        "inStock": { "type": "boolean" }
+      },
+      "required": ["id", "title", "price", "category"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer order with line items and delivery status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "customerName": { "type": "string", "maxLength": 128 },
+        "customerEmail": { "type": "string", "maxLength": 256 },
+        "customerPhone": { "type": "string", "maxLength": 64 },
+        "deliveryAddress": { "type": "string", "maxLength": 512 },
+        "deliveryType": { "type": "string", "maxLength": 64 },
+        "paymentMethod": { "type": "string", "maxLength": 64 },
+        "paymentStatus": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "maxLength": 64 },
+        "totalPrice": { "type": "number" },
+        "date": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "totalPrice", "status"]
+    },
+    "PromoCode": {
+      "title": "PromoCode",
+      "description": "Discounts and promotional codes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "code": { "type": "string", "maxLength": 64 },
+        "discountPercent": { "type": "number" },
+        "discountValue": { "type": "number" },
+        "title": { "type": "string", "maxLength": 256 },
+        "active": { "type": "boolean" }
+      },
+      "required": ["id", "code", "discountPercent", "active"]
+    },
+    "StorefrontSettings": {
+      "title": "StorefrontSettings",
+      "description": "Store configuration and contacts",
+      "type": "object",
+      "properties": {
+        "storeName": { "type": "string", "maxLength": 128 },
+        "phone": { "type": "string", "maxLength": 64 },
+        "email": { "type": "string", "maxLength": 128 },
+        "pickupAddress": { "type": "string", "maxLength": 512 },
+        "isStoreOnline": { "type": "boolean" }
+      },
+      "required": ["storeName"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Real-time support chat messages",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "sender": { "type": "string", "maxLength": 32 },
+        "text": { "type": "string", "maxLength": 4096 },
+        "timestamp": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "sender", "text"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Designated administrator identity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "role": { "type": "string", "maxLength": 32 }
+      },
+      "required": ["id", "email", "role"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user profile",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "phone": { "type": "string", "maxLength": 64 },
+        "address": { "type": "string", "maxLength": 512 }
+      },
+      "required": ["uid", "name"]
+    },
+    "Banner": {
+      "title": "Banner",
+      "description": "Storefront promo slider banners and announcements",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "imageUrl": { "type": "string", "maxLength": 1000000 },
+        "isActive": { "type": "boolean" },
+        "order": { "type": "number" }
+      },
+      "required": ["id", "title"]
+    },
+    "DeliveryMethod": {
+      "title": "DeliveryMethod",
+      "description": "Delivery shipping method configuration modules",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "duration": { "type": "string", "maxLength": 128 },
+        "price": { "type": "number" },
+        "icon": { "type": "string", "maxLength": 64 },
+        "description": { "type": "string", "maxLength": 2048 },
+        "type": { "type": "string", "maxLength": 64 },
+        "freeThreshold": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "sortOrder": { "type": "number" },
+        "highlightBadge": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "title", "price"]
+    },
+    "PickupPoint": {
+      "title": "PickupPoint",
+      "description": "Self-pickup store locations and boutiques",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 256 },
+        "city": { "type": "string", "maxLength": 128 },
+        "address": { "type": "string", "maxLength": 512 },
+        "metro": { "type": "string", "maxLength": 256 },
+        "schedule": { "type": "string", "maxLength": 256 },
+        "phone": { "type": "string", "maxLength": 64 },
+        "note": { "type": "string", "maxLength": 2048 },
+        "isActive": { "type": "boolean" },
+        "isDefault": { "type": "boolean" }
+      },
+      "required": ["id", "name", "address"]
+    }
+  },
+  "firestore": {
+    "/delivery_methods/{methodId}": {
+      "schema": "DeliveryMethod",
+      "description": "Delivery shipping methods configurable via admin"
+    },
+    "/pickup_points/{pointId}": {
+      "schema": "PickupPoint",
+      "description": "Self-pickup physical points and boutique locations"
+    },
+    "/banners/{bannerId}": {
+      "schema": "Banner",
+      "description": "Storefront marketing banners readable by all, editable by admins"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Catalog products accessible publicly for read, editable by admins"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Customer orders visible to order owner and admins"
+    },
+    "/promos/{promoId}": {
+      "schema": "PromoCode",
+      "description": "Promotional codes list readable by all, editable by admins"
+    },
+    "/settings/{settingId}": {
+      "schema": "StorefrontSettings",
+      "description": "Global storefront settings readable by all, editable by admins"
+    },
+    "/chat_messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Support chat messages readable and writable by participants and admins"
+    },
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "Designated admin collection"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile data accessible by the user and admins"
+    }
+  }
+}

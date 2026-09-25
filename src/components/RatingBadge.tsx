@@ -1,0 +1,57 @@
+import React from 'react';
+import { Star } from 'lucide-react';
+
+interface RatingBadgeProps {
+  rating: number;
+  reviewsCount?: number;
+  showLabel?: boolean;
+  size?: 'sm' | 'md';
+  variant?: 'flat' | 'photo';
+  className?: string;
+}
+
+export const RatingBadge: React.FC<RatingBadgeProps> = ({
+  rating,
+  reviewsCount,
+  showLabel = false,
+  size = 'sm',
+  variant = 'flat',
+  className = '',
+}) => {
+  const formattedRating = (Math.round((rating || 5) * 10) / 10).toFixed(1);
+
+  if (variant === 'flat') {
+    return (
+      <div
+        className={`neu-flat text-[#5F6ED0] font-extrabold text-[10px] px-3 py-1 rounded-full uppercase tracking-wider inline-flex items-center justify-center gap-1.5 shrink-0 leading-none ${className}`}
+      >
+        <Star className="w-2.5 h-2.5 fill-[#5F6ED0] text-[#5F6ED0] shrink-0" strokeWidth={0} />
+        {showLabel && <span>Рейтинг</span>}
+        <span>{formattedRating}</span>
+        {reviewsCount !== undefined && showLabel && (
+          <span className="opacity-80 font-bold">({reviewsCount})</span>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`rounded-full neu-photo-badge text-[#2D3A4E] font-bold inline-flex items-center justify-center shrink-0 leading-none ${
+        size === 'sm' ? 'h-6 px-2.5 text-[10px] gap-1' : 'h-7 px-3 text-xs gap-1.5'
+      } ${className}`}
+    >
+      <Star
+        className={`${
+          size === 'sm' ? 'w-2.5 h-2.5' : 'w-3 h-3'
+        } fill-[#5C6B80] text-[#5C6B80] shrink-0`}
+        strokeWidth={0}
+      />
+      {showLabel && <span className="text-[#5C6B80] font-semibold text-[10px]">Рейтинг</span>}
+      <span className="font-bold">{formattedRating}</span>
+      {reviewsCount !== undefined && showLabel && (
+        <span className="text-[#5C6B80] font-normal text-[10px]">({reviewsCount})</span>
+      )}
+    </div>
+  );
+};
