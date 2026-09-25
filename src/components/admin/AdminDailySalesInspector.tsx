@@ -49,7 +49,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
   if (!dayData) return null;
 
   const statusLabelMap: Record<string, { label: string; color: string }> = {
-    accepted: { label: 'Принят', color: 'text-blue-700 bg-blue-100' },
+    accepted: { label: 'Принят', color: 'text-accent bg-accent/10' },
     assembling: { label: 'Собирается', color: 'text-warning bg-warning-soft' },
     in_transit: { label: 'В доставке', color: 'text-purple-700 bg-purple-100' },
     ready: { label: 'Готов к выдаче', color: 'text-success bg-success-soft' },
@@ -58,17 +58,17 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
   };
 
   return (
-    <div className="neu-inset rounded-2xl p-4 sm:p-5 bg-[#E3E8EF] border border-[#5F6ED0]/40 space-y-4 transition-all animate-in fade-in-50 duration-200">
+    <div className="neu-inset rounded-2xl p-4 sm:p-5 bg-[#E3E8EF] border border-accent/40 space-y-4 transition-all animate-in fade-in-50 duration-200">
       {/* Header with Day Navigator & Close */}
       <div className="flex items-center justify-between gap-3 flex-wrap border-b border-[#BAC5D5]/50 pb-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-[#4B59BB] bg-[#E3E8EF] shrink-0">
+          <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-accent bg-[#E3E8EF] shrink-0">
             <Calendar className="w-5 h-5" />
           </div>
 
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-black uppercase tracking-wider text-[#4B59BB]">
+              <span className="text-[11px] font-black uppercase tracking-wider text-accent">
                 Срез дня
               </span>
               {dayIndex !== undefined && totalDays !== undefined && (
@@ -83,7 +83,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
                 </span>
               )}
               {dayData.hasRealOrders && (
-                <span className="text-[11px] font-black text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <span className="text-[11px] font-black text-accent bg-accent/10 px-2 py-0.5 rounded-full flex items-center gap-1">
                   ⚡ Firestore ({dayData.realOrdersList.length})
                 </span>
               )}
@@ -91,7 +91,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
 
             <h4 className="text-sm sm:text-base font-black text-[#2D3A4E] mt-0.5 flex items-center gap-2">
               <span>{dayData.fullDate}</span>
-              <span className="text-xs font-bold text-[#4B59BB]">({dayData.weekday})</span>
+              <span className="text-xs font-bold text-accent">({dayData.weekday})</span>
             </h4>
           </div>
         </div>
@@ -151,11 +151,11 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
         <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-1">
           <div className="flex items-center justify-between text-[#4E5C70]">
             <span className="text-[11px] font-bold uppercase tracking-wider">Выручка за сутки</span>
-            <div className="w-5 h-5 rounded-lg neu-inset flex items-center justify-center text-[#4B59BB] bg-[#E3E8EF]">
+            <div className="w-5 h-5 rounded-lg neu-inset flex items-center justify-center text-accent bg-[#E3E8EF]">
               <DollarSign className="w-3 h-3" />
             </div>
           </div>
-          <p className="text-base sm:text-lg font-black text-[#4B59BB] tracking-tight">
+          <p className="text-base sm:text-lg font-black text-accent tracking-tight">
             {dayData.revenue.toLocaleString('ru-RU')} ₽
           </p>
           <div className="text-[11px] text-[#4E5C70] flex items-center justify-between">
@@ -177,7 +177,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
           </p>
           <div className="text-[11px] text-[#4E5C70] flex items-center justify-between">
             <span>Заказов в базе:</span>
-            <strong className="text-indigo-600 font-bold">{dayData.realOrdersList.length}</strong>
+            <strong className="text-accent font-bold">{dayData.realOrdersList.length}</strong>
           </div>
         </div>
 
@@ -222,7 +222,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
       <div className="space-y-2.5 pt-1">
         <div className="flex items-center justify-between text-xs font-bold text-[#4E5C70]">
           <span className="flex items-center gap-1.5 text-[#2D3A4E]">
-            <Package className="w-4 h-4 text-[#4B59BB]" />
+            <Package className="w-4 h-4 text-accent" />
             Реестр заказов за {dayData.date}:
           </span>
           <span className="text-[11px] neu-inset px-2.5 py-1 rounded-lg bg-[#E3E8EF] text-[#2D3A4E] font-extrabold">
@@ -246,11 +246,11 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
                     onSelectOrder?.(ord);
                     triggerChartHapticFeedback('medium');
                   }}
-                  className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] flex items-center justify-between gap-3 text-xs hover:border-[#5F6ED0]/50 border border-transparent transition-all cursor-pointer group active:scale-[0.99]"
+                  className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] flex items-center justify-between gap-3 text-xs hover:border-accent/50 border border-transparent transition-all cursor-pointer group active:scale-[0.99]"
                 >
                   <div className="space-y-1.5 min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono font-black text-[#2D3A4E] text-[12px] group-hover:text-[#4B59BB] transition-colors flex items-center gap-0.5">
+                      <span className="font-mono font-black text-[#2D3A4E] text-[12px] group-hover:text-accent transition-colors flex items-center gap-0.5">
                         <Hash className="w-3 h-3 text-[#4E5C70]" />
                         {ord.id}
                       </span>
@@ -291,13 +291,13 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
                   </div>
 
                   <div className="text-right shrink-0 space-y-1">
-                    <p className="text-sm font-black text-[#4B59BB] tabular-nums">
+                    <p className="text-sm font-black text-accent tabular-nums">
                       {ord.totalPrice.toLocaleString('ru-RU')} ₽
                     </p>
                     <span className="text-[11px] text-[#4E5C70] block">
                       {ord.paymentMethod || 'Карта онлайн'}
                     </span>
-                    <span className="text-[11px] font-bold text-[#4B59BB] group-hover:underline flex items-center justify-end gap-0.5">
+                    <span className="text-[11px] font-bold text-accent group-hover:underline flex items-center justify-end gap-0.5">
                       Детали <ChevronRight className="w-2.5 h-2.5" />
                     </span>
                   </div>

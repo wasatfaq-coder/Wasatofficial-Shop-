@@ -109,7 +109,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
 
     // Default icon
     return (
-      <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-[#4B59BB] bg-[#E3E8EF] shrink-0">
+      <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-accent bg-[#E3E8EF] shrink-0">
         <Bell className="w-4 h-4 stroke-[2.5]" />
       </div>
     );
@@ -135,7 +135,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
                 {toast.badgeText && (
                   <span
                     className={`text-[11px] font-black px-2 py-0.5 rounded-full border ${
-                      toast.badgeBg || 'bg-indigo-100 text-[#4B59BB] border-indigo-200'
+                      toast.badgeBg || 'bg-accent/10 text-accent border-accent/20'
                     }`}
                   >
                     {toast.badgeText}
@@ -143,7 +143,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
                 )}
               </div>
               {toast.subtitle && (
-                <p className="text-[11px] font-bold text-[#4B59BB] mt-0.5 truncate">
+                <p className="text-[11px] font-bold text-accent mt-0.5 truncate">
                   {toast.subtitle}
                 </p>
               )}
@@ -193,7 +193,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
     >
       <div className="flex items-center gap-2.5 min-w-0">
         {toast.type === 'success' && <CheckCircle className="w-5 h-5 text-success shrink-0" />}
-        {toast.type === 'info' && <Info className="w-5 h-5 text-[#4B59BB] shrink-0" />}
+        {toast.type === 'info' && <Info className="w-5 h-5 text-accent shrink-0" />}
         {toast.type === 'error' && <AlertCircle className="w-5 h-5 text-danger shrink-0" />}
         <span className="text-xs sm:text-sm font-bold text-[#2D3A4E] truncate">{toast.text}</span>
       </div>

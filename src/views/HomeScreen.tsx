@@ -223,7 +223,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               Онлайн-корзина временно на обновлении. Для резервирования моделей свяжитесь с
               консьержем{phone ? (
                 <>
-                  : <strong className="text-[#4B59BB]">{phone}</strong>
+                  : <strong className="text-accent">{phone}</strong>
                 </>
               ) : (
                 ' в чате поддержки'
@@ -239,7 +239,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <button
             type="button"
             onClick={onOpenDrawer}
-            className="w-11 h-11 rounded-full neu-inset flex items-center justify-center text-[#2D3A4E] hover:text-[#4B59BB] shrink-0 active:scale-95 transition-all cursor-pointer bg-[#E3E8EF]"
+            className="w-11 h-11 rounded-full neu-inset flex items-center justify-center text-[#2D3A4E] hover:text-accent shrink-0 active:scale-95 transition-all cursor-pointer bg-[#E3E8EF]"
             aria-label="Открыть меню"
             title="Меню"
           >
@@ -271,7 +271,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               setActiveTab('catalog');
             }
           }}
-          className="w-11 h-11 rounded-full neu-inset flex items-center justify-center text-[#2D3A4E] hover:text-[#4B59BB] shrink-0 active:scale-95 transition-all cursor-pointer bg-[#E3E8EF]"
+          className="w-11 h-11 rounded-full neu-inset flex items-center justify-center text-[#2D3A4E] hover:text-accent shrink-0 active:scale-95 transition-all cursor-pointer bg-[#E3E8EF]"
           title="Расширенная фильтрация"
           aria-label="Расширенная фильтрация"
         >
@@ -298,14 +298,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {/* Left Text content */}
             <div className="flex-1 space-y-2 max-w-[52%]">
               {currentSlide.badge && (
-                <span className="text-[11px] font-black neu-button px-2.5 py-0.5 rounded-full text-[#4B59BB] uppercase tracking-wider inline-block bg-[#E3E8EF]">
+                <span className="text-[11px] font-black neu-button px-2.5 py-0.5 rounded-full text-accent uppercase tracking-wider inline-block bg-[#E3E8EF]">
                   {currentSlide.badge}
                 </span>
               )}
               <h2 className="text-[22px] sm:text-[24px] font-extrabold text-[#2D3A4E] leading-tight">
                 {currentSlide.title}
               </h2>
-              <p className="text-[12px] sm:text-[13px] text-[#6B7280] font-normal leading-relaxed line-clamp-2">
+              <p className="text-[12px] sm:text-[13px] text-[#4E5C70] font-normal leading-relaxed line-clamp-2">
                 {currentSlide.subtitle}
               </p>
             </div>
@@ -361,10 +361,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 }}
                 className="flex flex-col items-center gap-2 group cursor-pointer bg-transparent border-0 p-0 select-none"
               >
-                <div className="w-14 h-14 rounded-2xl neu-inset flex items-center justify-center text-[#2D3A4E] group-hover:text-[#4B59BB] group-hover:scale-105 group-active:scale-95 transition-all duration-150 cursor-pointer bg-[#E3E8EF]">
+                <div className="w-14 h-14 rounded-2xl neu-inset flex items-center justify-center text-[#2D3A4E] group-hover:text-accent group-hover:scale-105 group-active:scale-95 transition-all duration-150 cursor-pointer bg-[#E3E8EF]">
                   <IconComp className="w-6 h-6 stroke-[1.8]" />
                 </div>
-                <span className="text-[13px] font-medium text-[#2D3A4E] group-hover:text-[#4B59BB] truncate max-w-full">
+                <span className="text-[13px] font-medium text-[#2D3A4E] group-hover:text-accent truncate max-w-full">
                   {cat.name}
                 </span>
               </button>
@@ -375,7 +375,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       {/* 7. Live Storefront Service & Trust Badges */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 py-1">
         <div className="neu-inset rounded-2xl p-3 text-center space-y-1 bg-[#E3E8EF]">
-          <div className="w-7 h-7 mx-auto rounded-xl neu-button flex items-center justify-center text-[#4B59BB] bg-[#E3E8EF]">
+          <div className="w-7 h-7 mx-auto rounded-xl neu-button flex items-center justify-center text-accent bg-[#E3E8EF]">
             <Truck className="w-3.5 h-3.5" />
           </div>
           <span className="text-[11px] font-extrabold text-[#2D3A4E] block">
@@ -389,7 +389,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
 
         <div className="neu-inset rounded-2xl p-3 text-center space-y-1 bg-[#E3E8EF]">
-          <div className="w-7 h-7 mx-auto rounded-xl neu-button flex items-center justify-center text-[#4B59BB] bg-[#E3E8EF]">
+          <div className="w-7 h-7 mx-auto rounded-xl neu-button flex items-center justify-center text-accent bg-[#E3E8EF]">
             <RotateCcw className="w-3.5 h-3.5" />
           </div>
           <span className="text-[11px] font-extrabold text-[#2D3A4E] block">
@@ -407,7 +407,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
 
         <div className="neu-inset rounded-2xl p-3 text-center space-y-1 bg-[#E3E8EF]">
-          <div className="w-7 h-7 mx-auto rounded-xl neu-button flex items-center justify-center text-[#4B59BB] bg-[#E3E8EF]">
+          <div className="w-7 h-7 mx-auto rounded-xl neu-button flex items-center justify-center text-accent bg-[#E3E8EF]">
             <Sparkles className="w-3.5 h-3.5" />
           </div>
           <span className="text-[11px] font-extrabold text-[#2D3A4E] block">Консьерж-сервис</span>
@@ -421,7 +421,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <h2 className="text-[18px] font-bold text-[#2D3A4E] tracking-tight">Популярное</h2>
           <button
             onClick={() => setActiveTab('catalog')}
-            className="neu-inset rounded-xl px-3 py-1.5 text-[12px] font-bold text-[#4B59BB] hover:text-[#3F4BA6] flex items-center gap-1 transition-all active:scale-95 bg-[#E3E8EF]"
+            className="neu-inset rounded-xl px-3 py-1.5 text-[12px] font-bold text-accent hover:text-accent-strong flex items-center gap-1 transition-all active:scale-95 bg-[#E3E8EF]"
           >
             <span>Смотреть все</span>
             <ChevronRight className="w-3.5 h-3.5" />

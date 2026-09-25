@@ -343,7 +343,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-[#4B59BB]">
+              <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-accent">
                 <Shield className="w-5 h-5 stroke-[2.2]" />
               </div>
               <div>
@@ -364,7 +364,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
           <div className="neu-flat rounded-2xl p-4 space-y-3">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0 mt-0.5">
+                <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-accent shrink-0 mt-0.5">
                   <Smartphone className="w-4 h-4" />
                 </div>
                 <div>
@@ -402,7 +402,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
           <div className="neu-flat rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <KeyRound className="w-4 h-4 text-[#4B59BB]" />
+                <KeyRound className="w-4 h-4 text-accent" />
                 <h4 className="text-xs font-bold text-[#2D3A4E] uppercase tracking-wider">
                   Критические данные аккаунта
                 </h4>
@@ -495,7 +495,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
                   <button
                     type="submit"
                     disabled={isChangingPassword}
-                    className="flex-1 py-2.5 rounded-xl neu-button text-xs font-extrabold text-[#4B59BB] hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+                    className="flex-1 py-2.5 rounded-xl neu-button text-xs font-extrabold text-accent hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
                   >
                     {isChangingPassword ? 'Обновление и сброс сессий...' : 'Сохранить новый пароль'}
                   </button>
@@ -551,7 +551,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
                 <button
                   type="submit"
                   disabled={isUpdatingEmail}
-                  className="w-full py-2.5 rounded-xl neu-button text-xs font-extrabold text-[#4B59BB] hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50 mt-1"
+                  className="w-full py-2.5 rounded-xl neu-button text-xs font-extrabold text-accent hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50 mt-1"
                 >
                   {isUpdatingEmail ? 'Обновление email и сессий...' : 'Подтвердить смену Email'}
                 </button>
@@ -568,7 +568,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
           <div className="neu-flat rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Laptop className="w-4 h-4 text-[#4B59BB]" />
+                <Laptop className="w-4 h-4 text-accent" />
                 <h4 className="text-xs font-bold text-[#2D3A4E] uppercase tracking-wider">
                   Активные сеансы
                 </h4>
@@ -588,14 +588,14 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
                   </p>
                 </div>
               </div>
-              <span className="text-[11px] font-extrabold text-[#4B59BB] uppercase tracking-wider">
+              <span className="text-[11px] font-extrabold text-accent uppercase tracking-wider">
                 Онлайн
               </span>
             </div>
 
             {lastSecurityEvent && (
               <div className="flex items-center gap-2 text-[11px] text-[#4E5C70] px-1">
-                <History className="w-3.5 h-3.5 text-[#4B59BB] shrink-0" />
+                <History className="w-3.5 h-3.5 text-accent shrink-0" />
                 <span className="truncate">{lastSecurityEvent}</span>
               </div>
             )}
@@ -613,7 +613,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
           {/* Section 4: Privacy & Compliance 152-FZ */}
           <div className="p-3.5 neu-inset rounded-2xl flex items-center justify-between gap-3 text-xs bg-[#BAC5D5]/15">
             <div className="flex items-center gap-2 min-w-0">
-              <FileCheck className="w-4 h-4 text-[#4B59BB] shrink-0" />
+              <FileCheck className="w-4 h-4 text-accent shrink-0" />
               <div className="min-w-0">
                 <p className="font-bold text-[#2D3A4E] truncate">Соответствие 152-ФЗ РФ</p>
                 <p className="text-[11px] text-[#4E5C70]">Выгрузка копии данных и аудит-логов</p>
@@ -622,7 +622,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
             <button
               type="button"
               onClick={handleExportData}
-              className="neu-button px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-[#4B59BB] flex items-center gap-1 shrink-0 active:scale-95 cursor-pointer hover:scale-105 transition-transform"
+              className="neu-button px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-accent flex items-center gap-1 shrink-0 active:scale-95 cursor-pointer hover:scale-105 transition-transform"
             >
               <Download className="w-3 h-3" />
               <span>Экспорт</span>

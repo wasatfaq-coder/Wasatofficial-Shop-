@@ -3,6 +3,7 @@ import { Clock, Heart, Trash2, X } from 'lucide-react';
 import { Product } from '../types';
 import { RatingBadge } from './RatingBadge';
 import { NeumorphicImage } from './NeumorphicImage';
+import { photoBadgeClass } from '../utils/productBadge';
 
 interface RecentlyViewedProps {
   recentlyViewed: Product[];
@@ -33,7 +34,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
     <div className={`space-y-3 pt-2 ${className}`}>
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-xl neu-inset flex items-center justify-center text-[#4B59BB] bg-[#E3E8EF]">
+          <div className="w-7 h-7 rounded-xl neu-inset flex items-center justify-center text-accent bg-[#E3E8EF]">
             <Clock className="w-4 h-4 stroke-[2.2]" />
           </div>
           <h3 className="text-sm font-bold text-[#2D3A4E] tracking-tight">{title}</h3>
@@ -63,17 +64,17 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
             <div
               key={`recently-viewed-${product.id}-${idx}`}
               onClick={() => onSelectProduct(product)}
-              className="group relative neu-inset rounded-2xl p-2.5 w-36 sm:w-40 shrink-0 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] flex flex-col justify-between select-none bg-[#E3E8EF] border border-transparent"
+              className="group relative neu-flat-sm rounded-2xl overflow-hidden w-36 sm:w-40 shrink-0 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98] flex flex-col justify-between select-none"
             >
               <div className="space-y-2">
                 {/* Thumbnail Image Container */}
-                <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden mb-1">
+                <div className="relative w-full aspect-[3/4] overflow-hidden mb-1">
                   <NeumorphicImage
                     src={thumbImage}
                     alt={product.title}
                     priority={idx < 2}
-                    containerClassName="w-full h-full rounded-xl"
-                    className="w-full h-full object-cover object-top rounded-xl group-hover:scale-105 transition-transform duration-300"
+                    containerClassName="w-full h-full"
+                    className="w-full h-full object-cover object-top group-hover:scale-[1.03] transition-transform duration-500"
                   />
 
                   {/* Remove Button from History */}
@@ -112,25 +113,25 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
 
                   {/* Badge */}
                   {product.badge && (
-                    <span className="absolute bottom-1.5 left-1.5 neu-photo-badge font-bold text-[11px] uppercase px-2 py-0.5 rounded-full text-[#2D3A4E] z-10">
+                    <span className={`absolute bottom-1.5 left-1.5 ${photoBadgeClass(product.badge)} font-bold text-[11px] uppercase px-2 py-0.5 rounded-full z-10`}>
                       {product.badge}
                     </span>
                   )}
                 </div>
 
                 {/* Info */}
-                <div className="space-y-0.5">
+                <div className="space-y-0.5 px-2.5">
                   <p className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider truncate">
                     {product.categoryLabel}
                   </p>
-                  <h4 className="text-xs font-bold text-[#2D3A4E] truncate leading-tight group-hover:text-[#4B59BB] transition-colors">
+                  <h4 className="text-xs font-bold text-[#2D3A4E] truncate leading-tight group-hover:text-accent transition-colors">
                     {product.title}
                   </h4>
                 </div>
               </div>
 
               {/* Price & Rating */}
-              <div className="pt-2 mt-1 border-t border-[#BAC5D5]/40 flex items-center justify-between">
+              <div className="pt-2 mt-1 mx-2.5 mb-2.5 border-t border-[#BAC5D5]/40 flex items-center justify-between">
                 <div>
                   <span className="text-xs font-bold text-[#2D3A4E]">
                     {product.price.toLocaleString('ru-RU')} ₽

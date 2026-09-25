@@ -327,7 +327,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
         {/* Header */}
         <div className="flex items-start justify-between gap-3 border-b border-[#BAC5D5]/50 pb-3">
           <div className="flex items-start gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-2xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0 mt-0.5">
+            <div className="w-10 h-10 rounded-2xl neu-button flex items-center justify-center text-accent shrink-0 mt-0.5">
               <RefreshCw className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
@@ -335,7 +335,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                 <h3 className="text-base font-black text-[#2D3A4E] leading-tight">
                   Корректировка состава заказа
                 </h3>
-                <span className="text-xs font-mono font-black neu-inset px-2.5 py-0.5 rounded-lg text-[#4B59BB] bg-[#E3E8EF] shrink-0">
+                <span className="text-xs font-mono font-black neu-inset px-2.5 py-0.5 rounded-lg text-accent bg-[#E3E8EF] shrink-0">
                   № {order.id}
                 </span>
               </div>
@@ -358,7 +358,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
         <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
           <div className="flex items-center gap-2">
             <span className="text-[#4E5C70] font-bold shrink-0">Статус заказа:</span>
-            <span className="neu-flat px-2.5 py-1 rounded-lg font-black text-[#4B59BB]">
+            <span className="neu-flat px-2.5 py-1 rounded-lg font-black text-accent">
               {order.status === 'accepted' && 'Принят в обработку'}
               {order.status === 'assembling' && 'На сборке'}
               {order.status === 'in_transit' && 'В пути'}
@@ -378,13 +378,13 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
         <div className="neu-flat rounded-2xl p-4 sm:p-5 space-y-3 bg-[#E3E8EF] border border-white/60">
           <div className="flex items-center justify-between">
             <label className="text-xs font-black uppercase text-[#2D3A4E] tracking-wider flex items-center gap-1.5">
-              <Package className="w-3.5 h-3.5 text-[#4B59BB]" />
+              <Package className="w-3.5 h-3.5 text-accent" />
               Состав позиций в заказе ({items.length})
             </label>
             <button
               type="button"
               onClick={() => setIsAddingItem(!isAddingItem)}
-              className="py-1.5 px-3 neu-button rounded-xl text-xs font-extrabold text-[#4B59BB] flex items-center gap-1.5 hover:scale-105 transition-transform cursor-pointer whitespace-nowrap"
+              className="py-1.5 px-3 neu-button rounded-xl text-xs font-extrabold text-accent flex items-center gap-1.5 hover:scale-105 transition-transform cursor-pointer whitespace-nowrap"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Добавить товар</span>
@@ -393,9 +393,9 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
 
           {/* Add New Item Panel */}
           {isAddingItem && (
-            <div className="neu-flat rounded-2xl p-3.5 bg-[#E3E8EF] border border-[#5F6ED0]/30 space-y-3 animate-in fade-in duration-150">
+            <div className="neu-flat rounded-2xl p-3.5 bg-[#E3E8EF] border border-accent/30 space-y-3 animate-in fade-in duration-150">
               <div className="flex items-center justify-between border-b border-[#BAC5D5]/40 pb-2">
-                <span className="text-xs font-extrabold text-[#4B59BB] flex items-center gap-1.5">
+                <span className="text-xs font-extrabold text-accent flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5" />
                   Выбор товара для добавления
                 </span>
@@ -475,7 +475,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                 <button
                   type="button"
                   onClick={handleAddItemToOrder}
-                  className="py-2 px-4 neu-button rounded-xl text-xs font-black text-[#4B59BB] flex items-center gap-1.5 cursor-pointer hover:scale-105 transition-transform"
+                  className="py-2 px-4 neu-button rounded-xl text-xs font-black text-accent flex items-center gap-1.5 cursor-pointer hover:scale-105 transition-transform"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Добавить в заказ</span>
@@ -514,7 +514,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                             <span className="neu-inset px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] bg-[#E3E8EF]">
                               {item.selectedColor}
                             </span>
-                            <span className="neu-flat px-2 py-0.5 rounded-lg text-[11px] font-black text-[#4B59BB]">
+                            <span className="neu-flat px-2 py-0.5 rounded-lg text-[11px] font-black text-accent">
                               {item.selectedSize}
                             </span>
                           </div>
@@ -579,7 +579,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
         {/* Reason for Modification */}
         <div className="neu-flat rounded-2xl p-4 sm:p-5 space-y-3 bg-[#E3E8EF] border border-white/60">
           <label className="text-xs font-black uppercase text-[#2D3A4E] tracking-wider flex items-center gap-1.5">
-            <UserCheck className="w-3.5 h-3.5 text-[#4B59BB]" />
+            <UserCheck className="w-3.5 h-3.5 text-accent" />
             Причина корректировки / возврата *
           </label>
           <NeumorphicSelect
@@ -614,7 +614,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
             return (
               <div className="neu-flat rounded-2xl p-4 sm:p-5 space-y-2 bg-[#E3E8EF] border border-white/60">
                 <label className="text-xs font-black uppercase text-[#2D3A4E] tracking-wider flex items-center gap-1.5">
-                  <Truck className="w-3.5 h-3.5 text-[#4B59BB]" />
+                  <Truck className="w-3.5 h-3.5 text-accent" />
                   Трек-номер отправления
                 </label>
                 <div className="neu-inset rounded-xl p-3 bg-[#E3E8EF] text-[11px] text-[#4E5C70] leading-relaxed">
@@ -628,7 +628,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
             <div className="neu-flat rounded-2xl p-4 sm:p-5 space-y-3 bg-[#E3E8EF] border border-white/60">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-black uppercase text-[#2D3A4E] tracking-wider flex items-center gap-1.5">
-                  <Truck className="w-3.5 h-3.5 text-[#4B59BB]" />
+                  <Truck className="w-3.5 h-3.5 text-accent" />
                   Трек-номер отправления (ТК)
                 </label>
                 {trackingNumber.trim() ? (
@@ -672,7 +672,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                     setTrackingNumber(generated);
                     onShowToast(`Сгенерирован трек-номер: ${generated}`, 'success');
                   }}
-                  className="py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-[#4B59BB] hover:scale-105 active:scale-95 transition-transform cursor-pointer shrink-0"
+                  className="py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-accent hover:scale-105 active:scale-95 transition-transform cursor-pointer shrink-0"
                   title="Сгенерировать CDEK трек-код"
                 >
                   + CDEK
@@ -684,7 +684,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                 <div className="neu-inset rounded-xl p-2.5 bg-[#E3E8EF] text-[11px] text-[#2D3A4E] flex items-center gap-2">
                   <Check className="w-3.5 h-3.5 text-success shrink-0" />
                   <span>
-                    Клиент увидит трек-номер <strong className="font-mono text-[#4B59BB]">{trackingNumber.trim()}</strong> для отслеживания в транспортной компании.
+                    Клиент увидит трек-номер <strong className="font-mono text-accent">{trackingNumber.trim()}</strong> для отслеживания в транспортной компании.
                   </span>
                 </div>
               ) : (
@@ -710,7 +710,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
 
           <div className="flex items-center justify-between text-sm font-extrabold text-[#2D3A4E]">
             <span>Новая итоговая сумма:</span>
-            <span className="text-[#4B59BB] font-black text-base">
+            <span className="text-accent font-black text-base">
               {newItemsTotal.toLocaleString('ru-RU')} ₽
             </span>
           </div>

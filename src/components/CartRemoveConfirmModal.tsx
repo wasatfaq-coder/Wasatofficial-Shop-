@@ -70,7 +70,7 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
               <p className="text-[11px] text-[#4E5C70]">
                 {item.selectedColor} • {item.selectedSize} ({item.quantity} шт.)
               </p>
-              <p className="text-xs font-black text-[#4B59BB] pt-0.5">
+              <p className="text-xs font-black text-accent pt-0.5">
                 {(item.product.price * item.quantity).toLocaleString('ru-RU')} ₽
               </p>
             </div>
@@ -87,9 +87,9 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
                 onMoveToFavorites(item);
                 onClose();
               }}
-              className="w-full py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-[#4B59BB] hover:scale-102 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-accent hover:scale-102 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Heart className="w-4 h-4 stroke-[2.2] fill-[#5F6ED0]/20 text-[#4B59BB]" />
+              <Heart className="w-4 h-4 stroke-[2.2] fill-accent/20 text-accent" />
               <span>Переместить в Избранное</span>
             </button>
 

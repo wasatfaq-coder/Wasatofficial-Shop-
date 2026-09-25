@@ -51,12 +51,12 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
               onClick={() => onToggle(item.id)}
               className={`w-full p-3.5 sm:p-4 rounded-2xl neu-button flex items-start justify-between gap-3 text-left transition-all duration-200 cursor-pointer active:scale-[0.99] ${
                 isExpanded
-                  ? 'border border-[#5F6ED0]/30 bg-white/80'
+                  ? 'border border-accent/30 bg-white/80'
                   : 'hover:border-white/90'
               }`}
             >
               <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                <span className="w-2 h-2 rounded-full bg-[#5F6ED0] mt-1.5 shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-accent mt-1.5 shrink-0" />
                 <span className="text-xs sm:text-sm font-extrabold text-[#2D3A4E] leading-snug">
                   {item.question}
                 </span>
@@ -65,11 +65,11 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
               <div
                 className={`w-7 h-7 rounded-xl neu-inset flex items-center justify-center shrink-0 transition-transform duration-300 ${
                   isExpanded
-                    ? 'rotate-180 text-white bg-[#5F6ED0]'
-                    : 'text-[#4B59BB] bg-[#E3E8EF]'
+                    ? 'rotate-180 text-white bg-accent'
+                    : 'text-accent bg-[#E3E8EF]'
                 }`}
               >
-                <ChevronDown className={`w-4 h-4 ${isExpanded ? 'text-white' : 'text-[#4B59BB]'}`} />
+                <ChevronDown className={`w-4 h-4 ${isExpanded ? 'text-white' : 'text-accent'}`} />
               </div>
             </button>
 

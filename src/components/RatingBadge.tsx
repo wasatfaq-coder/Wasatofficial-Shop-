@@ -23,9 +23,9 @@ export const RatingBadge: React.FC<RatingBadgeProps> = ({
   if (variant === 'flat') {
     return (
       <div
-        className={`neu-flat text-[#4B59BB] font-extrabold text-[11px] px-3 py-1 rounded-full uppercase tracking-wider inline-flex items-center justify-center gap-1.5 shrink-0 leading-none ${className}`}
+        className={`neu-flat text-accent font-extrabold text-[11px] px-3 py-1 rounded-full uppercase tracking-wider inline-flex items-center justify-center gap-1.5 shrink-0 leading-none ${className}`}
       >
-        <Star className="w-2.5 h-2.5 fill-[#5F6ED0] text-[#4B59BB] shrink-0" strokeWidth={0} />
+        <Star className="w-2.5 h-2.5 fill-accent text-accent shrink-0" strokeWidth={0} />
         {showLabel && <span>Рейтинг</span>}
         <span>{formattedRating}</span>
         {reviewsCount !== undefined && showLabel && (

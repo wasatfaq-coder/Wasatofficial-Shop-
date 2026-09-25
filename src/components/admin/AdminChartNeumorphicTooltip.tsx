@@ -67,7 +67,7 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
     revenue: {
       title: isMonthly ? 'Выручка за месяц' : 'Суточная выручка',
       color: '#5F6ED0',
-      badgeClass: 'text-[#4B59BB] bg-[#5F6ED0]/10 border-[#5F6ED0]/30',
+      badgeClass: 'text-accent bg-accent/10 border-accent/30',
       valueFormatted: `${currentVal.toLocaleString('ru-RU')} ₽`,
       prevFormatted: `${prevVal.toLocaleString('ru-RU')} ₽`,
       diffFormatted: `${diff >= 0 ? '+' : ''}${diff.toLocaleString('ru-RU')} ₽`,
@@ -105,7 +105,7 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
       {/* --- 1. NEUMORPHIC HEADER: DATE & PEAK BADGE --- */}
       <div className="flex items-center justify-between gap-1.5 border-b border-[#BAC5D5]/50 pb-1.5">
         <div className="flex items-center gap-1.5 min-w-0">
-          <div className="w-5 h-5 rounded-lg neu-inset flex items-center justify-center text-[#4B59BB] bg-[#E3E8EF] shrink-0">
+          <div className="w-5 h-5 rounded-lg neu-inset flex items-center justify-center text-accent bg-[#E3E8EF] shrink-0">
             <Calendar className="w-3 h-3" />
           </div>
 
@@ -255,9 +255,9 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
 
       {/* --- 5. REAL FIRESTORE ORDERS PREVIEW IF PRESENT --- */}
       {data.hasRealOrders && data.realOrdersList.length > 0 && (
-        <div className="neu-inset rounded-lg px-2 py-1 bg-[#E3E8EF] flex items-center justify-between text-[11px] border border-indigo-200/50 text-indigo-800">
+        <div className="neu-inset rounded-lg px-2 py-1 bg-[#E3E8EF] flex items-center justify-between text-[11px] border border-accent/10 text-accent-strong">
           <span className="flex items-center gap-1 font-extrabold">
-            <Zap className="w-2.5 h-2.5 text-indigo-600 shrink-0" />
+            <Zap className="w-2.5 h-2.5 text-accent shrink-0" />
             В базе:
           </span>
           <span className="font-bold neu-inset px-1.5 py-0.2 rounded bg-[#E3E8EF]">
@@ -273,7 +273,7 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
       {/* --- 6. FOOTER INTERACTION HINT --- */}
       <div className="pt-0.5 text-center border-t border-[#BAC5D5]/35">
         <span className="text-[11px] text-[#4E5C70] font-bold flex items-center justify-center gap-1">
-          <MousePointerClick className="w-2.5 h-2.5 text-[#4B59BB]" />
+          <MousePointerClick className="w-2.5 h-2.5 text-accent" />
           Кликните для деталей дня
         </span>
       </div>

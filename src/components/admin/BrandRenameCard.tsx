@@ -79,7 +79,7 @@ export const BrandRenameCard: React.FC<BrandRenameCardProps> = ({
   return (
     <div className="neu-flat rounded-2xl p-4 space-y-3">
       <div className="flex items-start gap-3">
-        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-[#4B59BB] shrink-0">
+        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0">
           <Replace className="w-4 h-4" />
         </div>
         <div className="min-w-0 space-y-1">
@@ -101,7 +101,7 @@ export const BrandRenameCard: React.FC<BrandRenameCardProps> = ({
         <button
           type="button"
           onClick={() => setIsConfirmOpen(true)}
-          className="w-full py-2.5 px-4 neu-button rounded-xl text-xs font-black text-[#4B59BB] cursor-pointer"
+          className="w-full py-2.5 px-4 neu-button rounded-xl text-xs font-black text-accent cursor-pointer"
         >
           Заменить на «{newName}»
         </button>

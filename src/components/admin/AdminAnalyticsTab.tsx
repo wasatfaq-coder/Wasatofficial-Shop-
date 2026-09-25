@@ -211,10 +211,10 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
   // Top categories stats calculated purely from real sales
   const categoryStats = useMemo(() => {
     const catMap = new Map<string, { name: string; revenue: number; color: string }>();
-    const colorPalette = ['bg-[#5F6ED0]', 'bg-[#4B58B0]', 'bg-[#7A87E0]', 'bg-[#8F9BB3]', 'bg-[#BAC5D5]'];
+    const colorPalette = ['bg-accent', 'bg-[#4B58B0]', 'bg-[#7A87E0]', 'bg-[#8F9BB3]', 'bg-[#BAC5D5]'];
 
     const defaultCategories = [
-      { id: 'shirts', name: 'Рубашки и сорочки', color: 'bg-[#5F6ED0]' },
+      { id: 'shirts', name: 'Рубашки и сорочки', color: 'bg-accent' },
       { id: 'linen', name: 'Премиум лен', color: 'bg-[#4B58B0]' },
       { id: 'jackets', name: 'Куртки и бомберы', color: 'bg-[#7A87E0]' },
       { id: 'trousers', name: 'Брюки и чиносы', color: 'bg-[#8F9BB3]' },
@@ -506,7 +506,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
       <div className="neu-inset rounded-2xl p-4 bg-[#E3E8EF] flex flex-col md:flex-row md:items-center justify-between gap-3 border border-white/60">
         <div className="space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] font-black uppercase tracking-wider text-[#4B59BB] bg-[#5F6ED0]/10 px-2 py-0.5 rounded-md">
+            <span className="text-[11px] font-black uppercase tracking-wider text-accent bg-accent/10 px-2 py-0.5 rounded-md">
               Финансовая аналитика
             </span>
             {/* Live Firestore Connection Badge */}
@@ -517,7 +517,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
           </div>
 
           <h3 className="text-base sm:text-lg font-black text-[#2D3A4E] tracking-tight flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-[#4B59BB] shrink-0" />
+            <TrendingUp className="w-5 h-5 text-accent shrink-0" />
             <span>Суточная выручка и динамика продаж</span>
           </h3>
 
@@ -569,7 +569,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
       <div>
         <div className="flex items-center justify-between pb-1.5 px-0.5">
           <span className="text-[11px] font-black uppercase tracking-wider text-[#4E5C70] flex items-center gap-1">
-            <Activity className="w-3 h-3 text-[#4B59BB]" />
+            <Activity className="w-3 h-3 text-accent" />
             Выберите показатель для отображения на графике:
           </span>
           <span className="text-[11px] text-[#8F9BB3] hidden sm:inline">
@@ -593,7 +593,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
           >
             <div className="flex items-center justify-between text-[#4E5C70]">
               <span className="text-[11px] font-bold uppercase tracking-wider">Выручка за период</span>
-              <div className="w-6 h-6 rounded-lg neu-inset flex items-center justify-center bg-[#E3E8EF] text-[#4B59BB]">
+              <div className="w-6 h-6 rounded-lg neu-inset flex items-center justify-center bg-[#E3E8EF] text-accent">
                 <DollarSign className="w-3.5 h-3.5" />
               </div>
             </div>
@@ -719,8 +719,8 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
         {/* Chart Block Header: Dynamic Title + Live Badge + Neumorphic 'Обновить данные' Button */}
         <div className="flex items-center justify-between gap-3 flex-wrap border-b border-[#BAC5D5]/50 pb-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0">
-              <Activity className="w-4 h-4 text-[#4B59BB]" />
+            <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent shrink-0">
+              <Activity className="w-4 h-4 text-accent" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -745,13 +745,13 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
             disabled={isRefreshing}
             className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all cursor-pointer select-none ${
               isRefreshing
-                ? 'neu-inset text-[#4B59BB] bg-[#E3E8EF] scale-[0.98]'
-                : 'neu-button text-[#2D3A4E] hover:text-[#4B59BB] active:scale-95'
+                ? 'neu-inset text-accent bg-[#E3E8EF] scale-[0.98]'
+                : 'neu-button text-[#2D3A4E] hover:text-accent active:scale-95'
             }`}
             title="Загрузить свежие данные из базы"
           >
             <RefreshCw
-              className={`w-3.5 h-3.5 text-[#4B59BB] transition-transform ${
+              className={`w-3.5 h-3.5 text-accent transition-transform ${
                 isRefreshing ? 'animate-spin' : ''
               }`}
             />
@@ -765,7 +765,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[11px] font-black uppercase text-[#4E5C70] mr-1">Метрика:</span>
             {[
-              { id: 'revenue', label: 'Выручка (₽)', color: 'text-[#4B59BB] border-[#5F6ED0]' },
+              { id: 'revenue', label: 'Выручка (₽)', color: 'text-accent border-accent' },
               { id: 'orders', label: 'Заказы (шт)', color: 'text-success border-[#10B981]' },
               { id: 'avgCheck', label: 'Средний чек (₽)', color: 'text-sky-700 border-[#0284C7]' },
               { id: 'returns', label: 'Возвраты (шт)', color: 'text-warning border-[#F59E0B]' },
@@ -869,7 +869,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
                 }`}
                 title="Комбинированный график (Микс)"
               >
-                <Layers className="w-3 h-3 text-[#4B59BB]" />
+                <Layers className="w-3 h-3 text-accent" />
                 <span>Микс</span>
               </button>
             </div>
@@ -879,7 +879,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
         {/* Info & Haptic status bar */}
         <div className="flex items-center justify-between gap-2 flex-wrap text-xs text-[#4E5C70]">
           <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#4E5C70]">
-            <MousePointerClick className="w-3.5 h-3.5 text-[#4B59BB]" />
+            <MousePointerClick className="w-3.5 h-3.5 text-accent" />
             <span>Нажмите на столбец или точку графика для детального среза дня</span>
           </div>
 
@@ -1210,7 +1210,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
         <div className="neu-inset rounded-2xl p-4 space-y-3 bg-[#E3E8EF] border border-white/60">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-black uppercase text-[#2D3A4E] tracking-wider flex items-center gap-1.5">
-              <Award className="w-4 h-4 text-[#4B59BB]" />
+              <Award className="w-4 h-4 text-accent" />
               Топ продаваемых товаров
             </h4>
             <span className="text-[11px] font-bold text-[#4E5C70]">По объему из базы</span>
@@ -1224,7 +1224,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
               return (
                 <div
                   key={prod.id}
-                  className="neu-inset rounded-2xl p-2.5 flex items-center justify-between gap-2.5 bg-[#E3E8EF] border border-transparent hover:border-[#5F6ED0]/30 transition-all"
+                  className="neu-inset rounded-2xl p-2.5 flex items-center justify-between gap-2.5 bg-[#E3E8EF] border border-transparent hover:border-accent/30 transition-all"
                 >
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <img
@@ -1237,7 +1237,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] font-black text-[#4B59BB] neu-inset px-1.5 py-0.2 rounded-md">
+                        <span className="text-[11px] font-black text-accent neu-inset px-1.5 py-0.2 rounded-md">
                           #{idx + 1}
                         </span>
                         <p className="text-xs font-bold text-[#2D3A4E] truncate">{prod.title}</p>
@@ -1250,7 +1250,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
                   </div>
 
                   <div className="text-right shrink-0">
-                    <p className="text-xs font-black text-[#4B59BB] tabular-nums">
+                    <p className="text-xs font-black text-accent tabular-nums">
                       {productRev.toLocaleString('ru-RU')} ₽
                     </p>
                     <span className="text-[11px] font-bold text-success">
@@ -1267,7 +1267,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
         <div className="neu-inset rounded-2xl p-4 space-y-3 bg-[#E3E8EF] border border-white/60">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-black uppercase text-[#2D3A4E] tracking-wider flex items-center gap-1.5">
-              <Layers className="w-4 h-4 text-[#4B59BB]" />
+              <Layers className="w-4 h-4 text-accent" />
               Топ категорий по доле продаж
             </h4>
             <span className="text-[11px] font-bold text-[#4E5C70]">100% охват</span>
@@ -1278,7 +1278,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
               <div key={idx} className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-[#2D3A4E]">{cat.name}</span>
-                  <span className="font-black text-[#4B59BB]">
+                  <span className="font-black text-accent">
                     {cat.share}%{' '}
                     <span className="text-[11px] text-[#4E5C70] font-normal">
                       ({cat.revenue.toLocaleString('ru-RU')} ₽)
@@ -1303,7 +1303,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
       <div className="neu-inset rounded-2xl p-4 space-y-3.5 bg-[#E3E8EF] border border-white/60">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#BAC5D5]/40 pb-2.5">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-xl neu-inset flex items-center justify-center text-[#4B59BB] shrink-0 bg-[#E3E8EF]">
+            <div className="w-7 h-7 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0 bg-[#E3E8EF]">
               <Tag className="w-3.5 h-3.5" />
             </div>
             <div>
@@ -1319,7 +1319,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
           <div className="flex items-center gap-2 text-[11px] font-bold">
             <div className="neu-inset px-2.5 py-1 rounded-xl bg-[#E3E8EF] text-[#2D3A4E] flex items-center gap-1.5">
               <span className="text-[#4E5C70]">Выручка:</span>
-              <span className="font-black text-[#4B59BB]">{totalPromoRevenue.toLocaleString('ru-RU')} ₽</span>
+              <span className="font-black text-accent">{totalPromoRevenue.toLocaleString('ru-RU')} ₽</span>
             </div>
             <div className="neu-inset px-2.5 py-1 rounded-xl bg-[#E3E8EF] text-[#2D3A4E] flex items-center gap-1.5">
               <span className="text-[#4E5C70]">Скидки:</span>
@@ -1340,7 +1340,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
                   <span className="neu-inset px-2 py-0.5 rounded-lg bg-[#E3E8EF] font-mono text-[11px] font-black text-[#2D3A4E]">
                     {promo.code}
                   </span>
-                  <span className="neu-inset px-1.5 py-0.5 rounded-md text-[11px] font-extrabold text-[#4B59BB] bg-[#E3E8EF]">
+                  <span className="neu-inset px-1.5 py-0.5 rounded-md text-[11px] font-extrabold text-accent bg-[#E3E8EF]">
                     {promo.discount}
                   </span>
                 </div>
@@ -1362,7 +1362,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
                 </div>
                 <div>
                   <span className="text-[11px] text-[#4E5C70] block">Выручка</span>
-                  <span className="text-xs font-extrabold text-[#4B59BB]">
+                  <span className="text-xs font-extrabold text-accent">
                     {Math.round(promo.revenue / 1000)}k ₽
                   </span>
                 </div>
@@ -1382,7 +1382,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
       <div className="neu-inset rounded-2xl p-4 space-y-3 bg-[#E3E8EF] border border-white/60">
         <div className="flex items-center justify-between text-xs font-bold text-[#4E5C70] px-0.5 flex-wrap gap-2">
           <span className="flex items-center gap-1.5 text-[#2D3A4E]">
-            <FileText className="w-4 h-4 text-[#4B59BB]" />
+            <FileText className="w-4 h-4 text-accent" />
             Генерация официальной финансовой отчетности
           </span>
           <span className="text-[11px] font-extrabold text-success neu-inset px-2.5 py-0.5 rounded-full bg-[#E3E8EF] flex items-center gap-1 border border-success/20">
@@ -1423,11 +1423,11 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
           <button
             onClick={handleRefreshData}
             disabled={isRefreshing}
-            className="w-12 h-12 shrink-0 neu-button rounded-2xl text-[#4E5C70] hover:text-[#4B59BB] flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-50"
+            className="w-12 h-12 shrink-0 neu-button rounded-2xl text-[#4E5C70] hover:text-accent flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-50"
             title="Обновить аналитику"
             aria-label="Обновить аналитику"
           >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-[#4B59BB]' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-accent' : ''}`} />
           </button>
         </div>
       </div>

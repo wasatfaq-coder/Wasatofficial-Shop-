@@ -10,6 +10,19 @@
   --color-success-soft: #EFF3F1;
   --color-warning-soft: #F3F2EF;
   --color-danger-soft: #F5F1F2;
+
+  /* Brand. Main buttons and fills (neu-button-accent, neu-fill-accent) are graphite #2D3A4E → #232D3D.
+     accent is a deep navy for links, selection, current steps and icons, so they stand apart from
+     the graphite body text (7.4:1 on the background, 6.8:1 on buttons); accent-strong for hover.
+     Muted gold only for brand badges (Хит, Premium, Limited): a fill under white text (4.53:1),
+     or gold-text as text (4.9:1) */
+  --color-accent: #2C4A6B;
+  --color-accent-strong: #1F3650;
+  --color-gold: #8C733E;
+  --color-gold-text: #75602F;
+
+  /* Headings: Manrope (index.html); body text stays on the system font */
+  --font-display: 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
 @layer base {
@@ -17,9 +30,9 @@
     --neu-bg: #E3E8EF;
     --text-primary: #2D3A4E;
     --text-secondary: #4E5C70;
-    /* Accent for fills, borders and icons; text uses the darker --accent-text (4.5:1 on the background and on buttons) */
-    --accent-periwinkle: #5F6ED0;
-    --accent-text: #4B59BB;
+    /* Accent for fills, borders, icons and text (--color-accent) */
+    --accent-periwinkle: var(--color-accent);
+    --accent-text: var(--color-accent);
 
     /* Neumorphic shadows: light falls from the top-left (135°) */
     --neu-shadow-dark: rgb(163 177 198 / 0.65);
@@ -42,13 +55,21 @@
     --neu-on-photo-pressed: inset 0 2px 4px rgb(20 28 40 / 0.4);
 
     /* Filled elements cast a shadow of their own color */
-    --neu-raised-accent: 4px 5px 14px rgb(95 110 208 / 0.45), -3px -3px 10px var(--neu-shadow-light);
-    --neu-raised-accent-hover: 5px 7px 18px rgb(95 110 208 / 0.55), -4px -4px 12px var(--neu-shadow-light);
-    --neu-pressed-accent: inset 3px 3px 6px rgb(45 55 130 / 0.85), inset -2px -2px 5px rgb(255 255 255 / 0.25);
-    --neu-fill-accent-shadow: 2px 3px 6px rgb(95 110 208 / 0.35);
+    --neu-raised-accent: 4px 5px 14px rgb(31 42 60 / 0.4), -3px -3px 10px var(--neu-shadow-light);
+    --neu-raised-accent-hover: 5px 7px 18px rgb(31 42 60 / 0.5), -4px -4px 12px var(--neu-shadow-light);
+    --neu-pressed-accent: inset 3px 3px 6px rgb(12 17 26 / 0.85), inset -2px -2px 5px rgb(255 255 255 / 0.25);
+    --neu-fill-accent-shadow: 2px 3px 6px rgb(31 42 60 / 0.3);
     --neu-raised-success: 4px 5px 14px rgb(59 102 82 / 0.4), -3px -3px 10px var(--neu-shadow-light);
     --neu-pressed-success: inset 3px 3px 6px rgb(25 45 36 / 0.85), inset -2px -2px 5px rgb(255 255 255 / 0.25);
     --neu-raised-dark: 4px 5px 14px rgb(30 39 54 / 0.4), -3px -3px 10px var(--neu-shadow-light);
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
   }
 
   body {
@@ -149,9 +170,8 @@
 }
 
 .neu-product-card:hover {
-  transform: translateY(-3px) scale(1.025) translateZ(0);
-  box-shadow: var(--neu-raised-lg), var(--neu-edge-highlight);
-  border-color: rgba(255, 255, 255, 0.85);
+  transform: translateY(-2px) translateZ(0);
+  box-shadow: var(--neu-raised-md);
 }
 
 .neu-product-card:active {
@@ -213,14 +233,14 @@ input[type="submit"] {
 }
 
 .neu-button-accent {
-  background: linear-gradient(145deg, #5767CC 0%, #4553B8 100%);
+  background: linear-gradient(145deg, #3A4659 0%, #232D3D 100%);
   color: #FFFFFF;
   box-shadow: var(--neu-raised-accent);
   cursor: pointer;
 }
 
 .neu-button-accent:hover {
-  background: linear-gradient(145deg, #5E6ED2 0%, #4B59BF 100%);
+  background: linear-gradient(145deg, #435066 0%, #283345 100%);
   box-shadow: var(--neu-raised-accent-hover);
   transform: translateY(-1px);
 }
@@ -270,7 +290,7 @@ button.active\:neu-inset-deep:active {
 
 /* Accent fill for indicators that are not buttons: badges, checked boxes, switches that are on, completed steps */
 .neu-fill-accent {
-  background: linear-gradient(145deg, #5767CC 0%, #4553B8 100%);
+  background: linear-gradient(145deg, #3A4659 0%, #232D3D 100%);
   color: #FFFFFF;
   box-shadow: var(--neu-fill-accent-shadow);
 }
@@ -314,6 +334,19 @@ button.active\:neu-inset-deep:active {
   box-shadow: var(--neu-on-photo);
 }
 
+/* Brand badges on photos: gold (Хит, Premium), sale (danger), others graphite */
+.neu-photo-badge-gold {
+  background-color: var(--color-gold);
+  color: #FFFFFF;
+  box-shadow: var(--neu-on-photo);
+}
+
+.neu-photo-badge-sale {
+  background-color: var(--color-danger);
+  color: #FFFFFF;
+  box-shadow: var(--neu-on-photo);
+}
+
 /* Range sliders */
 input[type="range"].neu-range {
   -webkit-appearance: none;
@@ -337,7 +370,7 @@ input[type="range"].neu-range::-webkit-slider-thumb {
   border-radius: 50%;
   background: var(--neu-bg);
   box-shadow: var(--neu-raised-sm);
-  border: 2.5px solid #5F6ED0;
+  border: 2.5px solid var(--color-accent);
   margin-top: -7px;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   cursor: grab;
@@ -361,7 +394,7 @@ input[type="range"].neu-range::-moz-range-thumb {
   border-radius: 50%;
   background: var(--neu-bg);
   box-shadow: var(--neu-raised-sm);
-  border: 2.5px solid #5F6ED0;
+  border: 2.5px solid var(--color-accent);
   cursor: grab;
 }
 

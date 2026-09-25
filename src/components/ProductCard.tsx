@@ -3,6 +3,7 @@ import { Plus, Eye, Check, Star } from 'lucide-react';
 import { Product } from '../types';
 import { NeumorphicImage } from './NeumorphicImage';
 import { AnimatedFavoriteButton } from './AnimatedFavoriteButton';
+import { photoBadgeClass } from '../utils/productBadge';
 
 interface ProductCardProps {
   product: Product;
@@ -50,23 +51,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   return (
     <div
       onClick={() => onSelect(product)}
-      className={`group neu-inset neu-product-card rounded-3xl p-3 flex flex-col justify-between cursor-pointer select-none h-full bg-[#E3E8EF] border border-transparent/60 hover:border-white/90 ${className}`}
+      className={`group neu-flat-sm neu-product-card rounded-3xl overflow-hidden flex flex-col justify-between cursor-pointer select-none h-full ${className}`}
     >
       {/* Product Image Box: Strictly 3:4 aspect ratio */}
-      <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden mb-2.5 group/img shrink-0">
+      <div className="relative w-full aspect-[3/4] overflow-hidden mb-2.5 group/img shrink-0">
         <NeumorphicImage
           src={mainImage}
           alt={product.title}
           priority={priority}
           loading={priority ? 'eager' : 'lazy'}
-          containerClassName="w-full h-full rounded-2xl"
-          className="w-full h-full object-cover object-center rounded-xl transition-transform duration-300 group-hover:scale-105"
+          containerClassName="w-full h-full"
+          className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.03]"
         />
 
         {/* Badge in top-left corner */}
         {product.badge && (
           <div className="absolute top-2.5 left-2.5 z-10">
-            <span className="h-6 px-2.5 rounded-full neu-photo-badge text-[11px] tracking-wider uppercase text-[#2D3A4E] font-bold inline-flex items-center justify-center leading-none">
+            <span className={`h-6 px-2.5 rounded-full ${photoBadgeClass(product.badge)} text-[11px] tracking-wider uppercase font-bold inline-flex items-center justify-center leading-none`}>
               {product.badge}
             </span>
           </div>
@@ -97,7 +98,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       </div>
 
       {/* Product Details */}
-      <div className="flex flex-col flex-1 justify-between gap-1.5 px-0.5">
+      <div className="flex flex-col flex-1 justify-between gap-1.5 px-3 pb-3">
         <div>
           {/* Category & Rating Row */}
           <div className="flex items-center justify-between text-[11px] mb-1">
@@ -111,7 +112,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </div>
 
           {/* Title - fixed 2 lines baseline */}
-          <h3 className="text-[14px] font-semibold text-[#2D3A4E] line-clamp-2 leading-snug break-words min-h-[38px]">
+          <h3 className="text-[14px] font-bold text-[#2D3A4E] line-clamp-2 leading-snug break-words min-h-[38px]">
             {product.title}
           </h3>
         </div>
@@ -120,17 +121,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <div className="flex items-end justify-between pt-1 mt-auto gap-1">
           <div className="flex flex-col min-h-[36px] justify-end">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[15px] font-bold text-[#2D3A4E] leading-none">
+              <span className="font-display text-[15px] font-extrabold text-[#2D3A4E] leading-none">
                 {product.price.toLocaleString('ru-RU')} ₽
               </span>
               {discountPercent ? (
-                <span className="text-[11px] font-bold text-[#4B59BB] bg-[#E3E8EF] px-1.5 py-0.5 rounded-md border border-white/60 leading-none">
+                <span className="text-[11px] font-bold text-accent bg-[#E3E8EF] px-1.5 py-0.5 rounded-md border border-white/60 leading-none">
                   -{discountPercent}%
                 </span>
               ) : null}
             </div>
             {product.originalPrice && product.originalPrice > product.price ? (
-              <span className="text-[12px] text-[#6B7280] line-through font-normal leading-tight mt-0.5">
+              <span className="text-[12px] text-[#4E5C70] line-through font-normal leading-tight mt-0.5">
                 {product.originalPrice.toLocaleString('ru-RU')} ₽
               </span>
             ) : (
@@ -146,7 +147,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0 mb-0.5 cursor-pointer ${
               justAdded
                 ? 'neu-inset text-success'
-                : 'neu-button text-[#4B59BB]'
+                : 'neu-button text-accent'
             }`}
             aria-label={justAdded ? 'Добавлено в корзину' : 'Добавить в корзину'}
             title={justAdded ? 'Добавлено в корзину' : 'Добавить в корзину'}

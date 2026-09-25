@@ -216,13 +216,13 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
         {/* Header */}
         <div className="flex items-start justify-between gap-3 border-b border-[#BAC5D5]/50 pb-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#4B59BB] shrink-0">
+            <div className="w-10 h-10 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-accent shrink-0">
               {type === 'material' ? <Tag className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-base font-black text-[#2D3A4E] tracking-tight">{title}</h3>
-                <span className="text-[11px] font-black text-[#4B59BB] bg-[#5F6ED0]/10 px-2 py-0.5 rounded-md neu-flat-sm">
+                <span className="text-[11px] font-black text-accent bg-accent/10 px-2 py-0.5 rounded-md neu-flat-sm">
                   {type === 'material' ? 'Состав полотна' : 'Каталог акцентов'}
                 </span>
               </div>
@@ -247,10 +247,10 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
             <div className="space-y-1.5" ref={categoryDropdownRef}>
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-black text-[#4E5C70] uppercase tracking-wider flex items-center gap-1">
-                  <SlidersHorizontal className="w-3 h-3 text-[#4B59BB]" />
+                  <SlidersHorizontal className="w-3 h-3 text-accent" />
                   <span>Категория одежды:</span>
                 </label>
-                <span className="text-[11px] font-bold text-[#4B59BB]">
+                <span className="text-[11px] font-bold text-accent">
                   Синхронизировано со всеми карточками
                 </span>
               </div>
@@ -273,14 +273,14 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                       className="w-full px-3.5 py-2.5 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-between text-left transition-all cursor-pointer border border-white/50 hover:border-white/80 active:scale-[0.99]"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-7 h-7 rounded-xl neu-button bg-[#E3E8EF] flex items-center justify-center text-[#4B59BB] shrink-0">
+                        <div className="w-7 h-7 rounded-xl neu-button bg-[#E3E8EF] flex items-center justify-center text-accent shrink-0">
                           <SelectedIcon className="w-3.5 h-3.5" />
                         </div>
                         <div className="min-w-0 flex items-center gap-2">
                           <span className="text-xs font-black text-[#2D3A4E] truncate">
                             {selectedTab.label}
                           </span>
-                          <span className="text-[11px] px-2 py-0.5 rounded-lg font-black bg-[#5F6ED0]/15 text-[#4B59BB]">
+                          <span className="text-[11px] px-2 py-0.5 rounded-lg font-black bg-accent/15 text-accent">
                             {selectedCount}{' '}
                             {selectedCount === 1
                               ? 'акцент'
@@ -291,9 +291,9 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 text-[#4E5C70] pl-2 shrink-0">
-                        <span className="text-[11px] font-bold text-[#4B59BB]">Выбрать</span>
+                        <span className="text-[11px] font-bold text-accent">Выбрать</span>
                         <ChevronDown
-                          className={`w-4 h-4 text-[#4B59BB] transition-transform duration-200 ${
+                          className={`w-4 h-4 text-accent transition-transform duration-200 ${
                             isCategoryDropdownOpen ? 'rotate-180' : ''
                           }`}
                         />
@@ -323,24 +323,24 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                               className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between ${
                                 isSelected
                                   ? 'neu-pill-active'
-                                  : 'neu-button text-[#2D3A4E] hover:text-[#4B59BB]'
+                                  : 'neu-button text-[#2D3A4E] hover:text-accent'
                               }`}
                             >
                               <div className="flex items-center gap-2 min-w-0">
-                                <TabIcon className="w-3.5 h-3.5 text-[#4B59BB]" />
+                                <TabIcon className="w-3.5 h-3.5 text-accent" />
                                 <span className="truncate">{tab.label}</span>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
                                 <span
                                   className={`text-[11px] px-1.5 py-0.5 rounded-md font-black ${
                                     isSelected
-                                      ? 'bg-[#5F6ED0]/10 text-[#4B59BB]'
+                                      ? 'bg-accent/10 text-accent'
                                       : 'neu-inset bg-[#E3E8EF] text-[#4E5C70]'
                                   }`}
                                 >
                                   {count}
                                 </span>
-                                {isSelected && <Check className="w-3.5 h-3.5 text-[#4B59BB]" />}
+                                {isSelected && <Check className="w-3.5 h-3.5 text-accent" />}
                               </div>
                             </button>
                           );
@@ -358,7 +358,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
             {/* Action Bar inside Inset */}
             <div className="flex items-center justify-between flex-wrap gap-2 pb-1 border-b border-[#BAC5D5]/40">
               <span className="text-[11px] font-black text-[#2D3A4E] flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[#4B59BB]" />
+                <Sparkles className="w-3.5 h-3.5 text-accent" />
                 <span>
                   {type === 'material'
                     ? 'Пресеты состава ткани:'
@@ -391,7 +391,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                       setTimeout(() => newPhraseInputRef.current?.focus(), 50);
                     }
                   }}
-                  className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-[#5F6ED0]/15 text-[#4B59BB] hover:bg-[#5F6ED0]/25 transition-colors cursor-pointer flex items-center gap-1"
+                  className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-accent/15 text-accent hover:bg-accent/25 transition-colors cursor-pointer flex items-center gap-1"
                 >
                   <Plus className="w-3 h-3" />
                   <span>Добавить свою</span>
@@ -408,7 +408,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                 <div className="flex items-center justify-between text-[11px] font-bold text-[#4E5C70]">
                   <span>
                     Новая фраза для:{' '}
-                    <strong className="text-[#4B59BB]">
+                    <strong className="text-accent">
                       {type === 'material'
                         ? 'Состав ткани'
                         : CATEGORY_TABS.find((t) => t.id === activeCategoryTab)?.label}
@@ -438,7 +438,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                   <button
                     type="submit"
                     disabled={!newPhraseInput.trim()}
-                    className="h-8 px-3 rounded-lg neu-button text-[#4B59BB] text-xs font-bold active:scale-95 disabled:opacity-50 cursor-pointer flex items-center gap-1 shrink-0"
+                    className="h-8 px-3 rounded-lg neu-button text-accent text-xs font-bold active:scale-95 disabled:opacity-50 cursor-pointer flex items-center gap-1 shrink-0"
                   >
                     <Plus className="w-3 h-3" />
                     <span>Добавить</span>
@@ -455,7 +455,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsAddingPhrase(true)}
-                    className="text-[#4B59BB] underline hover:text-[#3F4BA6] cursor-pointer ml-1"
+                    className="text-accent underline hover:text-accent-strong cursor-pointer ml-1"
                   >
                     Добавить первую
                   </button>
@@ -469,7 +469,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                       className={`group inline-flex items-center rounded-xl text-[11px] font-bold transition-all ${
                         isSelected
                           ? 'neu-pill-active'
-                          : 'neu-button text-[#2D3A4E] hover:text-[#4B59BB]'
+                          : 'neu-button text-[#2D3A4E] hover:text-accent'
                       }`}
                     >
                       <button
@@ -489,7 +489,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                             isManageMode
                               ? 'text-danger hover:text-danger opacity-100'
                               : isSelected
-                              ? 'text-[#4B59BB]/70 hover:text-[#4B59BB] opacity-0 group-hover:opacity-100'
+                              ? 'text-accent/70 hover:text-accent opacity-0 group-hover:opacity-100'
                               : 'text-danger hover:text-danger opacity-0 group-hover:opacity-100'
                           }`}
                           title="Удалить фразу из базы"
@@ -514,7 +514,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5 text-[#4B59BB]" />
+                <FileText className="w-3.5 h-3.5 text-accent" />
                 <span>{type === 'material' ? 'Полный текст состава ткани:' : 'Текст описания:'}</span>
               </label>
               {draft && (
@@ -551,7 +551,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                 Слов: <strong className="text-[#2D3A4E]">{wordCount}</strong> • Символов:{' '}
                 <strong className="text-[#2D3A4E]">{draft.length}</strong>
               </span>
-              <span className="text-[#4B59BB]">
+              <span className="text-accent">
                 Нажмите «Сохранить изменения» для применения
               </span>
             </div>

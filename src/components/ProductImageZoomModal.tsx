@@ -110,7 +110,7 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
           <div className="w-full max-w-4xl flex items-center justify-between gap-2 sm:gap-3 z-20 shrink-0">
             {/* Title and Angle info */}
             <div className="h-11 sm:h-12 flex-1 min-w-0 px-3 sm:px-4 rounded-2xl neu-flat bg-[#E3E8EF] flex items-center gap-2.5 border border-white/80">
-              <div className="w-7 h-7 rounded-xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#4B59BB] shrink-0 border border-white/60">
+              <div className="w-7 h-7 rounded-xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-accent shrink-0 border border-white/60">
                 <Sparkles className="w-3.5 h-3.5" />
               </div>
               <div className="min-w-0 truncate">
@@ -131,7 +131,7 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
                 <button
                   onClick={handleZoomOut}
                   disabled={zoomLevel <= 1}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#2D3A4E] hover:text-[#4B59BB] disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 transition-all cursor-pointer select-none"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 transition-all cursor-pointer select-none"
                   title="Уменьшить"
                   aria-label="Уменьшить"
                 >
@@ -139,7 +139,7 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
                 </button>
                 <button
                   onClick={handleResetZoom}
-                  className="h-7 sm:h-8 px-2.5 sm:px-3 text-[11px] sm:text-xs font-black text-[#4B59BB] neu-inset bg-[#E3E8EF] rounded-xl flex items-center justify-center border border-[#5F6ED0]/20 active:scale-95 transition-all cursor-pointer select-none"
+                  className="h-7 sm:h-8 px-2.5 sm:px-3 text-[11px] sm:text-xs font-black text-accent neu-inset bg-[#E3E8EF] rounded-xl flex items-center justify-center border border-accent/20 active:scale-95 transition-all cursor-pointer select-none"
                   title="Сбросить масштаб"
                 >
                   {Math.round(zoomLevel * 100)}%
@@ -147,7 +147,7 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
                 <button
                   onClick={handleZoomIn}
                   disabled={zoomLevel >= 3}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#2D3A4E] hover:text-[#4B59BB] disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 transition-all cursor-pointer select-none"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 transition-all cursor-pointer select-none"
                   title="Увеличить"
                   aria-label="Увеличить"
                 >
@@ -221,7 +221,7 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
             {/* Zoom Tip Overlay */}
             {zoomLevel === 1 && (
               <div className="absolute bottom-3 left-1/2 -translate-x-1/2 neu-photo-badge text-[#2D3A4E] text-[11px] font-bold px-3.5 py-1.5 rounded-full z-10 flex items-center gap-1.5 pointer-events-none">
-                <ZoomIn className="w-3.5 h-3.5 text-[#4B59BB]" />
+                <ZoomIn className="w-3.5 h-3.5 text-accent" />
                 <span>Кликните для увеличения (до 300%)</span>
               </div>
             )}
@@ -239,7 +239,7 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
                 }}
                 className={`p-1 rounded-2xl transition-all flex items-center gap-2 cursor-pointer ${
                   currentIndex === idx
-                    ? 'neu-inset ring-2 ring-[#5F6ED0] bg-[#E3E8EF] scale-105'
+                    ? 'neu-inset ring-2 ring-accent bg-[#E3E8EF] scale-105'
                     : 'neu-button bg-[#E3E8EF] opacity-75 hover:opacity-100'
                 }`}
               >

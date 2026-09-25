@@ -95,7 +95,7 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
     if (/[^A-Za-z0-9А-Яа-я]/.test(pass)) score += 1;
 
     if (score <= 2) return { score: 1, label: 'Простой', color: 'bg-warning' };
-    if (score <= 3) return { score: 2, label: 'Хороший', color: 'bg-blue-500' };
+    if (score <= 3) return { score: 2, label: 'Хороший', color: 'bg-accent' };
     return { score: 3, label: 'Надежный', color: 'bg-success' };
   };
 
@@ -207,13 +207,13 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
 
         {/* Modal Header */}
         <div className="text-center space-y-2 mb-6">
-          <div className="w-14 h-14 rounded-2xl neu-flat flex items-center justify-center text-[#4B59BB] mx-auto">
-            <div className="w-10 h-10 rounded-xl neu-inset flex items-center justify-center text-[#4B59BB]">
+          <div className="w-14 h-14 rounded-2xl neu-flat flex items-center justify-center text-accent mx-auto">
+            <div className="w-10 h-10 rounded-xl neu-inset flex items-center justify-center text-accent">
               <KeyRound className="w-5 h-5 stroke-[2.2]" />
             </div>
           </div>
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#BAC5D5]/30 text-[11px] font-bold text-[#4B59BB] mb-1">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#BAC5D5]/30 text-[11px] font-bold text-accent mb-1">
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>Безопасность панели управления</span>
             </div>
@@ -272,13 +272,13 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                     if (error) setError(null);
                   }}
                   placeholder="Введите текущий пароль"
-                  className="w-full pl-10 pr-11 py-2.5 neu-inset rounded-2xl bg-[#E3E8EF] text-xs sm:text-sm font-bold text-[#2D3A4E] placeholder:text-[#56647A] focus:ring-2 focus:ring-[#5F6ED0]/40 transition-all"
+                  className="w-full pl-10 pr-11 py-2.5 neu-inset rounded-2xl bg-[#E3E8EF] text-xs sm:text-sm font-bold text-[#2D3A4E] placeholder:text-[#56647A] focus:ring-2 focus:ring-accent/40 transition-all"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  className="absolute right-3 text-[#4E5C70] hover:text-[#4B59BB] p-1 transition-colors cursor-pointer"
+                  className="absolute right-3 text-[#4E5C70] hover:text-accent p-1 transition-colors cursor-pointer"
                   title={showCurrentPassword ? 'Скрыть пароль' : 'Показать пароль'}
                   aria-label={showCurrentPassword ? 'Скрыть пароль' : 'Показать пароль'}
                 >
@@ -313,7 +313,7 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                     if (error) setError(null);
                   }}
                   placeholder="Введите новый логин (минимум 3 символа)"
-                  className="w-full pl-10 pr-4 py-2.5 neu-inset rounded-2xl bg-[#E3E8EF] text-xs sm:text-sm font-bold text-[#2D3A4E] placeholder:text-[#56647A] focus:ring-2 focus:ring-[#5F6ED0]/40 transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 neu-inset rounded-2xl bg-[#E3E8EF] text-xs sm:text-sm font-bold text-[#2D3A4E] placeholder:text-[#56647A] focus:ring-2 focus:ring-accent/40 transition-all"
                   required
                   minLength={3}
                 />
@@ -348,14 +348,14 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                     if (error) setError(null);
                   }}
                   placeholder="Не менее 6 символов"
-                  className="w-full pl-10 pr-11 py-2.5 neu-inset rounded-2xl bg-[#E3E8EF] text-xs sm:text-sm font-bold text-[#2D3A4E] placeholder:text-[#56647A] focus:ring-2 focus:ring-[#5F6ED0]/40 transition-all"
+                  className="w-full pl-10 pr-11 py-2.5 neu-inset rounded-2xl bg-[#E3E8EF] text-xs sm:text-sm font-bold text-[#2D3A4E] placeholder:text-[#56647A] focus:ring-2 focus:ring-accent/40 transition-all"
                   required
                   minLength={6}
                 />
                 <button
                   type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 text-[#4E5C70] hover:text-[#4B59BB] p-1 transition-colors cursor-pointer"
+                  className="absolute right-3 text-[#4E5C70] hover:text-accent p-1 transition-colors cursor-pointer"
                   title={showNewPassword ? 'Скрыть пароль' : 'Показать пароль'}
                   aria-label={showNewPassword ? 'Скрыть пароль' : 'Показать пароль'}
                 >
@@ -409,14 +409,14 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                   className={`w-full pl-10 pr-11 py-2.5 neu-inset rounded-2xl bg-[#E3E8EF] text-xs sm:text-sm font-bold text-[#2D3A4E] placeholder:text-[#56647A] focus:ring-2 transition-all ${
                     confirmPassword && confirmPassword !== newPassword
                       ? 'focus:ring-danger/50 border border-danger/35'
-                      : 'focus:ring-[#5F6ED0]/40'
+                      : 'focus:ring-accent/40'
                   }`}
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 text-[#4E5C70] hover:text-[#4B59BB] p-1 transition-colors cursor-pointer"
+                  className="absolute right-3 text-[#4E5C70] hover:text-accent p-1 transition-colors cursor-pointer"
                   title={showConfirmPassword ? 'Скрыть пароль' : 'Показать пароль'}
                   aria-label={showConfirmPassword ? 'Скрыть пароль' : 'Показать пароль'}
                 >

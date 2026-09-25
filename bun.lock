@@ -5,6 +5,7 @@
     "": {
       "name": "react-example",
       "dependencies": {
+        "@fontsource/manrope": "^5.3.0",
         "@tailwindcss/vite": "^4.1.14",
         "@vitejs/plugin-react": "^6.1.1",
         "firebase": "^12.19.0",
@@ -185,6 +186,8 @@
     "@firebase/util": ["@firebase/util@1.15.3", "", { "dependencies": { "tslib": "^2.1.0" } }, "sha512-c/z/gaIlaaLZEuGbE6sLUuJ61tskg1JghvhcNQzW948ASBinbVBBRnZTC4b4yt4LaEtJQkYlyzqLHcutFwEIvA=="],
 
     "@firebase/webchannel-wrapper": ["@firebase/webchannel-wrapper@1.0.7", "", {}, "sha512-phBFwieDLvkZGYN9CE9ZFNEIoBVksprzsnCzQejCmCHtgwCXReeuRpoEGN9C4EbhONztv8NRV1tau6Rb9pONwQ=="],
+
+    "@fontsource/manrope": ["@fontsource/manrope@5.3.0", "", {}, "sha512-obJ1Dv3+uCA6HlHgW8u4BGYxJR9In2HW7gjJhlflEvkrj1X1iSEwu0fToL+JYGC/FEKFfIz1sBuPduvcL2gIAA=="],
 
     "@google-cloud/cloud-sql-connector": ["@google-cloud/cloud-sql-connector@1.12.0", "", { "dependencies": { "@google-cloud/sql": "^0.25.0", "@googleapis/sqladmin": "^38.0.0", "@grpc/grpc-js": "^1.14.4", "gaxios": "^8.0.0", "google-auth-library": "^11.0.2", "p-throttle": "^8.1.0" } }, "sha512-cUrI+6StY8F/dQB5Lujrl9TFYibDZGGWvPp1aHhvLn4btOlbflxdHoZ6NDWeWySCNtnOYhoiZNQfK4qPC5moBw=="],
 

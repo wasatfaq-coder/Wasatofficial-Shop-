@@ -158,7 +158,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#BAC5D5]/50">
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <div className="w-9 h-9 rounded-2xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0">
+              <div className="w-9 h-9 rounded-2xl neu-button flex items-center justify-center text-accent shrink-0">
                 <Ticket className="w-5 h-5 stroke-[2.2]" />
               </div>
               <div className="min-w-0 flex-1">
@@ -166,7 +166,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                   <h3 className="text-base font-extrabold text-[#2D3A4E] leading-tight whitespace-nowrap">
                     Промокоды и купоны
                   </h3>
-                  <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full neu-inset text-[#4B59BB] whitespace-nowrap shrink-0">
+                  <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full neu-inset text-accent whitespace-nowrap shrink-0">
                     {activePromos.length} активных
                   </span>
                 </div>
@@ -195,7 +195,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
 
           {/* Active Applied Promo Status (If any applied) */}
           {appliedPromo && (
-            <div className="neu-inset-deep rounded-2xl p-3.5 border border-[#5F6ED0]/40 flex items-center justify-between bg-[#E3E8EF]">
+            <div className="neu-inset-deep rounded-2xl p-3.5 border border-accent/40 flex items-center justify-between bg-[#E3E8EF]">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl neu-fill-accent text-white font-black text-xs flex items-center justify-center shrink-0">
                   {appliedPromo.discountType === 'fixed'
@@ -204,10 +204,10 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-black text-[#4B59BB]">
+                    <span className="text-xs font-black text-accent">
                       {appliedPromo.code}
                     </span>
-                    <span className="text-[11px] font-bold text-[#4B59BB] neu-inset px-1.5 py-0.5 rounded-md">
+                    <span className="text-[11px] font-bold text-accent neu-inset px-1.5 py-0.5 rounded-md">
                       Применен
                     </span>
                   </div>
@@ -232,7 +232,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
           {/* List of Coupons */}
           <div className="space-y-3 pt-1">
             <h4 className="text-xs font-bold text-[#2D3A4E] uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-[#4B59BB]" />
+              <Sparkles className="w-3.5 h-3.5 text-accent" />
               <span>Доступные купоны со скидкой</span>
             </h4>
 
@@ -269,7 +269,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                       <div className="w-12 h-12 rounded-2xl neu-inset flex flex-col items-center justify-center shrink-0 border border-white/60">
                         <span
                           className={`text-xs font-black leading-none ${
-                            isFixed ? 'text-warning text-[11px]' : 'text-[#4B59BB]'
+                            isFixed ? 'text-warning text-[11px]' : 'text-accent'
                           }`}
                         >
                           {discountLabel}
@@ -288,7 +288,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                           <button
                             type="button"
                             onClick={(e) => handleCopyCode(coupon.code, e)}
-                            className="text-[#4E5C70] hover:text-[#4B59BB] text-[11px] flex items-center gap-0.5 font-bold transition-colors cursor-pointer"
+                            className="text-[#4E5C70] hover:text-accent text-[11px] flex items-center gap-0.5 font-bold transition-colors cursor-pointer"
                             title="Скопировать код"
                           >
                             {copiedCode === coupon.code ? (
@@ -307,7 +307,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                         </p>
 
                         {coupon.isReferral && (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#4B59BB] mt-1">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-accent mt-1">
                             <Share2 className="w-3 h-3" />
                             Блогер: {coupon.partnerName}
                           </span>
@@ -318,7 +318,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                           {coupon.minOrderAmount ? (
                             <span
                               className={`neu-inset px-2 py-0.5 rounded-md font-semibold ${
-                                isMinOrderNotMet ? 'text-warning font-bold' : 'text-[#4B59BB]'
+                                isMinOrderNotMet ? 'text-warning font-bold' : 'text-accent'
                               }`}
                             >
                               От {coupon.minOrderAmount.toLocaleString('ru-RU')} ₽
@@ -329,7 +329,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
 
                           {coupon.expiresAt && (
                             <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3 text-[#4B59BB]" />
+                              <Clock className="w-3 h-3 text-accent" />
                               <span>До {coupon.expiresAt}</span>
                             </span>
                           )}
@@ -356,7 +356,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                         className={`py-1.5 px-4 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
                           isCurrentActive
                             ? 'neu-inset text-success opacity-80 cursor-default'
-                            : 'neu-button text-[#4B59BB] hover:text-[#2D3A4E] hover:scale-105 active:scale-95'
+                            : 'neu-button text-accent hover:text-[#2D3A4E] hover:scale-105 active:scale-95'
                         }`}
                       >
                         {isCurrentActive ? (

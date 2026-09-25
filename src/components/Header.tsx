@@ -54,7 +54,7 @@ export const Header: React.FC<HeaderProps> = ({
         {isHome ? (
           <button
             onClick={onOpenDrawer}
-            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-[#4B59BB] transition-colors shrink-0"
+            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent transition-colors shrink-0"
             aria-label="Открыть меню"
           >
             <Menu className="w-5 h-5 stroke-[2]" />
@@ -66,7 +66,7 @@ export const Header: React.FC<HeaderProps> = ({
               else if (activeTab === 'product-detail') setActiveTab('home');
               else setActiveTab('home');
             }}
-            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-[#4B59BB] transition-colors shrink-0"
+            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent transition-colors shrink-0"
             aria-label="Назад"
           >
             <ArrowLeft className="w-5 h-5 stroke-[2]" />
@@ -75,8 +75,12 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Center Header Title */}
         <div className="text-center flex-1 min-w-0 px-2">
-          <h1 className="text-lg font-bold text-[#2D3A4E] leading-tight truncate tracking-tight">
+          <h1 className="text-lg font-extrabold text-[#2D3A4E] leading-tight truncate tracking-tight">
             {titleInfo.main}
+            {/* Brand mark: a gold dot after the store name */}
+            {titleInfo.main === storeName && (
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-gold ml-1 align-baseline" aria-hidden="true" />
+            )}
           </h1>
           {titleInfo.sub && (
             <p className="text-xs font-semibold text-[#4E5C70] leading-none mt-0.5 truncate">
@@ -89,7 +93,7 @@ export const Header: React.FC<HeaderProps> = ({
         {activeTab === 'profile' ? (
           <button
             onClick={onOpenDrawer}
-            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-[#4B59BB] transition-colors shrink-0"
+            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent transition-colors shrink-0"
             aria-label="Настройки"
           >
             <Settings className="w-5 h-5 stroke-[2]" />
