@@ -12,7 +12,8 @@
 ## Стек
 
 - React 19 + TypeScript, Vite 6, Tailwind CSS 4, Motion, Recharts
-- Firebase: Authentication (вход через Google), Cloud Firestore (данные), Hosting (сайт)
+- Firebase: Authentication (Google и анонимный вход для гостевого чата), Cloud Firestore (данные),
+  Cloud Functions (серверное оформление заказов), Hosting (сайт)
 - Менеджер пакетов — [Bun](https://bun.sh) (`bun.lock`)
 
 ## Быстрый старт
@@ -31,6 +32,19 @@ bun run dev        # http://localhost:3000
 `.env.example` описывает переменные, которые подставляет Google AI Studio при запуске
 там (`GEMINI_API_KEY`, `APP_URL`). Для локальной разработки и Firebase Hosting они не нужны.
 
+### Локально с эмуляторами Firebase
+
+Чтобы не трогать боевую базу (и проверить оформление заказа через функцию), запустите
+эмуляторы и dev-сервер в режиме эмуляторов (нужна Java):
+
+```bash
+npm ci --prefix functions && bun run build:functions
+bunx firebase emulators:start --only auth,firestore,functions --project ai-studio-applet-webapp-e9574
+VITE_USE_EMULATORS=true bun run dev   # во втором терминале
+```
+
+База в эмуляторе пустая: товары добавьте через панель администратора или скриптом с Admin SDK.
+
 ## Команды
 
 | Команда | Что делает |
@@ -40,6 +54,8 @@ bun run dev        # http://localhost:3000
 | `bun run preview` | Локальный просмотр собранного `dist/` |
 | `bun run lint` | Проверка типов TypeScript (`tsc --noEmit`) |
 | `bun run test:rules` | Тесты правил Firestore в эмуляторе (нужна Java 11+) |
+| `bun run test:functions` | Тесты Cloud Functions и расчёта цены в эмуляторе (нужны Java и `npm ci --prefix functions`) |
+| `bun run build:functions` | Сборка Cloud Functions в `functions/lib/` |
 | `bun run deploy` | Сборка и ручной деплой Hosting + правил Firestore |
 
 ## Структура
@@ -51,10 +67,12 @@ src/
   context/        AuthContext — вход через Google и проверка прав администратора
   utils/          синхронизация с Firestore, склад, доставка, аналитика, экспорт
   data/           начальные (демо) данные для пустой базы
-  firebase.ts     инициализация Firebase
+  shared/         код, общий с сервером: расчёт цены, контракт API заказа
+  firebase.ts     инициализация Firebase, вызов placeOrder, личность для гостевого чата
+functions/        Cloud Functions (placeOrder) и их тесты; свой package.json (npm)
 firestore.rules   правила доступа к Firestore
 tests/            тесты правил Firestore
-firebase.json     настройки Hosting и Firestore для Firebase CLI
+firebase.json     настройки Hosting, Firestore и Functions для Firebase CLI
 ```
 
 ## Администрирование
@@ -74,6 +92,53 @@ firebase.json     настройки Hosting и Firestore для Firebase CLI
 `ai-studio-manstyle-…` → коллекция `admins` → документ с ID = UID пользователя
 (UID есть в Authentication → Users). Поля документа могут быть любыми,
 например `{ "role": "admin" }`.
+
+## Серверная часть
+
+### Оформление заказов (Cloud Function `placeOrder`)
+
+Функция `placeOrder` (регион `europe-west1`) берёт цены, остатки, промокоды, стоимость
+доставки и настройки магазина из Firestore и в одной транзакции:
+пересчитывает сумму, проверяет и списывает остатки, применяет промокод и создаёт заказ.
+Всё, что присылает клиент, кроме состава корзины, адреса и контактов, игнорируется.
+
+Режим включается флагом `settings/server.serverOrdersEnabled`:
+
+| Флаг | Кто оформляет заказ | Что разрешено покупателям в правилах |
+|---|---|---|
+| нет / `false` | браузер (как раньше) | создавать заказ, списывать остатки, менять счётчики промокодов |
+| `true` | Cloud Function | только отзывы о товарах; заказы, остатки и промокоды — только сервер |
+
+**Как включить:**
+
+1. Подключите тариф **Blaze** в Firebase Console (Cloud Functions без него не работают;
+   для небольшого магазина обычно укладывается в бесплатные лимиты).
+2. GitHub → Settings → Secrets and variables → Actions → **Variables** → создайте переменную
+   `DEPLOY_FUNCTIONS` со значением `true`. Сервисному аккаунту деплоя дополнительно нужны
+   роли **Cloud Functions Admin**, **Artifact Registry Administrator** и **Cloud Build Editor**.
+3. Дождитесь деплоя из `main` (или запустите workflow «Deploy to Firebase» вручную) и
+   убедитесь, что функция `placeOrder` появилась в Firebase Console → Functions.
+4. Firestore → база `ai-studio-manstyle-…` → коллекция `settings` → документ `server` →
+   поле `serverOrdersEnabled` (boolean) = `true`.
+
+Выключить обратно — поставить `false`: магазин вернётся к оформлению в браузере.
+
+### Чат поддержки
+
+У каждого покупателя свой диалог (`chat_messages.threadId` = UID). Покупатель, вошедший через
+Google, пишет от своего аккаунта. Гость при первом сообщении получает анонимную учётную запись
+(отдельная копия Firebase-приложения, основной вход при этом не меняется). Для этого включите
+**Authentication → Sign-in method → Anonymous**; без этого гостю предложат войти через Google.
+
+Администратор видит все диалоги во вкладке «Поддержка» панели администратора.
+Внутренние заметки сотрудников покупателю не видны. Сообщения, написанные до разделения
+чата, собраны в диалог «Общий чат (до разделения)».
+
+### Бонусы и заметки менеджера
+
+Бонусные баллы (`users.bonusPoints`) меняет только администратор, покупатель изменить их
+не может. Заметки и теги менеджера о покупателе хранятся в коллекции `customer_notes`,
+доступной только администраторам.
 
 ## Деплой (Firebase Hosting)
 

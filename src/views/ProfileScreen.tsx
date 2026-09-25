@@ -134,9 +134,11 @@ interface ProfileScreenProps {
     tag?: ChatMessage['tag'],
     isInternalNote?: boolean,
     productCard?: ChatMessage['productCard'],
-    orderStatusUpdate?: ChatMessage['orderStatusUpdate']
+    orderStatusUpdate?: ChatMessage['orderStatusUpdate'],
+    thread?: Pick<ChatMessage, 'threadId' | 'threadName'>
   ) => void;
-  onClearChat?: () => void;
+  /** undefined: whole chat, null: legacy messages without a thread, string: one customer's thread */
+  onClearChat?: (threadId?: string | null) => void;
   storefrontSettings?: StorefrontSettings;
   onUpdateStorefrontSettings?: (settings: StorefrontSettings) => void;
   onSyncFirebase?: () => Promise<void>;
@@ -277,6 +279,49 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     if (onUpdateOrders) onUpdateOrders(updated);
   };
 
+  // Support inbox: one dialog per customer (messages grouped by threadId).
+  // Messages written before per-customer chats existed have no threadId.
+  const LEGACY_THREAD_KEY = '__legacy__';
+  const chatThreads = React.useMemo(() => {
+    const byKey = new Map<string, { key: string; threadId: string | null; name: string; count: number; lastOrder: number; lastText: string }>();
+    for (const msg of localChatMessages) {
+      const key = msg.threadId || LEGACY_THREAD_KEY;
+      const order = Number(msg.id.match(/\d+/)?.[0] || 0);
+      const entry = byKey.get(key) || {
+        key,
+        threadId: msg.threadId || null,
+        name: msg.threadId ? 'Покупатель' : 'Общий чат (до разделения)',
+        count: 0,
+        lastOrder: 0,
+        lastText: '',
+      };
+      if (msg.threadName) entry.name = msg.threadName;
+      entry.count += 1;
+      if (order >= entry.lastOrder) {
+        entry.lastOrder = order;
+        entry.lastText = msg.text || 'Вложение';
+      }
+      byKey.set(key, entry);
+    }
+    return [...byKey.values()].sort((a, b) => b.lastOrder - a.lastOrder);
+  }, [localChatMessages]);
+
+  const [activeChatThreadKey, setActiveChatThreadKey] = useState<string | null>(null);
+  React.useEffect(() => {
+    if (chatThreads.length > 0 && !chatThreads.some((t) => t.key === activeChatThreadKey)) {
+      setActiveChatThreadKey(chatThreads[0].key);
+    }
+  }, [chatThreads, activeChatThreadKey]);
+
+  const activeThreadMessages = localChatMessages.filter(
+    (m) => (m.threadId || LEGACY_THREAD_KEY) === activeChatThreadKey
+  );
+
+  const handleClearActiveThread = () => {
+    if (!onClearChat || !activeChatThreadKey) return;
+    onClearChat(activeChatThreadKey === LEGACY_THREAD_KEY ? null : activeChatThreadKey);
+  };
+
   const handleSendAdminMessage = (
     text: string,
     imageUrl?: string,
@@ -286,8 +331,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     productCard?: ChatMessage['productCard'],
     orderStatusUpdate?: ChatMessage['orderStatusUpdate']
   ) => {
+    const activeThread = chatThreads.find((t) => t.key === activeChatThreadKey);
+    const thread = activeThread?.threadId
+      ? { threadId: activeThread.threadId, threadName: activeThread.name }
+      : undefined;
     const newMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
+      ...thread,
       sender: 'admin',
       text,
       imageUrl,
@@ -300,7 +350,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     };
     setLocalChatMessages((prev) => [...prev, newMsg]);
     if (onSendMessageAsAdmin) {
-      onSendMessageAsAdmin(text, imageUrl, promoCard, tag, isInternalNote, productCard, orderStatusUpdate);
+      onSendMessageAsAdmin(text, imageUrl, promoCard, tag, isInternalNote, productCard, orderStatusUpdate, thread);
     }
   };
 
@@ -3575,8 +3625,39 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
               {/* --- TAB 7: REAL-TIME SUPPORT CHAT --- */}
               {adminTab === 'support' && (
+                <div className="space-y-3">
+                  <div className="neu-inset rounded-2xl p-3 space-y-2">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-[#5C6B80]">
+                      Диалоги покупателей · {chatThreads.length}
+                    </p>
+                    {chatThreads.length === 0 ? (
+                      <p className="text-xs text-[#5C6B80]">Сообщений от покупателей пока нет</p>
+                    ) : (
+                      <div className="flex gap-2 overflow-x-auto pb-1">
+                        {chatThreads.map((thread) => (
+                          <button
+                            key={thread.key}
+                            type="button"
+                            onClick={() => setActiveChatThreadKey(thread.key)}
+                            className={`shrink-0 max-w-[220px] text-left rounded-xl px-3 py-2 transition-all cursor-pointer ${
+                              thread.key === activeChatThreadKey
+                                ? 'neu-button-accent text-white'
+                                : 'neu-button text-[#2D3A4E]'
+                            }`}
+                            title={thread.lastText}
+                          >
+                            <span className="block text-xs font-bold truncate">
+                              {thread.name} · {thread.count}
+                            </span>
+                            <span className="block text-[10px] opacity-80 truncate">{thread.lastText}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 <AdminSupportChatTab
-                  messages={localChatMessages}
+                  key={activeChatThreadKey || 'none'}
+                  messages={activeThreadMessages}
                   orders={orders}
                   products={productsList}
                   promos={localPromos}
@@ -3584,9 +3665,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   onSendMessageAsAdmin={handleSendAdminMessage}
                   onUpdateOrders={handleUpdateOrders}
                   onUpdatePromos={handleUpdatePromosList}
-                  onClearChat={onClearChat}
+                  onClearChat={handleClearActiveThread}
                   onShowToast={onShowToast}
                 />
+                </div>
               )}
 
               {/* --- TAB 8: STOREFRONT & SYSTEM SETTINGS --- */}

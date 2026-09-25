@@ -11,8 +11,11 @@ ManStyle — SPA интернет-магазина мужской одежды (
 - `bun run lint` — `tsc --noEmit` (линтера ESLint нет)
 - `bun run build` — сборка в `dist/`
 - `bun run test:rules` — тесты `firestore.rules` в эмуляторе (нужна Java)
+- `bun run test:functions` — тесты Cloud Functions и расчёта цены (сначала `npm ci --prefix functions`)
+- `functions/`: отдельный npm-пакет; `npm run typecheck|build --prefix functions`
 
-Перед коммитом: `bun run lint && bun run build`; при изменении правил — `bun run test:rules`.
+Перед коммитом: `bun run lint && bun run build`; при изменении правил — `bun run test:rules`;
+при изменении `functions/` или `src/shared/` — `bun run test:functions`.
 
 ## Архитектура
 
@@ -27,6 +30,13 @@ ManStyle — SPA интернет-магазина мужской одежды (
   или документ `admins/{uid}`. Заказы и профили видны только владельцу и администратору.
   Гостевые заказы хранятся в `localStorage`.
 - ID базы Firestore — в `firebase-applet-config.json` (`firestoreDatabaseId`) и `firebase.json`.
+- `src/shared/` — код, общий с Cloud Functions (расчёт цены `orderPricing.ts`, контракт
+  `orderApi.ts`). Без браузерных API. Меняя расчёт цены, меняете его и на сервере.
+- Заказы: при `settings/server.serverOrdersEnabled == true` заказ оформляет функция `placeOrder`
+  (`functions/src/placeOrder.ts`), иначе — клиент (`completeOrderLocally` в `App.tsx`).
+- Чат: сообщения с `threadId` (uid покупателя; у гостя — анонимный uid из отдельного
+  Firebase-приложения `guest-chat`). У каждого сообщения должно быть поле `isInternalNote`.
+- `users.bonusPoints/managerNotes/tags` меняет только администратор; заметки менеджера хранятся в `customer_notes`.
 
 ## Деплой
 
