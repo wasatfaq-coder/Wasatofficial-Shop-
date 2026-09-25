@@ -146,14 +146,14 @@ export const INITIAL_BANNER_SLIDES: BannerSlide[] = [
   {
     id: 'banner-2',
     title: 'Премиум льняные рубашки',
-    subtitle: 'Натуральный 100% лён и дышащие ткани',
+    subtitle: 'Натуральный 100% лен и дышащие ткани',
     btnText: 'Рубашки',
     image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&q=80&w=800',
     mobileImage: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&q=80&w=600',
     desktopImage: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&q=80&w=1400',
     targetCategory: 'shirts',
     active: true,
-    badge: '100% ЛЁН',
+    badge: '100% ЛЕН',
     scheduleEnabled: true,
     startDate: '2026-08-01T00:00',
     endDate: '2026-09-30T23:59',
@@ -179,7 +179,7 @@ export const INITIAL_QUICK_TEMPLATES: ChatQuickTemplate[] = [
     category: 'sizes',
     categoryLabel: 'Размеры и посадка',
     title: 'Подбор размера по росту и весу',
-    text: 'Здравствуйте! Я консультант магазина ManStyle. Назовите ваш рост и вес, либо используйте встроенный "Калькулятор размеров" в карточке товара, и я подскажу точный размер.',
+    text: 'Здравствуйте! Я консультант магазина Wasat Shop. Назовите ваш рост и вес, либо используйте встроенный "Калькулятор размеров" в карточке товара, и я подскажу точный размер.',
   },
   {
     id: 'tmpl-2',
@@ -200,7 +200,7 @@ export const INITIAL_QUICK_TEMPLATES: ChatQuickTemplate[] = [
     category: 'discounts',
     categoryLabel: 'Скидки и промо',
     title: 'Промокод на скидку 10%',
-    text: 'Благодарим вас за выбор ManStyle! Дарим вам персональный промокод MANSTYLE10 на скидку 10% на ваш следующий заказ.',
+    text: 'Благодарим вас за выбор Wasat Shop! Дарим вам персональный промокод MANSTYLE10 на скидку 10% на ваш следующий заказ.',
   },
   {
     id: 'tmpl-5',
@@ -215,7 +215,7 @@ export const INITIAL_CHAT_MESSAGES: ChatMessage[] = [
   {
     id: 'msg-welcome',
     sender: 'bot',
-    text: 'Здравствуйте! Я консультант службы поддержки ManStyle. Чем я могу помочь вам?',
+    text: 'Здравствуйте! Я консультант службы поддержки Wasat Shop. Чем я могу помочь вам?',
     timestamp: 'Только что',
   },
 ];

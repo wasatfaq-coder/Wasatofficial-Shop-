@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-ManStyle — SPA интернет-магазина мужской одежды (React 19 + Vite 6 + Tailwind 4),
+Wasat Shop — SPA интернет-магазина мужской одежды (React 19 + Vite 6 + Tailwind 4),
 данные в Firebase (Auth через Google, Firestore с именованной базой, Hosting).
 Интерфейс и тексты — на русском.
 
@@ -36,6 +36,9 @@ ManStyle — SPA интернет-магазина мужской одежды (
   (`functions/src/placeOrder.ts`), иначе — клиент (`completeOrderLocally` в `App.tsx`).
 - Чат: сообщения с `threadId` (uid покупателя; у гостя — анонимный uid из отдельного
   Firebase-приложения `guest-chat`). У каждого сообщения должно быть поле `isInternalNote`.
+- Название магазина не прописывать в текстах: `getStoreName(settings)` / `currentStoreName()` из
+  `src/utils/storeContacts.ts` (там же контакты без демо-значений). Номера заказов и новые артикулы — `WS-`.
+  Ключи `manstyle_*` в `localStorage` и ID базы — внутренние, не переименовывать.
 - `users.bonusPoints/managerNotes/tags` меняет только администратор; заметки менеджера хранятся в `customer_notes`.
 - Стили — неоморфные классы из `src/index.css`, тени только через их переменные (`--neu-*`), без `shadow-*`
   Tailwind рядом с `neu-*` (неоморфный класс их перекрывает). Одна `neu-button-accent` на экран,

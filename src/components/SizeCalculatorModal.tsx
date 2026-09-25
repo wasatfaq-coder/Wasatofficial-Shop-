@@ -131,7 +131,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
       allowance = '+1...2 см';
       fitDescription = `Приталенный крой с акцентом на линию груди и плеч (ОГ ${chest} см, ПОГ ${halfChest} см). При дропе ${
         drop > 0 ? `+${drop}` : drop
-      } см (${russianPattern.fullnessGroup}-я полнота) обеспечивает точную скульптурную посадку без лишнего объёма в талии.`;
+      } см (${russianPattern.fullnessGroup}-я полнота) обеспечивает точную скульптурную посадку без лишнего объема в талии.`;
     } else if (isOversize) {
       fitTitle = 'Oversize (Свободный крой)';
       fitBadge = 'OVERSIZE';
@@ -222,10 +222,10 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                 </div>
                 <div>
                   <h3 className="text-base font-extrabold text-[#2D3A4E]">
-                    Мои размеры & Лекало
+                    Мои размеры и лекало
                   </h3>
                   <p className="text-[11px] text-[#4E5C70] font-medium">
-                    Точный расчёт параметров и размера мужской одежды
+                    Точный расчет параметров и размера мужской одежды
                   </p>
                 </div>
               </div>
@@ -388,7 +388,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                           <th className="py-1 px-1">Междунар.</th>
                           <th className="py-1 px-1">Грудь (ОГ)</th>
                           <th className="py-1 px-1">Талия (ОТ)</th>
-                          <th className="py-1 px-1">Бёдра (ОБ)</th>
+                          <th className="py-1 px-1">Бедра (ОБ)</th>
                           <th className="py-1 px-1">Джинсы</th>
                         </tr>
                       </thead>
@@ -481,7 +481,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
               {/* Hips Slider */}
               <NeumorphicSlider
                 id="sizecalc-slider-hips"
-                label="Обхват бёдер"
+                label="Обхват бедер"
                 value={hips}
                 min={80}
                 max={140}
@@ -541,7 +541,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
               </div>
               <span className="text-xs font-bold text-[#2D3A4E] flex items-center gap-1.5">
                 <BookmarkCheck className="w-3.5 h-3.5 text-[#4B59BB]" />
-                <span>Сохранить параметры в моём профиле</span>
+                <span>Сохранить параметры в моем профиле</span>
               </span>
             </button>
 
@@ -566,7 +566,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                 {applied ? (
                   <>
                     <Check className="w-4 h-4 stroke-[3]" />
-                    <span>Размер {recommendedSizeLabel} сохранён!</span>
+                    <span>Размер {recommendedSizeLabel} сохранен!</span>
                   </>
                 ) : (
                   <span>Выбрать {recommendedSizeLabel}</span>

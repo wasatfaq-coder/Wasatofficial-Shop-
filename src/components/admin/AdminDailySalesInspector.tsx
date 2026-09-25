@@ -176,7 +176,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
             {dayData.orders} <span className="text-xs font-bold text-[#4E5C70]">шт.</span>
           </p>
           <div className="text-[11px] text-[#4E5C70] flex items-center justify-between">
-            <span>В базе Firestore:</span>
+            <span>Заказов в базе:</span>
             <strong className="text-indigo-600 font-bold">{dayData.realOrdersList.length}</strong>
           </div>
         </div>
@@ -193,7 +193,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
             {dayData.avgCheck.toLocaleString('ru-RU')} ₽
           </p>
           <div className="text-[11px] text-[#4E5C70]">
-            На 1 завершённую покупку
+            На 1 завершенную покупку
           </div>
         </div>
 
@@ -227,8 +227,8 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
           </span>
           <span className="text-[11px] neu-inset px-2.5 py-1 rounded-lg bg-[#E3E8EF] text-[#2D3A4E] font-extrabold">
             {dayData.realOrdersList.length > 0
-              ? `${dayData.realOrdersList.length} заказ(ов) из Firestore`
-              : 'Расчётный суточный объем'}
+              ? `${dayData.realOrdersList.length} заказ(ов) из базы`
+              : 'Расчетный суточный объем'}
           </span>
         </div>
 

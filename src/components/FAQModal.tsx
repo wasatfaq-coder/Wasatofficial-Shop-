@@ -53,7 +53,7 @@ const FAQ_DATA: FAQItem[] = [
     category: 'returns',
     question: 'Каковы условия и сроки возврата товара (гарантия {RETURN_DAYS} дней)?',
     answer:
-      'В соответствии с законодательством РФ и стандартами MANSTYLE, вы можете вернуть или обменять неподошедший товар надлежащего качества в течение {RETURN_DAYS} дней с момента получения. Главное условие — сохранение товарного вида, фабричных пломб, ярлыков и оригинальной упаковки.',
+      'В соответствии с законодательством РФ и правилами магазина, вы можете вернуть или обменять неподошедший товар надлежащего качества в течение {RETURN_DAYS} дней с момента получения. Главное условие — сохранение товарного вида, фабричных пломб, ярлыков и оригинальной упаковки.',
     highlights: ['{RETURN_DAYS} дней на возврат', 'Быстрое оформление онлайн', 'Возврат средств на карту за 1-3 рабочих дня'],
   },
   {
@@ -83,7 +83,7 @@ const FAQ_DATA: FAQItem[] = [
   {
     id: 'war-1',
     category: 'warranty',
-    question: 'Какая гарантия предоставляется на изделия MANSTYLE?',
+    question: 'Какая гарантия предоставляется на наши изделия?',
     answer:
       'Мы предоставляем официальную гарантию качества 6 месяцев на всю линейку мужской одежды и обуви. Гарантия покрывает прочность швов, надежность премиальной металлической фурнитуры (молнии, кнопки, пуговицы) и стойкость натуральных красителей при соблюдении рекомендаций по уходу.',
     highlights: ['6 месяцев гарантии', 'Премиальная фурнитура', '100% контроль качества перед отправкой'],
@@ -91,7 +91,7 @@ const FAQ_DATA: FAQItem[] = [
   {
     id: 'war-2',
     category: 'warranty',
-    question: 'Из каких тканей шьется коллекция MANSTYLE?',
+    question: 'Из каких тканей шьется наша коллекция?',
     answer:
       'Для пошива используются исключительно сертифицированные премиальные ткани: 100% египетский длинноволокнистый хлопок, тонкорунная шерсть мериноса Super 120s–150s, натуральный лен и премиальный шелк европейских мануфактур.',
     highlights: ['Натуральные гипоаллергенные ткани', 'Высокая износостойкость'],
@@ -124,6 +124,8 @@ interface FAQModalProps {
   returnPeriodDays?: number;
   /** Store phone from Admin → «Витрина»; the call button is hidden when empty */
   storePhone?: string;
+  /** Store email from Admin → «Витрина»; hidden when empty */
+  storeEmail?: string;
   onOpenSupportChat?: () => void;
   onShowToast?: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
@@ -136,6 +138,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
   freeDeliveryThreshold = 5000,
   returnPeriodDays = 14,
   storePhone = '',
+  storeEmail = '',
 }) => {
   const faqData = useMemo<FAQItem[]>(() => {
     const fill = (text: string) =>
@@ -208,7 +211,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
                   Часто задаваемые вопросы (FAQ)
                 </h3>
                 <p className="text-[11px] text-[#4E5C70]">
-                  Всё о доставке, примерке, возврате и гарантиях качества
+                  Все о доставке, примерке, возврате и гарантиях качества
                 </p>
               </div>
             </div>
@@ -310,14 +313,14 @@ export const FAQModal: React.FC<FAQModalProps> = ({
                 >
                   <span>Написать в чат</span>
                 </button>
-              ) : (
+              ) : storeEmail ? (
                 <a
-                  href="mailto:support@manstyle-store.ru"
+                  href={`mailto:${storeEmail}`}
                   className="neu-button px-3 py-1.5 rounded-xl text-xs font-bold text-[#4B59BB] cursor-pointer"
                 >
-                  support@manstyle-store.ru
+                  {storeEmail}
                 </a>
-              )}
+              ) : null}
             </div>
           </div>
         </motion.div>

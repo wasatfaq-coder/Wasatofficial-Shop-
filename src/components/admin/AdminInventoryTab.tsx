@@ -43,6 +43,7 @@ import {
   getStockMovementLogs,
   saveStockMovementLogs,
 } from '../../utils/inventory';
+import { currentStoreName } from '../../utils/storeContacts';
 
 interface AdminInventoryTabProps {
   products: Product[];
@@ -1541,7 +1542,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                 </div>
                 <div>
                   <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E]">
-                    Генератор термоэтикеток & Штрихкодов
+                    Генератор термоэтикеток и штрихкодов
                   </h4>
                   <p className="text-[11px] text-[#4E5C70] font-semibold">
                     Стандарты Wildberries / Ozon / Склад / Розничный ценник
@@ -1655,7 +1656,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                   }`}
                 >
                   <div className="border-b border-black/30 pb-1 mb-1 flex items-center justify-between">
-                    <span className="text-[11px] font-black tracking-widest uppercase">MANSTYLE</span>
+                    <span className="text-[11px] font-black tracking-widest uppercase">{currentStoreName()}</span>
                     <span className="text-[11px] font-bold text-black/70">RU / EAC</span>
                   </div>
 

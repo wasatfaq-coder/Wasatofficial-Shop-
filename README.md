@@ -1,4 +1,4 @@
-# ManStyle — магазин мужской одежды
+# Wasat Shop — магазин мужской одежды
 
 [![CI](https://github.com/wasatfaq-coder/Wasatofficial-Shop-/actions/workflows/ci.yml/badge.svg)](https://github.com/wasatfaq-coder/Wasatofficial-Shop-/actions/workflows/ci.yml)
 [![Deploy](https://github.com/wasatfaq-coder/Wasatofficial-Shop-/actions/workflows/deploy.yml/badge.svg)](https://github.com/wasatfaq-coder/Wasatofficial-Shop-/actions/workflows/deploy.yml)

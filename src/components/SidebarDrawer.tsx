@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ActiveTab, StorefrontSettings } from '../types';
-import { publicSetting } from '../utils/storeContacts';
+import { getStoreName, publicSetting } from '../utils/storeContacts';
 
 interface SidebarDrawerProps {
   isOpen: boolean;
@@ -54,7 +54,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
 
   // Demo template phone is never shown to customers (see storeContacts.ts)
   const phone = publicSetting(storefrontSettings?.phone);
-  const storeName = storefrontSettings?.storeName || 'MANSTYLE';
+  const storeName = getStoreName(storefrontSettings);
   const storeSlogan = storefrontSettings?.storeSlogan || 'Премиальная мужская одежда';
 
   return (
@@ -88,7 +88,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
               <div className="flex items-center justify-between pb-4 border-b border-[#BAC5D5]/60 shrink-0">
                 <div>
                   <h2 className="text-xl font-black text-[#2D3A4E] tracking-tight">{storeName}</h2>
-                  <p className="text-[11px] text-[#4E5C70] font-semibold line-clamp-1">{storeSlogan}</p>
+                  <p className="text-[11px] text-[#4E5C70] font-semibold leading-snug line-clamp-2">{storeSlogan}</p>
                 </div>
                 <button
                   onClick={onClose}
@@ -269,7 +269,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                 <Building2 className="w-5 h-5 text-[#4B59BB] stroke-[2] shrink-0 group-hover:scale-105 transition-transform" />
                 <div className="text-left min-w-0">
                   <span className="font-bold text-[#2D3A4E] block text-sm leading-tight truncate group-hover:text-[#4B59BB] transition-colors">
-                    Бренд & Реквизиты
+                    Бренд и реквизиты
                   </span>
                   <span className="text-[11px] text-[#4E5C70] block font-semibold truncate">
                     Контакты консьерж-сервиса

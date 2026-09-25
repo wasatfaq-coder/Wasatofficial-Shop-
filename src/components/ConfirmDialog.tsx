@@ -7,6 +7,10 @@ interface ConfirmDialogProps {
   title: string;
   message: React.ReactNode;
   confirmLabel?: string;
+  /** Icon on the confirm button; a trash can by default */
+  confirmIcon?: React.ReactNode;
+  /** 'neutral' for a bulk change that is not a deletion: accent button instead of the danger one */
+  tone?: 'danger' | 'neutral';
   onConfirm: () => void;
   onClose: () => void;
 }
@@ -20,6 +24,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   title,
   message,
   confirmLabel = 'Удалить',
+  confirmIcon,
+  tone = 'danger',
   onConfirm,
   onClose,
 }) => (
@@ -46,7 +52,11 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         >
           <div className="flex items-center justify-between gap-3 pb-2 border-b border-[#BAC5D5]/50">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-danger shrink-0">
+              <div
+                className={`w-8 h-8 rounded-xl neu-inset flex items-center justify-center shrink-0 ${
+                  tone === 'danger' ? 'text-danger' : 'text-[#4B59BB]'
+                }`}
+              >
                 <AlertTriangle className="w-4 h-4" />
               </div>
               <h3 className="text-sm font-extrabold text-[#2D3A4E]">{title}</h3>
@@ -77,9 +87,11 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                 onConfirm();
                 onClose();
               }}
-              className="flex-1 py-2.5 px-3 neu-button-danger rounded-xl text-xs font-black flex items-center justify-center gap-1.5 cursor-pointer"
+              className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 cursor-pointer ${
+                tone === 'danger' ? 'neu-button-danger' : 'neu-button text-[#4B59BB]'
+              }`}
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              {confirmIcon ?? <Trash2 className="w-3.5 h-3.5" />}
               <span>{confirmLabel}</span>
             </button>
           </div>

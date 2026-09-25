@@ -258,7 +258,7 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
         <div className="neu-inset rounded-lg px-2 py-1 bg-[#E3E8EF] flex items-center justify-between text-[11px] border border-indigo-200/50 text-indigo-800">
           <span className="flex items-center gap-1 font-extrabold">
             <Zap className="w-2.5 h-2.5 text-indigo-600 shrink-0" />
-            В Firestore:
+            В базе:
           </span>
           <span className="font-bold neu-inset px-1.5 py-0.2 rounded bg-[#E3E8EF]">
             {data.realOrdersList.length} зак. (

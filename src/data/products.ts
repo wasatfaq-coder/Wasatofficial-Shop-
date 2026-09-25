@@ -20,7 +20,7 @@ const RAW_PRODUCTS: Product[] = [
     originalPrice: 3500,
     badge: 'Новинка',
     description: 'Легкая и дышащая рубашка из натурального льна. Идеально подходит для теплой погоды и премиального повседневного стиля.',
-    material: '100% лён',
+    material: '100% лен',
     images: [
       'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&q=80&w=800',
       'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&q=80&w=800',
@@ -136,7 +136,7 @@ const RAW_PRODUCTS: Product[] = [
     reviewsCount: 64,
     fit: 'regular',
     skus: [
-      // Exact example from user prompt: «Куртка L Синий — 3 шт., М Чёрный — 0 шт.»
+      // Exact example from user prompt: «Куртка L Синий — 3 шт., М Черный — 0 шт.»
       { id: 'bomber-jacket-03-Синий-M', color: 'Синий', size: 'M', stock: 4, skuCode: 'MS-JK03-BLU-M', barcode: '460730003001' },
       { id: 'bomber-jacket-03-Синий-L', color: 'Синий', size: 'L', stock: 3, skuCode: 'MS-JK03-BLU-L', barcode: '460730003002' },
       { id: 'bomber-jacket-03-Синий-XL', color: 'Синий', size: 'XL', stock: 1, skuCode: 'MS-JK03-BLU-XL', barcode: '460730003003' },
@@ -236,7 +236,7 @@ const RAW_PRODUCTS: Product[] = [
     categoryLabel: 'Свитшот',
     price: 3290,
     badge: 'Новинка',
-    description: 'Мягкий толстовочный свитшот с круглым вырезом и эластичными подвязками. Внутренняя сторона с лёгким начесом.',
+    description: 'Мягкий толстовочный свитшот с круглым вырезом и эластичными подвязками. Внутренняя сторона с легким начесом.',
     material: '80% хлопок, 20% полиэстер',
     images: [
       'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&q=80&w=800',

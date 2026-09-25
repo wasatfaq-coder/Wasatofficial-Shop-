@@ -414,7 +414,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
             className="text-xs font-bold text-danger hover:text-danger flex items-center gap-1.5 ml-auto cursor-pointer active:scale-95 transition-transform py-1 px-2.5 rounded-xl hover:neu-inset"
           >
             <RotateCcw className="w-3.5 h-3.5 stroke-[2.2]" />
-            <span>Сбросить всё</span>
+            <span>Сбросить все</span>
           </button>
         </div>
       )}

@@ -34,11 +34,14 @@ import {
   isPickupDelivery,
 } from '../utils/deliveryStages';
 import { motion, AnimatePresence } from 'motion/react';
+import { currentStoreName, telHref } from '../utils/storeContacts';
 
 interface DeliveryTrackingMapModalProps {
   order: Order | null;
   isOpen: boolean;
   onClose: () => void;
+  /** Store phone from the settings; the call button is hidden without it */
+  storePhone?: string;
   onOpenSupportChat?: (orderId?: string) => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
@@ -47,6 +50,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
   order,
   isOpen,
   onClose,
+  storePhone = '',
   onOpenSupportChat,
   onShowToast,
 }) => {
@@ -250,7 +254,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[11px] font-black text-[#4E5C70] uppercase tracking-wider flex items-center gap-1.5">
                   <Truck className="w-3.5 h-3.5 text-[#4B59BB]" />
-                  {isPickup ? 'Самовывоз из бутика' : isExpress ? 'Срочная экспресс-доставка' : 'Курьерская служба MANSTYLE'}
+                  {isPickup ? 'Самовывоз из бутика' : isExpress ? 'Срочная экспресс-доставка' : `Курьерская служба ${currentStoreName()}`}
                 </span>
                 <span className="text-[11px] font-bold text-success neu-inset-deep neu-inset-deep-animated px-2.5 py-0.5 rounded-lg whitespace-nowrap shrink-0 flex items-center gap-1 border border-success/30">
                   <span className="w-1.5 h-1.5 rounded-full bg-success inline-block animate-ping" />
@@ -408,7 +412,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                   <circle r="10" fill="#3B49A8" />
                   <circle r="4" fill="#FFFFFF" />
                   <text x="-32" y="24" fill="#2D3A4E" fontSize="9" fontWeight="900">
-                    Склад MANSTYLE
+                    Склад {currentStoreName()}
                   </text>
                 </g>
 
@@ -528,7 +532,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                     MS
                   </div>
                   <div className="min-w-0 flex-1 space-y-0.5">
-                    <span className="text-xs font-black text-[#2D3A4E] truncate">Бутик MANSTYLE</span>
+                    <span className="text-xs font-black text-[#2D3A4E] truncate">Бутик {currentStoreName()}</span>
                     <p className="text-[11px] text-[#4E5C70] truncate">
                       Выдача заказов &bull; Персональный стилист и примерка
                     </p>
@@ -573,18 +577,17 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                     </span>
                   </div>
                   <p className="text-[11px] text-[#4E5C70] truncate">
-                    {isExpress ? 'Срочный курьер ManStyle' : 'Курьер ManStyle • Lada Largus (о742ве777)'}
+                    {isExpress ? `Срочный курьер ${currentStoreName()}` : `Курьер ${currentStoreName()}`}
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-[#BAC5D5]/30">
-                {!order.isCancelled && order.status !== 'delivered' && (
+                {storePhone && !order.isCancelled && order.status !== 'delivered' && (
                   <a
-                    href="tel:+79165550199"
-                    onClick={() => onShowToast('Вызов курьера: +7 (916) 555-01-99', 'info')}
+                    href={telHref(storePhone)}
                     className="flex-1 sm:flex-initial py-2 px-3 rounded-xl neu-button text-[#4B59BB] hover:scale-105 active:scale-95 transition-transform cursor-pointer flex items-center justify-center gap-1.5 text-xs font-bold whitespace-nowrap"
-                    title="Позвонить курьеру (+7 916 555-01-99)"
+                    title={`Позвонить в магазин (${storePhone})`}
                   >
                     <Phone className="w-3.5 h-3.5 shrink-0" />
                     <span>Позвонить</span>

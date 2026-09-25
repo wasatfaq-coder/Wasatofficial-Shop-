@@ -350,7 +350,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
         <div className="min-w-0">
           <h3 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
             <Tag className="w-4 h-4 text-[#4B59BB] shrink-0" />
-            <span>Конструктор промокодов & Программы лояльности</span>
+            <span>Конструктор промокодов и программы лояльности</span>
           </h3>
           <p className="text-[11px] text-[#4E5C70] truncate">
             Процентные и фиксированные скидки (₽), генерация пачек кодов и реферальная система
@@ -411,7 +411,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
           }`}
         >
           <Share2 className="w-3.5 h-3.5" />
-          <span>Реферальная система & Блогеры ({referralPromos.length})</span>
+          <span>Реферальная система и блогеры ({referralPromos.length})</span>
         </button>
 
         <button
@@ -678,7 +678,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 required
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
-                placeholder="MANSTYLE20"
+                placeholder="WASAT20"
                 className="w-full px-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E] uppercase font-black bg-[#E3E8EF]"
               />
             </div>

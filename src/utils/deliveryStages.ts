@@ -286,9 +286,9 @@ export function getSynchronizedDeliveryStages(
       return 'Заказ перемещается со склада в выбранный пункт выдачи';
     }
     if (isExpress) {
-      return 'Срочный заказ передан курьеру MANSTYLE для экспресс-доставки';
+      return 'Срочный заказ передан курьеру для экспресс-доставки';
     }
-    return 'Заказ передан курьеру MANSTYLE для доставки по адресу';
+    return 'Заказ передан курьеру для доставки по адресу';
   };
 
   const getStage4Title = (status: Order['status']) => {
@@ -326,7 +326,7 @@ export function getSynchronizedDeliveryStages(
       return `Доставка в почтовое отделение по адресу: ${order.deliveryAddress || 'Почтовый индекс'}`;
     }
     if (isPickup) {
-      return `Адрес пункта выдачи: ${order.deliveryAddress || 'Бутик MANSTYLE'}`;
+      return `Адрес пункта выдачи: ${order.deliveryAddress || 'бутик магазина'}`;
     }
     if (isTK) {
       return `Адрес доставки: ${order.deliveryAddress || 'Город назначения'}`;
@@ -603,7 +603,7 @@ export function getDefaultHistorySteps(order: {
         title: 'Заказ принят',
         date: orderDate,
         completed: true,
-        description: 'Заказ успешно зарегистрирован в системе MANSTYLE',
+        description: 'Заказ зарегистрирован в магазине',
       },
       {
         title: 'Заказ отменен',
@@ -640,10 +640,10 @@ export function getDefaultHistorySteps(order: {
     : isTK && order.trackingNumber
     ? `Транспортная компания (трек-номер ${order.trackingNumber})`
     : isPickup
-    ? 'Самовывоз из фирменного бутика MANSTYLE'
+    ? 'Самовывоз из бутика магазина'
     : isExpress
-    ? 'Срочная доставка экспресс-курьером MANSTYLE'
-    : 'Штатная курьерская служба MANSTYLE';
+    ? 'Срочная доставка экспресс-курьером'
+    : 'Курьерская служба магазина';
 
   const readyTitle = isPost
     ? (isDelivered ? 'Посылка получена в отделении' : 'Прибыло в отделение связи / Готово к выдаче')

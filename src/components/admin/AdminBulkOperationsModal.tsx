@@ -363,7 +363,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
             {/* Mode Switcher */}
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-[#2D3A4E] uppercase tracking-wide">
-                Сезонные скидки & Распродажа
+                Сезонные скидки и распродажа
               </span>
               <button
                 type="button"
@@ -461,7 +461,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
               {[
                 { id: 'linen', label: 'Лен' },
                 { id: 'shirts', label: 'Рубашки' },
-                { id: 'tshirts', label: 'Футболки & Поло' },
+                { id: 'tshirts', label: 'Футболки и поло' },
                 { id: 'jackets', label: 'Куртки' },
                 { id: 'trousers', label: 'Брюки' },
                 { id: 'sweatshirts', label: 'Свитшоты' },

@@ -8,7 +8,7 @@ export const INITIAL_DELIVERY_METHODS: DeliveryMethod[] = [
     price: 350,
     icon: 'Bike',
     type: 'courier',
-    description: 'Штатный курьер MANSTYLE с примеркой до 15 минут прямо у вас дома или в офисе.',
+    description: 'Штатный курьер Wasat Shop с примеркой до 15 минут прямо у вас дома или в офисе.',
     freeThreshold: 5000,
     isActive: true,
     sortOrder: 1,
@@ -21,7 +21,7 @@ export const INITIAL_DELIVERY_METHODS: DeliveryMethod[] = [
     price: 0,
     icon: 'Store',
     type: 'pickup',
-    description: 'Самовывоз из фирменного бутика MANSTYLE с примеркой и персональным стилистом.',
+    description: 'Самовывоз из фирменного бутика Wasat Shop с примеркой и персональным стилистом.',
     isActive: true,
     sortOrder: 2,
     highlightBadge: 'Бесплатно',
@@ -65,7 +65,7 @@ export const INITIAL_DELIVERY_METHODS: DeliveryMethod[] = [
 export const INITIAL_PICKUP_POINTS: PickupPoint[] = [
   {
     id: 'pickup-presnya',
-    name: 'Флагманский бутик MANSTYLE (Москва-Сити)',
+    name: 'Флагманский бутик Wasat Shop (Москва-Сити)',
     city: 'Москва',
     address: 'Пресненская наб., 12, ММДЦ «Москва-Сити», Башня Федерация Восток, 45 этаж, бутик 4502',
     metro: 'Деловой центр / Выставочная',
@@ -77,7 +77,7 @@ export const INITIAL_PICKUP_POINTS: PickupPoint[] = [
   },
   {
     id: 'pickup-tverskaya',
-    name: 'Шоурум MANSTYLE Тверская',
+    name: 'Шоурум Wasat Shop Тверская',
     city: 'Москва',
     address: 'ул. Тверская, 15, строение 1, 2 этаж',
     metro: 'Тверская / Пушкинская / Чеховская',
@@ -89,7 +89,7 @@ export const INITIAL_PICKUP_POINTS: PickupPoint[] = [
   },
   {
     id: 'pickup-spb',
-    name: 'Бутик MANSTYLE Невский',
+    name: 'Бутик Wasat Shop Невский',
     city: 'Санкт-Петербург',
     address: 'Невский проспект, 54, Галерея бутиков, 1 этаж',
     metro: 'Гостиный двор / Маяковская',

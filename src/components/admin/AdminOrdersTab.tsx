@@ -501,7 +501,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         title: STATUS_CONFIG[newStatus].label,
         date: dateNow,
         completed: true,
-        description: `Статус изменен оператором MANSTYLE на "${STATUS_CONFIG[newStatus].label}"`,
+        description: `Статус изменен менеджером магазина на "${STATUS_CONFIG[newStatus].label}"`,
       };
 
       const existingSteps = ord.historySteps || [];
@@ -711,7 +711,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         <div>
           <h3 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
             <Package className="w-4 h-4 text-[#4B59BB]" />
-            Управление клиентскими заказами & Логистика
+            Управление клиентскими заказами и логистика
           </h3>
           <p className="text-[11px] text-[#4E5C70]">
             Синхронизация списания/возврата склада, трек-номера СДЭК/Почта и статусы оплаты
@@ -1576,7 +1576,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                     title="Изменить состав заказа, списать или вернуть остатки на склад"
                   >
                     <SlidersHorizontal className="w-3.5 h-3.5 text-warning" />
-                    <span>Правка состава & Склад</span>
+                    <span>Правка состава и склад</span>
                   </button>
 
                   {/* Delivery Map Opener */}
@@ -1642,7 +1642,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                   <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-2 text-xs animate-in fade-in">
                     <h5 className="font-black text-[#2D3A4E] flex items-center gap-1.5 uppercase text-[11px] tracking-wider">
                       <Clock className="w-3.5 h-3.5 text-[#4B59BB]" />
-                      Хронология изменений заказа & Складские события
+                      Хронология изменений заказа и складские события
                     </h5>
 
                     {/* Status Steps */}

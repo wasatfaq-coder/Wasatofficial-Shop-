@@ -174,7 +174,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
           className="text-xs font-bold text-[#4E5C70] hover:text-danger transition-colors flex items-center gap-1 cursor-pointer"
         >
           <Trash2 className="w-3.5 h-3.5" />
-          <span>Очистить всё</span>
+          <span>Очистить все</span>
         </button>
       </div>
 

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { motion, AnimatePresence } from 'motion/react';
 import { SecuritySettingsModal } from '../components/SecuritySettingsModal';
-import { getStoreContacts, telHref } from '../utils/storeContacts';
+import { currentStoreName, getStoreContacts, getStoreName, telHref } from '../utils/storeContacts';
 import { GUEST_USER_PROFILE } from '../data/products';
 import { FAQModal } from '../components/FAQModal';
 import {
@@ -82,6 +82,7 @@ import { AdminProductsTab } from '../components/admin/AdminProductsTab';
 import { AdminOrdersTab } from '../components/admin/AdminOrdersTab';
 import { AdminCustomersTab } from '../components/admin/AdminCustomersTab';
 import { AdminStorefrontTab } from '../components/admin/AdminStorefrontTab';
+import { BrandRenameCard } from '../components/admin/BrandRenameCard';
 import { AdminDeliveryTab } from '../components/admin/AdminDeliveryTab';
 import { AdminAuthModal } from '../components/admin/AdminAuthModal';
 import { AdminChangeCredentialsModal } from '../components/admin/AdminChangeCredentialsModal';
@@ -632,7 +633,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             });
             onShowToast('Push-уведомления включены! Статусы заказов будут приходить на устройство', 'success');
             try {
-              new Notification('MANSTYLE', {
+              new Notification(currentStoreName(), {
                 body: 'Уведомления успешно подключены!',
                 icon: '/favicon.ico',
               });
@@ -894,11 +895,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   });
 
   // Storefront & Boutique settings values with defaults
-  const storeName = storefrontSettings?.storeName || 'MANSTYLE';
-  const storeSlogan = storefrontSettings?.storeSlogan || 'Бутик мужской одежды & аксессуаров';
+  const storeName = getStoreName(storefrontSettings);
+  const storeSlogan = storefrontSettings?.storeSlogan || 'Бутик мужской одежды и аксессуаров';
   // Demo template contacts are never shown to customers (see storeContacts.ts)
   const {
     phone: storePhone,
+    email: storeEmail,
     telegram: storeTelegram,
     pickupAddress,
   } = getStoreContacts(storefrontSettings);
@@ -1290,7 +1292,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase">
-            Мерки профиля & Лекало РФ
+            Мерки профиля и лекало РФ
           </h3>
           <button
             onClick={() => {
@@ -1397,9 +1399,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </div>
         ) : (
           <div className="neu-inset rounded-3xl p-4 bg-[#E3E8EF] border border-white/60 text-center space-y-1">
-            <p className="text-xs font-bold text-[#2D3A4E]">Мерки ещё не указаны</p>
+            <p className="text-xs font-bold text-[#2D3A4E]">Мерки еще не указаны</p>
             <p className="text-[11px] text-[#4E5C70]">
-              Нажмите «Изменить» и укажите рост, вес и обхваты — подберём размер по российским лекалам.
+              Нажмите «Изменить» и укажите рост, вес и обхваты — подберем размер по российским лекалам.
             </p>
           </div>
         )}
@@ -1578,7 +1580,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   {isAdminAuthenticated && isFirebaseAdmin ? (
                     <span className="neu-button px-2 py-0.5 rounded-full text-[11px] font-black text-success bg-[#E3E8EF] flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                      Админ Firebase
+                      Доступ открыт
                     </span>
                   ) : (
                     <span className="neu-inset px-2 py-0.5 rounded-full text-[11px] font-bold text-[#4E5C70] bg-[#E3E8EF] flex items-center gap-1">
@@ -1855,15 +1857,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         </div>
 
                         <div className="flex items-center gap-1.5 shrink-0">
-                          {isCourierDelivery(ord.deliveryMethod, ord.trackingCompany) && !ord.isCancelled && ord.status !== 'delivered' && (
+                          {storePhone && isCourierDelivery(ord.deliveryMethod, ord.trackingCompany) && !ord.isCancelled && ord.status !== 'delivered' && (
                             <a
-                              href="tel:+79165550199"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onShowToast('Вызов курьера: +7 (916) 555-01-99', 'info');
-                              }}
+                              href={telHref(storePhone)}
+                              onClick={(e) => e.stopPropagation()}
                               className="p-2 rounded-xl neu-button text-[#4B59BB] hover:scale-105 active:scale-95 transition-transform flex items-center justify-center cursor-pointer"
-                              title="Позвонить курьеру (+7 916 555-01-99)"
+                              title={`Позвонить в магазин (${storePhone})`}
+                              aria-label={`Позвонить в магазин (${storePhone})`}
                             >
                               <Phone className="w-3.5 h-3.5" />
                             </a>
@@ -2041,7 +2041,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     <div className="space-y-0.5">
                       <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider flex items-center gap-1">
                         {isPickup ? <Store className="w-3.5 h-3.5 text-[#4B59BB]" /> : isExpress ? <Zap className="w-3.5 h-3.5 text-warning" /> : <Bike className="w-3.5 h-3.5 text-[#4B59BB]" />}
-                        {isPickup ? 'Самовывоз из бутика' : isExpress ? 'Срочная экспресс-доставка' : 'Курьерская служба MANSTYLE'}
+                        {isPickup ? 'Самовывоз из бутика' : isExpress ? 'Срочная экспресс-доставка' : `Курьерская служба ${storeName}`}
                       </span>
                       <p className="text-xs font-black text-[#2D3A4E]">
                         {selectedOrderForTracking.deliveryMethod || (isPickup ? 'Самовывоз' : 'Курьерская доставка')}
@@ -2054,8 +2054,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
                   <p className="text-[11px] text-[#4E5C70] leading-snug">
                     {isPickup
-                      ? `Пункт выдачи: ${selectedOrderForTracking.deliveryAddress || 'Бутик MANSTYLE'}. Заказ выдается сотрудниками бутика без трек-номера.`
-                      : `Адрес доставки: ${selectedOrderForTracking.deliveryAddress || 'Адрес клиента'}. Заказ доставляется штатной службой MANSTYLE без сторонних трек-номеров.`}
+                      ? `Пункт выдачи: ${selectedOrderForTracking.deliveryAddress || `Бутик ${storeName}`}. Заказ выдается сотрудниками бутика без трек-номера.`
+                      : `Адрес доставки: ${selectedOrderForTracking.deliveryAddress || 'Адрес клиента'}. Заказ доставляется штатной службой ${storeName} без сторонних трек-номеров.`}
                   </p>
 
                   {isCourier && (
@@ -2520,7 +2520,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         MS
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-black text-[#2D3A4E] truncate">Бутик MANSTYLE</p>
+                        <p className="text-xs font-black text-[#2D3A4E] truncate">Бутик {storeName}</p>
                         <p className="text-[11px] text-[#4E5C70] truncate">Персональный стилист &bull; Примерочный зал</p>
                       </div>
                     </div>
@@ -2563,18 +2563,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                           </span>
                         </div>
                         <p className="text-[11px] text-[#4E5C70] truncate">
-                          {isExpress ? 'Срочный курьер ManStyle' : 'Курьер ManStyle • Lada Largus'}
+                          {isExpress ? `Срочный курьер ${storeName}` : `Курьер ${storeName}`}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {!selectedOrderForTracking.isCancelled && selectedOrderForTracking.status !== 'delivered' && (
+                      {storePhone && !selectedOrderForTracking.isCancelled && selectedOrderForTracking.status !== 'delivered' && (
                         <a
-                          href="tel:+79165550199"
-                          onClick={() => onShowToast('Вызов курьера: +7 (916) 555-01-99', 'info')}
+                          href={telHref(storePhone)}
                           className="py-1.5 px-2.5 rounded-xl neu-button text-[#4B59BB] hover:scale-105 active:scale-95 transition-transform flex items-center gap-1 text-[11px] font-extrabold cursor-pointer"
-                          title="Позвонить курьеру (+7 916 555-01-99)"
+                          title={`Позвонить в магазин (${storePhone})`}
                         >
                           <Phone className="w-3.5 h-3.5" />
                           <span>Позвонить</span>
@@ -3205,7 +3204,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 </div>
                 <div>
                   <h3 className="text-base font-extrabold text-[#2D3A4E]">
-                    Мерки профиля & Лекало РФ
+                    Мерки профиля и лекало РФ
                   </h3>
                   <p className="text-[11px] text-[#4E5C70] font-medium">
                     Стандарты ГОСТ 31399-2009 / ГОСТ Р 52771-2007
@@ -3311,7 +3310,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                           <th className="py-1 px-1">Междунар.</th>
                           <th className="py-1 px-1">Обхват груди</th>
                           <th className="py-1 px-1">Талия</th>
-                          <th className="py-1 px-1">Бёдра</th>
+                          <th className="py-1 px-1">Бедра</th>
                           <th className="py-1 px-1">Джинсы (W)</th>
                         </tr>
                       </thead>
@@ -3404,7 +3403,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               {/* Hips Slider */}
               <NeumorphicSlider
                 id="meas-slider-hips"
-                label="Обхват бёдер"
+                label="Обхват бедер"
                 value={measHips}
                 min={80}
                 max={140}
@@ -3503,13 +3502,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm sm:text-base font-extrabold text-[#2D3A4E] truncate">Панель администратора</h3>
+                    <h3 className="text-sm sm:text-base font-extrabold text-[#2D3A4E] leading-tight">Панель администратора</h3>
                     <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-black text-success bg-success-soft border border-success/25">
                       <span className="w-1.5 h-1.5 rounded-full bg-success" />
                       {adminCreds.username}
                     </span>
                   </div>
-                  <p className="text-[11px] sm:text-[11px] font-medium text-[#4E5C70] truncate">Управление каталогом, складом, аналитикой и витриной MANSTYLE</p>
+                  <p className="text-[11px] sm:text-[11px] font-medium text-[#4E5C70] truncate">Каталог, склад, заказы и витрина</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -3551,9 +3550,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               {[
                 { id: 'analytics', label: 'Аналитика', icon: BarChart3 },
                 { id: 'products', label: 'Каталог', icon: Layers },
-                { id: 'inventory', label: 'Склад & SKU', icon: Boxes },
+                { id: 'inventory', label: 'Склад и SKU', icon: Boxes },
                 { id: 'orders', label: 'Заказы', icon: Package },
-                { id: 'delivery', label: 'Доставка & ПВЗ', icon: Truck },
+                { id: 'delivery', label: 'Доставка и ПВЗ', icon: Truck },
                 { id: 'customers', label: 'Клиенты', icon: Users },
                 { id: 'promos', label: 'Промокоды', icon: Tag },
                 { id: 'banners', label: 'Баннеры', icon: ImageIcon },
@@ -3752,11 +3751,26 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
               {/* --- TAB 8: STOREFRONT & SYSTEM SETTINGS --- */}
               {adminTab === 'storefront' && (
-                <AdminStorefrontTab
-                  settings={storefrontSettings}
-                  onUpdateSettings={onUpdateStorefrontSettings}
-                  onShowToast={onShowToast}
-                />
+                <div className="space-y-4">
+                  <BrandRenameCard
+                    settings={storefrontSettings}
+                    deliveryMethods={deliveryMethods ?? []}
+                    pickupPoints={pickupPoints ?? []}
+                    bannerSlides={bannerSlides}
+                    promos={promos}
+                    onUpdateSettings={onUpdateStorefrontSettings}
+                    onUpdateDeliveryMethods={onUpdateDeliveryMethods}
+                    onUpdatePickupPoints={onUpdatePickupPoints}
+                    onUpdateBannerSlides={onUpdateBannerSlides}
+                    onUpdatePromos={onUpdatePromos}
+                    onShowToast={onShowToast}
+                  />
+                  <AdminStorefrontTab
+                    settings={storefrontSettings}
+                    onUpdateSettings={onUpdateStorefrontSettings}
+                    onShowToast={onShowToast}
+                  />
+                </div>
               )}
                 </motion.div>
               </AnimatePresence>
@@ -3772,6 +3786,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         freeDeliveryThreshold={storefrontSettings?.freeDeliveryThreshold}
         returnPeriodDays={storefrontSettings?.returnPeriodDays}
         storePhone={storePhone}
+        storeEmail={storeEmail}
         onClose={() => setActiveModal(null)}
         onOpenSupportChat={onOpenSupportChat}
         onShowToast={onShowToast}
@@ -3808,7 +3823,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     <Headphones className="w-4 h-4" />
                   </div>
                   <h3 className="text-sm font-black uppercase tracking-wider text-[#2D3A4E]">
-                    Служба заботы MANSTYLE
+                    Служба заботы {storeName}
                   </h3>
                 </div>
                 <button
@@ -3861,12 +3876,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     </button>
                   )}
 
-                  <a
-                    href="mailto:support@manstyle-store.ru"
-                    className="w-full neu-button py-2.5 px-4 rounded-xl text-xs font-bold text-[#2D3A4E] flex items-center justify-center gap-2 cursor-pointer hover:text-[#4B59BB] transition-colors"
-                  >
-                    <span>Email: support@manstyle-store.ru</span>
-                  </a>
+                  {storeEmail && (
+                    <a
+                      href={`mailto:${storeEmail}`}
+                      className="w-full neu-button py-2.5 px-4 rounded-xl text-xs font-bold text-[#2D3A4E] flex items-center justify-center gap-2 cursor-pointer hover:text-[#4B59BB] transition-colors"
+                    >
+                      <span>Email: {storeEmail}</span>
+                    </a>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -3879,6 +3896,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         isOpen={!!selectedOrderForMap}
         onClose={() => setSelectedOrderIdForMap(null)}
         order={selectedOrderForMap}
+        storePhone={storePhone}
         onOpenSupportChat={onOpenSupportChat}
         onShowToast={onShowToast}
       />
@@ -3926,14 +3944,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       <ConfirmDialog
         isOpen={addressToDelete !== null}
         title="Удалить адрес?"
-        message="Адрес будет удалён из сохранённых."
+        message="Адрес будет удален из сохраненных."
         onConfirm={() => addressToDelete && handleDeleteAddress(addressToDelete)}
         onClose={() => setAddressToDelete(null)}
       />
       <ConfirmDialog
         isOpen={cardToDelete !== null}
         title="Удалить карту?"
-        message="Карта будет удалена из сохранённых."
+        message="Карта будет удалена из сохраненных."
         onConfirm={() => cardToDelete && handleDeleteCard(cardToDelete)}
         onClose={() => setCardToDelete(null)}
       />

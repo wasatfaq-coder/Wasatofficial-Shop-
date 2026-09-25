@@ -3,8 +3,8 @@ import { Product, ProductSKU, CartItem, StockMovementLog, StorefrontSettings } f
 // Contacts and legal details are intentionally empty: real values are entered in
 // Admin → «Витрина». Customer screens hide anything that is not filled in.
 export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
-  storeName: 'MANSTYLE',
-  storeSlogan: 'Бутик премиальной мужской одежды & обуви',
+  storeName: 'Wasat Shop',
+  storeSlogan: 'Бутик премиальной мужской одежды и обуви',
   storeBannerText: 'Бесплатная экспресс-доставка при заказе от 5 000 ₽',
   isStoreBannerVisible: true,
   bannerBadgeText: 'АКЦИЯ',
@@ -50,9 +50,9 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
     'Бесплатная корректировка длины брюк и посадки пиджака нашим мастером-портным.',
 
   // Brand Philosophy & Guarantees Defaults
-  brandPhilosophyTitle: 'Философия бренда MANSTYLE',
+  brandPhilosophyTitle: 'Философия бренда Wasat Shop',
   brandPhilosophyText:
-    'MANSTYLE — премиальный бутик мужской одежды, основанный на эстетике сдержанной роскоши («Quiet Luxury») и безупречном архитектурном крое. Мы создаем гардероб вне времени, который подчеркивает статус и харизму мужчины без кричащих логотипов.',
+    'Wasat Shop — премиальный бутик мужской одежды, основанный на эстетике сдержанной роскоши («Quiet Luxury») и безупречном архитектурном крое. Мы создаем гардероб вне времени, который подчеркивает статус и харизму мужчины без кричащих логотипов.',
   brandMaterialsTitle: 'Итальянские ткани',
   brandMaterialsText:
     'Селективная шерсть Super 150’s от мануфактур Loro Piana и Zegna, длинноволокнистый хлопок Supima и натуральный лен.',
@@ -112,9 +112,15 @@ export function extractSizeName(size: unknown): string {
 }
 
 /**
- * Generate a standard SKU Code (e.g. MS-SH01-BEI-L)
+ * Generate a standard SKU Code (e.g. WS-SH01-BEI-L).
+ * New products get the WS prefix; codes filled in for existing SKUs keep MS, so they don't change.
  */
-export function generateSkuCode(product: Partial<Product> & { id: string }, color: unknown, size: unknown): string {
+export function generateSkuCode(
+  product: Partial<Product> & { id: string },
+  color: unknown,
+  size: unknown,
+  prefix: 'WS' | 'MS' = 'MS'
+): string {
   const catCode = product.category ? product.category.slice(0, 2).toUpperCase() : 'PR';
   const idNum = (product.id ? String(product.id) : '01').replace(/[^0-9]/g, '').slice(0, 2) || '01';
   const colorStr = extractColorName(color);
@@ -123,7 +129,7 @@ export function generateSkuCode(product: Partial<Product> & { id: string }, colo
     .toUpperCase()
     .replace(/[^A-ZА-Я0-9]/g, 'CLR') || 'DEF';
   const sizeStr = extractSizeName(size) || 'M';
-  return `MS-${catCode}${idNum}-${colorCode}-${sizeStr}`.toUpperCase();
+  return `${prefix}-${catCode}${idNum}-${colorCode}-${sizeStr}`.toUpperCase();
 }
 
 /**
@@ -160,7 +166,7 @@ export function generateDefaultSKUs(product: Partial<Product> & { id: string }):
       let stock = 4;
       const combinedIdx = (cIdx * 3 + sIdx * 2 + (product.id ? String(product.id).length : 0)) % 7;
       if (combinedIdx === 0) {
-        stock = 0; // Out of stock example (e.g. М Чёрный - 0 шт)
+        stock = 0; // Out of stock example (e.g. М Черный - 0 шт)
       } else if (combinedIdx === 1 || combinedIdx === 4) {
         stock = (sIdx % 2 === 0) ? 1 : 2; // Low stock (e.g. L Синий - 2 шт)
       } else if (combinedIdx === 2) {

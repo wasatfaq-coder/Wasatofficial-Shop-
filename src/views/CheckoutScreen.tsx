@@ -35,6 +35,7 @@ import {
   calcSubtotal,
   getAvailableDeliveryMethods,
 } from '../shared/orderPricing';
+import { currentStoreName } from '../utils/storeContacts';
 
 interface CheckoutScreenProps {
   cartItems: CartItem[];
@@ -70,7 +71,6 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   deliveryMethods,
   pickupPoints,
 }) => {
-  const [currentStep, setCurrentStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{
@@ -236,12 +236,24 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   const isPostSelected = selectedDelivery === 'post' || currentDeliveryObj.type === 'post' || (currentDeliveryObj.title || '').toLowerCase().includes('почт');
   const isCourierSelected = !isPickupSelected && !isPostSelected;
 
+  // Progress over the single-page form: a step is done when its section is filled in
+  const contactsDone =
+    name.trim().length >= 2 && phone.replace(/\D/g, '').length >= 10 && /\S+@\S+\.\S+/.test(email.trim());
+  const deliveryDone = isPickupSelected
+    ? Boolean(selectedPickupPoint)
+    : isPostSelected
+    ? Boolean(addrStreet.trim() && addrHouse?.trim())
+    : Boolean(addrStreet.trim() && addrHouse?.trim() && addrEntrance?.trim() && addrIntercom?.trim());
+  const paymentDone = Boolean(paymentMethod);
   const steps = [
-    { num: 1, label: 'Данные' },
-    { num: 2, label: 'Доставка' },
-    { num: 3, label: 'Оплата' },
-    { num: 4, label: 'Подтверждение' },
+    { num: 1, label: 'Данные', done: contactsDone, target: 'checkout-contacts' },
+    { num: 2, label: 'Доставка', done: deliveryDone, target: 'checkout-delivery' },
+    { num: 3, label: 'Оплата', done: paymentDone, target: 'checkout-payment' },
+    { num: 4, label: 'Подтверждение', done: false, target: 'checkout-confirm' },
   ];
+  const currentStep = steps.find((st) => !st.done)?.num ?? 4;
+  const scrollToSection = (id: string) =>
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -355,14 +367,16 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           <div className="absolute top-4 left-6 right-6 h-0.5 bg-[#BAC5D5] -z-0" />
 
           {steps.map((st) => {
-            const isCompleted = st.num < currentStep;
+            const isCompleted = st.done;
             const isCurrent = st.num === currentStep;
 
             return (
-              <div
+              <button
+                type="button"
                 key={st.num}
-                onClick={() => setCurrentStep(st.num)}
-                className="flex flex-col items-center gap-1.5 z-10 cursor-pointer"
+                onClick={() => scrollToSection(st.target)}
+                aria-label={`${st.label}: ${isCompleted ? 'заполнено' : isCurrent ? 'текущий шаг' : 'не заполнено'}`}
+                className="flex flex-col items-center gap-1.5 z-10 cursor-pointer rounded-xl"
               >
                 <div
                   className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
@@ -382,7 +396,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                 >
                   {st.label}
                 </span>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -455,7 +469,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Contact Info matching Image 5 */}
-        <div className="neu-flat rounded-3xl p-4 space-y-3 border border-white/60">
+        <div id="checkout-contacts" className="neu-flat rounded-3xl p-4 space-y-3 border border-white/60">
           <h3 className="text-xs font-bold text-slate-800 tracking-wider uppercase">
             Контактные данные
           </h3>
@@ -514,7 +528,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                       Пункт выдачи заказа
                     </h3>
                     <p className="text-[11px] text-[#4E5C70] font-medium">
-                      Самовывоз из фирменного бутика ManStyle
+                      Самовывоз из фирменного бутика {currentStoreName()}
                     </p>
                   </div>
                 </div>
@@ -529,7 +543,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                   <div className="space-y-1 min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-xs font-black text-[#2D3A4E]">
-                        {selectedPickupPoint?.name || 'Флагманский бутик ManStyle'}
+                        {selectedPickupPoint?.name || `Бутик ${currentStoreName()}`}
                       </span>
                       <span className="text-[11px] font-bold text-[#4B59BB] neu-inset px-2 py-0.5 rounded-md bg-[#E3E8EF]">
                         г. {selectedPickupPoint?.city || 'Москва'}
@@ -791,7 +805,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
         </div>
 
         {/* Shipping Methods */}
-        <div className="neu-flat rounded-3xl p-4 space-y-3">
+        <div id="checkout-delivery" className="neu-flat rounded-3xl p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase">
               Способ доставки
@@ -857,7 +871,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                       <div className="min-w-0 flex-1 pr-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <p
-                            className={`text-xs transition-colors truncate ${
+                            className={`text-xs leading-snug transition-colors line-clamp-2 ${
                               isSelected ? 'font-black text-[#4B59BB]' : 'font-bold text-[#2D3A4E]'
                             }`}
                           >
@@ -935,7 +949,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                                     )}
                                   </div>
                                   <div className="min-w-0">
-                                    <span className="text-xs font-black text-[#2D3A4E] block truncate">
+                                    <span className="text-xs font-black text-[#2D3A4E] block leading-snug line-clamp-2">
                                       {point.name}
                                     </span>
                                     <span className="text-[11px] font-bold text-[#4B59BB]">
@@ -1035,7 +1049,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
         </div>
 
         {/* Payment Methods */}
-        <div className="neu-flat rounded-3xl p-4 space-y-3">
+        <div id="checkout-payment" className="neu-flat rounded-3xl p-4 space-y-3">
           <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase">
             Способ оплаты
           </h3>
@@ -1118,6 +1132,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
 
         {/* Final Blue Action Button - Confirm Order with neu-inset-deep animation */}
         <button
+          id="checkout-confirm"
           type="submit"
           disabled={isSubmitting}
           className={`w-full py-4 rounded-2xl btn-confirm-order font-bold text-sm flex items-center justify-center gap-2 cursor-pointer transition-all ${

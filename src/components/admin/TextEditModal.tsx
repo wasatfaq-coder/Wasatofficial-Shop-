@@ -32,7 +32,7 @@ interface TextEditModalProps {
 
 const CATEGORY_TABS = [
   { id: 'global', label: 'Общие (Все)', icon: Sparkles },
-  { id: 'linen', label: 'Лён', icon: Layers },
+  { id: 'linen', label: 'Лен', icon: Layers },
   { id: 'shirts', label: 'Рубашки', icon: Layers },
   { id: 'tshirts', label: 'Футболки', icon: Layers },
   { id: 'jackets', label: 'Куртки', icon: Layers },
@@ -506,7 +506,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
 
             {/* Inset Footer Helper Note */}
             <div className="pt-2 border-t border-[#BAC5D5]/35 text-[11px] font-semibold text-[#4E5C70] flex items-center justify-between">
-              <span>Нажмите на фразу, чтобы добавить её в текст</span>
+              <span>Нажмите на фразу, чтобы добавить ее в текст</span>
             </div>
           </div>
 

@@ -5,10 +5,10 @@ import { Product, FabricCompositionItem, CareInstructionItem } from '../types';
  */
 const DEFAULT_FABRIC_COMPOSITIONS: Record<string, FabricCompositionItem[]> = {
   linen: [
-    { fiber: 'Натуральный органический лён', percentage: 100 },
+    { fiber: 'Натуральный органический лен', percentage: 100 },
   ],
   linen_blend: [
-    { fiber: 'Европейский лён', percentage: 80 },
+    { fiber: 'Европейский лен', percentage: 80 },
     { fiber: 'Мягкий хлопок', percentage: 20 },
   ],
   cotton_pique: [

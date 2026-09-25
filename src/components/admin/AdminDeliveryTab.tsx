@@ -211,7 +211,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
     setFormPointAddress('');
     setFormPointMetro('');
     setFormPointSchedule('Ежедневно: 10:00 – 22:00');
-    setFormPointPhone('+7 (495) 790-12-34');
+    setFormPointPhone('');
     setFormPointNote('');
     setFormPointIsActive(true);
     setFormPointIsDefault(pickupPoints.length === 0);
@@ -1038,7 +1038,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                   type="text"
                   value={formPointName}
                   onChange={(e) => setFormPointName(e.target.value)}
-                  placeholder="Флагманский бутик MANSTYLE (Москва-Сити)"
+                  placeholder="Флагманский бутик (Москва-Сити)"
                   className="w-full neu-inset rounded-xl py-2 px-3 text-[#2D3A4E]"
                   required
                 />

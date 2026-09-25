@@ -93,7 +93,7 @@ function formatMoscowTime(now: Date): string {
 }
 
 function randomOrderId(): string {
-  return `MS-${Math.floor(10_000_000 + Math.random() * 90_000_000)}`;
+  return `WS-${Math.floor(10_000_000 + Math.random() * 90_000_000)}`;
 }
 
 function skuKey(color: unknown, size: unknown): string {

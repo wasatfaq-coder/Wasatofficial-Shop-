@@ -13,7 +13,7 @@ import {
   Barcode,
 } from 'lucide-react';
 import { Order, StorefrontSettings } from '../../types';
-import { getLegalDetails, getStoreContacts } from '../../utils/storeContacts';
+import { currentStoreName, getLegalDetails, getStoreContacts } from '../../utils/storeContacts';
 import { copyToClipboard } from '../../utils/clipboard';
 import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
 import { motion, AnimatePresence } from 'motion/react';
@@ -52,8 +52,8 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
 
   const handleCopyInvoiceNumber = () => {
     if (order) {
-      copyToClipboard(`MS-INV-${order.id}`);
-      onShowToast(`Номер накладной MS-INV-${order.id} скопирован`, 'info');
+      copyToClipboard(`WS-INV-${order.id}`);
+      onShowToast(`Номер накладной WS-INV-${order.id} скопирован`, 'info');
     }
   };
 
@@ -122,7 +122,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
           <div className="flex justify-between items-start border-b border-slate-200 pb-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xl font-black tracking-tight text-[#2D3A4E]">MANSTYLE</span>
+                <span className="text-xl font-black tracking-tight text-[#2D3A4E]">{currentStoreName()}</span>
                 <span className="text-[11px] font-extrabold bg-[#5F6ED0]/10 text-[#4B59BB] px-2 py-0.5 rounded-full uppercase">
                   Официальный документ
                 </span>
@@ -140,7 +140,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
               >
                 <span className="text-xs font-bold text-slate-400 block uppercase">Накладная №</span>
                 <span className="text-base font-black text-[#4B59BB] tracking-wide">
-                  MS-INV-{order.id.slice(-6).toUpperCase()}
+                  WS-INV-{order.id.slice(-6).toUpperCase()}
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 font-semibold mt-0.5">
@@ -154,7 +154,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
             <div>
               <span className="text-[11px] uppercase font-bold text-slate-400 block">Заказчик</span>
               <span className="font-bold text-slate-800">
-                {order.customerName || 'Покупатель MANSTYLE'}
+                {order.customerName || 'Покупатель'}
               </span>
               <span className="text-[11px] text-slate-500 block">
                 {order.customerPhone || '—'}
@@ -176,7 +176,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
               </span>
             </div>
             <div>
-              <span className="text-[11px] uppercase font-bold text-slate-400 block">Оплата & Доставка</span>
+              <span className="text-[11px] uppercase font-bold text-slate-400 block">Оплата и доставка</span>
               <span className="font-bold text-slate-800 flex items-center gap-1">
                 <CreditCard className="w-3 h-3 text-success" />
                 {order.paymentMethod || 'Банковская карта онлайн'}
@@ -283,7 +283,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
               <div className="w-36 border-b border-slate-400 border-dashed pb-0.5 text-center text-slate-400 font-mono text-[11px]">
                 Отпустил со склада (подпись)
               </div>
-              <p className="text-[11px] text-slate-400 mt-1">Штамп отдела контроля качества MANSTYLE</p>
+              <p className="text-[11px] text-slate-400 mt-1">Штамп отдела контроля качества {currentStoreName()}</p>
             </div>
           </div>
         </div>
