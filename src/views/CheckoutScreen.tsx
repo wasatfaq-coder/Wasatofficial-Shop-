@@ -337,7 +337,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
         </div>
         <button
           onClick={() => setActiveTab('catalog')}
-          className="neu-button-primary rounded-full px-6 py-3 font-bold text-xs inline-flex items-center gap-2 cursor-pointer"
+          className="neu-button-accent rounded-full px-6 py-3 font-bold text-xs inline-flex items-center gap-2 cursor-pointer"
         >
           <span>Перейти в каталог</span>
           <ArrowRight className="w-4 h-4" />
@@ -349,7 +349,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   return (
     <div className="space-y-5 pb-28 animate-in fade-in duration-300">
       {/* 4-Step Progress Indicator */}
-      <div className="neu-card rounded-3xl p-4">
+      <div className="neu-flat rounded-3xl p-4">
         <div className="flex items-center justify-between relative px-2">
           {/* Connector Line */}
           <div className="absolute top-4 left-6 right-6 h-0.5 bg-[#BAC5D5] -z-0" />
@@ -389,7 +389,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
       </div>
 
       {/* Order Summary Items Accordion */}
-      <div className="neu-card rounded-3xl p-4 space-y-3">
+      <div className="neu-flat rounded-3xl p-4 space-y-3">
         <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase">Ваш заказ</h3>
         <div className="space-y-2.5">
           {cartItems.map((item) => (
@@ -500,7 +500,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
         </div>
 
         {/* Shipping Address / Pickup Point Section */}
-        <div className="neu-card rounded-3xl p-4 space-y-3">
+        <div className="neu-flat rounded-3xl p-4 space-y-3">
           {isPickupSelected ? (
             /* Neumorphic Pickup Point Address Card */
             <div className="space-y-3">
@@ -636,7 +636,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                         onClick={() => handleSelectSavedAddress(sa)}
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer ${
                           isSel
-                            ? 'neu-accent-button'
+                            ? 'neu-pill-active'
                             : 'neu-button text-[#2D3A4E] hover:text-[#5F6ED0]'
                         }`}
                       >
@@ -791,7 +791,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
         </div>
 
         {/* Shipping Methods */}
-        <div className="neu-card rounded-3xl p-4 space-y-3">
+        <div className="neu-flat rounded-3xl p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase">
               Способ доставки
@@ -823,7 +823,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                 <div
                   key={method.id}
                   className={`rounded-2xl transition-all ${
-                    isSelected ? 'neu-card p-3.5 bg-[#E3E8EF] ring-1.5 ring-[#5F6ED0]/60' : 'neu-button p-3.5'
+                    isSelected ? 'neu-pill-active p-3.5' : 'neu-button p-3.5'
                   }`}
                 >
                   {/* Method Header Row */}
@@ -835,7 +835,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                       <div
                         className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${
                           isSelected
-                            ? 'neu-inset text-[#5F6ED0]'
+                            ? 'neu-pill-active'
                             : 'neu-button text-[#5C6B80]'
                         }`}
                       >
@@ -847,7 +847,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                       <div
                         className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 transition-all ${
                           isSelected
-                            ? 'neu-inset text-[#5F6ED0]'
+                            ? 'neu-pill-active'
                             : 'neu-button text-[#2D3A4E]'
                         }`}
                       >
@@ -864,7 +864,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                             {method.title}
                           </p>
                           {method.highlightBadge && (
-                            <span className="neu-button-accent text-white text-[9px] font-black px-1.5 py-0.2 rounded-full uppercase">
+                            <span className="neu-fill-accent text-white text-[9px] font-black px-1.5 py-0.2 rounded-full uppercase">
                               {method.highlightBadge}
                             </span>
                           )}
@@ -916,7 +916,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                               }}
                               className={`p-3 rounded-2xl cursor-pointer transition-all space-y-2 ${
                                 isPointSelected
-                                  ? 'neu-inset ring-2 ring-[#5F6ED0] bg-[#E3E8EF]'
+                                  ? 'neu-pill-active'
                                   : 'neu-button hover:bg-[#E3E8EF]/80'
                               }`}
                             >
@@ -1035,11 +1035,11 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
         </div>
 
         {/* Payment Methods */}
-        <div className="neu-card rounded-3xl p-4 space-y-3">
+        <div className="neu-flat rounded-3xl p-4 space-y-3">
           <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase">
             Способ оплаты
           </h3>
-          <div className="grid grid-cols-3 gap-2 p-1.5 neu-inset rounded-2xl">
+          <div className="grid grid-cols-3 gap-2 p-1.5 neu-flat-sm rounded-2xl">
             {[
               { id: 'card', label: 'Карта', icon: CreditCard },
               { id: 'sbp', label: 'СБП', icon: ShieldCheck },
@@ -1054,7 +1054,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                   onClick={() => setPaymentMethod(item.id as any)}
                   className={`py-3 px-1.5 rounded-xl text-center flex flex-col items-center justify-center gap-1.5 text-xs transition-all duration-200 cursor-pointer ${
                     isSelected
-                      ? 'neu-accent-button font-bold'
+                      ? 'neu-pill-active font-bold'
                       : 'text-[#5C6B80] hover:text-[#2D3A4E] font-medium'
                   }`}
                 >
@@ -1067,7 +1067,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
         </div>
 
         {/* Receipt / Order Breakdown Card */}
-        <div className="neu-card rounded-3xl p-4 space-y-2.5 text-xs text-[#2D3A4E]">
+        <div className="neu-flat rounded-3xl p-4 space-y-2.5 text-xs text-[#2D3A4E]">
           <h3 className="font-bold uppercase tracking-wider text-[11px] text-[#5C6B80] border-b border-[#BAC5D5]/40 pb-2">
             Детализация оплаты
           </h3>
@@ -1123,7 +1123,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           className={`w-full py-4 rounded-2xl btn-confirm-order font-bold text-sm flex items-center justify-center gap-2 cursor-pointer transition-all ${
             isSubmitting
               ? 'neu-inset-deep neu-inset-deep-animated text-[#5F6ED0] bg-[#E3E8EF] ring-2 ring-[#5F6ED0]/40'
-              : 'neu-accent-button text-white active:scale-[0.98]'
+              : 'neu-button-accent text-white active:scale-[0.98]'
           }`}
         >
           {isSubmitting ? (

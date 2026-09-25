@@ -120,7 +120,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
   if (isRichNotification) {
     return (
       <div
-        className="pointer-events-auto neu-modal rounded-2xl p-3.5 border border-white/90 shadow-xl space-y-2.5 animate-in fade-in slide-in-from-top-4 duration-300 relative bg-[#E3E8EF]"
+        className="pointer-events-auto neu-modal rounded-2xl p-3.5 border border-white/90 space-y-2.5 animate-in fade-in slide-in-from-top-4 duration-300 relative bg-[#E3E8EF]"
         role="alert"
       >
         {/* Top Header */}
@@ -174,7 +174,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
                 toast.action?.onClick();
                 onDismiss(toast.id);
               }}
-              className="py-1.5 px-3 neu-button-accent rounded-xl text-[11px] font-black text-white flex items-center gap-1 cursor-pointer active:scale-95 transition-transform shadow-xs"
+              className="py-1.5 px-3 neu-button-accent rounded-xl text-[11px] font-black text-white flex items-center gap-1 cursor-pointer active:scale-95 transition-transform"
             >
               <span>{toast.action.label}</span>
               <ArrowRight className="w-3 h-3" />
@@ -188,7 +188,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
   // Standard Compact Toast Item
   return (
     <div
-      className="pointer-events-auto neu-dropdown rounded-2xl p-3 px-4 flex items-center justify-between gap-3 border border-white/80 shadow-md animate-in fade-in slide-in-from-top-4 duration-300 bg-[#E3E8EF]"
+      className="pointer-events-auto neu-dropdown rounded-2xl p-3 px-4 flex items-center justify-between gap-3 border border-white/80 animate-in fade-in slide-in-from-top-4 duration-300 bg-[#E3E8EF]"
       role="status"
     >
       <div className="flex items-center gap-2.5 min-w-0">

@@ -259,13 +259,13 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
               <span className="text-xs font-black text-[#2D3A4E] uppercase tracking-wide">
                 Режим корректировки цен
               </span>
-              <div className="neu-inset rounded-xl p-1 flex gap-1 bg-[#E3E8EF]">
+              <div className="neu-flat-sm rounded-xl p-1 flex gap-1 bg-[#E3E8EF]">
                 <button
                   type="button"
                   onClick={() => setPriceAdjustmentType('percent')}
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
                     priceAdjustmentType === 'percent'
-                      ? 'neu-button text-[#5F6ED0] font-black'
+                      ? 'neu-pill-active font-black'
                       : 'text-[#5C6B80]'
                   }`}
                 >
@@ -276,7 +276,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                   onClick={() => setPriceAdjustmentType('fixed')}
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
                     priceAdjustmentType === 'fixed'
-                      ? 'neu-button text-[#5F6ED0] font-black'
+                      ? 'neu-pill-active font-black'
                       : 'text-[#5C6B80]'
                   }`}
                 >
@@ -314,7 +314,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                       onClick={() => setPriceAdjustmentValue(val)}
                       className={`px-2.5 py-1 rounded-xl text-xs font-extrabold cursor-pointer transition-all ${
                         priceAdjustmentValue === val
-                          ? 'neu-inset text-[#5F6ED0] font-black'
+                          ? 'neu-pill-active font-black'
                           : 'neu-button text-[#5C6B80] hover:text-[#2D3A4E]'
                       }`}
                     >
@@ -344,7 +344,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                     onClick={() => setPriceRounding(r.id as any)}
                     className={`py-1.5 px-2 rounded-xl text-[11px] font-bold transition-all text-center cursor-pointer ${
                       priceRounding === r.id
-                        ? 'neu-inset text-[#5F6ED0] font-black'
+                        ? 'neu-pill-active font-black'
                         : 'neu-button text-[#5C6B80]'
                     }`}
                   >
@@ -405,7 +405,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                         onClick={() => setDiscountPercent(p)}
                         className={`px-3 py-1 rounded-xl text-xs font-extrabold cursor-pointer transition-all ${
                           discountPercent === p
-                            ? 'neu-inset text-[#5F6ED0] font-black'
+                            ? 'neu-pill-active font-black'
                             : 'neu-button text-[#5C6B80] hover:text-[#2D3A4E]'
                         }`}
                       >
@@ -428,7 +428,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                         onClick={() => setDiscountBadge(b)}
                         className={`px-3 py-1 rounded-xl text-xs font-extrabold cursor-pointer transition-all ${
                           discountBadge === b
-                            ? 'neu-inset text-[#5F6ED0] font-black'
+                            ? 'neu-pill-active font-black'
                             : 'neu-button text-[#5C6B80]'
                         }`}
                       >
@@ -472,7 +472,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                   onClick={() => setTargetCategory(cat.id)}
                   className={`p-3 rounded-2xl text-xs font-bold transition-all text-center cursor-pointer active:scale-95 flex flex-col items-center justify-center gap-1 ${
                     targetCategory === cat.id
-                      ? 'neu-inset text-[#5F6ED0] font-black bg-[#E3E8EF]'
+                      ? 'neu-pill-active font-black'
                       : 'neu-button text-[#2D3A4E]'
                   }`}
                 >

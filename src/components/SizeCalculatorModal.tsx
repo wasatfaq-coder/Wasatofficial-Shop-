@@ -239,17 +239,17 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
             </div>
 
             {/* Product Fit & Silhouette Indicator (Neumorphic Inset Deepened Banner with live updates) */}
-            <div className="neu-inset rounded-2xl p-3.5 border border-white/50 space-y-2 bg-[#E3E8EF] shadow-inner transition-all duration-200">
+            <div className="neu-inset rounded-2xl p-3.5 border border-white/50 space-y-2 bg-[#E3E8EF] transition-all duration-200">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 rounded-xl neu-button flex items-center justify-center shrink-0 text-[#5F6ED0] bg-[#E3E8EF] border border-white/80 shadow-xs">
+                  <div className="w-7 h-7 rounded-xl neu-button flex items-center justify-center shrink-0 text-[#5F6ED0] bg-[#E3E8EF] border border-white/80">
                     <Info className="w-3.5 h-3.5 stroke-[2.4]" />
                   </div>
                   <div className="flex items-center gap-2 flex-wrap min-w-0">
                     <span className="text-xs font-black text-[#2D3A4E]">
                       Силуэт изделия:
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-full neu-inset text-[#5F6ED0] text-[10px] uppercase font-black tracking-wider bg-[#E3E8EF] border border-[#5F6ED0]/30 shadow-xs">
+                    <span className="px-2.5 py-0.5 rounded-full neu-inset text-[#5F6ED0] text-[10px] uppercase font-black tracking-wider bg-[#E3E8EF] border border-[#5F6ED0]/30">
                       {silhouetteData.fitBadge}
                     </span>
                     <span className="text-[10px] font-bold text-[#5C6B80] px-2 py-0.5 rounded-md neu-inset bg-[#E3E8EF] border border-white/40">
@@ -511,7 +511,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                         onClick={() => setFitPreference(pref.id as any)}
                         className={`py-2 px-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                           isActive
-                            ? 'neu-inset-deep neu-inset-deep-animated text-[#5F6ED0] font-black bg-[#E3E8EF] border border-[#5F6ED0]/40'
+                            ? 'neu-pill-active font-black'
                             : 'neu-button text-[#5C6B80] hover:text-[#2D3A4E] bg-[#E3E8EF]'
                         }`}
                       >
@@ -533,7 +533,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
               <div
                 className={`w-5 h-5 rounded-lg flex items-center justify-center transition-all ${
                   saveToProfile
-                    ? 'neu-button-accent text-white'
+                    ? 'neu-fill-accent text-white'
                     : 'neu-inset text-transparent border border-white/60 bg-[#E3E8EF]'
                 }`}
               >
@@ -557,10 +557,10 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
               <button
                 type="button"
                 onClick={handleApply}
-                className={`flex-1 py-3.5 px-4 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all shadow-md ${
+                className={`flex-1 py-3.5 px-4 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all ${
                   applied
                     ? 'neu-button-success text-white'
-                    : 'neu-button-primary text-white'
+                    : 'neu-button-accent text-white'
                 }`}
               >
                 {applied ? (

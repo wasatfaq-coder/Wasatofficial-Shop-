@@ -572,7 +572,7 @@ export const NeumorphicRechartsLegend: React.FC<NeumorphicRechartsLegendProps> =
         return (
           <div
             key={`neu-leg-${index}-${entry.dataKey || entry.value}`}
-            className="neu-inset rounded-xl px-2.5 py-1 bg-[#E3E8EF] flex items-center gap-2 border border-white/70 shadow-xs transition-transform hover:scale-[1.02] cursor-default"
+            className="neu-inset rounded-xl px-2.5 py-1 bg-[#E3E8EF] flex items-center gap-2 border border-white/70 transition-transform hover:scale-[1.02] cursor-default"
           >
             {/* Visual Icon differentiator */}
             {isPrev ? (

@@ -254,7 +254,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
                   onClick={() => setSelectedCategory(cat.id)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all cursor-pointer active:scale-95 ${
                     isActive
-                      ? 'neu-button text-[#5F6ED0] bg-white/70 shadow-sm'
+                      ? 'neu-pill-active'
                       : 'text-[#5C6B80] hover:text-[#2D3A4E] hover:bg-white/30'
                   }`}
                 >
@@ -276,7 +276,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
           </div>
 
           {/* Footer Call to Action (Support Chat & Call) */}
-          <div className="neu-card rounded-2xl p-3.5 flex items-center justify-between gap-3 shrink-0 bg-gradient-to-r from-[#E3E8EF] to-[#D8E1EC] border border-white/80">
+          <div className="neu-flat rounded-2xl p-3.5 flex items-center justify-between gap-3 shrink-0 bg-gradient-to-r from-[#E3E8EF] to-[#D8E1EC] border border-white/80">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] shrink-0">
                 <MessageSquare className="w-4 h-4" />

@@ -101,7 +101,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrint}
-              className="py-2 px-3.5 bg-[#5F6ED0] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-[#4E5DC0] transition-colors cursor-pointer active:scale-95"
+              className="py-2 px-3.5 bg-[#5F6ED0] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-[#4F5DC0] transition-colors cursor-pointer active:scale-95"
             >
               <Printer className="w-3.5 h-3.5" />
               Печать

@@ -104,7 +104,7 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
                   onConfirmRemove(item.id);
                   onClose();
                 }}
-                className="flex-1 py-2.5 px-3 neu-button rounded-xl text-xs font-black text-[#7E525E] hover:text-[#2D3A4E] hover:scale-102 active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="flex-1 py-2.5 px-3 neu-button-danger rounded-xl text-xs font-black hover:scale-102 active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Удалить</span>

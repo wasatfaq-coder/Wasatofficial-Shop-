@@ -474,7 +474,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                 <button
                   type="button"
                   onClick={handleAddItemToOrder}
-                  className="py-2 px-4 neu-button-accent rounded-xl text-xs font-black text-white flex items-center gap-1.5 cursor-pointer hover:scale-105 transition-transform"
+                  className="py-2 px-4 neu-button rounded-xl text-xs font-black text-[#5F6ED0] flex items-center gap-1.5 cursor-pointer hover:scale-105 transition-transform"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Добавить в заказ</span>
@@ -524,7 +524,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                       <button
                         type="button"
                         onClick={() => handleRemoveItem(idx)}
-                        className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#7E525E] hover:scale-105 transition-transform cursor-pointer shrink-0"
+                        className="w-8 h-8 rounded-xl neu-button-danger flex items-center justify-center hover:scale-105 transition-transform cursor-pointer shrink-0"
                         title="Удалить позицию из заказа (частичный возврат)"
                       >
                         <Trash2 className="w-4 h-4" />

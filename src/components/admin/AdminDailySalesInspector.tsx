@@ -58,11 +58,11 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
   };
 
   return (
-    <div className="neu-inset rounded-2xl p-4 sm:p-5 bg-[#E3E8EF] border border-[#5F6ED0]/40 space-y-4 transition-all shadow-inner animate-in fade-in-50 duration-200">
+    <div className="neu-inset rounded-2xl p-4 sm:p-5 bg-[#E3E8EF] border border-[#5F6ED0]/40 space-y-4 transition-all animate-in fade-in-50 duration-200">
       {/* Header with Day Navigator & Close */}
       <div className="flex items-center justify-between gap-3 flex-wrap border-b border-[#BAC5D5]/50 pb-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-[#5F6ED0] bg-[#E3E8EF] shrink-0 shadow-sm">
+          <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-[#5F6ED0] bg-[#E3E8EF] shrink-0">
             <Calendar className="w-5 h-5" />
           </div>
 

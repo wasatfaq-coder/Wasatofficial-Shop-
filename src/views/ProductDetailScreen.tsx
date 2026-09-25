@@ -442,7 +442,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                           ? 'neu-inset text-[#5C6B80]/70 bg-[#E3E8EF] border border-[#BAC5D5]/60'
                           : 'neu-flat text-[#5C6B80]/40 opacity-70 hover:opacity-100 line-through'
                         : isSelected
-                        ? 'neu-inset text-[#5F6ED0]'
+                        ? 'neu-pill-active'
                         : 'neu-button text-[#2D3A4E] hover:text-[#5F6ED0]'
                     }`}
                   >
@@ -584,12 +584,12 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
       {/* Neumorphic Product Information Tabs (Description, Fabric Specs, Care) */}
       <div className="neu-flat rounded-3xl p-4 border border-white/60 space-y-3">
         {/* Tab Switcher Bar */}
-        <div className="neu-inset p-1.5 rounded-2xl flex items-center justify-between gap-1">
+        <div className="neu-flat-sm p-1.5 rounded-2xl flex items-center justify-between gap-1">
           <button
             onClick={() => setDetailTab('description')}
             className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
               detailTab === 'description'
-                ? 'neu-flat text-[#5F6ED0] border border-white/80 scale-[0.98]'
+                ? 'neu-pill-active'
                 : 'text-[#5C6B80] hover:text-[#2D3A4E]'
             }`}
           >
@@ -601,7 +601,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             onClick={() => setDetailTab('specs')}
             className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
               detailTab === 'specs'
-                ? 'neu-flat text-[#5F6ED0] border border-white/80 scale-[0.98]'
+                ? 'neu-pill-active'
                 : 'text-[#5C6B80] hover:text-[#2D3A4E]'
             }`}
           >
@@ -613,7 +613,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             onClick={() => setDetailTab('care')}
             className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
               detailTab === 'care'
-                ? 'neu-flat text-[#5F6ED0] border border-white/80 scale-[0.98]'
+                ? 'neu-pill-active'
                 : 'text-[#5C6B80] hover:text-[#2D3A4E]'
             }`}
           >

@@ -161,7 +161,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
         <button
           type="button"
           onClick={() => setIsWriteReviewOpen(true)}
-          className="neu-button px-3.5 py-2 rounded-xl text-xs font-bold text-[#5F6ED0] flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-sm hover:opacity-90"
+          className="neu-button px-3.5 py-2 rounded-xl text-xs font-bold text-[#5F6ED0] flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer hover:opacity-90"
         >
           <Plus className="w-4 h-4" />
           <span>Написать отзыв</span>
@@ -169,7 +169,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
       </div>
 
       {/* Rating Summary Card */}
-      <div className="neu-card rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="neu-flat rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-2xl neu-inset flex flex-col items-center justify-center shrink-0">
             <span className="text-2xl font-black text-[#5F6ED0] leading-none">
@@ -202,12 +202,12 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
         </div>
 
         {/* Sort controls */}
-        <div className="grid grid-cols-2 gap-1.5 neu-inset p-1 rounded-xl w-full sm:w-auto sm:flex sm:items-center">
+        <div className="grid grid-cols-2 gap-1.5 neu-flat-sm p-1 rounded-xl w-full sm:w-auto sm:flex sm:items-center">
           <button
             type="button"
             onClick={() => setSortBy('newest')}
             className={`py-2 px-3 sm:px-4 rounded-lg text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center ${
-              sortBy === 'newest' ? 'neu-button text-[#5F6ED0] shadow-sm' : 'text-[#5C6B80] hover:text-[#2D3A4E]'
+              sortBy === 'newest' ? 'neu-pill-active' : 'text-[#5C6B80] hover:text-[#2D3A4E]'
             }`}
           >
             Сначала новые
@@ -216,7 +216,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
             type="button"
             onClick={() => setSortBy('helpful')}
             className={`py-2 px-3 sm:px-4 rounded-lg text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center ${
-              sortBy === 'helpful' ? 'neu-button text-[#5F6ED0] shadow-sm' : 'text-[#5C6B80] hover:text-[#2D3A4E]'
+              sortBy === 'helpful' ? 'neu-pill-active' : 'text-[#5C6B80] hover:text-[#2D3A4E]'
             }`}
           >
             Полезные
@@ -231,7 +231,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
           const currentHelpful = (rev.helpfulCount || 0) + (isLiked ? 1 : 0);
 
           return (
-            <div key={rev.id} className="neu-card rounded-2xl p-4 space-y-3">
+            <div key={rev.id} className="neu-flat rounded-2xl p-4 space-y-3">
               {/* Author & Rating info */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
@@ -402,7 +402,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                   </button>
 
                   {isSizeDropdownOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-1.5 bg-[#E3E8EF] rounded-2xl p-1.5 z-50 neu-dropdown border border-white/80 space-y-1 shadow-xl max-h-48 overflow-y-auto no-scrollbar">
+                    <div className="absolute top-full left-0 right-0 mt-1.5 bg-[#E3E8EF] rounded-2xl p-1.5 z-50 neu-dropdown border border-white/80 space-y-1 max-h-48 overflow-y-auto no-scrollbar">
                       {product.sizes.map((s) => {
                         const isSelected = selectedSize === s;
                         return (
@@ -415,7 +415,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                             }}
                             className={`w-full text-left px-3 py-2 text-xs rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
                               isSelected
-                                ? 'neu-inset font-bold text-[#5F6ED0] border border-white/60'
+                                ? 'neu-pill-active font-bold'
                                 : 'text-[#2D3A4E] font-medium hover:bg-white/60'
                             }`}
                           >
@@ -458,7 +458,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                   </button>
 
                   {isColorDropdownOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-1.5 bg-[#E3E8EF] rounded-2xl p-1.5 z-50 neu-dropdown border border-white/80 space-y-1 shadow-xl max-h-48 overflow-y-auto no-scrollbar">
+                    <div className="absolute top-full left-0 right-0 mt-1.5 bg-[#E3E8EF] rounded-2xl p-1.5 z-50 neu-dropdown border border-white/80 space-y-1 max-h-48 overflow-y-auto no-scrollbar">
                       {product.colors.map((c) => {
                         const isSelected = selectedColor === c.name;
                         return (
@@ -471,7 +471,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                             }}
                             className={`w-full text-left px-3 py-2 text-xs rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
                               isSelected
-                                ? 'neu-inset font-bold text-[#5F6ED0] border border-white/60'
+                                ? 'neu-pill-active font-bold'
                                 : 'text-[#2D3A4E] font-medium hover:bg-white/60'
                             }`}
                           >
@@ -529,7 +529,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
 
               <button
                 type="submit"
-                className="w-full py-3 rounded-2xl neu-button-accent text-white text-xs font-bold shadow-md hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer"
+                className="w-full py-3 rounded-2xl neu-button-accent text-white text-xs font-bold hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer"
               >
                 Опубликовать отзыв
               </button>

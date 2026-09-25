@@ -25,7 +25,7 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
 }) => {
   if (items.length === 0) {
     return (
-      <div className="neu-card rounded-2xl p-6 text-center space-y-2 text-[#5C6B80]">
+      <div className="neu-flat rounded-2xl p-6 text-center space-y-2 text-[#5C6B80]">
         <HelpCircle className="w-8 h-8 mx-auto text-[#BAC5D5]" />
         <p className="font-bold text-sm text-[#2D3A4E]">{emptyMessage}</p>
         <p className="text-xs">
@@ -51,7 +51,7 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
               onClick={() => onToggle(item.id)}
               className={`w-full p-3.5 sm:p-4 rounded-2xl neu-button flex items-start justify-between gap-3 text-left transition-all duration-200 cursor-pointer active:scale-[0.99] ${
                 isExpanded
-                  ? 'border border-[#5F6ED0]/30 shadow-md bg-white/80'
+                  ? 'border border-[#5F6ED0]/30 bg-white/80'
                   : 'hover:border-white/90'
               }`}
             >
@@ -65,7 +65,7 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
               <div
                 className={`w-7 h-7 rounded-xl neu-inset flex items-center justify-center shrink-0 transition-transform duration-300 ${
                   isExpanded
-                    ? 'rotate-180 text-white bg-[#5F6ED0] shadow-sm'
+                    ? 'rotate-180 text-white bg-[#5F6ED0]'
                     : 'text-[#5F6ED0] bg-[#E3E8EF]'
                 }`}
               >
@@ -83,7 +83,7 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
                   transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
                   className="overflow-hidden"
                 >
-                  <div className="neu-inset rounded-2xl p-4 bg-[#E3E8EF] border border-white/60 shadow-inner space-y-3">
+                  <div className="neu-inset rounded-2xl p-4 bg-[#E3E8EF] border border-white/60 space-y-3">
                     <p className="text-xs sm:text-[13px] text-[#4A5568] leading-relaxed font-medium">
                       {item.answer}
                     </p>
@@ -93,7 +93,7 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
                         {item.highlights.map((h, i) => (
                           <span
                             key={i}
-                            className="neu-flat px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-bold text-emerald-800 bg-white/80 border border-emerald-300/40 flex items-center gap-1.5 shadow-sm"
+                            className="neu-flat px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-bold text-emerald-800 bg-white/80 border border-emerald-300/40 flex items-center gap-1.5"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                             <span>{h}</span>

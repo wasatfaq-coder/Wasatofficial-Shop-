@@ -1367,7 +1367,6 @@ export default function App() {
             setActiveTab={setActiveTab}
             cartCount={totalCartCount}
             onOpenDrawer={() => setIsDrawerOpen(true)}
-            onClearCart={handleClearCart}
             selectedProductTitle={selectedProduct?.title}
           />
         )}

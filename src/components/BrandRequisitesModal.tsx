@@ -419,7 +419,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                 <button
                   type="button"
                   onClick={copyAllRequisites}
-                  className="neu-button px-3 py-2 rounded-xl text-xs font-bold text-[#5F6ED0] hover:text-[#4956a8] flex items-center gap-1.5 cursor-pointer shrink-0 active:scale-95 transition-all"
+                  className="neu-button px-3 py-2 rounded-xl text-xs font-bold text-[#5F6ED0] hover:text-[#4F5DC0] flex items-center gap-1.5 cursor-pointer shrink-0 active:scale-95 transition-all"
                   title="Скопировать все реквизиты"
                 >
                   {copiedKey === 'all' ? (

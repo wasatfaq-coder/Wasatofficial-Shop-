@@ -123,7 +123,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         </div>
         <button
           onClick={() => setActiveTab('catalog')}
-          className="neu-button-primary rounded-full px-6 py-3 font-bold text-xs inline-flex items-center gap-2 cursor-pointer"
+          className="neu-button-accent rounded-full px-6 py-3 font-bold text-xs inline-flex items-center gap-2 cursor-pointer"
         >
           <span>Перейти в каталог</span>
           <ArrowRight className="w-4 h-4" />
@@ -289,7 +289,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     {/* Trigger removal modal */}
                     <button
                       onClick={() => setItemToRemove(item)}
-                      className="w-7 h-7 rounded-full neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#7E525E] transition-colors cursor-pointer"
+                      className="w-7 h-7 rounded-full neu-button-danger flex items-center justify-center transition-colors cursor-pointer"
                       title="Удалить товар"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -552,7 +552,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         <div className="space-y-2">
           <button
             onClick={() => setActiveTab('checkout')}
-            className="w-full py-3.5 rounded-2xl neu-button-primary font-bold text-sm flex items-center justify-center gap-2 transition-all btn-confirm-order active:neu-inset-deep active:scale-[0.98] cursor-pointer"
+            className="w-full py-3.5 rounded-2xl neu-button-accent font-bold text-sm flex items-center justify-center gap-2 transition-all btn-confirm-order active:neu-inset-deep active:scale-[0.98] cursor-pointer"
           >
             <span>Оформить заказ</span>
             <ArrowRight className="w-4 h-4" />

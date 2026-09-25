@@ -100,11 +100,7 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
 
   return (
     <div
-      style={{
-        boxShadow:
-          '6px 10px 22px rgba(145, 160, 185, 0.6), -6px -6px 18px rgba(255, 255, 255, 0.95), inset 1px 1px 0 rgba(255, 255, 255, 0.9)',
-      }}
-      className="w-[236px] sm:w-[258px] p-2.5 sm:p-3 rounded-2xl bg-[#E3E8EF] border border-white/90 text-xs space-y-2 pointer-events-none select-none animate-in fade-in-50 zoom-in-95 duration-150 transition-all z-50 shadow-xl"
+      className="w-[236px] sm:w-[258px] p-2.5 sm:p-3 rounded-2xl neu-dropdown border border-white/90 text-xs space-y-2 pointer-events-none select-none animate-in fade-in-50 zoom-in-95 duration-150 transition-all z-50"
     >
       {/* --- 1. NEUMORPHIC HEADER: DATE & PEAK BADGE --- */}
       <div className="flex items-center justify-between gap-1.5 border-b border-[#BAC5D5]/50 pb-1.5">

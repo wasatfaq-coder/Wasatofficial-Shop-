@@ -37,6 +37,9 @@ ManStyle — SPA интернет-магазина мужской одежды (
 - Чат: сообщения с `threadId` (uid покупателя; у гостя — анонимный uid из отдельного
   Firebase-приложения `guest-chat`). У каждого сообщения должно быть поле `isInternalNote`.
 - `users.bonusPoints/managerNotes/tags` меняет только администратор; заметки менеджера хранятся в `customer_notes`.
+- Стили — неоморфные классы из `src/index.css`, тени только через их переменные (`--neu-*`), без `shadow-*`
+  Tailwind рядом с `neu-*` (неоморфный класс их перекрывает). Одна `neu-button-accent` на экран,
+  выбранное — `neu-pill-active`, удаление — `neu-button-danger` + `ConfirmDialog`. Подробно — `docs/ui-audit-plan.md`.
 
 ## Деплой
 
