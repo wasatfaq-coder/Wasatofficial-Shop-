@@ -151,17 +151,17 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
         <div>
           <h3 className="text-base font-extrabold text-[#2D3A4E] flex items-center gap-2">
             <span>Отзывы покупателей</span>
-            <span className="neu-inset px-2.5 py-0.5 rounded-full text-xs font-bold text-[#5F6ED0]">
+            <span className="neu-inset px-2.5 py-0.5 rounded-full text-xs font-bold text-[#4B59BB]">
               {reviews.length}
             </span>
           </h3>
-          <p className="text-xs text-[#5C6B80]">Реальный опыт и честные оценки покупателей</p>
+          <p className="text-xs text-[#4E5C70]">Реальный опыт и честные оценки покупателей</p>
         </div>
 
         <button
           type="button"
           onClick={() => setIsWriteReviewOpen(true)}
-          className="neu-button px-3.5 py-2 rounded-xl text-xs font-bold text-[#5F6ED0] flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer hover:opacity-90"
+          className="neu-button px-3.5 py-2 rounded-xl text-xs font-bold text-[#4B59BB] flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer hover:opacity-90"
         >
           <Plus className="w-4 h-4" />
           <span>Написать отзыв</span>
@@ -172,10 +172,10 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
       <div className="neu-flat rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-2xl neu-inset flex flex-col items-center justify-center shrink-0">
-            <span className="text-2xl font-black text-[#5F6ED0] leading-none">
+            <span className="text-2xl font-black text-[#4B59BB] leading-none">
               {product.rating.toFixed(1)}
             </span>
-            <span className="text-[10px] text-[#5C6B80] font-bold mt-1">из 5.0</span>
+            <span className="text-[11px] text-[#4E5C70] font-bold mt-1">из 5.0</span>
           </div>
 
           <div>
@@ -207,7 +207,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
             type="button"
             onClick={() => setSortBy('newest')}
             className={`py-2 px-3 sm:px-4 rounded-lg text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center ${
-              sortBy === 'newest' ? 'neu-pill-active' : 'text-[#5C6B80] hover:text-[#2D3A4E]'
+              sortBy === 'newest' ? 'neu-pill-active' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
             }`}
           >
             Сначала новые
@@ -216,7 +216,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
             type="button"
             onClick={() => setSortBy('helpful')}
             className={`py-2 px-3 sm:px-4 rounded-lg text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center ${
-              sortBy === 'helpful' ? 'neu-pill-active' : 'text-[#5C6B80] hover:text-[#2D3A4E]'
+              sortBy === 'helpful' ? 'neu-pill-active' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
             }`}
           >
             Полезные
@@ -235,12 +235,12 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
               {/* Author & Rating info */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full neu-button flex items-center justify-center font-black text-xs text-[#5F6ED0] uppercase shrink-0">
+                  <div className="w-8 h-8 rounded-full neu-button flex items-center justify-center font-black text-xs text-[#4B59BB] uppercase shrink-0">
                     {rev.authorName ? rev.authorName[0] : 'U'}
                   </div>
                   <div>
                     <span className="text-xs font-bold text-[#2D3A4E]">{rev.authorName}</span>
-                    <p className="text-[10px] text-[#5C6B80]">{rev.date}</p>
+                    <p className="text-[11px] text-[#4E5C70]">{rev.date}</p>
                   </div>
                 </div>
 
@@ -258,7 +258,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
 
               {/* Purchase specs */}
               {(rev.sizePurchased || rev.colorPurchased) && (
-                <div className="flex items-center gap-2 text-[11px] text-[#5C6B80]">
+                <div className="flex items-center gap-2 text-[11px] text-[#4E5C70]">
                   {rev.sizePurchased && (
                     <span className="neu-inset px-2 py-0.5 rounded-md font-semibold">
                       Размер: {rev.sizePurchased}
@@ -296,7 +296,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                   type="button"
                   onClick={() => handleToggleHelpful(rev.id)}
                   className={`neu-button px-2.5 py-1 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                    isLiked ? 'text-success' : 'text-[#5C6B80] hover:text-[#2D3A4E]'
+                    isLiked ? 'text-success' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
                   }`}
                 >
                   <ThumbsUp className={`w-3.5 h-3.5 ${isLiked ? 'fill-success' : ''}`} />
@@ -314,12 +314,12 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
           <div className="neu-modal rounded-3xl p-5 max-w-md w-full space-y-4 max-h-[90vh] overflow-y-auto no-scrollbar border border-white/80 text-[#2D3A4E]">
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl neu-inset flex items-center justify-center text-[#5F6ED0]">
+                <div className="w-9 h-9 rounded-2xl neu-inset flex items-center justify-center text-[#4B59BB]">
                   <MessageSquarePlus className="w-5 h-5 stroke-[2.2]" />
                 </div>
                 <div>
                   <h3 className="text-base font-extrabold text-[#2D3A4E]">Оставить отзыв</h3>
-                  <p className="text-[11px] text-[#5C6B80] truncate max-w-[220px]">
+                  <p className="text-[11px] text-[#4E5C70] truncate max-w-[220px]">
                     {product.title}
                   </p>
                 </div>
@@ -327,7 +327,8 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
               <button
                 type="button"
                 onClick={() => setIsWriteReviewOpen(false)}
-                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer"
+                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                aria-label="Закрыть"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -346,6 +347,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                       onMouseLeave={() => setHoverRating(null)}
                       onClick={() => setSelectedRating(st)}
                       className="p-1 cursor-pointer transform hover:scale-125 transition-transform"
+                      aria-label={`Оценка ${st} из 5`}
                     >
                       <Star
                         className={`w-6 h-6 ${
@@ -357,7 +359,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                     </button>
                   ))}
                 </div>
-                <span className="text-[11px] font-bold text-[#5F6ED0]">
+                <span className="text-[11px] font-bold text-[#4B59BB]">
                   {selectedRating === 5 && 'Превосходно!'}
                   {selectedRating === 4 && 'Хорошо'}
                   {selectedRating === 3 && 'Нормально'}
@@ -374,7 +376,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                   value={authorName}
                   onChange={(e) => setAuthorName(e.target.value)}
                   placeholder="Например, Александр В."
-                  className="w-full py-2.5 px-3.5 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder-[#5C6B80]/60 outline-none"
+                  className="w-full py-2.5 px-3.5 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
                 />
               </div>
 
@@ -395,8 +397,8 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                   >
                     <span className="font-bold">{selectedSize || 'Размер'}</span>
                     <ChevronDown
-                      className={`w-4 h-4 text-[#5C6B80] transition-transform duration-200 shrink-0 ${
-                        isSizeDropdownOpen ? 'rotate-180 text-[#5F6ED0]' : ''
+                      className={`w-4 h-4 text-[#4E5C70] transition-transform duration-200 shrink-0 ${
+                        isSizeDropdownOpen ? 'rotate-180 text-[#4B59BB]' : ''
                       }`}
                     />
                   </button>
@@ -420,7 +422,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                             }`}
                           >
                             <span>{s}</span>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-[#5F6ED0] stroke-[2.5]" />}
+                            {isSelected && <Check className="w-3.5 h-3.5 text-[#4B59BB] stroke-[2.5]" />}
                           </button>
                         );
                       })}
@@ -451,8 +453,8 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                       <span className="truncate font-bold">{selectedColor || 'Цвет'}</span>
                     </div>
                     <ChevronDown
-                      className={`w-4 h-4 text-[#5C6B80] transition-transform duration-200 shrink-0 ${
-                        isColorDropdownOpen ? 'rotate-180 text-[#5F6ED0]' : ''
+                      className={`w-4 h-4 text-[#4E5C70] transition-transform duration-200 shrink-0 ${
+                        isColorDropdownOpen ? 'rotate-180 text-[#4B59BB]' : ''
                       }`}
                     />
                   </button>
@@ -482,7 +484,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                               />
                               <span className="truncate">{c.name}</span>
                             </div>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-[#5F6ED0] stroke-[2.5] shrink-0" />}
+                            {isSelected && <Check className="w-3.5 h-3.5 text-[#4B59BB] stroke-[2.5] shrink-0" />}
                           </button>
                         );
                       })}
@@ -499,7 +501,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
                   placeholder="Опишите ваши впечатления от посадки, ткани, деталей кроя..."
-                  className="w-full p-3 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder-[#5C6B80]/60 outline-none resize-none"
+                  className="w-full p-3 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A] resize-none"
                 />
               </div>
 
@@ -511,7 +513,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                   value={prosText}
                   onChange={(e) => setProsText(e.target.value)}
                   placeholder="Например: качественная ткань, идеальный воротник"
-                  className="w-full py-2 px-3.5 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder-[#5C6B80]/60 outline-none"
+                  className="w-full py-2 px-3.5 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
                 />
               </div>
 
@@ -523,7 +525,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                   value={consText}
                   onChange={(e) => setConsText(e.target.value)}
                   placeholder="Например: маломерит на полразмера"
-                  className="w-full py-2 px-3.5 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder-[#5C6B80]/60 outline-none"
+                  className="w-full py-2 px-3.5 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
                 />
               </div>
 

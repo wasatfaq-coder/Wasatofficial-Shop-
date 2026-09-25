@@ -67,7 +67,7 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
     revenue: {
       title: isMonthly ? 'Выручка за месяц' : 'Суточная выручка',
       color: '#5F6ED0',
-      badgeClass: 'text-[#5F6ED0] bg-[#5F6ED0]/10 border-[#5F6ED0]/30',
+      badgeClass: 'text-[#4B59BB] bg-[#5F6ED0]/10 border-[#5F6ED0]/30',
       valueFormatted: `${currentVal.toLocaleString('ru-RU')} ₽`,
       prevFormatted: `${prevVal.toLocaleString('ru-RU')} ₽`,
       diffFormatted: `${diff >= 0 ? '+' : ''}${diff.toLocaleString('ru-RU')} ₽`,
@@ -105,7 +105,7 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
       {/* --- 1. NEUMORPHIC HEADER: DATE & PEAK BADGE --- */}
       <div className="flex items-center justify-between gap-1.5 border-b border-[#BAC5D5]/50 pb-1.5">
         <div className="flex items-center gap-1.5 min-w-0">
-          <div className="w-5 h-5 rounded-lg neu-inset flex items-center justify-center text-[#5F6ED0] bg-[#E3E8EF] shrink-0">
+          <div className="w-5 h-5 rounded-lg neu-inset flex items-center justify-center text-[#4B59BB] bg-[#E3E8EF] shrink-0">
             <Calendar className="w-3 h-3" />
           </div>
 
@@ -113,14 +113,14 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
             <p className="font-black text-[#2D3A4E] text-[11px] sm:text-xs truncate leading-tight">
               {data.fullDate || label}
             </p>
-            <p className="text-[9px] font-bold text-[#5C6B80] truncate leading-tight">
+            <p className="text-[11px] font-bold text-[#4E5C70] truncate leading-tight">
               {isMonthly ? 'Месячный срез' : `${data.weekday} • Суточный срез`}
             </p>
           </div>
         </div>
 
         {data.isPeakDay && (
-          <span className="text-[8px] font-black text-warning bg-warning-soft border border-warning/35 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shrink-0 animate-pulse">
+          <span className="text-[11px] font-black text-warning bg-warning-soft border border-warning/35 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shrink-0 animate-pulse">
             <Flame className="w-2.5 h-2.5 text-warning fill-warning" />
             Пик
           </span>
@@ -129,12 +129,12 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
 
       {/* --- 2. PRIMARY METRIC HERO CARD (NEU-INSET) --- */}
       <div className="neu-inset rounded-xl p-2 bg-[#E3E8EF] space-y-1 border border-white/40">
-        <div className="flex items-center justify-between text-[#5C6B80] gap-1">
-          <span className="text-[9px] font-extrabold uppercase tracking-wider truncate">
+        <div className="flex items-center justify-between text-[#4E5C70] gap-1">
+          <span className="text-[11px] font-extrabold uppercase tracking-wider truncate">
             {metricConfig.title}
           </span>
           <span
-            className={`text-[8px] font-black px-1.5 py-0.2 rounded-md border shrink-0 ${metricConfig.badgeClass}`}
+            className={`text-[11px] font-black px-1.5 py-0.2 rounded-md border shrink-0 ${metricConfig.badgeClass}`}
           >
             Срез
           </span>
@@ -151,7 +151,7 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
           {/* Share of Period */}
           {activeMetric === 'revenue' && totalPeriodRevenue > 0 && (
             <span
-              className="text-[9px] font-extrabold text-[#5C6B80] neu-inset px-1.5 py-0.5 rounded-md bg-[#E3E8EF] shrink-0"
+              className="text-[11px] font-extrabold text-[#4E5C70] neu-inset px-1.5 py-0.5 rounded-md bg-[#E3E8EF] shrink-0"
               title="Доля в общей выручке выбранного периода"
             >
               {periodShare}% оборота
@@ -161,8 +161,8 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
 
         {/* Benchmark against daily average */}
         {activeMetric === 'revenue' && avgDailyRevenue > 0 && !isMonthly && (
-          <div className="flex items-center justify-between text-[9px] pt-0.5 border-t border-[#BAC5D5]/30">
-            <span className="text-[#5C6B80]">К норме дня:</span>
+          <div className="flex items-center justify-between text-[11px] pt-0.5 border-t border-[#BAC5D5]/30">
+            <span className="text-[#4E5C70]">К норме дня:</span>
             <span
               className={`font-black flex items-center gap-0.5 ${
                 isAboveAvg ? 'text-success' : 'text-danger'
@@ -186,25 +186,25 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
 
       {/* --- 3. COMPARISON VS PREVIOUS CYCLE (IF ENABLED) --- */}
       {compareWithPrevious && activeMetric !== 'avgCheck' && (
-        <div className="neu-inset rounded-xl p-2 bg-[#E3E8EF] space-y-0.5 text-[10px] border border-white/40">
-          <div className="flex items-center justify-between text-[#5C6B80]">
-            <span className="flex items-center gap-1 text-[9px] font-medium">
+        <div className="neu-inset rounded-xl p-2 bg-[#E3E8EF] space-y-0.5 text-[11px] border border-white/40">
+          <div className="flex items-center justify-between text-[#4E5C70]">
+            <span className="flex items-center gap-1 text-[11px] font-medium">
               <span className="w-2 h-0.5 bg-[#94A3B8] rounded-full" />
               Пред. период:
             </span>
-            <span className="font-bold text-[#64748B] tabular-nums text-[10px]">
+            <span className="font-bold text-[#64748B] tabular-nums text-[11px]">
               {metricConfig.prevFormatted}
             </span>
           </div>
 
-          <div className="flex items-center justify-between pt-0.5 border-t border-[#BAC5D5]/25 text-[9px]">
-            <span className="text-[#5C6B80]">Динамика:</span>
+          <div className="flex items-center justify-between pt-0.5 border-t border-[#BAC5D5]/25 text-[11px]">
+            <span className="text-[#4E5C70]">Динамика:</span>
             <div className="flex items-center gap-1">
-              <span className="font-semibold text-[#5C6B80] text-[9px]">
+              <span className="font-semibold text-[#4E5C70] text-[11px]">
                 {metricConfig.diffFormatted}
               </span>
               <span
-                className={`font-black px-1 py-0.2 rounded text-[8px] flex items-center gap-0.5 ${
+                className={`font-black px-1 py-0.2 rounded text-[11px] flex items-center gap-0.5 ${
                   isPositive
                     ? 'text-success bg-success-soft'
                     : 'text-danger bg-danger-soft'
@@ -220,16 +220,16 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
       {/* --- 4. DETAILED DAILY SNAPSHOT METRICS GRID --- */}
       <div className="grid grid-cols-3 gap-1 text-center">
         <div className="neu-inset rounded-lg p-1.5 bg-[#E3E8EF] space-y-0.5">
-          <span className="text-[8px] font-bold text-[#5C6B80] block truncate">
+          <span className="text-[11px] font-bold text-[#4E5C70] block truncate">
             Заказов
           </span>
           <p className="text-[11px] font-black text-[#2D3A4E] tabular-nums leading-tight">
-            {data.orders} <span className="text-[8px] font-normal text-[#5C6B80]">шт</span>
+            {data.orders} <span className="text-[11px] font-normal text-[#4E5C70]">шт</span>
           </p>
         </div>
 
         <div className="neu-inset rounded-lg p-1.5 bg-[#E3E8EF] space-y-0.5">
-          <span className="text-[8px] font-bold text-[#5C6B80] block truncate">
+          <span className="text-[11px] font-bold text-[#4E5C70] block truncate">
             Ср. чек
           </span>
           <p className="text-[11px] font-black text-success tabular-nums leading-tight truncate">
@@ -240,7 +240,7 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
         </div>
 
         <div className="neu-inset rounded-lg p-1.5 bg-[#E3E8EF] space-y-0.5">
-          <span className="text-[8px] font-bold text-[#5C6B80] block truncate">
+          <span className="text-[11px] font-bold text-[#4E5C70] block truncate">
             Возвраты
           </span>
           <p
@@ -248,14 +248,14 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
               data.returns === 0 ? 'text-[#2D3A4E]' : 'text-warning'
             }`}
           >
-            {data.returns} <span className="text-[8px] font-normal text-[#5C6B80]">шт</span>
+            {data.returns} <span className="text-[11px] font-normal text-[#4E5C70]">шт</span>
           </p>
         </div>
       </div>
 
       {/* --- 5. REAL FIRESTORE ORDERS PREVIEW IF PRESENT --- */}
       {data.hasRealOrders && data.realOrdersList.length > 0 && (
-        <div className="neu-inset rounded-lg px-2 py-1 bg-[#E3E8EF] flex items-center justify-between text-[9px] border border-indigo-200/50 text-indigo-800">
+        <div className="neu-inset rounded-lg px-2 py-1 bg-[#E3E8EF] flex items-center justify-between text-[11px] border border-indigo-200/50 text-indigo-800">
           <span className="flex items-center gap-1 font-extrabold">
             <Zap className="w-2.5 h-2.5 text-indigo-600 shrink-0" />
             В Firestore:
@@ -272,8 +272,8 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
 
       {/* --- 6. FOOTER INTERACTION HINT --- */}
       <div className="pt-0.5 text-center border-t border-[#BAC5D5]/35">
-        <span className="text-[8px] text-[#5C6B80] font-bold flex items-center justify-center gap-1">
-          <MousePointerClick className="w-2.5 h-2.5 text-[#5F6ED0]" />
+        <span className="text-[11px] text-[#4E5C70] font-bold flex items-center justify-center gap-1">
+          <MousePointerClick className="w-2.5 h-2.5 text-[#4B59BB]" />
           Кликните для деталей дня
         </span>
       </div>

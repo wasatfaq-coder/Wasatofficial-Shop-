@@ -110,14 +110,14 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
           <div className="w-full max-w-4xl flex items-center justify-between gap-2 sm:gap-3 z-20 shrink-0">
             {/* Title and Angle info */}
             <div className="h-11 sm:h-12 flex-1 min-w-0 px-3 sm:px-4 rounded-2xl neu-flat bg-[#E3E8EF] flex items-center gap-2.5 border border-white/80">
-              <div className="w-7 h-7 rounded-xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#5F6ED0] shrink-0 border border-white/60">
+              <div className="w-7 h-7 rounded-xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#4B59BB] shrink-0 border border-white/60">
                 <Sparkles className="w-3.5 h-3.5" />
               </div>
               <div className="min-w-0 truncate">
                 <span className="text-xs sm:text-sm font-black text-[#2D3A4E] leading-none truncate block">
                   {productTitle}
                 </span>
-                <span className="text-[10px] text-[#5C6B80] font-bold leading-tight truncate block mt-0.5">
+                <span className="text-[11px] text-[#4E5C70] font-bold leading-tight truncate block mt-0.5">
                   {ANGLE_LABELS[currentIndex % ANGLE_LABELS.length]} • Ракурс {currentIndex + 1} из{' '}
                   {images.length}
                 </span>
@@ -131,14 +131,15 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
                 <button
                   onClick={handleZoomOut}
                   disabled={zoomLevel <= 1}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#2D3A4E] hover:text-[#5F6ED0] disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 transition-all cursor-pointer select-none"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#2D3A4E] hover:text-[#4B59BB] disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 transition-all cursor-pointer select-none"
                   title="Уменьшить"
+                  aria-label="Уменьшить"
                 >
                   <ZoomOut className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
                 </button>
                 <button
                   onClick={handleResetZoom}
-                  className="h-7 sm:h-8 px-2.5 sm:px-3 text-[11px] sm:text-xs font-black text-[#5F6ED0] neu-inset bg-[#E3E8EF] rounded-xl flex items-center justify-center border border-[#5F6ED0]/20 active:scale-95 transition-all cursor-pointer select-none"
+                  className="h-7 sm:h-8 px-2.5 sm:px-3 text-[11px] sm:text-xs font-black text-[#4B59BB] neu-inset bg-[#E3E8EF] rounded-xl flex items-center justify-center border border-[#5F6ED0]/20 active:scale-95 transition-all cursor-pointer select-none"
                   title="Сбросить масштаб"
                 >
                   {Math.round(zoomLevel * 100)}%
@@ -146,8 +147,9 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
                 <button
                   onClick={handleZoomIn}
                   disabled={zoomLevel >= 3}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#2D3A4E] hover:text-[#5F6ED0] disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 transition-all cursor-pointer select-none"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#2D3A4E] hover:text-[#4B59BB] disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 transition-all cursor-pointer select-none"
                   title="Увеличить"
+                  aria-label="Увеличить"
                 >
                   <ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
                 </button>
@@ -158,6 +160,7 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
                 onClick={onClose}
                 className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl neu-button flex items-center justify-center text-[#2D3A4E] hover:text-danger active:scale-90 transition-all cursor-pointer bg-[#E3E8EF] border border-white/80 shrink-0 select-none"
                 title="Закрыть"
+                aria-label="Закрыть"
               >
                 <X className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
               </button>
@@ -200,6 +203,7 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
                   onClick={handlePrev}
                   className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-2xl neu-photo-btn flex items-center justify-center text-[#2D3A4E] z-20 cursor-pointer hover:scale-105 active:scale-95 transition-transform"
                   title="Предыдущий ракурс"
+                  aria-label="Предыдущий ракурс"
                 >
                   <ChevronLeft className="w-6 h-6 stroke-[2.5]" />
                 </button>
@@ -207,6 +211,7 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
                   onClick={handleNext}
                   className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-2xl neu-photo-btn flex items-center justify-center text-[#2D3A4E] z-20 cursor-pointer hover:scale-105 active:scale-95 transition-transform"
                   title="Следующий ракурс"
+                  aria-label="Следующий ракурс"
                 >
                   <ChevronRight className="w-6 h-6 stroke-[2.5]" />
                 </button>
@@ -216,7 +221,7 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
             {/* Zoom Tip Overlay */}
             {zoomLevel === 1 && (
               <div className="absolute bottom-3 left-1/2 -translate-x-1/2 neu-photo-badge text-[#2D3A4E] text-[11px] font-bold px-3.5 py-1.5 rounded-full z-10 flex items-center gap-1.5 pointer-events-none">
-                <ZoomIn className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                <ZoomIn className="w-3.5 h-3.5 text-[#4B59BB]" />
                 <span>Кликните для увеличения (до 300%)</span>
               </div>
             )}
@@ -243,7 +248,7 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
                   alt=""
                   className="w-12 h-12 sm:w-14 sm:h-14 object-cover object-top rounded-xl"
                 />
-                <span className="hidden sm:inline-block pr-2 text-left text-[10px] font-bold text-[#2D3A4E] max-w-[100px] leading-tight">
+                <span className="hidden sm:inline-block pr-2 text-left text-[11px] font-bold text-[#2D3A4E] max-w-[100px] leading-tight">
                   {ANGLE_LABELS[idx % ANGLE_LABELS.length]}
                 </span>
               </button>

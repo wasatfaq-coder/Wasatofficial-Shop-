@@ -51,7 +51,7 @@ export const Header: React.FC<HeaderProps> = ({
         {isHome ? (
           <button
             onClick={onOpenDrawer}
-            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-[#5F6ED0] transition-colors shrink-0"
+            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-[#4B59BB] transition-colors shrink-0"
             aria-label="Открыть меню"
           >
             <Menu className="w-5 h-5 stroke-[2]" />
@@ -63,7 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
               else if (activeTab === 'product-detail') setActiveTab('home');
               else setActiveTab('home');
             }}
-            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-[#5F6ED0] transition-colors shrink-0"
+            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-[#4B59BB] transition-colors shrink-0"
             aria-label="Назад"
           >
             <ArrowLeft className="w-5 h-5 stroke-[2]" />
@@ -76,7 +76,7 @@ export const Header: React.FC<HeaderProps> = ({
             {titleInfo.main}
           </h1>
           {titleInfo.sub && (
-            <p className="text-xs font-semibold text-[#5C6B80] leading-none mt-0.5 truncate">
+            <p className="text-xs font-semibold text-[#4E5C70] leading-none mt-0.5 truncate">
               {titleInfo.sub}
             </p>
           )}
@@ -86,7 +86,7 @@ export const Header: React.FC<HeaderProps> = ({
         {activeTab === 'profile' ? (
           <button
             onClick={onOpenDrawer}
-            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-[#5F6ED0] transition-colors shrink-0"
+            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-[#4B59BB] transition-colors shrink-0"
             aria-label="Настройки"
           >
             <Settings className="w-5 h-5 stroke-[2]" />

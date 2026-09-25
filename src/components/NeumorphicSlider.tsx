@@ -98,7 +98,7 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {icon && (
-            <div className="w-7 h-7 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] shrink-0 bg-[#E3E8EF]">
+            <div className="w-7 h-7 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0 bg-[#E3E8EF]">
               {icon}
             </div>
           )}
@@ -107,7 +107,7 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
               {label}
             </span>
             {subtitle && (
-              <span className="text-[10px] text-[#5C6B80] block truncate">
+              <span className="text-[11px] text-[#4E5C70] block truncate">
                 {subtitle}
               </span>
             )}
@@ -121,7 +121,7 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
             onClick={() => onChange(Math.max(min, value - step))}
             disabled={value <= min}
             aria-label={`Уменьшить ${label}`}
-            className="w-6 h-6 rounded-lg neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            className="w-6 h-6 rounded-lg neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             <Minus className="w-3 h-3 stroke-[2.5]" />
           </button>
@@ -129,11 +129,11 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
           <div
             className={`px-2.5 py-1 rounded-xl font-extrabold text-xs tracking-tight transition-transform duration-100 ${
               isDragging
-                ? 'neu-inset-deep text-[#5F6ED0] scale-105 bg-[#E3E8EF]'
-                : 'neu-inset text-[#5F6ED0] bg-[#E3E8EF]'
+                ? 'neu-inset-deep text-[#4B59BB] scale-105 bg-[#E3E8EF]'
+                : 'neu-inset text-[#4B59BB] bg-[#E3E8EF]'
             }`}
           >
-            {value} <span className="text-[10px] font-bold text-[#5C6B80]">{unit}</span>
+            {value} <span className="text-[11px] font-bold text-[#4E5C70]">{unit}</span>
           </div>
 
           <button
@@ -141,7 +141,7 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
             onClick={() => onChange(Math.min(max, value + step))}
             disabled={value >= max}
             aria-label={`Увеличить ${label}`}
-            className="w-6 h-6 rounded-lg neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            className="w-6 h-6 rounded-lg neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             <Plus className="w-3 h-3 stroke-[2.5]" />
           </button>
@@ -163,7 +163,7 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
           aria-valuemax={max}
           aria-valuenow={value}
           aria-label={label}
-          className="relative w-full h-3 rounded-full neu-inset bg-[#D8DFEB] cursor-pointer touch-none select-none outline-none focus-visible:ring-2 focus-visible:ring-[#5F6ED0]"
+          className="relative w-full h-3 rounded-full neu-inset bg-[#D8DFEB] cursor-pointer touch-none select-none focus-visible:ring-2 focus-visible:ring-[#5F6ED0]"
         >
           {/* Active Gradient Rail */}
           <div
@@ -176,7 +176,7 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
           {/* Recommended marker if present (subtle recessed dot on track rail) */}
           {recommendedValue && (
             <div
-              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#5C6B80]/40 pointer-events-none z-0"
+              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#4E5C70]/40 pointer-events-none z-0"
               style={{
                 left: `${((recommendedValue - min) / (max - min)) * 100}%`,
               }}
@@ -209,10 +209,10 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
         </div>
 
         {/* Min & Max Labels */}
-        <div className="flex justify-between items-center text-[10px] font-bold text-[#5C6B80] pt-2 px-0.5">
+        <div className="flex justify-between items-center text-[11px] font-bold text-[#4E5C70] pt-2 px-0.5">
           <span>{min} {unit}</span>
           {recommendedValue && (
-            <span className="text-[9px] font-semibold text-[#5F6ED0]/80">
+            <span className="text-[11px] font-semibold text-[#4B59BB]/80">
               База: {recommendedValue} {unit}
             </span>
           )}

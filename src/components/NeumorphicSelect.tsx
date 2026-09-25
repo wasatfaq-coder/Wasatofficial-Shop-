@@ -88,7 +88,7 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
             : 'px-3.5 py-2.5'
         } ${variant === 'inset' ? 'neu-inset' : 'neu-button'} ${
           triggerClassName || 'rounded-xl'
-        } text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF] flex items-center justify-between gap-2 transition-all cursor-pointer text-left focus:outline-none ${
+        } text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF] flex items-center justify-between gap-2 transition-all cursor-pointer text-left ${
           disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#BAC5D5]/30'
         } ${isOpen ? 'ring-2 ring-[#5F6ED0]/50' : ''}`}
       >
@@ -96,7 +96,7 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
           {selectedOption?.icon && <span className="shrink-0">{selectedOption.icon}</span>}
           <span className="truncate">
             {prefix && (
-              <span className="text-[#5C6B80] font-medium mr-1.5">{prefix}</span>
+              <span className="text-[#4E5C70] font-medium mr-1.5">{prefix}</span>
             )}
             <span className={prefix ? 'font-black text-[#2D3A4E]' : ''}>
               {triggerLabel || (selectedOption ? selectedOption.label : placeholder)}
@@ -106,15 +106,15 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
             <span
               className={`${
                 variant === 'inset' ? 'neu-button' : 'neu-flat'
-              } text-[10px] px-2 py-0.5 rounded-md text-[#5F6ED0] font-black shrink-0`}
+              } text-[11px] px-2 py-0.5 rounded-md text-[#4B59BB] font-black shrink-0`}
             >
               {selectedOption.badge}
             </span>
           )}
         </div>
         <ChevronDown
-          className={`w-4 h-4 text-[#5C6B80] shrink-0 transition-transform duration-200 ${
-            isOpen ? 'rotate-180 text-[#5F6ED0]' : ''
+          className={`w-4 h-4 text-[#4E5C70] shrink-0 transition-transform duration-200 ${
+            isOpen ? 'rotate-180 text-[#4B59BB]' : ''
           }`}
         />
       </button>
@@ -144,13 +144,13 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
                   <div className="min-w-0 flex-1">
                     <p className="leading-snug text-left">{opt.label}</p>
                     {opt.sublabel && (
-                      <p className="text-[10px] text-[#5C6B80] font-normal mt-0.5 leading-tight">
+                      <p className="text-[11px] text-[#4E5C70] font-normal mt-0.5 leading-tight">
                         {opt.sublabel}
                       </p>
                     )}
                   </div>
                   {opt.badge && (
-                    <span className="neu-flat text-[9px] px-1.5 py-0.5 rounded text-[#5F6ED0] font-black shrink-0 whitespace-nowrap">
+                    <span className="neu-flat text-[11px] px-1.5 py-0.5 rounded text-[#4B59BB] font-black shrink-0 whitespace-nowrap">
                       {opt.badge}
                     </span>
                   )}

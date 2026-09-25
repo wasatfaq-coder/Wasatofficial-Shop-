@@ -112,12 +112,12 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   if (cartItems.length === 0) {
     return (
       <div className="py-12 space-y-5 text-center animate-in fade-in duration-300">
-        <div className="w-24 h-24 rounded-full neu-flat flex items-center justify-center mx-auto text-[#5C6B80]">
+        <div className="w-24 h-24 rounded-full neu-flat flex items-center justify-center mx-auto text-[#4E5C70]">
           <ShoppingBag className="w-10 h-10 stroke-[1.5]" />
         </div>
         <div className="space-y-1">
           <h2 className="text-xl font-bold text-[#2D3A4E]">Ваша корзина пуста</h2>
-          <p className="text-xs text-[#5C6B80] max-w-xs mx-auto">
+          <p className="text-xs text-[#4E5C70] max-w-xs mx-auto">
             Выберите стильные новинки из нашего каталога мужской одежды
           </p>
         </div>
@@ -138,14 +138,14 @@ export const CartScreen: React.FC<CartScreenProps> = ({
       <div className="neu-flat rounded-2xl p-3.5 border border-white/60 space-y-2 bg-[#E3E8EF]">
         <div className="flex items-center justify-between text-xs font-bold">
           <div className="flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#5F6ED0]" />
+            <Sparkles className="w-3.5 h-3.5 text-[#4B59BB]" />
             <span className="text-[#2D3A4E]">
               {remainingForFreeDelivery === 0
                 ? 'Бесплатная доставка получена!'
                 : `До бесплатной доставки: ${remainingForFreeDelivery.toLocaleString('ru-RU')} ₽`}
             </span>
           </div>
-          <span className="text-[11px] font-black text-[#5F6ED0]">
+          <span className="text-[11px] font-black text-[#4B59BB]">
             {Math.min(100, Math.round((rawSubtotal / freeThreshold) * 100))}%
           </span>
         </div>
@@ -163,7 +163,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-[#2D3A4E]">Товаров в корзине:</span>
-          <span className="neu-inset px-2.5 py-0.5 rounded-full text-xs font-black text-[#5F6ED0]">
+          <span className="neu-inset px-2.5 py-0.5 rounded-full text-xs font-black text-[#4B59BB]">
             {totalItemsCount}
           </span>
         </div>
@@ -171,7 +171,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         <button
           type="button"
           onClick={() => setIsClearCartConfirmOpen(true)}
-          className="text-xs font-bold text-[#5C6B80] hover:text-danger transition-colors flex items-center gap-1 cursor-pointer"
+          className="text-xs font-bold text-[#4E5C70] hover:text-danger transition-colors flex items-center gap-1 cursor-pointer"
         >
           <Trash2 className="w-3.5 h-3.5" />
           <span>Очистить всё</span>
@@ -200,7 +200,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     className="w-full h-full object-cover object-top rounded-xl"
                   />
                   {availableStock <= 2 && availableStock > 0 && (
-                    <span className="absolute bottom-1 right-1 neu-flat bg-[#E3E8EF]/95 text-[#2D3A4E] text-[9px] font-extrabold px-1.5 py-0.5 rounded-md border border-white/60">
+                    <span className="absolute bottom-1 right-1 neu-flat bg-[#E3E8EF]/95 text-[#2D3A4E] text-[11px] font-extrabold px-1.5 py-0.5 rounded-md border border-white/60">
                       {availableStock} шт.
                     </span>
                   )}
@@ -216,9 +216,10 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     <button
                       onClick={(e) => onToggleFavorite(item.product, e)}
                       className={`w-7 h-7 rounded-full neu-button flex items-center justify-center transition-colors shrink-0 ${
-                        isFav ? 'text-[#5F6ED0]' : 'text-[#5C6B80] hover:text-[#2D3A4E]'
+                        isFav ? 'text-[#4B59BB]' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
                       }`}
                       title={isFav ? 'В избранном' : 'Добавить в избранное'}
+                      aria-label={isFav ? 'В избранном' : 'Добавить в избранное'}
                     >
                       <Heart
                         className={`w-3.5 h-3.5 ${
@@ -233,14 +234,14 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => setEditingVariantItemId(isEditingVariant ? null : item.id)}
-                      className="neu-inset px-2.5 py-0.5 rounded-xl flex items-center gap-1.5 text-[11px] font-bold text-[#5F6ED0] hover:scale-102 transition-transform cursor-pointer"
+                      className="neu-inset px-2.5 py-0.5 rounded-xl flex items-center gap-1.5 text-[11px] font-bold text-[#4B59BB] hover:scale-102 transition-transform cursor-pointer"
                       title="Нажмите, чтобы изменить цвет или размер"
                     >
                       <span>{item.selectedColor} • {item.selectedSize}</span>
-                      <SlidersHorizontal className="w-3 h-3 text-[#5F6ED0]" />
+                      <SlidersHorizontal className="w-3 h-3 text-[#4B59BB]" />
                     </button>
 
-                    <span className="text-[10px] font-semibold text-[#5C6B80]">
+                    <span className="text-[11px] font-semibold text-[#4E5C70]">
                       {availableStock <= 2 ? `Осталось: ${availableStock} шт.` : `В наличии: ${availableStock} шт.`}
                     </span>
                   </div>
@@ -260,8 +261,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                             onUpdateQuantity(item.id, item.quantity - 1);
                           }
                         }}
-                        className="w-6 h-6 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-[#5F6ED0] cursor-pointer"
+                        className="w-6 h-6 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-[#4B59BB] cursor-pointer"
                         title={item.quantity === 1 ? 'Удалить товар' : 'Уменьшить количество'}
+                        aria-label={item.quantity === 1 ? 'Удалить товар' : 'Уменьшить количество'}
                       >
                         <Minus className="w-3 h-3 stroke-[2.5]" />
                       </button>
@@ -278,9 +280,10 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                         }}
                         disabled={isAtMaxStock}
                         className={`w-6 h-6 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] transition-opacity cursor-pointer ${
-                          isAtMaxStock ? 'opacity-30 cursor-not-allowed' : 'hover:text-[#5F6ED0]'
+                          isAtMaxStock ? 'opacity-30 cursor-not-allowed' : 'hover:text-[#4B59BB]'
                         }`}
                         title={isAtMaxStock ? `На складе всего ${availableStock} шт.` : 'Добавить'}
+                        aria-label="Увеличить количество"
                       >
                         <Plus className="w-3 h-3 stroke-[2.5]" />
                       </button>
@@ -291,6 +294,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                       onClick={() => setItemToRemove(item)}
                       className="w-7 h-7 rounded-full neu-button-danger flex items-center justify-center transition-colors cursor-pointer"
                       title="Удалить товар"
+                      aria-label="Удалить товар"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -304,7 +308,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                   {/* Header */}
                   <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-6 h-6 rounded-lg neu-flat bg-[#E3E8EF] flex items-center justify-center text-[#5F6ED0] shrink-0 border border-white/60">
+                      <div className="w-6 h-6 rounded-lg neu-flat bg-[#E3E8EF] flex items-center justify-center text-[#4B59BB] shrink-0 border border-white/60">
                         <SlidersHorizontal className="w-3.5 h-3.5" />
                       </div>
                       <div className="truncate">
@@ -316,7 +320,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => setEditingVariantItemId(null)}
-                      className="px-2.5 py-1 rounded-xl neu-button text-[10px] font-extrabold text-[#5C6B80] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer shrink-0"
+                      className="px-2.5 py-1 rounded-xl neu-button text-[11px] font-extrabold text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer shrink-0"
                     >
                       Закрыть
                     </button>
@@ -325,8 +329,8 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                   {/* Colors */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-[#5C6B80]">Цвет:</span>
-                      <span className="text-[10px] font-extrabold text-[#5F6ED0] neu-inset px-2 py-0.5 rounded-lg bg-[#E3E8EF]">
+                      <span className="text-[11px] font-bold text-[#4E5C70]">Цвет:</span>
+                      <span className="text-[11px] font-extrabold text-[#4B59BB] neu-inset px-2 py-0.5 rounded-lg bg-[#E3E8EF]">
                         {item.selectedColor}
                       </span>
                     </div>
@@ -350,7 +354,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                               isCurrent
                                 ? 'neu-inset bg-[#E3E8EF] text-[#1E293B] border border-[#5F6ED0]/40 font-black'
                                 : isOutOfStock
-                                ? 'opacity-35 neu-inset bg-[#E3E8EF]/60 text-[#5C6B80] line-through cursor-not-allowed border border-transparent'
+                                ? 'opacity-35 neu-inset bg-[#E3E8EF]/60 text-[#4E5C70] line-through cursor-not-allowed border border-transparent'
                                 : 'neu-button text-[#2D3A4E] hover:text-[#1E293B]'
                             }`}
                           >
@@ -359,7 +363,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                               style={{ backgroundColor: colorHex || '#94A3B8' }}
                             />
                             <span className="leading-none">{colorName}</span>
-                            {isCurrent && <Check className="w-3.5 h-3.5 stroke-[3] shrink-0 text-[#5F6ED0]" />}
+                            {isCurrent && <Check className="w-3.5 h-3.5 stroke-[3] shrink-0 text-[#4B59BB]" />}
                           </button>
                         );
                       })}
@@ -369,8 +373,8 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                   {/* Sizes */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-[#5C6B80]">Размер:</span>
-                      <span className="text-[10px] font-extrabold text-[#5F6ED0] neu-inset px-2 py-0.5 rounded-lg bg-[#E3E8EF]">
+                      <span className="text-[11px] font-bold text-[#4E5C70]">Размер:</span>
+                      <span className="text-[11px] font-extrabold text-[#4B59BB] neu-inset px-2 py-0.5 rounded-lg bg-[#E3E8EF]">
                         {item.selectedSize}
                       </span>
                     </div>
@@ -392,17 +396,17 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                               isCurrent
                                 ? 'neu-inset bg-[#E3E8EF] text-[#1E293B] border border-[#5F6ED0]/40 font-black'
                                 : isOutOfStock
-                                ? 'opacity-35 neu-inset bg-[#E3E8EF]/60 text-[#5C6B80] line-through cursor-not-allowed border border-transparent'
+                                ? 'opacity-35 neu-inset bg-[#E3E8EF]/60 text-[#4E5C70] line-through cursor-not-allowed border border-transparent'
                                 : 'neu-button text-[#2D3A4E] hover:text-[#1E293B]'
                             }`}
                           >
                             <span>{sz}</span>
                             {szStock <= 2 && szStock > 0 && (
-                              <span className={`text-[10px] font-bold ${isCurrent ? 'text-warning' : 'text-warning'}`}>
+                              <span className={`text-[11px] font-bold ${isCurrent ? 'text-warning' : 'text-warning'}`}>
                                 ({szStock})
                               </span>
                             )}
-                            {isCurrent && <Check className="w-3.5 h-3.5 stroke-[3] shrink-0 text-[#5F6ED0]" />}
+                            {isCurrent && <Check className="w-3.5 h-3.5 stroke-[3] shrink-0 text-[#4B59BB]" />}
                           </button>
                         );
                       })}
@@ -411,7 +415,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
 
                   {/* Stock footer & Confirm Button */}
                   <div className="pt-2 border-t border-[#BAC5D5]/50 flex items-center justify-between gap-2 text-[11px]">
-                    <div className="flex items-center gap-1.5 text-[#5C6B80] font-bold min-w-0">
+                    <div className="flex items-center gap-1.5 text-[#4E5C70] font-bold min-w-0">
                       <span className="shrink-0">Наличие:</span>
                       <span
                         className={`truncate font-extrabold ${
@@ -432,7 +436,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => setEditingVariantItemId(null)}
-                      className="px-3 py-1.5 rounded-xl neu-button text-[10px] font-black text-[#5F6ED0] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer shrink-0"
+                      className="px-3 py-1.5 rounded-xl neu-button text-[11px] font-black text-[#4B59BB] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer shrink-0"
                     >
                       Готово
                     </button>
@@ -450,22 +454,22 @@ export const CartScreen: React.FC<CartScreenProps> = ({
           <button
             type="button"
             onClick={onOpenPromoModal}
-            className="flex-1 flex items-center justify-between text-xs font-bold text-[#2D3A4E] hover:text-[#5F6ED0] transition-colors group cursor-pointer"
+            className="flex-1 flex items-center justify-between text-xs font-bold text-[#2D3A4E] hover:text-[#4B59BB] transition-colors group cursor-pointer"
           >
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] group-hover:scale-105 transition-transform">
+              <div className="w-7 h-7 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] group-hover:scale-105 transition-transform">
                 <Tag className="w-3.5 h-3.5 stroke-[2.2]" />
               </div>
               <div className="text-left">
                 <p className="text-xs font-bold text-[#2D3A4E]">
                   {appliedPromo ? `Промокод: ${appliedPromo.code}` : 'Добавить купоны и промокоды'}
                 </p>
-                <p className="text-[10px] text-[#5C6B80] font-normal">
+                <p className="text-[11px] text-[#4E5C70] font-normal">
                   {appliedPromo ? `Скидка ${appliedPromo.discountPercent}% применена` : 'Есть доступные купоны'}
                 </p>
               </div>
             </div>
-            <span className="text-[11px] font-extrabold text-[#5F6ED0] neu-inset px-2.5 py-1 rounded-xl transition-all">
+            <span className="text-[11px] font-extrabold text-[#4B59BB] neu-inset px-2.5 py-1 rounded-xl transition-all">
               {appliedPromo ? 'Изменить' : 'Выбрать'}
             </span>
           </button>
@@ -478,12 +482,12 @@ export const CartScreen: React.FC<CartScreenProps> = ({
               value={promoInput}
               onChange={(e) => setPromoInput(e.target.value)}
               placeholder={appliedPromo ? `Активен: ${appliedPromo.code}` : 'Или введите код вручную'}
-              className="w-full neu-inset rounded-xl py-2 px-3 text-xs font-medium text-[#2D3A4E] placeholder-[#5C6B80]/70 focus:outline-none uppercase"
+              className="w-full neu-inset rounded-xl py-2 px-3 text-xs font-medium text-[#2D3A4E] placeholder:text-[#56647A] uppercase"
             />
           </div>
           <button
             type="submit"
-            className="neu-button rounded-xl px-3.5 py-2 text-xs font-bold text-[#2D3A4E] hover:text-[#5F6ED0] shrink-0 cursor-pointer"
+            className="neu-button rounded-xl px-3.5 py-2 text-xs font-bold text-[#2D3A4E] hover:text-[#4B59BB] shrink-0 cursor-pointer"
           >
             Применить
           </button>
@@ -492,7 +496,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
 
       {/* Applied Promo discount pill */}
       {appliedPromo && (
-        <div className="neu-inset rounded-xl p-2.5 px-3.5 flex items-center justify-between text-xs font-bold text-[#5F6ED0] border border-[#5F6ED0]/30 bg-[#E3E8EF]">
+        <div className="neu-inset rounded-xl p-2.5 px-3.5 flex items-center justify-between text-xs font-bold text-[#4B59BB] border border-[#5F6ED0]/30 bg-[#E3E8EF]">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#5F6ED0]" />
             <span>
@@ -508,7 +512,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
             <button
               type="button"
               onClick={onRemovePromo}
-              className="text-[10px] font-extrabold text-[#5C6B80] hover:text-danger ml-1 underline cursor-pointer"
+              className="text-[11px] font-extrabold text-[#4E5C70] hover:text-danger ml-1 underline cursor-pointer"
             >
               Сбросить
             </button>
@@ -519,14 +523,14 @@ export const CartScreen: React.FC<CartScreenProps> = ({
       {/* Summary Cost Card */}
       <div className="neu-flat rounded-3xl p-3.5 border border-white/80 space-y-3">
         <div className="neu-inset rounded-2xl p-4 space-y-2.5 bg-[#E3E8EF]">
-          <div className="space-y-2 text-xs font-semibold text-[#5C6B80]">
+          <div className="space-y-2 text-xs font-semibold text-[#4E5C70]">
             <div className="flex justify-between">
               <span>Товары ({totalItemsCount})</span>
               <span className="text-[#2D3A4E] font-bold">{rawSubtotal.toLocaleString('ru-RU')} ₽</span>
             </div>
 
             {discountAmount > 0 && (
-              <div className="flex justify-between text-[#5F6ED0] font-bold">
+              <div className="flex justify-between text-[#4B59BB] font-bold">
                 <span>Скидка</span>
                 <span>-{discountAmount.toLocaleString('ru-RU')} ₽</span>
               </div>
@@ -561,7 +565,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
           <button
             type="button"
             onClick={() => setIsQuickOrderOpen(true)}
-            className="w-full py-2.5 rounded-2xl neu-button font-bold text-xs text-[#5F6ED0] flex items-center justify-center transition-all active:scale-[0.98] cursor-pointer"
+            className="w-full py-2.5 rounded-2xl neu-button font-bold text-xs text-[#4B59BB] flex items-center justify-center transition-all active:scale-[0.98] cursor-pointer"
           >
             <span>Быстрый заказ в 1 клик</span>
           </button>
@@ -598,14 +602,14 @@ export const CartScreen: React.FC<CartScreenProps> = ({
               </div>
               <h3 className="text-sm font-extrabold text-[#2D3A4E]">Очистка всей корзины</h3>
             </div>
-            <p className="text-xs text-[#5C6B80] leading-relaxed">
+            <p className="text-xs text-[#4E5C70] leading-relaxed">
               Вы уверены, что хотите удалить все <strong>{totalItemsCount}</strong> поз. из корзины?
             </p>
             <div className="flex items-center gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setIsClearCartConfirmOpen(false)}
-                className="flex-1 py-2.5 rounded-xl neu-button text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl neu-button text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
               >
                 Отмена
               </button>

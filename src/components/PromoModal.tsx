@@ -158,7 +158,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#BAC5D5]/50">
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <div className="w-9 h-9 rounded-2xl neu-button flex items-center justify-center text-[#5F6ED0] shrink-0">
+              <div className="w-9 h-9 rounded-2xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0">
                 <Ticket className="w-5 h-5 stroke-[2.2]" />
               </div>
               <div className="min-w-0 flex-1">
@@ -166,11 +166,11 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                   <h3 className="text-base font-extrabold text-[#2D3A4E] leading-tight whitespace-nowrap">
                     Промокоды и купоны
                   </h3>
-                  <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full neu-inset text-[#5F6ED0] whitespace-nowrap shrink-0">
+                  <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full neu-inset text-[#4B59BB] whitespace-nowrap shrink-0">
                     {activePromos.length} активных
                   </span>
                 </div>
-                <p className="text-[11px] text-[#5C6B80] font-medium truncate">
+                <p className="text-[11px] text-[#4E5C70] font-medium truncate">
                   Процентные (-15%) и фиксированные (-500 ₽) скидки
                 </p>
               </div>
@@ -178,7 +178,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
 
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] transition-all active:scale-90 shrink-0 cursor-pointer"
+              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all active:scale-90 shrink-0 cursor-pointer"
               aria-label="Закрыть"
             >
               <X className="w-4 h-4 stroke-[2.5]" />
@@ -204,14 +204,14 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-black text-[#5F6ED0]">
+                    <span className="text-xs font-black text-[#4B59BB]">
                       {appliedPromo.code}
                     </span>
-                    <span className="text-[10px] font-bold text-[#5F6ED0] neu-inset px-1.5 py-0.5 rounded-md">
+                    <span className="text-[11px] font-bold text-[#4B59BB] neu-inset px-1.5 py-0.5 rounded-md">
                       Применен
                     </span>
                   </div>
-                  <p className="text-[10px] text-[#5C6B80] font-medium">
+                  <p className="text-[11px] text-[#4E5C70] font-medium">
                     {appliedPromo.discountType === 'fixed'
                       ? `Скидка ${appliedPromo.discountValue?.toLocaleString('ru-RU')} ₽ учтена`
                       : `Скидка ${appliedPromo.discountPercent}% учтена в расчете заказа`}
@@ -222,7 +222,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
               <button
                 type="button"
                 onClick={onRemovePromo}
-                className="text-[11px] font-bold text-[#5C6B80] hover:text-danger underline px-2 py-1 rounded-lg transition-colors cursor-pointer"
+                className="text-[11px] font-bold text-[#4E5C70] hover:text-danger underline px-2 py-1 rounded-lg transition-colors cursor-pointer"
               >
                 Отменить
               </button>
@@ -232,7 +232,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
           {/* List of Coupons */}
           <div className="space-y-3 pt-1">
             <h4 className="text-xs font-bold text-[#2D3A4E] uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-[#5F6ED0]" />
+              <Sparkles className="w-3.5 h-3.5 text-[#4B59BB]" />
               <span>Доступные купоны со скидкой</span>
             </h4>
 
@@ -258,7 +258,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                   >
                     {/* Badge top right */}
                     {coupon.badgeText && (
-                      <div className="absolute top-3 right-3 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full neu-fill-accent text-white flex items-center gap-1 whitespace-nowrap shrink-0">
+                      <div className="absolute top-3 right-3 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full neu-fill-accent text-white flex items-center gap-1 whitespace-nowrap shrink-0">
                         <Tag className="w-2.5 h-2.5" />
                         <span>{coupon.badgeText}</span>
                       </div>
@@ -269,12 +269,12 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                       <div className="w-12 h-12 rounded-2xl neu-inset flex flex-col items-center justify-center shrink-0 border border-white/60">
                         <span
                           className={`text-xs font-black leading-none ${
-                            isFixed ? 'text-warning text-[11px]' : 'text-[#5F6ED0]'
+                            isFixed ? 'text-warning text-[11px]' : 'text-[#4B59BB]'
                           }`}
                         >
                           {discountLabel}
                         </span>
-                        <span className="text-[8px] font-bold text-[#5C6B80] uppercase mt-0.5">
+                        <span className="text-[11px] font-bold text-[#4E5C70] uppercase mt-0.5">
                           скидка
                         </span>
                       </div>
@@ -288,7 +288,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                           <button
                             type="button"
                             onClick={(e) => handleCopyCode(coupon.code, e)}
-                            className="text-[#5C6B80] hover:text-[#5F6ED0] text-[10px] flex items-center gap-0.5 font-bold transition-colors cursor-pointer"
+                            className="text-[#4E5C70] hover:text-[#4B59BB] text-[11px] flex items-center gap-0.5 font-bold transition-colors cursor-pointer"
                             title="Скопировать код"
                           >
                             {copiedCode === coupon.code ? (
@@ -302,34 +302,34 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                         <p className="text-xs font-bold text-[#2D3A4E] mt-1">
                           {coupon.title}
                         </p>
-                        <p className="text-[11px] text-[#5C6B80] leading-snug mt-0.5">
+                        <p className="text-[11px] text-[#4E5C70] leading-snug mt-0.5">
                           {coupon.description}
                         </p>
 
                         {coupon.isReferral && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#5F6ED0] mt-1">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#4B59BB] mt-1">
                             <Share2 className="w-3 h-3" />
                             Блогер: {coupon.partnerName}
                           </span>
                         )}
 
                         {/* Rules / Min Order badge */}
-                        <div className="flex items-center gap-2 flex-wrap pt-2 text-[10px] text-[#5C6B80]">
+                        <div className="flex items-center gap-2 flex-wrap pt-2 text-[11px] text-[#4E5C70]">
                           {coupon.minOrderAmount ? (
                             <span
                               className={`neu-inset px-2 py-0.5 rounded-md font-semibold ${
-                                isMinOrderNotMet ? 'text-warning font-bold' : 'text-[#5F6ED0]'
+                                isMinOrderNotMet ? 'text-warning font-bold' : 'text-[#4B59BB]'
                               }`}
                             >
                               От {coupon.minOrderAmount.toLocaleString('ru-RU')} ₽
                             </span>
                           ) : (
-                            <span className="text-[#5C6B80]">Без мин. чека</span>
+                            <span className="text-[#4E5C70]">Без мин. чека</span>
                           )}
 
                           {coupon.expiresAt && (
                             <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3 text-[#5F6ED0]" />
+                              <Clock className="w-3 h-3 text-[#4B59BB]" />
                               <span>До {coupon.expiresAt}</span>
                             </span>
                           )}
@@ -340,11 +340,11 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                     {/* Action Button */}
                     <div className="mt-3 pt-2.5 border-t border-[#BAC5D5]/40 flex items-center justify-between gap-2">
                       {isMinOrderNotMet ? (
-                        <span className="text-[10px] text-warning font-bold">
+                        <span className="text-[11px] text-warning font-bold">
                           Добавьте еще товаров до {coupon.minOrderAmount?.toLocaleString('ru-RU')} ₽
                         </span>
                       ) : (
-                        <span className="text-[10px] text-[#5C6B80]">
+                        <span className="text-[11px] text-[#4E5C70]">
                           {isCurrentActive ? 'Купон уже применен' : 'Готов к применению'}
                         </span>
                       )}
@@ -356,7 +356,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                         className={`py-1.5 px-4 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
                           isCurrentActive
                             ? 'neu-inset text-success opacity-80 cursor-default'
-                            : 'neu-button text-[#5F6ED0] hover:text-[#2D3A4E] hover:scale-105 active:scale-95'
+                            : 'neu-button text-[#4B59BB] hover:text-[#2D3A4E] hover:scale-105 active:scale-95'
                         }`}
                       >
                         {isCurrentActive ? (
@@ -389,7 +389,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                 value={customInput}
                 onChange={(e) => setCustomInput(e.target.value.toUpperCase())}
                 placeholder="ВВЕДИТЕ КОД (НАПРИМЕР, MANSTYLE20)"
-                className="flex-1 px-3.5 py-2.5 neu-inset rounded-2xl text-xs uppercase font-bold text-[#2D3A4E] placeholder:text-[#5C6B80]/70 focus:outline-none bg-[#E3E8EF]"
+                className="flex-1 px-3.5 py-2.5 neu-inset rounded-2xl text-xs uppercase font-bold text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
               />
               <button
                 type="submit"

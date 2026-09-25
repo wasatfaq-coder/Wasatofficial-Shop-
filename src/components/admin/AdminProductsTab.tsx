@@ -189,7 +189,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         value: cat.id,
         label: cat.name,
         badge: `${count}`,
-        icon: <Tag className="w-3.5 h-3.5 text-[#5F6ED0]" />,
+        icon: <Tag className="w-3.5 h-3.5 text-[#4B59BB]" />,
       };
     });
   }, [products]);
@@ -756,32 +756,32 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       {/* Top Search & Actions Toolbar */}
       <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#5C6B80]" />
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#4E5C70]" />
           <input
             type="text"
             placeholder="Поиск по названию, артикулу SKU или штрихкоду..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#5C6B80] focus:outline-none bg-[#E3E8EF]"
+            className="w-full pl-8 pr-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
           />
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={() => exportProductsToCSV(products)}
-            className="py-2 px-2.5 neu-button rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#5F6ED0] flex items-center gap-1 cursor-pointer transition-colors active:scale-95"
+            className="py-2 px-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#4B59BB] flex items-center gap-1 cursor-pointer transition-colors active:scale-95"
             title="Экспортировать весь каталог в файл CSV для Excel"
           >
-            <Download className="w-3.5 h-3.5 text-[#5F6ED0]" />
+            <Download className="w-3.5 h-3.5 text-[#4B59BB]" />
             <span className="hidden sm:inline">Экспорт CSV</span>
           </button>
 
           <button
             onClick={() => setIsCSVImportModalOpen(true)}
-            className="py-2 px-2.5 neu-button rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#5F6ED0] flex items-center gap-1 cursor-pointer transition-colors active:scale-95"
+            className="py-2 px-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#4B59BB] flex items-center gap-1 cursor-pointer transition-colors active:scale-95"
             title="Импортировать товары из CSV"
           >
-            <Upload className="w-3.5 h-3.5 text-[#5F6ED0]" />
+            <Upload className="w-3.5 h-3.5 text-[#4B59BB]" />
             <span className="hidden sm:inline">Импорт</span>
           </button>
 
@@ -796,10 +796,10 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                 value: '',
               })
             }
-            className="py-2 px-2.5 neu-button rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#5F6ED0] flex items-center gap-1 cursor-pointer transition-colors active:scale-95"
+            className="py-2 px-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#4B59BB] flex items-center gap-1 cursor-pointer transition-colors active:scale-95"
             title="Управление быстрыми фразами и акцентами для всех категорий одежды"
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#5F6ED0]" />
+            <Sparkles className="w-3.5 h-3.5 text-[#4B59BB]" />
             <span className="hidden sm:inline">Быстрые фразы</span>
           </button>
 
@@ -834,7 +834,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] transition-all cursor-pointer text-center ${
                 stockFilter === sf.id
                   ? 'neu-pill-active font-black'
-                  : 'text-[#5C6B80] font-bold hover:text-[#2D3A4E]'
+                  : 'text-[#4E5C70] font-bold hover:text-[#2D3A4E]'
               }`}
             >
               {sf.label}
@@ -866,19 +866,19 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
             <div
               className={`w-5 h-5 rounded-lg flex items-center justify-center transition-all ${
                 isAllFilteredSelected
-                  ? 'neu-button text-[#5F6ED0] bg-[#E3E8EF] scale-105'
-                  : 'neu-button text-transparent bg-[#E3E8EF] group-hover:text-[#5F6ED0]/30'
+                  ? 'neu-button text-[#4B59BB] bg-[#E3E8EF] scale-105'
+                  : 'neu-button text-transparent bg-[#E3E8EF] group-hover:text-[#4B59BB]/30'
               }`}
             >
               <Check className="w-3 h-3 stroke-[3]" />
             </div>
-            <span className="text-xs font-extrabold text-[#2D3A4E] group-hover:text-[#5F6ED0] transition-colors">
+            <span className="text-xs font-extrabold text-[#2D3A4E] group-hover:text-[#4B59BB] transition-colors">
               {isAllFilteredSelected ? 'Снять выделение со всех' : 'Выбрать все отфильтрованные'}
             </span>
           </div>
 
-          <span className="text-xs font-bold text-[#5C6B80]">
-            Выбрано: <strong className="text-[#5F6ED0]">{selectedProductIds.length}</strong>
+          <span className="text-xs font-bold text-[#4E5C70]">
+            Выбрано: <strong className="text-[#4B59BB]">{selectedProductIds.length}</strong>
           </span>
         </div>
 
@@ -886,7 +886,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
           <div className="flex flex-wrap items-center gap-2 pt-1.5 animate-in fade-in duration-150">
             <button
               onClick={() => setIsBulkOperationsModalOpen(true)}
-              className="h-8 px-3 neu-button rounded-xl text-[11px] font-black text-[#5F6ED0] flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
+              className="h-8 px-3 neu-button rounded-xl text-[11px] font-black text-[#4B59BB] flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
               Массовые операции
@@ -894,18 +894,18 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
             <button
               onClick={() => setIsBulkDiscountModalOpen(true)}
-              className="h-8 px-3 neu-button rounded-xl text-[11px] font-black text-[#5C6B80] hover:text-[#5F6ED0] flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
+              className="h-8 px-3 neu-button rounded-xl text-[11px] font-black text-[#4E5C70] hover:text-[#4B59BB] flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
             >
-              <Tag className="w-3.5 h-3.5 text-[#5F6ED0]" />
+              <Tag className="w-3.5 h-3.5 text-[#4B59BB]" />
               Скидка
             </button>
 
             <div className="relative">
               <button
                 onClick={() => setIsBulkCategoryDropdownOpen(!isBulkCategoryDropdownOpen)}
-                className="h-8 px-3 neu-button rounded-xl text-[11px] font-black text-[#5C6B80] hover:text-[#2D3A4E] flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
+                className="h-8 px-3 neu-button rounded-xl text-[11px] font-black text-[#4E5C70] hover:text-[#2D3A4E] flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
               >
-                <Layers className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                <Layers className="w-3.5 h-3.5 text-[#4B59BB]" />
                 Сменить категорию
                 <ChevronDown className="w-3 h-3 ml-0.5" />
               </button>
@@ -927,7 +927,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
             <button
               onClick={handleBulkRestock}
-              className="h-8 px-3 neu-button rounded-xl text-[11px] font-black text-[#5C6B80] hover:text-success flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
+              className="h-8 px-3 neu-button rounded-xl text-[11px] font-black text-[#4E5C70] hover:text-success flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
               title="Пополнить складские остатки всех выбранных на +5 шт"
             >
               <Boxes className="w-3.5 h-3.5 text-success" />
@@ -936,7 +936,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
             <button
               onClick={() => handleBulkToggleStock(false)}
-              className="h-8 px-3 neu-button rounded-xl text-[11px] font-black text-[#5C6B80] hover:text-warning flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
+              className="h-8 px-3 neu-button rounded-xl text-[11px] font-black text-[#4E5C70] hover:text-warning flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
             >
               <X className="w-3.5 h-3.5 text-warning" />
               Снять с продажи
@@ -944,7 +944,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
             <button
               onClick={() => handleBulkToggleStock(true)}
-              className="h-8 px-3 neu-button rounded-xl text-[11px] font-black text-[#5C6B80] hover:text-success flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
+              className="h-8 px-3 neu-button rounded-xl text-[11px] font-black text-[#4E5C70] hover:text-success flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
             >
               <Check className="w-3.5 h-3.5 text-success" />
               В продажу
@@ -964,9 +964,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       {/* Products List Grid */}
       <div className="space-y-2">
         {filteredProducts.length === 0 ? (
-          <div className="neu-inset rounded-2xl p-8 text-center space-y-1 text-[#5C6B80] bg-[#E3E8EF]">
+          <div className="neu-inset rounded-2xl p-8 text-center space-y-1 text-[#4E5C70] bg-[#E3E8EF]">
             <p className="text-xs font-bold text-[#2D3A4E]">Товары не найдены</p>
-            <p className="text-[10px]">Попробуйте изменить поисковый запрос или фильтры</p>
+            <p className="text-[11px]">Попробуйте изменить поисковый запрос или фильтры</p>
           </div>
         ) : (
           filteredProducts.map((prod, pIdx) => {
@@ -992,8 +992,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                     <div
                       className={`w-5 h-5 rounded-lg flex items-center justify-center transition-all ${
                         isSelected
-                          ? 'neu-button text-[#5F6ED0] bg-[#E3E8EF] scale-105'
-                          : 'neu-button text-transparent bg-[#E3E8EF] group-hover:text-[#5F6ED0]/30'
+                          ? 'neu-button text-[#4B59BB] bg-[#E3E8EF] scale-105'
+                          : 'neu-button text-transparent bg-[#E3E8EF] group-hover:text-[#4B59BB]/30'
                       }`}
                     >
                       <Check className="w-3 h-3 stroke-[3]" />
@@ -1019,36 +1019,36 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                       >
                         {prod.title}
                       </h4>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg neu-button text-[#5F6ED0] shrink-0 bg-[#E3E8EF] whitespace-nowrap">
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg neu-button text-[#4B59BB] shrink-0 bg-[#E3E8EF] whitespace-nowrap">
                         {prod.categoryLabel || prod.category}
                       </span>
                       {prod.badge && (
-                        <span className="text-[9px] font-black px-2 py-0.5 rounded-md neu-fill-accent text-white shrink-0 leading-tight whitespace-nowrap">
+                        <span className="text-[11px] font-black px-2 py-0.5 rounded-md neu-fill-accent text-white shrink-0 leading-tight whitespace-nowrap">
                           {prod.badge}
                         </span>
                       )}
                       {prod.inStock === false && (
-                        <span className="text-[9px] font-black px-2 py-0.5 rounded-md neu-inset text-danger shrink-0 bg-danger-soft border border-danger/25 whitespace-nowrap">
+                        <span className="text-[11px] font-black px-2 py-0.5 rounded-md neu-inset text-danger shrink-0 bg-danger-soft border border-danger/25 whitespace-nowrap">
                           Снят с витрины
                         </span>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 text-[11px] text-[#5C6B80] font-semibold flex-wrap">
-                      <span className="font-mono text-[#5F6ED0] font-bold text-[10px] neu-button px-1.5 py-0.5 rounded-md bg-[#E3E8EF] shrink-0 whitespace-nowrap">
+                    <div className="flex items-center gap-2 text-[11px] text-[#4E5C70] font-semibold flex-wrap">
+                      <span className="font-mono text-[#4B59BB] font-bold text-[11px] neu-button px-1.5 py-0.5 rounded-md bg-[#E3E8EF] shrink-0 whitespace-nowrap">
                         {primarySku}
                       </span>
                       <span className="font-black text-[#2D3A4E] text-xs shrink-0 whitespace-nowrap">
                         {prod.price.toLocaleString('ru-RU')} ₽
                       </span>
                       {prod.originalPrice && (
-                        <span className="line-through text-slate-400 text-[10px] shrink-0 whitespace-nowrap">
+                        <span className="line-through text-slate-400 text-[11px] shrink-0 whitespace-nowrap">
                           {prod.originalPrice.toLocaleString('ru-RU')} ₽
                         </span>
                       )}
                       <span className="text-[#BAC5D5] shrink-0">•</span>
                       <span
-                        className={`font-black text-[10px] px-2 py-0.5 rounded-lg shrink-0 whitespace-nowrap ${
+                        className={`font-black text-[11px] px-2 py-0.5 rounded-lg shrink-0 whitespace-nowrap ${
                           totalStock === 0
                             ? 'text-danger bg-danger-soft border border-danger/25'
                             : totalStock < 3
@@ -1069,8 +1069,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                     {/* Secondary: Preview */}
                     <button
                       onClick={() => setProductToInspect(prod)}
-                      className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#5F6ED0] active:scale-95 transition-all cursor-pointer shrink-0"
+                      className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#4B59BB] active:scale-95 transition-all cursor-pointer shrink-0"
                       title="Быстрый просмотр карточки"
+                      aria-label="Быстрый просмотр карточки"
                     >
                       <Eye className="w-3.5 h-3.5" />
                     </button>
@@ -1078,8 +1079,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                     {/* Secondary: Duplicate */}
                     <button
                       onClick={() => handleDuplicateProduct(prod)}
-                      className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-success active:scale-95 transition-all cursor-pointer shrink-0"
+                      className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-success active:scale-95 transition-all cursor-pointer shrink-0"
                       title="Дублировать товар (копировать)"
+                      aria-label="Дублировать товар (копировать)"
                     >
                       <Copy className="w-3.5 h-3.5" />
                     </button>
@@ -1089,6 +1091,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                       onClick={() => setProductToDelete(prod)}
                       className="w-8 h-8 rounded-xl neu-button-danger flex items-center justify-center active:scale-95 transition-all cursor-pointer shrink-0"
                       title="Удалить товар"
+                      aria-label="Удалить товар"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -1097,7 +1100,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   {/* Primary Action: Edit */}
                   <button
                     onClick={() => handleOpenEditProduct(prod)}
-                    className="h-8 px-3.5 neu-button rounded-xl text-xs font-black text-[#5F6ED0] flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shrink-0"
+                    className="h-8 px-3.5 neu-button rounded-xl text-xs font-black text-[#4B59BB] flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shrink-0"
                     title="Редактировать товар"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
@@ -1117,7 +1120,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#BAC5D5]/50 gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-10 h-10 rounded-2xl neu-button flex items-center justify-center text-[#5F6ED0] shrink-0">
+                <div className="w-10 h-10 rounded-2xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0">
                   <Layers className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
@@ -1126,12 +1129,12 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                       {editingProduct ? 'Редактирование товара' : 'Новый товар каталога'}
                     </h3>
                     {editingProduct && (
-                      <span className="neu-inset px-2 py-0.5 rounded-lg text-[10px] font-mono font-black text-[#5F6ED0] bg-[#E3E8EF]">
+                      <span className="neu-inset px-2 py-0.5 rounded-lg text-[11px] font-mono font-black text-[#4B59BB] bg-[#E3E8EF]">
                         {editingProduct.id}
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 text-[11px] text-[#5C6B80] font-medium mt-0.5 flex-wrap">
+                  <div className="flex items-center gap-2 text-[11px] text-[#4E5C70] font-medium mt-0.5 flex-wrap">
                     <span>Параметры, цены, себестоимость и остатки SKU</span>
                     <span>•</span>
                     <span
@@ -1158,7 +1161,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                     className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer active:scale-95 ${
                       formInStock
                         ? 'neu-button text-success bg-[#E3E8EF]'
-                        : 'text-[#5C6B80] hover:text-[#2D3A4E]'
+                        : 'text-[#4E5C70] hover:text-[#2D3A4E]'
                     }`}
                   >
                     В продаже
@@ -1169,7 +1172,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                     className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer active:scale-95 ${
                       !formInStock
                         ? 'neu-button text-danger bg-[#E3E8EF]'
-                        : 'text-[#5C6B80] hover:text-[#2D3A4E]'
+                        : 'text-[#4E5C70] hover:text-[#2D3A4E]'
                     }`}
                   >
                     Снят с витрины
@@ -1179,8 +1182,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsProductFormOpen(false)}
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer shrink-0"
+                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer shrink-0"
                   title="Закрыть"
+                  aria-label="Закрыть"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -1217,7 +1221,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                 <div className="space-y-3">
                   {/* Title */}
                   <div>
-                    <label className="text-[11px] font-bold text-[#5C6B80] block mb-1">
+                    <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
                       Название товара *
                     </label>
                     <input
@@ -1225,7 +1229,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                       value={formTitle}
                       onChange={(e) => setFormTitle(e.target.value)}
                       placeholder="например, Рубашка льняная Slim Fit"
-                      className="w-full px-3.5 py-2 neu-inset rounded-xl text-xs font-bold text-[#2D3A4E] focus:outline-none bg-[#E3E8EF] placeholder:text-[#5C6B80]/60"
+                      className="w-full px-3.5 py-2 neu-inset rounded-xl text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF] placeholder:text-[#56647A]"
                       required
                     />
                   </div>
@@ -1234,19 +1238,19 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] border border-white/60 space-y-2.5">
                     <div className="flex items-center justify-between pb-1 border-b border-[#BAC5D5]/30">
                       <label className="text-[11px] font-black text-[#2D3A4E] flex items-center gap-1.5 uppercase tracking-wider">
-                        <Tag className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                        <Tag className="w-3.5 h-3.5 text-[#4B59BB]" />
                         <span>Маркетинговый ярлык (Бейдж)</span>
                       </label>
                       {formBadge ? (
                         <button
                           type="button"
                           onClick={() => setFormBadge('')}
-                          className="text-[10px] font-bold text-danger hover:text-danger hover:underline cursor-pointer"
+                          className="text-[11px] font-bold text-danger hover:text-danger hover:underline cursor-pointer"
                         >
                           Снять ярлык
                         </button>
                       ) : (
-                        <span className="text-[10px] font-semibold text-[#5C6B80]">Опционально</span>
+                        <span className="text-[11px] font-semibold text-[#4E5C70]">Опционально</span>
                       )}
                     </div>
                     <div className="flex flex-wrap gap-1.5 pt-0.5">
@@ -1255,10 +1259,10 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                           key={b}
                           type="button"
                           onClick={() => setFormBadge(formBadge === b ? '' : b)}
-                          className={`h-7 px-2.5 rounded-xl text-[10px] font-black whitespace-nowrap cursor-pointer transition-all active:scale-95 flex items-center justify-center border ${
+                          className={`h-7 px-2.5 rounded-xl text-[11px] font-black whitespace-nowrap cursor-pointer transition-all active:scale-95 flex items-center justify-center border ${
                             formBadge === b
                               ? 'neu-pill-active border-transparent'
-                              : 'neu-button text-[#5C6B80] hover:text-[#2D3A4E] border-white/60 bg-[#E3E8EF]'
+                              : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E] border-white/60 bg-[#E3E8EF]'
                           }`}
                         >
                           {b}
@@ -1270,14 +1274,14 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                       value={formBadge}
                       onChange={(e) => setFormBadge(e.target.value)}
                       placeholder="Или свой текст (например: -30% или ХИТ СЕЗОНА)"
-                      className="w-full px-3 py-2 neu-inset rounded-xl text-xs font-bold text-[#5F6ED0] focus:outline-none bg-[#E3E8EF] placeholder:text-[#5C6B80]/70"
+                      className="w-full px-3 py-2 neu-inset rounded-xl text-xs font-bold text-[#4B59BB] bg-[#E3E8EF] placeholder:text-[#56647A]"
                     />
                   </div>
 
                   {/* Category and Material */}
                   <div className="grid grid-cols-2 gap-2.5">
                     <div className="min-w-0">
-                      <label className="text-[11px] font-bold text-[#5C6B80] block mb-1 truncate">
+                      <label className="text-[11px] font-bold text-[#4E5C70] block mb-1 truncate">
                         Категория
                       </label>
                       <NeumorphicSelect
@@ -1293,7 +1297,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
                     <div className="min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <label className="text-[11px] font-bold text-[#5C6B80] truncate">
+                        <label className="text-[11px] font-bold text-[#4E5C70] truncate">
                           Материал ткани
                         </label>
                         <button
@@ -1308,7 +1312,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                               value: formMaterial,
                             })
                           }
-                          className="text-[10px] font-bold text-[#5F6ED0] hover:text-[#4F5DC0] flex items-center gap-0.5 cursor-pointer"
+                          className="text-[11px] font-bold text-[#4B59BB] hover:text-[#3F4BA6] flex items-center gap-0.5 cursor-pointer"
                           title="Редактировать в модальном окне"
                         >
                           <Pencil className="w-2.5 h-2.5" />
@@ -1321,7 +1325,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                           value={formMaterial}
                           onChange={(e) => setFormMaterial(e.target.value)}
                           placeholder="100% лен"
-                          className="w-full h-10 pl-3 pr-8 neu-inset rounded-xl text-xs font-semibold text-[#2D3A4E] focus:outline-none bg-[#E3E8EF] truncate"
+                          className="w-full h-10 pl-3 pr-8 neu-inset rounded-xl text-xs font-semibold text-[#2D3A4E] bg-[#E3E8EF] truncate"
                         />
                         <button
                           type="button"
@@ -1335,8 +1339,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                               value: formMaterial,
                             })
                           }
-                          className="absolute right-2 p-1 text-[#5C6B80] hover:text-[#5F6ED0] cursor-pointer"
+                          className="absolute right-2 p-1 text-[#4E5C70] hover:text-[#4B59BB] cursor-pointer"
                           title="Открыть окно редактирования материала"
+                          aria-label="Открыть окно редактирования материала"
                         >
                           <Maximize2 className="w-3.5 h-3.5" />
                         </button>
@@ -1347,7 +1352,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   {/* Description Section - Positioned directly below Category and Material */}
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="text-[11px] font-bold text-[#5C6B80]">
+                      <label className="text-[11px] font-bold text-[#4E5C70]">
                         Описание товара
                       </label>
                       <button
@@ -1362,7 +1367,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                             value: formDescription,
                           })
                         }
-                        className="text-[10px] font-bold text-[#5F6ED0] hover:text-[#4F5DC0] flex items-center gap-0.5 cursor-pointer"
+                        className="text-[11px] font-bold text-[#4B59BB] hover:text-[#3F4BA6] flex items-center gap-0.5 cursor-pointer"
                         title="Открыть окно редактирования описания"
                       >
                         <Maximize2 className="w-2.5 h-2.5" />
@@ -1375,7 +1380,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         value={formDescription}
                         onChange={(e) => setFormDescription(e.target.value)}
                         placeholder="Краткое описание преимуществ ткани и кроя..."
-                        className="w-full px-3 py-2 pr-8 neu-inset rounded-xl text-xs text-[#2D3A4E] focus:outline-none bg-[#E3E8EF] resize-none leading-relaxed"
+                        className="w-full px-3 py-2 pr-8 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] resize-none leading-relaxed"
                       />
                       <button
                         type="button"
@@ -1389,8 +1394,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                             value: formDescription,
                           })
                         }
-                        className="absolute top-2 right-2 p-1 text-[#5C6B80] hover:text-[#5F6ED0] cursor-pointer"
+                        className="absolute top-2 right-2 p-1 text-[#4E5C70] hover:text-[#4B59BB] cursor-pointer"
                         title="Редактировать в модальном окне"
+                        aria-label="Редактировать в модальном окне"
                       >
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
@@ -1401,11 +1407,11 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   <div className="p-3 neu-inset rounded-2xl bg-[#E3E8EF] space-y-2.5 border border-white/60">
                     <div className="flex items-center justify-between text-[11px] font-black text-[#2D3A4E] flex-wrap gap-1">
                       <span className="flex items-center gap-1.5">
-                        <DollarSign className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                        <DollarSign className="w-3.5 h-3.5 text-[#4B59BB]" />
                         Ценообразование и маржинальность
                       </span>
                       {formPrice > 0 && formCostPrice !== undefined && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-lg neu-flat bg-[#E3E8EF] text-success font-extrabold border border-success/20">
+                        <span className="text-[11px] px-2 py-0.5 rounded-lg neu-flat bg-[#E3E8EF] text-success font-extrabold border border-success/20">
                           Маржа: {Math.round(((formPrice - formCostPrice) / formPrice) * 100)}% (+{(formPrice - formCostPrice).toLocaleString('ru-RU')} ₽)
                         </span>
                       )}
@@ -1413,7 +1419,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
                     <div className="grid grid-cols-3 gap-2">
                       <div>
-                        <label className="text-[10px] font-bold text-[#5C6B80] block mb-1 truncate">
+                        <label className="text-[11px] font-bold text-[#4E5C70] block mb-1 truncate">
                           Цена продажи (₽) *
                         </label>
                         <input
@@ -1421,13 +1427,13 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                           value={formPrice}
                           onChange={(e) => setFormPrice(Number(e.target.value))}
                           min="100"
-                          className="w-full h-9 px-2.5 neu-flat rounded-xl text-xs font-black text-[#5F6ED0] focus:outline-none bg-[#E3E8EF] border border-white/50"
+                          className="w-full h-9 px-2.5 neu-flat rounded-xl text-xs font-black text-[#4B59BB] bg-[#E3E8EF] border border-white/50"
                           required
                         />
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-bold text-[#5C6B80] block mb-1 truncate" title="Себестоимость закупки">
+                        <label className="text-[11px] font-bold text-[#4E5C70] block mb-1 truncate" title="Себестоимость закупки">
                           Себестоимость (₽)
                         </label>
                         <input
@@ -1437,12 +1443,12 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                             setFormCostPrice(e.target.value ? Number(e.target.value) : undefined)
                           }
                           placeholder="например 1400"
-                          className="w-full h-9 px-2.5 neu-flat rounded-xl text-xs font-bold text-[#2D3A4E] focus:outline-none bg-[#E3E8EF] border border-white/50"
+                          className="w-full h-9 px-2.5 neu-flat rounded-xl text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF] border border-white/50"
                         />
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-bold text-[#5C6B80] block mb-1 truncate">
+                        <label className="text-[11px] font-bold text-[#4E5C70] block mb-1 truncate">
                           Старая цена (₽)
                         </label>
                         <input
@@ -1452,7 +1458,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                             setFormOldPrice(e.target.value ? Number(e.target.value) : undefined)
                           }
                           placeholder="без скидки"
-                          className="w-full h-9 px-2.5 neu-flat rounded-xl text-xs text-slate-500 line-through focus:outline-none bg-[#E3E8EF] border border-white/50 placeholder:text-[#5C6B80]/50"
+                          className="w-full h-9 px-2.5 neu-flat rounded-xl text-xs text-slate-500 line-through bg-[#E3E8EF] border border-white/50 placeholder:text-[#56647A]"
                         />
                       </div>
                     </div>
@@ -1462,24 +1468,24 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-1.5">
-                        <div className="w-5 h-5 rounded-md neu-inset flex items-center justify-center text-[#5F6ED0]">
+                        <div className="w-5 h-5 rounded-md neu-inset flex items-center justify-center text-[#4B59BB]">
                           <ImageIcon className="w-3 h-3" />
                         </div>
                         <span className="text-[11px] font-black text-[#2D3A4E]">Галерея фото</span>
-                        <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-md neu-inset text-[#5F6ED0] bg-[#E3E8EF]">
+                        <span className="text-[11px] font-extrabold px-1.5 py-0.2 rounded-md neu-inset text-[#4B59BB] bg-[#E3E8EF]">
                           {formImages.length}
                         </span>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-[#5C6B80] px-2 py-0.5 rounded-lg neu-inset bg-[#E3E8EF]">
+                        <span className="text-[11px] font-bold text-[#4E5C70] px-2 py-0.5 rounded-lg neu-inset bg-[#E3E8EF]">
                           Первое фото — обложка
                         </span>
                         {formImages.length > 0 && (
                           <button
                             type="button"
                             onClick={handleClearAllImages}
-                            className="h-6 px-2.5 rounded-lg neu-button-danger text-[10px] font-black active:scale-95 transition-all cursor-pointer flex items-center gap-1"
+                            className="h-6 px-2.5 rounded-lg neu-button-danger text-[11px] font-black active:scale-95 transition-all cursor-pointer flex items-center gap-1"
                             title="Удалить все фото"
                           >
                             <Trash2 className="w-2.5 h-2.5" />
@@ -1518,16 +1524,16 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         type="button"
                         onClick={() => galleryFileInputRef.current?.click()}
                         disabled={isUploadingImage}
-                        className="w-full py-2.5 px-3 neu-button rounded-xl text-xs font-black text-[#5F6ED0] hover:text-[#4F5DC0] flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
+                        className="w-full py-2.5 px-3 neu-button rounded-xl text-xs font-black text-[#4B59BB] hover:text-[#3F4BA6] flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
                       >
                         {isUploadingImage ? (
                           <>
-                            <Loader2 className="w-4 h-4 animate-spin text-[#5F6ED0]" />
+                            <Loader2 className="w-4 h-4 animate-spin text-[#4B59BB]" />
                             <span>Обработка изображений...</span>
                           </>
                         ) : (
                           <>
-                            <ImagePlus className="w-4 h-4 text-[#5F6ED0]" />
+                            <ImagePlus className="w-4 h-4 text-[#4B59BB]" />
                             <span>Загрузить из галереи / с устройства</span>
                           </>
                         )}
@@ -1539,9 +1545,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                           onClick={() => galleryFileInputRef.current?.click()}
                           className="py-6 px-4 rounded-xl border border-dashed border-[#BAC5D5] flex flex-col items-center justify-center gap-1.5 cursor-pointer hover:bg-white/40 transition-colors text-center"
                         >
-                          <ImagePlus className="w-6 h-6 text-[#5C6B80]" />
+                          <ImagePlus className="w-6 h-6 text-[#4E5C70]" />
                           <p className="text-xs font-bold text-[#2D3A4E]">Галерея пока пуста</p>
-                          <p className="text-[10px] text-[#5C6B80]">
+                          <p className="text-[11px] text-[#4E5C70]">
                             Нажмите «Загрузить из галереи» или перетащите фото сюда
                           </p>
                         </div>
@@ -1564,7 +1570,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
                               {/* Cover Badge */}
                               {idx === 0 && (
-                                <div className="absolute top-1.5 left-1.5 bg-[#5F6ED0] text-white text-[9px] font-black px-1.5 py-0.5 rounded-md shadow-sm">
+                                <div className="absolute top-1.5 left-1.5 bg-[#5F6ED0] text-white text-[11px] font-black px-1.5 py-0.5 rounded-md shadow-sm">
                                   <span>Главная</span>
                                 </div>
                               )}
@@ -1578,6 +1584,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                                 }}
                                 className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-danger hover:bg-danger/90 text-white flex items-center justify-center shadow-[var(--neu-on-photo)] active:scale-90 transition-transform cursor-pointer z-10"
                                 title="Удалить это фото"
+                                aria-label="Удалить это фото"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -1594,6 +1601,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                                       }}
                                       className="p-1 rounded bg-white/20 hover:bg-white/40 text-white cursor-pointer"
                                       title="Переместить левее"
+                                      aria-label="Переместить левее"
                                     >
                                       <ArrowLeft className="w-2.5 h-2.5" />
                                     </button>
@@ -1607,6 +1615,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                                       }}
                                       className="p-1 rounded bg-white/20 hover:bg-white/40 text-white cursor-pointer"
                                       title="Переместить правее"
+                                      aria-label="Переместить правее"
                                     >
                                       <ArrowRight className="w-2.5 h-2.5" />
                                     </button>
@@ -1622,6 +1631,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                                     }}
                                     className="p-1 rounded bg-white/20 hover:bg-white/40 text-white cursor-pointer"
                                     title="Увеличить фото"
+                                    aria-label="Увеличить фото"
                                   >
                                     <Maximize2 className="w-2.5 h-2.5" />
                                   </button>
@@ -1632,7 +1642,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                                         e.stopPropagation();
                                         handleSetCoverImage(idx);
                                       }}
-                                      className="text-[8px] font-black bg-[#5F6ED0] hover:bg-[#4F5DC0] text-white px-1.5 py-0.5 rounded cursor-pointer"
+                                      className="text-[11px] font-black bg-[#5F6ED0] hover:bg-[#4553B8] text-white px-1.5 py-0.5 rounded cursor-pointer"
                                       title="Сделать главной обложкой"
                                     >
                                       Обложка
@@ -1652,7 +1662,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                           value={newImageUrlInput}
                           onChange={(e) => setNewImageUrlInput(e.target.value)}
                           placeholder="Вставить ссылку на фото (https://...)"
-                          className="flex-1 min-w-0 h-8 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] focus:outline-none bg-[#E3E8EF] placeholder:text-[#5C6B80]/60"
+                          className="flex-1 min-w-0 h-8 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] placeholder:text-[#56647A]"
                         />
                         <button
                           type="button"
@@ -1664,7 +1674,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                             }
                           }}
                           disabled={!newImageUrlInput.trim()}
-                          className="h-8 px-3 neu-button rounded-xl text-xs font-bold text-[#5F6ED0] disabled:opacity-40 active:scale-95 transition-all cursor-pointer shrink-0 whitespace-nowrap"
+                          className="h-8 px-3 neu-button rounded-xl text-xs font-bold text-[#4B59BB] disabled:opacity-40 active:scale-95 transition-all cursor-pointer shrink-0 whitespace-nowrap"
                         >
                           + Ссылка
                         </button>
@@ -1679,10 +1689,10 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] border border-white/60 space-y-3">
                     <div className="flex items-center justify-between pb-1 border-b border-[#BAC5D5]/30">
                       <label className="text-[11px] font-black text-[#2D3A4E] flex items-center gap-1.5 uppercase tracking-wider">
-                        <Palette className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                        <Palette className="w-3.5 h-3.5 text-[#4B59BB]" />
                         <span>Цвета товара ({formColors.length})</span>
                       </label>
-                      <span className="text-[10px] font-semibold text-[#5C6B80]">Мин. 1 цвет</span>
+                      <span className="text-[11px] font-semibold text-[#4E5C70]">Мин. 1 цвет</span>
                     </div>
 
                     {/* Active Colors Chips */}
@@ -1701,8 +1711,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                             <button
                               type="button"
                               onClick={() => handleRemoveColor(c.name)}
-                              className="text-[#5C6B80] hover:text-danger ml-1 active:scale-90 transition-transform cursor-pointer"
+                              className="text-[#4E5C70] hover:text-danger ml-1 active:scale-90 transition-transform cursor-pointer"
                               title={`Удалить цвет «${c.name}»`}
+                              aria-label="Закрыть"
                             >
                               <X className="w-3 h-3" />
                             </button>
@@ -1719,7 +1730,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                           value={customColorName}
                           onChange={(e) => setCustomColorName(e.target.value)}
                           placeholder="Новый цвет (напр. Хаки)"
-                          className="flex-1 min-w-0 h-8 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none placeholder:text-[#5C6B80]/70"
+                          className="flex-1 min-w-0 h-8 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] placeholder:text-[#56647A]"
                         />
                         <div className="relative w-28 shrink-0">
                           <input
@@ -1735,7 +1746,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                             }}
                             placeholder="#HEX"
                             maxLength={7}
-                            className="w-full h-8 pl-8 pr-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none uppercase font-mono"
+                            className="w-full h-8 pl-8 pr-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] uppercase font-mono"
                           />
                           <div
                             className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-black/15 shadow-inner"
@@ -1750,7 +1761,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                           type="button"
                           onClick={handleAddCustomColor}
                           disabled={!customColorName.trim() || !/^#([0-9A-F]{3}){1,2}$/i.test(customColorHex)}
-                          className="h-8 px-3 neu-button rounded-xl text-xs font-black text-[#5F6ED0] cursor-pointer transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                          className="h-8 px-3 neu-button rounded-xl text-xs font-black text-[#4B59BB] cursor-pointer transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                         >
                           + Цвет
                         </button>
@@ -1796,10 +1807,10 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] border border-white/60 space-y-3">
                     <div className="flex items-center justify-between pb-1 border-b border-[#BAC5D5]/30">
                       <label className="text-[11px] font-black text-[#2D3A4E] flex items-center gap-1.5 uppercase tracking-wider">
-                        <Ruler className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                        <Ruler className="w-3.5 h-3.5 text-[#4B59BB]" />
                         <span>Размеры товара ({formSizes.length})</span>
                       </label>
-                      <span className="text-[10px] font-semibold text-[#5C6B80]">Мин. 1 размер</span>
+                      <span className="text-[11px] font-semibold text-[#4E5C70]">Мин. 1 размер</span>
                     </div>
 
                     {/* Active Sizes */}
@@ -1807,15 +1818,16 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                       {formSizes.map((s) => (
                         <div
                           key={s}
-                          className="neu-button px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs font-black text-[#5F6ED0] bg-[#E3E8EF] border border-white/60"
+                          className="neu-button px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs font-black text-[#4B59BB] bg-[#E3E8EF] border border-white/60"
                         >
                           <span>{s}</span>
                           {formSizes.length > 1 && (
                             <button
                               type="button"
                               onClick={() => handleRemoveSize(s)}
-                              className="text-[#5C6B80] hover:text-danger ml-1 active:scale-90 transition-transform cursor-pointer"
+                              className="text-[#4E5C70] hover:text-danger ml-1 active:scale-90 transition-transform cursor-pointer"
                               title={`Удалить размер ${s}`}
+                              aria-label="Закрыть"
                             >
                               <X className="w-3 h-3" />
                             </button>
@@ -1826,7 +1838,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
                     {/* Preset Sizes Bar */}
                     <div className="flex flex-wrap items-center gap-1 pt-0.5">
-                      <span className="text-[10px] text-[#5C6B80] font-semibold mr-0.5">Сетка:</span>
+                      <span className="text-[11px] text-[#4E5C70] font-semibold mr-0.5">Сетка:</span>
                       {PRESET_SIZES.map((sz) => {
                         const isSelected = formSizes.includes(sz);
                         return (
@@ -1834,10 +1846,10 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                             key={sz}
                             type="button"
                             onClick={() => handleTogglePresetSize(sz)}
-                            className={`h-6 px-2 rounded-lg text-[10px] font-black transition-all active:scale-95 cursor-pointer whitespace-nowrap ${
+                            className={`h-6 px-2 rounded-lg text-[11px] font-black transition-all active:scale-95 cursor-pointer whitespace-nowrap ${
                               isSelected
                                 ? 'neu-pill-active'
-                                : 'neu-button text-[#5C6B80] hover:text-[#2D3A4E]'
+                                : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
                             }`}
                           >
                             {sz}
@@ -1853,13 +1865,13 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         value={customSizeInput}
                         onChange={(e) => setCustomSizeInput(e.target.value)}
                         placeholder="Свой размер (напр. XXL или 52)"
-                        className="flex-1 min-w-0 h-8 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none uppercase placeholder:text-[#5C6B80]/70"
+                        className="flex-1 min-w-0 h-8 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] uppercase placeholder:text-[#56647A]"
                       />
                       <button
                         type="button"
                         onClick={handleAddCustomSize}
                         disabled={!customSizeInput.trim()}
-                        className="h-8 px-3 neu-button rounded-xl text-xs font-black text-[#5F6ED0] cursor-pointer shrink-0 transition-all active:scale-95 disabled:opacity-40"
+                        className="h-8 px-3 neu-button rounded-xl text-xs font-black text-[#4B59BB] cursor-pointer shrink-0 transition-all active:scale-95 disabled:opacity-40"
                       >
                         + Размер
                       </button>
@@ -1869,8 +1881,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   {/* SKU Stock Matrix */}
                   <div>
                     <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
-                      <label className="text-[11px] font-bold text-[#5C6B80] flex items-center gap-1.5">
-                        <Boxes className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                      <label className="text-[11px] font-bold text-[#4E5C70] flex items-center gap-1.5">
+                        <Boxes className="w-3.5 h-3.5 text-[#4B59BB]" />
                         <span>Остатки SKU ({formSkus.length} вариаций)</span>
                       </label>
 
@@ -1879,7 +1891,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         <button
                           type="button"
                           onClick={() => handleBulkChangeAllSkuStock(5)}
-                          className="h-6 px-2 rounded-lg neu-button text-[10px] font-bold text-[#5F6ED0] active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                          className="h-6 px-2 rounded-lg neu-button text-[11px] font-bold text-[#4B59BB] active:scale-95 transition-all cursor-pointer whitespace-nowrap"
                           title="Добавить +5 шт. ко всем вариациям"
                         >
                           +5
@@ -1887,7 +1899,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         <button
                           type="button"
                           onClick={() => handleBulkChangeAllSkuStock(10)}
-                          className="h-6 px-2 rounded-lg neu-button text-[10px] font-bold text-[#5F6ED0] active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                          className="h-6 px-2 rounded-lg neu-button text-[11px] font-bold text-[#4B59BB] active:scale-95 transition-all cursor-pointer whitespace-nowrap"
                           title="Добавить +10 шт. ко всем вариациям"
                         >
                           +10
@@ -1895,7 +1907,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         <button
                           type="button"
                           onClick={handleResetAllSkuStock}
-                          className="h-6 px-2 rounded-lg neu-button text-[10px] font-bold text-danger active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                          className="h-6 px-2 rounded-lg neu-button text-[11px] font-bold text-danger active:scale-95 transition-all cursor-pointer whitespace-nowrap"
                           title="Обнулить остатки всех вариаций"
                         >
                           Обнулить
@@ -1903,7 +1915,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         <button
                           type="button"
                           onClick={handleRegenerateMissingCodes}
-                          className="h-6 px-2 rounded-lg neu-button text-[10px] font-bold text-[#5C6B80] hover:text-[#5F6ED0] active:scale-95 transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap"
+                          className="h-6 px-2 rounded-lg neu-button text-[11px] font-bold text-[#4E5C70] hover:text-[#4B59BB] active:scale-95 transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap"
                           title="Заполнить пропущенные артикулы и штрихкоды"
                         >
                           <RefreshCw className="w-2.5 h-2.5" />
@@ -1914,7 +1926,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
                     <div className="neu-inset rounded-2xl p-2 max-h-56 overflow-y-auto space-y-1.5 text-xs bg-[#E3E8EF]">
                       {formSkus.length === 0 ? (
-                        <div className="p-4 text-center text-xs text-[#5C6B80]">
+                        <div className="p-4 text-center text-xs text-[#4E5C70]">
                           Нет вариаций SKU. Добавьте цвет и размер.
                         </div>
                       ) : (
@@ -1936,16 +1948,16 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                                       {sku.color}
                                     </span>
                                     <span className="text-[#BAC5D5]">•</span>
-                                    <span className="font-extrabold text-[#5F6ED0] text-xs">
+                                    <span className="font-extrabold text-[#4B59BB] text-xs">
                                       {sku.size}
                                     </span>
                                   </div>
-                                  <div className="flex items-center gap-2 text-[10px] text-[#5C6B80] font-mono">
+                                  <div className="flex items-center gap-2 text-[11px] text-[#4E5C70] font-mono">
                                     <span>{sku.skuCode}</span>
                                     {sku.barcode && (
                                       <>
                                         <span className="text-[#BAC5D5]">|</span>
-                                        <span className="text-[9px]">{sku.barcode}</span>
+                                        <span className="text-[11px]">{sku.barcode}</span>
                                       </>
                                     )}
                                   </div>
@@ -1963,7 +1975,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                                       )
                                     );
                                   }}
-                                  className="w-6 h-6 rounded-lg neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer font-bold text-xs"
+                                  className="w-6 h-6 rounded-lg neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer font-bold text-xs"
+                                  aria-label="Уменьшить остаток"
                                 >
                                   <Minus className="w-3 h-3" />
                                 </button>
@@ -1978,7 +1991,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                                       prev.map((it, idx) => (idx === sIdx ? { ...it, stock: val } : it))
                                     );
                                   }}
-                                  className="w-12 text-center py-1 neu-inset rounded-lg font-black text-xs text-[#5F6ED0] bg-[#E3E8EF] focus:outline-none"
+                                  className="w-12 text-center py-1 neu-inset rounded-lg font-black text-xs text-[#4B59BB] bg-[#E3E8EF]"
                                 />
                                 <button
                                   type="button"
@@ -1989,11 +2002,12 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                                       )
                                     );
                                   }}
-                                  className="w-6 h-6 rounded-lg neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-95 transition-all cursor-pointer font-bold text-xs"
+                                  className="w-6 h-6 rounded-lg neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-95 transition-all cursor-pointer font-bold text-xs"
+                                  aria-label="Увеличить остаток"
                                 >
                                   <Plus className="w-3 h-3" />
                                 </button>
-                                <span className="text-[10px] font-bold text-[#5C6B80] ml-0.5">шт.</span>
+                                <span className="text-[11px] font-bold text-[#4E5C70] ml-0.5">шт.</span>
 
                                 {/* Stock status dot */}
                                 <span
@@ -2027,21 +2041,21 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                 {/* Neumorphic Recessed Summary Columns */}
                 <div className="grid grid-cols-3 gap-2 sm:gap-3">
                   <div className="p-2 sm:p-2.5 neu-inset rounded-xl bg-[#E3E8EF] flex flex-col justify-center text-center">
-                    <span className="text-[10px] font-bold text-[#5C6B80] leading-tight mb-0.5">Общий остаток</span>
-                    <span className="text-xs sm:text-sm font-black text-[#5F6ED0]">
-                      {totalFormStock} <span className="text-[10px] font-bold">шт.</span>
+                    <span className="text-[11px] font-bold text-[#4E5C70] leading-tight mb-0.5">Общий остаток</span>
+                    <span className="text-xs sm:text-sm font-black text-[#4B59BB]">
+                      {totalFormStock} <span className="text-[11px] font-bold">шт.</span>
                     </span>
                   </div>
 
                   <div className="p-2 sm:p-2.5 neu-inset rounded-xl bg-[#E3E8EF] flex flex-col justify-center text-center">
-                    <span className="text-[10px] font-bold text-[#5C6B80] leading-tight mb-0.5">Оценка партии</span>
+                    <span className="text-[11px] font-bold text-[#4E5C70] leading-tight mb-0.5">Оценка партии</span>
                     <span className="text-xs sm:text-sm font-black text-[#2D3A4E] truncate">
-                      {totalFormInventoryValue.toLocaleString('ru-RU')} <span className="text-[10px] font-bold">₽</span>
+                      {totalFormInventoryValue.toLocaleString('ru-RU')} <span className="text-[11px] font-bold">₽</span>
                     </span>
                   </div>
 
                   <div className="p-2 sm:p-2.5 neu-inset rounded-xl bg-[#E3E8EF] flex flex-col justify-center text-center">
-                    <span className="text-[10px] font-bold text-[#5C6B80] leading-tight mb-0.5">Статус товара</span>
+                    <span className="text-[11px] font-bold text-[#4E5C70] leading-tight mb-0.5">Статус товара</span>
                     <div className="flex items-center justify-center gap-1.5">
                       <span className={`w-1.5 h-1.5 rounded-full ${formInStock ? 'bg-success' : 'bg-danger'}`} />
                       <span
@@ -2059,7 +2073,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsProductFormOpen(false)}
-                    className="flex-1 sm:flex-initial py-2.5 px-5 neu-button rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer text-center"
+                    className="flex-1 sm:flex-initial py-2.5 px-5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer text-center"
                   >
                     Отмена
                   </button>
@@ -2083,21 +2097,22 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
           <div className="neu-modal rounded-3xl p-5 sm:p-6 max-w-xl w-full space-y-4 text-[#2D3A4E] border border-white/80 max-h-[90vh] overflow-y-auto my-auto">
             <div className="flex items-start sm:items-center justify-between pb-2 border-b border-[#BAC5D5]/50 gap-2">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] shrink-0">
+                <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0">
                   <FileSpreadsheet className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
                   <h3 className="text-sm sm:text-base font-black uppercase tracking-wider text-[#2D3A4E] truncate">
                     Импорт каталога из CSV
                   </h3>
-                  <p className="text-[11px] text-[#5C6B80] font-medium truncate sm:whitespace-normal leading-tight">
+                  <p className="text-[11px] text-[#4E5C70] font-medium truncate sm:whitespace-normal leading-tight">
                     Загрузите файл или вставьте строки CSV для пакетного добавления
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsCSVImportModalOpen(false)}
-                className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer shrink-0"
+                className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer shrink-0"
+                aria-label="Закрыть"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -2105,7 +2120,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="block text-[11px] font-bold text-[#5C6B80] mb-1">
+                <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                   1. Выберите файл на диске (.csv)
                 </label>
                 <input
@@ -2117,7 +2132,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-[#5C6B80] mb-1">
+                <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                   2. Либо вставьте текст CSV в поле ниже
                 </label>
                 <textarea
@@ -2126,7 +2141,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   onChange={(e) => setCsvInputText(e.target.value)}
                   placeholder={`ID,Название,Категория,Цена (₽),Старая цена (₽),В наличии,Остаток,Размеры,Цвета,Картинка,Описание
 "prod-1","Рубашка льняная","linen",2990,3500,"Да",12,"S; M; L","Бежевый; Синий","https://images.unsplash.com/...","Премиальный лен"`}
-                  className="w-full p-3 neu-inset rounded-xl font-mono text-[11px] text-[#2D3A4E] focus:outline-none bg-[#E3E8EF] leading-relaxed"
+                  className="w-full p-3 neu-inset rounded-xl font-mono text-[11px] text-[#2D3A4E] bg-[#E3E8EF] leading-relaxed"
                 />
               </div>
             </div>
@@ -2135,7 +2150,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               <button
                 type="button"
                 onClick={() => setIsCSVImportModalOpen(false)}
-                className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer"
+                className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer"
               >
                 Отмена
               </button>
@@ -2158,19 +2173,20 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
             {/* Header */}
             <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0]">
+                <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB]">
                   <Eye className="w-4 h-4" />
                 </div>
                 <div>
                   <h3 className="text-sm font-black uppercase text-[#2D3A4E]">
                     Карточка товара
                   </h3>
-                  <span className="text-[10px] font-mono text-[#5C6B80]">{productToInspect.id}</span>
+                  <span className="text-[11px] font-mono text-[#4E5C70]">{productToInspect.id}</span>
                 </div>
               </div>
               <button
                 onClick={() => setProductToInspect(null)}
-                className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer"
+                className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer"
+                aria-label="Закрыть"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -2185,7 +2201,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                 referrerPolicy="no-referrer"
               />
               {productToInspect.badge && (
-                <span className="absolute top-2.5 left-2.5 neu-fill-accent text-white text-[10px] font-black px-2 py-0.5 rounded-lg">
+                <span className="absolute top-2.5 left-2.5 neu-fill-accent text-white text-[11px] font-black px-2 py-0.5 rounded-lg">
                   {productToInspect.badge}
                 </span>
               )}
@@ -2197,11 +2213,11 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   {productToInspect.title}
                 </h4>
                 <div className="text-right shrink-0">
-                  <div className="text-base font-black text-[#5F6ED0]">
+                  <div className="text-base font-black text-[#4B59BB]">
                     {productToInspect.price.toLocaleString('ru-RU')} ₽
                   </div>
                   {productToInspect.originalPrice && (
-                    <div className="text-[11px] text-[#5C6B80] line-through">
+                    <div className="text-[11px] text-[#4E5C70] line-through">
                       {productToInspect.originalPrice.toLocaleString('ru-RU')} ₽
                     </div>
                   )}
@@ -2209,20 +2225,20 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               </div>
 
               {productToInspect.description && (
-                <p className="text-[#5C6B80] text-xs leading-relaxed">
+                <p className="text-[#4E5C70] text-xs leading-relaxed">
                   {productToInspect.description}
                 </p>
               )}
 
               <div className="grid grid-cols-2 gap-2 text-[11px]">
                 <div className="neu-inset rounded-xl p-2.5 bg-[#E3E8EF]">
-                  <span className="text-[#5C6B80] block">Категория:</span>
+                  <span className="text-[#4E5C70] block">Категория:</span>
                   <strong className="text-[#2D3A4E]">
                     {productToInspect.categoryLabel || productToInspect.category}
                   </strong>
                 </div>
                 <div className="neu-inset rounded-xl p-2.5 bg-[#E3E8EF]">
-                  <span className="text-[#5C6B80] block">Материал:</span>
+                  <span className="text-[#4E5C70] block">Материал:</span>
                   <strong className="text-[#2D3A4E]">
                     {productToInspect.material || '100% лен'}
                   </strong>
@@ -2232,9 +2248,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               {/* SKU Breakdown in inspect modal */}
               {productToInspect.skus && productToInspect.skus.length > 0 && (
                 <div className="space-y-1.5 pt-1">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-[#5C6B80]">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-[#4E5C70]">
                     <span>Вариации SKU ({productToInspect.skus.length})</span>
-                    <span className="text-[#5F6ED0] font-black">
+                    <span className="text-[#4B59BB] font-black">
                       Всего: {getProductTotalStock(productToInspect)} шт.
                     </span>
                   </div>
@@ -2247,9 +2263,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         <span className="font-bold text-[#2D3A4E]">
                           {sku.color} • {sku.size}
                         </span>
-                        <div className="flex items-center gap-2 font-mono text-[10px] text-[#5C6B80]">
+                        <div className="flex items-center gap-2 font-mono text-[11px] text-[#4E5C70]">
                           <span>{sku.skuCode}</span>
-                          <span className="font-black text-[#5F6ED0]">{sku.stock} шт.</span>
+                          <span className="font-black text-[#4B59BB]">{sku.stock} шт.</span>
                         </div>
                       </div>
                     ))}
@@ -2263,7 +2279,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               <button
                 type="button"
                 onClick={() => setProductToInspect(null)}
-                className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer"
+                className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer"
               >
                 Закрыть
               </button>
@@ -2293,7 +2309,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
             </div>
             <div className="space-y-1">
               <h3 className="text-sm sm:text-base font-black text-[#2D3A4E]">Удалить товар?</h3>
-              <p className="text-xs text-[#5C6B80] leading-relaxed">
+              <p className="text-xs text-[#4E5C70] leading-relaxed">
                 Вы действительно хотите безвозвратно удалить{' '}
                 <strong className="text-[#2D3A4E]">«{productToDelete.title}»</strong> из каталога?
               </p>
@@ -2302,7 +2318,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               <button
                 type="button"
                 onClick={() => setProductToDelete(null)}
-                className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer"
+                className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer"
               >
                 Отмена
               </button>
@@ -2334,14 +2350,15 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               <h3 className="text-sm font-black uppercase text-[#2D3A4E]">Скидка на товары</h3>
               <button
                 onClick={() => setIsBulkDiscountModalOpen(false)}
-                className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] active:scale-95 transition-all"
+                className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all"
+                aria-label="Закрыть"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <p className="text-xs text-[#5C6B80] font-bold">
-              Применить процент скидки к <strong className="text-[#5F6ED0]">{selectedProductIds.length}</strong> товарам:
+            <p className="text-xs text-[#4E5C70] font-bold">
+              Применить процент скидки к <strong className="text-[#4B59BB]">{selectedProductIds.length}</strong> товарам:
             </p>
 
             <div className="grid grid-cols-3 gap-2">
@@ -2353,7 +2370,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   className={`py-2 rounded-xl text-xs font-black transition-all active:scale-95 cursor-pointer ${
                     bulkDiscountPercent === pct
                       ? 'neu-pill-active'
-                      : 'neu-button text-[#2D3A4E] hover:text-[#5F6ED0]'
+                      : 'neu-button text-[#2D3A4E] hover:text-[#4B59BB]'
                   }`}
                 >
                   -{pct}%
@@ -2365,7 +2382,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               <button
                 type="button"
                 onClick={() => setIsBulkDiscountModalOpen(false)}
-                className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] active:scale-95 transition-all"
+                className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all"
               >
                 Отмена
               </button>
@@ -2395,6 +2412,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               type="button"
               onClick={() => setPreviewZoomImage(null)}
               className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center cursor-pointer transition-colors shadow-[var(--neu-on-photo)]"
+              aria-label="Закрыть"
             >
               <X className="w-5 h-5" />
             </button>

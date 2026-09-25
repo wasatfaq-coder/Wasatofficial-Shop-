@@ -173,7 +173,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
         className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] border border-white/60 flex items-center justify-between gap-3 cursor-pointer select-none transition-all active:scale-[0.99]"
       >
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-[#5F6ED0] shrink-0 bg-[#E3E8EF] border border-white/40">
+          <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-[#4B59BB] shrink-0 bg-[#E3E8EF] border border-white/40">
             <PackageCheck className="w-4 h-4 stroke-[2.2]" />
           </div>
           <div>
@@ -185,7 +185,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 }`}
               />
             </div>
-            <p className="text-[11px] text-[#5C6B80]">
+            <p className="text-[11px] text-[#4E5C70]">
               Скрывать распроданные размеры и товары
             </p>
           </div>
@@ -204,8 +204,8 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
           <div
             className={`w-5 h-5 rounded-full transition-transform duration-200 ease-in-out flex items-center justify-center ${
               filterState.onlyInStock
-                ? 'translate-x-6 bg-white text-[#5F6ED0] shadow-[var(--neu-raised-sm)]'
-                : 'translate-x-0 bg-[#E3E8EF] text-[#5C6B80] shadow-sm'
+                ? 'translate-x-6 bg-white text-[#4B59BB] shadow-[var(--neu-raised-sm)]'
+                : 'translate-x-0 bg-[#E3E8EF] text-[#4E5C70] shadow-sm'
             }`}
           >
             {filterState.onlyInStock ? (
@@ -221,10 +221,10 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
       <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] border border-white/60 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-bold text-[#2D3A4E]">
-            <Banknote className="w-4 h-4 text-[#5F6ED0]" />
+            <Banknote className="w-4 h-4 text-[#4B59BB]" />
             <span>Ценовой диапазон</span>
           </div>
-          <span className="text-xs font-black text-[#5F6ED0] neu-inset-deep px-2.5 py-0.5 rounded-lg bg-[#E3E8EF] border border-[#5F6ED0]/40">
+          <span className="text-xs font-black text-[#4B59BB] neu-inset-deep px-2.5 py-0.5 rounded-lg bg-[#E3E8EF] border border-[#5F6ED0]/40">
             {filterState.minPrice.toLocaleString('ru-RU')} ₽ — {filterState.maxPrice.toLocaleString('ru-RU')} ₽
           </span>
         </div>
@@ -246,7 +246,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
             }}
             className="neu-range py-1 w-full"
           />
-          <div className="flex justify-between text-[10px] text-[#5C6B80] font-bold px-1">
+          <div className="flex justify-between text-[11px] text-[#4E5C70] font-bold px-1">
             <span>{minPossiblePrice.toLocaleString('ru-RU')} ₽</span>
             <span>{Math.round((minPossiblePrice + maxPossiblePrice) / 2).toLocaleString('ru-RU')} ₽</span>
             <span>{maxPossiblePrice.toLocaleString('ru-RU')} ₽</span>
@@ -272,7 +272,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 className={`text-[11px] font-bold px-2.5 py-1.5 rounded-xl transition-all active:scale-95 cursor-pointer ${
                   isPresetActive
                     ? 'neu-pill-active font-black'
-                    : 'neu-inset text-[#2D3A4E] hover:text-[#5F6ED0] bg-[#E3E8EF] border border-white/40'
+                    : 'neu-inset text-[#2D3A4E] hover:text-[#4B59BB] bg-[#E3E8EF] border border-white/40'
                 }`}
               >
                 {preset.label}
@@ -286,7 +286,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
       <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] border border-white/60 space-y-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-bold text-[#2D3A4E]">
-            <Layers className="w-4 h-4 text-[#5F6ED0]" />
+            <Layers className="w-4 h-4 text-[#4B59BB]" />
             <span>Материал изделия</span>
           </div>
           {filterState.selectedMaterials.length > 0 && (
@@ -295,7 +295,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
               onClick={() =>
                 onChangeFilterState((prev) => ({ ...prev, selectedMaterials: [] }))
               }
-              className="text-[10px] font-bold text-danger hover:text-danger transition-colors neu-inset px-2 py-0.5 rounded-lg border border-white/40 cursor-pointer"
+              className="text-[11px] font-bold text-danger hover:text-danger transition-colors neu-inset px-2 py-0.5 rounded-lg border border-white/40 cursor-pointer"
             >
               Сбросить ({filterState.selectedMaterials.length})
             </button>
@@ -314,14 +314,14 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer ${
                   isSelected
                     ? 'neu-pill-active font-black'
-                    : 'neu-inset text-[#2D3A4E] hover:text-[#5F6ED0] bg-[#E3E8EF] border border-white/40'
+                    : 'neu-inset text-[#2D3A4E] hover:text-[#4B59BB] bg-[#E3E8EF] border border-white/40'
                 }`}
               >
                 {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
                 <span>{cat.name}</span>
                 <span
-                  className={`text-[10px] font-medium px-1.5 py-0.2 rounded-md ${
-                    isSelected ? 'neu-pill-active font-bold' : 'neu-inset text-[#5C6B80]'
+                  className={`text-[11px] font-medium px-1.5 py-0.2 rounded-md ${
+                    isSelected ? 'neu-pill-active font-bold' : 'neu-inset text-[#4E5C70]'
                   }`}
                 >
                   {count}
@@ -336,7 +336,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
       <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] border border-white/60 space-y-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-bold text-[#2D3A4E]">
-            <Sparkles className="w-4 h-4 text-[#5F6ED0]" />
+            <Sparkles className="w-4 h-4 text-[#4B59BB]" />
             <span>Наличие размеров</span>
           </div>
           {filterState.selectedSizes.length > 0 && (
@@ -345,7 +345,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
               onClick={() =>
                 onChangeFilterState((prev) => ({ ...prev, selectedSizes: [] }))
               }
-              className="text-[10px] font-bold text-danger hover:text-danger transition-colors neu-inset px-2 py-0.5 rounded-lg border border-white/40 cursor-pointer"
+              className="text-[11px] font-bold text-danger hover:text-danger transition-colors neu-inset px-2 py-0.5 rounded-lg border border-white/40 cursor-pointer"
             >
               Сбросить ({filterState.selectedSizes.length})
             </button>
@@ -369,11 +369,11 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                     ? 'opacity-40 cursor-not-allowed neu-inset bg-[#E3E8EF]/50 border border-white/20'
                     : isSelected
                     ? 'neu-pill-active font-black'
-                    : 'neu-inset font-bold text-[#2D3A4E] hover:text-[#5F6ED0] bg-[#E3E8EF] border border-white/40'
+                    : 'neu-inset font-bold text-[#2D3A4E] hover:text-[#4B59BB] bg-[#E3E8EF] border border-white/40'
                 }`}
               >
                 <span className="text-xs">{sz}</span>
-                <span className="text-[9px] font-medium text-[#5C6B80]">
+                <span className="text-[11px] font-medium text-[#4E5C70]">
                   {isOutOfStock ? 'нет' : `${count} шт.`}
                 </span>
               </button>
@@ -391,12 +391,12 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
           }
           className={`p-3 rounded-2xl text-xs flex items-center justify-between transition-all active:scale-95 cursor-pointer ${
             filterState.onlyNew
-              ? 'neu-inset-deep font-black text-[#5F6ED0] border border-[#5F6ED0]/60 bg-[#E3E8EF]'
-              : 'neu-inset font-medium text-[#2D3A4E] hover:text-[#5F6ED0] bg-[#E3E8EF] border border-white/40'
+              ? 'neu-inset-deep font-black text-[#4B59BB] border border-[#5F6ED0]/60 bg-[#E3E8EF]'
+              : 'neu-inset font-medium text-[#2D3A4E] hover:text-[#4B59BB] bg-[#E3E8EF] border border-white/40'
           }`}
         >
           <span>Только новинки</span>
-          {filterState.onlyNew && <Check className="w-4 h-4 text-[#5F6ED0] stroke-[3]" />}
+          {filterState.onlyNew && <Check className="w-4 h-4 text-[#4B59BB] stroke-[3]" />}
         </button>
 
         <button
@@ -409,12 +409,12 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
           }
           className={`p-3 rounded-2xl text-xs flex items-center justify-between transition-all active:scale-95 cursor-pointer ${
             filterState.onlyDiscount
-              ? 'neu-inset-deep font-black text-[#5F6ED0] border border-[#5F6ED0]/60 bg-[#E3E8EF]'
-              : 'neu-inset font-medium text-[#2D3A4E] hover:text-[#5F6ED0] bg-[#E3E8EF] border border-white/40'
+              ? 'neu-inset-deep font-black text-[#4B59BB] border border-[#5F6ED0]/60 bg-[#E3E8EF]'
+              : 'neu-inset font-medium text-[#2D3A4E] hover:text-[#4B59BB] bg-[#E3E8EF] border border-white/40'
           }`}
         >
           <span>Со скидкой</span>
-          {filterState.onlyDiscount && <Check className="w-4 h-4 text-[#5F6ED0] stroke-[3]" />}
+          {filterState.onlyDiscount && <Check className="w-4 h-4 text-[#4B59BB] stroke-[3]" />}
         </button>
       </div>
     </div>
@@ -436,7 +436,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
             <div className="neu-flat rounded-3xl p-4 bg-[#E3E8EF] border border-white/80 space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
                 <div className="flex items-center gap-2">
-                  <SlidersHorizontal className="w-4 h-4 text-[#5F6ED0]" />
+                  <SlidersHorizontal className="w-4 h-4 text-[#4B59BB]" />
                   <span className="text-xs font-black text-[#2D3A4E] uppercase tracking-wider">
                     Параметры фильтрации каталога
                   </span>
@@ -444,8 +444,9 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 <button
                   type="button"
                   onClick={onToggleInline}
-                  className="w-7 h-7 rounded-xl neu-inset flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] border border-white/40 cursor-pointer"
+                  className="w-7 h-7 rounded-xl neu-inset flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] border border-white/40 cursor-pointer"
                   title="Свернуть"
+                  aria-label="Свернуть"
                 >
                   <ChevronUp className="w-4 h-4" />
                 </button>
@@ -457,7 +458,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 <button
                   type="button"
                   onClick={onResetFilters}
-                  className="py-2.5 px-4 rounded-xl neu-inset text-xs font-bold text-[#5C6B80] hover:text-danger transition-colors flex items-center gap-1.5 border border-white/40 cursor-pointer"
+                  className="py-2.5 px-4 rounded-xl neu-inset text-xs font-bold text-[#4E5C70] hover:text-danger transition-colors flex items-center gap-1.5 border border-white/40 cursor-pointer"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   <span>Сбросить</span>
@@ -465,7 +466,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 <button
                   type="button"
                   onClick={onToggleInline}
-                  className="flex-1 py-2.5 px-4 rounded-xl neu-inset-deep text-xs font-bold text-center active:scale-98 transition-all bg-[#E3E8EF] text-[#5F6ED0] border border-[#5F6ED0]/50 cursor-pointer"
+                  className="flex-1 py-2.5 px-4 rounded-xl neu-inset-deep text-xs font-bold text-center active:scale-98 transition-all bg-[#E3E8EF] text-[#4B59BB] border border-[#5F6ED0]/50 cursor-pointer"
                 >
                   Показать {filteredCount} товаров
                 </button>
@@ -503,7 +504,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
               {/* Header */}
               <div className="flex items-center justify-between pb-3 border-b border-[#BAC5D5]/60">
                 <div className="flex items-center gap-2">
-                  <SlidersHorizontal className="w-5 h-5 text-[#5F6ED0] stroke-[2.2]" />
+                  <SlidersHorizontal className="w-5 h-5 text-[#4B59BB] stroke-[2.2]" />
                   <h3 className="text-base font-bold text-[#2D3A4E]">
                     Расширенная фильтрация
                   </h3>
@@ -511,7 +512,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 <button
                   type="button"
                   onClick={onCloseModal}
-                  className="w-8 h-8 rounded-full neu-inset flex items-center justify-center text-[#2D3A4E] hover:text-[#5F6ED0] transition-colors border border-white/50 cursor-pointer active:scale-95"
+                  className="w-8 h-8 rounded-full neu-inset flex items-center justify-center text-[#2D3A4E] hover:text-[#4B59BB] transition-colors border border-white/50 cursor-pointer active:scale-95"
                   aria-label="Закрыть"
                 >
                   <X className="w-4 h-4" />
@@ -525,7 +526,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 <button
                   type="button"
                   onClick={onResetFilters}
-                  className="py-3 px-4 rounded-2xl neu-inset text-xs font-bold text-[#5C6B80] hover:text-danger shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 border border-white/40 active:scale-95"
+                  className="py-3 px-4 rounded-2xl neu-inset text-xs font-bold text-[#4E5C70] hover:text-danger shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 border border-white/40 active:scale-95"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   <span>Сбросить</span>
@@ -539,7 +540,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                       onCloseModal();
                     }
                   }}
-                  className="flex-1 py-3.5 px-5 rounded-2xl neu-inset-deep font-bold text-xs text-center active:scale-98 transition-all cursor-pointer bg-[#E3E8EF] text-[#5F6ED0] border border-[#5F6ED0]/60 flex items-center justify-center gap-2"
+                  className="flex-1 py-3.5 px-5 rounded-2xl neu-inset-deep font-bold text-xs text-center active:scale-98 transition-all cursor-pointer bg-[#E3E8EF] text-[#4B59BB] border border-[#5F6ED0]/60 flex items-center justify-center gap-2"
                 >
                   <span>Показать {filteredCount} товаров</span>
                 </button>

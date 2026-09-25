@@ -80,12 +80,13 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
             >
             {/* Header / Close */}
             <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/60">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-[#5F6ED0] neu-inset px-3 py-1 rounded-full">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-[#4B59BB] neu-inset px-3 py-1 rounded-full">
                 Быстрый просмотр
               </span>
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E]"
+                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E]"
+                aria-label="Закрыть"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -139,7 +140,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
             {/* Product Title & Info */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-[#5C6B80] uppercase tracking-wide">
+                <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wide">
                   {product.categoryLabel}
                 </span>
                 <RatingBadge
@@ -161,7 +162,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                   {product.price.toLocaleString('ru-RU')} ₽
                 </span>
                 {product.originalPrice && (
-                  <span className="text-xs text-[#5C6B80] line-through">
+                  <span className="text-xs text-[#4E5C70] line-through">
                     {product.originalPrice.toLocaleString('ru-RU')} ₽
                   </span>
                 )}
@@ -204,7 +205,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                 <span className="text-xs font-bold text-[#2D3A4E]">Размер: {selectedSize}</span>
                 <button
                   onClick={() => setIsSizeCalcOpen(true)}
-                  className="text-[11px] font-bold text-[#5F6ED0] hover:underline flex items-center gap-1 cursor-pointer"
+                  className="text-[11px] font-bold text-[#4B59BB] hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <Ruler className="w-3.5 h-3.5" />
                   <span>Подобрать размер</span>
@@ -258,8 +259,9 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                   onClose();
                   onSelectFullProduct(product);
                 }}
-                className="neu-button p-3.5 rounded-2xl text-[#2D3A4E] hover:text-[#5F6ED0] flex items-center justify-center shrink-0 cursor-pointer"
+                className="neu-button p-3.5 rounded-2xl text-[#2D3A4E] hover:text-[#4B59BB] flex items-center justify-center shrink-0 cursor-pointer"
                 title="Перейти к подробному описанию"
+                aria-label="Перейти к подробному описанию"
               >
                 <ArrowRight className="w-4 h-4" />
               </button>

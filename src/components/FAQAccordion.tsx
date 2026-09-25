@@ -25,7 +25,7 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
 }) => {
   if (items.length === 0) {
     return (
-      <div className="neu-flat rounded-2xl p-6 text-center space-y-2 text-[#5C6B80]">
+      <div className="neu-flat rounded-2xl p-6 text-center space-y-2 text-[#4E5C70]">
         <HelpCircle className="w-8 h-8 mx-auto text-[#BAC5D5]" />
         <p className="font-bold text-sm text-[#2D3A4E]">{emptyMessage}</p>
         <p className="text-xs">
@@ -66,10 +66,10 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
                 className={`w-7 h-7 rounded-xl neu-inset flex items-center justify-center shrink-0 transition-transform duration-300 ${
                   isExpanded
                     ? 'rotate-180 text-white bg-[#5F6ED0]'
-                    : 'text-[#5F6ED0] bg-[#E3E8EF]'
+                    : 'text-[#4B59BB] bg-[#E3E8EF]'
                 }`}
               >
-                <ChevronDown className={`w-4 h-4 ${isExpanded ? 'text-white' : 'text-[#5F6ED0]'}`} />
+                <ChevronDown className={`w-4 h-4 ${isExpanded ? 'text-white' : 'text-[#4B59BB]'}`} />
               </div>
             </button>
 
@@ -93,7 +93,7 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
                         {item.highlights.map((h, i) => (
                           <span
                             key={i}
-                            className="neu-flat px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-bold text-success bg-white/80 border border-success/40 flex items-center gap-1.5"
+                            className="neu-flat px-2.5 py-1 rounded-xl text-[11px] sm:text-[11px] font-bold text-success bg-white/80 border border-success/40 flex items-center gap-1.5"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0" />
                             <span>{h}</span>

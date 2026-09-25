@@ -200,22 +200,23 @@ export const FAQModal: React.FC<FAQModalProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3 shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl neu-button flex items-center justify-center text-[#5F6ED0] shrink-0">
+              <div className="w-10 h-10 rounded-2xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0">
                 <HelpCircle className="w-5 h-5 stroke-[2.2]" />
               </div>
               <div>
                 <h3 className="text-base font-extrabold text-[#2D3A4E]">
                   Часто задаваемые вопросы (FAQ)
                 </h3>
-                <p className="text-[11px] text-[#5C6B80]">
+                <p className="text-[11px] text-[#4E5C70]">
                   Всё о доставке, примерке, возврате и гарантиях качества
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer active:scale-95 transition-transform"
+              className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer active:scale-95 transition-transform"
               title="Закрыть"
+              aria-label="Закрыть"
             >
               <X className="w-4 h-4" />
             </button>
@@ -223,19 +224,19 @@ export const FAQModal: React.FC<FAQModalProps> = ({
 
           {/* Search bar */}
           <div className="relative shrink-0">
-            <Search className="w-4 h-4 text-[#5C6B80] absolute left-3.5 top-3" />
+            <Search className="w-4 h-4 text-[#4E5C70] absolute left-3.5 top-3" />
             <input
               type="text"
               placeholder="Поиск по вопросам и ответам..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full py-2.5 pl-10 pr-4 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder-[#5C6B80]/70 outline-none bg-[#E3E8EF]"
+              className="w-full py-2.5 pl-10 pr-4 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-2.5 text-[#5C6B80] hover:text-[#2D3A4E] text-xs font-bold"
+                className="absolute right-3 top-2.5 text-[#4E5C70] hover:text-[#2D3A4E] text-xs font-bold"
               >
                 Очистить
               </button>
@@ -255,10 +256,10 @@ export const FAQModal: React.FC<FAQModalProps> = ({
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all cursor-pointer active:scale-95 ${
                     isActive
                       ? 'neu-pill-active'
-                      : 'text-[#5C6B80] hover:text-[#2D3A4E] hover:bg-white/30'
+                      : 'text-[#4E5C70] hover:text-[#2D3A4E] hover:bg-white/30'
                   }`}
                 >
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#5F6ED0]' : 'text-[#5C6B80]'}`} />
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#4B59BB]' : 'text-[#4E5C70]'}`} />
                   <span>{cat.label}</span>
                 </button>
               );
@@ -278,12 +279,12 @@ export const FAQModal: React.FC<FAQModalProps> = ({
           {/* Footer Call to Action (Support Chat & Call) */}
           <div className="neu-flat rounded-2xl p-3.5 flex items-center justify-between gap-3 shrink-0 bg-gradient-to-r from-[#E3E8EF] to-[#D8E1EC] border border-white/80">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] shrink-0">
+              <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0">
                 <MessageSquare className="w-4 h-4" />
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-bold text-[#2D3A4E] truncate">Не нашли ответ на свой вопрос?</p>
-                <p className="text-[10px] text-[#5C6B80]">Служба заботы отвечает за 1 минуту</p>
+                <p className="text-[11px] text-[#4E5C70]">Служба заботы отвечает за 1 минуту</p>
               </div>
             </div>
 
@@ -291,7 +292,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
               {storePhone && (
                 <a
                   href={telHref(storePhone)}
-                  className="w-8 h-8 rounded-xl neu-button text-[#2D3A4E] hover:text-[#5F6ED0] flex items-center justify-center cursor-pointer transition-colors"
+                  className="w-8 h-8 rounded-xl neu-button text-[#2D3A4E] hover:text-[#4B59BB] flex items-center justify-center cursor-pointer transition-colors"
                   title={`Позвонить: ${storePhone}`}
                 >
                   <PhoneCall className="w-3.5 h-3.5" />
@@ -312,7 +313,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
               ) : (
                 <a
                   href="mailto:support@manstyle-store.ru"
-                  className="neu-button px-3 py-1.5 rounded-xl text-xs font-bold text-[#5F6ED0] cursor-pointer"
+                  className="neu-button px-3 py-1.5 rounded-xl text-xs font-bold text-[#4B59BB] cursor-pointer"
                 >
                   support@manstyle-store.ru
                 </a>

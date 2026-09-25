@@ -41,6 +41,8 @@ ManStyle — SPA интернет-магазина мужской одежды (
   Tailwind рядом с `neu-*` (неоморфный класс их перекрывает). Одна `neu-button-accent` на экран,
   выбранное — `neu-pill-active`, удаление — `neu-button-danger` + `ConfirmDialog`. Цвета статусов — только
   токены `success/warning/danger` (и `*-soft` для подложек), не emerald/rose/amber. Подробно — `docs/ui-audit-plan.md`.
+- Доступность: текст не мельче `text-[11px]`, вторичный текст #4E5C70, сиреневый текст #4B59BB (`--accent-text`);
+  не отключать `outline` (фокус — через `:focus-visible` в `index.css`); кнопке из одной иконки — `aria-label`.
 
 ## Деплой
 

@@ -343,17 +343,18 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-[#5F6ED0]">
+              <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-[#4B59BB]">
                 <Shield className="w-5 h-5 stroke-[2.2]" />
               </div>
               <div>
                 <h3 className="text-base font-extrabold text-[#2D3A4E]">Безопасность и доступ</h3>
-                <p className="text-[11px] text-[#5C6B80]">Управление паролем, email, 2FA и сессиями</p>
+                <p className="text-[11px] text-[#4E5C70]">Управление паролем, email, 2FA и сессиями</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer"
+              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+              aria-label="Закрыть"
             >
               <X className="w-4 h-4" />
             </button>
@@ -363,19 +364,19 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
           <div className="neu-flat rounded-2xl p-4 space-y-3">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] shrink-0 mt-0.5">
+                <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0 mt-0.5">
                   <Smartphone className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="text-xs font-bold text-[#2D3A4E]">Двухфакторная защита (2FA)</p>
                     {local2FA && (
-                      <span className="text-[10px] font-black text-success neu-inset px-2 py-0.5 rounded-full">
+                      <span className="text-[11px] font-black text-success neu-inset px-2 py-0.5 rounded-full">
                         Активна
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-[#5C6B80] mt-0.5">
+                  <p className="text-[11px] text-[#4E5C70] mt-0.5">
                     Подтверждение входа одноразовым кодом из SMS или приложения
                   </p>
                 </div>
@@ -401,7 +402,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
           <div className="neu-flat rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <KeyRound className="w-4 h-4 text-[#5F6ED0]" />
+                <KeyRound className="w-4 h-4 text-[#4B59BB]" />
                 <h4 className="text-xs font-bold text-[#2D3A4E] uppercase tracking-wider">
                   Критические данные аккаунта
                 </h4>
@@ -416,7 +417,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
                     className={`py-1 px-2.5 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer ${
                       activeSection === 'password'
                         ? 'neu-pill-active'
-                        : 'text-[#5C6B80] hover:text-[#2D3A4E]'
+                        : 'text-[#4E5C70] hover:text-[#2D3A4E]'
                     }`}
                   >
                     Пароль
@@ -427,7 +428,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
                     className={`py-1 px-2.5 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer ${
                       activeSection === 'email'
                         ? 'neu-pill-active'
-                        : 'text-[#5C6B80] hover:text-[#2D3A4E]'
+                        : 'text-[#4E5C70] hover:text-[#2D3A4E]'
                     }`}
                   >
                     Email
@@ -439,7 +440,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
             {isGoogleUser ? (
               <div className="p-3 neu-inset rounded-xl flex items-start gap-2.5 bg-[#BAC5D5]/15">
                 <CheckCircle2 className="w-4 h-4 text-success shrink-0 mt-0.5" />
-                <p className="text-[11px] text-[#5C6B80] leading-relaxed">
+                <p className="text-[11px] text-[#4E5C70] leading-relaxed">
                   Вы авторизованы через Google ID. Пароль и email привязаны к аккаунту Google и защищены центром безопасности Google.
                 </p>
               </div>
@@ -452,12 +453,13 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
                     placeholder="Текущий пароль"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full py-2.5 pl-3.5 pr-10 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder-[#5C6B80]/60 outline-none"
+                    className="w-full py-2.5 pl-3.5 pr-10 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowCurrent(!showCurrent)}
-                    className="absolute right-3 top-2.5 text-[#5C6B80] hover:text-[#2D3A4E]"
+                    className="absolute right-3 top-2.5 text-[#4E5C70] hover:text-[#2D3A4E]"
+                    aria-label={showCurrent ? 'Скрыть пароль' : 'Показать пароль'}
                   >
                     {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -469,12 +471,13 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
                     placeholder="Новый пароль (от 6 символов)"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full py-2.5 pl-3.5 pr-10 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder-[#5C6B80]/60 outline-none"
+                    className="w-full py-2.5 pl-3.5 pr-10 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowNew(!showNew)}
-                    className="absolute right-3 top-2.5 text-[#5C6B80] hover:text-[#2D3A4E]"
+                    className="absolute right-3 top-2.5 text-[#4E5C70] hover:text-[#2D3A4E]"
+                    aria-label={showNew ? 'Скрыть пароль' : 'Показать пароль'}
                   >
                     {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -485,14 +488,14 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
                   placeholder="Повторите новый пароль"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full py-2.5 px-3.5 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder-[#5C6B80]/60 outline-none"
+                  className="w-full py-2.5 px-3.5 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
                 />
 
                 <div className="flex items-center gap-2 pt-1">
                   <button
                     type="submit"
                     disabled={isChangingPassword}
-                    className="flex-1 py-2.5 rounded-xl neu-button text-xs font-extrabold text-[#5F6ED0] hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+                    className="flex-1 py-2.5 rounded-xl neu-button text-xs font-extrabold text-[#4B59BB] hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
                   >
                     {isChangingPassword ? 'Обновление и сброс сессий...' : 'Сохранить новый пароль'}
                   </button>
@@ -502,15 +505,16 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
                       type="button"
                       onClick={handleSendResetEmail}
                       disabled={isSendingResetEmail}
-                      className="px-3 py-2.5 rounded-xl neu-button text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] active:scale-[0.98] transition-all cursor-pointer shrink-0"
+                      className="px-3 py-2.5 rounded-xl neu-button text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] active:scale-[0.98] transition-all cursor-pointer shrink-0"
                       title="Отправить ссылку сброса на email"
+                      aria-label="Отправить ссылку сброса на email"
                     >
                       <RefreshCw className={`w-3.5 h-3.5 ${isSendingResetEmail ? 'animate-spin' : ''}`} />
                     </button>
                   )}
                 </div>
 
-                <div className="flex items-center gap-1.5 text-[10px] text-[#5C6B80] px-1">
+                <div className="flex items-center gap-1.5 text-[11px] text-[#4E5C70] px-1">
                   <AlertTriangle className="w-3 h-3 text-warning shrink-0" />
                   <span>При смене пароля все остальные устройства будут принудительно отключены.</span>
                 </div>
@@ -519,17 +523,17 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
               /* --- EMAIL CHANGE FORM --- */
               <form onSubmit={handleEmailSubmit} className="space-y-2.5">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-[#5C6B80] uppercase tracking-wider block">
+                  <label className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider block">
                     Текущий адрес
                   </label>
                   <div className="py-2 px-3 rounded-xl neu-inset text-xs text-[#2D3A4E] font-mono bg-[#E3E8EF] flex items-center justify-between">
                     <span>{userEmail || 'Не указан'}</span>
-                    <span className="text-[10px] text-success font-bold">Активен</span>
+                    <span className="text-[11px] text-success font-bold">Активен</span>
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-[#5C6B80] uppercase tracking-wider block">
+                  <label className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider block">
                     Новый Email адрес
                   </label>
                   <div className="relative">
@@ -538,21 +542,21 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
                       placeholder="name@example.com"
                       value={newEmailInput}
                       onChange={(e) => setNewEmailInput(e.target.value)}
-                      className="w-full py-2.5 pl-3.5 pr-10 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder-[#5C6B80]/60 outline-none"
+                      className="w-full py-2.5 pl-3.5 pr-10 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
                     />
-                    <Mail className="w-4 h-4 text-[#5C6B80] absolute right-3 top-2.5" />
+                    <Mail className="w-4 h-4 text-[#4E5C70] absolute right-3 top-2.5" />
                   </div>
                 </div>
 
                 <button
                   type="submit"
                   disabled={isUpdatingEmail}
-                  className="w-full py-2.5 rounded-xl neu-button text-xs font-extrabold text-[#5F6ED0] hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50 mt-1"
+                  className="w-full py-2.5 rounded-xl neu-button text-xs font-extrabold text-[#4B59BB] hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50 mt-1"
                 >
                   {isUpdatingEmail ? 'Обновление email и сессий...' : 'Подтвердить смену Email'}
                 </button>
 
-                <div className="flex items-center gap-1.5 text-[10px] text-[#5C6B80] px-1">
+                <div className="flex items-center gap-1.5 text-[11px] text-[#4E5C70] px-1">
                   <AlertTriangle className="w-3 h-3 text-warning shrink-0" />
                   <span>При смене email все активные сеансы на сторонних устройствах автоматически завершаются.</span>
                 </div>
@@ -564,12 +568,12 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
           <div className="neu-flat rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Laptop className="w-4 h-4 text-[#5F6ED0]" />
+                <Laptop className="w-4 h-4 text-[#4B59BB]" />
                 <h4 className="text-xs font-bold text-[#2D3A4E] uppercase tracking-wider">
                   Активные сеансы
                 </h4>
               </div>
-              <span className="text-[10px] font-bold text-success neu-inset px-2.5 py-0.5 rounded-full">
+              <span className="text-[11px] font-bold text-success neu-inset px-2.5 py-0.5 rounded-full">
                 1 сессия активна
               </span>
             </div>
@@ -579,19 +583,19 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
                 <div className="w-2.5 h-2.5 rounded-full bg-success animate-pulse shrink-0" />
                 <div>
                   <p className="font-bold text-[#2D3A4E]">Текущее устройство (Браузер)</p>
-                  <p className="text-[10px] text-[#5C6B80]">
+                  <p className="text-[11px] text-[#4E5C70]">
                     Москва, РФ • {sessionsRevokedAt ? `Сеансы обновлены в ${sessionsRevokedAt}` : 'Сеанс активен прямо сейчас'}
                   </p>
                 </div>
               </div>
-              <span className="text-[10px] font-extrabold text-[#5F6ED0] uppercase tracking-wider">
+              <span className="text-[11px] font-extrabold text-[#4B59BB] uppercase tracking-wider">
                 Онлайн
               </span>
             </div>
 
             {lastSecurityEvent && (
-              <div className="flex items-center gap-2 text-[10px] text-[#5C6B80] px-1">
-                <History className="w-3.5 h-3.5 text-[#5F6ED0] shrink-0" />
+              <div className="flex items-center gap-2 text-[11px] text-[#4E5C70] px-1">
+                <History className="w-3.5 h-3.5 text-[#4B59BB] shrink-0" />
                 <span className="truncate">{lastSecurityEvent}</span>
               </div>
             )}
@@ -609,16 +613,16 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
           {/* Section 4: Privacy & Compliance 152-FZ */}
           <div className="p-3.5 neu-inset rounded-2xl flex items-center justify-between gap-3 text-xs bg-[#BAC5D5]/15">
             <div className="flex items-center gap-2 min-w-0">
-              <FileCheck className="w-4 h-4 text-[#5F6ED0] shrink-0" />
+              <FileCheck className="w-4 h-4 text-[#4B59BB] shrink-0" />
               <div className="min-w-0">
                 <p className="font-bold text-[#2D3A4E] truncate">Соответствие 152-ФЗ РФ</p>
-                <p className="text-[10px] text-[#5C6B80]">Выгрузка копии данных и аудит-логов</p>
+                <p className="text-[11px] text-[#4E5C70]">Выгрузка копии данных и аудит-логов</p>
               </div>
             </div>
             <button
               type="button"
               onClick={handleExportData}
-              className="neu-button px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-[#5F6ED0] flex items-center gap-1 shrink-0 active:scale-95 cursor-pointer hover:scale-105 transition-transform"
+              className="neu-button px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-[#4B59BB] flex items-center gap-1 shrink-0 active:scale-95 cursor-pointer hover:scale-105 transition-transform"
             >
               <Download className="w-3 h-3" />
               <span>Экспорт</span>

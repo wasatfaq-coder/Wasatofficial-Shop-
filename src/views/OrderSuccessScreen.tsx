@@ -34,7 +34,7 @@ export const OrderSuccessScreen: React.FC<OrderSuccessScreenProps> = ({
         <h2 className="text-2xl font-black text-[#2D3A4E] tracking-tight">
           Заказ № {orderId}
         </h2>
-        <p className="text-xs text-[#5C6B80] max-w-xs mx-auto leading-relaxed font-medium">
+        <p className="text-xs text-[#4E5C70] max-w-xs mx-auto leading-relaxed font-medium">
           Спасибо за выбор ManStyle! Мы уже начали сборку и передачу вашего заказа в доставку.
         </p>
       </div>
@@ -42,12 +42,12 @@ export const OrderSuccessScreen: React.FC<OrderSuccessScreenProps> = ({
       {/* Order Info Card with active status tracking box */}
       <div className="neu-flat rounded-3xl p-5 text-left space-y-3 border border-white/80">
         <div className="flex items-center gap-3 p-3 rounded-2xl neu-inset-deep neu-inset-deep-animated border border-[#5F6ED0]/40 bg-[#E3E8EF]">
-          <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-[#5F6ED0] shrink-0">
+          <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-[#4B59BB] shrink-0">
             <Package className="w-5 h-5 stroke-[2.2]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] text-[#5C6B80] font-medium">Текущий статус</p>
-            <p className="text-xs font-black text-[#5F6ED0] flex items-center gap-1.5">
+            <p className="text-[11px] text-[#4E5C70] font-medium">Текущий статус</p>
+            <p className="text-xs font-black text-[#4B59BB] flex items-center gap-1.5">
               <span>Принят в обработку</span>
               <span className="w-1.5 h-1.5 rounded-full bg-[#5F6ED0] animate-pulse" />
             </p>
@@ -56,15 +56,15 @@ export const OrderSuccessScreen: React.FC<OrderSuccessScreenProps> = ({
 
         <div className="space-y-2 text-xs pt-1">
           <div className="flex justify-between">
-            <span className="text-[#5C6B80]">Сумма заказа:</span>
+            <span className="text-[#4E5C70]">Сумма заказа:</span>
             <span className="font-bold text-[#2D3A4E]">{totalPrice.toLocaleString('ru-RU')} ₽</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-[#5C6B80]">Доставка:</span>
+            <span className="text-[#4E5C70]">Доставка:</span>
             <span className="font-bold text-[#2D3A4E]">{deliveryMethod}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-[#5C6B80]">Адрес:</span>
+            <span className="text-[#4E5C70]">Адрес:</span>
             <span className="font-bold text-[#2D3A4E] truncate max-w-[180px]">{deliveryAddress}</span>
           </div>
         </div>
@@ -80,7 +80,7 @@ export const OrderSuccessScreen: React.FC<OrderSuccessScreenProps> = ({
 
         <button
           onClick={() => setActiveTab('home')}
-          className="w-full neu-button rounded-2xl py-3 font-bold text-xs text-[#5C6B80] hover:text-[#2D3A4E] flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] transition-all"
+          className="w-full neu-button rounded-2xl py-3 font-bold text-xs text-[#4E5C70] hover:text-[#2D3A4E] flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] transition-all"
         >
           <Home className="w-4 h-4" />
           <span>Вернуться на главную</span>

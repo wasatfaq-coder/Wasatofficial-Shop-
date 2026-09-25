@@ -88,11 +88,12 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
               <div className="flex items-center justify-between pb-4 border-b border-[#BAC5D5]/60 shrink-0">
                 <div>
                   <h2 className="text-xl font-black text-[#2D3A4E] tracking-tight">{storeName}</h2>
-                  <p className="text-[11px] text-[#5C6B80] font-semibold line-clamp-1">{storeSlogan}</p>
+                  <p className="text-[11px] text-[#4E5C70] font-semibold line-clamp-1">{storeSlogan}</p>
                 </div>
                 <button
                   onClick={onClose}
-                  className="w-10 h-10 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-[#5F6ED0] cursor-pointer"
+                  className="w-10 h-10 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-[#4B59BB] cursor-pointer"
+                  aria-label="Закрыть"
                 >
               <X className="w-5 h-5 stroke-[2]" />
             </button>
@@ -105,18 +106,18 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
               className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer active:scale-[0.98] group ${
                 activeTab === 'home'
                   ? 'neu-pill-active font-bold'
-                  : 'neu-button text-[#2D3A4E] hover:text-[#5F6ED0]'
+                  : 'neu-button text-[#2D3A4E] hover:text-[#4B59BB]'
               }`}
             >
               <div className="flex items-center gap-3">
-                <Home className="w-5 h-5 text-[#5F6ED0] group-hover:scale-105 transition-transform" />
-                <span className="group-hover:text-[#5F6ED0] transition-colors">Главная</span>
+                <Home className="w-5 h-5 text-[#4B59BB] group-hover:scale-105 transition-transform" />
+                <span className="group-hover:text-[#4B59BB] transition-colors">Главная</span>
               </div>
               <ChevronRight
                 className={`w-4 h-4 transition-colors ${
                   activeTab === 'home'
-                    ? 'text-[#5F6ED0]'
-                    : 'text-[#5C6B80] group-hover:text-[#5F6ED0]'
+                    ? 'text-[#4B59BB]'
+                    : 'text-[#4E5C70] group-hover:text-[#4B59BB]'
                 }`}
               />
             </button>
@@ -126,18 +127,18 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
               className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer active:scale-[0.98] group ${
                 activeTab === 'catalog'
                   ? 'neu-pill-active font-bold'
-                  : 'neu-button text-[#2D3A4E] hover:text-[#5F6ED0]'
+                  : 'neu-button text-[#2D3A4E] hover:text-[#4B59BB]'
               }`}
             >
               <div className="flex items-center gap-3">
-                <Grid className="w-5 h-5 text-[#5F6ED0] group-hover:scale-105 transition-transform" />
-                <span className="group-hover:text-[#5F6ED0] transition-colors">Каталог товаров</span>
+                <Grid className="w-5 h-5 text-[#4B59BB] group-hover:scale-105 transition-transform" />
+                <span className="group-hover:text-[#4B59BB] transition-colors">Каталог товаров</span>
               </div>
               <ChevronRight
                 className={`w-4 h-4 transition-colors ${
                   activeTab === 'catalog'
-                    ? 'text-[#5F6ED0]'
-                    : 'text-[#5C6B80] group-hover:text-[#5F6ED0]'
+                    ? 'text-[#4B59BB]'
+                    : 'text-[#4E5C70] group-hover:text-[#4B59BB]'
                 }`}
               />
             </button>
@@ -147,15 +148,15 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                 onClose();
                 if (onOpenFilters) onOpenFilters();
               }}
-              className="neu-inset bg-[#E3E8EF] rounded-2xl p-3 px-4 flex items-center justify-between text-[#2D3A4E] font-medium hover:text-[#5F6ED0] transition-all cursor-pointer active:scale-[0.98] group"
+              className="neu-inset bg-[#E3E8EF] rounded-2xl p-3 px-4 flex items-center justify-between text-[#2D3A4E] font-medium hover:text-[#4B59BB] transition-all cursor-pointer active:scale-[0.98] group"
             >
               <div className="flex items-center gap-3">
-                <SlidersHorizontal className="w-5 h-5 text-[#5F6ED0] stroke-[2] group-hover:scale-105 transition-transform" />
-                <span className="font-bold text-[#2D3A4E] group-hover:text-[#5F6ED0] transition-colors">
+                <SlidersHorizontal className="w-5 h-5 text-[#4B59BB] stroke-[2] group-hover:scale-105 transition-transform" />
+                <span className="font-bold text-[#2D3A4E] group-hover:text-[#4B59BB] transition-colors">
                   Фильтры товаров
                 </span>
               </div>
-              <span className="neu-inset-deep text-[#5F6ED0] text-[10px] px-2.5 py-0.5 rounded-full font-extrabold uppercase tracking-wide border border-[#5F6ED0]/30">
+              <span className="neu-inset-deep text-[#4B59BB] text-[11px] px-2.5 py-0.5 rounded-full font-extrabold uppercase tracking-wide border border-[#5F6ED0]/30">
                 Поиск
               </span>
             </button>
@@ -165,15 +166,15 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                 onClose();
                 if (onOpenMySizes) onOpenMySizes();
               }}
-              className="neu-inset bg-[#E3E8EF] rounded-2xl p-3 px-4 flex items-center justify-between text-[#2D3A4E] font-medium hover:text-[#5F6ED0] transition-all cursor-pointer active:scale-[0.98] group"
+              className="neu-inset bg-[#E3E8EF] rounded-2xl p-3 px-4 flex items-center justify-between text-[#2D3A4E] font-medium hover:text-[#4B59BB] transition-all cursor-pointer active:scale-[0.98] group"
             >
               <div className="flex items-center gap-3">
-                <Ruler className="w-5 h-5 text-[#5F6ED0] stroke-[2] group-hover:scale-105 transition-transform" />
-                <span className="font-bold text-[#2D3A4E] group-hover:text-[#5F6ED0] transition-colors">
+                <Ruler className="w-5 h-5 text-[#4B59BB] stroke-[2] group-hover:scale-105 transition-transform" />
+                <span className="font-bold text-[#2D3A4E] group-hover:text-[#4B59BB] transition-colors">
                   Мои размеры
                 </span>
               </div>
-              <span className="neu-fill-accent text-white text-[10px] px-2.5 py-0.5 rounded-full font-extrabold uppercase tracking-wide">
+              <span className="neu-fill-accent text-white text-[11px] px-2.5 py-0.5 rounded-full font-extrabold uppercase tracking-wide">
                 Подбор
               </span>
             </button>
@@ -183,12 +184,12 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
               className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer active:scale-[0.98] group ${
                 activeTab === 'cart'
                   ? 'neu-pill-active font-bold'
-                  : 'neu-button text-[#2D3A4E] hover:text-[#5F6ED0]'
+                  : 'neu-button text-[#2D3A4E] hover:text-[#4B59BB]'
               }`}
             >
               <div className="flex items-center gap-3">
-                <ShoppingBag className="w-5 h-5 text-[#5F6ED0] group-hover:scale-105 transition-transform" />
-                <span className="group-hover:text-[#5F6ED0] transition-colors">Корзина</span>
+                <ShoppingBag className="w-5 h-5 text-[#4B59BB] group-hover:scale-105 transition-transform" />
+                <span className="group-hover:text-[#4B59BB] transition-colors">Корзина</span>
               </div>
               {cartCount > 0 ? (
                 <span className="neu-fill-accent text-white text-xs px-2 py-0.5 rounded-full font-bold">
@@ -198,8 +199,8 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                 <ChevronRight
                   className={`w-4 h-4 transition-colors ${
                     activeTab === 'cart'
-                      ? 'text-[#5F6ED0]'
-                      : 'text-[#5C6B80] group-hover:text-[#5F6ED0]'
+                      ? 'text-[#4B59BB]'
+                      : 'text-[#4E5C70] group-hover:text-[#4B59BB]'
                   }`}
                 />
               )}
@@ -210,12 +211,12 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
               className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer active:scale-[0.98] group ${
                 activeTab === 'favorites'
                   ? 'neu-pill-active font-bold'
-                  : 'neu-button text-[#2D3A4E] hover:text-[#5F6ED0]'
+                  : 'neu-button text-[#2D3A4E] hover:text-[#4B59BB]'
               }`}
             >
               <div className="flex items-center gap-3">
                 <Heart className="w-5 h-5 text-danger group-hover:scale-105 transition-transform" />
-                <span className="group-hover:text-[#5F6ED0] transition-colors">Избранное</span>
+                <span className="group-hover:text-[#4B59BB] transition-colors">Избранное</span>
               </div>
               {favoritesCount > 0 ? (
                 <span className="bg-danger text-white text-xs px-2 py-0.5 rounded-full font-bold shadow-xs">
@@ -225,8 +226,8 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                 <ChevronRight
                   className={`w-4 h-4 transition-colors ${
                     activeTab === 'favorites'
-                      ? 'text-[#5F6ED0]'
-                      : 'text-[#5C6B80] group-hover:text-[#5F6ED0]'
+                      ? 'text-[#4B59BB]'
+                      : 'text-[#4E5C70] group-hover:text-[#4B59BB]'
                   }`}
                 />
               )}
@@ -237,20 +238,20 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
               className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer active:scale-[0.98] group ${
                 activeTab === 'profile'
                   ? 'neu-pill-active font-bold'
-                  : 'neu-button text-[#2D3A4E] hover:text-[#5F6ED0]'
+                  : 'neu-button text-[#2D3A4E] hover:text-[#4B59BB]'
               }`}
             >
               <div className="flex items-center gap-3">
-                <User className="w-5 h-5 text-[#5F6ED0] group-hover:scale-105 transition-transform" />
-                <span className="group-hover:text-[#5F6ED0] transition-colors">
+                <User className="w-5 h-5 text-[#4B59BB] group-hover:scale-105 transition-transform" />
+                <span className="group-hover:text-[#4B59BB] transition-colors">
                   Профиль
                 </span>
               </div>
               <ChevronRight
                 className={`w-4 h-4 transition-colors ${
                   activeTab === 'profile'
-                    ? 'text-[#5F6ED0]'
-                    : 'text-[#5C6B80] group-hover:text-[#5F6ED0]'
+                    ? 'text-[#4B59BB]'
+                    : 'text-[#4E5C70] group-hover:text-[#4B59BB]'
                 }`}
               />
             </button>
@@ -262,20 +263,20 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                 onClose();
                 if (onOpenBrandDetails) onOpenBrandDetails();
               }}
-              className="neu-inset bg-[#E3E8EF] rounded-2xl p-3 px-4 flex items-center justify-between text-[#2D3A4E] font-medium hover:text-[#5F6ED0] transition-all cursor-pointer active:scale-[0.98] group"
+              className="neu-inset bg-[#E3E8EF] rounded-2xl p-3 px-4 flex items-center justify-between text-[#2D3A4E] font-medium hover:text-[#4B59BB] transition-all cursor-pointer active:scale-[0.98] group"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <Building2 className="w-5 h-5 text-[#5F6ED0] stroke-[2] shrink-0 group-hover:scale-105 transition-transform" />
+                <Building2 className="w-5 h-5 text-[#4B59BB] stroke-[2] shrink-0 group-hover:scale-105 transition-transform" />
                 <div className="text-left min-w-0">
-                  <span className="font-bold text-[#2D3A4E] block text-sm leading-tight truncate group-hover:text-[#5F6ED0] transition-colors">
+                  <span className="font-bold text-[#2D3A4E] block text-sm leading-tight truncate group-hover:text-[#4B59BB] transition-colors">
                     Бренд & Реквизиты
                   </span>
-                  <span className="text-[10px] text-[#5C6B80] block font-semibold truncate">
+                  <span className="text-[11px] text-[#4E5C70] block font-semibold truncate">
                     Контакты консьерж-сервиса
                   </span>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-[#5C6B80] group-hover:text-[#5F6ED0] transition-colors shrink-0" />
+              <ChevronRight className="w-4 h-4 text-[#4E5C70] group-hover:text-[#4B59BB] transition-colors shrink-0" />
             </button>
           </nav>
         </div>
@@ -290,18 +291,18 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
             className="w-full neu-inset bg-[#E3E8EF] rounded-2xl p-3 px-3.5 flex items-center justify-between text-left transition-all group cursor-pointer active:scale-[0.98]"
           >
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center shrink-0 text-[#5F6ED0]">
+              <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center shrink-0 text-[#4B59BB]">
                 <Headphones className="w-4.5 h-4.5 stroke-[2.2]" />
               </div>
               <div>
-                <p className="text-xs font-bold text-[#2D3A4E] flex items-center gap-1.5 group-hover:text-[#5F6ED0] transition-colors">
+                <p className="text-xs font-bold text-[#2D3A4E] flex items-center gap-1.5 group-hover:text-[#4B59BB] transition-colors">
                   <span>Поддержка 24/7</span>
                   <span className="w-2 h-2 rounded-full bg-success inline-block animate-pulse" />
                 </p>
-                <p className="text-[11px] text-[#5C6B80] font-medium">Онлайн-чат с консьержем</p>
+                <p className="text-[11px] text-[#4E5C70] font-medium">Онлайн-чат с консьержем</p>
               </div>
             </div>
-            <MessageSquare className="w-4 h-4 text-[#5C6B80] group-hover:text-[#5F6ED0] transition-colors shrink-0" />
+            <MessageSquare className="w-4 h-4 text-[#4E5C70] group-hover:text-[#4B59BB] transition-colors shrink-0" />
           </button>
 
           <button
@@ -313,10 +314,10 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
             className="w-full text-center py-1 px-2 rounded-xl hover:bg-[#BAC5D5]/20 transition-all cursor-pointer space-y-0.5 block"
             title="Открыть реквизиты, информацию о бренде и контакты"
           >
-            <p className="text-[11px] text-[#5C6B80] font-bold hover:text-[#5F6ED0] transition-colors">
+            <p className="text-[11px] text-[#4E5C70] font-bold hover:text-[#4B59BB] transition-colors">
               {phone ? `${storeName} • ${phone}` : storeName}
             </p>
-            <p className="text-[10px] text-[#5C6B80]/80">Реквизиты • О бренде • Контакты</p>
+            <p className="text-[11px] text-[#4E5C70]/80">Реквизиты • О бренде • Контакты</p>
           </button>
         </div>
       </motion.div>

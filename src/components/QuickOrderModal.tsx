@@ -138,17 +138,18 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
             {/* Header */}
             <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-[#5F6ED0]">
-                  <ShoppingBag className="w-4 h-4 text-[#5F6ED0]" />
+                <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-[#4B59BB]">
+                  <ShoppingBag className="w-4 h-4 text-[#4B59BB]" />
                 </div>
                 <div>
                   <h3 className="text-sm font-extrabold text-[#2D3A4E]">Быстрый заказ в 1 клик</h3>
-                  <p className="text-[10px] text-[#5C6B80]">Менеджер перезвонит для подтверждения</p>
+                  <p className="text-[11px] text-[#4E5C70]">Менеджер перезвонит для подтверждения</p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer"
+                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                aria-label="Закрыть"
               >
                 <X className="w-4 h-4 stroke-[2.5]" />
               </button>
@@ -167,11 +168,11 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   />
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-[#2D3A4E] truncate">{item.title}</p>
-                    <p className="text-[10px] text-[#5C6B80]">{item.variant}</p>
+                    <p className="text-[11px] text-[#4E5C70]">{item.variant}</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="font-extrabold text-[#5F6ED0]">{item.price.toLocaleString('ru-RU')} ₽</p>
-                    <p className="text-[10px] text-[#5C6B80]">{item.qty} шт.</p>
+                    <p className="font-extrabold text-[#4B59BB]">{item.price.toLocaleString('ru-RU')} ₽</p>
+                    <p className="text-[11px] text-[#4E5C70]">{item.qty} шт.</p>
                   </div>
                 </div>
               ))}
@@ -179,7 +180,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
 
             {/* Price Preview */}
             <div className="neu-flat rounded-2xl p-3 bg-[#E3E8EF] flex items-center justify-between">
-              <span className="text-xs font-bold text-[#5C6B80]">Итого к оплате:</span>
+              <span className="text-xs font-bold text-[#4E5C70]">Итого к оплате:</span>
               <span className="text-base font-extrabold text-[#2D3A4E]">
                 {totalPrice.toLocaleString('ru-RU')} ₽
               </span>
@@ -197,7 +198,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
             <form onSubmit={handleSubmit} className="space-y-3">
               <div className="space-y-1">
                 <label className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                  <User className="w-3.5 h-3.5 text-[#4B59BB]" />
                   <span>Ваше имя *</span>
                 </label>
                 <input
@@ -206,13 +207,13 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   placeholder="Иван"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#5C6B80]/70 focus:outline-none bg-[#E3E8EF]"
+                  className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
                 />
               </div>
 
               <div className="space-y-1">
                 <label className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                  <Phone className="w-3.5 h-3.5 text-[#4B59BB]" />
                   <span>Номер телефона *</span>
                 </label>
                 <input
@@ -221,13 +222,13 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   placeholder="+7 (999) 000-00-00"
                   value={phone}
                   onChange={handlePhoneChange}
-                  className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#5C6B80]/70 focus:outline-none bg-[#E3E8EF]"
+                  className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
                 />
               </div>
 
               <div className="space-y-1">
                 <label className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                  <MapPin className="w-3.5 h-3.5 text-[#4B59BB]" />
                   <span>Город и улица доставки</span>
                 </label>
                 <input
@@ -235,14 +236,14 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   placeholder="Москва, ул. Тверская"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#5C6B80]/70 focus:outline-none bg-[#E3E8EF]"
+                  className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
                 />
               </div>
 
               {/* Дополнительные поля: Номер дома, Подъезд, Квартира/Офис, Домофон */}
               <div className="grid grid-cols-4 gap-2 text-[11px]">
                 <div>
-                  <label className="text-[10px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
+                  <label className="text-[11px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
                     Дом <span className="text-danger">*</span>
                   </label>
                   <input
@@ -255,13 +256,13 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                         setErrors(prev => ({ ...prev, house: undefined, general: undefined }));
                       }
                     }}
-                    className={`w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#5C6B80]/60 focus:outline-none bg-[#E3E8EF] transition-all ${
+                    className={`w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF] transition-all ${
                       errors.house ? 'ring-2 ring-danger/50 bg-danger-soft' : ''
                     }`}
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
+                  <label className="text-[11px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
                     Подъезд <span className="text-danger">*</span>
                   </label>
                   <input
@@ -274,13 +275,13 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                         setErrors(prev => ({ ...prev, entrance: undefined, general: undefined }));
                       }
                     }}
-                    className={`w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#5C6B80]/60 focus:outline-none bg-[#E3E8EF] transition-all ${
+                    className={`w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF] transition-all ${
                       errors.entrance ? 'ring-2 ring-danger/50 bg-danger-soft' : ''
                     }`}
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
+                  <label className="text-[11px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
                     Кв./Офис
                   </label>
                   <input
@@ -288,11 +289,11 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                     placeholder="25"
                     value={apartment}
                     onChange={(e) => setApartment(e.target.value)}
-                    className="w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#5C6B80]/60 focus:outline-none bg-[#E3E8EF]"
+                    className="w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
+                  <label className="text-[11px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
                     Домофон <span className="text-danger">*</span>
                   </label>
                   <input
@@ -305,7 +306,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                         setErrors(prev => ({ ...prev, intercom: undefined, general: undefined }));
                       }
                     }}
-                    className={`w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#5C6B80]/60 focus:outline-none bg-[#E3E8EF] transition-all ${
+                    className={`w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF] transition-all ${
                       errors.intercom ? 'ring-2 ring-danger/50 bg-danger-soft' : ''
                     }`}
                   />
@@ -313,7 +314,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
               </div>
 
               {/* Guarantee Badge */}
-              <div className="p-2 rounded-xl neu-flat bg-[#E3E8EF] flex items-center gap-2 text-[10px] text-success font-semibold">
+              <div className="p-2 rounded-xl neu-flat bg-[#E3E8EF] flex items-center gap-2 text-[11px] text-success font-semibold">
                 <ShieldCheck className="w-4 h-4 text-success shrink-0" />
                 <span>Оплата при получении после примерки. Бесплатный возврат.</span>
               </div>
@@ -323,7 +324,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer"
+                  className="py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
                 >
                   Отмена
                 </button>
@@ -332,7 +333,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   disabled={isSubmitting || !name.trim() || phone.length < 11}
                   className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black cursor-pointer transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 btn-confirm-order ${
                     isSubmitting
-                      ? 'neu-inset-deep neu-inset-deep-animated text-[#5F6ED0] bg-[#E3E8EF] ring-2 ring-[#5F6ED0]/40'
+                      ? 'neu-inset-deep neu-inset-deep-animated text-[#4B59BB] bg-[#E3E8EF] ring-2 ring-[#5F6ED0]/40'
                       : 'neu-button-accent text-white hover:scale-102 active:neu-inset-deep active:scale-98'
                   }`}
                 >

@@ -145,7 +145,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
             {/* Header */}
             <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/60">
               <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-[#5F6ED0]" />
+                <MapPin className="w-5 h-5 text-[#4B59BB]" />
                 <h3 className="text-base font-extrabold text-[#2D3A4E]">
                   {editingAddress ? 'Редактировать адрес' : 'Новый адрес доставки'}
                 </h3>
@@ -153,7 +153,8 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-colors cursor-pointer"
+                aria-label="Закрыть"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -182,7 +183,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Дом, Работа, Студия"
-                  className="w-full neu-inset rounded-2xl py-2.5 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#5C6B80]/70 focus:outline-none bg-[#E3E8EF]"
+                  className="w-full neu-inset rounded-2xl py-2.5 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
                 />
               </div>
 
@@ -198,7 +199,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
                     placeholder="Москва"
-                    className="w-full neu-inset rounded-2xl py-2.5 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#5C6B80]/70 focus:outline-none bg-[#E3E8EF]"
+                    className="w-full neu-inset rounded-2xl py-2.5 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
                   />
                 </div>
                 <div>
@@ -210,7 +211,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                     value={postalCode}
                     onChange={(e) => setPostalCode(e.target.value)}
                     placeholder="101000"
-                    className="w-full neu-inset rounded-2xl py-2.5 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#5C6B80]/70 focus:outline-none bg-[#E3E8EF]"
+                    className="w-full neu-inset rounded-2xl py-2.5 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
                   />
                 </div>
               </div>
@@ -226,7 +227,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                   value={street}
                   onChange={(e) => setStreet(e.target.value)}
                   placeholder="ул. Тверская, Ленинский проспект"
-                  className="w-full neu-inset rounded-2xl py-2.5 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#5C6B80]/70 focus:outline-none bg-[#E3E8EF]"
+                  className="w-full neu-inset rounded-2xl py-2.5 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
                 />
               </div>
 
@@ -246,12 +247,12 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                       }
                     }}
                     placeholder="д. 10 / 12к1"
-                    className={`w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#5C6B80]/70 focus:outline-none bg-[#E3E8EF] transition-all ${
+                    className={`w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF] transition-all ${
                       errors.house ? 'ring-2 ring-danger/70 bg-danger-soft' : ''
                     }`}
                   />
                   {errors.house && (
-                    <p className="text-[10px] text-danger font-medium mt-1 leading-tight">
+                    <p className="text-[11px] text-danger font-medium mt-1 leading-tight">
                       {errors.house}
                     </p>
                   )}
@@ -270,12 +271,12 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                       }
                     }}
                     placeholder="2"
-                    className={`w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#5C6B80]/70 focus:outline-none bg-[#E3E8EF] transition-all ${
+                    className={`w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF] transition-all ${
                       errors.entrance ? 'ring-2 ring-danger/70 bg-danger-soft' : ''
                     }`}
                   />
                   {errors.entrance && (
-                    <p className="text-[10px] text-danger font-medium mt-1 leading-tight">
+                    <p className="text-[11px] text-danger font-medium mt-1 leading-tight">
                       {errors.entrance}
                     </p>
                   )}
@@ -289,7 +290,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                     value={floor}
                     onChange={(e) => setFloor(e.target.value)}
                     placeholder="4"
-                    className="w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#5C6B80]/70 focus:outline-none bg-[#E3E8EF]"
+                    className="w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
                   />
                 </div>
               </div>
@@ -305,7 +306,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                     value={apartment}
                     onChange={(e) => setApartment(e.target.value)}
                     placeholder="кв. 25 / офис 14"
-                    className="w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#5C6B80]/70 focus:outline-none bg-[#E3E8EF]"
+                    className="w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
                   />
                 </div>
                 <div>
@@ -322,12 +323,12 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                       }
                     }}
                     placeholder="25K / #1234"
-                    className={`w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#5C6B80]/70 focus:outline-none bg-[#E3E8EF] transition-all ${
+                    className={`w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF] transition-all ${
                       errors.intercom ? 'ring-2 ring-danger/70 bg-danger-soft' : ''
                     }`}
                   />
                   {errors.intercom && (
-                    <p className="text-[10px] text-danger font-medium mt-1 leading-tight">
+                    <p className="text-[11px] text-danger font-medium mt-1 leading-tight">
                       {errors.intercom}
                     </p>
                   )}
@@ -336,7 +337,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
 
               {/* Live Preview Box for Delivery */}
               <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-1">
-                <span className="text-[10px] font-bold text-[#5C6B80] uppercase tracking-wider block">
+                <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider block">
                   Адрес в накладной для курьера:
                 </span>
                 <p className="text-xs font-bold text-[#2D3A4E] leading-relaxed break-words">
@@ -358,7 +359,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                 >
                   <Check className="w-3.5 h-3.5 stroke-[3]" />
                 </div>
-                <span className="font-bold text-xs text-[#2D3A4E] group-hover:text-[#5F6ED0] transition-colors">
+                <span className="font-bold text-xs text-[#2D3A4E] group-hover:text-[#4B59BB] transition-colors">
                   Сделать основным адресом
                 </span>
               </div>
@@ -368,7 +369,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 py-3.5 neu-button rounded-2xl text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] transition-colors cursor-pointer"
+                  className="flex-1 py-3.5 neu-button rounded-2xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] transition-colors cursor-pointer"
                 >
                   Отмена
                 </button>

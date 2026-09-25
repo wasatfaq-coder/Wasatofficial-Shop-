@@ -68,7 +68,7 @@ const STATUS_CONFIG: Record<
   accepted: {
     label: 'Принят',
     bg: 'bg-indigo-50 border-indigo-200',
-    text: 'text-[#5F6ED0]',
+    text: 'text-[#4B59BB]',
     icon: Clock,
     nextStatus: 'assembling',
     nextLabel: 'В сборку',
@@ -214,7 +214,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
   // Date filter options for Neumorphic dropdown
   const dateFilterOptions = useMemo(() => [
-    { value: 'all', label: 'Все время', icon: <Calendar className="w-3.5 h-3.5 text-[#5F6ED0]" /> },
+    { value: 'all', label: 'Все время', icon: <Calendar className="w-3.5 h-3.5 text-[#4B59BB]" /> },
     { value: 'today', label: 'Сегодня' },
     { value: 'yesterday', label: 'Вчера' },
     { value: '7days', label: 'Последние 7 дней' },
@@ -227,7 +227,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       value: 'all',
       label: 'Все статусы',
       badge: `${orders.length}`,
-      icon: <Layers className="w-3.5 h-3.5 text-[#5F6ED0]" />,
+      icon: <Layers className="w-3.5 h-3.5 text-[#4B59BB]" />,
     },
     {
       value: 'accepted',
@@ -710,10 +710,10 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
         <div>
           <h3 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
-            <Package className="w-4 h-4 text-[#5F6ED0]" />
+            <Package className="w-4 h-4 text-[#4B59BB]" />
             Управление клиентскими заказами & Логистика
           </h3>
-          <p className="text-[11px] text-[#5C6B80]">
+          <p className="text-[11px] text-[#4E5C70]">
             Синхронизация списания/возврата склада, трек-номера СДЭК/Почта и статусы оплаты
           </p>
         </div>
@@ -721,16 +721,16 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={() => exportOrdersToCSV(filteredOrders)}
-            className="py-1.5 px-3 neu-inset rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#5F6ED0] flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+            className="py-1.5 px-3 neu-inset rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#4B59BB] flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
             title="Экспортировать отфильтрованные заказы в CSV"
           >
-            <Download className="w-3.5 h-3.5 text-[#5F6ED0]" />
+            <Download className="w-3.5 h-3.5 text-[#4B59BB]" />
             <span>Экспорт в CSV</span>
           </button>
 
           <button
             onClick={() => onShowToast('Список заказов актуализирован', 'info')}
-            className="py-1.5 px-3 neu-inset rounded-xl text-xs font-bold text-[#5F6ED0] flex items-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95 transition-transform"
+            className="py-1.5 px-3 neu-inset rounded-xl text-xs font-bold text-[#4B59BB] flex items-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95 transition-transform"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Обновить</span>
@@ -741,13 +741,13 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       {/* Search & Date Filter Bar */}
       <div className="space-y-2">
         <div className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#5C6B80]" />
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#4E5C70]" />
           <input
             type="text"
             placeholder="Поиск по номеру заказа, клиенту, телефону, трек-номеру, адресу или товарам..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#5C6B80] focus:outline-none bg-[#E3E8EF]"
+            className="w-full pl-8 pr-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
           />
         </div>
 
@@ -769,8 +769,8 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
               onClick={handleToggleSelectAll}
               className={`h-[42px] text-[11px] font-bold px-3.5 rounded-xl cursor-pointer flex items-center gap-2 transition-all ml-auto sm:ml-0 whitespace-nowrap active:scale-95 neu-inset ${
                 selectedOrderIds.length > 0
-                  ? 'text-[#5F6ED0] bg-[#E3E8EF] font-black'
-                  : 'text-[#5C6B80] hover:text-[#2D3A4E]'
+                  ? 'text-[#4B59BB] bg-[#E3E8EF] font-black'
+                  : 'text-[#4E5C70] hover:text-[#2D3A4E]'
               }`}
             >
               <div
@@ -778,7 +778,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                   selectedOrderIds.length > 0 && selectedOrderIds.length === filteredOrders.length
                     ? 'neu-fill-accent text-white'
                     : selectedOrderIds.length > 0
-                    ? 'neu-button text-[#5F6ED0] bg-white/70'
+                    ? 'neu-button text-[#4B59BB] bg-white/70'
                     : 'neu-button bg-white/40 text-transparent border border-white/60'
                 }`}
               >
@@ -800,7 +800,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
           {/* Top Info & Actions Bar */}
           <div className="flex items-center justify-between gap-2.5 flex-wrap">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-[#5F6ED0] shrink-0 font-black">
+              <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-[#4B59BB] shrink-0 font-black">
                 <Layers className="w-4 h-4" />
               </div>
               <div className="min-w-0">
@@ -808,7 +808,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                   <span className="text-xs font-black text-[#2D3A4E] uppercase tracking-wider">
                     Пакетные действия
                   </span>
-                  <span className="neu-inset px-2.5 py-0.5 rounded-lg text-[11px] font-black text-[#5F6ED0] bg-[#E3E8EF]">
+                  <span className="neu-inset px-2.5 py-0.5 rounded-lg text-[11px] font-black text-[#4B59BB] bg-[#E3E8EF]">
                     Выбрано: {selectedOrderIds.length}
                   </span>
                 </div>
@@ -819,17 +819,17 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
               <button
                 type="button"
                 onClick={handleBulkExportCSV}
-                className="h-8 px-3 rounded-xl neu-button text-xs font-bold text-[#2D3A4E] hover:text-[#5F6ED0] flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shrink-0"
+                className="h-8 px-3 rounded-xl neu-button text-xs font-bold text-[#2D3A4E] hover:text-[#4B59BB] flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shrink-0"
                 title="Экспорт выбранных заказов в CSV файл"
               >
-                <Download className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                <Download className="w-3.5 h-3.5 text-[#4B59BB]" />
                 <span className="hidden xs:inline">Экспорт CSV</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setSelectedOrderIds([])}
-                className="h-8 px-2.5 sm:px-3 rounded-xl neu-button text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] flex items-center gap-1 cursor-pointer active:scale-95 transition-all shrink-0"
+                className="h-8 px-2.5 sm:px-3 rounded-xl neu-button text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] flex items-center gap-1 cursor-pointer active:scale-95 transition-all shrink-0"
                 title="Снять выбор со всех заказов"
               >
                 <X className="w-3.5 h-3.5" />
@@ -856,7 +856,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                     value: 'assembling',
                     label: 'В сборку',
                     sublabel: 'Передать на комплектацию на склад',
-                    icon: <Package className="w-3.5 h-3.5 text-[#5F6ED0]" />,
+                    icon: <Package className="w-3.5 h-3.5 text-[#4B59BB]" />,
                   },
                   {
                     value: 'in_transit',
@@ -940,7 +940,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                     value: 'export',
                     label: 'Экспорт в CSV',
                     sublabel: 'Выгрузить реестр в файл Excel/CSV',
-                    icon: <Download className="w-3.5 h-3.5 text-[#5F6ED0]" />,
+                    icon: <Download className="w-3.5 h-3.5 text-[#4B59BB]" />,
                   },
                   {
                     value: 'cancel_return',
@@ -995,7 +995,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
               variant="inset"
               prefix="Доставка:"
               options={[
-                { value: 'all', label: 'Все способы', icon: <Truck className="w-3.5 h-3.5 text-[#5F6ED0]" /> },
+                { value: 'all', label: 'Все способы', icon: <Truck className="w-3.5 h-3.5 text-[#4B59BB]" /> },
                 { value: 'courier', label: 'Курьерская доставка' },
                 { value: 'express', label: 'Срочная экспресс' },
                 { value: 'pickup', label: 'Самовывоз из бутика' },
@@ -1024,7 +1024,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         {/* Active Filters Reset Bar */}
         {(statusFilter !== 'all' || deliveryFilter !== 'all' || paymentFilter !== 'all' || paymentStatusFilter !== 'all' || dateFilter !== 'all') && (
           <div className="flex items-center justify-between text-xs px-1">
-            <span className="text-[11px] text-[#5C6B80] font-medium">
+            <span className="text-[11px] text-[#4E5C70] font-medium">
               Применены фильтры заказов
             </span>
             <button
@@ -1035,7 +1035,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                 setPaymentFilter('all');
                 setPaymentStatusFilter('all');
               }}
-              className="py-1 px-2.5 neu-button rounded-xl text-[11px] font-bold text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer flex items-center gap-1 transition-all"
+              className="py-1 px-2.5 neu-button rounded-xl text-[11px] font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer flex items-center gap-1 transition-all"
             >
               <X className="w-3 h-3" />
               Сбросить все фильтры
@@ -1047,8 +1047,8 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       {/* Orders List */}
       <div className="space-y-3">
         {filteredOrders.length === 0 ? (
-          <div className="neu-inset rounded-2xl p-8 text-center space-y-2 text-[#5C6B80] bg-[#E3E8EF]">
-            <Package className="w-8 h-8 mx-auto text-[#5C6B80]/60" />
+          <div className="neu-inset rounded-2xl p-8 text-center space-y-2 text-[#4E5C70] bg-[#E3E8EF]">
+            <Package className="w-8 h-8 mx-auto text-[#4E5C70]/60" />
             <p className="text-xs font-bold text-[#2D3A4E]">Заказы не найдены</p>
             <p className="text-[11px]">
               {orders.length === 0
@@ -1107,24 +1107,25 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                       <span className="text-xs font-black text-[#2D3A4E] font-mono">№ {ord.id}</span>
                       <button
                         onClick={() => handleCopyOrderId(ord.id)}
-                        className="p-1.5 neu-button rounded-lg text-[#5C6B80] hover:text-[#5F6ED0] cursor-pointer active:scale-95 transition-all"
+                        className="p-1.5 neu-button rounded-lg text-[#4E5C70] hover:text-[#4B59BB] cursor-pointer active:scale-95 transition-all"
                         title="Скопировать номер заказа"
+                        aria-label="Скопировать номер заказа"
                       >
                         <Copy className="w-3 h-3" />
                       </button>
                     </div>
-                    <span className="text-[10px] text-[#5C6B80] font-semibold">
+                    <span className="text-[11px] text-[#4E5C70] font-semibold">
                       от {ord.date || 'Сегодня'}
                     </span>
 
                     {ord.isAdjusted && (
-                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-warning-soft text-warning border border-warning/35">
+                      <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-warning-soft text-warning border border-warning/35">
                         Скорректирован
                       </span>
                     )}
 
                     {ord.isCancelled && (
-                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-danger-soft text-danger border border-danger/35 flex items-center gap-1">
+                      <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-danger-soft text-danger border border-danger/35 flex items-center gap-1">
                         <XCircle className="w-2.5 h-2.5" />
                         Отменен (Остатки возвращены)
                       </span>
@@ -1240,12 +1241,12 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                           <div className="flex items-center gap-2 min-w-0 pr-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#5F6ED0] shrink-0" />
                             <span className="truncate font-bold">{it.product?.title || 'Товар каталога'}</span>
-                            <span className="text-[10px] text-[#5C6B80] shrink-0">
+                            <span className="text-[11px] text-[#4E5C70] shrink-0">
                               ({it.selectedColor}, {it.selectedSize})
                             </span>
                           </div>
                           <div className="text-right shrink-0">
-                            <span className="font-bold text-[#5F6ED0] whitespace-nowrap">
+                            <span className="font-bold text-[#4B59BB] whitespace-nowrap">
                               {it.quantity} шт. × {(it.product?.price || 0).toLocaleString()} ₽
                             </span>
                           </div>
@@ -1256,8 +1257,8 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                     {/* Internal Manager Note View & Inline Editor */}
                     <div className="neu-inset-deep rounded-2xl p-3 bg-[#E3E8EF] space-y-1.5 border border-white/40">
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-bold text-[#5C6B80] flex items-center gap-1.5">
-                          <MessageSquare className="w-3 h-3 text-[#5F6ED0]" />
+                        <span className="font-bold text-[#4E5C70] flex items-center gap-1.5">
+                          <MessageSquare className="w-3 h-3 text-[#4B59BB]" />
                           Служебная заметка менеджера:
                         </span>
                         {!isEditingNote && (
@@ -1266,7 +1267,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                               setEditingNoteOrderId(ord.id);
                               setTempNoteValue(ord.managerNote || '');
                             }}
-                            className="text-[10px] text-[#5F6ED0] font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                            className="text-[11px] text-[#4B59BB] font-bold hover:underline flex items-center gap-1 cursor-pointer"
                           >
                             <Edit3 className="w-2.5 h-2.5" />
                             {ord.managerNote ? 'Изменить' : '+ Добавить заметку'}
@@ -1281,20 +1282,22 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                             value={tempNoteValue}
                             onChange={(e) => setTempNoteValue(e.target.value)}
                             placeholder="Например: клиент просил отправить до 14:00, звонок за час"
-                            className="flex-1 px-2.5 py-1.5 rounded-lg neu-flat bg-[#E3E8EF] text-xs text-[#2D3A4E] focus:outline-none"
+                            className="flex-1 px-2.5 py-1.5 rounded-lg neu-flat bg-[#E3E8EF] text-xs text-[#2D3A4E]"
                             autoFocus
                           />
                           <button
                             onClick={() => handleSaveManagerNote(ord.id)}
                             className="p-1.5 neu-button-accent rounded-lg text-white"
                             title="Сохранить"
+                            aria-label="Сохранить"
                           >
                             <Check className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => setEditingNoteOrderId(null)}
-                            className="p-1.5 neu-button rounded-lg text-[#5C6B80]"
+                            className="p-1.5 neu-button rounded-lg text-[#4E5C70]"
                             title="Отмена"
+                            aria-label="Отмена"
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -1308,14 +1311,14 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                   </div>
 
                   {/* Right: Logistics, Tracking Carrier & Total */}
-                  <div className="md:col-span-5 space-y-2 text-[11px] text-[#5C6B80] min-w-0">
+                  <div className="md:col-span-5 space-y-2 text-[11px] text-[#4E5C70] min-w-0">
                     <div className="neu-inset-deep rounded-2xl p-3 space-y-2.5 bg-[#E3E8EF] overflow-hidden border border-white/40">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-[#2D3A4E] flex items-center gap-1">
-                          <Truck className="w-3 h-3 text-[#5F6ED0]" />
+                          <Truck className="w-3 h-3 text-[#4B59BB]" />
                           {ord.deliveryMethod || 'Курьер'}
                         </span>
-                        <span className="text-[10px] text-[#5C6B80]">
+                        <span className="text-[11px] text-[#4E5C70]">
                           {ord.paymentMethod || 'Онлайн'}
                         </span>
                       </div>
@@ -1343,11 +1346,11 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
                           return (
                             <div className="pt-2 border-t border-[#BAC5D5]/40 flex items-center justify-between text-[11px] flex-wrap gap-1.5">
-                              <span className="font-bold text-[#5C6B80] flex items-center gap-1.5">
-                                <Truck className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                              <span className="font-bold text-[#4E5C70] flex items-center gap-1.5">
+                                <Truck className="w-3.5 h-3.5 text-[#4B59BB]" />
                                 <span>Способ: <strong className="text-[#2D3A4E]">{ord.deliveryMethod || 'Курьер'}</strong></span>
                               </span>
-                              <span className="text-[10px] text-[#5C6B80] font-medium neu-inset px-2 py-0.5 rounded-lg bg-[#E3E8EF]">
+                              <span className="text-[11px] text-[#4E5C70] font-medium neu-inset px-2 py-0.5 rounded-lg bg-[#E3E8EF]">
                                 Трек-номер не предусмотрен ({methodTypeLabel})
                               </span>
                             </div>
@@ -1358,9 +1361,9 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                           <div className="pt-2 border-t border-[#BAC5D5]/40 space-y-1.5">
                             <div className="flex items-center justify-between text-[11px]">
                               <span className="font-bold text-[#2D3A4E] flex items-center gap-1.5 flex-wrap">
-                                <span className="text-[#5C6B80]">ТК:</span>
-                                <strong className="text-[#5F6ED0] font-black">{carrierObj.name}</strong>
-                                <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border ${carrierObj.badgeBg}`}>
+                                <span className="text-[#4E5C70]">ТК:</span>
+                                <strong className="text-[#4B59BB] font-black">{carrierObj.name}</strong>
+                                <span className={`text-[11px] font-extrabold px-1.5 py-0.5 rounded border ${carrierObj.badgeBg}`}>
                                   {carrierObj.badge}
                                 </span>
                               </span>
@@ -1373,7 +1376,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                                     setTempCarrierValue(ord.trackingCompany || 'cdek');
                                     setOpenCarrierDropdownOrderId(null);
                                   }}
-                                  className="text-[10px] text-[#5F6ED0] font-bold hover:underline flex items-center gap-1 cursor-pointer neu-button px-2 py-0.5 rounded-lg active:scale-95 transition-all"
+                                  className="text-[11px] text-[#4B59BB] font-bold hover:underline flex items-center gap-1 cursor-pointer neu-button px-2 py-0.5 rounded-lg active:scale-95 transition-all"
                                 >
                                   <Edit3 className="w-2.5 h-2.5" />
                                   <span>{ord.trackingNumber ? 'Изменить' : 'Добавить трек'}</span>
@@ -1385,7 +1388,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                               <div className="neu-flat rounded-2xl p-3 bg-[#E3E8EF] border border-white/80 space-y-3 pt-2.5 animate-in fade-in duration-150">
                                 {/* Neumorphic Carrier Selector (Clean inline grid with no overlapping popover) */}
                                 <div className="space-y-1.5">
-                                  <label className="text-[10px] font-black text-[#5C6B80] uppercase tracking-wider block">
+                                  <label className="text-[11px] font-black text-[#4E5C70] uppercase tracking-wider block">
                                     Служба доставки (ТК)
                                   </label>
 
@@ -1400,7 +1403,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                                           className={`p-2 rounded-xl text-left transition-all flex items-center justify-between gap-2 cursor-pointer ${
                                             isSelected
                                               ? 'neu-pill-active font-black'
-                                              : 'neu-button text-[#2D3A4E] hover:text-[#5F6ED0] bg-[#E3E8EF] border border-white/70'
+                                              : 'neu-button text-[#2D3A4E] hover:text-[#4B59BB] bg-[#E3E8EF] border border-white/70'
                                           }`}
                                         >
                                           <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -1408,7 +1411,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                                               className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
                                                 isSelected
                                                   ? 'neu-pill-active'
-                                                  : 'neu-button text-[#5C6B80] bg-[#E3E8EF]'
+                                                  : 'neu-button text-[#4E5C70] bg-[#E3E8EF]'
                                               }`}
                                             >
                                               <Truck className="w-3.5 h-3.5" />
@@ -1417,12 +1420,12 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                                               <div className="flex items-center gap-1.5 flex-wrap">
                                                 <span className="text-xs truncate">{c.name}</span>
                                                 <span
-                                                  className={`text-[8px] font-extrabold px-1 py-0.2 rounded border shrink-0 ${c.badgeBg}`}
+                                                  className={`text-[11px] font-extrabold px-1 py-0.2 rounded border shrink-0 ${c.badgeBg}`}
                                                 >
                                                   {c.badge}
                                                 </span>
                                               </div>
-                                              <p className="text-[9px] text-[#5C6B80] truncate leading-tight mt-0.5 font-normal">
+                                              <p className="text-[11px] text-[#4E5C70] truncate leading-tight mt-0.5 font-normal">
                                                 {c.sublabel}
                                               </p>
                                             </div>
@@ -1444,7 +1447,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
                                 {/* Tracking Number Input */}
                                 <div className="space-y-1">
-                                  <label className="text-[10px] font-black text-[#5C6B80] uppercase tracking-wider block">
+                                  <label className="text-[11px] font-black text-[#4E5C70] uppercase tracking-wider block">
                                     Трек-номер отправления
                                   </label>
                                   <div className="relative">
@@ -1453,14 +1456,15 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                                       value={tempTrackValue}
                                       onChange={(e) => setTempTrackValue(e.target.value)}
                                       placeholder="Например: 1459203810"
-                                      className="w-full px-3 py-2 pr-8 rounded-xl neu-inset bg-[#E3E8EF] text-xs font-mono font-bold text-[#2D3A4E] border border-white/60 focus:outline-none focus:ring-2 focus:ring-[#5F6ED0]/40 transition-all"
+                                      className="w-full px-3 py-2 pr-8 rounded-xl neu-inset bg-[#E3E8EF] text-xs font-mono font-bold text-[#2D3A4E] border border-white/60 focus:ring-2 focus:ring-[#5F6ED0]/40 transition-all"
                                       autoFocus
                                     />
                                     {tempTrackValue && (
                                       <button
                                         type="button"
                                         onClick={() => setTempTrackValue('')}
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer"
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                                        aria-label="Закрыть"
                                       >
                                         <X className="w-3 h-3" />
                                       </button>
@@ -1476,7 +1480,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                                       setEditingTrackOrderId(null);
                                       setOpenCarrierDropdownOrderId(null);
                                     }}
-                                    className="px-3.5 py-1.5 neu-button rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer active:scale-95 transition-all"
+                                    className="px-3.5 py-1.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer active:scale-95 transition-all"
                                   >
                                     Отмена
                                   </button>
@@ -1495,14 +1499,15 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                               </div>
                             ) : ord.trackingNumber ? (
                               <div className="flex items-center justify-between gap-1 neu-inset rounded-lg p-1.5 bg-[#E3E8EF]">
-                                <span className="font-mono text-xs font-black text-[#5F6ED0] truncate">
+                                <span className="font-mono text-xs font-black text-[#4B59BB] truncate">
                                   {ord.trackingNumber}
                                 </span>
                                 <div className="flex items-center gap-1 shrink-0">
                                   <button
                                     onClick={() => handleCopyTracking(ord.trackingNumber!)}
-                                    className="p-1 neu-button rounded-md text-[#5C6B80] hover:text-[#5F6ED0]"
+                                    className="p-1 neu-button rounded-md text-[#4E5C70] hover:text-[#4B59BB]"
                                     title="Скопировать трек-номер"
+                                    aria-label="Скопировать трек-номер"
                                   >
                                     <Copy className="w-3.5 h-3.5" />
                                   </button>
@@ -1511,7 +1516,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                                       href={trackingUrl}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="p-1 neu-button rounded-md text-[#5F6ED0] hover:text-[#2D3A4E]"
+                                      className="p-1 neu-button rounded-md text-[#4B59BB] hover:text-[#2D3A4E]"
                                       title="Открыть отслеживание на сайте ТК"
                                     >
                                       <ExternalLink className="w-3.5 h-3.5" />
@@ -1520,7 +1525,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                                 </div>
                               </div>
                             ) : (
-                              <span className="text-[10px] text-[#5C6B80] italic">Трек-номер не указан</span>
+                              <span className="text-[11px] text-[#4E5C70] italic">Трек-номер не указан</span>
                             )}
                           </div>
                         );
@@ -1528,7 +1533,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
                       <div className="flex items-center justify-between pt-1.5 border-t border-[#BAC5D5]/40 text-xs">
                         <span className="font-bold text-[#2D3A4E]">Сумма к оплате:</span>
-                        <span className="text-sm font-black text-[#5F6ED0]">
+                        <span className="text-sm font-black text-[#4B59BB]">
                           {ord.totalPrice.toLocaleString()} ₽
                         </span>
                       </div>
@@ -1547,27 +1552,27 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                         onShowToast(`Переход в чат с клиентом ${ord.customerName || ord.id}`, 'info');
                       }
                     }}
-                    className="h-8 px-3 neu-inset rounded-xl text-xs font-bold text-[#5F6ED0] hover:text-[#2D3A4E] hover:bg-[#DDE4F0] flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all bg-[#E3E8EF] border border-white/60"
+                    className="h-8 px-3 neu-inset rounded-xl text-xs font-bold text-[#4B59BB] hover:text-[#2D3A4E] hover:bg-[#DDE4F0] flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all bg-[#E3E8EF] border border-white/60"
                     title="Написать клиенту в чат поддержки"
                   >
-                    <MessageSquare className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                    <MessageSquare className="w-3.5 h-3.5 text-[#4B59BB]" />
                     <span>Чат с клиентом</span>
                   </button>
 
                   {/* Print Invoice / Receipt Button */}
                   <button
                     onClick={() => setSelectedOrderForInvoice(ord)}
-                    className="h-8 px-3 neu-inset rounded-xl text-xs font-bold text-[#2D3A4E] hover:text-[#5F6ED0] hover:bg-[#DDE4F0] flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all bg-[#E3E8EF] border border-white/60"
+                    className="h-8 px-3 neu-inset rounded-xl text-xs font-bold text-[#2D3A4E] hover:text-[#4B59BB] hover:bg-[#DDE4F0] flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all bg-[#E3E8EF] border border-white/60"
                     title="Сформировать и распечатать товарный чек или накладную"
                   >
-                    <Printer className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                    <Printer className="w-3.5 h-3.5 text-[#4B59BB]" />
                     <span>Печать чека</span>
                   </button>
 
                   {/* Order Adjustment Modal Opener */}
                   <button
                     onClick={() => setSelectedOrderForAdjustment(ord)}
-                    className="h-8 px-3 neu-inset rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] hover:bg-[#DDE4F0] flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all bg-[#E3E8EF] border border-white/60"
+                    className="h-8 px-3 neu-inset rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] hover:bg-[#DDE4F0] flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all bg-[#E3E8EF] border border-white/60"
                     title="Изменить состав заказа, списать или вернуть остатки на склад"
                   >
                     <SlidersHorizontal className="w-3.5 h-3.5 text-warning" />
@@ -1577,7 +1582,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                   {/* Delivery Map Opener */}
                   <button
                     onClick={() => setSelectedOrderForMap(ord)}
-                    className="h-8 px-3 neu-inset rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] hover:bg-[#DDE4F0] flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all bg-[#E3E8EF] border border-white/60"
+                    className="h-8 px-3 neu-inset rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] hover:bg-[#DDE4F0] flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all bg-[#E3E8EF] border border-white/60"
                     title="Интерактивная карта доставки"
                   >
                     <Navigation className="w-3.5 h-3.5 text-sky-600" />
@@ -1587,10 +1592,10 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                   {/* Delivery Stages Management Opener */}
                   <button
                     onClick={() => setSelectedOrderForDeliveryStages(ord)}
-                    className="h-8 px-3 neu-inset rounded-xl text-xs font-bold text-[#5F6ED0] hover:text-[#2D3A4E] hover:bg-[#DDE4F0] flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all bg-[#E3E8EF] border border-white/60"
+                    className="h-8 px-3 neu-inset rounded-xl text-xs font-bold text-[#4B59BB] hover:text-[#2D3A4E] hover:bg-[#DDE4F0] flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all bg-[#E3E8EF] border border-white/60"
                     title="Управление этапами доставки заказа"
                   >
-                    <Clock className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                    <Clock className="w-3.5 h-3.5 text-[#4B59BB]" />
                     <span>Этапы доставки</span>
                   </button>
 
@@ -1608,7 +1613,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                   {!ord.isCancelled && (
                     <button
                       onClick={() => handleCancelAndReturnStock(ord)}
-                      className="h-8 px-2.5 neu-inset rounded-xl text-xs font-bold text-[#5C6B80] hover:text-danger hover:bg-danger-soft flex items-center gap-1 cursor-pointer active:scale-95 transition-all bg-[#E3E8EF] border border-white/60"
+                      className="h-8 px-2.5 neu-inset rounded-xl text-xs font-bold text-[#4E5C70] hover:text-danger hover:bg-danger-soft flex items-center gap-1 cursor-pointer active:scale-95 transition-all bg-[#E3E8EF] border border-white/60"
                       title="Отменить заказ и автоматически вернуть товары на склад"
                     >
                       <RotateCcw className="w-3.5 h-3.5 text-danger" />
@@ -1622,10 +1627,10 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                       setExpandedOrderAuditLogId(isAuditExpanded ? null : ord.id)
                     }
                     className={`h-8 px-3 rounded-xl text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 sm:ml-auto neu-inset bg-[#E3E8EF] border border-white/60 ${
-                      isAuditExpanded ? 'text-[#5F6ED0] font-black border-[#5F6ED0]/40 bg-[#DDE4F0]' : 'text-[#5C6B80] hover:text-[#5F6ED0] hover:bg-[#DDE4F0]'
+                      isAuditExpanded ? 'text-[#4B59BB] font-black border-[#5F6ED0]/40 bg-[#DDE4F0]' : 'text-[#4E5C70] hover:text-[#4B59BB] hover:bg-[#DDE4F0]'
                     }`}
                   >
-                    <History className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                    <History className="w-3.5 h-3.5 text-[#4B59BB]" />
                     <span>
                       История {ord.adjustmentLogs?.length || ord.historySteps?.length ? `(${((ord.adjustmentLogs?.length || 0) + (ord.historySteps?.length || 0))})` : ''}
                     </span>
@@ -1635,8 +1640,8 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                 {/* Expandable Audit Log & Status History Timeline */}
                 {isAuditExpanded && (
                   <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-2 text-xs animate-in fade-in">
-                    <h5 className="font-black text-[#2D3A4E] flex items-center gap-1.5 uppercase text-[10px] tracking-wider">
-                      <Clock className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                    <h5 className="font-black text-[#2D3A4E] flex items-center gap-1.5 uppercase text-[11px] tracking-wider">
+                      <Clock className="w-3.5 h-3.5 text-[#4B59BB]" />
                       Хронология изменений заказа & Складские события
                     </h5>
 
@@ -1651,9 +1656,9 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                             <span className="w-2 h-2 rounded-full bg-success mt-1 shrink-0" />
                             <div>
                               <span className="font-bold">{step?.title || `Этап ${sIdx + 1}`}</span>
-                              <span className="text-[#5C6B80] ml-1.5 text-[10px]">({step?.date || ord.date})</span>
+                              <span className="text-[#4E5C70] ml-1.5 text-[11px]">({step?.date || ord.date})</span>
                               {step?.description && (
-                                <p className="text-[#5C6B80] text-[10px]">{step.description}</p>
+                                <p className="text-[#4E5C70] text-[11px]">{step.description}</p>
                               )}
                             </div>
                           </div>
@@ -1664,7 +1669,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                     {/* Adjustment Audit Logs */}
                     {ord.adjustmentLogs && ord.adjustmentLogs.length > 0 && (
                       <div className="pt-2 border-t border-[#BAC5D5]/50 space-y-1.5">
-                        <span className="font-bold text-[10px] text-warning uppercase">
+                        <span className="font-bold text-[11px] text-warning uppercase">
                           Журнал корректировок состава:
                         </span>
                         {ord.adjustmentLogs.map((log) => (
@@ -1674,9 +1679,9 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                           >
                             <div className="flex justify-between font-bold text-[#2D3A4E]">
                               <span>{log.reason}</span>
-                              <span className="text-[#5C6B80] font-mono text-[10px]">{log.date}</span>
+                              <span className="text-[#4E5C70] font-mono text-[11px]">{log.date}</span>
                             </div>
-                            <p className="text-[10px] text-[#5C6B80]">
+                            <p className="text-[11px] text-[#4E5C70]">
                               Сумма: {log.previousTotal} ₽ ➔ <strong>{log.newTotal} ₽</strong>
                               {log.refundAmount ? ` (Возврат клиенту: ${log.refundAmount} ₽)` : ''}
                             </p>
@@ -1746,7 +1751,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                 <h3 className="text-sm font-black text-[#2D3A4E]">
                   Отменить выбранные заказы?
                 </h3>
-                <p className="text-[11px] text-[#5C6B80] font-medium">
+                <p className="text-[11px] text-[#4E5C70] font-medium">
                   Действие затронет {selectedOrderIds.length} {selectedOrderIds.length === 1 ? 'заказ' : selectedOrderIds.length < 5 ? 'заказа' : 'заказов'}
                 </p>
               </div>
@@ -1754,7 +1759,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
             <div className="neu-inset rounded-2xl p-3.5 space-y-1.5 text-xs text-[#2D3A4E] bg-[#E3E8EF]/70">
               <p className="font-bold">Что произойдет:</p>
-              <ul className="text-[11px] text-[#5C6B80] space-y-1 list-disc list-inside">
+              <ul className="text-[11px] text-[#4E5C70] space-y-1 list-disc list-inside">
                 <li>Все товары из выбранных заказов будут автоматически возвращены на остатки склада</li>
                 <li>Статус оплаты будет переведен в «Возврат»</li>
                 <li>В историю каждого заказа запишется запись об отмене</li>
@@ -1765,7 +1770,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
               <button
                 type="button"
                 onClick={() => setIsBulkCancelModalOpen(false)}
-                className="h-9 px-4 rounded-xl neu-button text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer active:scale-95 transition-all"
+                className="h-9 px-4 rounded-xl neu-button text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer active:scale-95 transition-all"
               >
                 Назад
               </button>
@@ -1795,11 +1800,11 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
               </div>
               <div className="min-w-0">
                 <h3 className="text-sm font-black text-[#2D3A4E] truncate">Удалить заказ № {orderToDelete.id}?</h3>
-                <p className="text-xs text-[#5C6B80] truncate">{orderToDelete.customerName || 'Клиент'}</p>
+                <p className="text-xs text-[#4E5C70] truncate">{orderToDelete.customerName || 'Клиент'}</p>
               </div>
             </div>
 
-            <p className="text-xs text-[#5C6B80]">
+            <p className="text-xs text-[#4E5C70]">
               Вы действительно хотите удалить заказ № <strong className="text-[#2D3A4E]">{orderToDelete.id}</strong> на сумму <strong className="text-[#2D3A4E]">{orderToDelete.totalPrice.toLocaleString()} ₽</strong> из базы данных Firestore?
             </p>
 
@@ -1808,7 +1813,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                 type="button"
                 onClick={() => setOrderToDelete(null)}
                 disabled={isDeletingOrder}
-                className="neu-inset px-4 py-2 rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] bg-[#E3E8EF] active:scale-95 transition-all cursor-pointer"
+                className="neu-inset px-4 py-2 rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] bg-[#E3E8EF] active:scale-95 transition-all cursor-pointer"
               >
                 Отмена
               </button>
