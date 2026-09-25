@@ -16,26 +16,26 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",
-    "@vitejs/plugin-react": "^5.0.4",
+    "@vitejs/plugin-react": "^6.1.1",
     "firebase": "^12.19.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.546.0",
-    "motion": "^12.23.24",
-    "react": "^19.0.1",
-    "react-dom": "^19.0.1",
+    "motion": "^13.4.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "recharts": "^3.10.1",
-    "vite": "^6.2.3"
+    "vite": "^8.3.0"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",
     "@types/node": "^22.14.0",
-    "autoprefixer": "^10.4.21",
-    "esbuild": "^0.25.0",
+    "autoprefixer": "^10.6.1",
+    "esbuild": "^0.28.2",
     "firebase-tools": "^15.31.0",
     "tailwindcss": "^4.1.14",
     "typescript": "~5.8.2",
-    "vite": "^6.2.3"
+    "vite": "^8.3.0"
   },
   "description": "ManStyle — интернет-магазин мужской одежды (React + Vite + Firebase)",
   "license": "UNLICENSED",
