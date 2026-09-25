@@ -5,6 +5,13 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # TypeScript 7 (native compiler) needs a tsconfig migration — upgrade deliberately, not via Dependabot
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      # Types must match the Node.js version the tooling runs on (22)
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
     groups:
       minor-and-patch:
         update-types: [minor, patch]
@@ -17,6 +24,12 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      # Cloud Functions run on Node.js 22 (functions/package.json "engines")
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
     groups:
       minor-and-patch:
         update-types: [minor, patch]
