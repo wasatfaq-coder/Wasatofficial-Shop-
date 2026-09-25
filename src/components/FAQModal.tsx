@@ -2,68 +2,16 @@ import React, { useState, useMemo } from 'react';
 import {
   HelpCircle,
   X,
-  Truck,
-  RotateCcw,
-  Ruler,
   Search,
   MessageSquare,
   PhoneCall,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FAQAccordion, FAQAccordionItem } from './FAQAccordion';
+import { NotConfigured } from './NotConfigured';
+import type { StoreFaqItem } from '../types';
 import { telHref } from '../utils/storeContacts';
 import { formatDays } from '../utils/pluralize';
-
-type FAQCategory = 'delivery' | 'returns' | 'sizing';
-
-type FAQItem = FAQAccordionItem & {
-  category: FAQCategory;
-};
-
-// Only answers backed by the store settings (Admin → «Витрина», «Доставка и ПВЗ») or by what the app
-// really does. Policies the admin panel does not configure (fitting, payment, receipts, warranty,
-// fabrics) are not promised here.
-const FAQ_DATA: FAQItem[] = [
-  {
-    id: 'del-1',
-    category: 'delivery',
-    question: 'Какие способы доставки доступны?',
-    answer:
-      'Способы доставки, сроки и стоимость для вашего заказа показаны на шаге оформления. При заказе от {FREE_DELIVERY} ₽ доставка бесплатная.',
-    highlights: ['Бесплатно от {FREE_DELIVERY} ₽', 'Стоимость видна при оформлении'],
-  },
-  {
-    id: 'del-2',
-    category: 'delivery',
-    question: 'Как узнать статус заказа?',
-    answer:
-      'Каждому заказу присваивается номер формата WS-XXXXXXXX. Статус и этапы доставки видны в профиле, в разделе «История заказов»; их обновляет магазин.',
-    highlights: ['Статус в профиле'],
-  },
-  {
-    id: 'ret-1',
-    category: 'returns',
-    question: 'Каковы условия и сроки возврата товара?',
-    answer:
-      'Вы можете вернуть или обменять неподошедший товар надлежащего качества в течение {RETURN_DAYS} дней с момента получения при сохранении товарного вида, ярлыков и упаковки. Чтобы оформить возврат, напишите нам в чат поддержки.',
-    highlights: ['{RETURN_DAYS} дней на возврат'],
-  },
-  {
-    id: 'siz-1',
-    category: 'sizing',
-    question: 'Как подобрать свой размер?',
-    answer:
-      'В карточке товара есть калькулятор размера: укажите рост и вес, и он подскажет размер по российской размерной сетке. Если сомневаетесь, спросите в чате поддержки.',
-    highlights: ['Калькулятор в карточке товара'],
-  },
-];
-
-const CATEGORIES = [
-  { id: 'all', label: 'Все темы', icon: HelpCircle },
-  { id: 'delivery', label: 'Доставка', icon: Truck },
-  { id: 'returns', label: 'Возврат', icon: RotateCcw },
-  { id: 'sizing', label: 'Размеры', icon: Ruler },
-];
 
 interface FAQModalProps {
   isOpen: boolean;
@@ -77,6 +25,8 @@ interface FAQModalProps {
   storeEmail?: string;
   onOpenSupportChat?: () => void;
   onShowToast?: (msg: string, type?: 'success' | 'info' | 'error') => void;
+  /** Questions from Admin → «FAQ»; none → «Вопросы и ответы: не настроено» */
+  faqItems?: StoreFaqItem[];
 }
 
 export const FAQModal: React.FC<FAQModalProps> = ({
@@ -88,44 +38,31 @@ export const FAQModal: React.FC<FAQModalProps> = ({
   returnPeriodDays = 14,
   storePhone = '',
   storeEmail = '',
+  faqItems = [],
 }) => {
-  const faqData = useMemo<FAQItem[]>(() => {
+  // {FREE_DELIVERY} and {RETURN_DAYS} in the admin's texts are replaced with the store settings
+  const faqData = useMemo<FAQAccordionItem[]>(() => {
     const fill = (text: string) =>
       text
         .split('{FREE_DELIVERY}').join(freeDeliveryThreshold.toLocaleString('ru-RU'))
         .split('{RETURN_DAYS} дней').join(formatDays(returnPeriodDays));
-    return FAQ_DATA.map((item) => ({
-      ...item,
-      question: fill(item.question),
-      answer: fill(item.answer),
-      highlights: item.highlights?.map(fill),
-    }));
-  }, [freeDeliveryThreshold, returnPeriodDays]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+    return faqItems
+      .filter((item) => item.isActive !== false && item.question.trim())
+      .map((item) => ({ id: item.id, question: fill(item.question), answer: fill(item.answer) }));
+  }, [faqItems, freeDeliveryThreshold, returnPeriodDays]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({
-    'del-1': true,
-    'ret-1': true,
-  });
+  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
 
   const toggleAccordion = (id: string) => {
     setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   const filteredQuestions = useMemo(() => {
-    return faqData.filter((item) => {
-      const matchesCategory =
-        selectedCategory === 'all' ||
-        item.category === selectedCategory ||
-        (selectedCategory === 'fitting' && item.category === 'fitting');
-      const matchesSearch =
-        !searchQuery.trim() ||
-        item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.answer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.highlights?.some((h) => h.toLowerCase().includes(searchQuery.toLowerCase()));
-      return matchesCategory && matchesSearch;
-    });
-  }, [faqData, selectedCategory, searchQuery]);
+    const q = searchQuery.trim().toLowerCase();
+    return faqData.filter(
+      (item) => !q || item.question.toLowerCase().includes(q) || item.answer.toLowerCase().includes(q)
+    );
+  }, [faqData, searchQuery]);
 
   if (!isOpen) return null;
 
@@ -159,9 +96,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
                 <h3 className="text-base font-extrabold text-[#2D3A4E]">
                   Часто задаваемые вопросы (FAQ)
                 </h3>
-                <p className="text-[11px] text-[#4E5C70]">
-                  Все о доставке, примерке, возврате и гарантиях качества
-                </p>
+                <p className="text-[11px] text-[#4E5C70]">Ответы магазина на частые вопросы</p>
               </div>
             </div>
             <button
@@ -195,37 +130,21 @@ export const FAQModal: React.FC<FAQModalProps> = ({
             )}
           </div>
 
-          {/* Category Pills (horizontal scroll) */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 shrink-0">
-            {CATEGORIES.map((cat) => {
-              const Icon = cat.icon;
-              const isActive = selectedCategory === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all cursor-pointer active:scale-95 ${
-                    isActive
-                      ? 'neu-pill-active'
-                      : 'text-[#4E5C70] hover:text-[#2D3A4E] hover:bg-white/30'
-                  }`}
-                >
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-accent' : 'text-[#4E5C70]'}`} />
-                  <span>{cat.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
           {/* Accordion List (Scrollable Area) */}
           <div className="flex-1 overflow-y-auto pr-1 no-scrollbar">
-            <FAQAccordion
-              items={filteredQuestions}
-              expandedIds={expandedIds}
-              onToggle={toggleAccordion}
-              emptyMessage="Вопрос не найден"
-            />
+            {faqData.length === 0 ? (
+              <NotConfigured
+                title="Вопросы и ответы"
+                hint="Задайте свой вопрос в чате поддержки — мы ответим."
+              />
+            ) : (
+              <FAQAccordion
+                items={filteredQuestions}
+                expandedIds={expandedIds}
+                onToggle={toggleAccordion}
+                emptyMessage="Вопрос не найден"
+              />
+            )}
           </div>
 
           {/* Footer Call to Action (Support Chat & Call) */}
@@ -236,7 +155,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-bold text-[#2D3A4E] truncate">Не нашли ответ на свой вопрос?</p>
-                <p className="text-[11px] text-[#4E5C70]">Служба заботы отвечает за 1 минуту</p>
+                <p className="text-[11px] text-[#4E5C70]">Напишите нам в чат поддержки</p>
               </div>
             </div>
 

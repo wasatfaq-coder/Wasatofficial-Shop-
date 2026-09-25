@@ -8,6 +8,9 @@ interface OrderSuccessScreenProps {
   totalPrice: number;
   deliveryMethod: string;
   deliveryAddress: string;
+  paymentMethod?: string;
+  /** Instructions of the chosen method from Admin → «Оплата» (e.g. transfer details) */
+  paymentInstructions?: string;
   setActiveTab: (tab: ActiveTab) => void;
 }
 
@@ -16,6 +19,8 @@ export const OrderSuccessScreen: React.FC<OrderSuccessScreenProps> = ({
   totalPrice,
   deliveryMethod,
   deliveryAddress,
+  paymentMethod,
+  paymentInstructions,
   setActiveTab,
 }) => {
   return (
@@ -39,6 +44,15 @@ export const OrderSuccessScreen: React.FC<OrderSuccessScreenProps> = ({
           Спасибо за выбор {currentStoreName()}! Мы уже начали сборку и передачу вашего заказа в доставку.
         </p>
       </div>
+
+      {paymentInstructions?.trim() && (
+        <div className="neu-inset rounded-3xl p-4 text-left space-y-1.5">
+          <p className="text-[11px] font-black uppercase tracking-wider text-[#4E5C70]">
+            Оплата{paymentMethod ? `: ${paymentMethod}` : ''}
+          </p>
+          <p className="text-xs text-[#2D3A4E] leading-relaxed whitespace-pre-line">{paymentInstructions}</p>
+        </div>
+      )}
 
       {/* Order Info Card with active status tracking box */}
       <div className="neu-flat rounded-3xl p-5 text-left space-y-3 border border-white/80">

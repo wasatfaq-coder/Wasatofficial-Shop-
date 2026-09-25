@@ -775,7 +775,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           </button>
           {openAccordion === 'shipping' && (
             <div className="px-4 pb-4 pt-1 text-xs text-[#4E5C70] leading-relaxed border-t border-[#BAC5D5]/40">
-              Курьерская доставка до двери с примеркой (1–2 дня), экспресс-доставка по Москве, пункты выдачи, СДЭК и Почта России. Сроки и стоимость для вашего адреса видны при оформлении заказа.
+              Способы доставки, сроки и стоимость для вашего адреса видны при оформлении заказа.
             </div>
           )}
         </div>
@@ -822,7 +822,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           </button>
           {openAccordion === 'returns' && (
             <div className="px-4 pb-4 pt-1 text-xs text-[#4E5C70] leading-relaxed border-t border-[#BAC5D5]/40">
-              Возврат в течение {formatDays(returnPeriodDays)} с момента получения в пункте выдачи или с вызовом курьера. Главное условие — сохранение товарного вида и ярлыков.
+              Возврат в течение {formatDays(returnPeriodDays)} с момента получения при сохранении товарного вида и ярлыков. Чтобы оформить возврат, напишите нам в чат поддержки.
             </div>
           )}
         </div>

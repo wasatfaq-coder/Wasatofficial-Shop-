@@ -28,13 +28,14 @@ import {
   Shirt,
   ShoppingBag,
 } from 'lucide-react';
-import { PromoCode, Product } from '../../types';
-import { CATEGORIES } from '../../data/products';
+import { PromoCode, Product, StoreCategory } from '../../types';
 import { copyToClipboard } from '../../utils/clipboard';
 import { NotConfigured } from '../NotConfigured';
 
 interface AdminPromoConstructorTabProps {
   promos: PromoCode[];
+  /** Admin → «Категории» (promo limited to categories) */
+  categories?: StoreCategory[];
   products?: Product[];
   onUpdatePromos: (promos: PromoCode[]) => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
@@ -42,6 +43,7 @@ interface AdminPromoConstructorTabProps {
 
 export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> = ({
   promos,
+  categories = [],
   products = [],
   onUpdatePromos,
   onShowToast,
@@ -973,7 +975,10 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     )}
                   </div>
                   <div className="flex flex-wrap gap-1.5 pt-1">
-                    {CATEGORIES.map((cat) => {
+                    {categories.length === 0 && (
+                      <span className="text-[11px] font-bold text-[#4E5C70]">Категории: не настроено</span>
+                    )}
+                    {categories.map((cat) => {
                       const isSelected = selectedCategories.includes(cat.id);
                       return (
                         <button

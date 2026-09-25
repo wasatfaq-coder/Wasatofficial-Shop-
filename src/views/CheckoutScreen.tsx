@@ -10,7 +10,6 @@ import {
   ArrowRight,
   ChevronRight,
   CreditCard,
-  ShieldCheck,
   Tag,
   Pencil,
   Truck,
@@ -35,6 +34,7 @@ import {
   getAvailableDeliveryMethods,
 } from '../shared/orderPricing';
 import { currentStoreName } from '../utils/storeContacts';
+import { NotConfigured } from '../components/NotConfigured';
 
 interface CheckoutScreenProps {
   cartItems: CartItem[];
@@ -189,7 +189,13 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
 
   // Delivery Methods Setup
   const [selectedDelivery, setSelectedDelivery] = useState<string>('courier');
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'sbp' | 'cash'>('card');
+  // Payment methods from Admin → «Оплата» only (no built-in card / SBP options)
+  const activePaymentMethods = (storefrontSettings?.paymentMethods ?? []).filter(
+    (m) => m.isActive !== false && m.title.trim()
+  );
+  const [paymentMethod, setPaymentMethod] = useState<string>(() => activePaymentMethods[0]?.id ?? '');
+  const selectedPayment = activePaymentMethods.find((m) => m.id === paymentMethod) ?? activePaymentMethods[0];
+  const noPaymentMethods = activePaymentMethods.length === 0;
 
   // Calculations (shared with the server-side order validation)
   const pricingLines = cartItems.map((item) => ({
@@ -243,6 +249,8 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   const noDeliveryMethods = availableDeliveryMethods.length === 0;
   const noPickupPoints = isPickupSelected && activePickupPoints.length === 0;
   const deliveryUnavailable = noDeliveryMethods || noPickupPoints;
+  // Ordering needs a delivery method (and point) and a payment method from the admin panel
+  const orderBlocked = deliveryUnavailable || noPaymentMethods;
   const deliveryDone = deliveryUnavailable
     ? false
     : isPickupSelected
@@ -250,7 +258,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
     : isPostSelected
     ? Boolean(addrStreet.trim() && addrHouse?.trim())
     : Boolean(addrStreet.trim() && addrHouse?.trim() && addrEntrance?.trim() && addrIntercom?.trim());
-  const paymentDone = Boolean(paymentMethod);
+  const paymentDone = Boolean(selectedPayment);
   const steps = [
     { num: 1, label: 'Данные', done: contactsDone, target: 'checkout-contacts' },
     { num: 2, label: 'Доставка', done: deliveryDone, target: 'checkout-delivery' },
@@ -265,9 +273,11 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
     e.preventDefault();
     if (cartItems.length === 0 || isSubmitting) return;
 
-    if (deliveryUnavailable) {
+    if (orderBlocked) {
       const text = noDeliveryMethods
         ? 'Способы доставки пока не настроены. Свяжитесь с магазином через чат поддержки.'
+        : noPaymentMethods
+        ? 'Способы оплаты пока не настроены. Свяжитесь с магазином через чат поддержки.'
         : 'Пункты выдачи пока не добавлены. Выберите другой способ доставки.';
       setValidationError(text);
       onShowToast?.(text, 'error');
@@ -319,12 +329,12 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
     setValidationError(null);
     setFieldErrors({});
     setIsSubmitting(true);
+    // The order keeps the method's name; «при получении» in it sets the «оплата при получении» status
+    const paymentTitle = selectedPayment?.title.trim() ?? '';
     const paymentLabel =
-      paymentMethod === 'sbp'
-        ? 'СБП (Система быстрых платежей)'
-        : paymentMethod === 'cash'
-        ? 'При получении (наличные / картой)'
-        : 'Банковская карта (онлайн)';
+      selectedPayment?.onDelivery && !paymentTitle.toLowerCase().includes('получении')
+        ? `${paymentTitle} (при получении)`
+        : paymentTitle;
 
     const finalOrderAddress =
       isPickupSelected && selectedPickupPoint
@@ -1079,31 +1089,39 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase">
             Способ оплаты
           </h3>
-          <div className="grid grid-cols-3 gap-2 p-1.5 neu-flat-sm rounded-2xl">
-            {[
-              { id: 'card', label: 'Карта', icon: CreditCard },
-              { id: 'sbp', label: 'СБП', icon: ShieldCheck },
-              { id: 'cash', label: 'При получении', icon: User },
-            ].map((item) => {
-              const Icon = item.icon;
-              const isSelected = paymentMethod === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setPaymentMethod(item.id as any)}
-                  className={`py-3 px-1.5 rounded-xl text-center flex flex-col items-center justify-center gap-1.5 text-xs transition-all duration-200 cursor-pointer ${
-                    isSelected
-                      ? 'neu-pill-active font-bold'
-                      : 'text-[#4E5C70] hover:text-[#2D3A4E] font-medium'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span className="leading-tight text-[11px]">{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
+          {noPaymentMethods ? (
+            <NotConfigured
+              title="Способы оплаты"
+              hint="Оформить заказ можно будет, когда магазин их добавит. Напишите нам в чат поддержки."
+            />
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-1.5 neu-flat-sm rounded-2xl">
+                {activePaymentMethods.map((item) => {
+                  const isSelected = selectedPayment?.id === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setPaymentMethod(item.id)}
+                      aria-pressed={isSelected}
+                      className={`py-3 px-3 rounded-xl text-left flex items-center gap-2 text-xs transition-all duration-200 cursor-pointer ${
+                        isSelected ? 'neu-pill-active font-bold' : 'text-[#4E5C70] hover:text-[#2D3A4E] font-medium'
+                      }`}
+                    >
+                      {item.onDelivery ? <User className="w-4 h-4 shrink-0" /> : <CreditCard className="w-4 h-4 shrink-0" />}
+                      <span className="leading-tight">{item.title}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {selectedPayment?.description?.trim() && (
+                <p className="neu-inset rounded-2xl p-3 text-xs text-[#2D3A4E] leading-relaxed whitespace-pre-line">
+                  {selectedPayment.description}
+                </p>
+              )}
+            </>
+          )}
         </div>
 
         {/* Receipt / Order Breakdown Card */}
@@ -1160,11 +1178,11 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
         <button
           id="checkout-confirm"
           type="submit"
-          disabled={isSubmitting || deliveryUnavailable}
+          disabled={isSubmitting || orderBlocked}
           className={`w-full py-4 rounded-2xl btn-confirm-order font-bold text-sm flex items-center justify-center gap-2 cursor-pointer transition-all ${
             isSubmitting
               ? 'neu-inset-deep neu-inset-deep-animated text-accent bg-[#E3E8EF] ring-2 ring-accent/40'
-              : deliveryUnavailable
+              : orderBlocked
               ? 'neu-inset text-[#4E5C70] cursor-not-allowed'
               : 'neu-button-accent text-white active:scale-[0.98]'
           }`}

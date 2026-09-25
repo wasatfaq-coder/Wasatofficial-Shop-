@@ -14,12 +14,14 @@ import {
   CheckCheck,
   AlertCircle,
 } from 'lucide-react';
-import { Product } from '../../types';
-import { CATEGORIES } from '../../data/products';
+import { Product, StoreCategory } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
+import { NotConfigured } from '../NotConfigured';
 
 interface AdminBulkOperationsModalProps {
   isOpen: boolean;
+  /** Admin → «Категории» */
+  categories?: StoreCategory[];
   selectedProducts: Product[];
   onClose: () => void;
   onApplyBulkChanges?: (updatedProducts: Product[], summaryMessage: string) => void;
@@ -46,6 +48,7 @@ const BADGE_PRESETS = [
 
 export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> = ({
   isOpen,
+  categories = [],
   selectedProducts,
   onClose,
   onApplyBulkChanges,
@@ -65,7 +68,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
   const [isRemoveDiscountMode, setIsRemoveDiscountMode] = useState<boolean>(false);
 
   // --- Category Tab State ---
-  const [targetCategory, setTargetCategory] = useState<string>('shirts');
+  const [targetCategory, setTargetCategory] = useState<string>(categories[0]?.id ?? '');
 
   const roundPrice = (price: number, rounding: 'none' | 'round90' | 'round50' | 'round100') => {
     if (price <= 0) return 0;
@@ -126,7 +129,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
       }
 
       if (activeTab === 'categories') {
-        const catObj = CATEGORIES.find((c) => c.id === targetCategory);
+        const catObj = categories.find((c) => c.id === targetCategory);
         return {
           ...p,
           category: targetCategory,
@@ -155,7 +158,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
         summaryMsg = `Назначена сезонная скидка ${discountPercent}% для ${selectedProducts.length} товаров`;
       }
     } else if (activeTab === 'categories') {
-      const catObj = CATEGORIES.find((c) => c.id === targetCategory);
+      const catObj = categories.find((c) => c.id === targetCategory);
       summaryMsg = `${selectedProducts.length} товаров перемещены в категорию "${catObj?.name || targetCategory}"`;
     }
 
@@ -457,16 +460,11 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
               Перемещение товаров в новую категорию
             </span>
 
+            {categories.length === 0 && (
+              <NotConfigured title="Категории" hint="Добавьте их в разделе «Категории»." />
+            )}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {[
-                { id: 'linen', label: 'Лен' },
-                { id: 'shirts', label: 'Рубашки' },
-                { id: 'tshirts', label: 'Футболки и поло' },
-                { id: 'jackets', label: 'Куртки' },
-                { id: 'trousers', label: 'Брюки' },
-                { id: 'sweatshirts', label: 'Свитшоты' },
-                { id: 'accessories', label: 'Аксессуары' },
-              ].map((cat) => (
+              {categories.map((cat) => ({ id: cat.id, label: cat.name })).map((cat) => (
                 <button
                   key={cat.id}
                   type="button"

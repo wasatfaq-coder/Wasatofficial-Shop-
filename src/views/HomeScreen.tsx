@@ -19,19 +19,12 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { Product, ActiveTab, BannerSlide, StorefrontSettings, UserProfile } from '../types';
 import { getStoreContacts, getStoreName } from '../utils/storeContacts';
-import { CATEGORIES } from '../data/products';
 import { ProductCard } from '../components/ProductCard';
 import { AutocompleteSearch } from '../components/AutocompleteSearch';
 import { RecentlyViewed } from '../components/RecentlyViewed';
 import { NeumorphicImage } from '../components/NeumorphicImage';
-import {
-  ShirtIcon,
-  TShirtIcon,
-  JacketIcon,
-  PantsIcon,
-  SweatshirtIcon,
-} from '../components/CategoryIcons';
 import { NotConfigured } from '../components/NotConfigured';
+import { categoryIcon, getCategories } from '../utils/categories';
 
 interface HomeScreenProps {
   products: Product[];
@@ -177,22 +170,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     setActiveTab('catalog');
   };
 
-  const getCategoryIcon = (id: string) => {
-    switch (id) {
-      case 'shirts':
-        return ShirtIcon;
-      case 'tshirts':
-        return TShirtIcon;
-      case 'jackets':
-        return JacketIcon;
-      case 'trousers':
-        return PantsIcon;
-      case 'sweatshirts':
-        return SweatshirtIcon;
-      default:
-        return Sparkles;
-    }
-  };
+  // Categories from Admin → «Категории»
+  const categories = getCategories(storefrontSettings);
 
   const currentSlide = displaySlides[activeBannerSlide] || displaySlides[0];
 
@@ -245,6 +224,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         )}
         <div className="flex-1">
           <AutocompleteSearch
+            categories={categories}
             products={products}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
@@ -346,11 +326,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       )}
 
       {/* 6. Quick Category Icons Row */}
+      {categories.length === 0 && <NotConfigured title="Категории" />}
       <div className="grid grid-cols-4 gap-3 py-1">
-        {CATEGORIES.filter((c) => c.id !== 'all')
+        {categories
           .slice(0, 4)
           .map((cat) => {
-            const IconComp = getCategoryIcon(cat.id);
+            const IconComp = categoryIcon(cat);
             return (
               <button
                 key={cat.id}

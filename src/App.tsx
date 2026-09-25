@@ -71,6 +71,7 @@ import { extractColorName, extractSizeName } from './utils/inventory';
 import { getStoreContacts, getStoreName, withStoreNameFields } from './utils/storeContacts';
 import { formatDays } from './utils/pluralize';
 import { productRatingValue } from './utils/productRating';
+import { getCategories } from './utils/categories';
 
 // Unique across customers: messages are create-only for customers (see firestore.rules)
 function newChatMessageId(): string {
@@ -570,6 +571,7 @@ export default function App() {
     totalPrice: number;
     deliveryMethod: string;
     deliveryAddress: string;
+    paymentMethod?: string;
   } | null>(null);
 
   // Global tactile feedback on button click/tap
@@ -1123,13 +1125,15 @@ export default function App() {
     const deliveryAddress =
       orderData.address ||
       (userProfile.savedAddresses?.[0] ? formatAddress(userProfile.savedAddresses[0]) : '') ||
-      (userProfile.address ? formatAddress(userProfile.address) : 'Москва, Пресненская наб., д. 12');
-    const deliveryMethod = orderData.deliveryMethod || 'Курьерская доставка';
-    const paymentMethod = orderData.paymentMethod || 'Карта (онлайн)';
+      (userProfile.address ? formatAddress(userProfile.address) : '') ||
+      'Уточнит менеджер';
+    // Quick (1-click) orders have no delivery or payment choice: the manager agrees them with the buyer
+    const deliveryMethod = orderData.deliveryMethod || 'Уточнит менеджер';
+    const paymentMethod = orderData.paymentMethod || 'Уточнит менеджер';
     return { customerName, customerPhone, customerEmail, deliveryAddress, deliveryMethod, paymentMethod };
   };
 
-  const finishOrder = (order: Pick<Order, 'id' | 'totalPrice' | 'deliveryMethod' | 'deliveryAddress'>) => {
+  const finishOrder = (order: Pick<Order, 'id' | 'totalPrice' | 'deliveryMethod' | 'deliveryAddress'> & { paymentMethod?: string }) => {
     setCartItems([]);
     setAppliedPromo(null);
     setLatestOrder({
@@ -1137,6 +1141,7 @@ export default function App() {
       totalPrice: order.totalPrice,
       deliveryMethod: order.deliveryMethod,
       deliveryAddress: order.deliveryAddress,
+      paymentMethod: order.paymentMethod,
     });
     addToast(`Заказ № ${order.id} успешно оформлен!`, 'success');
     setActiveTab('order-success');
@@ -1274,7 +1279,7 @@ export default function App() {
     const modifiedProducts = updatedProducts.filter((p) => orderedProductIds.has(p.id));
     saveModifiedProductsToFirestore(modifiedProducts);
 
-    finishOrder({ id: newOrderId, totalPrice, deliveryMethod, deliveryAddress });
+    finishOrder({ id: newOrderId, totalPrice, deliveryMethod, deliveryAddress, paymentMethod });
     return true;
   };
 
@@ -1460,6 +1465,7 @@ export default function App() {
 
           {activeTab === 'catalog' && (
             <CatalogScreen
+              categories={getCategories(storefrontSettings)}
               products={products}
               favorites={favorites}
               cartItemIds={cartProductIds}
@@ -1521,7 +1527,13 @@ export default function App() {
               onRemovePromo={handleRemovePromo}
               onCompleteOrder={handleCompleteOrder}
               storefrontSettings={customerStorefront}
-              hasDeliveryMethods={deliveryMethods.some((m) => m.isActive !== false)}
+              checkoutBlocker={
+                !deliveryMethods.some((m) => m.isActive !== false)
+                  ? 'Способы доставки'
+                  : !(storefrontSettings.paymentMethods ?? []).some((m) => m.isActive !== false)
+                  ? 'Способы оплаты'
+                  : null
+              }
             />
           )}
 
@@ -1628,6 +1640,12 @@ export default function App() {
               totalPrice={latestOrder.totalPrice}
               deliveryMethod={latestOrder.deliveryMethod}
               deliveryAddress={latestOrder.deliveryAddress}
+              paymentMethod={latestOrder.paymentMethod}
+              paymentInstructions={
+                (storefrontSettings.paymentMethods ?? []).find(
+                  (m) => m.title.trim() && latestOrder.paymentMethod?.startsWith(m.title.trim())
+                )?.description
+              }
               setActiveTab={setActiveTab}
             />
           )}

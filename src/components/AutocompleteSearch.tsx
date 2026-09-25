@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, X, Tag, Sparkles, Shirt, Layers, Package, Palette, ArrowRight, Check } from 'lucide-react';
 import { Product } from '../types';
-import { CATEGORIES } from '../data/products';
 import { RatingBadge } from './RatingBadge';
 import { photoBadgeClass } from '../utils/productBadge';
 import { getProductRating } from '../utils/productRating';
+import type { StoreCategory } from '../types';
 
 interface AutocompleteSearchProps {
+  /** From Admin → «Категории» */
+  categories?: StoreCategory[];
   products: Product[];
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -18,6 +20,7 @@ interface AutocompleteSearchProps {
 }
 
 export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
+  categories = [],
   products,
   searchQuery,
   onSearchChange,
@@ -65,10 +68,8 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
     }
 
     // Matched categories
-    const matchedCategories = CATEGORIES.filter(
-      (c) =>
-        c.id !== 'all' &&
-        (c.name.toLowerCase().includes(cleanQuery) || c.id.toLowerCase().includes(cleanQuery))
+    const matchedCategories = categories.filter(
+      (c) => c.name.toLowerCase().includes(cleanQuery) || c.id.toLowerCase().includes(cleanQuery)
     );
 
     // Collect matching unique color names across products
@@ -101,7 +102,7 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
       matchedColors,
       matchedProducts,
     };
-  }, [products, cleanQuery]);
+  }, [products, categories, cleanQuery]);
 
   const hasResults =
     cleanQuery.length > 0 &&

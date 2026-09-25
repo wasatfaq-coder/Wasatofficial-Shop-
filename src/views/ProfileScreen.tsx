@@ -105,6 +105,11 @@ import {
   loadLocalPickupPoints,
   saveLocalPickupPoints,
 } from '../data/deliveryData';
+import { FolderTree, Wallet, CircleHelp } from 'lucide-react';
+import { AdminFaqTab } from '../components/admin/AdminFaqTab';
+import { AdminPaymentTab } from '../components/admin/AdminPaymentTab';
+import { AdminCategoriesTab } from '../components/admin/AdminCategoriesTab';
+import { getCategories } from '../utils/categories';
 
 interface ProfileScreenProps {
   profile: UserProfile;
@@ -478,7 +483,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // Admin Panel Tab & Filter state
   const [adminTab, setAdminTab] = useState<
-    'analytics' | 'products' | 'inventory' | 'orders' | 'delivery' | 'customers' | 'promos' | 'banners' | 'support' | 'storefront'
+    | 'analytics' | 'products' | 'categories' | 'inventory' | 'orders' | 'delivery' | 'payment' | 'customers'
+    | 'promos' | 'banners' | 'support' | 'faq' | 'storefront'
   >('analytics');
   const [supportTargetOrderId, setSupportTargetOrderId] = useState<string | null>(null);
 
@@ -3545,13 +3551,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               {[
                 { id: 'analytics', label: 'Аналитика', icon: BarChart3 },
                 { id: 'products', label: 'Каталог', icon: Layers },
+                { id: 'categories', label: 'Категории', icon: FolderTree },
                 { id: 'inventory', label: 'Склад и SKU', icon: Boxes },
                 { id: 'orders', label: 'Заказы', icon: Package },
                 { id: 'delivery', label: 'Доставка и ПВЗ', icon: Truck },
+                { id: 'payment', label: 'Оплата', icon: Wallet },
                 { id: 'customers', label: 'Клиенты', icon: Users },
                 { id: 'promos', label: 'Промокоды', icon: Tag },
                 { id: 'banners', label: 'Баннеры', icon: ImageIcon },
                 { id: 'support', label: 'Чат поддержки', icon: Headphones },
+                { id: 'faq', label: 'FAQ', icon: CircleHelp },
                 { id: 'storefront', label: 'Витрина', icon: Store },
               ].map((tab) => {
                 const Icon = tab.icon;
@@ -3611,6 +3620,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               {/* --- TAB 2: PRODUCTS CATALOG MANAGEMENT --- */}
               {adminTab === 'products' && (
                 <AdminProductsTab
+                  categories={getCategories(storefrontSettings)}
                   products={productsList}
                   onUpdateProducts={handleUpdateProductsList}
                   onShowToast={onShowToast}
@@ -3678,6 +3688,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               {/* --- TAB 5: PROMO CODE CONSTRUCTOR --- */}
               {adminTab === 'promos' && (
                 <AdminPromoConstructorTab
+                  categories={getCategories(storefrontSettings)}
                   promos={localPromos}
                   products={productsList}
                   onUpdatePromos={handleUpdatePromosList}
@@ -3688,6 +3699,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               {/* --- TAB 6: HOMEPAGE BANNERS & SLIDER MANAGEMENT --- */}
               {adminTab === 'banners' && (
                 <AdminBannersTab
+                  categories={getCategories(storefrontSettings)}
                   banners={localBanners}
                   products={productsList}
                   promos={localPromos}
@@ -3744,6 +3756,32 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 </div>
               )}
 
+              {adminTab === 'categories' && (
+                <AdminCategoriesTab
+                  settings={storefrontSettings}
+                  products={productsList}
+                  onUpdateSettings={onUpdateStorefrontSettings}
+                  onUpdateProducts={handleUpdateProductsList}
+                  onShowToast={onShowToast}
+                />
+              )}
+
+              {adminTab === 'payment' && (
+                <AdminPaymentTab
+                  settings={storefrontSettings}
+                  onUpdateSettings={onUpdateStorefrontSettings}
+                  onShowToast={onShowToast}
+                />
+              )}
+
+              {adminTab === 'faq' && (
+                <AdminFaqTab
+                  settings={storefrontSettings}
+                  onUpdateSettings={onUpdateStorefrontSettings}
+                  onShowToast={onShowToast}
+                />
+              )}
+
               {/* --- TAB 8: STOREFRONT & SYSTEM SETTINGS --- */}
               {adminTab === 'storefront' && (
                 <div className="space-y-4">
@@ -3782,6 +3820,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         returnPeriodDays={storefrontSettings?.returnPeriodDays}
         storePhone={storePhone}
         storeEmail={storeEmail}
+        faqItems={storefrontSettings?.faqItems}
         onClose={() => setActiveModal(null)}
         onOpenSupportChat={onOpenSupportChat}
         onShowToast={onShowToast}

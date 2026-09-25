@@ -37,8 +37,8 @@ interface CartScreenProps {
   onRemovePromo: () => void;
   onCompleteOrder?: (orderData: any) => void;
   storefrontSettings?: import('../types').StorefrontSettings;
-  /** False until the owner adds a delivery method: checkout is not possible then */
-  hasDeliveryMethods?: boolean;
+  /** What is missing for checkout (e.g. «Способы доставки»); null when checkout is possible */
+  checkoutBlocker?: string | null;
 }
 
 export const CartScreen: React.FC<CartScreenProps> = ({
@@ -58,7 +58,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   onRemovePromo,
   onCompleteOrder,
   storefrontSettings,
-  hasDeliveryMethods = true,
+  checkoutBlocker = null,
 }) => {
   const [promoInput, setPromoInput] = useState('');
   const [itemToRemove, setItemToRemove] = useState<CartItem | null>(null);
@@ -558,17 +558,17 @@ export const CartScreen: React.FC<CartScreenProps> = ({
 
         {/* Action Buttons: 1-Click Quick Order + Full Checkout */}
         <div className="space-y-2">
-          {!hasDeliveryMethods && (
+          {checkoutBlocker && (
             <NotConfigured
-              title="Способы доставки"
+              title={checkoutBlocker}
               hint="Оформить заказ можно будет, когда магазин их добавит. Пока доступен заказ в 1 клик."
             />
           )}
           <button
             onClick={() => setActiveTab('checkout')}
-            disabled={!hasDeliveryMethods}
+            disabled={Boolean(checkoutBlocker)}
             className={`w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-              hasDeliveryMethods
+              !checkoutBlocker
                 ? 'neu-button-accent btn-confirm-order active:neu-inset-deep active:scale-[0.98] cursor-pointer'
                 : 'neu-inset text-[#4E5C70] cursor-not-allowed'
             }`}

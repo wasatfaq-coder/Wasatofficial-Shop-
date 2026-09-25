@@ -54,32 +54,29 @@ import { AdminBulkOperationsModal } from './AdminBulkOperationsModal';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { TextEditModal } from './TextEditModal';
 import { NotConfigured } from '../NotConfigured';
+import type { StoreCategory } from '../../types';
 
 interface AdminProductsTabProps {
+  /** Admin → «Категории»: the only category list for products */
+  categories?: StoreCategory[];
   products: Product[];
   onUpdateProducts: (updated: Product[]) => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
-const CATEGORY_OPTIONS = [
-  { id: 'all', name: 'Все категории' },
-  { id: 'linen', name: 'Лен' },
-  { id: 'shirts', name: 'Рубашки' },
-  { id: 'trousers', name: 'Брюки' },
-  { id: 'jackets', name: 'Куртки' },
-  { id: 'sweatshirts', name: 'Свитшоты' },
-  { id: 'accessories', name: 'Аксессуары' },
-];
 
 const PRESET_BADGES = ['ХИТ', 'NEW', 'SALE', '-20%', 'PREMIUM', 'LIMITED', 'ECO', 'EXCLUSIVE'];
 
 const PRESET_SIZES = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '46', '48', '50', '52', '54'];
 
 export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
+  categories = [],
   products,
   onUpdateProducts,
   onShowToast,
 }) => {
+  // «Все категории» for the filter + the categories from Admin → «Категории»
+  const CATEGORY_OPTIONS = useMemo(() => [{ id: 'all', name: 'Все категории' }, ...categories], [categories]);
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
@@ -103,7 +100,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
   // Product Form Fields State
   const [formTitle, setFormTitle] = useState('');
-  const [formCategory, setFormCategory] = useState('linen');
+  const [formCategory, setFormCategory] = useState(categories[0]?.id ?? '');
   const [formPrice, setFormPrice] = useState<number>(2990);
   const [formCostPrice, setFormCostPrice] = useState<number | undefined>(1400);
   const [formOldPrice, setFormOldPrice] = useState<number | undefined>(3490);
@@ -344,7 +341,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   const handleOpenAddProduct = () => {
     setEditingProduct(null);
     setFormTitle('');
-    setFormCategory('linen');
+    setFormCategory(categories[0]?.id ?? '');
     setFormPrice(2990);
     setFormCostPrice(1450);
     setFormOldPrice(3490);
@@ -366,7 +363,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     const mock = {
       id: `prod-${Date.now()}`,
       title: 'Новый товар',
-      category: 'linen',
+      category: categories[0]?.id ?? '',
       price: 2990,
       images: ['https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80'],
       colors: initialColors,
@@ -380,7 +377,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   const handleOpenEditProduct = (prod: Product) => {
     setEditingProduct(prod);
     setFormTitle(prod.title);
-    setFormCategory(prod.category || 'linen');
+    setFormCategory(prod.category || categories[0]?.id || '');
     setFormPrice(prod.price);
     setFormCostPrice(prod.costPrice || Math.round(prod.price * 0.48));
     setFormOldPrice(prod.originalPrice);
@@ -713,7 +710,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         const fullProd: Product = {
           id: prodId,
           title: p.title || 'Новый товар',
-          category: p.category || 'linen',
+          category: p.category || categories[0]?.id || '',
           categoryLabel: p.categoryLabel || 'Лен',
           price: p.price || 2990,
           originalPrice: p.originalPrice,
@@ -806,7 +803,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
           <button
             onClick={handleOpenAddProduct}
-            className="py-2 px-3.5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center gap-1.5 shrink-0 active:scale-95 transition-all cursor-pointer"
+            disabled={categories.length === 0}
+            title={categories.length === 0 ? 'Сначала добавьте категории в разделе «Категории»' : undefined}
+            className="py-2 px-3.5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center gap-1.5 shrink-0 active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus className="w-4 h-4 text-white" />
             <span>Добавить товар</span>
@@ -2433,6 +2432,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       <AdminBulkOperationsModal
         isOpen={isBulkOperationsModalOpen}
         onClose={() => setIsBulkOperationsModalOpen(false)}
+        categories={categories}
         selectedProducts={products.filter((p) => selectedProductIds.includes(p.id))}
         onApplyBulkChanges={(updatedList, summary) => {
           const map = new Map(updatedList.map((p) => [p.id, p]));
