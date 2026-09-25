@@ -23,7 +23,7 @@ jobs:
       pull-requests: write
       checks: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun run build
@@ -48,10 +48,16 @@ jobs:
       group: firebase-production
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
       - run: bun install --frozen-lockfile
       - run: bun run lint
+      # Never publish rules that fail their tests
+      - run: bun run test:rules
       - run: bun run build
       - if: env.HAS_FIREBASE_SECRET != 'true'
         run: echo "::warning::FIREBASE_SERVICE_ACCOUNT secret is not set — deploy skipped"

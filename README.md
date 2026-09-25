@@ -7,7 +7,7 @@
 каталог с фильтрами, корзина, оформление заказа, личный кабинет, чат поддержки
 и панель администратора (товары, склад, заказы, промокоды, витрина, аналитика).
 
-**Продакшен:** https://ai-studio-applet-webapp-e9574.web.app
+**Продакшен:** https://ai-studio-applet-webapp-e9574.web.app (появится после первого деплоя из `main`)
 
 ## Стек
 
@@ -91,15 +91,31 @@ firebase.json     настройки Hosting и Firestore для Firebase CLI
    (и ваш собственный домен, если подключите). Иначе не будет работать вход через Google.
 3. Создайте сервисный аккаунт для деплоя. Проще всего выполнить локально
    `bunx firebase init hosting:github`: команда сама создаст аккаунт и секрет
-   `FIREBASE_SERVICE_ACCOUNT_…`. Если он называется иначе, переименуйте его
-   в `FIREBASE_SERVICE_ACCOUNT` или добавьте вручную:
+   `FIREBASE_SERVICE_ACCOUNT_…`. На вопросы о создании workflow-файлов ответьте **No**
+   (они уже есть в `.github/workflows/`), а затем добавьте секрет с тем же значением
+   под именем `FIREBASE_SERVICE_ACCOUNT`. Или создайте всё вручную:
    - Google Cloud Console → IAM → Service Accounts → создать аккаунт с ролями
      **Firebase Hosting Admin**, **Firebase Rules Admin**, **Cloud Datastore Index Admin**,
      **Service Account User** и **API Keys Viewer**; скачать ключ в формате JSON;
    - GitHub → Settings → Secrets and variables → Actions → **New repository secret**,
      имя `FIREBASE_SERVICE_ACCOUNT`, значение — содержимое JSON-ключа.
 
-Пока секрет не задан, шаги деплоя пропускаются с предупреждением, а сборка всё равно проверяется.
+Пока секрет не задан, шаги деплоя пропускаются с предупреждением (статус job при этом
+зелёный), а сборка всё равно проверяется. Перед публикацией в продакшен также
+запускаются тесты правил Firestore: правила, не прошедшие тесты, не деплоятся.
+
+### Настройки репозитория GitHub
+
+Рекомендуется включить в **Settings**:
+
+- **Rules → Rulesets → New branch ruleset** для `main`: запрет удаления и force-push,
+  обязательный Pull Request и обязательные проверки `Typecheck & build` и
+  `Firestore rules tests`. Пока в проекте один разработчик, число обязательных одобрений
+  оставьте 0: GitHub не даёт одобрить собственный PR. Владелец назначается ревьюером
+  автоматически через `.github/CODEOWNERS`;
+- **Advanced Security**: *Private vulnerability reporting*, *Dependabot alerts*,
+  *Dependabot security updates* и *Secret scanning* с *Push protection*;
+- **General → Pull Requests**: *Automatically delete head branches*.
 
 ### Ручной деплой
 
