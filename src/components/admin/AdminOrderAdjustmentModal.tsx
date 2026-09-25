@@ -628,11 +628,11 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                   Трек-номер отправления (ТК)
                 </label>
                 {trackingNumber.trim() ? (
-                  <span className="text-[10px] font-bold text-emerald-700 neu-flat px-2 py-0.5 rounded-lg bg-emerald-50">
+                  <span className="text-[10px] font-bold text-success neu-flat px-2 py-0.5 rounded-lg bg-success-soft">
                     Будет виден клиенту
                   </span>
                 ) : (
-                  <span className="text-[10px] font-bold text-amber-700 neu-flat px-2 py-0.5 rounded-lg bg-amber-50">
+                  <span className="text-[10px] font-bold text-warning neu-flat px-2 py-0.5 rounded-lg bg-warning-soft">
                     Уведомление об отсутствии
                   </span>
                 )}
@@ -677,14 +677,14 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
               {/* Dynamic Preview Notice for Admin */}
               {trackingNumber.trim() ? (
                 <div className="neu-inset rounded-xl p-2.5 bg-[#E3E8EF] text-[11px] text-[#2D3A4E] flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-success shrink-0" />
                   <span>
                     Клиент увидит трек-номер <strong className="font-mono text-[#5F6ED0]">{trackingNumber.trim()}</strong> для отслеживания в транспортной компании.
                   </span>
                 </div>
               ) : (
-                <div className="neu-inset rounded-xl p-2.5 bg-amber-50/80 border border-amber-300/70 text-[11px] text-amber-900 flex items-center gap-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <div className="neu-inset rounded-xl p-2.5 bg-warning-soft border border-warning/70 text-[11px] text-warning flex items-center gap-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-warning shrink-0" />
                   <span>
                     Пока трек-номер не указан, у клиента в личном кабинете будет отображаться сообщение: <em>«Трек-номер формируется транспортной компанией»</em>.
                   </span>
@@ -712,38 +712,38 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
 
           {/* Refund Notice */}
           {isRefund && (
-            <div className="neu-inset rounded-2xl p-3 bg-emerald-50/80 border border-emerald-300/70 text-xs text-emerald-900 flex items-center justify-between gap-3">
+            <div className="neu-inset rounded-2xl p-3 bg-success-soft border border-success/70 text-xs text-success flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
-                <CreditCard className="w-4 h-4 text-emerald-600 shrink-0" />
+                <CreditCard className="w-4 h-4 text-success shrink-0" />
                 <div>
-                  <p className="font-extrabold text-emerald-800">
+                  <p className="font-extrabold text-success">
                     Сумма к возврату клиенту: {delta.toLocaleString('ru-RU')} ₽
                   </p>
-                  <p className="text-[10px] text-emerald-700 leading-tight">
+                  <p className="text-[10px] text-success leading-tight">
                     Автоматический возврат на банковскую карту клиента в течение 1–3 дней
                   </p>
                 </div>
               </div>
-              <span className="font-black text-emerald-700 text-sm whitespace-nowrap shrink-0">
+              <span className="font-black text-success text-sm whitespace-nowrap shrink-0">
                 - {delta.toLocaleString('ru-RU')} ₽
               </span>
             </div>
           )}
 
           {isExtraCharge && (
-            <div className="neu-inset rounded-2xl p-3 bg-amber-50/80 border border-amber-300/70 text-xs text-amber-900 flex items-center justify-between gap-3">
+            <div className="neu-inset rounded-2xl p-3 bg-warning-soft border border-warning/70 text-xs text-warning flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                <AlertCircle className="w-4 h-4 text-warning shrink-0" />
                 <div>
-                  <p className="font-extrabold text-amber-800">
+                  <p className="font-extrabold text-warning">
                     Требуется доплата: {Math.abs(delta).toLocaleString('ru-RU')} ₽
                   </p>
-                  <p className="text-[10px] text-amber-700 leading-tight">
+                  <p className="text-[10px] text-warning leading-tight">
                     Клиенту будет выставлена ссылка на доплату добавленных позиций
                   </p>
                 </div>
               </div>
-              <span className="font-black text-amber-700 text-sm whitespace-nowrap shrink-0">
+              <span className="font-black text-warning text-sm whitespace-nowrap shrink-0">
                 + {Math.abs(delta).toLocaleString('ru-RU')} ₽
               </span>
             </div>

@@ -222,7 +222,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               className="py-2 px-4.5 neu-inset rounded-xl text-xs font-black text-[#5F6ED0] hover:text-[#4F5DC0] flex items-center gap-2 cursor-pointer active:scale-95 transition-all bg-[#E3E8EF]"
               title="Применить все изменения к витрине"
             >
-              {isSaved ? <Check className="w-4 h-4 text-emerald-600" /> : <Save className="w-4 h-4 text-[#5F6ED0]" />}
+              {isSaved ? <Check className="w-4 h-4 text-success" /> : <Save className="w-4 h-4 text-[#5F6ED0]" />}
               <span>{isSaved ? 'Сохранено!' : 'Применить'}</span>
             </button>
           </div>
@@ -242,7 +242,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             className="w-full max-w-sm neu-flat rounded-3xl bg-[#E3E8EF] p-5 sm:p-6 space-y-4 border border-white/80 animate-in zoom-in-95 duration-150"
           >
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-2xl neu-flat-sm flex items-center justify-center text-amber-600 bg-[#E3E8EF] shrink-0 border border-white/80">
+              <div className="w-10 h-10 rounded-2xl neu-flat-sm flex items-center justify-center text-warning bg-[#E3E8EF] shrink-0 border border-white/80">
                 <AlertCircle className="w-5 h-5" />
               </div>
               <div>
@@ -268,7 +268,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   setIsResetConfirmOpen(false);
                   handleResetToDefaults();
                 }}
-                className="py-2 px-4 neu-button rounded-xl text-xs font-black text-rose-600 hover:text-rose-700 active:scale-95 transition-all cursor-pointer bg-[#E3E8EF] border border-rose-300/70"
+                className="py-2 px-4 neu-button rounded-xl text-xs font-black text-danger hover:text-danger active:scale-95 transition-all cursor-pointer bg-[#E3E8EF] border border-danger/70"
               >
                 Да, сбросить
               </button>
@@ -297,8 +297,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
           {/* Store Offline Banner Preview if offline */}
           {!localSettings.isStoreOnline && (
-            <div className="neu-inset rounded-2xl p-3 bg-amber-500/10 border border-amber-500/30 flex items-center gap-2.5 text-amber-900">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+            <div className="neu-inset rounded-2xl p-3 bg-warning-soft border border-warning/30 flex items-center gap-2.5 text-warning">
+              <AlertCircle className="w-4 h-4 text-warning shrink-0" />
               <div className="text-xs">
                 <span className="font-black block">Режим закрытой примерки</span>
                 <span className="text-[11px] text-[#5C6B80]">
@@ -426,7 +426,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 <span className="text-[9px] text-[#5C6B80] block font-bold">Беспл. доставка</span>
                 <Pencil className="w-2.5 h-2.5 text-[#5F6ED0] opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <span className="text-xs font-black text-emerald-700 block">
+              <span className="text-xs font-black text-success block">
                 от {localSettings.freeDeliveryThreshold?.toLocaleString('ru-RU') || 5000} ₽
               </span>
             </button>
@@ -450,7 +450,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               </div>
               <span
                 className={`text-xs font-black block ${
-                  localSettings.isExpressEnabled ? 'text-emerald-700' : 'text-rose-600'
+                  localSettings.isExpressEnabled ? 'text-success' : 'text-danger'
                 }`}
               >
                 {localSettings.isExpressEnabled ? 'Включена' : 'Отключена'}
@@ -1849,7 +1849,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] space-y-2.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-success" />
                   <span className="text-[11px] font-black text-[#2D3A4E]">
                     Стандарты подлинности и гарантии
                   </span>
@@ -1897,7 +1897,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </span>
 
                 <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-md neu-flat-sm flex items-center justify-center text-emerald-600 font-bold text-[10px] shrink-0 bg-[#E3E8EF]">
+                  <span className="w-5 h-5 rounded-md neu-flat-sm flex items-center justify-center text-success font-bold text-[10px] shrink-0 bg-[#E3E8EF]">
                     ✓
                   </span>
                   <input
@@ -1932,7 +1932,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-md neu-flat-sm flex items-center justify-center text-emerald-600 font-bold text-[10px] shrink-0 bg-[#E3E8EF]">
+                  <span className="w-5 h-5 rounded-md neu-flat-sm flex items-center justify-center text-success font-bold text-[10px] shrink-0 bg-[#E3E8EF]">
                     ✓
                   </span>
                   <input
@@ -1967,7 +1967,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-md neu-flat-sm flex items-center justify-center text-emerald-600 font-bold text-[10px] shrink-0 bg-[#E3E8EF]">
+                  <span className="w-5 h-5 rounded-md neu-flat-sm flex items-center justify-center text-success font-bold text-[10px] shrink-0 bg-[#E3E8EF]">
                     ✓
                   </span>
                   <input
@@ -2040,7 +2040,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         freeDeliveryThreshold: Math.max(0, Number(e.target.value) || 0),
                       })
                     }
-                    className="w-full px-3 py-2 neu-button rounded-xl text-xs font-black text-emerald-700 bg-[#E3E8EF] focus:outline-none pr-8"
+                    className="w-full px-3 py-2 neu-button rounded-xl text-xs font-black text-success bg-[#E3E8EF] focus:outline-none pr-8"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#5C6B80]">
                     ₽
@@ -2070,7 +2070,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               </div>
               <div className="flex items-center justify-between text-[10px] text-[#5C6B80] pt-0.5">
                 <span>Свыше суммы: 0 ₽</span>
-                <span className="font-bold text-emerald-700">0 ₽ от порога</span>
+                <span className="font-bold text-success">0 ₽ от порога</span>
               </div>
             </div>
 
@@ -2174,7 +2174,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               </div>
               <div className="flex items-center justify-between text-[10px] text-[#5C6B80] pt-0.5">
                 <span>Шоурум бутика</span>
-                <span className="font-bold text-emerald-700">
+                <span className="font-bold text-success">
                   {localSettings.pickupDeliveryPrice === 0 ? 'Бесплатно' : `${localSettings.pickupDeliveryPrice} ₽`}
                 </span>
               </div>
@@ -2268,7 +2268,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 <div className="space-y-0.5 truncate">
                   <span className="text-xs font-black text-[#2D3A4E] block truncate">Онлайн-витрина</span>
                   <span className={`text-[10px] font-bold block truncate ${
-                    localSettings.isStoreOnline ? 'text-emerald-700' : 'text-amber-700'
+                    localSettings.isStoreOnline ? 'text-success' : 'text-warning'
                   }`}>
                     {localSettings.isStoreOnline ? 'Прием заказов активен' : 'Технические работы'}
                   </span>
@@ -2306,7 +2306,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 <div className="space-y-0.5 truncate">
                   <span className="text-xs font-black text-[#2D3A4E] block truncate">Экспресс 2 часа</span>
                   <span className={`text-[10px] font-bold block truncate ${
-                    localSettings.isExpressEnabled ? 'text-emerald-700' : 'text-[#8C9BAE]'
+                    localSettings.isExpressEnabled ? 'text-success' : 'text-[#8C9BAE]'
                   }`}>
                     {localSettings.isExpressEnabled ? 'Доступна клиентам' : 'Временно отключена'}
                   </span>
@@ -2344,7 +2344,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 <div className="space-y-0.5 truncate">
                   <span className="text-xs font-black text-[#2D3A4E] block truncate">Авто-скидки</span>
                   <span className={`text-[10px] font-bold block truncate ${
-                    localSettings.isAutoDiscount ? 'text-emerald-700' : 'text-[#8C9BAE]'
+                    localSettings.isAutoDiscount ? 'text-success' : 'text-[#8C9BAE]'
                   }`}>
                     {localSettings.isAutoDiscount ? 'Акции активны' : 'Только базовая цена'}
                   </span>
@@ -2438,7 +2438,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             <div className="neu-inset p-3 rounded-2xl bg-[#E3E8EF] space-y-1">
               <span className="text-[10px] font-bold text-[#5C6B80] block uppercase tracking-wider">Статус пароля</span>
               <div className="flex items-center gap-1.5 font-black text-sm text-[#2D3A4E]">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <ShieldCheck className="w-4 h-4 text-success" />
                 <span>Защищен (••••••••)</span>
               </div>
             </div>
@@ -2475,7 +2475,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             type="submit"
             className="py-3 px-6 neu-inset rounded-2xl text-xs font-black text-[#5F6ED0] hover:text-[#4F5DC0] flex items-center gap-2 cursor-pointer active:scale-95 transition-transform bg-[#E3E8EF]"
           >
-            {isSaved ? <Check className="w-4 h-4 text-emerald-600" /> : <Save className="w-4 h-4 text-[#5F6ED0]" />}
+            {isSaved ? <Check className="w-4 h-4 text-success" /> : <Save className="w-4 h-4 text-[#5F6ED0]" />}
             <span>{isSaved ? 'Сохранено!' : 'Применить настройки к витрине'}</span>
           </button>
         </div>

@@ -856,7 +856,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
     { id: 'sizing', label: 'Размеры', icon: Ruler, color: 'text-[#5C6B80]' },
     { id: 'delivery', label: 'Доставка', icon: Truck, color: 'text-[#5C6B80]' },
     { id: 'return', label: 'Возврат', icon: RotateCcw, color: 'text-[#5C6B80]' },
-    { id: 'complaint', label: 'Претензия', icon: AlertTriangle, color: 'text-[#7E525E]' },
+    { id: 'complaint', label: 'Претензия', icon: AlertTriangle, color: 'text-danger' },
     { id: 'discount', label: 'Промокод', icon: Gift, color: 'text-[#5F6ED0]' },
     { id: 'consultation', label: 'Консультация', icon: HelpCircle, color: 'text-[#5F6ED0]' },
   ];
@@ -878,13 +878,13 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
       value: 'agent',
       label: 'Ответы оператора',
       badge: 'Оператор',
-      icon: <Headphones className="w-3.5 h-3.5 text-[#3F6E58]" />,
+      icon: <Headphones className="w-3.5 h-3.5 text-success" />,
     },
     {
       value: 'notes',
       label: 'Внутренние заметки',
       badge: 'Заметки',
-      icon: <Lock className="w-3.5 h-3.5 text-[#8C733E]" />,
+      icon: <Lock className="w-3.5 h-3.5 text-warning" />,
     },
   ];
 
@@ -910,7 +910,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
       label: 'Внутренняя заметка',
       sublabel: 'Служебная заметка для коллег (клиент не видит)',
       badge: 'Заметка 🔒',
-      icon: <Lock className="w-3.5 h-3.5 text-[#8C733E]" />,
+      icon: <Lock className="w-3.5 h-3.5 text-warning" />,
     },
   ];
 
@@ -932,7 +932,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
       label: 'Загрузить фото',
       sublabel: 'Прикрепить изображение или скриншот',
       badge: 'Файл',
-      icon: <ImageIcon className="w-3.5 h-3.5 text-[#3F6E58]" />,
+      icon: <ImageIcon className="w-3.5 h-3.5 text-success" />,
     },
   ];
 
@@ -962,7 +962,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
       value: 'waiting',
       label: `Ожидают ответа (${threads.filter((t) => t.status === 'waiting').length})`,
       badge: `${threads.filter((t) => t.status === 'waiting').length}`,
-      icon: <Clock className="w-3.5 h-3.5 text-[#8C733E]" />,
+      icon: <Clock className="w-3.5 h-3.5 text-warning" />,
     },
     {
       value: 'in_progress',
@@ -974,13 +974,13 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
       value: 'vip',
       label: 'VIP и срочные',
       badge: 'VIP',
-      icon: <Crown className="w-3.5 h-3.5 text-[#8C733E]" />,
+      icon: <Crown className="w-3.5 h-3.5 text-warning" />,
     },
     {
       value: 'resolved',
       label: 'Решенные вопросы',
       badge: 'Архив',
-      icon: <CheckCircle2 className="w-3.5 h-3.5 text-[#3F6E58]" />,
+      icon: <CheckCircle2 className="w-3.5 h-3.5 text-success" />,
     },
   ];
 
@@ -1032,13 +1032,13 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
       case 'accepted':
         return { label: ORDER_STATUS_LABELS.accepted, class: 'neu-inset text-[#5F6ED0] bg-[#E3E8EF]' };
       case 'assembling':
-        return { label: ORDER_STATUS_LABELS.assembling, class: 'neu-inset text-[#8C733E] bg-[#E3E8EF]' };
+        return { label: ORDER_STATUS_LABELS.assembling, class: 'neu-inset text-warning bg-[#E3E8EF]' };
       case 'in_transit':
         return { label: ORDER_STATUS_LABELS.in_transit, class: 'neu-inset text-[#4A6984] bg-[#E3E8EF]' };
       case 'ready':
         return { label: ORDER_STATUS_LABELS.ready, class: 'neu-inset text-[#635B87] bg-[#E3E8EF]' };
       case 'delivered':
-        return { label: ORDER_STATUS_LABELS.delivered, class: 'neu-inset text-[#3F6E58] bg-[#E3E8EF]' };
+        return { label: ORDER_STATUS_LABELS.delivered, class: 'neu-inset text-success bg-[#E3E8EF]' };
       default:
         return { label: 'Обработка', class: 'neu-inset text-[#5C6B80] bg-[#E3E8EF]' };
     }
@@ -1133,25 +1133,25 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             </div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-sm font-black text-[#2D3A4E]">1.8 мин</span>
-              <span className="text-[9px] font-bold text-[#3F6E58]">Цель &lt; 3 мин</span>
+              <span className="text-[9px] font-bold text-success">Цель &lt; 3 мин</span>
             </div>
           </div>
 
           <div className="neu-inset rounded-xl p-2.5 bg-[#E3E8EF]">
             <div className="flex items-center justify-between text-[10px] font-bold text-[#5C6B80] mb-0.5">
               <span>Рейтинг клиентов (CSAT)</span>
-              <Star className="w-3 h-3 text-[#8C733E]" />
+              <Star className="w-3 h-3 text-warning" />
             </div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-sm font-black text-[#2D3A4E]">4.9 / 5.0</span>
-              <span className="text-[9px] font-bold text-[#3F6E58]">98% довольны</span>
+              <span className="text-[9px] font-bold text-success">98% довольны</span>
             </div>
           </div>
 
           <div className="neu-inset rounded-xl p-2.5 bg-[#E3E8EF]">
             <div className="flex items-center justify-between text-[10px] font-bold text-[#5C6B80] mb-0.5">
               <span>Решено за смену</span>
-              <CheckCircle2 className="w-3 h-3 text-[#3F6E58]" />
+              <CheckCircle2 className="w-3 h-3 text-success" />
             </div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-sm font-black text-[#2D3A4E]">18 обращений</span>
@@ -1162,7 +1162,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
           <div className="neu-inset rounded-xl p-2.5 bg-[#E3E8EF]">
             <div className="flex items-center justify-between text-[10px] font-bold text-[#5C6B80] mb-0.5">
               <span>В очереди / Онлайн</span>
-              <span className="w-2 h-2 rounded-full bg-[#3F6E58]" />
+              <span className="w-2 h-2 rounded-full bg-success" />
             </div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-sm font-black text-[#5F6ED0]">
@@ -1455,7 +1455,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
 
                         {currentThread.priority === 'vip' && (
                           <span
-                            className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full neu-button text-[#8C733E] flex items-center justify-center text-[9px] font-black border border-white"
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full neu-button text-warning flex items-center justify-center text-[9px] font-black border border-white"
                             title="VIP клиент"
                           >
                             <Crown className="w-3 h-3" />
@@ -1464,7 +1464,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
 
                         {currentThread.priority === 'urgent' && (
                           <span
-                            className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full neu-button text-[#7E525E] flex items-center justify-center text-[9px] font-black border border-white"
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full neu-button text-danger flex items-center justify-center text-[9px] font-black border border-white"
                             title="Срочное обращение"
                           >
                             <Zap className="w-3 h-3" />
@@ -1489,7 +1489,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                         {currentThread.lastActivity}
                       </span>
                       {currentThread.csatRating && (
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-lg neu-inset bg-[#E3E8EF] text-[#8C733E] flex items-center gap-0.5">
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-lg neu-inset bg-[#E3E8EF] text-warning flex items-center gap-0.5">
                           ★ {currentThread.csatRating}.0
                         </span>
                       )}
@@ -1503,7 +1503,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                         href={`tel:${currentThread.customerPhone.replace(/[^\d+]/g, '')}`}
                         className="p-2 neu-flat-sm rounded-xl flex items-center gap-2 text-[#2D3A4E] hover:text-[#5F6ED0] transition-colors truncate"
                       >
-                        <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <Phone className="w-3.5 h-3.5 text-success shrink-0" />
                         <span className="truncate font-bold">{currentThread.customerPhone}</span>
                       </a>
                     )}
@@ -1523,7 +1523,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                       </span>
                       <p className="line-clamp-2 text-[#2D3A4E] font-medium leading-relaxed neu-inset p-2.5 rounded-xl bg-[#E3E8EF]">
                         {currentThread.messages[currentThread.messages.length - 1].isInternalNote ? (
-                          <span className="text-[#8C733E] font-bold flex items-center gap-1">
+                          <span className="text-warning font-bold flex items-center gap-1">
                             <Lock className="w-3 h-3 shrink-0" />
                             <span>Заметка: {currentThread.messages[currentThread.messages.length - 1].text}</span>
                           </span>
@@ -1536,8 +1536,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
 
                   {/* Follow-up reminder if set */}
                   {currentThread.followUpReminder && !currentThread.followUpReminder.completed && (
-                    <div className="flex items-center gap-2 text-[11px] font-bold text-[#8C733E] neu-inset p-2.5 rounded-xl bg-[#E3E8EF] border border-[#8C733E]/20">
-                      <Clock className="w-4 h-4 text-[#8C733E] shrink-0" />
+                    <div className="flex items-center gap-2 text-[11px] font-bold text-warning neu-inset p-2.5 rounded-xl bg-[#E3E8EF] border border-warning/20">
+                      <Clock className="w-4 h-4 text-warning shrink-0" />
                       <div className="min-w-0 flex-1">
                         <span className="block font-black">{currentThread.followUpReminder.dueDate}</span>
                         <span className="text-[10px] font-normal text-[#5C6B80] truncate block">
@@ -1553,10 +1553,10 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                       {currentThread.tags.map((tag, idx) => {
                         const tagLabels: Record<string, { label: string; color: string }> = {
                           sizing: { label: 'Размеры', color: 'text-[#5F6ED0]' },
-                          delivery: { label: 'Доставка', color: 'text-[#8C733E]' },
-                          return: { label: 'Возврат', color: 'text-[#7E525E]' },
-                          consultation: { label: 'Консультация', color: 'text-[#3F6E58]' },
-                          complaint: { label: 'Претензия', color: 'text-[#7E525E]' },
+                          delivery: { label: 'Доставка', color: 'text-warning' },
+                          return: { label: 'Возврат', color: 'text-danger' },
+                          consultation: { label: 'Консультация', color: 'text-success' },
+                          complaint: { label: 'Претензия', color: 'text-danger' },
                         };
                         const info = tagLabels[tag] || { label: tag, color: 'text-[#5C6B80]' };
                         return (
@@ -1584,7 +1584,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                     <button
                       type="button"
                       onClick={() => setIsReminderModalOpen(true)}
-                      className="py-2 px-2.5 neu-button rounded-xl text-[10px] font-bold text-[#8C733E] flex items-center justify-center gap-1 cursor-pointer active:scale-95"
+                      className="py-2 px-2.5 neu-button rounded-xl text-[10px] font-bold text-warning flex items-center justify-center gap-1 cursor-pointer active:scale-95"
                     >
                       <Bell className="w-3.5 h-3.5" />
                       <span>{currentThread.followUpReminder ? 'Напоминание' : 'Напомнить'}</span>
@@ -1636,7 +1636,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                               {/* VIP Badge */}
                               {thread.priority === 'vip' && (
                                 <span
-                                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full neu-button text-[#8C733E] flex items-center justify-center text-[9px] font-black border border-white"
+                                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full neu-button text-warning flex items-center justify-center text-[9px] font-black border border-white"
                                   title="VIP клиент"
                                 >
                                   <Crown className="w-3 h-3" />
@@ -1646,7 +1646,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                               {/* Urgent Badge */}
                               {thread.priority === 'urgent' && (
                                 <span
-                                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full neu-button text-[#7E525E] flex items-center justify-center text-[9px] font-black border border-white"
+                                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full neu-button text-danger flex items-center justify-center text-[9px] font-black border border-white"
                                   title="Срочное обращение"
                                 >
                                   <Zap className="w-3 h-3" />
@@ -1684,14 +1684,14 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
 
                             {/* Resolved Status Checkmark Badge */}
                             {thread.status === 'resolved' && unread === 0 && (
-                              <span className="w-5 h-5 rounded-full neu-inset flex items-center justify-center text-[#3F6E58]" title="Вопрос решен">
+                              <span className="w-5 h-5 rounded-full neu-inset flex items-center justify-center text-success" title="Вопрос решен">
                                 <CheckCircle2 className="w-3.5 h-3.5" />
                               </span>
                             )}
 
                             {/* Waiting status indicator */}
                             {thread.status === 'waiting' && unread === 0 && (
-                              <span className="w-2.5 h-2.5 rounded-full bg-[#8C733E] animate-pulse" title="Ожидает ответа" />
+                              <span className="w-2.5 h-2.5 rounded-full bg-warning animate-pulse" title="Ожидает ответа" />
                             )}
                           </div>
                         </div>
@@ -1700,7 +1700,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                         {lastMsg && (
                           <div className="mt-2.5 pt-2 border-t border-[#BAC5D5]/40 text-[11px] sm:text-xs text-[#5C6B80] leading-relaxed">
                             {lastMsg.isInternalNote ? (
-                              <span className="text-[#8C733E] font-bold flex items-center gap-1">
+                              <span className="text-warning font-bold flex items-center gap-1">
                                 <Lock className="w-3 h-3 shrink-0" />
                                 <span className="truncate">Заметка: {lastMsg.text}</span>
                               </span>
@@ -1714,10 +1714,10 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
 
                         {/* Reminder / Follow-up Alert Box */}
                         {thread.followUpReminder && !thread.followUpReminder.completed && (
-                          <div className="mt-2.5 flex items-center gap-1.5 text-[10px] font-bold text-[#8C733E] neu-inset px-2.5 py-1.5 rounded-xl bg-[#E3E8EF] border border-white/40">
-                            <Clock className="w-3.5 h-3.5 text-[#8C733E] shrink-0" />
+                          <div className="mt-2.5 flex items-center gap-1.5 text-[10px] font-bold text-warning neu-inset px-2.5 py-1.5 rounded-xl bg-[#E3E8EF] border border-white/40">
+                            <Clock className="w-3.5 h-3.5 text-warning shrink-0" />
                             <span className="truncate">
-                              <span className="font-black text-[#8C733E]">{thread.followUpReminder.dueDate}:</span>{' '}
+                              <span className="font-black text-warning">{thread.followUpReminder.dueDate}:</span>{' '}
                               {thread.followUpReminder.note}
                             </span>
                           </div>
@@ -1729,10 +1729,10 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                             {thread.tags.map((tag, tagIdx) => {
                               const tagLabels: Record<string, { label: string; color: string }> = {
                                 sizing: { label: 'Размеры', color: 'text-[#5F6ED0]' },
-                                delivery: { label: 'Доставка', color: 'text-[#8C733E]' },
-                                return: { label: 'Возврат', color: 'text-[#7E525E]' },
-                                consultation: { label: 'Консультация', color: 'text-[#3F6E58]' },
-                                complaint: { label: 'Претензия', color: 'text-[#7E525E]' },
+                                delivery: { label: 'Доставка', color: 'text-warning' },
+                                return: { label: 'Возврат', color: 'text-danger' },
+                                consultation: { label: 'Консультация', color: 'text-success' },
+                                complaint: { label: 'Претензия', color: 'text-danger' },
                               };
                               const info = tagLabels[tag] || { label: tag, color: 'text-[#5C6B80]' };
                               return (
@@ -1745,7 +1745,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                               );
                             })}
                             {thread.csatRating && (
-                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-md neu-inset bg-[#E3E8EF] text-[#8C733E] ml-auto flex items-center gap-0.5">
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-md neu-inset bg-[#E3E8EF] text-warning ml-auto flex items-center gap-0.5">
                                 ★ {thread.csatRating}.0
                               </span>
                             )}
@@ -1819,7 +1819,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                     onClick={() => setIsReminderModalOpen(true)}
                     className={`h-7 px-2.5 neu-inset rounded-xl text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all active:scale-95 bg-[#E3E8EF] border border-transparent ${
                       currentThread.followUpReminder
-                        ? 'text-[#8C733E] font-black'
+                        ? 'text-warning font-black'
                         : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                     }`}
                     title="Установить напоминание для оператора"
@@ -1831,8 +1831,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                   {/* Status Dropdown / Buttons */}
                   <div className="neu-flat-sm rounded-xl p-1 flex gap-1 bg-[#E3E8EF] text-[10px] font-bold">
                     {[
-                      { id: 'in_progress', label: 'В работе', color: 'text-[#8C733E]' },
-                      { id: 'resolved', label: 'Решен', color: 'text-[#3F6E58]' },
+                      { id: 'in_progress', label: 'В работе', color: 'text-warning' },
+                      { id: 'resolved', label: 'Решен', color: 'text-success' },
                       { id: 'closed', label: 'Закрыт', color: 'text-[#5C6B80]' },
                     ].map((st) => (
                       <button
@@ -1856,7 +1856,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               {currentThread.followUpReminder && (
                 <div className="neu-inset rounded-xl p-2.5 bg-[#E3E8EF] flex items-center justify-between gap-2 text-xs">
                   <div className="flex items-center gap-2 text-[#2D3A4E] min-w-0">
-                    <span className="w-6 h-6 rounded-lg neu-inset flex items-center justify-center text-[#8C733E] shrink-0 bg-[#E3E8EF]">
+                    <span className="w-6 h-6 rounded-lg neu-inset flex items-center justify-center text-warning shrink-0 bg-[#E3E8EF]">
                       <Clock className="w-3.5 h-3.5" />
                     </span>
                     <span className="text-[11px] font-bold truncate">
@@ -1866,9 +1866,9 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                   <button
                     type="button"
                     onClick={handleDismissReminder}
-                    className="px-2 py-1 neu-inset rounded-lg text-[10px] font-black text-[#3F6E58] flex items-center gap-1 cursor-pointer shrink-0 bg-[#E3E8EF] border border-transparent"
+                    className="px-2 py-1 neu-inset rounded-lg text-[10px] font-black text-success flex items-center gap-1 cursor-pointer shrink-0 bg-[#E3E8EF] border border-transparent"
                   >
-                    <Check className="w-3 h-3 text-[#3F6E58]" />
+                    <Check className="w-3 h-3 text-success" />
                     <span>Выполнено</span>
                   </button>
                 </div>
@@ -2031,8 +2031,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                       {/* Sender label badge */}
                       <div className="flex items-center gap-1.5 px-1">
                         {isInternal ? (
-                          <span className="text-[10px] font-black text-[#8C733E] flex items-center gap-1 neu-inset px-2 py-0.5 rounded-md bg-[#E3E8EF] border border-[#8C733E]/20">
-                            <Lock className="w-3 h-3 text-[#8C733E]" />
+                          <span className="text-[10px] font-black text-warning flex items-center gap-1 neu-inset px-2 py-0.5 rounded-md bg-[#E3E8EF] border border-warning/20">
+                            <Lock className="w-3 h-3 text-warning" />
                             Внутренняя заметка для коллег (клиент не видит)
                           </span>
                         ) : isUser ? (
@@ -2041,8 +2041,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                             Покупатель
                           </span>
                         ) : (
-                          <span className="text-[10px] font-bold text-[#3F6E58] flex items-center gap-1">
-                            <UserCheck className="w-3 h-3 text-[#3F6E58]" />
+                          <span className="text-[10px] font-bold text-success flex items-center gap-1">
+                            <UserCheck className="w-3 h-3 text-success" />
                             Оператор поддержки
                           </span>
                         )}
@@ -2053,7 +2053,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                       <div
                         className={`p-3.5 rounded-2xl text-xs max-w-[88%] space-y-2.5 leading-relaxed ${
                           isInternal
-                            ? 'neu-inset bg-[#E3E8EF] border border-[#8C733E]/40 text-[#2D3A4E] font-medium'
+                            ? 'neu-inset bg-[#E3E8EF] border border-warning/40 text-[#2D3A4E] font-medium'
                             : isUser
                             ? 'neu-inset bg-[#E3E8EF] text-[#2D3A4E] border border-transparent'
                             : 'neu-bubble-own font-medium'
@@ -2124,7 +2124,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                                   Обновление заказа № {msg.orderStatusUpdate.orderId}
                                 </span>
                               </div>
-                              <div className="text-[11px] font-bold text-[#3F6E58]">
+                              <div className="text-[11px] font-bold text-success">
                                 Новый статус: {msg.orderStatusUpdate.newStatusLabel}
                               </div>
                               {msg.orderStatusUpdate.trackingNumber && (
@@ -2145,7 +2145,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                                   <Sparkles className="w-3 h-3 text-[#5F6ED0]" />
                                   Персональный промокод
                                 </span>
-                                <span className="text-[10px] font-extrabold text-[#3F6E58] neu-inset px-2 py-0.5 rounded-lg bg-[#E3E8EF]">
+                                <span className="text-[10px] font-extrabold text-success neu-inset px-2 py-0.5 rounded-lg bg-[#E3E8EF]">
                                   {msg.promoCard.discountType === 'fixed'
                                     ? `-${msg.promoCard.discountValue.toLocaleString('ru-RU')} ₽`
                                     : `-${msg.promoCard.discountValue}%`}
@@ -2182,7 +2182,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 <div>
                   <label className="block text-[10px] font-bold text-[#5C6B80] mb-1 px-0.5 flex items-center gap-1.5">
                     {isInternalNote ? (
-                      <Lock className="w-3 h-3 text-[#8C733E]" />
+                      <Lock className="w-3 h-3 text-warning" />
                     ) : (
                       <MessageSquare className="w-3 h-3 text-[#5F6ED0]" />
                     )}
@@ -2236,7 +2236,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                   <button
                     type="button"
                     onClick={() => setSelectedPhoto(null)}
-                    className="p-1 rounded-lg neu-inset text-[#7E525E] cursor-pointer bg-[#E3E8EF] border border-transparent"
+                    className="p-1 rounded-lg neu-inset text-danger cursor-pointer bg-[#E3E8EF] border border-transparent"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -2255,7 +2255,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                       : 'Напишите ответ покупателю (Shift+Enter для переноса строки)...'
                   }
                   className={`w-full p-3.5 neu-inset rounded-2xl text-xs text-[#2D3A4E] focus:outline-none bg-[#E3E8EF] resize-none transition-all ${
-                    isInternalNote ? 'border border-[#8C733E]/40' : ''
+                    isInternalNote ? 'border border-warning/40' : ''
                   }`}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -2292,7 +2292,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                   disabled={!replyText.trim() && !selectedPhoto}
                   className={`w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 ${
                     isInternalNote
-                      ? 'neu-button bg-amber-50/50 text-[#8C733E] font-black border border-[#8C733E]/40'
+                      ? 'neu-button bg-warning-soft text-warning font-black border border-warning/40'
                       : 'neu-button-accent text-white border border-white/40'
                   }`}
                 >
@@ -2721,7 +2721,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
           <div className="neu-modal rounded-3xl p-5 sm:p-6 w-full max-w-md bg-[#E3E8EF] border border-white/80 space-y-4 my-auto">
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-[#8C733E] shrink-0">
+                <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-warning shrink-0">
                   <Bell className="w-4 h-4" />
                 </div>
                 <div>

@@ -46,7 +46,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         >
           <div className="flex items-center justify-between gap-3 pb-2 border-b border-[#BAC5D5]/50">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-[#7E525E] shrink-0">
+              <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-danger shrink-0">
                 <AlertTriangle className="w-4 h-4" />
               </div>
               <h3 className="text-sm font-extrabold text-[#2D3A4E]">{title}</h3>

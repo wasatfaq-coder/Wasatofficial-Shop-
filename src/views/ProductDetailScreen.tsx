@@ -545,7 +545,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 currentStock === 0
                   ? 'neu-inset bg-slate-200/80 text-slate-400 cursor-not-allowed'
                   : isAdded
-                  ? 'bg-emerald-600 text-white neu-inset'
+                  ? 'bg-success text-white neu-inset'
                   : 'neu-button-accent'
               }`}
             >
@@ -631,7 +631,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               </p>
               <div className="grid grid-cols-2 gap-2 pt-1">
                 <div className="neu-flat rounded-xl p-2.5 bg-[#E3E8EF] flex items-center gap-2">
-                  <Leaf className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <Leaf className="w-4 h-4 text-success shrink-0" />
                   <div>
                     <p className="font-black text-[11px] text-[#2D3A4E]">Эко-материал</p>
                     <p className="text-[10px] text-[#5C6B80]">100% биоразлагаемо</p>
@@ -679,8 +679,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                   ))}
                 </div>
 
-                <div className="pt-1.5 flex items-center gap-1.5 text-[10px] text-emerald-800 font-semibold border-t border-[#BAC5D5]/40">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                <div className="pt-1.5 flex items-center gap-1.5 text-[10px] text-success font-semibold border-t border-[#BAC5D5]/40">
+                  <ShieldCheck className="w-4 h-4 text-success shrink-0" />
                   <span>Сертифицировано OEKO-TEX® Standard 100 • Гипоаллергенный натуральный состав</span>
                 </div>
               </div>

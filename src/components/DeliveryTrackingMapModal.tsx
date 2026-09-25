@@ -204,8 +204,8 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                     <span className="text-[10px] font-black text-[#5C6B80] uppercase tracking-wider">
                       Трек-номер отправления (ТК)
                     </span>
-                    <span className="text-[10px] font-bold text-emerald-700 neu-inset-deep neu-inset-deep-animated px-2 py-0.5 rounded-lg whitespace-nowrap shrink-0 flex items-center gap-1 border border-emerald-400/30">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-ping" />
+                    <span className="text-[10px] font-bold text-success neu-inset-deep neu-inset-deep-animated px-2 py-0.5 rounded-lg whitespace-nowrap shrink-0 flex items-center gap-1 border border-success/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-success inline-block animate-ping" />
                       Активен
                     </span>
                   </div>
@@ -229,14 +229,14 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
             }
 
             return (
-              <div className="neu-inset rounded-2xl p-3.5 bg-amber-50/70 border border-amber-300/80 text-amber-900 space-y-1.5">
+              <div className="neu-inset rounded-2xl p-3.5 bg-warning-soft border border-warning/80 text-warning space-y-1.5">
                 <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                  <h4 className="text-xs font-extrabold text-amber-900">
+                  <AlertCircle className="w-4 h-4 text-warning shrink-0" />
+                  <h4 className="text-xs font-extrabold text-warning">
                     Трек-номер формируется транспортной компанией
                   </h4>
                 </div>
-                <p className="text-[11px] text-amber-800 leading-relaxed pl-6">
+                <p className="text-[11px] text-warning leading-relaxed pl-6">
                   Продавец готовит отправление для транспортной компании. После регистрации накладной перевозчиком трек-номер будет отображен в деталях заказа.
                 </p>
               </div>
@@ -251,8 +251,8 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                   <Truck className="w-3.5 h-3.5 text-[#5F6ED0]" />
                   {isPickup ? 'Самовывоз из бутика' : isExpress ? 'Срочная экспресс-доставка' : 'Курьерская служба MANSTYLE'}
                 </span>
-                <span className="text-[10px] font-bold text-emerald-700 neu-inset-deep neu-inset-deep-animated px-2.5 py-0.5 rounded-lg whitespace-nowrap shrink-0 flex items-center gap-1 border border-emerald-400/30">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-ping" />
+                <span className="text-[10px] font-bold text-success neu-inset-deep neu-inset-deep-animated px-2.5 py-0.5 rounded-lg whitespace-nowrap shrink-0 flex items-center gap-1 border border-success/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-success inline-block animate-ping" />
                   {isDelivered ? 'Заказ доставлен' : 'Прямая доставка без трек-номера'}
                 </span>
               </div>
@@ -273,8 +273,8 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                 Карта маршрута курьера
               </span>
               {order.trackingNumber && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 neu-inset-deep neu-inset-deep-animated px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0 border border-emerald-400/30">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-success neu-inset-deep neu-inset-deep-animated px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0 border border-success/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-success animate-ping shrink-0" />
                   Прямой эфир
                 </span>
               )}
@@ -565,7 +565,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                     <span className="text-xs font-black text-[#2D3A4E] truncate">
                       {isExpress ? 'Иван (Экспресс)' : 'Алексей Смирнов'}
                     </span>
-                    <span className="text-[10px] font-bold text-amber-700 neu-flat px-1.5 py-0.5 rounded-lg bg-amber-50 whitespace-nowrap shrink-0">
+                    <span className="text-[10px] font-bold text-warning neu-flat px-1.5 py-0.5 rounded-lg bg-warning-soft whitespace-nowrap shrink-0">
                       ★ 4.96
                     </span>
                   </div>
@@ -631,7 +631,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                   key={step.id || `track-step-${idx}`}
                   className={`p-3 rounded-2xl flex items-start gap-3 transition-all ${
                     isCompleted
-                      ? 'neu-flat bg-[#E3E8EF] border border-emerald-400/40'
+                      ? 'neu-flat bg-[#E3E8EF] border border-success/40'
                       : isActive
                       ? 'neu-inset-deep bg-[#E3E8EF] border border-[#5F6ED0]/70 ring-1 ring-[#5F6ED0]/30'
                       : 'neu-flat bg-[#E3E8EF]/60 opacity-65 border border-white/50'
@@ -640,7 +640,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                   <div
                     className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 mt-0.5 transition-all ${
                       isCompleted
-                        ? 'bg-emerald-600 text-white'
+                        ? 'bg-success text-white'
                         : isActive
                         ? 'neu-inset-deep text-[#5F6ED0] bg-[#E3E8EF] border border-[#5F6ED0]'
                         : 'neu-button text-[#5C6B80]'
@@ -657,7 +657,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                       <span
                         className={`text-[10px] font-bold px-2 py-0.5 rounded-lg whitespace-nowrap shrink-0 ${
                           isCompleted
-                            ? 'text-emerald-800 bg-emerald-100/80 border border-emerald-200'
+                            ? 'text-success bg-success-soft border border-success/25'
                             : isActive
                             ? 'neu-inset-deep text-[#5F6ED0] bg-[#E3E8EF] border border-[#5F6ED0]/50'
                             : 'text-[#5C6B80] bg-[#DDE3EC] border border-[#BAC5D5]/50'

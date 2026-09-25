@@ -214,11 +214,11 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
               }`}
             >
               <div className="flex items-center gap-3">
-                <Heart className="w-5 h-5 text-rose-500 group-hover:scale-105 transition-transform" />
+                <Heart className="w-5 h-5 text-danger group-hover:scale-105 transition-transform" />
                 <span className="group-hover:text-[#5F6ED0] transition-colors">Избранное</span>
               </div>
               {favoritesCount > 0 ? (
-                <span className="bg-rose-500 text-white text-xs px-2 py-0.5 rounded-full font-bold shadow-xs">
+                <span className="bg-danger text-white text-xs px-2 py-0.5 rounded-full font-bold shadow-xs">
                   {favoritesCount}
                 </span>
               ) : (
@@ -296,7 +296,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
               <div>
                 <p className="text-xs font-bold text-[#2D3A4E] flex items-center gap-1.5 group-hover:text-[#5F6ED0] transition-colors">
                   <span>Поддержка 24/7</span>
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
+                  <span className="w-2 h-2 rounded-full bg-success inline-block animate-pulse" />
                 </p>
                 <p className="text-[11px] text-[#5C6B80] font-medium">Онлайн-чат с консьержем</p>
               </div>

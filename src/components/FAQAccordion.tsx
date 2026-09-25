@@ -93,9 +93,9 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
                         {item.highlights.map((h, i) => (
                           <span
                             key={i}
-                            className="neu-flat px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-bold text-emerald-800 bg-white/80 border border-emerald-300/40 flex items-center gap-1.5"
+                            className="neu-flat px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-bold text-success bg-white/80 border border-success/40 flex items-center gap-1.5"
                           >
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0" />
                             <span>{h}</span>
                           </span>
                         ))}

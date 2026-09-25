@@ -156,7 +156,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                 <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-[#5F6ED0] border border-white/80">
                   <Headphones className="w-5 h-5 text-[#5F6ED0] stroke-[2.2]" />
                 </div>
-                <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-[#E3E8EF] rounded-full shadow-sm" />
+                <span className="absolute bottom-0 right-0 w-3 h-3 bg-success border-2 border-[#E3E8EF] rounded-full shadow-sm" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -168,7 +168,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                   </span>
                 </div>
                 <p className="text-[10px] sm:text-[11px] text-[#5C6B80] font-medium flex items-center gap-1.5 truncate">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse shrink-0" />
                   <span className="truncate">Онлайн • Подбор & помощь</span>
                 </p>
               </div>
@@ -188,7 +188,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                 type="button"
                 onClick={onClose}
                 title="Закрыть чат"
-                className="w-9 h-9 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#2D3A4E] hover:text-rose-600 transition-all border border-white/70 active:scale-95 cursor-pointer"
+                className="w-9 h-9 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#2D3A4E] hover:text-danger transition-all border border-white/70 active:scale-95 cursor-pointer"
               >
                 <X className="w-4 h-4 text-[#2D3A4E]" />
               </button>
@@ -223,7 +223,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                     {!isUser && (
                       <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-[#5F6ED0] shrink-0 mt-0.5 border border-white/60">
                         {isAgent ? (
-                          <UserCheck className="w-4 h-4 text-emerald-600" />
+                          <UserCheck className="w-4 h-4 text-success" />
                         ) : (
                           <Headphones className="w-4 h-4 text-[#5F6ED0]" />
                         )}
@@ -236,8 +236,8 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                         <div className="flex items-center gap-1.5 px-1">
                           <span className="text-[10px] font-black text-[#5C6B80]">
                             {isAgent ? (
-                              <span className="text-emerald-700 font-black flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              <span className="text-success font-black flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-success" />
                                 Оператор поддержки
                               </span>
                             ) : (
@@ -255,7 +255,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                           isUser
                             ? 'neu-bubble-own rounded-tr-none'
                             : isAgent
-                            ? 'neu-flat rounded-tl-none text-[#2D3A4E] border border-emerald-300/60 bg-emerald-50/20'
+                            ? 'neu-flat rounded-tl-none text-[#2D3A4E] border border-success/60 bg-success-soft'
                             : 'neu-flat rounded-tl-none text-[#2D3A4E] border border-white/80'
                         }`}
                       >
@@ -374,7 +374,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                                 <span className="text-[11px] font-bold text-[#2D3A4E]">
                                   Новый статус:
                                 </span>
-                                <span className="text-[11px] font-black text-emerald-700">
+                                <span className="text-[11px] font-black text-success">
                                   {msg.orderStatusUpdate.newStatusLabel}
                                 </span>
                               </div>
@@ -396,7 +396,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                                   <Sparkles className="w-3 h-3 text-[#5F6ED0]" />
                                   Персональный промокод
                                 </span>
-                                <span className="text-[10px] font-extrabold text-emerald-700 neu-inset px-2 py-0.5 rounded-lg bg-emerald-50">
+                                <span className="text-[10px] font-extrabold text-success neu-inset px-2 py-0.5 rounded-lg bg-success-soft">
                                   {msg.promoCard.discountType === 'fixed'
                                     ? `-${msg.promoCard.discountValue.toLocaleString('ru-RU')} ₽`
                                     : `-${msg.promoCard.discountValue}%`}
@@ -528,7 +528,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
               <button
                 type="button"
                 onClick={() => setAttachedImage(null)}
-                className="w-7 h-7 rounded-xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-rose-500 hover:text-rose-700 active:scale-90 transition-all border border-white/70 cursor-pointer"
+                className="w-7 h-7 rounded-xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-danger hover:text-danger active:scale-90 transition-all border border-white/70 cursor-pointer"
                 title="Удалить прикрепленное фото"
               >
                 <X className="w-4 h-4" />

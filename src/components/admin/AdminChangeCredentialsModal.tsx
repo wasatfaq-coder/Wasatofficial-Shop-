@@ -94,9 +94,9 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
     if (/[0-9]/.test(pass)) score += 1;
     if (/[^A-Za-z0-9А-Яа-я]/.test(pass)) score += 1;
 
-    if (score <= 2) return { score: 1, label: 'Простой', color: 'bg-amber-500' };
+    if (score <= 2) return { score: 1, label: 'Простой', color: 'bg-warning' };
     if (score <= 3) return { score: 2, label: 'Хороший', color: 'bg-blue-500' };
-    return { score: 3, label: 'Надежный', color: 'bg-emerald-500' };
+    return { score: 3, label: 'Надежный', color: 'bg-success' };
   };
 
   const strength = getPasswordStrength(newPassword);
@@ -227,11 +227,11 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
 
         {/* Success Banner */}
         {isSuccess ? (
-          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-3 animate-in fade-in">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+          <div className="p-4 rounded-2xl bg-success-soft border border-success/25 text-success text-xs font-bold flex items-center gap-3 animate-in fade-in">
+            <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
             <div>
               <p className="font-black text-sm">Данные успешно сохранены!</p>
-              <p className="text-[11px] text-emerald-700 font-medium mt-0.5">
+              <p className="text-[11px] text-success font-medium mt-0.5">
                 Обновленный логин и пароль активированы и будут использоваться при следующем входе.
               </p>
             </div>
@@ -242,9 +242,9 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
             {error && (
               <div
                 id="admin-change-credentials-error-banner"
-                className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-start gap-2 animate-in fade-in"
+                className="p-3 rounded-2xl bg-danger-soft border border-danger/25 text-danger text-xs font-bold flex items-start gap-2 animate-in fade-in"
               >
-                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+                <AlertCircle className="w-4 h-4 shrink-0 text-danger mt-0.5" />
                 <span>{error}</span>
               </div>
             )}
@@ -255,7 +255,7 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                 htmlFor="admin-curr-password-input"
                 className="text-xs font-extrabold text-[#2D3A4E] block px-1"
               >
-                Текущий пароль администратора <span className="text-rose-500">*</span>
+                Текущий пароль администратора <span className="text-danger">*</span>
               </label>
               <div className="relative flex items-center">
                 <div className="absolute left-3.5 text-[#5C6B80] pointer-events-none">
@@ -296,7 +296,7 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                 htmlFor="admin-new-username-input"
                 className="text-xs font-extrabold text-[#2D3A4E] block px-1"
               >
-                Новый логин администратора <span className="text-rose-500">*</span>
+                Новый логин администратора <span className="text-danger">*</span>
               </label>
               <div className="relative flex items-center">
                 <div className="absolute left-3.5 text-[#5C6B80] pointer-events-none">
@@ -325,7 +325,7 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                   htmlFor="admin-new-password-input"
                   className="text-xs font-extrabold text-[#2D3A4E] block"
                 >
-                  Новый пароль <span className="text-rose-500">*</span>
+                  Новый пароль <span className="text-danger">*</span>
                 </label>
                 {newPassword && (
                   <span className="text-[10px] font-bold text-[#5C6B80]">
@@ -388,7 +388,7 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                 htmlFor="admin-confirm-password-input"
                 className="text-xs font-extrabold text-[#2D3A4E] block px-1"
               >
-                Повторите новый пароль <span className="text-rose-500">*</span>
+                Повторите новый пароль <span className="text-danger">*</span>
               </label>
               <div className="relative flex items-center">
                 <div className="absolute left-3.5 text-[#5C6B80] pointer-events-none">
@@ -405,7 +405,7 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                   placeholder="Повторите новый пароль"
                   className={`w-full pl-10 pr-11 py-2.5 neu-inset rounded-2xl bg-[#E3E8EF] text-xs sm:text-sm font-bold text-[#2D3A4E] placeholder:text-[#5C6B80]/60 focus:outline-none focus:ring-2 transition-all ${
                     confirmPassword && confirmPassword !== newPassword
-                      ? 'focus:ring-rose-400 border border-rose-300'
+                      ? 'focus:ring-danger/50 border border-danger/35'
                       : 'focus:ring-[#5F6ED0]/40'
                   }`}
                   required
@@ -420,7 +420,7 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                 </button>
               </div>
               {confirmPassword && confirmPassword === newPassword && (
-                <p className="text-[10px] text-emerald-600 font-bold px-1 flex items-center gap-1">
+                <p className="text-[10px] text-success font-bold px-1 flex items-center gap-1">
                   <Check className="w-3 h-3" />
                   Пароли совпадают
                 </p>
@@ -452,7 +452,7 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                   id="admin-change-credentials-reset-toggle-btn"
                   type="button"
                   onClick={() => setShowResetConfirm(!showResetConfirm)}
-                  className="py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-[#5C6B80] hover:text-amber-600 active:scale-98 transition-all cursor-pointer flex items-center gap-1.5"
+                  className="py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-[#5C6B80] hover:text-warning active:scale-98 transition-all cursor-pointer flex items-center gap-1.5"
                   title="Сбросить к заводским настройкам (Admin / 12345678)"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
@@ -463,7 +463,7 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
 
             {/* Reset confirmation box */}
             {showResetConfirm && (
-              <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-2 animate-in fade-in">
+              <div className="p-3.5 rounded-2xl bg-warning-soft border border-warning/25 text-warning text-xs space-y-2 animate-in fade-in">
                 <p className="font-bold">
                   Вы действительно хотите сбросить учетные данные к стандартным (Логин: <code>Admin</code>, Пароль: <code>12345678</code>)?
                 </p>
@@ -471,7 +471,7 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                   <button
                     type="button"
                     onClick={handleResetToDefaults}
-                    className="px-3 py-1.5 rounded-lg bg-amber-600 text-white font-black text-[11px] hover:bg-amber-700 transition-colors cursor-pointer"
+                    className="px-3 py-1.5 rounded-lg bg-warning text-white font-black text-[11px] hover:bg-warning/90 transition-colors cursor-pointer"
                   >
                     Да, сбросить
                   </button>

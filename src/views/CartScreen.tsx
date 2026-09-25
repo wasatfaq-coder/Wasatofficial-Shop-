@@ -152,7 +152,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         <div className="w-full h-2 rounded-full overflow-hidden neu-inset">
           <div
             className={`h-full transition-all duration-500 rounded-full ${
-              remainingForFreeDelivery === 0 ? 'bg-emerald-500' : 'bg-[#5F6ED0]'
+              remainingForFreeDelivery === 0 ? 'bg-success' : 'bg-[#5F6ED0]'
             }`}
             style={{ width: `${Math.min(100, (rawSubtotal / freeThreshold) * 100)}%` }}
           />
@@ -171,7 +171,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         <button
           type="button"
           onClick={() => setIsClearCartConfirmOpen(true)}
-          className="text-xs font-bold text-[#5C6B80] hover:text-[#7E525E] transition-colors flex items-center gap-1 cursor-pointer"
+          className="text-xs font-bold text-[#5C6B80] hover:text-danger transition-colors flex items-center gap-1 cursor-pointer"
         >
           <Trash2 className="w-3.5 h-3.5" />
           <span>Очистить всё</span>
@@ -398,7 +398,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                           >
                             <span>{sz}</span>
                             {szStock <= 2 && szStock > 0 && (
-                              <span className={`text-[10px] font-bold ${isCurrent ? 'text-amber-700' : 'text-amber-600'}`}>
+                              <span className={`text-[10px] font-bold ${isCurrent ? 'text-warning' : 'text-warning'}`}>
                                 ({szStock})
                               </span>
                             )}
@@ -416,10 +416,10 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                       <span
                         className={`truncate font-extrabold ${
                           availableStock === 0
-                            ? 'text-[#7E525E]'
+                            ? 'text-danger'
                             : availableStock <= 2
-                            ? 'text-amber-600'
-                            : 'text-emerald-600'
+                            ? 'text-warning'
+                            : 'text-success'
                         }`}
                       >
                         {availableStock === 0
@@ -508,7 +508,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
             <button
               type="button"
               onClick={onRemovePromo}
-              className="text-[10px] font-extrabold text-[#5C6B80] hover:text-[#7E525E] ml-1 underline cursor-pointer"
+              className="text-[10px] font-extrabold text-[#5C6B80] hover:text-danger ml-1 underline cursor-pointer"
             >
               Сбросить
             </button>
@@ -534,7 +534,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
 
             <div className="flex justify-between">
               <span>Доставка</span>
-              <span className={deliveryFee === 0 ? 'text-emerald-600 font-bold' : 'text-[#2D3A4E]'}>
+              <span className={deliveryFee === 0 ? 'text-success font-bold' : 'text-[#2D3A4E]'}>
                 {deliveryFee === 0 ? 'Бесплатно' : `${deliveryFee} ₽`}
               </span>
             </div>
@@ -592,9 +592,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
       {isClearCartConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/50 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="relative w-full max-w-sm neu-modal rounded-3xl p-5 space-y-4 border border-white/80">
-            <div className="flex items-center gap-2 text-[#7E525E] pb-2 border-b border-[#BAC5D5]/50">
+            <div className="flex items-center gap-2 text-danger pb-2 border-b border-[#BAC5D5]/50">
               <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center">
-                <Trash2 className="w-4 h-4 text-[#7E525E]" />
+                <Trash2 className="w-4 h-4 text-danger" />
               </div>
               <h3 className="text-sm font-extrabold text-[#2D3A4E]">Очистка всей корзины</h3>
             </div>
@@ -615,7 +615,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                   onClearCart();
                   setIsClearCartConfirmOpen(false);
                 }}
-                className="flex-1 py-2.5 rounded-xl neu-button text-xs font-black text-[#7E525E] hover:text-[#2D3A4E] cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl neu-button text-xs font-black text-danger hover:text-[#2D3A4E] cursor-pointer"
               >
                 Да, очистить
               </button>

@@ -261,9 +261,9 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                   <button
                     type="button"
                     onClick={handleMarkAllCompleted}
-                    className="neu-button px-2.5 py-1 rounded-xl text-[10px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
+                    className="neu-button px-2.5 py-1 rounded-xl text-[10px] font-bold text-success hover:text-success flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
                   >
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    <CheckCircle2 className="w-3 h-3 text-success" />
                     <span>Все выполнены</span>
                   </button>
                   <button
@@ -329,7 +329,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                     </label>
                     <div className="flex gap-1.5">
                       {[
-                        { id: 'completed', label: 'Выполнен', color: 'text-emerald-700 bg-emerald-50' },
+                        { id: 'completed', label: 'Выполнен', color: 'text-success bg-success-soft' },
                         { id: 'active', label: 'В процессе', color: 'text-blue-700 bg-blue-50' },
                         { id: 'pending', label: 'Ожидает', color: 'text-slate-600 bg-slate-100' },
                       ].map((st) => (
@@ -393,7 +393,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                     key={stage.id || `stage-${idx}`}
                     className={`p-3 sm:p-3.5 rounded-2xl space-y-2.5 transition-all ${
                       isCompleted
-                        ? 'neu-inset bg-[#E3E8EF] border border-emerald-400/40'
+                        ? 'neu-inset bg-[#E3E8EF] border border-success/40'
                         : isActive
                         ? 'neu-inset-deep neu-inset-deep-animated bg-[#E3E8EF] border border-[#5F6ED0]/60 ring-1 ring-[#5F6ED0]/20'
                         : 'neu-inset bg-[#E3E8EF]/60 opacity-80 border border-white/50'
@@ -405,7 +405,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                         <div
                           className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 transition-all ${
                             isCompleted
-                              ? 'bg-emerald-600 text-white'
+                              ? 'bg-success text-white'
                               : isActive
                               ? 'neu-inset-deep neu-inset-deep-animated text-[#5F6ED0] bg-[#E3E8EF] border border-[#5F6ED0]'
                               : 'neu-button text-[#5C6B80]'
@@ -425,7 +425,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                           onClick={() => handleStatusChange(idx, 'completed')}
                           className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer flex items-center gap-1 ${
                             isCompleted
-                              ? 'bg-emerald-600 text-white shadow-xs'
+                              ? 'bg-success text-white shadow-xs'
                               : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                           }`}
                         >

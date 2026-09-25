@@ -187,8 +187,8 @@ export const PromoModal: React.FC<PromoModalProps> = ({
 
           {/* Error Banner if any */}
           {errorMessage && (
-            <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] border border-[#7E525E]/40 text-[#7E525E] text-xs flex items-center gap-2 animate-in fade-in duration-200">
-              <AlertCircle className="w-4 h-4 text-[#7E525E] shrink-0" />
+            <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] border border-danger/40 text-danger text-xs flex items-center gap-2 animate-in fade-in duration-200">
+              <AlertCircle className="w-4 h-4 text-danger shrink-0" />
               <span className="font-semibold">{errorMessage}</span>
             </div>
           )}
@@ -222,7 +222,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
               <button
                 type="button"
                 onClick={onRemovePromo}
-                className="text-[11px] font-bold text-[#5C6B80] hover:text-[#7E525E] underline px-2 py-1 rounded-lg transition-colors cursor-pointer"
+                className="text-[11px] font-bold text-[#5C6B80] hover:text-danger underline px-2 py-1 rounded-lg transition-colors cursor-pointer"
               >
                 Отменить
               </button>
@@ -269,7 +269,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                       <div className="w-12 h-12 rounded-2xl neu-inset flex flex-col items-center justify-center shrink-0 border border-white/60">
                         <span
                           className={`text-xs font-black leading-none ${
-                            isFixed ? 'text-amber-600 text-[11px]' : 'text-[#5F6ED0]'
+                            isFixed ? 'text-warning text-[11px]' : 'text-[#5F6ED0]'
                           }`}
                         >
                           {discountLabel}
@@ -292,7 +292,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                             title="Скопировать код"
                           >
                             {copiedCode === coupon.code ? (
-                              <span className="text-emerald-600 font-black">Скопировано!</span>
+                              <span className="text-success font-black">Скопировано!</span>
                             ) : (
                               <Copy className="w-3 h-3" />
                             )}
@@ -318,7 +318,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                           {coupon.minOrderAmount ? (
                             <span
                               className={`neu-inset px-2 py-0.5 rounded-md font-semibold ${
-                                isMinOrderNotMet ? 'text-amber-700 font-bold' : 'text-[#5F6ED0]'
+                                isMinOrderNotMet ? 'text-warning font-bold' : 'text-[#5F6ED0]'
                               }`}
                             >
                               От {coupon.minOrderAmount.toLocaleString('ru-RU')} ₽
@@ -340,7 +340,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                     {/* Action Button */}
                     <div className="mt-3 pt-2.5 border-t border-[#BAC5D5]/40 flex items-center justify-between gap-2">
                       {isMinOrderNotMet ? (
-                        <span className="text-[10px] text-amber-700 font-bold">
+                        <span className="text-[10px] text-warning font-bold">
                           Добавьте еще товаров до {coupon.minOrderAmount?.toLocaleString('ru-RU')} ₽
                         </span>
                       ) : (
@@ -355,13 +355,13 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                         disabled={isCurrentActive}
                         className={`py-1.5 px-4 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
                           isCurrentActive
-                            ? 'neu-inset text-emerald-700 opacity-80 cursor-default'
+                            ? 'neu-inset text-success opacity-80 cursor-default'
                             : 'neu-button text-[#5F6ED0] hover:text-[#2D3A4E] hover:scale-105 active:scale-95'
                         }`}
                       >
                         {isCurrentActive ? (
                           <>
-                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            <Check className="w-3.5 h-3.5 text-success" />
                             <span>Применен</span>
                           </>
                         ) : (

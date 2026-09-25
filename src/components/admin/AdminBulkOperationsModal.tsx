@@ -369,7 +369,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                 onClick={() => setIsRemoveDiscountMode(!isRemoveDiscountMode)}
                 className={`py-1.5 px-3 rounded-xl text-xs font-extrabold flex items-center gap-1.5 cursor-pointer transition-all ${
                   isRemoveDiscountMode
-                    ? 'neu-inset text-amber-700 bg-amber-50/50'
+                    ? 'neu-inset text-warning bg-warning-soft'
                     : 'neu-button text-[#5C6B80] hover:text-[#2D3A4E]'
                 }`}
               >

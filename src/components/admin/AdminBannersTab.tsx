@@ -331,12 +331,12 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
     const end = b.endDate ? new Date(b.endDate).getTime() : Infinity;
 
     if (now < start) {
-      return { status: 'scheduled', label: 'Запланирован', color: 'text-amber-600' };
+      return { status: 'scheduled', label: 'Запланирован', color: 'text-warning' };
     }
     if (now > end) {
-      return { status: 'expired', label: 'Завершен', color: 'text-[#7E525E]' };
+      return { status: 'expired', label: 'Завершен', color: 'text-danger' };
     }
-    return { status: 'live', label: 'В эфире (по расписанию)', color: 'text-emerald-600' };
+    return { status: 'live', label: 'В эфире (по расписанию)', color: 'text-success' };
   };
 
   return (
@@ -615,7 +615,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                   <span
                     className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
                       mobileImage || image
-                        ? 'bg-emerald-100 text-emerald-700 font-extrabold'
+                        ? 'bg-success-soft text-success font-extrabold'
                         : 'bg-slate-200 text-[#5C6B80]'
                     }`}
                   >
@@ -647,7 +647,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                         <button
                           type="button"
                           onClick={handleClearMobileImage}
-                          className="w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-[var(--neu-on-photo)] active:scale-90 transition-transform cursor-pointer"
+                          className="w-6 h-6 rounded-full bg-danger hover:bg-danger/90 text-white flex items-center justify-center shadow-[var(--neu-on-photo)] active:scale-90 transition-transform cursor-pointer"
                           title="Удалить фото"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -736,7 +736,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                   <span
                     className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
                       desktopImage
-                        ? 'bg-emerald-100 text-emerald-700 font-extrabold'
+                        ? 'bg-success-soft text-success font-extrabold'
                         : 'bg-slate-200 text-[#5C6B80]'
                     }`}
                   >
@@ -768,7 +768,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                         <button
                           type="button"
                           onClick={handleClearDesktopImage}
-                          className="w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-[var(--neu-on-photo)] active:scale-90 transition-transform cursor-pointer"
+                          className="w-6 h-6 rounded-full bg-danger hover:bg-danger/90 text-white flex items-center justify-center shadow-[var(--neu-on-photo)] active:scale-90 transition-transform cursor-pointer"
                           title="Удалить фото"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -1061,7 +1061,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                       onClick={() => handleToggleActive(slide.id)}
                       className={`px-2.5 py-1 rounded-xl text-[10px] font-black transition-all cursor-pointer ${
                         slide.active
-                          ? 'neu-button text-emerald-700 bg-[#E3E8EF]'
+                          ? 'neu-button text-success bg-[#E3E8EF]'
                           : 'neu-inset text-[#5C6B80] bg-[#E3E8EF]'
                       }`}
                     >

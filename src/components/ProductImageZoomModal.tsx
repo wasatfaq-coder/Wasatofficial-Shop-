@@ -156,7 +156,7 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
               {/* Close modal button */}
               <button
                 onClick={onClose}
-                className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl neu-button flex items-center justify-center text-[#2D3A4E] hover:text-rose-600 active:scale-90 transition-all cursor-pointer bg-[#E3E8EF] border border-white/80 shrink-0 select-none"
+                className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl neu-button flex items-center justify-center text-[#2D3A4E] hover:text-danger active:scale-90 transition-all cursor-pointer bg-[#E3E8EF] border border-white/80 shrink-0 select-none"
                 title="Закрыть"
               >
                 <X className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />

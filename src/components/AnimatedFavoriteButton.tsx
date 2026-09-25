@@ -64,7 +64,7 @@ export const AnimatedFavoriteButton: React.FC<AnimatedFavoriteButtonProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.55, ease: 'easeOut' }}
             onAnimationComplete={() => setIsAnimating(false)}
-            className="absolute inset-0 rounded-full bg-rose-500/35 pointer-events-none"
+            className="absolute inset-0 rounded-full bg-danger/35 pointer-events-none"
           />
         )}
       </AnimatePresence>
@@ -92,7 +92,7 @@ export const AnimatedFavoriteButton: React.FC<AnimatedFavoriteButtonProps> = ({
         <Heart
           className={`${currentSize.icon} transition-colors duration-200 ${
             isFavorite
-              ? 'fill-rose-500 text-rose-500 stroke-rose-500 drop-shadow-xs'
+              ? 'fill-danger text-danger stroke-danger drop-shadow-xs'
               : 'text-[#5C6B80] stroke-[1.8] hover:text-[#2D3A4E]'
           } ${iconClassName}`}
         />

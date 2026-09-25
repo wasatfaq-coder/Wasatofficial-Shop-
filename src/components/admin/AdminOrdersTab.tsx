@@ -75,8 +75,8 @@ const STATUS_CONFIG: Record<
   },
   assembling: {
     label: 'Собирается',
-    bg: 'bg-amber-50 border-amber-200',
-    text: 'text-amber-700',
+    bg: 'bg-warning-soft border-warning/25',
+    text: 'text-warning',
     icon: Package,
     nextStatus: 'in_transit',
     nextLabel: 'Передать курьеру',
@@ -91,8 +91,8 @@ const STATUS_CONFIG: Record<
   },
   ready: {
     label: 'Готов к выдаче',
-    bg: 'bg-emerald-50 border-emerald-200',
-    text: 'text-emerald-700',
+    bg: 'bg-success-soft border-success/25',
+    text: 'text-success',
     icon: MapPin,
     nextStatus: 'delivered',
     nextLabel: 'Вручить клиенту',
@@ -111,15 +111,15 @@ const PAYMENT_STATUS_CONFIG: Record<
 > = {
   pending: {
     label: 'Ожидает оплаты',
-    bg: 'bg-amber-50 border-amber-200',
-    text: 'text-amber-700',
-    dot: 'bg-amber-500',
+    bg: 'bg-warning-soft border-warning/25',
+    text: 'text-warning',
+    dot: 'bg-warning',
   },
   paid: {
     label: 'Оплачен онлайн',
-    bg: 'bg-emerald-50 border-emerald-200',
-    text: 'text-emerald-700',
-    dot: 'bg-emerald-500',
+    bg: 'bg-success-soft border-success/25',
+    text: 'text-success',
+    dot: 'bg-success',
   },
   paid_on_delivery: {
     label: 'Оплата при вручении',
@@ -129,9 +129,9 @@ const PAYMENT_STATUS_CONFIG: Record<
   },
   refunded: {
     label: 'Возврат средств',
-    bg: 'bg-rose-50 border-rose-200',
-    text: 'text-rose-700',
-    dot: 'bg-rose-500',
+    bg: 'bg-danger-soft border-danger/25',
+    text: 'text-danger',
+    dot: 'bg-danger',
   },
 };
 
@@ -150,7 +150,7 @@ const TRACKING_CARRIERS: TrackingCarrierConfig[] = [
     name: 'СДЭК',
     sublabel: 'Пункты выдачи СДЭК и курьер',
     badge: 'CDEK',
-    badgeBg: 'text-emerald-700 bg-emerald-100/80 border-emerald-300',
+    badgeBg: 'text-success bg-success-soft border-success/35',
     urlPrefix: (track) => `https://www.cdek.ru/ru/tracking?order_id=${encodeURIComponent(track)}`,
   },
   {
@@ -166,7 +166,7 @@ const TRACKING_CARRIERS: TrackingCarrierConfig[] = [
     name: 'Boxberry',
     sublabel: 'Сеть отделений и постаматов',
     badge: 'Boxberry',
-    badgeBg: 'text-rose-700 bg-rose-100/80 border-rose-300',
+    badgeBg: 'text-danger bg-danger-soft border-danger/35',
     urlPrefix: (track) => `https://boxberry.ru/tracking-page?track=${encodeURIComponent(track)}`,
   },
   {
@@ -174,7 +174,7 @@ const TRACKING_CARRIERS: TrackingCarrierConfig[] = [
     name: 'Яндекс Доставка',
     sublabel: 'Экспресс и пункты Яндекс',
     badge: 'Яндекс',
-    badgeBg: 'text-amber-800 bg-amber-100/80 border-amber-300',
+    badgeBg: 'text-warning bg-warning-soft border-warning/35',
     urlPrefix: (_track) => `https://dostavka.yandex.ru/`,
   },
   {
@@ -182,7 +182,7 @@ const TRACKING_CARRIERS: TrackingCarrierConfig[] = [
     name: 'DHL Express',
     sublabel: 'Международная экспресс-доставка',
     badge: 'DHL',
-    badgeBg: 'text-yellow-800 bg-yellow-100/80 border-yellow-400',
+    badgeBg: 'text-warning bg-warning-soft border-warning/35',
     urlPrefix: (track) => `https://www.dhl.com/ru-ru/home/tracking.html?tracking-id=${encodeURIComponent(track)}`,
   },
   {
@@ -251,13 +251,13 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       value: 'ready',
       label: 'Готов к выдаче',
       badge: `${orders.filter((o) => o.status === 'ready' && !o.isCancelled).length}`,
-      icon: <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />,
+      icon: <span className="w-2 h-2 rounded-full bg-warning shrink-0" />,
     },
     {
       value: 'delivered',
       label: 'Доставлен',
       badge: `${orders.filter((o) => o.status === 'delivered' && !o.isCancelled).length}`,
-      icon: <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />,
+      icon: <span className="w-2 h-2 rounded-full bg-success shrink-0" />,
     },
   ], [orders]);
 
@@ -868,13 +868,13 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                     value: 'ready',
                     label: 'Готов к выдаче',
                     sublabel: 'Ожидает клиента в пункте самовывоза',
-                    icon: <Clock className="w-3.5 h-3.5 text-amber-600" />,
+                    icon: <Clock className="w-3.5 h-3.5 text-warning" />,
                   },
                   {
                     value: 'delivered',
                     label: 'Доставлен',
                     sublabel: 'Успешно вручен покупателю',
-                    icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />,
+                    icon: <CheckCircle2 className="w-3.5 h-3.5 text-success" />,
                   },
                 ]}
               />
@@ -896,13 +896,13 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                     value: 'paid',
                     label: 'Отметить как «Оплачен»',
                     sublabel: 'Подтвердить поступление средств',
-                    icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />,
+                    icon: <CheckCircle2 className="w-3.5 h-3.5 text-success" />,
                   },
                   {
                     value: 'pending',
                     label: 'Ожидает оплаты',
                     sublabel: 'Счет выставлен, платеж не получен',
-                    icon: <Clock className="w-3.5 h-3.5 text-amber-600" />,
+                    icon: <Clock className="w-3.5 h-3.5 text-warning" />,
                   },
                   {
                     value: 'paid_on_delivery',
@@ -914,7 +914,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                     value: 'refunded',
                     label: 'Возврат средств',
                     sublabel: 'Оформить возврат клиенту',
-                    icon: <RotateCcw className="w-3.5 h-3.5 text-[#7E525E]" />,
+                    icon: <RotateCcw className="w-3.5 h-3.5 text-danger" />,
                   },
                 ]}
               />
@@ -946,7 +946,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                     value: 'cancel_return',
                     label: 'Отменить и вернуть остатки',
                     sublabel: 'Аннулировать заказы с возвратом на склад',
-                    icon: <RotateCcw className="w-3.5 h-3.5 text-[#7E525E]" />,
+                    icon: <RotateCcw className="w-3.5 h-3.5 text-danger" />,
                   },
                 ]}
               />
@@ -978,7 +978,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
               variant="inset"
               prefix="Статус оплаты:"
               options={[
-                { value: 'all', label: 'Все статусы', icon: <DollarSign className="w-3.5 h-3.5 text-emerald-600" /> },
+                { value: 'all', label: 'Все статусы', icon: <DollarSign className="w-3.5 h-3.5 text-success" /> },
                 { value: 'paid', label: 'Оплачен онлайн' },
                 { value: 'pending', label: 'Ожидает оплаты' },
                 { value: 'paid_on_delivery', label: 'При получении' },
@@ -1079,7 +1079,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                   isOrderSelected
                     ? 'border-[#5F6ED0] ring-2 ring-[#5F6ED0]/20'
                     : ord.isCancelled
-                    ? 'border-rose-300/80 opacity-90'
+                    ? 'border-danger/80 opacity-90'
                     : 'border-transparent'
                 }`}
               >
@@ -1118,13 +1118,13 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                     </span>
 
                     {ord.isAdjusted && (
-                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-warning-soft text-warning border border-warning/35">
                         Скорректирован
                       </span>
                     )}
 
                     {ord.isCancelled && (
-                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-danger-soft text-danger border border-danger/35 flex items-center gap-1">
                         <XCircle className="w-2.5 h-2.5" />
                         Отменен (Остатки возвращены)
                       </span>
@@ -1570,7 +1570,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                     className="h-8 px-3 neu-inset rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] hover:bg-[#DDE4F0] flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all bg-[#E3E8EF] border border-white/60"
                     title="Изменить состав заказа, списать или вернуть остатки на склад"
                   >
-                    <SlidersHorizontal className="w-3.5 h-3.5 text-amber-600" />
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-warning" />
                     <span>Правка состава & Склад</span>
                   </button>
 
@@ -1608,10 +1608,10 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                   {!ord.isCancelled && (
                     <button
                       onClick={() => handleCancelAndReturnStock(ord)}
-                      className="h-8 px-2.5 neu-inset rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#7E525E] hover:bg-rose-50/50 flex items-center gap-1 cursor-pointer active:scale-95 transition-all bg-[#E3E8EF] border border-white/60"
+                      className="h-8 px-2.5 neu-inset rounded-xl text-xs font-bold text-[#5C6B80] hover:text-danger hover:bg-danger-soft flex items-center gap-1 cursor-pointer active:scale-95 transition-all bg-[#E3E8EF] border border-white/60"
                       title="Отменить заказ и автоматически вернуть товары на склад"
                     >
-                      <RotateCcw className="w-3.5 h-3.5 text-[#7E525E]" />
+                      <RotateCcw className="w-3.5 h-3.5 text-danger" />
                       <span>Отмена</span>
                     </button>
                   )}
@@ -1648,7 +1648,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                             key={sIdx}
                             className="flex items-start gap-2 text-[11px] text-[#2D3A4E]"
                           >
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1 shrink-0" />
+                            <span className="w-2 h-2 rounded-full bg-success mt-1 shrink-0" />
                             <div>
                               <span className="font-bold">{step?.title || `Этап ${sIdx + 1}`}</span>
                               <span className="text-[#5C6B80] ml-1.5 text-[10px]">({step?.date || ord.date})</span>
@@ -1664,7 +1664,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                     {/* Adjustment Audit Logs */}
                     {ord.adjustmentLogs && ord.adjustmentLogs.length > 0 && (
                       <div className="pt-2 border-t border-[#BAC5D5]/50 space-y-1.5">
-                        <span className="font-bold text-[10px] text-amber-800 uppercase">
+                        <span className="font-bold text-[10px] text-warning uppercase">
                           Журнал корректировок состава:
                         </span>
                         {ord.adjustmentLogs.map((log) => (
@@ -1739,8 +1739,8 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         <div className="admin-no-glow fixed inset-0 z-[100] bg-[#2D3A4E]/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in">
           <div className="neu-modal rounded-3xl max-w-md w-full p-5 sm:p-6 space-y-4 my-auto bg-[#E3E8EF] border border-white/80">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-[#7E525E] shrink-0 font-black">
-                <ShieldAlert className="w-5 h-5 text-[#7E525E]" />
+              <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-danger shrink-0 font-black">
+                <ShieldAlert className="w-5 h-5 text-danger" />
               </div>
               <div>
                 <h3 className="text-sm font-black text-[#2D3A4E]">
@@ -1775,7 +1775,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                   handleBulkCancelAndReturn();
                   setIsBulkCancelModalOpen(false);
                 }}
-                className="h-9 px-4 rounded-xl neu-button text-xs font-bold text-[#7E525E] hover:text-rose-600 cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+                className="h-9 px-4 rounded-xl neu-button text-xs font-bold text-danger hover:text-danger cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 Подтвердить отмену
@@ -1790,7 +1790,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         <div className="admin-no-glow fixed inset-0 z-[100] bg-[#2D3A4E]/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in">
           <div className="neu-modal rounded-3xl max-w-sm w-full p-5 space-y-4 my-auto bg-[#E3E8EF] border border-white/80">
             <div className="flex items-center gap-3 border-b border-[#BAC5D5]/40 pb-3">
-              <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-rose-600 shrink-0">
+              <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-danger shrink-0">
                 <Trash2 className="w-4 h-4" />
               </div>
               <div className="min-w-0">

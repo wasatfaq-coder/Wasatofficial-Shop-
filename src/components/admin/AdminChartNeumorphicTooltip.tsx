@@ -75,7 +75,7 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
     orders: {
       title: isMonthly ? 'Заказы за месяц' : 'Заказы за день',
       color: '#10B981',
-      badgeClass: 'text-emerald-700 bg-emerald-500/10 border-emerald-500/30',
+      badgeClass: 'text-success bg-success-soft border-success/30',
       valueFormatted: `${currentVal} шт.`,
       prevFormatted: `${prevVal} шт.`,
       diffFormatted: `${diff >= 0 ? '+' : ''}${diff} шт.`,
@@ -91,7 +91,7 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
     returns: {
       title: 'Возвраты',
       color: '#F59E0B',
-      badgeClass: 'text-amber-700 bg-amber-500/10 border-amber-500/30',
+      badgeClass: 'text-warning bg-warning-soft border-warning/30',
       valueFormatted: `${currentVal} шт.`,
       prevFormatted: `${prevVal} шт.`,
       diffFormatted: `${diff >= 0 ? '+' : ''}${diff} шт.`,
@@ -120,8 +120,8 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
         </div>
 
         {data.isPeakDay && (
-          <span className="text-[8px] font-black text-amber-800 bg-amber-200 border border-amber-300 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shrink-0 animate-pulse">
-            <Flame className="w-2.5 h-2.5 text-amber-600 fill-amber-500" />
+          <span className="text-[8px] font-black text-warning bg-warning-soft border border-warning/35 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shrink-0 animate-pulse">
+            <Flame className="w-2.5 h-2.5 text-warning fill-warning" />
             Пик
           </span>
         )}
@@ -165,17 +165,17 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
             <span className="text-[#5C6B80]">К норме дня:</span>
             <span
               className={`font-black flex items-center gap-0.5 ${
-                isAboveAvg ? 'text-emerald-700' : 'text-[#7E525E]'
+                isAboveAvg ? 'text-success' : 'text-danger'
               }`}
             >
               {isAboveAvg ? (
                 <>
-                  <ArrowUpRight className="w-2.5 h-2.5 text-emerald-600" />+
+                  <ArrowUpRight className="w-2.5 h-2.5 text-success" />+
                   {diffFromAvg.toFixed(1)}%
                 </>
               ) : (
                 <>
-                  <ArrowDownRight className="w-2.5 h-2.5 text-[#7E525E]" />
+                  <ArrowDownRight className="w-2.5 h-2.5 text-danger" />
                   {diffFromAvg.toFixed(1)}%
                 </>
               )}
@@ -206,8 +206,8 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
               <span
                 className={`font-black px-1 py-0.2 rounded text-[8px] flex items-center gap-0.5 ${
                   isPositive
-                    ? 'text-emerald-800 bg-emerald-100'
-                    : 'text-rose-800 bg-rose-100'
+                    ? 'text-success bg-success-soft'
+                    : 'text-danger bg-danger-soft'
                 }`}
               >
                 {isPositive ? `+${percentDiff}%` : `${percentDiff}%`}
@@ -232,7 +232,7 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
           <span className="text-[8px] font-bold text-[#5C6B80] block truncate">
             Ср. чек
           </span>
-          <p className="text-[11px] font-black text-emerald-700 tabular-nums leading-tight truncate">
+          <p className="text-[11px] font-black text-success tabular-nums leading-tight truncate">
             {data.avgCheck >= 1000
               ? `${Math.round(data.avgCheck / 1000)}k`
               : data.avgCheck} ₽
@@ -245,7 +245,7 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
           </span>
           <p
             className={`text-[11px] font-black tabular-nums leading-tight ${
-              data.returns === 0 ? 'text-[#2D3A4E]' : 'text-amber-700'
+              data.returns === 0 ? 'text-[#2D3A4E]' : 'text-warning'
             }`}
           >
             {data.returns} <span className="text-[8px] font-normal text-[#5C6B80]">шт</span>

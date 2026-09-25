@@ -21,14 +21,14 @@ export const OrderSuccessScreen: React.FC<OrderSuccessScreenProps> = ({
     <div className="py-8 space-y-6 text-center animate-in zoom-in-95 duration-300 max-w-sm mx-auto pb-28">
       {/* Celebration Icon */}
       <div className="relative w-28 h-28 rounded-full neu-flat p-2 flex items-center justify-center mx-auto border border-white/80">
-        <div className="w-20 h-20 rounded-full neu-inset flex items-center justify-center text-emerald-600">
+        <div className="w-20 h-20 rounded-full neu-inset flex items-center justify-center text-success">
           <CheckCircle2 className="w-12 h-12 stroke-[2]" />
         </div>
       </div>
 
       <div className="space-y-2">
-        <span className="neu-inset-deep neu-inset-deep-animated text-emerald-700 text-xs font-extrabold px-3.5 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1.5 border border-emerald-400/40">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+        <span className="neu-inset-deep neu-inset-deep-animated text-success text-xs font-extrabold px-3.5 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1.5 border border-success/40">
+          <span className="w-1.5 h-1.5 rounded-full bg-success animate-ping" />
           Заказ оформлен • Активен
         </span>
         <h2 className="text-2xl font-black text-[#2D3A4E] tracking-tight">

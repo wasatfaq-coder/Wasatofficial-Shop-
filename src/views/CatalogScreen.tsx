@@ -301,13 +301,13 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
         <div className="flex items-center gap-2 flex-wrap py-1">
           {filterState.onlyInStock && (
             <span className="neu-inset text-[11px] font-bold text-[#5F6ED0] px-3 py-1.5 rounded-full flex items-center gap-1.5 bg-[#E3E8EF] border border-[#5F6ED0]/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+              <span className="w-1.5 h-1.5 rounded-full bg-success inline-block" />
               Только в наличии
               <button
                 onClick={() =>
                   setFilterState((prev) => ({ ...prev, onlyInStock: false }))
                 }
-                className="text-[#5C6B80] hover:text-rose-500 cursor-pointer transition-colors"
+                className="text-[#5C6B80] hover:text-danger cursor-pointer transition-colors"
               >
                 <X className="w-3 h-3 stroke-[2.5]" />
               </button>
@@ -325,7 +325,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                     maxPrice: 35000,
                   }))
                 }
-                className="text-[#5C6B80] hover:text-rose-500 cursor-pointer transition-colors"
+                className="text-[#5C6B80] hover:text-danger cursor-pointer transition-colors"
               >
                 <X className="w-3 h-3 stroke-[2.5]" />
               </button>
@@ -347,7 +347,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                       selectedMaterials: prev.selectedMaterials.filter((m) => m !== matId),
                     }))
                   }
-                  className="text-[#5C6B80] hover:text-rose-500 cursor-pointer transition-colors"
+                  className="text-[#5C6B80] hover:text-danger cursor-pointer transition-colors"
                 >
                   <X className="w-3 h-3 stroke-[2.5]" />
                 </button>
@@ -368,7 +368,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                     selectedSizes: prev.selectedSizes.filter((s) => s !== sz),
                   }))
                 }
-                className="text-[#5C6B80] hover:text-rose-500 cursor-pointer transition-colors"
+                className="text-[#5C6B80] hover:text-danger cursor-pointer transition-colors"
               >
                 <X className="w-3 h-3 stroke-[2.5]" />
               </button>
@@ -382,7 +382,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                 onClick={() =>
                   setFilterState((prev) => ({ ...prev, onlyNew: false }))
                 }
-                className="text-[#5C6B80] hover:text-rose-500 cursor-pointer transition-colors"
+                className="text-[#5C6B80] hover:text-danger cursor-pointer transition-colors"
               >
                 <X className="w-3 h-3 stroke-[2.5]" />
               </button>
@@ -396,7 +396,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                 onClick={() =>
                   setFilterState((prev) => ({ ...prev, onlyDiscount: false }))
                 }
-                className="text-[#5C6B80] hover:text-rose-500 cursor-pointer transition-colors"
+                className="text-[#5C6B80] hover:text-danger cursor-pointer transition-colors"
               >
                 <X className="w-3 h-3 stroke-[2.5]" />
               </button>
@@ -405,7 +405,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
 
           <button
             onClick={handleResetAll}
-            className="text-xs font-bold text-rose-500 hover:text-rose-600 flex items-center gap-1.5 ml-auto cursor-pointer active:scale-95 transition-transform py-1 px-2.5 rounded-xl hover:neu-inset"
+            className="text-xs font-bold text-danger hover:text-danger flex items-center gap-1.5 ml-auto cursor-pointer active:scale-95 transition-transform py-1 px-2.5 rounded-xl hover:neu-inset"
           >
             <RotateCcw className="w-3.5 h-3.5 stroke-[2.2]" />
             <span>Сбросить всё</span>

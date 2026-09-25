@@ -73,35 +73,35 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
     }
     if (toast.icon === 'package') {
       return (
-        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-amber-600 bg-amber-50/80 shrink-0">
+        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-warning bg-warning-soft shrink-0">
           <Package className="w-4 h-4 stroke-[2.5]" />
         </div>
       );
     }
     if (toast.icon === 'store') {
       return (
-        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-emerald-600 bg-emerald-50/80 shrink-0">
+        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-success bg-success-soft shrink-0">
           <Store className="w-4 h-4 stroke-[2.5]" />
         </div>
       );
     }
     if (toast.icon === 'check' || toast.type === 'success') {
       return (
-        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-emerald-600 bg-emerald-50/80 shrink-0">
+        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-success bg-success-soft shrink-0">
           <CheckCircle className="w-4 h-4 stroke-[2.5]" />
         </div>
       );
     }
     if (toast.icon === 'alert' || toast.type === 'error') {
       return (
-        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-rose-600 bg-rose-50/80 shrink-0">
+        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-danger bg-danger-soft shrink-0">
           <AlertCircle className="w-4 h-4 stroke-[2.5]" />
         </div>
       );
     }
     if (toast.icon === 'sparkles') {
       return (
-        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-amber-500 bg-amber-50/80 shrink-0">
+        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-warning bg-warning-soft shrink-0">
           <Sparkles className="w-4 h-4 stroke-[2.5]" />
         </div>
       );
@@ -192,9 +192,9 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
       role="status"
     >
       <div className="flex items-center gap-2.5 min-w-0">
-        {toast.type === 'success' && <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />}
+        {toast.type === 'success' && <CheckCircle className="w-5 h-5 text-success shrink-0" />}
         {toast.type === 'info' && <Info className="w-5 h-5 text-[#5F6ED0] shrink-0" />}
-        {toast.type === 'error' && <AlertCircle className="w-5 h-5 text-rose-500 shrink-0" />}
+        {toast.type === 'error' && <AlertCircle className="w-5 h-5 text-danger shrink-0" />}
         <span className="text-xs sm:text-sm font-bold text-[#2D3A4E] truncate">{toast.text}</span>
       </div>
       <button

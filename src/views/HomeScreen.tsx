@@ -211,8 +211,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     <div className="space-y-5 pb-36 animate-in fade-in duration-300">
       {/* 1. Maintenance / Concierge Banner (if store is offline) */}
       {!isOnline && (
-        <div className="neu-flat rounded-2xl p-3.5 bg-amber-500/10 border border-amber-500/30 flex items-center gap-3 text-amber-900 animate-in fade-in">
-          <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-amber-600 shrink-0 bg-[#E3E8EF]">
+        <div className="neu-flat rounded-2xl p-3.5 bg-warning-soft border border-warning/30 flex items-center gap-3 text-warning animate-in fade-in">
+          <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-warning shrink-0 bg-[#E3E8EF]">
             <AlertCircle className="w-4 h-4" />
           </div>
           <div className="text-xs space-y-0.5">
@@ -399,7 +399,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
 
         <div className="neu-inset rounded-2xl p-3 text-center space-y-1 bg-[#E3E8EF]">
-          <div className="w-7 h-7 mx-auto rounded-xl neu-button flex items-center justify-center text-emerald-600 bg-[#E3E8EF]">
+          <div className="w-7 h-7 mx-auto rounded-xl neu-button flex items-center justify-center text-success bg-[#E3E8EF]">
             <ShieldCheck className="w-3.5 h-3.5" />
           </div>
           <span className="text-[11px] font-extrabold text-[#2D3A4E] block">100% Оригинал</span>

@@ -39,7 +39,8 @@ ManStyle — SPA интернет-магазина мужской одежды (
 - `users.bonusPoints/managerNotes/tags` меняет только администратор; заметки менеджера хранятся в `customer_notes`.
 - Стили — неоморфные классы из `src/index.css`, тени только через их переменные (`--neu-*`), без `shadow-*`
   Tailwind рядом с `neu-*` (неоморфный класс их перекрывает). Одна `neu-button-accent` на экран,
-  выбранное — `neu-pill-active`, удаление — `neu-button-danger` + `ConfirmDialog`. Подробно — `docs/ui-audit-plan.md`.
+  выбранное — `neu-pill-active`, удаление — `neu-button-danger` + `ConfirmDialog`. Цвета статусов — только
+  токены `success/warning/danger` (и `*-soft` для подложек), не emerald/rose/amber. Подробно — `docs/ui-audit-plan.md`.
 
 ## Деплой
 

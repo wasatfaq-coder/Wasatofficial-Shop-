@@ -43,9 +43,9 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
           >
           {/* Header */}
           <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
-            <div className="flex items-center gap-2 text-[#7E525E]">
+            <div className="flex items-center gap-2 text-danger">
               <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center">
-                <Trash2 className="w-4 h-4 text-[#7E525E]" />
+                <Trash2 className="w-4 h-4 text-danger" />
               </div>
               <h3 className="text-sm font-extrabold text-[#2D3A4E]">Удаление товара</h3>
             </div>

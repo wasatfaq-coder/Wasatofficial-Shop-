@@ -373,7 +373,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                   onClick={() => setIsManageMode(!isManageMode)}
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1 ${
                     isManageMode
-                      ? 'bg-rose-500/15 text-rose-700 font-extrabold'
+                      ? 'bg-danger-soft text-danger font-extrabold'
                       : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                   }`}
                   title="Режим удаления фраз"
@@ -416,7 +416,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsAddingPhrase(false)}
-                    className="text-[#5C6B80] hover:text-rose-600"
+                    className="text-[#5C6B80] hover:text-danger"
                   >
                     Отмена
                   </button>
@@ -486,10 +486,10 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                           onClick={(e) => handleDeletePhrase(phrase, e)}
                           className={`p-1.5 pr-2 rounded-r-xl transition-opacity cursor-pointer ${
                             isManageMode
-                              ? 'text-rose-600 hover:text-rose-700 opacity-100'
+                              ? 'text-danger hover:text-danger opacity-100'
                               : isSelected
                               ? 'text-[#5F6ED0]/70 hover:text-[#5F6ED0] opacity-0 group-hover:opacity-100'
-                              : 'text-rose-500 hover:text-rose-700 opacity-0 group-hover:opacity-100'
+                              : 'text-danger hover:text-danger opacity-0 group-hover:opacity-100'
                           }`}
                           title="Удалить фразу из базы"
                         >
@@ -519,7 +519,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setDraft('')}
-                  className="px-2.5 py-1 rounded-lg neu-button text-[10px] font-bold text-rose-600 hover:text-rose-700 active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg neu-button text-[10px] font-bold text-danger hover:text-danger active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
                   title="Очистить поле ввода"
                 >
                   <Trash2 className="w-2.5 h-2.5" />
