@@ -240,6 +240,7 @@ export interface Order {
   customerName?: string;
   customerPhone?: string;
   customerEmail?: string;
+  customerUid?: string; // Firebase Auth uid of the customer (absent for guest orders)
 }
 
 export type ActiveTab = 'home' | 'catalog' | 'cart' | 'favorites' | 'profile' | 'product-detail' | 'checkout' | 'order-success';

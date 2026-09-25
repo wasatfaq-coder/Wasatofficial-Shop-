@@ -31,6 +31,7 @@ import {
   subscribeToStorefrontSettings,
   subscribeToChatMessages,
   subscribeToUsers,
+  subscribeToOwnUserProfile,
   saveOrderToFirestore,
   saveModifiedProductsToFirestore,
   syncAllProductsToFirestore,
@@ -56,6 +57,25 @@ import { CheckoutScreen } from './views/CheckoutScreen';
 import { ProfileScreen } from './views/ProfileScreen';
 import { FavoritesScreen } from './views/FavoritesScreen';
 import { OrderSuccessScreen } from './views/OrderSuccessScreen';
+
+const GUEST_ORDERS_STORAGE_KEY = 'manstyle_guest_orders';
+
+// Guests cannot read orders back from Firestore, so their history lives in this browser
+function loadGuestOrders(): Order[] {
+  try {
+    const raw = localStorage.getItem(GUEST_ORDERS_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveGuestOrder(order: Order) {
+  try {
+    localStorage.setItem(GUEST_ORDERS_STORAGE_KEY, JSON.stringify([order, ...loadGuestOrders()]));
+  } catch {}
+}
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
@@ -316,7 +336,7 @@ export default function App() {
     });
   };
 
-  const { currentUser } = useAuth();
+  const { currentUser, isAdmin, loading: authLoading } = useAuth();
 
   // 1. Real-time Firestore Subscriptions
   React.useEffect(() => {
@@ -340,12 +360,6 @@ export default function App() {
       }
     });
 
-    const unsubOrders = subscribeToOrders((loadedOrders) => {
-      if (loadedOrders) {
-        setOrders(loadedOrders);
-      }
-    });
-
     const unsubPromos = subscribeToPromos((loadedPromos) => {
       if (loadedPromos) {
         setPromos(loadedPromos);
@@ -361,12 +375,6 @@ export default function App() {
     const unsubChat = subscribeToChatMessages((loadedMsgs) => {
       if (loadedMsgs) {
         setChatMessages(loadedMsgs);
-      }
-    });
-
-    const unsubUsers = subscribeToUsers((loadedUsers) => {
-      if (loadedUsers) {
-        setAllUsers(loadedUsers);
       }
     });
 
@@ -395,16 +403,48 @@ export default function App() {
 
     return () => {
       unsubProds();
-      unsubOrders();
       unsubPromos();
       unsubSettings();
       unsubChat();
-      unsubUsers();
       unsubBanners();
       unsubDelivery();
       unsubPickup();
     };
   }, []);
+
+  // 1b. Orders & customer profiles are private (see firestore.rules):
+  // admins see everything, signed-in customers only their own data,
+  // guests keep their orders in this browser only.
+  React.useEffect(() => {
+    if (authLoading) return;
+
+    if (isAdmin) {
+      const unsubOrders = subscribeToOrders((loadedOrders) => setOrders(loadedOrders));
+      const unsubUsers = subscribeToUsers((loadedUsers) => setAllUsers(loadedUsers));
+      return () => {
+        unsubOrders();
+        unsubUsers();
+      };
+    }
+
+    if (currentUser) {
+      const unsubOrders = subscribeToOrders(
+        (loadedOrders) => setOrders(loadedOrders),
+        undefined,
+        currentUser.uid
+      );
+      const unsubUsers = subscribeToOwnUserProfile(currentUser.uid, (loadedUsers) =>
+        setAllUsers(loadedUsers)
+      );
+      return () => {
+        unsubOrders();
+        unsubUsers();
+      };
+    }
+
+    setOrders(loadGuestOrders());
+    setAllUsers([]);
+  }, [authLoading, isAdmin, currentUser]);
 
   // 2. Sync profile from Firebase Auth user & users collection
   React.useEffect(() => {
@@ -949,7 +989,8 @@ export default function App() {
     customerPhone?: string;
     customerEmail?: string;
   }) => {
-    const newOrderId = `MS-${Math.floor(1000 + Math.random() * 9000)}`;
+    // Orders are create-only for customers, so IDs must not collide with existing ones
+    const newOrderId = `MS-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
     const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     const customerName =
@@ -989,6 +1030,7 @@ export default function App() {
       customerName,
       customerPhone,
       customerEmail,
+      customerUid: currentUser?.uid,
       paymentMethod,
       paymentStatus,
       trackingNumber: undefined,
@@ -1044,6 +1086,9 @@ export default function App() {
 
     setOrders((prev) => [newOrder, ...prev]);
     saveOrderToFirestore(newOrder);
+    if (!currentUser) {
+      saveGuestOrder(newOrder);
+    }
     
     // Atomically persist stock updates only for ordered products
     const orderedProductIds = new Set(orderData.items.map((i) => i.product.id));

@@ -1,0 +1,63 @@
+name: Deploy to Firebase
+
+# Requires the repository secret FIREBASE_SERVICE_ACCOUNT (see README → «Деплой»).
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  FIREBASE_PROJECT: ai-studio-applet-webapp-e9574
+  # Deploy steps are skipped (with a warning) until the secret is configured
+  HAS_FIREBASE_SECRET: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+
+jobs:
+  preview:
+    name: Preview channel (PR)
+    # Secrets are not available to PRs from forks
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - if: env.HAS_FIREBASE_SECRET != 'true'
+        run: echo "::warning::FIREBASE_SERVICE_ACCOUNT secret is not set — preview deploy skipped"
+      - if: env.HAS_FIREBASE_SECRET == 'true'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ env.FIREBASE_PROJECT }}
+          expires: 7d
+
+  production:
+    name: Hosting + Firestore rules (main)
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://${{ env.FIREBASE_PROJECT }}.web.app
+    concurrency:
+      group: firebase-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run build
+      - if: env.HAS_FIREBASE_SECRET != 'true'
+        run: echo "::warning::FIREBASE_SERVICE_ACCOUNT secret is not set — deploy skipped"
+      - if: env.HAS_FIREBASE_SECRET == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - if: env.HAS_FIREBASE_SECRET == 'true'
+        run: bunx firebase deploy --only hosting,firestore --project "$FIREBASE_PROJECT" --non-interactive

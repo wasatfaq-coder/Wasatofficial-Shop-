@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
-import { auth, signInWithGoogle, logOut, testFirestoreConnection } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db, signInWithGoogle, logOut, testFirestoreConnection } from '../firebase';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -18,25 +19,44 @@ const AuthContext = createContext<AuthContextType>({
   logoutUser: async () => {},
 });
 
-const ADMIN_EMAIL = 'gunh83975@gmail.com';
+// Must stay in sync with isAdmin() in firestore.rules
+export const ADMIN_EMAIL = 'gunh83975@gmail.com';
+
+/**
+ * Admin = verified owner Google account, or a user with an /admins/{uid} document
+ * (created manually in Firebase Console). Firestore rules enforce the same check.
+ */
+async function resolveIsAdmin(user: User | null): Promise<boolean> {
+  if (!user) return false;
+  if (user.emailVerified && user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+    return true;
+  }
+  try {
+    const snap = await getDoc(doc(db, 'admins', user.uid));
+    return snap.exists();
+  } catch {
+    return false;
+  }
+}
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     // Probe Firestore connection on app start as required by Firebase skill
     testFirestoreConnection();
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      const admin = await resolveIsAdmin(user);
       setCurrentUser(user);
+      setIsAdmin(admin);
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
-
-  const isAdmin = Boolean(currentUser && currentUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase());
 
   const handleGoogleLogin = async () => {
     try {
