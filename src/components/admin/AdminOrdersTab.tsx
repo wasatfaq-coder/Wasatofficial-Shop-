@@ -33,7 +33,7 @@ import {
   Layers,
   Trash2,
 } from 'lucide-react';
-import { Order, Product, OrderAdjustmentLog, OrderStatusHistoryStep, DeliveryStage } from '../../types';
+import { Order, Product, OrderAdjustmentLog, OrderStatusHistoryStep, DeliveryStage, StorefrontSettings } from '../../types';
 import { exportOrdersToCSV } from '../../utils/csvHelpers';
 import { copyToClipboard } from '../../utils/clipboard';
 import { returnStockWithLogs } from '../../utils/inventory';
@@ -53,6 +53,7 @@ import { NeumorphicSelect } from '../NeumorphicSelect';
 
 interface AdminOrdersTabProps {
   orders: Order[];
+  storefrontSettings?: StorefrontSettings;
   products: Product[];
   onUpdateOrders: (updated: Order[]) => void;
   onUpdateProducts?: (updated: Product[]) => void;
@@ -196,6 +197,7 @@ const TRACKING_CARRIERS: TrackingCarrierConfig[] = [
 
 export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   orders,
+  storefrontSettings,
   products = [],
   onUpdateOrders,
   onUpdateProducts,
@@ -1695,6 +1697,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         isOpen={!!selectedOrderForInvoice}
         onClose={() => setSelectedOrderForInvoice(null)}
         order={selectedOrderForInvoice}
+        storefrontSettings={storefrontSettings}
         onShowToast={onShowToast}
       />
 

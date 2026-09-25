@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SecuritySettingsModal } from '../components/SecuritySettingsModal';
+import { getStoreContacts, telHref } from '../utils/storeContacts';
+import { GUEST_USER_PROFILE } from '../data/products';
 import { FAQModal } from '../components/FAQModal';
 import {
   User,
@@ -666,17 +668,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       sessionStorage.removeItem('manstyle_admin_auth');
     } catch {}
     setIsAdminAuthenticated(false);
-    onUpdateProfile({
-      name: 'Гость MANSTYLE',
-      email: '',
-      phone: '',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
-      address: { street: '', city: 'Москва', postalCode: '' },
-      savedAddresses: [],
-      savedCards: [],
-      notificationsEnabled: true,
-      bonusPoints: 0,
-    });
+    onUpdateProfile(GUEST_USER_PROFILE);
     onShowToast('Вы успешно вышли из аккаунта', 'info');
   };
 
@@ -899,11 +891,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   // Storefront & Boutique settings values with defaults
   const storeName = storefrontSettings?.storeName || 'MANSTYLE';
   const storeSlogan = storefrontSettings?.storeSlogan || 'Бутик мужской одежды & аксессуаров';
-  const storePhone = storefrontSettings?.phone || '+7 (495) 123-45-67';
-  const storeTelegram = storefrontSettings?.telegram || '@manstyle_official';
-  const pickupAddress =
-    storefrontSettings?.pickupAddress ||
-    'Москва, Пресненская наб. 12, Башня Федерация Восток, 2 этаж';
+  // Demo template contacts are never shown to customers (see storeContacts.ts)
+  const {
+    phone: storePhone,
+    telegram: storeTelegram,
+    pickupAddress,
+  } = getStoreContacts(storefrontSettings);
   const workingHours = storefrontSettings?.workingHours || 'Ежедневно с 10:00 до 22:00';
 
   return (
@@ -913,18 +906,26 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         {!isEditingProfile ? (
           <div className="neu-inset rounded-2xl p-4 flex items-center gap-4">
             <div className="relative w-16 h-16 rounded-full neu-flat p-1 shrink-0 overflow-hidden">
-              <img
-                src={profile.avatar}
-                alt={profile.name}
-                className="w-full h-full object-cover rounded-full"
-              />
+              {profile.avatar ? (
+                <img
+                  src={profile.avatar}
+                  alt={profile.name}
+                  className="w-full h-full object-cover rounded-full"
+                />
+              ) : (
+                <div className="w-full h-full rounded-full flex items-center justify-center text-[#5F6ED0] text-xl font-black">
+                  {profile.name?.trim() ? profile.name.trim()[0].toUpperCase() : <User className="w-7 h-7" />}
+                </div>
+              )}
             </div>
 
             <div className="flex-1 min-w-0 space-y-1">
               <h2 className="text-lg font-bold text-[#2D3A4E] leading-tight truncate">
-                {profile.name}
+                {profile.name?.trim() || 'Гость'}
               </h2>
-              <p className="text-xs text-[#5C6B80] truncate">{profile.email}</p>
+              <p className="text-xs text-[#5C6B80] truncate">
+                {profile.email || 'Заполните профиль, чтобы оформлять заказы быстрее'}
+              </p>
 
               <button
                 onClick={() => setIsEditingProfile(true)}
@@ -1014,21 +1015,23 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </div>
       </div>
 
-      {/* Firebase Cloud Synchronization & Auth Section */}
+      {/* Account & sign-in (cloud sync details are shown to admins only) */}
       <div className="neu-card rounded-3xl p-3.5 space-y-3">
         <div className="neu-inset rounded-2xl p-3.5 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] shrink-0">
-                <Database className="w-5 h-5 stroke-[2.2]" />
+                {isFirebaseAdmin ? <Database className="w-5 h-5 stroke-[2.2]" /> : <User className="w-5 h-5 stroke-[2.2]" />}
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-sm font-bold text-[#2D3A4E]">Firebase Cloud</h3>
-                  <span className="neu-button px-2 py-0.5 rounded-full text-[10px] font-black text-emerald-600 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    Firestore активен
-                  </span>
+                  <h3 className="text-sm font-bold text-[#2D3A4E]">{isFirebaseAdmin ? 'Синхронизация данных' : 'Аккаунт'}</h3>
+                  {isFirebaseAdmin && (
+                    <span className="neu-button px-2 py-0.5 rounded-full text-[10px] font-black text-emerald-600 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      База данных подключена
+                    </span>
+                  )}
                   {isFirebaseAdmin && (
                     <span className="neu-button-accent text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
                       <ShieldCheck className="w-3 h-3" />
@@ -1037,20 +1040,24 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   )}
                 </div>
                 <p className="text-xs text-[#5C6B80]">
-                  Синхронизация каталога, заказов, акций и чата с Firestore
+                  {isFirebaseAdmin
+                    ? 'Каталог, заказы, акции и чат хранятся в облаке'
+                    : 'Заказы, адреса и переписка сохраняются на всех ваших устройствах'}
                 </p>
               </div>
             </div>
 
+            {isFirebaseAdmin && (
             <button
               type="button"
               onClick={handleTriggerSync}
               disabled={isSyncingFirebase}
-              title="Принудительно синхронизировать все данные с Firestore"
+              title="Принудительно синхронизировать все данные с облаком"
               className="neu-button rounded-xl p-2.5 text-[#5F6ED0] hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0 disabled:opacity-60"
             >
               <RefreshCw className={`w-4 h-4 ${isSyncingFirebase ? 'animate-spin text-[#5F6ED0]' : ''}`} />
             </button>
+            )}
           </div>
 
           {/* User Auth Status Details */}
@@ -1070,7 +1077,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 )}
                 <div className="min-w-0">
                   <p className="font-bold text-[#2D3A4E] truncate">
-                    {currentUser.displayName || 'Google Пользователь'}
+                    {currentUser.displayName || 'Пользователь Google'}
                   </p>
                   <p className="text-[11px] text-[#5C6B80] truncate">{currentUser.email}</p>
                 </div>
@@ -1088,7 +1095,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           ) : (
             <div className="p-2.5 rounded-xl bg-[#BAC5D5]/20 space-y-2 text-xs">
               <p className="text-[#5C6B80] text-[11px] leading-relaxed">
-                Войдите через Google для привязки заказов и автоматической синхронизации личных данных с облаком:
+                Войдите через Google, чтобы видеть историю заказов и переписку с поддержкой на любом устройстве:
               </p>
               <button
                 type="button"
@@ -1114,7 +1121,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                   />
                 </svg>
-                <span>{isGoogleSigningIn ? 'Авторизация...' : 'Войти через Google (Firebase Auth)'}</span>
+                <span>{isGoogleSigningIn ? 'Вход…' : 'Войти через Google'}</span>
               </button>
             </div>
           )}
@@ -1295,6 +1302,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           </button>
         </div>
 
+        {profile.bodyMeasurements ? (
         <div className="neu-inset rounded-3xl p-4 space-y-3.5 bg-[#E3E8EF] border border-white/60">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -1378,6 +1386,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </div>
           </div>
         </div>
+        ) : (
+          <div className="neu-inset rounded-3xl p-4 bg-[#E3E8EF] border border-white/60 text-center space-y-1">
+            <p className="text-xs font-bold text-[#2D3A4E]">Мерки ещё не указаны</p>
+            <p className="text-[11px] text-[#5C6B80]">
+              Нажмите «Изменить» и укажите рост, вес и обхваты — подберём размер по российским лекалам.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Section 4: Избранное */}
@@ -1431,10 +1447,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
           <div className="space-y-2 text-xs text-[#2D3A4E] pt-1">
             <div className="neu-inset rounded-2xl p-3 space-y-1 bg-[#E3E8EF]">
+              {pickupAddress && (
               <div className="flex items-start gap-2">
                 <MapPin className="w-3.5 h-3.5 text-[#5F6ED0] shrink-0 mt-0.5" />
                 <span className="font-semibold text-[11px] leading-relaxed">{pickupAddress}</span>
               </div>
+              )}
               <div className="flex items-center gap-2 pt-1">
                 <Clock className="w-3.5 h-3.5 text-[#5C6B80] shrink-0" />
                 <span className="text-[11px] text-[#5C6B80] font-medium">{workingHours}</span>
@@ -1442,13 +1460,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </div>
 
             <div className="flex items-center gap-2 pt-1 flex-wrap">
+              {storePhone && (
               <a
-                href={`tel:${storePhone.replace(/[^\d+]/g, '')}`}
+                href={telHref(storePhone)}
                 className="flex-1 min-w-[130px] py-2.5 px-3 neu-inset rounded-xl text-[11px] font-black text-[#2D3A4E] hover:text-[#5F6ED0] flex items-center justify-center gap-1.5 transition-all bg-[#E3E8EF] border border-transparent hover:border-[#5F6ED0]/30"
               >
                 <Phone className="w-3.5 h-3.5 text-[#5F6ED0]" />
                 <span>{storePhone}</span>
               </a>
+              )}
 
               {onOpenSupportChat ? (
                 <button
@@ -1459,7 +1479,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   <MessageCircle className="w-3.5 h-3.5" />
                   <span>Чат с консьержем</span>
                 </button>
-              ) : (
+              ) : storeTelegram ? (
                 <a
                   href={`https://t.me/${storeTelegram.replace('@', '')}`}
                   target="_blank"
@@ -1469,7 +1489,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   <Send className="w-3.5 h-3.5" />
                   <span>{storeTelegram}</span>
                 </a>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -1528,6 +1548,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </h3>
         <div className="neu-card rounded-3xl p-3 space-y-2">
           {/* Admin Panel Item Trigger */}
+          {/* Admin entry is only shown to verified admins (Google sign-in) */}
+          {isFirebaseAdmin && (
           <button
             id="admin-panel-trigger-btn"
             type="button"
@@ -1563,6 +1585,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               <ChevronRight className="w-4 h-4 text-[#5C6B80] group-hover:text-[#5F6ED0] transition-colors" />
             </div>
           </button>
+          )}
 
           <div className="p-3.5 neu-inset rounded-2xl flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -1607,7 +1630,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </div>
       </div>
 
-      {/* Logout Action Button */}
+      {/* Logout Action Button (only for a signed-in customer) */}
+      {currentUser && (
       <button
         onClick={handleFullLogout}
         className="w-full neu-inset rounded-2xl p-4 flex items-center justify-center gap-2 text-[#5C6B80] hover:text-[#7E525E] font-bold text-sm active:scale-[0.99] transition-all cursor-pointer bg-[#E3E8EF] border border-transparent hover:border-[#7E525E]/30"
@@ -1615,6 +1639,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <LogOut className="w-5 h-5 stroke-[2]" />
         <span>Выйти из аккаунта</span>
       </button>
+      )}
 
       {/* ================= MODAL: ORDER HISTORY & TRACKING ================= */}
       {activeModal === 'orders' && (
@@ -3590,6 +3615,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               {adminTab === 'orders' && (
                 <AdminOrdersTab
                   orders={orders}
+                  storefrontSettings={storefrontSettings}
                   products={productsList}
                   onUpdateOrders={handleUpdateOrders}
                   onUpdateProducts={handleUpdateProductsList}
@@ -3719,6 +3745,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       {/* ================= MODAL: FAQ ACCORDION ================= */}
       <FAQModal
         isOpen={activeModal === 'faq'}
+        freeDeliveryThreshold={storefrontSettings?.freeDeliveryThreshold}
+        returnPeriodDays={storefrontSettings?.returnPeriodDays}
+        storePhone={storePhone}
         onClose={() => setActiveModal(null)}
         onOpenSupportChat={onOpenSupportChat}
         onShowToast={onShowToast}
@@ -3768,27 +3797,29 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
               <div className="space-y-3 text-xs text-[#5C6B80] leading-relaxed">
                 <p className="font-bold text-[#2D3A4E]">Мы на связи и готовы помочь с любым вопросом!</p>
+                {storePhone && (
                 <div className="neu-inset rounded-2xl p-3.5 space-y-2 bg-[#E3E8EF]">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-bold text-[#2D3A4E]">Бесплатная горячая линия:</p>
+                      <p className="font-bold text-[#2D3A4E]">Телефон магазина:</p>
                       <a
-                        href="tel:88005553535"
+                        href={telHref(storePhone)}
                         className="text-[#5F6ED0] font-black text-base hover:underline block"
                       >
-                        8 (800) 555-35-35
+                        {storePhone}
                       </a>
                     </div>
                     <a
-                      href="tel:88005553535"
+                      href={telHref(storePhone)}
                       className="neu-button p-2.5 rounded-xl text-[#5F6ED0] hover:scale-105 active:scale-95 transition-transform"
-                      title="Позвонить прямо сейчас"
+                      title="Позвонить"
                     >
                       <Phone className="w-4 h-4" />
                     </a>
                   </div>
-                  <p className="text-[11px] text-[#5C6B80]">Ежедневно с 09:00 до 21:00 (звонок по РФ бесплатный)</p>
+                  <p className="text-[11px] text-[#5C6B80]">{workingHours}</p>
                 </div>
+                )}
 
                 <div className="space-y-2 pt-1">
                   {onOpenSupportChat && (

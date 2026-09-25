@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product, ActiveTab, BannerSlide, StorefrontSettings, UserProfile } from '../types';
+import { getStoreContacts } from '../utils/storeContacts';
 import { CATEGORIES } from '../data/products';
 import { INITIAL_BANNER_SLIDES } from '../data/marketingAndSupport';
 import { ProductCard } from '../components/ProductCard';
@@ -202,13 +203,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const isExpress = storefrontSettings?.isExpressEnabled !== false;
   const freeShippingLimit = storefrontSettings?.freeDeliveryThreshold ?? 5000;
   const returnPeriod = storefrontSettings?.returnPeriodDays ?? 14;
-  const phone = storefrontSettings?.phone || '+7 (495) 123-45-67';
-  const email = storefrontSettings?.email || 'concierge@manstyle.ru';
-  const telegram = storefrontSettings?.telegram || '@manstyle_official';
-  const whatsapp = storefrontSettings?.whatsapp || '+7 (999) 000-00-00';
-  const pickupAddress =
-    storefrontSettings?.pickupAddress ||
-    'Москва, Пресненская наб. 12, Башня Федерация Восток, 2 этаж';
+  // Demo template contacts are never shown to customers (see storeContacts.ts)
+  const { phone } = getStoreContacts(storefrontSettings);
   const workingHours = storefrontSettings?.workingHours || 'Ежедневно с 10:00 до 22:00';
 
   return (
@@ -225,7 +221,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </span>
             <p className="text-[11px] text-[#5C6B80]">
               Онлайн-корзина временно на обновлении. Для резервирования моделей свяжитесь с
-              консьержем: <strong className="text-[#5F6ED0]">{phone}</strong>
+              консьержем{phone ? (
+                <>
+                  : <strong className="text-[#5F6ED0]">{phone}</strong>
+                </>
+              ) : (
+                ' в чате поддержки'
+              )}.
             </p>
           </div>
         </div>

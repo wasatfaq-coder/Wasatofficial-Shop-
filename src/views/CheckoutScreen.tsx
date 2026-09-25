@@ -78,20 +78,21 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
     entrance?: boolean;
     intercom?: boolean;
   }>({});
-  const [name, setName] = useState(userProfile?.name || 'Александр Новиков');
-  const [phone, setPhone] = useState(userProfile?.phone || '+7 (999) 123-45-67');
-  const [email, setEmail] = useState(userProfile?.email || 'alex@manstyle.ru');
+  // Never prefill made-up contact or address data: a guest could submit it unnoticed
+  const [name, setName] = useState(userProfile?.name || '');
+  const [phone, setPhone] = useState(userProfile?.phone || '');
+  const [email, setEmail] = useState(userProfile?.email || '');
   const defaultSaved = userProfile?.savedAddresses?.find((a) => a.isDefault) || userProfile?.savedAddresses?.[0];
 
   const [addrTitle, setAddrTitle] = useState(defaultSaved?.title || 'Дом');
   const [addrCity, setAddrCity] = useState(defaultSaved?.city || userProfile?.address?.city || 'Москва');
-  const [addrPostal, setAddrPostal] = useState(defaultSaved?.postalCode || userProfile?.address?.postalCode || '101000');
-  const [addrStreet, setAddrStreet] = useState(defaultSaved?.street || userProfile?.address?.street || 'ул. Ленина');
-  const [addrHouse, setAddrHouse] = useState(defaultSaved?.house || userProfile?.address?.house || '10');
-  const [addrEntrance, setAddrEntrance] = useState(defaultSaved?.entrance || userProfile?.address?.entrance || '2');
-  const [addrFloor, setAddrFloor] = useState(defaultSaved?.floor || userProfile?.address?.floor || '4');
-  const [addrApartment, setAddrApartment] = useState(defaultSaved?.apartment || userProfile?.address?.apartment || 'кв. 25');
-  const [addrIntercom, setAddrIntercom] = useState(defaultSaved?.intercom || userProfile?.address?.intercom || '25K');
+  const [addrPostal, setAddrPostal] = useState(defaultSaved?.postalCode || userProfile?.address?.postalCode || '');
+  const [addrStreet, setAddrStreet] = useState(defaultSaved?.street || userProfile?.address?.street || '');
+  const [addrHouse, setAddrHouse] = useState(defaultSaved?.house || userProfile?.address?.house || '');
+  const [addrEntrance, setAddrEntrance] = useState(defaultSaved?.entrance || userProfile?.address?.entrance || '');
+  const [addrFloor, setAddrFloor] = useState(defaultSaved?.floor || userProfile?.address?.floor || '');
+  const [addrApartment, setAddrApartment] = useState(defaultSaved?.apartment || userProfile?.address?.apartment || '');
+  const [addrIntercom, setAddrIntercom] = useState(defaultSaved?.intercom || userProfile?.address?.intercom || '');
 
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [selectedSavedId, setSelectedSavedId] = useState<string>(defaultSaved?.id || 'custom');
@@ -111,8 +112,8 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
     setSelectedSavedId(saved.id);
     setAddrTitle(saved.title || 'Адрес');
     setAddrCity(saved.city || 'Москва');
-    setAddrPostal(saved.postalCode || '101000');
-    setAddrStreet(saved.street || 'ул. Ленина');
+    setAddrPostal(saved.postalCode || '');
+    setAddrStreet(saved.street || '');
     setAddrHouse(saved.house || '');
     setAddrEntrance(saved.entrance || '');
     setAddrFloor(saved.floor || '');
@@ -246,11 +247,14 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
     e.preventDefault();
     if (cartItems.length === 0 || isSubmitting) return;
 
-    // Validate courier delivery required fields (house, entrance, intercom)
+    // Validate courier delivery required fields (street, house, entrance, intercom)
     if (isCourierSelected) {
       const missing: string[] = [];
       const errorsObj: { house?: boolean; entrance?: boolean; intercom?: boolean } = {};
 
+      if (!addrStreet.trim()) {
+        missing.push('улица');
+      }
       if (!addrHouse || !addrHouse.trim()) {
         missing.push('номер дома');
         errorsObj.house = true;
@@ -274,12 +278,12 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
         return;
       }
     } else if (isPostSelected) {
-      if (!addrHouse || !addrHouse.trim()) {
-        const errorText = 'Для отправки Почтой России укажите номер дома получателя.';
+      if (!addrStreet.trim() || !addrHouse || !addrHouse.trim()) {
+        const errorText = 'Для отправки Почтой России укажите улицу и номер дома получателя.';
         setValidationError(errorText);
         setFieldErrors({ house: true });
         if (onShowToast) {
-          onShowToast('Укажите номер дома для Почты России', 'error');
+          onShowToast('Укажите улицу и номер дома для Почты России', 'error');
         }
         return;
       }
@@ -654,9 +658,11 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                     <MapPin className="w-3.5 h-3.5 text-[#5F6ED0]" />
                     {addrTitle}
                   </span>
-                  <span className="text-[10px] font-bold text-[#5C6B80] neu-inset px-2 py-0.5 rounded-md">
-                    Индекс: {addrPostal || '101000'}
-                  </span>
+                  {addrPostal && (
+                    <span className="text-[10px] font-bold text-[#5C6B80] neu-inset px-2 py-0.5 rounded-md">
+                      Индекс: {addrPostal}
+                    </span>
+                  )}
                 </div>
 
                 {/* Validation Alert inside address card if data incomplete */}
