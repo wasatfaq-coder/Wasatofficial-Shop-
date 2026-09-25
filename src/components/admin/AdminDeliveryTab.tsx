@@ -22,10 +22,8 @@ import {
   Sparkles,
   Layers,
   ArrowRight,
-  RotateCcw,
 } from 'lucide-react';
 import { DeliveryMethod, PickupPoint, StorefrontSettings } from '../../types';
-import { INITIAL_DELIVERY_METHODS, INITIAL_PICKUP_POINTS } from '../../data/deliveryData';
 
 interface AdminDeliveryTabProps {
   deliveryMethods: DeliveryMethod[];
@@ -335,12 +333,6 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
     onShowToast(`Пункт «${toDelete?.name || ''}» удален`, 'info');
   };
 
-  const handleRestoreDefaults = () => {
-    onUpdateDeliveryMethods(INITIAL_DELIVERY_METHODS);
-    onUpdatePickupPoints(INITIAL_PICKUP_POINTS);
-    onShowToast('Восстановлены стандартные способы доставки и пункты выдачи', 'success');
-  };
-
   // Icon mapping
   const renderMethodIcon = (iconName: string, className = 'w-5 h-5') => {
     switch (iconName) {
@@ -482,15 +474,6 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={handleRestoreDefaults}
-            className="p-2 neu-button rounded-xl text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
-            title="Восстановить стандартные настройки доставки"
-            aria-label="Восстановить стандартные настройки доставки"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
         </div>
       </div>
 

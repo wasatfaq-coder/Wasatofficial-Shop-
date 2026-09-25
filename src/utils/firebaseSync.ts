@@ -15,7 +15,6 @@ import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Product, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, UserProfile, BannerSlide, DeliveryMethod, PickupPoint } from '../types';
 import { PRODUCTS, INITIAL_ORDERS } from '../data/products';
 import { INITIAL_PROMO_CODES, INITIAL_CHAT_MESSAGES, INITIAL_BANNER_SLIDES } from '../data/marketingAndSupport';
-import { INITIAL_DELIVERY_METHODS, INITIAL_PICKUP_POINTS } from '../data/deliveryData';
 import { INITIAL_FIRESTORE_USERS } from '../data/initialCustomers';
 import { DEFAULT_STOREFRONT_SETTINGS } from './inventory';
 import { compressBase64Image } from './imageUpload';
@@ -1017,24 +1016,10 @@ export function subscribeToDeliveryMethods(
   return onSnapshot(
     colRef,
     async (snapshot) => {
+      // Empty means the owner has not added any (or removed the demo ones): show nothing.
+      // Demo data from deliveryData.ts is never shown to customers or written back.
       if (snapshot.empty) {
-        if (!hasAlreadySeeded('delivery_methods') && !inFlightSeedOperations.has('delivery_methods')) {
-          inFlightSeedOperations.add('delivery_methods');
-          try {
-            const batch = writeBatch(db);
-            for (let i = 0; i < INITIAL_DELIVERY_METHODS.length; i++) {
-              const m = { ...INITIAL_DELIVERY_METHODS[i], sortOrder: i + 1 };
-              batch.set(doc(db, 'delivery_methods', m.id), sanitizeForFirestore(m));
-            }
-            await batch.commit();
-            markCollectionSeeded('delivery_methods');
-          } catch (e) {
-            console.warn('Could not seed initial delivery methods:', e);
-          } finally {
-            inFlightSeedOperations.delete('delivery_methods');
-          }
-        }
-        onUpdate(INITIAL_DELIVERY_METHODS);
+        onUpdate([]);
         return;
       }
       markCollectionSeeded('delivery_methods');
@@ -1092,23 +1077,10 @@ export function subscribeToPickupPoints(
   return onSnapshot(
     colRef,
     async (snapshot) => {
+      // Empty means the owner has not added any (or removed the demo ones): show nothing.
+      // Demo data from deliveryData.ts is never shown to customers or written back.
       if (snapshot.empty) {
-        if (!hasAlreadySeeded('pickup_points') && !inFlightSeedOperations.has('pickup_points')) {
-          inFlightSeedOperations.add('pickup_points');
-          try {
-            const batch = writeBatch(db);
-            for (const pt of INITIAL_PICKUP_POINTS) {
-              batch.set(doc(db, 'pickup_points', pt.id), sanitizeForFirestore(pt));
-            }
-            await batch.commit();
-            markCollectionSeeded('pickup_points');
-          } catch (e) {
-            console.warn('Could not seed initial pickup points:', e);
-          } finally {
-            inFlightSeedOperations.delete('pickup_points');
-          }
-        }
-        onUpdate(INITIAL_PICKUP_POINTS);
+        onUpdate([]);
         return;
       }
       markCollectionSeeded('pickup_points');

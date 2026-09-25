@@ -13,7 +13,6 @@ import {
   validatePromo,
   type PricingLine,
 } from '../../src/shared/orderPricing';
-import { INITIAL_DELIVERY_METHODS } from '../../src/data/deliveryData';
 import { extractColorName, extractSizeName, generateDefaultSKUs } from '../../src/utils/inventory';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages } from '../../src/utils/deliveryStages';
 
@@ -156,9 +155,7 @@ export async function placeOrderCore(
     let deliveryMethods: DeliveryMethod[] = [];
     if (!isQuickOrder) {
       const methodsSnap = await tx.get(db.collection('delivery_methods'));
-      deliveryMethods = methodsSnap.empty
-        ? INITIAL_DELIVERY_METHODS
-        : methodsSnap.docs.map((d) => ({ ...(d.data() as DeliveryMethod), id: d.id }));
+      deliveryMethods = methodsSnap.docs.map((d) => ({ ...(d.data() as DeliveryMethod), id: d.id }));
     }
 
     // ---- Lines, stock check ----
