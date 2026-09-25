@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { currentStoreName } from './storeContacts';
 
 interface ReportData {
   periodLabel: string;
@@ -56,7 +57,7 @@ export async function generateAnalyticsPDF(data: ReportData): Promise<void> {
     <div style="border-bottom: 2px solid #5F6ED0; padding-bottom: 18px; margin-bottom: 22px; display: flex; justify-content: space-between; align-items: flex-start;">
       <div>
         <h1 style="margin: 0; font-size: 24px; font-weight: 900; letter-spacing: -0.5px; color: #1E293B;">
-          MANSTYLE <span style="color: #5F6ED0; font-weight: 700; font-size: 16px;">| FINANCIAL REPORT</span>
+          ${currentStoreName()} <span style="color: #5F6ED0; font-weight: 700; font-size: 16px;">| FINANCIAL REPORT</span>
         </h1>
         <p style="margin: 4px 0 0 0; font-size: 13px; color: #64748B;">
           Финансово-аналитический отчет продаж и ключевых показателей
@@ -214,7 +215,7 @@ export async function generateAnalyticsPDF(data: ReportData): Promise<void> {
 
     <!-- Footer Seal -->
     <div style="border-top: 1px solid #E2E8F0; padding-top: 10px; display: flex; justify-content: space-between; font-size: 10px; color: #94A3B8;">
-      <span>MANSTYLE E-Commerce ERP • Конфиденциальный отчет</span>
+      <span>${currentStoreName()} • Конфиденциальный отчет</span>
       <span>Стр. 1 из 1</span>
     </div>
   `;
@@ -242,7 +243,7 @@ export async function generateAnalyticsPDF(data: ReportData): Promise<void> {
 
     pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, Math.min(imgHeight, pageHeight));
     
-    const fileName = `MANSTYLE_Отчет_${data.periodLabel.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    const fileName = `${currentStoreName().replace(/\s+/g, '_')}_Отчет_${data.periodLabel.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
     pdf.save(fileName);
   } finally {
     if (container.parentNode) {

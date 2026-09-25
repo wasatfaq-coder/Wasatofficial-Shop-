@@ -1,5 +1,5 @@
 {
-  "name": "ManStyle - Мужская одежда",
+  "name": "Wasat Shop — мужская одежда",
   "description": "Мобильное приложение магазина мужской одежды в стиле Neumorphism с фильтрами товаров, интерактивной корзиной, оформлением заказа и личным кабинетом.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

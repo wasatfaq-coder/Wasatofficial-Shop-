@@ -443,7 +443,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                 type="text"
                 value={subtitle}
                 onChange={(e) => setSubtitle(e.target.value)}
-                placeholder="Натуральный 100% лён и дышащие ткани"
+                placeholder="Натуральный 100% лен и дышащие ткани"
                 className="w-full px-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF]"
               />
             </div>
@@ -471,7 +471,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                 type="text"
                 value={badge}
                 onChange={(e) => setBadge(e.target.value)}
-                placeholder="NEW, ХИТ, 100% ЛЁН"
+                placeholder="NEW, ХИТ, 100% ЛЕН"
                 className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF]"
               />
             </div>

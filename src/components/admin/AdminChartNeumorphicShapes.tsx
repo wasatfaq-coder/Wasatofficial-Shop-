@@ -591,7 +591,7 @@ export const NeumorphicRechartsLegend: React.FC<NeumorphicRechartsLegendProps> =
                 </svg>
               </span>
             ) : chartType === 'bar' || (!isAreaTrend && chartType === 'composed') ? (
-              <span className="flex items-center justify-center w-3.5 h-3" title="Столбец объёма">
+              <span className="flex items-center justify-center w-3.5 h-3" title="Столбец объема">
                 <span
                   className="w-2 h-3 rounded-xs shadow-xs"
                   style={{

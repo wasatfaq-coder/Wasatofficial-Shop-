@@ -169,7 +169,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                 </div>
                 <p className="text-[11px] sm:text-[11px] text-[#4E5C70] font-medium flex items-center gap-1.5 truncate">
                   <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse shrink-0" />
-                  <span className="truncate">Онлайн • Подбор & помощь</span>
+                  <span className="truncate">Онлайн • Подбор и помощь</span>
                 </p>
               </div>
             </div>

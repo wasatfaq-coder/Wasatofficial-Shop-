@@ -115,7 +115,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
 
     const newRev: ProductReview = {
       id: `rev-${Date.now()}`,
-      authorName: authorName.trim() || 'Покупатель MANSTYLE',
+      authorName: authorName.trim() || 'Покупатель',
       rating: selectedRating,
       date: 'Сегодня',
       comment: commentText.trim(),

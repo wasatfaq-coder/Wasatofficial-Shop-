@@ -1,5 +1,6 @@
 import React from 'react';
 import { Menu, ArrowLeft, Settings } from 'lucide-react';
+import { STORE_NAME_DEFAULT } from '../utils/storeContacts';
 import { ActiveTab } from '../types';
 
 interface HeaderProps {
@@ -8,6 +9,7 @@ interface HeaderProps {
   cartCount: number;
   onOpenDrawer: () => void;
   selectedProductTitle?: string;
+  storeName?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -16,13 +18,14 @@ export const Header: React.FC<HeaderProps> = ({
   cartCount,
   onOpenDrawer,
   selectedProductTitle,
+  storeName = STORE_NAME_DEFAULT,
 }) => {
   const isHome = activeTab === 'home';
 
   const getTitle = () => {
     switch (activeTab) {
       case 'home':
-        return { main: 'ManStyle', sub: 'Мужская одежда' };
+        return { main: storeName, sub: 'Мужская одежда' };
       case 'catalog':
         return { main: 'Каталог', sub: 'Поиск и фильтры' };
       case 'cart':
@@ -34,11 +37,11 @@ export const Header: React.FC<HeaderProps> = ({
       case 'product-detail':
         return { main: selectedProductTitle || 'Товар', sub: 'Детали товара' };
       case 'checkout':
-        return { main: 'Оформление заказа', sub: 'Шаг 1 из 4' };
+        return { main: 'Оформление заказа', sub: `${cartCount} ${getDeclinedItems(cartCount)}` };
       case 'order-success':
         return { main: 'Заказ оформлен', sub: 'Успешно' };
       default:
-        return { main: 'ManStyle', sub: 'Мужская одежда' };
+        return { main: storeName, sub: 'Мужская одежда' };
     }
   };
 

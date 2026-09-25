@@ -215,7 +215,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
 
     const defaultCategories = [
       { id: 'shirts', name: 'Рубашки и сорочки', color: 'bg-[#5F6ED0]' },
-      { id: 'linen', name: 'Премиум лён', color: 'bg-[#4B58B0]' },
+      { id: 'linen', name: 'Премиум лен', color: 'bg-[#4B58B0]' },
       { id: 'jackets', name: 'Куртки и бомберы', color: 'bg-[#7A87E0]' },
       { id: 'trousers', name: 'Брюки и чиносы', color: 'bg-[#8F9BB3]' },
       { id: 'accessories', name: 'Аксессуары', color: 'bg-[#BAC5D5]' },
@@ -326,7 +326,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
       setAnimationCycle((c) => c + 1);
       setIsConfirmDeleteModalOpen(false);
       onShowToast(
-        `Все статистические данные и заказы (${res.deletedCount} шт.) успешно удалены из базы Firestore`,
+        `Все статистические данные и заказы (${res.deletedCount} шт.) удалены из базы`,
         'success'
       );
     } catch (err) {
@@ -424,12 +424,12 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
 
       setAnimationCycle((c) => c + 1);
       onShowToast(
-        `Данные Firestore обновлены: переподписка выполнена (${loadedOrdersCount} заказов актуализировано в реальном времени)`,
+        `Данные обновлены: заказов в базе — ${loadedOrdersCount}`,
         'success'
       );
     } catch (err) {
       console.error('[Firestore Resubscribe] Failed to resubscribe:', err);
-      onShowToast('Не удалось обновить подписку Firestore. Проверьте соединение.', 'error');
+      onShowToast('Не удалось обновить данные. Проверьте соединение.', 'error');
     } finally {
       setIsRefreshing(false);
     }
@@ -440,7 +440,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
   const handleExportPDF = async () => {
     try {
       setIsExportingPDF(true);
-      onShowToast('Формирование официального PDF-отчёта продаж...', 'info');
+      onShowToast('Формирование официального PDF-отчета продаж...', 'info');
 
       const recentOrdersData = activeOrders.slice(0, 15).map((o) => ({
         id: String(o.id),
@@ -507,7 +507,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
         <div className="space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[11px] font-black uppercase tracking-wider text-[#4B59BB] bg-[#5F6ED0]/10 px-2 py-0.5 rounded-md">
-              ФИНАНСОВАЯ АНАЛИТИКА FIRESTORE
+              Финансовая аналитика
             </span>
             {/* Live Firestore Connection Badge */}
             <div className="neu-inset px-2.5 py-0.5 rounded-full bg-[#E3E8EF] flex items-center gap-1.5 text-[11px] font-extrabold text-success border border-success/20">
@@ -522,7 +522,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
           </h3>
 
           <p className="text-xs text-[#4E5C70]">
-            Интерактивные графики Recharts с плавной анимацией появления данных и детальным суточным срезом
+            Выручка и число заказов по дням. Нажмите на день, чтобы увидеть подробности
           </p>
         </div>
 
@@ -729,7 +729,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
                 </h3>
                 <span className="flex items-center gap-1 text-[11px] font-extrabold text-success bg-success-soft px-2 py-0.5 rounded-full border border-success/40">
                   <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                  Live Firestore
+                  Обновляется автоматически
                 </span>
               </div>
               <p className="text-[11px] text-[#4E5C70] font-medium">
@@ -748,7 +748,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
                 ? 'neu-inset text-[#4B59BB] bg-[#E3E8EF] scale-[0.98]'
                 : 'neu-button text-[#2D3A4E] hover:text-[#4B59BB] active:scale-95'
             }`}
-            title="Принудительно переподписаться на данные Firestore и обновить метрики в реальном времени"
+            title="Загрузить свежие данные из базы"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 text-[#4B59BB] transition-transform ${
@@ -883,10 +883,6 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
             <span>Нажмите на столбец или точку графика для детального среза дня</span>
           </div>
 
-          <div className="flex items-center gap-1 text-[11px] font-bold text-[#4B59BB] neu-inset px-2.5 py-0.5 rounded-full bg-[#E3E8EF]">
-            <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse shadow-sm" />
-            <span>Тактильный отклик Neumorphism</span>
-          </div>
         </div>
 
         {/* Recharts Container with smooth entrance animations */}
@@ -1217,7 +1213,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
               <Award className="w-4 h-4 text-[#4B59BB]" />
               Топ продаваемых товаров
             </h4>
-            <span className="text-[11px] font-bold text-[#4E5C70]">По объёму из базы</span>
+            <span className="text-[11px] font-bold text-[#4E5C70]">По объему из базы</span>
           </div>
 
           <div className="space-y-2">
@@ -1315,7 +1311,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
                 Эффективность маркетинговых промокодов
               </h4>
               <p className="text-[11px] font-medium text-[#4E5C70]">
-                Вклад промо-акций в общий объём продаж за {periodLabelMap[period].toLowerCase()}
+                Вклад промо-акций в общий объем продаж за {periodLabelMap[period].toLowerCase()}
               </p>
             </div>
           </div>
@@ -1387,11 +1383,11 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
         <div className="flex items-center justify-between text-xs font-bold text-[#4E5C70] px-0.5 flex-wrap gap-2">
           <span className="flex items-center gap-1.5 text-[#2D3A4E]">
             <FileText className="w-4 h-4 text-[#4B59BB]" />
-            Генерация официальной финансовой отчётности
+            Генерация официальной финансовой отчетности
           </span>
           <span className="text-[11px] font-extrabold text-success neu-inset px-2.5 py-0.5 rounded-full bg-[#E3E8EF] flex items-center gap-1 border border-success/20">
             <CheckCircle2 className="w-3.5 h-3.5 text-success" />
-            База Firestore синхронизирована
+            Данные актуальны
           </span>
         </div>
 
@@ -1409,7 +1405,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
             ) : (
               <>
                 <Download className="w-4 h-4 text-white shrink-0" />
-                <span>Скачать финансовый отчёт (PDF)</span>
+                <span>Скачать финансовый отчет (PDF)</span>
               </>
             )}
           </button>
@@ -1417,7 +1413,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
           <button
             onClick={() => setIsConfirmDeleteModalOpen(true)}
             className="py-3 px-4 neu-button-danger rounded-2xl font-black text-xs active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
-            title="Удалить все статистические данные и заказы из базы данных Firestore"
+            title="Удалить все статистические данные и заказы из базы"
           >
             <Trash2 className="w-4 h-4" />
             <span className="hidden sm:inline">Очистить статистику базы</span>
@@ -1428,8 +1424,8 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
             onClick={handleRefreshData}
             disabled={isRefreshing}
             className="w-12 h-12 shrink-0 neu-button rounded-2xl text-[#4E5C70] hover:text-[#4B59BB] flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-50"
-            title="Обновить аналитику из Firestore"
-            aria-label="Обновить аналитику из Firestore"
+            title="Обновить аналитику"
+            aria-label="Обновить аналитику"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-[#4B59BB]' : ''}`} />
           </button>
@@ -1457,7 +1453,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
                     Очистка статистики базы
                   </h3>
                   <p className="text-[11px] text-[#4E5C70]">
-                    Полное удаление данных из Firestore
+                    Полное удаление данных из базы
                   </p>
                 </div>
               </div>
@@ -1511,7 +1507,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
                 ) : (
                   <>
                     <Trash2 className="w-3.5 h-3.5" />
-                    <span>Удалить всё</span>
+                    <span>Удалить все</span>
                   </>
                 )}
               </button>

@@ -3,7 +3,7 @@ import { UserProfile } from '../types';
 export const INITIAL_FIRESTORE_USERS: UserProfile[] = [
   {
     uid: 'user-admin-001',
-    name: 'Администратор MANSTYLE',
+    name: 'Администратор Wasat Shop',
     email: 'gunh83975@gmail.com',
     phone: '+7 (999) 000-11-22',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
@@ -20,7 +20,7 @@ export const INITIAL_FIRESTORE_USERS: UserProfile[] = [
     savedAddresses: [
       {
         id: 'addr-admin-1',
-        title: 'Офис MANSTYLE',
+        title: 'Офис Wasat Shop',
         city: 'Москва',
         street: 'Пресненская наб.',
         house: '12',

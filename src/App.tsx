@@ -67,7 +67,7 @@ import { FavoritesScreen } from './views/FavoritesScreen';
 import { OrderSuccessScreen } from './views/OrderSuccessScreen';
 import { validatePromo, PricingLine, QUICK_ORDER_DELIVERY_ID } from './shared/orderPricing';
 import { extractColorName, extractSizeName } from './utils/inventory';
-import { getStoreContacts } from './utils/storeContacts';
+import { getStoreContacts, getStoreName, withStoreNameFields } from './utils/storeContacts';
 import { formatDays } from './utils/pluralize';
 
 // Unique across customers: messages are create-only for customers (see firestore.rules)
@@ -308,6 +308,26 @@ export default function App() {
   const [deliveryMethods, setDeliveryMethods] = useState<DeliveryMethod[]>(loadLocalDeliveryMethods);
   const [pickupPoints, setPickupPoints] = useState<PickupPoint[]>(loadLocalPickupPoints);
 
+  // Customers see the current store name even while Firestore still holds the template brand.
+  // The admin panel gets the raw data, so the rename in «Витрина» can find and fix it.
+  const storeName = getStoreName(storefrontSettings);
+  const customerStorefront = React.useMemo(
+    () => ({ ...withStoreNameFields(storefrontSettings, storeName), storeName }),
+    [storefrontSettings, storeName]
+  );
+  const customerDeliveryMethods = React.useMemo(
+    () => deliveryMethods.map((m) => withStoreNameFields(m, storeName)),
+    [deliveryMethods, storeName]
+  );
+  const customerBannerSlides = React.useMemo(
+    () => bannerSlides.map((s) => withStoreNameFields(s, storeName)),
+    [bannerSlides, storeName]
+  );
+  const customerPickupPoints = React.useMemo(
+    () => pickupPoints.map((pt) => withStoreNameFields(pt, storeName)),
+    [pickupPoints, storeName]
+  );
+
   const handleUpdateDeliveryMethods = (updated: DeliveryMethod[]) => {
     setDeliveryMethods(updated);
     saveLocalDeliveryMethods(updated);
@@ -398,6 +418,8 @@ export default function App() {
     const unsubSettings = subscribeToStorefrontSettings((loadedSettings) => {
       if (loadedSettings) {
         setStorefrontSettings(loadedSettings);
+        // Cached copy: components without props read the store name from it (currentStoreName)
+        saveStorefrontSettings(loadedSettings);
       }
     });
 
@@ -540,10 +562,10 @@ export default function App() {
       if (currentUser) {
         await saveUserProfileToFirestore(currentUser.uid, userProfile);
       }
-      addToast('Все данные успешно синхронизированы с Firebase Firestore!', 'success');
+      addToast('Все данные сохранены в базе', 'success');
     } catch (err) {
       console.error('Firebase Sync Error:', err);
-      addToast('Ошибка синхронизации с Firebase', 'error');
+      addToast('Не удалось сохранить данные в базе', 'error');
     }
   };
 
@@ -954,7 +976,7 @@ export default function App() {
         addToast(
           anonymousDisabled
             ? 'Чтобы написать в поддержку, войдите через Google в разделе «Профиль»'
-            : 'Не удалось подключиться к чату. Проверьте соединение и попробуйте ещё раз.',
+            : 'Не удалось подключиться к чату. Проверьте соединение и попробуйте еще раз.',
           'error'
         );
         return;
@@ -979,16 +1001,16 @@ export default function App() {
 
     setTimeout(() => {
       setIsChatTyping(false);
-      let replyText = 'Благодарим за обращение! Менеджер службы заботы MANSTYLE ответит вам в течение нескольких минут.';
+      let replyText = `Благодарим за обращение! Менеджер ${storeName} ответит вам в течение нескольких минут.`;
       const lower = text.toLowerCase();
       if (imageUrl) {
         replyText = 'Спасибо за прикрепленное фото! Консультант уже изучает изображение и поможет с оценкой или подбором.';
       } else if (lower.includes('размер') || lower.includes('подобрать')) {
-        replyText = 'Воспользуйтесь «Калькулятором размеров» в меню или в карточке товара — он подберёт размер по вашим росту, весу и обхватам.';
+        replyText = 'Воспользуйтесь «Калькулятором размеров» в меню или в карточке товара — он подберет размер по вашим росту, весу и обхватам.';
       } else if (lower.includes('доставк') || lower.includes('где заказ') || lower.includes('трек')) {
         replyText = 'Статус и отслеживание заказов — в разделе «Профиль» → «Заказы и трекинг». Сроки доставки для вашего адреса видны при оформлении заказа.';
       } else if (lower.includes('возврат') || lower.includes('обмен')) {
-        replyText = `Возврат и обмен возможны в течение ${formatDays(storefrontSettings.returnPeriodDays ?? 14)}. Прикрепите фото бирки и товара прямо в чат — так мы оформим всё быстрее.`;
+        replyText = `Возврат и обмен возможны в течение ${formatDays(storefrontSettings.returnPeriodDays ?? 14)}. Прикрепите фото бирки и товара прямо в чат — так мы оформим все быстрее.`;
       } else if (lower.includes('скидк') || lower.includes('промокод')) {
         replyText = 'Доступные промокоды можно выбрать в корзине — кнопка «Добавить купоны и промокоды». Менеджер также может подобрать для вас персональное предложение.';
       }
@@ -1092,7 +1114,7 @@ export default function App() {
       orderData.contact?.name ||
       orderData.customerName ||
       userProfile.name ||
-      'Покупатель MANSTYLE';
+      'Покупатель';
     const customerPhone =
       orderData.contact?.phone ||
       orderData.customerPhone ||
@@ -1159,7 +1181,7 @@ export default function App() {
       const message =
         err instanceof Error && err.message && err.message !== 'internal'
           ? err.message
-          : 'Не удалось оформить заказ. Проверьте соединение и попробуйте ещё раз.';
+          : 'Не удалось оформить заказ. Проверьте соединение и попробуйте еще раз.';
       addToast(message, 'error');
       return false;
     }
@@ -1171,7 +1193,7 @@ export default function App() {
   // Legacy client-side checkout, used until the Cloud Function is deployed and enabled
   const completeOrderLocally = (orderData: CompleteOrderData): boolean => {
     // Orders are create-only for customers, so IDs must not collide with existing ones
-    const newOrderId = `MS-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
+    const newOrderId = `WS-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
     const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     const { customerName, customerPhone, customerEmail, deliveryAddress, deliveryMethod, paymentMethod } =
@@ -1317,7 +1339,7 @@ export default function App() {
           onOpenFilters={() => setIsAdvancedFilterOpen(true)}
           onOpenSupportChat={() => setIsSupportChatOpen(true)}
           onOpenBrandDetails={() => setIsBrandModalOpen(true)}
-          storefrontSettings={storefrontSettings}
+          storefrontSettings={customerStorefront}
         />
 
         <CatalogAdvancedFilter
@@ -1339,7 +1361,7 @@ export default function App() {
         <BrandRequisitesModal
           isOpen={isBrandModalOpen}
           onClose={() => setIsBrandModalOpen(false)}
-          storefrontSettings={storefrontSettings}
+          storefrontSettings={customerStorefront}
           onOpenSupportChat={() => setIsSupportChatOpen(true)}
         />
 
@@ -1376,7 +1398,7 @@ export default function App() {
           isOpen={isMySizesModalOpen}
           onClose={() => setIsMySizesModalOpen(false)}
           availableSizes={['S', 'M', 'L', 'XL', 'XXL']}
-          onSelectSize={(sz) => addToast(`Сохранён рекомендуемый размер: ${sz}`, 'success')}
+          onSelectSize={(sz) => addToast(`Сохранен рекомендуемый размер: ${sz}`, 'success')}
           productFit="regular"
           userProfile={userProfile}
           onSaveMeasurements={handleSaveMeasurements}
@@ -1401,6 +1423,7 @@ export default function App() {
             cartCount={totalCartCount}
             onOpenDrawer={() => setIsDrawerOpen(true)}
             selectedProductTitle={selectedProduct?.title}
+            storeName={storeName}
           />
         )}
 
@@ -1429,8 +1452,8 @@ export default function App() {
               setActiveTab={setActiveTab}
               onSelectCategory={setSelectedCategory}
               onOpenDrawer={() => setIsDrawerOpen(true)}
-              bannerSlides={bannerSlides}
-              storefrontSettings={storefrontSettings}
+              bannerSlides={customerBannerSlides}
+              storefrontSettings={customerStorefront}
               onOpenSupportChat={() => setIsSupportChatOpen(true)}
               onApplyPromo={handleApplyPromo}
               onShowToast={addToast}
@@ -1502,7 +1525,7 @@ export default function App() {
               onOpenPromoModal={() => setIsPromoModalOpen(true)}
               onRemovePromo={handleRemovePromo}
               onCompleteOrder={handleCompleteOrder}
-              storefrontSettings={storefrontSettings}
+              storefrontSettings={customerStorefront}
             />
           )}
 
@@ -1514,10 +1537,10 @@ export default function App() {
               setActiveTab={setActiveTab}
               appliedPromo={appliedPromo}
               onOpenPromoModal={() => setIsPromoModalOpen(true)}
-              storefrontSettings={storefrontSettings}
+              storefrontSettings={customerStorefront}
               onShowToast={addToast}
-              deliveryMethods={deliveryMethods}
-              pickupPoints={pickupPoints}
+              deliveryMethods={customerDeliveryMethods}
+              pickupPoints={customerPickupPoints}
             />
           )}
 

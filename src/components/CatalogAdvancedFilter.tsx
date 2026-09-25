@@ -26,7 +26,7 @@ export interface FilterState {
 
 export const MATERIAL_CATEGORIES = [
   { id: 'cotton', name: 'Хлопок / Пике', keywords: ['хлопок', 'cotton', 'пике'] },
-  { id: 'linen', name: 'Лён', keywords: ['лён', 'лен', 'linen'] },
+  { id: 'linen', name: 'Лен', keywords: ['лён', 'лен', 'linen'] },
   { id: 'wool', name: 'Шерсть / Кашемир', keywords: ['шерсть', 'wool', 'кашемир', 'cashmere'] },
   { id: 'denim', name: 'Деним', keywords: ['деним', 'джинс', 'эластан'] },
   { id: 'blend', name: 'Смесовые ткани', keywords: ['полиэстер', 'вискоза', 'смесов', 'polyester'] },

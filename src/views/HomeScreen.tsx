@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product, ActiveTab, BannerSlide, StorefrontSettings, UserProfile } from '../types';
-import { getStoreContacts } from '../utils/storeContacts';
+import { getStoreContacts, getStoreName } from '../utils/storeContacts';
 import { CATEGORIES } from '../data/products';
 import { INITIAL_BANNER_SLIDES } from '../data/marketingAndSupport';
 import { ProductCard } from '../components/ProductCard';
@@ -197,8 +197,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const currentSlide = displaySlides[activeBannerSlide] || displaySlides[0];
 
   // Settings values with defaults
-  const storeName = storefrontSettings?.storeName || 'MANSTYLE';
-  const storeSlogan = storefrontSettings?.storeSlogan || 'Бутик мужской одежды & аксессуаров';
+  const storeName = getStoreName(storefrontSettings);
+  const storeSlogan = storefrontSettings?.storeSlogan || 'Бутик мужской одежды и аксессуаров';
   const isOnline = storefrontSettings?.isStoreOnline !== false;
   const isExpress = storefrontSettings?.isExpressEnabled !== false;
   const freeShippingLimit = storefrontSettings?.freeDeliveryThreshold ?? 5000;

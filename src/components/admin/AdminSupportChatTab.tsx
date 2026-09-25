@@ -12,7 +12,6 @@ import {
   Trash2,
   Paperclip,
   Image as ImageIcon,
-  Plus,
   Pencil,
   X,
   Maximize2,
@@ -39,7 +38,6 @@ import {
   Crown,
   Zap,
   Search,
-  Star,
   Activity,
   CheckCircle2,
   BarChart3,
@@ -54,6 +52,7 @@ import { NeumorphicSelect, NeumorphicSelectOption } from '../NeumorphicSelect';
 import { copyToClipboard } from '../../utils/clipboard';
 import { compressChatImageFile } from '../../utils/imageUpload';
 import { ORDER_STATUS_LABELS, isTransportCompanyDelivery } from '../../utils/deliveryStages';
+import { currentStoreName } from '../../utils/storeContacts';
 
 interface AdminSupportChatTabProps {
   messages: ChatMessage[];
@@ -88,54 +87,30 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   onClearChat,
   onShowToast,
 }) => {
-  // --- 1. MULTI-DIALOG INBOX THREADS STATE ---
-  const [threads, setThreads] = useState<CustomerThread[]>(() => {
-    const list: CustomerThread[] = [
-      {
-        id: 'thread-main',
-        customerName: orders[0]?.customerName || 'Покупатель онлайн',
-        customerPhone: orders[0]?.customerPhone || '',
-        customerEmail: orders[0]?.customerEmail || '',
-        orderNumber: orders[0]?.id || undefined,
-        status: 'in_progress',
-        priority: 'standard',
-        lastActivity: 'Только что',
-        unreadCount: 0,
-        activeOrderId: orders[0]?.id || undefined,
-        tags: ['consultation'],
-        csatRating: 5,
-        messages: messages, // synced with live props
-      },
-    ];
-
-    // Add threads for real existing orders if any
-    orders.forEach((ord) => {
-      if (list.some((t) => t.orderNumber === ord.id || t.id === `thread-order-${ord.id}`)) return;
-      list.push({
-        id: `thread-order-${ord.id}`,
-        customerName: ord.customerName || `Заказ № ${ord.id}`,
-        customerPhone: ord.customerPhone || '',
-        customerEmail: ord.customerEmail || '',
-        orderNumber: ord.id,
-        activeOrderId: ord.id,
-        status: ord.status === 'delivered' ? 'resolved' : 'in_progress',
-        priority: 'standard',
-        lastActivity: ord.date || 'Недавно',
-        unreadCount: 0,
-        tags: ['delivery'],
-        messages: [
-          {
-            id: `m-init-${ord.id}`,
-            sender: 'bot',
-            text: `Диалог по заказу № ${ord.id} (${ord.items?.length || 0} тов. на сумму ${ord.totalPrice?.toLocaleString('ru-RU')} ₽).`,
-            timestamp: ord.date || 'Недавно',
-          },
-        ],
-      });
-    });
-
-    return list;
-  });
+  // --- 1. DIALOG STATE ---
+  // ProfileScreen passes the messages of one real customer dialog (grouped by threadId).
+  // Name, contacts and order context come from that customer's own orders, never from another buyer's.
+  const buildMainThread = (prev?: CustomerThread): CustomerThread => {
+    const customerUid = messages.find((m) => m.threadId)?.threadId;
+    const threadName = [...messages].reverse().find((m) => m.threadName)?.threadName;
+    const lastOrder = customerUid ? orders.find((o) => o.customerUid === customerUid) : undefined;
+    return {
+      status: 'in_progress',
+      priority: 'standard',
+      unreadCount: 0,
+      tags: ['consultation'],
+      ...prev,
+      id: 'thread-main',
+      customerName: threadName || lastOrder?.customerName || 'Покупатель',
+      customerPhone: lastOrder?.customerPhone || '',
+      customerEmail: lastOrder?.customerEmail || '',
+      orderNumber: lastOrder?.id,
+      activeOrderId: lastOrder?.id,
+      lastActivity: messages[messages.length - 1]?.timestamp || '',
+      messages,
+    };
+  };
+  const [threads, setThreads] = useState<CustomerThread[]>(() => [buildMainThread()]);
 
   const [activeThreadId, setActiveThreadId] = useState<string>('thread-main');
   const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
@@ -145,87 +120,14 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   const [isInboxDrawerOpen, setIsInboxDrawerOpen] = useState<boolean>(true);
   const [viewMode, setViewMode] = useState<'dropdown' | 'cards'>('dropdown');
 
-  // Sync main thread messages with live props
+  // Keep the dialog in sync with live messages and orders
   useEffect(() => {
-    setThreads((prev) =>
-      prev.map((t) => (t.id === 'thread-main' ? { ...t, messages: messages } : t))
-    );
-  }, [messages]);
+    setThreads((prev) => prev.map((t) => (t.id === 'thread-main' ? buildMainThread(t) : t)));
+  }, [messages, orders]);
 
-  // Sync real orders into threads dynamically
-  useEffect(() => {
-    if (!orders || orders.length === 0) return;
-    setThreads((prev) => {
-      const updated = [...prev];
-      orders.forEach((ord) => {
-        const exists = updated.some((t) => t.orderNumber === ord.id || t.id === `thread-order-${ord.id}`);
-        if (!exists) {
-          updated.push({
-            id: `thread-order-${ord.id}`,
-            customerName: ord.customerName || `Заказ № ${ord.id}`,
-            customerPhone: ord.customerPhone || '',
-            customerEmail: ord.customerEmail || '',
-            orderNumber: ord.id,
-            activeOrderId: ord.id,
-            status: ord.status === 'delivered' ? 'resolved' : 'in_progress',
-            priority: 'standard',
-            lastActivity: ord.date || 'Недавно',
-            unreadCount: 0,
-            tags: ['delivery'],
-            messages: [
-              {
-                id: `m-init-${ord.id}`,
-                sender: 'bot',
-                text: `Диалог по заказу № ${ord.id} (${ord.items?.length || 0} тов. на сумму ${ord.totalPrice?.toLocaleString('ru-RU')} ₽).`,
-                timestamp: ord.date || 'Недавно',
-              },
-            ],
-          });
-        }
-      });
-      return updated;
-    });
-  }, [orders]);
-
-  // Jump or switch to specific order thread when navigated from Orders tab
+  // Show the given order in the order widget when navigated from the Orders tab
   useEffect(() => {
     if (!initialOrderId) return;
-    const existingThread = threads.find(
-      (t) => t.orderNumber === initialOrderId || t.activeOrderId === initialOrderId
-    );
-    if (existingThread) {
-      setActiveThreadId(existingThread.id);
-      setIsInboxDrawerOpen(true);
-    } else {
-      const matchedOrder = orders.find((o) => o.id === initialOrderId);
-      const newThreadId = `thread-order-${initialOrderId}`;
-      const newThread: CustomerThread = {
-        id: newThreadId,
-        customerName: matchedOrder?.customerName || `Покупатель по заказу ${initialOrderId}`,
-        customerPhone: matchedOrder?.customerPhone || '+7 (999) 000-00-00',
-        customerEmail: matchedOrder?.customerEmail || 'client@manstyle.ru',
-        orderNumber: initialOrderId,
-        activeOrderId: initialOrderId,
-        status: 'in_progress',
-        priority: 'standard',
-        lastActivity: 'Только что',
-        unreadCount: 0,
-        tags: ['consultation', 'delivery'],
-        messages: [
-          {
-            id: `m-order-${Date.now()}`,
-            sender: 'agent',
-            text: `Диалог по заказу № ${initialOrderId} открыт. Чем мы можем помочь клиенту?`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          },
-        ],
-      };
-      setThreads((prev) => [newThread, ...prev]);
-      setActiveThreadId(newThreadId);
-      setIsInboxDrawerOpen(true);
-    }
-
-    // Immediately synchronize the active order context for the top banner/actions
     const targetOrder = orders.find((o) => o.id === initialOrderId);
     if (targetOrder) {
       setSelectedOrderContext(targetOrder);
@@ -259,9 +161,6 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState<boolean>(false);
   const [isReturnModalOpen, setIsReturnModalOpen] = useState<boolean>(false);
   const [returnReason, setReturnReason] = useState<string>('Не подошел размер (нужен меньше/больше)');
-
-  // --- 5. KPI METRICS BAR STATE ---
-  const [showKpiBar, setShowKpiBar] = useState<boolean>(true);
 
   // --- 6. REMINDER & PRIORITY STATE ---
   const [isReminderModalOpen, setIsReminderModalOpen] = useState<boolean>(false);
@@ -315,10 +214,9 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
         setSelectedOrderContext(foundOrder);
         setNewOrderStatus(foundOrder.status);
         setNewTrackingNumber(foundOrder.trackingNumber || '');
-      } else if (orders.length > 0) {
-        setSelectedOrderContext(orders[0]);
-        setNewOrderStatus(orders[0].status);
-        setNewTrackingNumber(orders[0].trackingNumber || '');
+      } else {
+        // No orders from this customer: do not offer actions on another buyer's order
+        setSelectedOrderContext(null);
       }
     }
   }, [currentThread, orders]);
@@ -719,7 +617,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
       discountType: promoType,
       discountValue: promoValue,
       title: `Персональный промокод службы заботы (${cleanCode})`,
-      description: promoReason || 'Индивидуальная скидка от службы заботы MANSTYLE',
+      description: promoReason || `Индивидуальная скидка от ${currentStoreName()}`,
       expiresAt: '31 декабря 2026 г.',
       usageLimit: 1,
       usedCount: 0,
@@ -1063,7 +961,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             <span className="w-7 h-7 rounded-xl neu-inset flex items-center justify-center text-[#4B59BB] shrink-0">
               <MessageSquare className="w-3.5 h-3.5" />
             </span>
-            <span className="truncate">Центр поддержки & Консультант клиентов</span>
+            <span className="truncate">Центр поддержки и консультант клиентов</span>
           </h3>
           <p className="text-[11px] text-[#4E5C70] font-medium truncate mt-0.5">
             Мульти-диалоги, персональные рекомендации товаров, управление заказами и служебные заметки
@@ -1071,19 +969,6 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
         </div>
 
         <div className="flex items-center gap-2 shrink-0 self-start lg:self-auto flex-wrap">
-          {/* KPI Analytics Toggle */}
-          <button
-            type="button"
-            onClick={() => setShowKpiBar(!showKpiBar)}
-            className={`h-9 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 bg-[#E3E8EF] ${
-              showKpiBar ? 'neu-inset text-[#4B59BB] font-black border border-[#5F6ED0]/40' : 'neu-inset text-[#4E5C70] hover:text-[#2D3A4E] border border-transparent'
-            }`}
-            title="Показать / скрыть KPI метрики службы заботы"
-          >
-            <Activity className="w-3.5 h-3.5" />
-            <span>Метрики</span>
-          </button>
-
           {/* Issue Compensation Promo Button */}
           <button
             type="button"
@@ -1123,57 +1008,6 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
           )}
         </div>
       </div>
-
-      {/* KPI METRICS WIDGET (Collapsible) */}
-      {showKpiBar && (
-        <div className="neu-flat rounded-2xl p-3.5 bg-[#E3E8EF] border border-white/80 grid grid-cols-2 sm:grid-cols-4 gap-3 animate-in fade-in duration-200">
-          <div className="neu-inset rounded-xl p-2.5 bg-[#E3E8EF]">
-            <div className="flex items-center justify-between text-[11px] font-bold text-[#4E5C70] mb-0.5">
-              <span>Время 1-го ответа (FRT)</span>
-              <Zap className="w-3 h-3 text-[#4E5C70]" />
-            </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-sm font-black text-[#2D3A4E]">1.8 мин</span>
-              <span className="text-[11px] font-bold text-success">Цель &lt; 3 мин</span>
-            </div>
-          </div>
-
-          <div className="neu-inset rounded-xl p-2.5 bg-[#E3E8EF]">
-            <div className="flex items-center justify-between text-[11px] font-bold text-[#4E5C70] mb-0.5">
-              <span>Рейтинг клиентов (CSAT)</span>
-              <Star className="w-3 h-3 text-warning" />
-            </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-sm font-black text-[#2D3A4E]">4.9 / 5.0</span>
-              <span className="text-[11px] font-bold text-success">98% довольны</span>
-            </div>
-          </div>
-
-          <div className="neu-inset rounded-xl p-2.5 bg-[#E3E8EF]">
-            <div className="flex items-center justify-between text-[11px] font-bold text-[#4E5C70] mb-0.5">
-              <span>Решено за смену</span>
-              <CheckCircle2 className="w-3 h-3 text-success" />
-            </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-sm font-black text-[#2D3A4E]">18 обращений</span>
-              <span className="text-[11px] font-bold text-[#4B59BB]">94% без эскалаций</span>
-            </div>
-          </div>
-
-          <div className="neu-inset rounded-xl p-2.5 bg-[#E3E8EF]">
-            <div className="flex items-center justify-between text-[11px] font-bold text-[#4E5C70] mb-0.5">
-              <span>В очереди / Онлайн</span>
-              <span className="w-2 h-2 rounded-full bg-success" />
-            </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-sm font-black text-[#4B59BB]">
-                {threads.filter((t) => t.status === 'waiting').length} в ожидании
-              </span>
-              <span className="text-[11px] font-bold text-[#4E5C70]">1 оператор</span>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Template Manager Panel (Expandable) */}
       {isManagingTemplates && (
@@ -1350,37 +1184,6 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                     </button>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newId = `thread-${Date.now()}`;
-                      const newThread: CustomerThread = {
-                        id: newId,
-                        customerName: `Покупатель #${Math.floor(1000 + Math.random() * 9000)}`,
-                        customerPhone: '+7 (999) 000-00-00',
-                        status: 'waiting',
-                        priority: 'standard',
-                        lastActivity: 'Только что',
-                        unreadCount: 0,
-                        messages: [
-                          {
-                            id: `m-init-${Date.now()}`,
-                            sender: 'user',
-                            text: 'Здравствуйте! У меня вопрос по ассортименту.',
-                            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                          },
-                        ],
-                      };
-                      setThreads([newThread, ...threads]);
-                      setActiveThreadId(newId);
-                      onShowToast('Создан новый диалог с клиентом', 'success');
-                    }}
-                    className="px-2 py-1.5 neu-inset rounded-xl text-[11px] font-black text-[#4B59BB] flex items-center gap-1 cursor-pointer active:scale-95 bg-[#E3E8EF] border border-transparent"
-                    title="Начать новый диалог с клиентом"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>Новый</span>
-                  </button>
                 </div>
               </div>
 
@@ -2613,7 +2416,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               </div>
 
               <div className="p-3 neu-inset rounded-xl bg-[#E3E8EF] text-xs text-[#4E5C70] space-y-1">
-                <p className="font-bold text-[#2D3A4E]">Политика обмена MANSTYLE:</p>
+                <p className="font-bold text-[#2D3A4E]">Политика обмена:</p>
                 <p>Бесплатный выезд курьера в течение 14 дней с момента получения заказа.</p>
               </div>
 
@@ -2931,7 +2734,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
       <ConfirmDialog
         isOpen={templateToDelete !== null}
         title="Удалить шаблон?"
-        message="Шаблон быстрого ответа будет удалён из списка."
+        message="Шаблон быстрого ответа будет удален из списка."
         onConfirm={() => templateToDelete && handleDeleteTemplate(templateToDelete)}
         onClose={() => setTemplateToDelete(null)}
       />

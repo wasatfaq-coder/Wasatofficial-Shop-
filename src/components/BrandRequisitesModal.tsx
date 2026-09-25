@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { StorefrontSettings } from '../types';
 import { copyToClipboard as safeCopyToClipboard } from '../utils/clipboard';
-import { getLegalDetails, getStoreContacts } from '../utils/storeContacts';
+import { getLegalDetails, getStoreContacts, getStoreName } from '../utils/storeContacts';
 
 interface BrandRequisitesModalProps {
   isOpen: boolean;
@@ -40,7 +40,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
   const [activeTab, setActiveTab] = useState<TabType>('concierge');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  const storeName = storefrontSettings?.storeName || 'MANSTYLE';
+  const storeName = getStoreName(storefrontSettings);
   // Demo template contacts/requisites are never shown to customers (see storeContacts.ts)
   const { phone, email, telegram, whatsapp, pickupAddress } = getStoreContacts(storefrontSettings);
   const workingHours = storefrontSettings?.workingHours || 'Ежедневно с 10:00 до 22:00 (Консьерж 24/7)';
@@ -161,7 +161,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                 </div>
                 <div className="min-w-0">
                   <h2 className="text-base sm:text-lg font-black text-[#2D3A4E] tracking-tight truncate">
-                    {storeName} • О бренде & Реквизиты
+                    {storeName} • О бренде и реквизиты
                   </h2>
                   <p className="text-[11px] text-[#4E5C70] font-semibold truncate">
                     Контакты консьерж-сервиса и юридические данные

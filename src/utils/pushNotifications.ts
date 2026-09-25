@@ -1,5 +1,6 @@
 import { Order } from '../types';
 import { ORDER_STATUS_LABELS, isTransportCompanyDelivery } from './deliveryStages';
+import { currentStoreName } from './storeContacts';
 
 /**
  * Plays a pleasant synthesizer notification chime using Web Audio API.
@@ -192,7 +193,7 @@ export function getOrderStatusNotification(
       return {
         title: `Заказ №${orderId} успешно доставлен!`,
         subtitle: statusTransition,
-        text: 'Спасибо за покупку в MANSTYLE. Будем рады видеть вас снова!',
+        text: `Спасибо за покупку в ${currentStoreName()}. Будем рады видеть вас снова!`,
         icon: 'check',
         orderId,
         oldStatus,

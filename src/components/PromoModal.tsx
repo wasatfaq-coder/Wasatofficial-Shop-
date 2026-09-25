@@ -388,7 +388,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                 type="text"
                 value={customInput}
                 onChange={(e) => setCustomInput(e.target.value.toUpperCase())}
-                placeholder="ВВЕДИТЕ КОД (НАПРИМЕР, MANSTYLE20)"
+                placeholder="ВВЕДИТЕ КОД (НАПРИМЕР, WASAT20)"
                 className="flex-1 px-3.5 py-2.5 neu-inset rounded-2xl text-xs uppercase font-bold text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
               />
               <button

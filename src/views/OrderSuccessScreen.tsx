@@ -1,6 +1,7 @@
 import React from 'react';
 import { CheckCircle2, Package, Home } from 'lucide-react';
 import { ActiveTab } from '../types';
+import { currentStoreName } from '../utils/storeContacts';
 
 interface OrderSuccessScreenProps {
   orderId: string;
@@ -35,7 +36,7 @@ export const OrderSuccessScreen: React.FC<OrderSuccessScreenProps> = ({
           Заказ № {orderId}
         </h2>
         <p className="text-xs text-[#4E5C70] max-w-xs mx-auto leading-relaxed font-medium">
-          Спасибо за выбор ManStyle! Мы уже начали сборку и передачу вашего заказа в доставку.
+          Спасибо за выбор {currentStoreName()}! Мы уже начали сборку и передачу вашего заказа в доставку.
         </p>
       </div>
 

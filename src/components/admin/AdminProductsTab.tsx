@@ -322,7 +322,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     const clonedSkus: ProductSKU[] = baseSkus.map((s, idx) => ({
       ...s,
       id: `${newId}-${s.color}-${s.size}-${idx}`,
-      skuCode: s.skuCode ? `${s.skuCode}-CPY` : `MS-CPY-${newId.slice(-4)}-${s.size}`,
+      skuCode: s.skuCode ? `${s.skuCode}-CPY` : `WS-CPY-${newId.slice(-4)}-${s.size}`,
       barcode: undefined,
     }));
 
@@ -573,7 +573,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       color: cleanName,
       size,
       stock: 4,
-      skuCode: generateSkuCode({ id: prodId, category: formCategory }, cleanName, size),
+      skuCode: generateSkuCode({ id: prodId, category: formCategory }, cleanName, size, 'WS'),
       barcode: generateBarcode({ id: prodId, category: formCategory }, cleanName, size),
     }));
 
@@ -609,7 +609,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       color: c.name,
       size,
       stock: 4,
-      skuCode: generateSkuCode({ id: prodId, category: formCategory }, c.name, size),
+      skuCode: generateSkuCode({ id: prodId, category: formCategory }, c.name, size, 'WS'),
       barcode: generateBarcode({ id: prodId, category: formCategory }, c.name, size),
     }));
 
@@ -630,7 +630,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         color: c.name,
         size,
         stock: 4,
-        skuCode: generateSkuCode({ id: prodId, category: formCategory }, c.name, size),
+        skuCode: generateSkuCode({ id: prodId, category: formCategory }, c.name, size, 'WS'),
         barcode: generateBarcode({ id: prodId, category: formCategory }, c.name, size),
       }));
 
@@ -675,7 +675,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     setFormSkus((prev) =>
       prev.map((s) => ({
         ...s,
-        skuCode: s.skuCode || generateSkuCode({ id: prodId, category: formCategory }, s.color, s.size),
+        skuCode: s.skuCode || generateSkuCode({ id: prodId, category: formCategory }, s.color, s.size, 'WS'),
         barcode: s.barcode || generateBarcode({ id: prodId, category: formCategory }, s.color, s.size),
       }))
     );
@@ -972,7 +972,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
           filteredProducts.map((prod, pIdx) => {
             const isSelected = selectedProductIds.includes(prod.id);
             const totalStock = getProductTotalStock(prod);
-            const primarySku = prod.skus?.[0]?.skuCode || `MS-CAT-${prod.id.slice(-4)}`;
+            const primarySku = prod.skus?.[0]?.skuCode || `WS-CAT-${prod.id.slice(-4)}`;
 
             return (
               <div
@@ -1210,7 +1210,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               <div className="neu-inset rounded-2xl p-2.5 bg-success-soft border border-success/25 text-success text-xs flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
                 <span className="font-bold">
-                  Все артикулы SKU и штрихкоды уникальны в каталоге MANSTYLE
+                  Все артикулы SKU и штрихкоды уникальны в каталоге
                 </span>
               </div>
             )}

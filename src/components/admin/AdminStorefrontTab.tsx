@@ -170,7 +170,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
         <div>
           <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-2">
             <Store className="w-4 h-4 text-[#4B59BB]" />
-            <span>Управление витриной, брендом & реквизитами</span>
+            <span>Управление витриной, брендом и реквизитами</span>
           </h3>
           <p className="text-[11px] text-[#4E5C70] font-medium mt-0.5">
             Редактирование контактов, VIP-консьержа, юридических реквизитов и философии бренда
@@ -185,7 +185,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               type="button"
               onClick={() => setIsClientModalOpen(true)}
               className="py-1.5 px-2.5 sm:px-3 neu-inset rounded-lg text-xs font-bold text-[#4B59BB] hover:text-[#3F4BA6] transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 bg-[#E3E8EF]"
-              title="Открыть модальное окно «Бренд & Реквизиты» от лица клиента"
+              title="Открыть окно «Бренд и реквизиты» так, как его видит покупатель"
             >
               <Crown className="w-3.5 h-3.5" />
               <span className="text-[11px]">Клиент</span>
@@ -466,7 +466,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
               <Phone className="w-3.5 h-3.5 text-[#4B59BB]" />
-              Основные контакты бутика & витрины
+              Основные контакты бутика и витрины
             </h4>
             <span className="text-[11px] font-extrabold text-[#4B59BB] neu-button px-2.5 py-1 rounded-lg bg-[#E3E8EF] border border-white/80">
               Шапка и футер
@@ -583,7 +583,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   type="email"
                   value={localSettings.email}
                   onChange={(e) => setLocalSettings({ ...localSettings, email: e.target.value })}
-                  placeholder="concierge@manstyle.ru"
+                  placeholder="shop@example.com"
                   className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF]"
                 />
                 <button
@@ -862,14 +862,14 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               Вкладка «Консьерж»: Описание и перечень услуг
             </h4>
             <span className="text-[11px] font-extrabold text-[#4B59BB] neu-button px-2.5 py-1 rounded-lg bg-[#E3E8EF] border border-white/80">
-              Модальное окно • Вкладка 1
+              Вкладка 1 из 3
             </span>
           </div>
 
           <div className="space-y-3 text-xs">
             <div>
               <label className="block text-[11px] font-bold text-[#4E5C70] mb-1.5">
-                Приветственное описание консьерж-сервиса (Intro)
+                Приветственное описание консьерж-сервиса
               </label>
               <div className="flex items-start gap-2">
                 <textarea
@@ -889,7 +889,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     openQuickEdit({
                       key: 'conciergeDescription',
                       title: 'Консьерж-сервис',
-                      fieldLabel: 'Приветственное описание (Intro)',
+                      fieldLabel: 'Приветственное описание',
                       value:
                         localSettings.conciergeDescription ??
                         'Персональный ассистент по стилю и сопровождению заказов. Помощь в выборе размера, бронирование закрытых моделей, организация выездной примерки и консультации стилиста.',
@@ -1200,7 +1200,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               Вкладка «Реквизиты»: Официальные юридические данные
             </h4>
             <span className="text-[11px] font-extrabold text-[#4B59BB] neu-button px-2.5 py-1 rounded-lg bg-[#E3E8EF] border border-white/80">
-              Модальное окно • Вкладка 2
+              Вкладка 2 из 3
             </span>
           </div>
 
@@ -1620,7 +1620,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               Вкладка «Бренд»: Философия, ткани, крой и гарантии
             </h4>
             <span className="text-[11px] font-extrabold text-[#4B59BB] neu-button px-2.5 py-1 rounded-lg bg-[#E3E8EF] border border-white/80">
-              Модальное окно • Вкладка 3
+              Вкладка 3 из 3
             </span>
           </div>
 
@@ -1675,7 +1675,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     rows={3}
                     value={
                       localSettings.brandPhilosophyText ??
-                      'MANSTYLE — премиальный бутик мужской одежды, основанный на эстетике сдержанной роскоши («Quiet Luxury») и безупречном архитектурном крое. Мы создаем гардероб вне времени, который подчеркивает статус и харизму мужчины без кричащих логотипов.'
+                      'Wasat Shop — премиальный бутик мужской одежды, основанный на эстетике сдержанной роскоши («Quiet Luxury») и безупречном архитектурном крое. Мы создаем гардероб вне времени, который подчеркивает статус и харизму мужчины без кричащих логотипов.'
                     }
                     onChange={(e) =>
                       setLocalSettings({ ...localSettings, brandPhilosophyText: e.target.value })
@@ -1691,7 +1691,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         fieldLabel: 'Текст манифеста бренда',
                         value:
                           localSettings.brandPhilosophyText ??
-                          'MANSTYLE — премиальный бутик мужской одежды, основанный на эстетике сдержанной роскоши («Quiet Luxury») и безупречном архитектурном крое. Мы создаем гардероб вне времени, который подчеркивает статус и харизму мужчины без кричащих логотипов.',
+                          'Wasat Shop — премиальный бутик мужской одежды, основанный на эстетике сдержанной роскоши («Quiet Luxury») и безупречном архитектурном крое. Мы создаем гардероб вне времени, который подчеркивает статус и харизму мужчины без кричащих логотипов.',
                         isMultiline: true,
                         rows: 4,
                         badge: 'Манифест',
@@ -2224,7 +2224,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             {/* Return Period */}
             <div className="neu-inset p-3 rounded-2xl bg-[#E3E8EF] space-y-1.5">
               <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1 truncate">
-                Срок возврата & примерки
+                Срок возврата и примерки
               </label>
               <div className="flex items-center gap-1.5">
                 <div className="relative flex-1 min-w-0">
@@ -2282,7 +2282,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
           <div className="flex items-center justify-between flex-wrap gap-2">
             <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
               <Sliders className="w-3.5 h-3.5 text-[#4B59BB]" />
-              Системные режимы витрины & логистики
+              Системные режимы витрины и логистики
             </h4>
             <span className="text-[11px] font-extrabold text-[#4B59BB] neu-button px-2.5 py-1 rounded-lg bg-[#E3E8EF] border border-white/80">
               Глобальные переключатели
@@ -2454,7 +2454,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               </div>
               <div>
                 <h4 className="text-sm font-black text-[#2D3A4E]">Безопасность и учетные данные администратора</h4>
-                <p className="text-[11px] text-[#4E5C70]">Управление логином и паролем для входа в панель управления MANSTYLE</p>
+                <p className="text-[11px] text-[#4E5C70]">Управление логином и паролем для входа в панель управления</p>
               </div>
             </div>
             <button
@@ -2510,7 +2510,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             className="py-3 px-5 neu-inset rounded-2xl text-xs font-bold text-[#4B59BB] hover:text-[#3F4BA6] flex items-center gap-2 cursor-pointer transition-colors active:scale-95 bg-[#E3E8EF]"
           >
             <Crown className="w-4 h-4 text-[#4B59BB]" />
-            <span>Проверить окно «Бренд & Реквизиты»</span>
+            <span>Проверить окно «Бренд и реквизиты»</span>
           </button>
 
           <button

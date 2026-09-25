@@ -41,6 +41,7 @@ import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
 import { NeumorphicSelect, NeumorphicSelectOption } from '../NeumorphicSelect';
 import { ORDER_STATUS_LABELS } from '../../utils/deliveryStages';
 import { formatAddress } from '../../utils/addressFormat';
+import { currentStoreName } from '../../utils/storeContacts';
 
 interface AdminCustomersTabProps {
   users: UserProfile[];
@@ -67,7 +68,7 @@ const CUSTOMER_CATEGORY_OPTIONS: NeumorphicSelectOption[] = [
   },
   {
     value: 'registered',
-    label: 'Firebase Auth',
+    label: 'Аккаунт Google',
     icon: <ShieldCheck className="w-3.5 h-3.5 text-[#4B59BB]" />,
   },
   {
@@ -150,7 +151,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       setCustomerToDelete(null);
     } catch (err) {
       console.error('Delete customer error:', err);
-      onShowToast('Не удалось удалить клиента из Firestore', 'error');
+      onShowToast('Не удалось удалить клиента из базы', 'error');
     } finally {
       setIsDeletingCustomer(false);
     }
@@ -252,7 +253,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
 
       map.set(key, {
         id: `guest-${key}`,
-        name: ord.customerName || 'Покупатель MANSTYLE',
+        name: ord.customerName || 'Покупатель',
         email: ord.customerEmail || '',
         phone: ord.customerPhone || '',
         isRegisteredUser: false,
@@ -356,7 +357,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       const docId = selectedCustomer.uid || selectedCustomer.id;
       await updateCustomerNotesInFirestore(docId, editingNotes, selectedCustomer.tags);
       setSelectedCustomer((prev) => (prev ? { ...prev, managerNotes: editingNotes } : null));
-      onShowToast('Заметка менеджера успешно сохранена в базе Firestore', 'success');
+      onShowToast('Заметка менеджера сохранена', 'success');
     } catch (err) {
       console.error('Error saving customer notes:', err);
       onShowToast('Не удалось сохранить заметку', 'error');
@@ -405,7 +406,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       `"${c.name.replace(/"/g, '""')}"`,
       `"${c.email}"`,
       `"${c.phone}"`,
-      c.isRegisteredUser ? '"Firebase Auth"' : '"Гость"',
+      c.isRegisteredUser ? '"Аккаунт Google"' : '"Гость"',
       c.totalSpent,
       c.ordersCount,
       c.averageOrderValue,
@@ -418,7 +419,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `MANSTYLE_Клиенты_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `${currentStoreName().replace(/\s+/g, '_')}_Клиенты_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -467,13 +468,13 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-xl font-black text-[#2D3A4E]">Клиенты & CRM</h2>
+            <h2 className="text-xl font-black text-[#2D3A4E]">Клиенты и CRM</h2>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-[#5F6ED0]/15 text-[#4B59BB]">
               {customerRecords.length} чел.
             </span>
           </div>
           <p className="text-xs text-[#4E5C70] mt-0.5">
-            База авторизованных покупателей Firebase Auth и гостевых профилей с заказами
+            Покупатели с аккаунтом Google и гости, оформившие заказ
           </p>
         </div>
 
@@ -671,10 +672,10 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                         {customer.isRegisteredUser ? (
                           <span
                             className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-bold bg-blue-50 text-blue-600 border border-blue-200"
-                            title="Пользователь зарегистрирован в Firebase Auth"
+                            title="Вошел через аккаунт Google"
                           >
                             <ShieldCheck className="w-3 h-3 text-blue-600" />
-                            <span>Auth</span>
+                            <span>Google</span>
                           </span>
                         ) : (
                           <span
@@ -797,7 +798,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     onClick={() => handleOpenDetail(customer)}
                     className="flex-1 py-2 px-3 rounded-xl neu-button text-xs font-black text-[#2D3A4E] hover:text-[#4B59BB] flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                   >
-                    <span>Подробнее & Заказы</span>
+                    <span>Подробнее и заказы</span>
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
 
@@ -870,7 +871,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     )}
                   </div>
                   <p className="text-xs text-[#4E5C70] mt-0.5">
-                    {selectedCustomer.isRegisteredUser ? 'Учетная запись Firebase Auth' : 'Гостевой покупатель'} • В базе с {selectedCustomer.registeredAt}
+                    {selectedCustomer.isRegisteredUser ? 'Аккаунт Google' : 'Гостевой покупатель'} • В базе с {selectedCustomer.registeredAt}
                   </p>
                 </div>
               </div>
@@ -1050,7 +1051,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
               {/* Financial Metrics & Loyalty Card */}
               <div className="neu-inset rounded-2xl p-4 bg-[#E3E8EF] space-y-3">
                 <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider block">
-                  Финансовые показатели & Лояльность
+                  Финансовые показатели и лояльность
                 </span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                   <div className="neu-flat-sm p-2.5 rounded-xl bg-[#E3E8EF]/80">
@@ -1124,7 +1125,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Edit3 className="w-4 h-4 text-[#4B59BB]" />
-                    <span className="text-xs font-black text-[#2D3A4E]">CRM Заметки & Теги менеджера</span>
+                    <span className="text-xs font-black text-[#2D3A4E]">CRM Заметки и теги менеджера</span>
                   </div>
                   <button
                     type="button"
@@ -1327,7 +1328,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
               <ul className="list-disc list-inside space-y-1 text-[#4E5C70]">
                 <li>Все фиктивные профили клиентов (Иван Петров, Алексей Морозов и т.д.)</li>
                 <li>Все демо-заказы (MS-8420, MS-7912, MS-9824...)</li>
-                <li>Неактуальные тестовые записи в Firestore</li>
+                <li>Неактуальные тестовые записи в базе</li>
               </ul>
               <p className="text-[11px] text-success font-bold pt-1 border-t border-[#BAC5D5]/40">
                 ✓ Ваш профиль администратора (gunh83975@gmail.com) и реальный каталог товаров останутся без изменений.

@@ -790,7 +790,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               </div>
               <div>
                 <p className="text-sm font-bold text-[#2D3A4E]">Подбор размера</p>
-                <p className="text-xs text-[#4E5C70]">Персональный расчёт по весу и росту</p>
+                <p className="text-xs text-[#4E5C70]">Персональный расчет по весу и росту</p>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-[#4E5C70] group-hover:translate-x-0.5 transition-transform" />
