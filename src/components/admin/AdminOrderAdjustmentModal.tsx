@@ -646,7 +646,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                 <div className="relative flex-1">
                   <input
                     type="text"
-                    placeholder="Например: CDEK-84920194..."
+                    placeholder="Трек-номер от службы доставки"
                     value={trackingNumber}
                     onChange={(e) => setTrackingNumber(e.target.value)}
                     className="w-full pl-3 pr-8 py-2.5 neu-inset rounded-xl text-xs font-mono font-bold text-[#2D3A4E] placeholder:text-[#56647A] placeholder:font-sans bg-[#E3E8EF]"
@@ -664,19 +664,6 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                   )}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    const randCode = Math.floor(10000000 + Math.random() * 90000000);
-                    const generated = `CDEK-${randCode}`;
-                    setTrackingNumber(generated);
-                    onShowToast(`Сгенерирован трек-номер: ${generated}`, 'success');
-                  }}
-                  className="py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-accent hover:scale-105 active:scale-95 transition-transform cursor-pointer shrink-0"
-                  title="Сгенерировать CDEK трек-код"
-                >
-                  + CDEK
-                </button>
               </div>
 
               {/* Dynamic Preview Notice for Admin */}

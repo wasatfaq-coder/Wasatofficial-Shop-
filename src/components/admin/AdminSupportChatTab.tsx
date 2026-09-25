@@ -47,12 +47,12 @@ import {
   Headphones,
 } from 'lucide-react';
 import { ChatMessage, ChatQuickTemplate, Order, Product, PromoCode, CustomerThread, ProductRecommendationCard } from '../../types';
-import { INITIAL_QUICK_TEMPLATES } from '../../data/marketingAndSupport';
 import { NeumorphicSelect, NeumorphicSelectOption } from '../NeumorphicSelect';
 import { copyToClipboard } from '../../utils/clipboard';
 import { compressChatImageFile } from '../../utils/imageUpload';
 import { ORDER_STATUS_LABELS, isTransportCompanyDelivery } from '../../utils/deliveryStages';
 import { currentStoreName } from '../../utils/storeContacts';
+import { NotConfigured } from '../NotConfigured';
 
 interface AdminSupportChatTabProps {
   messages: ChatMessage[];
@@ -74,6 +74,8 @@ interface AdminSupportChatTabProps {
   onClearChat?: () => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
+
+const TEMPLATES_STORAGE_KEY = 'manstyle_admin_reply_templates';
 
 export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   messages,
@@ -175,7 +177,24 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   const [selectedTag, setSelectedTag] = useState<ChatMessage['tag']>('consultation');
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [isManagingTemplates, setIsManagingTemplates] = useState(false);
-  const [templates, setTemplates] = useState<ChatQuickTemplate[]>(INITIAL_QUICK_TEMPLATES);
+  // Reply templates are the admin's own, kept in this browser. No demo templates: they promised
+  // promo codes and terms the store may not have. Earlier versions lost them on reload.
+  const [templates, setTemplatesState] = useState<ChatQuickTemplate[]>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(TEMPLATES_STORAGE_KEY) || '[]');
+      return Array.isArray(saved) ? saved : [];
+    } catch {
+      return [];
+    }
+  });
+  const setTemplates = (next: ChatQuickTemplate[]) => {
+    setTemplatesState(next);
+    try {
+      localStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // Storage unavailable: templates stay for this session
+    }
+  };
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [previewImageModal, setPreviewImageModal] = useState<string | null>(null);
   const [selectedOrderContext, setSelectedOrderContext] = useState<Order | null>(null);
@@ -837,7 +856,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   const quickTemplateDropdownOptions: NeumorphicSelectOption[] = [
     {
       value: '',
-      label: 'Вставить быстрый ответ (шаблон)...',
+      label: templates.length > 0 ? 'Вставить быстрый ответ (шаблон)...' : 'Шаблоны ответов: не настроено',
       icon: <Zap className="w-3.5 h-3.5 text-accent" />,
     },
     ...templates.map((tpl) => ({
@@ -1098,6 +1117,9 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             <span className="text-[11px] font-black uppercase text-[#4E5C70] tracking-wider block">
               Текущие шаблоны ({templates.length}):
             </span>
+            {templates.length === 0 && (
+              <NotConfigured title="Шаблоны ответов" hint="Добавьте первый шаблон в форме выше." />
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto no-scrollbar">
               {templates.map((tpl) => (
                 <div

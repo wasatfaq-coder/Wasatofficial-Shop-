@@ -467,8 +467,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         colors: formColors,
         skus: formSkus,
         inStock: formInStock && (formSkus.length === 0 || formSkus.some((s) => s.stock > 0)),
-        rating: 5.0,
-        reviewsCount: 1,
+        rating: 0,
+        reviewsCount: 0,
         isNew: true,
       };
 
@@ -723,8 +723,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
           sizes,
           colors,
           skus: [],
-          rating: 4.9,
-          reviewsCount: 8,
+          rating: 0,
+          reviewsCount: 0,
         };
         fullProd.skus = generateDefaultSKUs(fullProd);
         return fullProd;

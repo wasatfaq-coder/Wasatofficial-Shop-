@@ -55,7 +55,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
   // Demo template phone is never shown to customers (see storeContacts.ts)
   const phone = publicSetting(storefrontSettings?.phone);
   const storeName = getStoreName(storefrontSettings);
-  const storeSlogan = storefrontSettings?.storeSlogan || 'Премиальная мужская одежда';
+  const storeSlogan = (storefrontSettings?.storeSlogan ?? '').trim();
 
   return (
     <AnimatePresence>
@@ -91,7 +91,9 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                     {storeName}
                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-gold ml-1 align-baseline" aria-hidden="true" />
                   </h2>
-                  <p className="text-[11px] text-[#4E5C70] font-semibold leading-snug line-clamp-2">{storeSlogan}</p>
+                  {storeSlogan && (
+                    <p className="text-[11px] text-[#4E5C70] font-semibold leading-snug line-clamp-2">{storeSlogan}</p>
+                  )}
                 </div>
                 <button
                   onClick={onClose}
@@ -299,10 +301,9 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
               </div>
               <div>
                 <p className="text-xs font-bold text-[#2D3A4E] flex items-center gap-1.5 group-hover:text-accent transition-colors">
-                  <span>Поддержка 24/7</span>
-                  <span className="w-2 h-2 rounded-full bg-success inline-block animate-pulse" />
+                  <span>Поддержка</span>
                 </p>
-                <p className="text-[11px] text-[#4E5C70] font-medium">Онлайн-чат с консьержем</p>
+                <p className="text-[11px] text-[#4E5C70] font-medium">Онлайн-чат с магазином</p>
               </div>
             </div>
             <MessageSquare className="w-4 h-4 text-[#4E5C70] group-hover:text-accent transition-colors shrink-0" />

@@ -4,6 +4,7 @@ import { Product } from '../types';
 import { NeumorphicImage } from './NeumorphicImage';
 import { AnimatedFavoriteButton } from './AnimatedFavoriteButton';
 import { photoBadgeClass } from '../utils/productBadge';
+import { getProductRating } from '../utils/productRating';
 
 interface ProductCardProps {
   product: Product;
@@ -40,7 +41,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   const mainImage = product.images && product.images.length > 0 ? product.images[0] : '';
-  const formattedRating = (Math.round((product.rating || 5) * 10) / 10).toFixed(1);
+  // From real reviews only; hidden until the product has any
+  const ratingInfo = getProductRating(product);
 
   // Calculate discount percentage if old price exists
   const discountPercent =
@@ -105,10 +107,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider truncate">
               {product.categoryLabel}
             </span>
-            <div className="flex items-center gap-1 font-bold text-[#2D3A4E] text-[11px] shrink-0">
-              <Star className="w-3 h-3 fill-[#4E5C70] text-[#4E5C70] shrink-0" strokeWidth={0} />
-              <span>{formattedRating}</span>
-            </div>
+            {ratingInfo && (
+              <div className="flex items-center gap-1 font-bold text-[#2D3A4E] text-[11px] shrink-0">
+                <Star className="w-3 h-3 fill-[#4E5C70] text-[#4E5C70] shrink-0" strokeWidth={0} />
+                <span>{ratingInfo.rating.toFixed(1)}</span>
+              </div>
+            )}
           </div>
 
           {/* Title - fixed 2 lines baseline */}

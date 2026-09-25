@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ActiveTab, Product, CartItem, UserProfile, Order, BodyMeasurements, PromoCode, BannerSlide, ChatMessage, AppliedPromoInfo, StorefrontSettings, DeliveryMethod, PickupPoint } from './types';
-import { PRODUCTS, GUEST_USER_PROFILE, INITIAL_ORDERS } from './data/products';
-import { INITIAL_PROMO_CODES, INITIAL_BANNER_SLIDES, INITIAL_CHAT_MESSAGES } from './data/marketingAndSupport';
+import { GUEST_USER_PROFILE } from './data/products';
+import { INITIAL_CHAT_MESSAGES } from './data/marketingAndSupport';
 import { loadLocalDeliveryMethods, saveLocalDeliveryMethods, loadLocalPickupPoints, saveLocalPickupPoints } from './data/deliveryData';
 import { playNotificationChime, sendBrowserNotification, getOrderStatusNotification } from './utils/pushNotifications';
 import { DeviceFrameWrapper } from './components/DeviceFrameWrapper';
@@ -42,6 +42,7 @@ import {
   saveOrderToFirestore,
   saveModifiedProductsToFirestore,
   syncAllProductsToFirestore,
+  deleteRemovedDocs,
   syncAllOrdersToFirestore,
   syncAllPromosToFirestore,
   saveStorefrontSettingsToFirestore,
@@ -69,6 +70,7 @@ import { validatePromo, PricingLine, QUICK_ORDER_DELIVERY_ID } from './shared/or
 import { extractColorName, extractSizeName } from './utils/inventory';
 import { getStoreContacts, getStoreName, withStoreNameFields } from './utils/storeContacts';
 import { formatDays } from './utils/pluralize';
+import { productRatingValue } from './utils/productRating';
 
 // Unique across customers: messages are create-only for customers (see firestore.rules)
 function newChatMessageId(): string {
@@ -136,7 +138,8 @@ export default function App() {
   }, [activeTab]);
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [products, setProducts] = useState<Product[]>(PRODUCTS);
+  // Catalog, promos and banners come only from Firestore (Admin panel); no demo data meanwhile
+  const [products, setProducts] = useState<Product[]>([]);
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('manstyle_favorites');
@@ -155,19 +158,20 @@ export default function App() {
   }, [favorites]);
 
   // Dynamic Marketing & Support States
-  const [promos, setPromos] = useState<PromoCode[]>(INITIAL_PROMO_CODES);
+  const [promos, setPromos] = useState<PromoCode[]>([]);
   const [bannerSlides, setBannerSlides] = useState<BannerSlide[]>(() => {
     try {
       const saved = localStorage.getItem('manstyle_banners');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch {}
-    return INITIAL_BANNER_SLIDES;
+    return [];
   });
 
   const handleUpdateBannerSlides = (newBanners: BannerSlide[]) => {
+    deleteRemovedDocs('banners', bannerSlides, newBanners);
     setBannerSlides(newBanners);
     try {
       localStorage.setItem('manstyle_banners', JSON.stringify(newBanners));
@@ -228,17 +232,15 @@ export default function App() {
     } catch {}
   }, [cartItems]);
 
+  const pendingSelectedProductId = React.useRef<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(() => {
     try {
-      const savedId = sessionStorage.getItem('manstyle_selected_product_id');
-      if (savedId) {
-        const found = PRODUCTS.find((p) => p.id === savedId);
-        if (found) return found;
-      }
+      // Restored from the catalog once it loads (see the products subscription)
+      pendingSelectedProductId.current = sessionStorage.getItem('manstyle_selected_product_id');
     } catch {
       // Ignore
     }
-    return PRODUCTS[0];
+    return null;
   });
 
   React.useEffect(() => {
@@ -250,12 +252,8 @@ export default function App() {
       }
     }
   }, [selectedProduct]);
-  const [recentlyViewed, setRecentlyViewed] = useState<Product[]>(() => [
-    PRODUCTS[1],
-    PRODUCTS[2],
-    PRODUCTS[3],
-    PRODUCTS[0],
-  ]);
+  // Filled as the visitor opens products; no made-up history
+  const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     try {
       const saved = localStorage.getItem('manstyle_user_profile');
@@ -283,7 +281,7 @@ export default function App() {
     }
   };
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
-  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
   const [isSupportChatOpen, setIsSupportChatOpen] = useState(false);
@@ -329,12 +327,14 @@ export default function App() {
   );
 
   const handleUpdateDeliveryMethods = (updated: DeliveryMethod[]) => {
+    deleteRemovedDocs('delivery_methods', deliveryMethods, updated);
     setDeliveryMethods(updated);
     saveLocalDeliveryMethods(updated);
     syncAllDeliveryMethodsToFirestore(updated);
   };
 
   const handleUpdatePickupPoints = (updated: PickupPoint[]) => {
+    deleteRemovedDocs('pickup_points', pickupPoints, updated);
     setPickupPoints(updated);
     saveLocalPickupPoints(updated);
     syncAllPickupPointsToFirestore(updated);
@@ -352,7 +352,7 @@ export default function App() {
       const matchesInStock = !catalogFilterState.onlyInStock || isProductInStock(p);
       const matchesNew = !catalogFilterState.onlyNew || p.isNew;
       const matchesDiscount = !catalogFilterState.onlyDiscount || (p.originalPrice && p.originalPrice > p.price);
-      const matchesRating = p.rating >= catalogFilterState.minRating;
+      const matchesRating = productRatingValue(p) >= catalogFilterState.minRating;
 
       return (
         matchesCategory &&
@@ -386,23 +386,23 @@ export default function App() {
   // 1. Real-time Firestore Subscriptions
   React.useEffect(() => {
     const unsubProds = subscribeToProducts((loadedProds) => {
-      if (loadedProds && loadedProds.length > 0) {
-        setProducts(loadedProds);
-        // Synchronize cart with latest stock & prices from cloud
-        setCartItems((prevCart) =>
-          prevCart
-            .filter((ci) => loadedProds.some((p) => p.id === ci.product.id))
-            .map((ci) => {
-              const fresh = loadedProds.find((p) => p.id === ci.product.id);
-              return fresh ? { ...ci, product: fresh } : ci;
-            })
-        );
-        // Refresh selected product if currently open
-        setSelectedProduct((prev) => {
-          if (!prev) return null;
-          return loadedProds.find((p) => p.id === prev.id) || null;
-        });
-      }
+      setProducts(loadedProds);
+      // Synchronize cart with latest stock & prices from cloud
+      setCartItems((prevCart) =>
+        prevCart
+          .filter((ci) => loadedProds.some((p) => p.id === ci.product.id))
+          .map((ci) => {
+            const fresh = loadedProds.find((p) => p.id === ci.product.id);
+            return fresh ? { ...ci, product: fresh } : ci;
+          })
+      );
+      // Refresh selected product if currently open
+      setSelectedProduct((prev) => {
+        const wantedId = prev?.id ?? pendingSelectedProductId.current;
+        pendingSelectedProductId.current = null;
+        if (!wantedId) return null;
+        return loadedProds.find((p) => p.id === wantedId) || null;
+      });
     });
 
     const unsubPromos = subscribeToPromos((loadedPromos) => {
@@ -423,27 +423,22 @@ export default function App() {
       }
     });
 
+    // An empty list is a real state (the owner removed everything): always apply it
     const unsubBanners = subscribeToBanners((loadedBanners) => {
-      if (loadedBanners && loadedBanners.length > 0) {
-        setBannerSlides(loadedBanners);
-        try {
-          localStorage.setItem('manstyle_banners', JSON.stringify(loadedBanners));
-        } catch {}
-      }
+      setBannerSlides(loadedBanners);
+      try {
+        localStorage.setItem('manstyle_banners', JSON.stringify(loadedBanners));
+      } catch {}
     });
 
     const unsubDelivery = subscribeToDeliveryMethods((loadedMethods) => {
-      if (loadedMethods && loadedMethods.length > 0) {
-        setDeliveryMethods(loadedMethods);
-        saveLocalDeliveryMethods(loadedMethods);
-      }
+      setDeliveryMethods(loadedMethods);
+      saveLocalDeliveryMethods(loadedMethods);
     });
 
     const unsubPickup = subscribeToPickupPoints((loadedPoints) => {
-      if (loadedPoints && loadedPoints.length > 0) {
-        setPickupPoints(loadedPoints);
-        saveLocalPickupPoints(loadedPoints);
-      }
+      setPickupPoints(loadedPoints);
+      saveLocalPickupPoints(loadedPoints);
     });
 
     return () => {
@@ -539,7 +534,7 @@ export default function App() {
           name: currentUser.displayName || existing?.name || prev.name,
           email: currentUser.email || existing?.email || prev.email,
           avatar: currentUser.photoURL || existing?.avatar || prev.avatar,
-          bonusPoints: existing?.bonusPoints ?? prev.bonusPoints ?? 1500,
+          bonusPoints: existing?.bonusPoints ?? prev.bonusPoints ?? 0,
         };
         try {
           localStorage.setItem('manstyle_user_profile', JSON.stringify(merged));
@@ -1526,6 +1521,7 @@ export default function App() {
               onRemovePromo={handleRemovePromo}
               onCompleteOrder={handleCompleteOrder}
               storefrontSettings={customerStorefront}
+              hasDeliveryMethods={deliveryMethods.some((m) => m.isActive !== false)}
             />
           )}
 
@@ -1573,6 +1569,7 @@ export default function App() {
               onShowToast={addToast}
               onOpenSupportChat={() => setIsSupportChatOpen(true)}
               onUpdateProducts={(updatedProds) => {
+                deleteRemovedDocs('products', products, updatedProds);
                 setProducts(updatedProds);
                 syncAllProductsToFirestore(updatedProds);
                 // Synchronize cart with updated products & remove deleted items
@@ -1602,6 +1599,7 @@ export default function App() {
               }}
               promos={promos}
               onUpdatePromos={(updatedPromos) => {
+                deleteRemovedDocs('promos', promos, updatedPromos);
                 setPromos(updatedPromos);
                 syncAllPromosToFirestore(updatedPromos);
               }}

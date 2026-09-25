@@ -5,6 +5,7 @@ import { Product, UserProfile, BodyMeasurements } from '../types';
 import { SizeCalculatorModal } from './SizeCalculatorModal';
 import { RatingBadge } from './RatingBadge';
 import { AnimatedFavoriteButton } from './AnimatedFavoriteButton';
+import { getProductRating } from '../utils/productRating';
 
 interface QuickViewModalProps {
   product: Product | null;
@@ -144,8 +145,8 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                   {product.categoryLabel}
                 </span>
                 <RatingBadge
-                  rating={product.rating}
-                  reviewsCount={product.reviewsCount}
+                  rating={getProductRating(product)?.rating}
+                  reviewsCount={getProductRating(product)?.count}
                   showLabel
                   size="md"
                 />

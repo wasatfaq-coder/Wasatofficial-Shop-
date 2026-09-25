@@ -12,7 +12,6 @@ import {
   Clock,
   Truck,
   RotateCcw,
-  ShieldCheck,
   AlertCircle,
   Tag,
   Gift,
@@ -21,7 +20,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Product, ActiveTab, BannerSlide, StorefrontSettings, UserProfile } from '../types';
 import { getStoreContacts, getStoreName } from '../utils/storeContacts';
 import { CATEGORIES } from '../data/products';
-import { INITIAL_BANNER_SLIDES } from '../data/marketingAndSupport';
 import { ProductCard } from '../components/ProductCard';
 import { AutocompleteSearch } from '../components/AutocompleteSearch';
 import { RecentlyViewed } from '../components/RecentlyViewed';
@@ -33,6 +31,7 @@ import {
   PantsIcon,
   SweatshirtIcon,
 } from '../components/CategoryIcons';
+import { NotConfigured } from '../components/NotConfigured';
 
 interface HomeScreenProps {
   products: Product[];
@@ -70,7 +69,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   setActiveTab,
   onSelectCategory,
   onOpenDrawer,
-  bannerSlides = INITIAL_BANNER_SLIDES,
+  bannerSlides = [],
   storefrontSettings,
   onOpenSupportChat,
   onApplyPromo,
@@ -104,7 +103,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   };
 
   const activeSlides = bannerSlides.filter(isSlideScheduledAndActive);
-  const displaySlides = activeSlides.length > 0 ? activeSlides : INITIAL_BANNER_SLIDES;
+  // Only banners from Admin → «Баннеры»; without any the hero block is not shown
+  const displaySlides = activeSlides;
 
   // Auto-play slider effect
   useEffect(() => {
@@ -198,14 +198,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   // Settings values with defaults
   const storeName = getStoreName(storefrontSettings);
-  const storeSlogan = storefrontSettings?.storeSlogan || 'Бутик мужской одежды и аксессуаров';
   const isOnline = storefrontSettings?.isStoreOnline !== false;
-  const isExpress = storefrontSettings?.isExpressEnabled !== false;
   const freeShippingLimit = storefrontSettings?.freeDeliveryThreshold ?? 5000;
   const returnPeriod = storefrontSettings?.returnPeriodDays ?? 14;
   // Demo template contacts are never shown to customers (see storeContacts.ts)
   const { phone } = getStoreContacts(storefrontSettings);
-  const workingHours = storefrontSettings?.workingHours || 'Ежедневно с 10:00 до 22:00';
 
   return (
     <div className="space-y-5 pb-36 animate-in fade-in duration-300">
@@ -280,6 +277,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       </div>
 
       {/* 5. Hero Collection Banner */}
+      {currentSlide && (
       <div
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
@@ -345,6 +343,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         )}
       </div>
+      )}
 
       {/* 6. Quick Category Icons Row */}
       <div className="grid grid-cols-4 gap-3 py-1">
@@ -373,7 +372,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       </div>
 
       {/* 7. Live Storefront Service & Trust Badges */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 py-1">
+      <div className="grid grid-cols-2 gap-2.5 py-1">
         <div className="neu-inset rounded-2xl p-3 text-center space-y-1 bg-[#E3E8EF]">
           <div className="w-7 h-7 mx-auto rounded-xl neu-button flex items-center justify-center text-accent bg-[#E3E8EF]">
             <Truck className="w-3.5 h-3.5" />
@@ -383,9 +382,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               ? `Бесплатно от ${freeShippingLimit.toLocaleString('ru-RU')} ₽`
               : 'Бесплатная доставка'}
           </span>
-          <span className="text-[11px] text-[#4E5C70] block">
-            {isExpress ? 'Экспресс 2ч или СДЭК' : 'Курьер и ПВЗ'}
-          </span>
+          <span className="text-[11px] text-[#4E5C70] block">Условия при оформлении</span>
         </div>
 
         <div className="neu-inset rounded-2xl p-3 text-center space-y-1 bg-[#E3E8EF]">
@@ -395,24 +392,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <span className="text-[11px] font-extrabold text-[#2D3A4E] block">
             {returnPeriod} дней на возврат
           </span>
-          <span className="text-[11px] text-[#4E5C70] block">Примерка перед оплатой</span>
+          <span className="text-[11px] text-[#4E5C70] block">Условия в FAQ</span>
         </div>
 
-        <div className="neu-inset rounded-2xl p-3 text-center space-y-1 bg-[#E3E8EF]">
-          <div className="w-7 h-7 mx-auto rounded-xl neu-button flex items-center justify-center text-success bg-[#E3E8EF]">
-            <ShieldCheck className="w-3.5 h-3.5" />
-          </div>
-          <span className="text-[11px] font-extrabold text-[#2D3A4E] block">100% Оригинал</span>
-          <span className="text-[11px] text-[#4E5C70] block">Итальянские ткани</span>
-        </div>
-
-        <div className="neu-inset rounded-2xl p-3 text-center space-y-1 bg-[#E3E8EF]">
-          <div className="w-7 h-7 mx-auto rounded-xl neu-button flex items-center justify-center text-accent bg-[#E3E8EF]">
-            <Sparkles className="w-3.5 h-3.5" />
-          </div>
-          <span className="text-[11px] font-extrabold text-[#2D3A4E] block">Консьерж-сервис</span>
-          <span className="text-[11px] text-[#4E5C70] block">Помощь стилиста 24/7</span>
-        </div>
       </div>
 
       {/* 8. Popular Section Header & Horizontal Scroll */}
@@ -427,6 +409,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
+
+        {popularProducts.length === 0 && (
+          <NotConfigured title="Каталог" hint="Товары появятся здесь, когда магазин их добавит." />
+        )}
 
         {/* Popular Products Horizontal Scroll Row */}
         <div className="flex overflow-x-auto no-scrollbar gap-3.5 pb-2 -mx-4 px-4 snap-x">

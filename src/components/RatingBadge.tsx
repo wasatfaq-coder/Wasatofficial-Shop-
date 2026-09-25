@@ -2,7 +2,8 @@ import React from 'react';
 import { Star } from 'lucide-react';
 
 interface RatingBadgeProps {
-  rating: number;
+  /** Hidden when there is no rating (no reviews yet) */
+  rating: number | null | undefined;
   reviewsCount?: number;
   showLabel?: boolean;
   size?: 'sm' | 'md';
@@ -18,7 +19,8 @@ export const RatingBadge: React.FC<RatingBadgeProps> = ({
   variant = 'flat',
   className = '',
 }) => {
-  const formattedRating = (Math.round((rating || 5) * 10) / 10).toFixed(1);
+  if (!rating) return null;
+  const formattedRating = (Math.round(rating * 10) / 10).toFixed(1);
 
   if (variant === 'flat') {
     return (

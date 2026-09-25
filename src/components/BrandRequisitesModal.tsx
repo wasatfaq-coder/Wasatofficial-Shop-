@@ -21,6 +21,7 @@ import {
 import { StorefrontSettings } from '../types';
 import { copyToClipboard as safeCopyToClipboard } from '../utils/clipboard';
 import { getLegalDetails, getStoreContacts, getStoreName } from '../utils/storeContacts';
+import { NotConfigured } from './NotConfigured';
 
 interface BrandRequisitesModalProps {
   isOpen: boolean;
@@ -43,51 +44,32 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
   const storeName = getStoreName(storefrontSettings);
   // Demo template contacts/requisites are never shown to customers (see storeContacts.ts)
   const { phone, email, telegram, whatsapp, pickupAddress } = getStoreContacts(storefrontSettings);
-  const workingHours = storefrontSettings?.workingHours || 'Ежедневно с 10:00 до 22:00 (Консьерж 24/7)';
+  // Only what the owner filled in (Admin → «Витрина»); empty parts are marked «Не настроено»
+  const text = (value?: string) => (value ?? '').trim();
+  const workingHours = text(storefrontSettings?.workingHours);
 
   // Legal details
   const legalData = getLegalDetails(storefrontSettings);
 
   // Concierge content
-  const conciergeDescription =
-    storefrontSettings?.conciergeDescription ||
-    'Персональный ассистент по стилю и сопровождению заказов. Помощь в выборе размера, бронирование закрытых моделей, организация выездной примерки и консультации стилиста.';
-  const service1Title = storefrontSettings?.conciergeService1Title || 'Персональный подбор капсулы';
-  const service1Desc =
-    storefrontSettings?.conciergeService1Desc ||
-    'Составление законченного гардероба на сезон или под деловые мероприятия стилистом бутика.';
-  const service2Title = storefrontSettings?.conciergeService2Title || 'Выездная примерка на дом и в офис';
-  const service2Desc =
-    storefrontSettings?.conciergeService2Desc ||
-    'Курьер доставит смежные размеры и фасоны с ожиданием до 30 минут без предоплаты.';
-  const service3Title = storefrontSettings?.conciergeService3Title || 'Подгонка в ателье бутика';
-  const service3Desc =
-    storefrontSettings?.conciergeService3Desc ||
-    'Бесплатная корректировка длины брюк и посадки пиджака нашим мастером-портным.';
+  const conciergeDescription = text(storefrontSettings?.conciergeDescription);
+  const conciergeServices = [
+    { title: text(storefrontSettings?.conciergeService1Title), desc: text(storefrontSettings?.conciergeService1Desc) },
+    { title: text(storefrontSettings?.conciergeService2Title), desc: text(storefrontSettings?.conciergeService2Desc) },
+    { title: text(storefrontSettings?.conciergeService3Title), desc: text(storefrontSettings?.conciergeService3Desc) },
+  ].filter((service) => service.title || service.desc);
+  const hasContacts = Boolean(phone || whatsapp || telegram || email);
 
   // Brand content
-  const brandPhilosophyTitle =
-    storefrontSettings?.brandPhilosophyTitle || `Философия бренда ${storeName}`;
-  const brandPhilosophyText =
-    storefrontSettings?.brandPhilosophyText ||
-    `${storeName} — премиальный бутик мужской одежды, основанный на эстетике сдержанной роскоши («Quiet Luxury») и безупречном архитектурном крое. Мы создаем гардероб вне времени, который подчеркивает статус и харизму мужчины без кричащих логотипов.`;
-  const brandMaterialsTitle = storefrontSettings?.brandMaterialsTitle || 'Итальянские ткани';
-  const brandMaterialsText =
-    storefrontSettings?.brandMaterialsText ||
-    'Селективная шерсть Super 150’s от мануфактур Loro Piana и Zegna, длинноволокнистый хлопок Supima и натуральный лен.';
-  const brandCraftsmanshipTitle = storefrontSettings?.brandCraftsmanshipTitle || 'Эталонный крой';
-  const brandCraftsmanshipText =
-    storefrontSettings?.brandCraftsmanshipText ||
-    'Каждая модель разработана с учетом анатомических особенностей мужской фигуры. Полуручная сборка и безупречные строчки.';
-  const brandGuaranteesTitle = storefrontSettings?.brandGuaranteesTitle || 'Стандарты подлинности и гарантии';
-  const brandGuaranteesList =
-    storefrontSettings?.brandGuaranteesList && storefrontSettings.brandGuaranteesList.length > 0
-      ? storefrontSettings.brandGuaranteesList
-      : [
-          '100% оригинальность и сертификация каждого изделия.',
-          'Расширенная гарантия качества на швы и фурнитуру.',
-          'Примерка перед оплатой и легкий возврат без лишних вопросов.',
-        ];
+  const brandPhilosophyTitle = text(storefrontSettings?.brandPhilosophyTitle) || `О бренде ${storeName}`;
+  const brandPhilosophyText = text(storefrontSettings?.brandPhilosophyText);
+  const brandFacts = [
+    { key: 'materials', icon: Scissors, title: text(storefrontSettings?.brandMaterialsTitle), body: text(storefrontSettings?.brandMaterialsText) },
+    { key: 'craft', icon: Award, title: text(storefrontSettings?.brandCraftsmanshipTitle), body: text(storefrontSettings?.brandCraftsmanshipText) },
+  ].filter((fact) => fact.title || fact.body);
+  const brandGuaranteesTitle = text(storefrontSettings?.brandGuaranteesTitle) || 'Гарантии';
+  const brandGuaranteesList = (storefrontSettings?.brandGuaranteesList ?? []).map((item) => item.trim()).filter(Boolean);
+  const hasBrandContent = Boolean(brandPhilosophyText || brandFacts.length > 0 || brandGuaranteesList.length > 0);
 
   const copyToClipboard = (text: string, key: string) => {
     safeCopyToClipboard(text);
@@ -230,16 +212,20 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="neu-flat-sm px-2.5 py-1 rounded-full text-[11px] font-black text-accent uppercase tracking-wider inline-flex items-center gap-1 bg-[#E3E8EF]">
                     <Sparkles className="w-3 h-3 text-accent" />
-                    VIP Concierge Service 24/7
+                    Консьерж-сервис
                   </span>
-                  <span className="w-2.5 h-2.5 rounded-full bg-success animate-pulse" />
                 </div>
-                <p className="text-xs text-[#2D3A4E] font-medium leading-relaxed">
-                  {conciergeDescription}
-                </p>
+                {conciergeDescription ? (
+                  <p className="text-xs text-[#2D3A4E] font-medium leading-relaxed">{conciergeDescription}</p>
+                ) : (
+                  <p className="text-xs font-bold text-[#4E5C70]">Описание не настроено</p>
+                )}
               </div>
 
               {/* Quick Communication Buttons */}
+              {!hasContacts && (
+                <NotConfigured title="Контакты магазина" hint="Пока свяжитесь с нами через онлайн-чат." />
+              )}
               <div className="grid grid-cols-2 gap-2.5">
                 {phone && (
                 <a
@@ -333,7 +319,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                   className="w-full neu-button-accent rounded-2xl p-3 text-white font-black text-xs flex items-center justify-center gap-2 hover:opacity-95 transition-all cursor-pointer"
                 >
                   <MessageSquare className="w-4 h-4" />
-                  <span>Открыть интерактивный онлайн-чат с консьержем</span>
+                  <span>Написать в онлайн-чат</span>
                 </button>
               )}
 
@@ -341,45 +327,25 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
               <div className="neu-inset rounded-2xl p-4 bg-[#E3E8EF] space-y-3">
                 <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
                   <Crown className="w-3.5 h-3.5 text-accent" />
-                  Услуги консьерж-сервиса {storeName}
+                  Услуги консьерж-сервиса
                 </h4>
-                <div className="space-y-2.5 text-xs">
-                  <div className="flex items-start gap-2.5">
-                    <span className="w-5 h-5 rounded-lg neu-flat-sm flex items-center justify-center text-accent font-black text-[11px] shrink-0 mt-0.5 bg-[#E3E8EF]">
-                      1
-                    </span>
-                    <div>
-                      <strong className="text-[#2D3A4E] block">{service1Title}</strong>
-                      <p className="text-[11px] text-[#4E5C70]">
-                        {service1Desc}
-                      </p>
-                    </div>
+                {conciergeServices.length === 0 ? (
+                  <p className="text-xs font-bold text-[#4E5C70]">Услуги не настроены</p>
+                ) : (
+                  <div className="space-y-2.5 text-xs">
+                    {conciergeServices.map((service, idx) => (
+                      <div key={`service-${idx}`} className="flex items-start gap-2.5">
+                        <span className="w-5 h-5 rounded-lg neu-flat-sm flex items-center justify-center text-accent font-black text-[11px] shrink-0 mt-0.5 bg-[#E3E8EF]">
+                          {idx + 1}
+                        </span>
+                        <div>
+                          {service.title && <strong className="text-[#2D3A4E] block">{service.title}</strong>}
+                          {service.desc && <p className="text-[11px] text-[#4E5C70]">{service.desc}</p>}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-
-                  <div className="flex items-start gap-2.5">
-                    <span className="w-5 h-5 rounded-lg neu-flat-sm flex items-center justify-center text-accent font-black text-[11px] shrink-0 mt-0.5 bg-[#E3E8EF]">
-                      2
-                    </span>
-                    <div>
-                      <strong className="text-[#2D3A4E] block">{service2Title}</strong>
-                      <p className="text-[11px] text-[#4E5C70]">
-                        {service2Desc}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-2.5">
-                    <span className="w-5 h-5 rounded-lg neu-flat-sm flex items-center justify-center text-accent font-black text-[11px] shrink-0 mt-0.5 bg-[#E3E8EF]">
-                      3
-                    </span>
-                    <div>
-                      <strong className="text-[#2D3A4E] block">{service3Title}</strong>
-                      <p className="text-[11px] text-[#4E5C70]">
-                        {service3Desc}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* Showroom & Hours */}
@@ -387,9 +353,11 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                 <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] space-y-1.5">
                   <div className="flex items-center gap-1.5 text-[11px] font-bold text-accent uppercase">
                     <MapPin className="w-3.5 h-3.5" />
-                    <span>Флагманский шоурум</span>
+                    <span>Адрес магазина</span>
                   </div>
-                  <p className="text-xs font-bold text-[#2D3A4E]">{pickupAddress}</p>
+                  <p className={`text-xs font-bold ${pickupAddress ? 'text-[#2D3A4E]' : 'text-[#4E5C70]'}`}>
+                    {pickupAddress || 'Не настроено'}
+                  </p>
                 </div>
 
                 <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] space-y-1.5">
@@ -397,7 +365,9 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                     <Clock className="w-3.5 h-3.5" />
                     <span>График работы</span>
                   </div>
-                  <p className="text-xs font-bold text-[#2D3A4E]">{workingHours}</p>
+                  <p className={`text-xs font-bold ${workingHours ? 'text-[#2D3A4E]' : 'text-[#4E5C70]'}`}>
+                    {workingHours || 'Не настроено'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -441,9 +411,10 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
               {/* Key Value Items */}
               <div className="space-y-2 text-xs">
                 {requisiteItems.length === 0 && (
-                  <p className="neu-inset rounded-2xl p-3 text-xs text-[#4E5C70] text-center">
-                    Реквизиты компании скоро появятся. По вопросам оплаты и документов напишите нам в чат поддержки.
-                  </p>
+                  <NotConfigured
+                    title="Реквизиты компании"
+                    hint="По вопросам оплаты и документов напишите нам в чат поддержки."
+                  />
                 )}
                 {requisiteItems.map((item) => (
                   <div
@@ -471,63 +442,55 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                 ))}
               </div>
 
-              <p className="text-[11px] text-[#4E5C70] text-center italic">
-                Все счета формируются автоматически в соответствии с законодательством РФ.
-              </p>
             </div>
           )}
 
           {/* TAB 3: О БРЕНДЕ */}
           {activeTab === 'brand' && (
             <div className="space-y-3.5 animate-in fade-in duration-200">
-              {/* Brand Philosophy */}
-              <div className="neu-inset rounded-2xl p-4 bg-[#E3E8EF] space-y-2.5">
-                <div className="flex items-center gap-2">
-                  <Crown className="w-4 h-4 text-accent" />
-                  <h3 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E]">
-                    {brandPhilosophyTitle}
-                  </h3>
-                </div>
-                <p className="text-xs text-[#2D3A4E] leading-relaxed">
-                  {brandPhilosophyText}
-                </p>
-              </div>
+              {!hasBrandContent && <NotConfigured title="Информация о бренде" />}
 
-              {/* Materials & Quality */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-                <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-accent uppercase">
-                    <Scissors className="w-3.5 h-3.5" />
-                    <span>{brandMaterialsTitle}</span>
+              {brandPhilosophyText && (
+                <div className="neu-inset rounded-2xl p-4 bg-[#E3E8EF] space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <Crown className="w-4 h-4 text-accent" />
+                    <h3 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E]">
+                      {brandPhilosophyTitle}
+                    </h3>
                   </div>
-                  <p className="text-[11px] text-[#4E5C70] leading-snug">
-                    {brandMaterialsText}
-                  </p>
+                  <p className="text-xs text-[#2D3A4E] leading-relaxed">{brandPhilosophyText}</p>
                 </div>
+              )}
 
-                <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-accent uppercase">
-                    <Award className="w-3.5 h-3.5" />
-                    <span>{brandCraftsmanshipTitle}</span>
-                  </div>
-                  <p className="text-[11px] text-[#4E5C70] leading-snug">
-                    {brandCraftsmanshipText}
-                  </p>
-                </div>
-              </div>
-
-              {/* Guarantees */}
-              <div className="neu-inset p-3.5 rounded-2xl bg-[#E3E8EF] space-y-2">
-                <div className="flex items-center gap-1.5 text-xs font-black text-[#2D3A4E]">
-                  <ShieldCheck className="w-4 h-4 text-success" />
-                  <span>{brandGuaranteesTitle}</span>
-                </div>
-                <ul className="text-[11px] text-[#4E5C70] space-y-1 list-disc list-inside">
-                  {brandGuaranteesList.map((item, idx) => (
-                    <li key={`guarantee-${idx}-${item.slice(0, 15)}`}>{item}</li>
+              {brandFacts.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                  {brandFacts.map((fact) => (
+                    <div key={fact.key} className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] space-y-1.5">
+                      {fact.title && (
+                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-accent uppercase">
+                          <fact.icon className="w-3.5 h-3.5" />
+                          <span>{fact.title}</span>
+                        </div>
+                      )}
+                      {fact.body && <p className="text-[11px] text-[#4E5C70] leading-snug">{fact.body}</p>}
+                    </div>
                   ))}
-                </ul>
-              </div>
+                </div>
+              )}
+
+              {brandGuaranteesList.length > 0 && (
+                <div className="neu-inset p-3.5 rounded-2xl bg-[#E3E8EF] space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-[#2D3A4E]">
+                    <ShieldCheck className="w-4 h-4 text-success" />
+                    <span>{brandGuaranteesTitle}</span>
+                  </div>
+                  <ul className="text-[11px] text-[#4E5C70] space-y-1 list-disc list-inside">
+                    {brandGuaranteesList.map((item, idx) => (
+                      <li key={`guarantee-${idx}-${item.slice(0, 15)}`}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
                 </motion.div>
@@ -536,7 +499,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
 
             {/* Footer info */}
             <div className="pt-3.5 mt-2 border-t border-[#BAC5D5]/50 flex items-center justify-between text-[11px] text-[#4E5C70] shrink-0">
-              <span>{storeName} • Официальный бутик</span>
+              <span>{storeName}</span>
               <button
                 type="button"
                 onClick={onClose}

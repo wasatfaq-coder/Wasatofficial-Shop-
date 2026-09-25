@@ -149,7 +149,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
     if (onUpdateSettings) {
       onUpdateSettings(DEFAULT_STOREFRONT_SETTINGS);
     }
-    onShowToast('Настройки сброшены к стандартным значениям', 'info');
+    onShowToast('Тексты и контакты витрины очищены', 'info');
   };
 
   // Helper to safely update an item in brandGuaranteesList
@@ -211,7 +211,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               type="button"
               onClick={() => setIsResetConfirmOpen(true)}
               className="py-2 px-3 neu-button-danger rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95"
-              title="Сбросить все настройки к стандартным значениям"
+              title="Очистить тексты и контакты витрины"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span className="text-[11px]">Сброс</span>
@@ -250,7 +250,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   Сброс настроек витрины
                 </h4>
                 <p className="text-[11px] text-[#4E5C70] mt-1 leading-relaxed">
-                  Вернуть все контакты, реквизиты, описание консьержа, манифест и тарифы доставки к исходным эталонным значениям?
+                  Очистить контакты, реквизиты, описание консьерж-сервиса и тексты о бренде? Покупатели увидят «Не настроено», пока вы не заполните их снова. Тарифы доставки вернутся к значениям по умолчанию.
                 </p>
               </div>
             </div>

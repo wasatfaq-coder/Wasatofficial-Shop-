@@ -51,53 +51,6 @@ interface AdminInventoryTabProps {
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
-const INITIAL_LOGS: StockMovementLog[] = [
-  {
-    id: 'log-1',
-    date: 'Сегодня, 11:30',
-    type: 'receipt',
-    productId: '1',
-    productTitle: 'Льняная рубашка Classic Beige',
-    skuCode: 'MS-LI01-BEI-L',
-    color: 'Бежевый',
-    size: 'L',
-    changeQuantity: 10,
-    previousStock: 2,
-    newStock: 12,
-    reason: 'Поступление новой партии с фабрики',
-    operator: 'Менеджер склада',
-  },
-  {
-    id: 'log-2',
-    date: 'Вчера, 16:45',
-    type: 'writeoff',
-    productId: '2',
-    productTitle: 'Брюки чинос Slim Fit',
-    skuCode: 'MS-TR02-NAV-M',
-    color: 'Темно-синий',
-    size: 'M',
-    changeQuantity: -1,
-    previousStock: 4,
-    newStock: 3,
-    reason: 'Списание фабричного брака строчки',
-    operator: 'Контролер ОТК',
-  },
-  {
-    id: 'log-3',
-    date: '2 дня назад',
-    type: 'order',
-    productId: '3',
-    productTitle: 'Куртка ветрозащитная Urban',
-    skuCode: 'MS-JA03-BLK-XL',
-    color: 'Черный',
-    size: 'XL',
-    changeQuantity: -1,
-    previousStock: 5,
-    newStock: 4,
-    reason: 'Списание по клиентскому заказу #MS-98214',
-    operator: 'Система',
-  },
-];
 
 export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
   products,
@@ -119,8 +72,8 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
 
   // Stock Movement Logs State
   const [movementLogs, setMovementLogs] = useState<StockMovementLog[]>(() => {
-    const saved = getStockMovementLogs();
-    return saved && saved.length > 0 ? saved : INITIAL_LOGS;
+    // Real stock movements only; the log starts empty
+    return getStockMovementLogs() ?? [];
   });
 
   const [logTypeFilter, setLogTypeFilter] = useState<'all' | 'order' | 'receipt' | 'writeoff' | 'return'>('all');
@@ -1237,15 +1190,6 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
               >
                 <FileText className="w-3.5 h-3.5" />
                 <span>Экспорт CSV</span>
-              </button>
-              <button
-                onClick={() => {
-                  setMovementLogs(INITIAL_LOGS);
-                  onShowToast('Журнал движений сброшен к демо', 'info');
-                }}
-                className="text-[11px] font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
-              >
-                Сброс
               </button>
             </div>
           </div>

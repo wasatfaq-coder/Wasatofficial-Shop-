@@ -34,6 +34,7 @@ import { BannerSlide, Product, PromoCode } from '../../types';
 import { CATEGORIES } from '../../data/products';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { processImageFiles } from '../../utils/imageUpload';
+import { NotConfigured } from '../NotConfigured';
 
 interface AdminBannersTabProps {
   banners: BannerSlide[];
@@ -993,6 +994,9 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
         </div>
 
         <div className="grid grid-cols-1 gap-3">
+          {banners.length === 0 && (
+            <NotConfigured title="Баннеры" hint="Пока баннеров нет, блок с баннером на главной скрыт." />
+          )}
           {banners.map((slide, index) => {
             const scheduleInfo = getBannerScheduleStatus(slide);
 

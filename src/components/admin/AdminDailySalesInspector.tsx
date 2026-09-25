@@ -228,7 +228,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
           <span className="text-[11px] neu-inset px-2.5 py-1 rounded-lg bg-[#E3E8EF] text-[#2D3A4E] font-extrabold">
             {dayData.realOrdersList.length > 0
               ? `${dayData.realOrdersList.length} заказ(ов) из базы`
-              : 'Расчетный суточный объем'}
+              : 'Заказов за день нет'}
           </span>
         </div>
 

@@ -13,9 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Product, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, UserProfile, BannerSlide, DeliveryMethod, PickupPoint } from '../types';
-import { PRODUCTS, INITIAL_ORDERS } from '../data/products';
-import { INITIAL_PROMO_CODES, INITIAL_CHAT_MESSAGES, INITIAL_BANNER_SLIDES } from '../data/marketingAndSupport';
-import { INITIAL_FIRESTORE_USERS } from '../data/initialCustomers';
+import { INITIAL_CHAT_MESSAGES } from '../data/marketingAndSupport';
 import { DEFAULT_STOREFRONT_SETTINGS } from './inventory';
 import { compressBase64Image } from './imageUpload';
 import { SERVER_CONFIG_DOC_ID, ServerConfig } from '../shared/orderApi';
@@ -24,29 +22,29 @@ import { getDefaultHistorySteps, getSynchronizedDeliveryStages, isTransportCompa
 /**
  * Global locks and session tracking to prevent duplicate or overflowing write stream queues.
  */
-const inFlightSeedOperations = new Set<string>();
-const seededCollections = new Set<string>();
+/**
+ * An empty collection means the owner has not added anything yet (or removed it all).
+ * Demo data from src/data is never written to the database or shown in its place.
+ */
 
-function hasAlreadySeeded(collectionName: string): boolean {
-  if (seededCollections.has(collectionName)) return true;
+/**
+ * Deletes the documents the admin removed from a list. The list editors save the new list
+ * with set() only, so without this a deleted item stayed in Firestore and came back on reload.
+ */
+export async function deleteRemovedDocs(
+  collectionName: string,
+  previous: { id: string }[],
+  next: { id: string }[]
+) {
+  const keep = new Set(next.map((item) => item.id));
+  const removed = previous.filter((item) => item.id && !keep.has(item.id));
+  if (removed.length === 0) return;
   try {
-    const val = sessionStorage.getItem(`manstyle_seeded_${collectionName}`);
-    if (val === 'true') {
-      seededCollections.add(collectionName);
-      return true;
-    }
-  } catch {
-    // Ignore storage issues
-  }
-  return false;
-}
-
-function markCollectionSeeded(collectionName: string) {
-  seededCollections.add(collectionName);
-  try {
-    sessionStorage.setItem(`manstyle_seeded_${collectionName}`, 'true');
-  } catch {
-    // Ignore storage issues
+    const batch = writeBatch(db);
+    removed.forEach((item) => batch.delete(doc(db, collectionName, item.id)));
+    await batch.commit();
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, collectionName);
   }
 }
 
@@ -88,17 +86,9 @@ export function subscribeToProducts(
     colRef,
     async (snapshot) => {
       if (snapshot.empty) {
-        if (!hasAlreadySeeded('products') && !inFlightSeedOperations.has('products')) {
-          try {
-            await seedInitialProducts();
-          } catch (seedErr) {
-            console.warn('Could not seed initial products to Firestore:', seedErr);
-          }
-        }
-        onUpdate(PRODUCTS);
+        onUpdate([]);
         return;
       }
-      markCollectionSeeded('products');
       const loaded: Product[] = [];
       snapshot.forEach((docSnap) => {
         loaded.push(docSnap.data() as Product);
@@ -112,22 +102,6 @@ export function subscribeToProducts(
   );
 }
 
-export async function seedInitialProducts() {
-  if (inFlightSeedOperations.has('products')) return;
-  inFlightSeedOperations.add('products');
-  try {
-    const batch = writeBatch(db);
-    for (const prod of PRODUCTS) {
-      batch.set(doc(db, 'products', prod.id), sanitizeForFirestore(prod));
-    }
-    await batch.commit();
-    markCollectionSeeded('products');
-  } catch (e) {
-    console.warn('Could not seed initial products with batch:', e);
-  } finally {
-    inFlightSeedOperations.delete('products');
-  }
-}
 
 export async function saveProductToFirestore(product: Product) {
   try {
@@ -367,12 +341,9 @@ export function subscribeToOrders(
     source,
     async (snapshot) => {
       if (snapshot.empty) {
-        // If collection in database is empty, return empty real array
-        markCollectionSeeded('orders');
         onUpdate([]);
         return;
       }
-      markCollectionSeeded('orders');
       const loaded: Order[] = [];
       snapshot.forEach((docSnap) => {
         try {
@@ -398,22 +369,6 @@ export function subscribeToOrders(
   );
 }
 
-export async function seedInitialOrders() {
-  if (inFlightSeedOperations.has('orders')) return;
-  inFlightSeedOperations.add('orders');
-  try {
-    const batch = writeBatch(db);
-    for (const ord of INITIAL_ORDERS) {
-      batch.set(doc(db, 'orders', ord.id), sanitizeForFirestore(ord));
-    }
-    await batch.commit();
-    markCollectionSeeded('orders');
-  } catch (e) {
-    console.warn('Could not batch seed initial orders:', e);
-  } finally {
-    inFlightSeedOperations.delete('orders');
-  }
-}
 
 export async function handleCompleteOrderFirestoreSync(order: Order): Promise<void> {
   try {
@@ -445,7 +400,6 @@ export async function deleteAllOrdersAndStatsFromFirestore(): Promise<{ deletedC
   try {
     const ordersSnap = await getDocs(collection(db, 'orders'));
     if (ordersSnap.empty) {
-      markCollectionSeeded('orders');
       return { deletedCount: 0 };
     }
 
@@ -463,7 +417,6 @@ export async function deleteAllOrdersAndStatsFromFirestore(): Promise<{ deletedC
       await batch.commit();
     }
 
-    markCollectionSeeded('orders');
     try {
       localStorage.setItem('manstyle_orders_cleared', 'true');
       sessionStorage.removeItem('manstyle_cached_orders');
@@ -503,17 +456,9 @@ export function subscribeToPromos(
     colRef,
     async (snapshot) => {
       if (snapshot.empty) {
-        if (!hasAlreadySeeded('promos') && !inFlightSeedOperations.has('promos')) {
-          try {
-            await seedInitialPromos();
-          } catch (e) {
-            console.warn('Could not seed initial promos:', e);
-          }
-        }
-        onUpdate(INITIAL_PROMO_CODES);
+        onUpdate([]);
         return;
       }
-      markCollectionSeeded('promos');
       const loaded: PromoCode[] = [];
       snapshot.forEach((docSnap) => {
         loaded.push(docSnap.data() as PromoCode);
@@ -527,22 +472,6 @@ export function subscribeToPromos(
   );
 }
 
-export async function seedInitialPromos() {
-  if (inFlightSeedOperations.has('promos')) return;
-  inFlightSeedOperations.add('promos');
-  try {
-    const batch = writeBatch(db);
-    for (const p of INITIAL_PROMO_CODES) {
-      batch.set(doc(db, 'promos', p.id), sanitizeForFirestore(p));
-    }
-    await batch.commit();
-    markCollectionSeeded('promos');
-  } catch (e) {
-    console.warn('Could not batch seed promos:', e);
-  } finally {
-    inFlightSeedOperations.delete('promos');
-  }
-}
 
 export async function savePromoToFirestore(promo: PromoCode) {
   try {
@@ -584,22 +513,11 @@ export function subscribeToStorefrontSettings(
     docRef,
     async (snapshot) => {
       if (!snapshot.exists()) {
-        if (!hasAlreadySeeded('storefront_settings') && !inFlightSeedOperations.has('storefront_settings')) {
-          inFlightSeedOperations.add('storefront_settings');
-          try {
-            await setDoc(docRef, sanitizeForFirestore(DEFAULT_STOREFRONT_SETTINGS));
-            markCollectionSeeded('storefront_settings');
-          } catch (e) {
-            console.warn('Could not seed storefront settings:', e);
-          } finally {
-            inFlightSeedOperations.delete('storefront_settings');
-          }
-        }
+        // Not configured yet: empty texts and contacts (DEFAULT_STOREFRONT_SETTINGS), nothing written
         onUpdate(DEFAULT_STOREFRONT_SETTINGS);
         return;
       }
-      markCollectionSeeded('storefront_settings');
-      onUpdate(snapshot.data() as StorefrontSettings);
+      onUpdate({ ...DEFAULT_STOREFRONT_SETTINGS, ...(snapshot.data() as StorefrontSettings) });
     },
     (error) => {
       console.warn('Storefront settings subscription warning:', error);
@@ -628,26 +546,9 @@ export function subscribeToBanners(
     colRef,
     async (snapshot) => {
       if (snapshot.empty) {
-        if (!hasAlreadySeeded('banners') && !inFlightSeedOperations.has('banners')) {
-          inFlightSeedOperations.add('banners');
-          try {
-            const batch = writeBatch(db);
-            for (let i = 0; i < INITIAL_BANNER_SLIDES.length; i++) {
-              const b = { ...INITIAL_BANNER_SLIDES[i], order: i };
-              batch.set(doc(db, 'banners', b.id), sanitizeForFirestore(b));
-            }
-            await batch.commit();
-            markCollectionSeeded('banners');
-          } catch (e) {
-            console.warn('Could not seed initial banners:', e);
-          } finally {
-            inFlightSeedOperations.delete('banners');
-          }
-        }
-        onUpdate(INITIAL_BANNER_SLIDES);
+        onUpdate([]);
         return;
       }
-      markCollectionSeeded('banners');
       const loaded: BannerSlide[] = [];
       snapshot.forEach((snap) => {
         loaded.push(snap.data() as BannerSlide);
@@ -829,17 +730,10 @@ export function subscribeToUsers(
     colRef,
     async (snapshot) => {
       if (snapshot.empty) {
-        if (!hasAlreadySeeded('users') && !inFlightSeedOperations.has('users')) {
-          try {
-            await seedInitialUsers();
-          } catch (e) {
-            console.warn('Could not seed initial users:', e);
-          }
-        }
-        onUpdate(INITIAL_FIRESTORE_USERS);
+        users = [];
+        emit();
         return;
       }
-      markCollectionSeeded('users');
       users = snapshot.docs.map((snap) => ({ docId: snap.id, data: snap.data() as UserProfile }));
       emit();
     },
@@ -875,23 +769,6 @@ export function subscribeToOwnUserProfile(
   );
 }
 
-export async function seedInitialUsers() {
-  if (inFlightSeedOperations.has('users')) return;
-  inFlightSeedOperations.add('users');
-  try {
-    const batch = writeBatch(db);
-    for (const u of INITIAL_FIRESTORE_USERS) {
-      const docId = u.uid || `user-${u.email.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      batch.set(doc(db, 'users', docId), sanitizeForFirestore(u));
-    }
-    await batch.commit();
-    markCollectionSeeded('users');
-  } catch (e) {
-    console.warn('Could not batch seed users:', e);
-  } finally {
-    inFlightSeedOperations.delete('users');
-  }
-}
 
 /** Fields only admins may change (enforced by firestore.rules); never sent from the profile screen. */
 const ADMIN_ONLY_PROFILE_FIELDS = ['bonusPoints', 'managerNotes', 'tags'] as const;
@@ -1022,7 +899,6 @@ export function subscribeToDeliveryMethods(
         onUpdate([]);
         return;
       }
-      markCollectionSeeded('delivery_methods');
       const loaded: DeliveryMethod[] = [];
       snapshot.forEach((snap) => {
         loaded.push(snap.data() as DeliveryMethod);
@@ -1083,7 +959,6 @@ export function subscribeToPickupPoints(
         onUpdate([]);
         return;
       }
-      markCollectionSeeded('pickup_points');
       const loaded: PickupPoint[] = [];
       snapshot.forEach((snap) => {
         loaded.push(snap.data() as PickupPoint);

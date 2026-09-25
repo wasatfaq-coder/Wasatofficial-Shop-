@@ -128,8 +128,8 @@ export function parseProductsFromCSV(csvText: string): Partial<Product>[] {
         colors: colors.length > 0 ? colors : [{ name: 'Бежевый', hex: '#D4C3B3' }],
         images: [image],
         description,
-        rating: 4.8,
-        reviewsCount: 12,
+        rating: 0,
+        reviewsCount: 0,
       });
     }
   }
