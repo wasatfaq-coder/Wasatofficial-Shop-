@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ActiveTab, StorefrontSettings } from '../types';
+import { publicSetting } from '../utils/storeContacts';
 
 interface SidebarDrawerProps {
   isOpen: boolean;
@@ -51,7 +52,8 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
     onClose();
   };
 
-  const phone = storefrontSettings?.phone || '+7 (495) 123-45-67';
+  // Demo template phone is never shown to customers (see storeContacts.ts)
+  const phone = publicSetting(storefrontSettings?.phone);
   const storeName = storefrontSettings?.storeName || 'MANSTYLE';
   const storeSlogan = storefrontSettings?.storeSlogan || 'Премиальная мужская одежда';
 
@@ -241,7 +243,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
               <div className="flex items-center gap-3">
                 <User className="w-5 h-5 text-[#5F6ED0] group-hover:scale-105 transition-transform" />
                 <span className="group-hover:text-[#5F6ED0] transition-colors">
-                  Профиль & Админка
+                  Профиль
                 </span>
               </div>
               <ChevronRight
@@ -312,9 +314,9 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
             title="Открыть реквизиты, информацию о бренде и контакты"
           >
             <p className="text-[11px] text-[#5C6B80] font-bold hover:text-[#5F6ED0] transition-colors">
-              {storeName} • {phone}
+              {phone ? `${storeName} • ${phone}` : storeName}
             </p>
-            <p className="text-[10px] text-[#5C6B80]/80">Реквизиты • Бренд • Консьерж 24/7</p>
+            <p className="text-[10px] text-[#5C6B80]/80">Реквизиты • О бренде • Контакты</p>
           </button>
         </div>
       </motion.div>

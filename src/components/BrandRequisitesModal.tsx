@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { StorefrontSettings } from '../types';
 import { copyToClipboard as safeCopyToClipboard } from '../utils/clipboard';
+import { getLegalDetails, getStoreContacts } from '../utils/storeContacts';
 
 interface BrandRequisitesModalProps {
   isOpen: boolean;
@@ -40,31 +41,12 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const storeName = storefrontSettings?.storeName || 'MANSTYLE';
-  const phone = storefrontSettings?.phone || '+7 (495) 123-45-67';
-  const email = storefrontSettings?.email || 'concierge@manstyle.ru';
-  const telegram = storefrontSettings?.telegram || '@manstyle_official';
-  const whatsapp = storefrontSettings?.whatsapp || '+7 (999) 000-00-00';
-  const pickupAddress =
-    storefrontSettings?.pickupAddress ||
-    'Москва, Пресненская наб. 12, Башня Федерация Восток, 2 этаж';
+  // Demo template contacts/requisites are never shown to customers (see storeContacts.ts)
+  const { phone, email, telegram, whatsapp, pickupAddress } = getStoreContacts(storefrontSettings);
   const workingHours = storefrontSettings?.workingHours || 'Ежедневно с 10:00 до 22:00 (Консьерж 24/7)';
 
   // Legal details
-  const legalData = {
-    companyName: storefrontSettings?.legalEntityName || 'ООО «МЭНСТАЙЛ РУС»',
-    inn: storefrontSettings?.inn || '7704829104',
-    kpp: storefrontSettings?.kpp || '770401001',
-    ogrn: storefrontSettings?.ogrn || '1217700458921',
-    bankName: storefrontSettings?.bankName || 'ПАО «Сбербанк России», г. Москва',
-    bik: storefrontSettings?.bik || '044525225',
-    checkingAccount: storefrontSettings?.checkingAccount || '40702810938000012345',
-    corrAccount: storefrontSettings?.corrAccount || '30101810400000000225',
-    legalAddress:
-      storefrontSettings?.legalAddress ||
-      '125009, г. Москва, Столешников переулок, д. 14, стр. 1, офис 402',
-    edo: storefrontSettings?.edo || 'Диадок (ID: 2BM-7704829104-770401001), СБИС',
-    ceo: storefrontSettings?.ceo || 'Смирнов Александр Владимирович',
-  };
+  const legalData = getLegalDetails(storefrontSettings);
 
   // Concierge content
   const conciergeDescription =
@@ -115,21 +97,28 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
     }, 2000);
   };
 
+  const requisiteItems = [
+    { label: 'Юридическое лицо', value: legalData.companyName, key: 'company' },
+    { label: 'ИНН', value: legalData.inn, key: 'inn' },
+    { label: 'КПП', value: legalData.kpp, key: 'kpp' },
+    { label: 'ОГРН', value: legalData.ogrn, key: 'ogrn' },
+    { label: 'Расчетный счет', value: legalData.checkingAccount, key: 'checking' },
+    { label: 'Банк', value: legalData.bankName, key: 'bank' },
+    { label: 'БИК', value: legalData.bik, key: 'bik' },
+    { label: 'Корр. счет', value: legalData.corrAccount, key: 'corr' },
+    { label: 'Юридический адрес', value: legalData.legalAddress, key: 'legalAddress' },
+    { label: 'Фактический адрес', value: pickupAddress, key: 'pickup' },
+    { label: 'ЭДО', value: legalData.edo, key: 'edo' },
+    { label: 'Руководитель', value: legalData.ceo, key: 'ceo' },
+    { label: 'Email', value: email, key: 'email' },
+    { label: 'Телефон', value: phone, key: 'phone' },
+  ].filter((item) => item.value);
+
   const copyAllRequisites = () => {
-    const fullText = `РЕКВИЗИТЫ КОМПАНИИ ${storeName}:
-Наименование: ${legalData.companyName}
-ИНН: ${legalData.inn}
-КПП: ${legalData.kpp}
-ОГРН: ${legalData.ogrn}
-Расчетный счет: ${legalData.checkingAccount}
-Банк: ${legalData.bankName}
-БИК: ${legalData.bik}
-Корр. счет: ${legalData.corrAccount}
-Юридический адрес: ${legalData.legalAddress}
-Фактический адрес / Шоурум: ${pickupAddress}
-Генеральный директор: ${legalData.ceo}
-Email: ${email}
-Телефон консьерж-сервиса: ${phone}`;
+    const fullText = [
+      `РЕКВИЗИТЫ КОМПАНИИ ${storeName}:`,
+      ...requisiteItems.map((item) => `${item.label}: ${item.value}`),
+    ].join('\n');
 
     copyToClipboard(fullText, 'all');
   };
@@ -251,6 +240,7 @@ Email: ${email}
 
               {/* Quick Communication Buttons */}
               <div className="grid grid-cols-2 gap-2.5">
+                {phone && (
                 <a
                   href={`tel:${cleanPhone}`}
                   className="neu-inset bg-[#E3E8EF] rounded-2xl p-3 flex items-center gap-2.5 text-[#2D3A4E] hover:text-[#5F6ED0] transition-all cursor-pointer active:scale-[0.98] group"
@@ -267,6 +257,7 @@ Email: ${email}
                     </span>
                   </div>
                 </a>
+                )}
 
                 {whatsapp && (
                   <a
@@ -310,6 +301,7 @@ Email: ${email}
                   </a>
                 )}
 
+                {email && (
                 <a
                   href={`mailto:${email}`}
                   className="neu-inset bg-[#E3E8EF] rounded-2xl p-3 flex items-center gap-2.5 text-[#2D3A4E] hover:text-[#5F6ED0] transition-all cursor-pointer active:scale-[0.98] group"
@@ -326,6 +318,7 @@ Email: ${email}
                     </span>
                   </div>
                 </a>
+                )}
               </div>
 
               {/* Online Chat Button inside App */}
@@ -413,6 +406,7 @@ Email: ${email}
           {activeTab === 'requisites' && (
             <div className="space-y-3.5 animate-in fade-in duration-200">
               {/* Copy All Button */}
+              {requisiteItems.length > 0 && (
               <div className="flex items-center justify-between gap-3 p-3.5 neu-inset rounded-2xl bg-[#E3E8EF]">
                 <div className="min-w-0">
                   <span className="text-xs font-black text-[#2D3A4E] block truncate">
@@ -441,23 +435,16 @@ Email: ${email}
                   )}
                 </button>
               </div>
+              )}
 
               {/* Key Value Items */}
               <div className="space-y-2 text-xs">
-                {[
-                  { label: 'Юридическое лицо', value: legalData.companyName, key: 'company' },
-                  { label: 'ИНН', value: legalData.inn, key: 'inn' },
-                  { label: 'КПП', value: legalData.kpp, key: 'kpp' },
-                  { label: 'ОГРН', value: legalData.ogrn, key: 'ogrn' },
-                  { label: 'Расчетный счет', value: legalData.checkingAccount, key: 'checking' },
-                  { label: 'Банк', value: legalData.bankName, key: 'bank' },
-                  { label: 'БИК', value: legalData.bik, key: 'bik' },
-                  { label: 'Корр. счет', value: legalData.corrAccount, key: 'corr' },
-                  { label: 'Юридический адрес', value: legalData.legalAddress, key: 'legalAddress' },
-                  { label: 'Фактический адрес', value: pickupAddress, key: 'pickup' },
-                  { label: 'ЭДО', value: legalData.edo, key: 'edo' },
-                  { label: 'Руководитель', value: legalData.ceo, key: 'ceo' },
-                ].map((item) => (
+                {requisiteItems.length === 0 && (
+                  <p className="neu-inset rounded-2xl p-3 text-xs text-[#5C6B80] text-center">
+                    Реквизиты компании скоро появятся. По вопросам оплаты и документов напишите нам в чат поддержки.
+                  </p>
+                )}
+                {requisiteItems.map((item) => (
                   <div
                     key={item.key}
                     onClick={() => copyToClipboard(item.value, item.key)}

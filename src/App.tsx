@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ActiveTab, Product, CartItem, UserProfile, Order, BodyMeasurements, PromoCode, BannerSlide, ChatMessage, AppliedPromoInfo, StorefrontSettings, DeliveryMethod, PickupPoint } from './types';
-import { PRODUCTS, INITIAL_USER_PROFILE, INITIAL_ORDERS } from './data/products';
+import { PRODUCTS, GUEST_USER_PROFILE, INITIAL_ORDERS } from './data/products';
 import { INITIAL_PROMO_CODES, INITIAL_BANNER_SLIDES, INITIAL_CHAT_MESSAGES } from './data/marketingAndSupport';
 import { loadLocalDeliveryMethods, saveLocalDeliveryMethods, loadLocalPickupPoints, saveLocalPickupPoints } from './data/deliveryData';
 import { playNotificationChime, sendBrowserNotification, getOrderStatusNotification } from './utils/pushNotifications';
@@ -23,7 +23,7 @@ import {
 import { deductStockWithLogs, loadStorefrontSettings, saveStorefrontSettings, getVariantStock, isProductInStock } from './utils/inventory';
 import { getDefaultDeliveryStages, getDefaultHistorySteps, getSynchronizedDeliveryStages } from './utils/deliveryStages';
 import { formatAddress } from './utils/addressFormat';
-import { useAuth } from './context/AuthContext';
+import { ADMIN_EMAIL, useAuth } from './context/AuthContext';
 import {
   ChatIdentity,
   createGuestChatIdentity,
@@ -67,6 +67,8 @@ import { FavoritesScreen } from './views/FavoritesScreen';
 import { OrderSuccessScreen } from './views/OrderSuccessScreen';
 import { validatePromo, PricingLine, QUICK_ORDER_DELIVERY_ID } from './shared/orderPricing';
 import { extractColorName, extractSizeName } from './utils/inventory';
+import { getStoreContacts } from './utils/storeContacts';
+import { formatDays } from './utils/pluralize';
 
 // Unique across customers: messages are create-only for customers (see firestore.rules)
 function newChatMessageId(): string {
@@ -80,6 +82,15 @@ function toPricingLine(item: CartItem): PricingLine {
     price: item.product.price,
     quantity: item.quantity,
   };
+}
+
+// Default profile of earlier versions (the shop admin's name, email, phone and office address)
+function isLegacyDemoProfile(profile: Partial<UserProfile>): boolean {
+  return (
+    profile.name === 'Администратор MANSTYLE' ||
+    (profile.email || '').trim().toLowerCase() === ADMIN_EMAIL.toLowerCase() ||
+    (profile.savedAddresses || []).some((a) => a.id === 'addr-1' && a.title === 'Офис MANSTYLE')
+  );
 }
 
 const GUEST_ORDERS_STORAGE_KEY = 'manstyle_guest_orders';
@@ -269,12 +280,16 @@ export default function App() {
       const saved = localStorage.getItem('manstyle_user_profile');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed === 'object') {
-          return { ...INITIAL_USER_PROFILE, ...parsed };
+        // Older versions shipped the shop admin's personal data as the default profile and
+        // cached it in every visitor's browser. Drop such a cache; the admin's own profile
+        // is restored from Firebase Auth after sign-in.
+        if (parsed && typeof parsed === 'object' && !isLegacyDemoProfile(parsed)) {
+          return { ...GUEST_USER_PROFILE, ...parsed };
         }
+        localStorage.removeItem('manstyle_user_profile');
       }
     } catch {}
-    return INITIAL_USER_PROFILE;
+    return GUEST_USER_PROFILE;
   });
 
   const handleUpdateProfile = (updated: UserProfile) => {
@@ -936,13 +951,13 @@ export default function App() {
       if (imageUrl) {
         replyText = 'Спасибо за прикрепленное фото! Консультант уже изучает изображение и поможет с оценкой или подбором.';
       } else if (lower.includes('размер') || lower.includes('подобрать')) {
-        replyText = 'Вы можете воспользоваться нашим умным "Калькулятором размеров" в меню или в карточке товара — он с точностью 98% подберет размер по вашим параметрам!';
+        replyText = 'Воспользуйтесь «Калькулятором размеров» в меню или в карточке товара — он подберёт размер по вашим росту, весу и обхватам.';
       } else if (lower.includes('доставк') || lower.includes('где заказ') || lower.includes('трек')) {
-        replyText = 'Все активные заказы и их статус отслеживания доступны во вкладке "Профиль" -> "История заказов". Доставка СДЭК и курьером занимает от 1 до 3 дней.';
+        replyText = 'Статус и отслеживание заказов — в разделе «Профиль» → «Заказы и трекинг». Сроки доставки для вашего адреса видны при оформлении заказа.';
       } else if (lower.includes('возврат') || lower.includes('обмен')) {
-        replyText = 'Возврат и бесплатный обмен возможны в течение 14 дней. Вы можете прикрепить фото бирки и товара прямо сюда в чат для быстрой обработки!';
+        replyText = `Возврат и обмен возможны в течение ${formatDays(storefrontSettings.returnPeriodDays ?? 14)}. Прикрепите фото бирки и товара прямо в чат — так мы оформим всё быстрее.`;
       } else if (lower.includes('скидк') || lower.includes('промокод')) {
-        replyText = 'Актуальные промокоды можно найти в разделе акций или применить код FIX500 (скидка 500 ₽) или MANSTYLE10 (-10%)!';
+        replyText = 'Доступные промокоды можно выбрать в корзине — кнопка «Добавить купоны и промокоды». Менеджер также может подобрать для вас персональное предложение.';
       }
 
       const botMsg: ChatMessage = {
@@ -1297,6 +1312,7 @@ export default function App() {
 
         <SupportChatModal
           isOpen={isSupportChatOpen}
+          storePhone={getStoreContacts(storefrontSettings).phone}
           onClose={() => setIsSupportChatOpen(false)}
           onOpenMySizes={() => setIsMySizesModalOpen(true)}
           onNavigateTab={(tab) => setActiveTab(tab)}
@@ -1418,6 +1434,8 @@ export default function App() {
           {activeTab === 'product-detail' && selectedProduct && (
             <ProductDetailScreen
               product={selectedProduct}
+              returnPeriodDays={storefrontSettings.returnPeriodDays}
+              freeDeliveryThreshold={storefrontSettings.freeDeliveryThreshold}
               isFavorite={favorites.includes(selectedProduct.id)}
               cartCount={totalCartCount}
               recentlyViewed={recentlyViewed.filter((p) => p.id !== selectedProduct.id)}

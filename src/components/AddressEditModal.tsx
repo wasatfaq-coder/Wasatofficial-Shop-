@@ -31,13 +31,13 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
 }) => {
   const [title, setTitle] = useState('Дом');
   const [city, setCity] = useState('Москва');
-  const [postalCode, setPostalCode] = useState('101000');
-  const [street, setStreet] = useState('ул. Ленина');
-  const [house, setHouse] = useState('10');
-  const [entrance, setEntrance] = useState('2');
-  const [floor, setFloor] = useState('4');
-  const [apartment, setApartment] = useState('кв. 25');
-  const [intercom, setIntercom] = useState('25K');
+  const [postalCode, setPostalCode] = useState('');
+  const [street, setStreet] = useState('');
+  const [house, setHouse] = useState('');
+  const [entrance, setEntrance] = useState('');
+  const [floor, setFloor] = useState('');
+  const [apartment, setApartment] = useState('');
+  const [intercom, setIntercom] = useState('');
   const [isDefault, setIsDefault] = useState(true);
   const [errors, setErrors] = useState<{
     house?: string;
@@ -60,13 +60,13 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
     } else {
       setTitle('Дом');
       setCity('Москва');
-      setPostalCode('101000');
-      setStreet('ул. Ленина');
-      setHouse('10');
-      setEntrance('2');
-      setFloor('4');
-      setApartment('кв. 25');
-      setIntercom('25K');
+      setPostalCode('');
+      setStreet('');
+      setHouse('');
+      setEntrance('');
+      setFloor('');
+      setApartment('');
+      setIntercom('');
       setIsDefault(true);
     }
     setErrors({});

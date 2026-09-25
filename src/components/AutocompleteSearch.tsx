@@ -282,10 +282,6 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
 
                       <div className="flex items-center gap-2 text-[11px] text-[#5C6B80] font-medium">
                         <span className="truncate">{product.categoryLabel}</span>
-                        <span>•</span>
-                        <span className="font-mono text-[10px] text-[#5C6B80]">
-                          Арт: {product.id}
-                        </span>
                       </div>
 
                       {/* Color dots preview */}

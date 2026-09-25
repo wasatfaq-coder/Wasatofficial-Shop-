@@ -12,7 +12,8 @@ import {
   Truck,
   Barcode,
 } from 'lucide-react';
-import { Order } from '../../types';
+import { Order, StorefrontSettings } from '../../types';
+import { getLegalDetails, getStoreContacts } from '../../utils/storeContacts';
 import { copyToClipboard } from '../../utils/clipboard';
 import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
 import { motion, AnimatePresence } from 'motion/react';
@@ -21,6 +22,7 @@ interface AdminOrderInvoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
   order: Order | null;
+  storefrontSettings?: StorefrontSettings;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
@@ -28,8 +30,22 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
   isOpen,
   onClose,
   order,
+  storefrontSettings,
   onShowToast,
 }) => {
+  // Seller details come from Admin → «Витрина»; demo template requisites are never printed
+  const legal = getLegalDetails(storefrontSettings);
+  const contacts = getStoreContacts(storefrontSettings);
+  const sellerLine = [
+    legal.companyName,
+    legal.ogrn && `ОГРН ${legal.ogrn}`,
+    legal.inn && `ИНН ${legal.inn}`,
+    legal.legalAddress,
+    contacts.phone,
+  ]
+    .filter(Boolean)
+    .join(' • ');
+
   const handlePrint = () => {
     window.print();
   };
@@ -113,9 +129,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
               <p className="text-[11px] text-slate-500 mt-1 font-medium">
                 Интернет-магазин премиальной мужской одежды
               </p>
-              <p className="text-[10px] text-slate-400">
-                ИП «МЭНСТАЙЛ РИТЕЙЛ» • ОГРНИП 321774600123456 • ИНН 772412345678
-              </p>
+              {sellerLine && <p className="text-[10px] text-slate-400">{sellerLine}</p>}
             </div>
             <div className="text-right">
               <div
@@ -142,7 +156,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
                 {order.customerName || 'Покупатель MANSTYLE'}
               </span>
               <span className="text-[11px] text-slate-500 block">
-                {order.customerPhone || '+7 (999) 000-00-00'}
+                {order.customerPhone || '—'}
               </span>
               {order.customerEmail && (
                 <span className="text-[10px] text-slate-400 block truncate">

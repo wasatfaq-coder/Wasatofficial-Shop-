@@ -1,16 +1,18 @@
 import { Product, ProductSKU, CartItem, StockMovementLog, StorefrontSettings } from '../types';
 
+// Contacts and legal details are intentionally empty: real values are entered in
+// Admin → «Витрина». Customer screens hide anything that is not filled in.
 export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   storeName: 'MANSTYLE',
   storeSlogan: 'Бутик премиальной мужской одежды & обуви',
   storeBannerText: 'Бесплатная экспресс-доставка при заказе от 5 000 ₽',
   isStoreBannerVisible: true,
   bannerBadgeText: 'АКЦИЯ',
-  phone: '+7 (495) 123-45-67',
-  email: 'concierge@manstyle.ru',
-  telegram: '@manstyle_official',
-  whatsapp: '+7 (999) 000-00-00',
-  pickupAddress: 'Москва, Пресненская наб. 12, Башня Федерация Восток, 2 этаж',
+  phone: '',
+  email: '',
+  telegram: '',
+  whatsapp: '',
+  pickupAddress: '',
   workingHours: 'Ежедневно с 10:00 до 22:00',
   returnPeriodDays: 14,
   freeDeliveryThreshold: 5000,
@@ -22,17 +24,17 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   isAutoDiscount: true,
   isPreorderMode: false,
   lowStockThreshold: 3,
-  legalEntityName: 'ООО «МЭНСТАЙЛ РУС»',
-  inn: '7704829104',
-  kpp: '770401001',
-  ogrn: '1217700458921',
-  bankName: 'ПАО «Сбербанк России», г. Москва',
-  bik: '044525225',
-  checkingAccount: '40702810938000012345',
-  corrAccount: '30101810400000000225',
-  legalAddress: '125009, г. Москва, Столешников переулок, д. 14, стр. 1, офис 402',
-  edo: 'Диадок (ID: 2BM-7704829104-770401001), СБИС',
-  ceo: 'Смирнов Александр Владимирович',
+  legalEntityName: '',
+  inn: '',
+  kpp: '',
+  ogrn: '',
+  bankName: '',
+  bik: '',
+  checkingAccount: '',
+  corrAccount: '',
+  legalAddress: '',
+  edo: '',
+  ceo: '',
 
   // Concierge Service Defaults
   conciergeDescription:

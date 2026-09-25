@@ -126,9 +126,6 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
                   <h4 className="text-xs font-bold text-[#2D3A4E] truncate leading-tight group-hover:text-[#5F6ED0] transition-colors">
                     {product.title}
                   </h4>
-                  <p className="text-[10px] text-[#5C6B80] font-mono">
-                    Арт: {product.id.substring(0, 10)}
-                  </p>
                 </div>
               </div>
 

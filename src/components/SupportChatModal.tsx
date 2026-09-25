@@ -25,9 +25,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ChatMessage, Product } from '../types';
 import { copyToClipboard } from '../utils/clipboard';
 import { compressChatImageFile } from '../utils/imageUpload';
+import { telHref } from '../utils/storeContacts';
 
 interface SupportChatModalProps {
   isOpen: boolean;
+  /** Store phone from Admin → «Витрина»; call button and hotline banner are hidden when empty */
+  storePhone?: string;
   onClose: () => void;
   onOpenMySizes?: () => void;
   onNavigateTab?: (tab: 'catalog' | 'profile' | 'cart') => void;
@@ -41,6 +44,7 @@ interface SupportChatModalProps {
 
 export const SupportChatModal: React.FC<SupportChatModalProps> = ({
   isOpen,
+  storePhone = '',
   onClose,
   onOpenMySizes,
   onNavigateTab,
@@ -171,13 +175,15 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
+              {storePhone && (
               <a
-                href="tel:88005553535"
-                title="Позвонить 8 (800) 555-35-35"
+                href={telHref(storePhone)}
+                title={`Позвонить: ${storePhone}`}
                 className="w-9 h-9 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#2D3A4E] hover:text-[#5F6ED0] transition-all border border-white/70 active:scale-95 cursor-pointer shadow-inner"
               >
                 <Phone className="w-4 h-4 text-[#2D3A4E]" />
               </a>
+              )}
               <button
                 type="button"
                 onClick={onClose}
@@ -189,15 +195,18 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
             </div>
           </div>
 
-          {/* Hotline Neumorphic Banner with Muted Badge */}
-          <div className="mx-3 mt-3 p-3 rounded-2xl neu-inset flex items-center justify-between text-xs font-semibold text-[#2D3A4E] shrink-0 border border-white/60 shadow-inner">
-            <span className="text-[#2D3A4E] font-bold">
-              Горячая линия: 8 (800) 555-35-35
-            </span>
-            <span className="text-[10px] text-[#5C6B80] neu-inset bg-[#E3E8EF] px-2.5 py-1 rounded-full font-extrabold uppercase tracking-wider border border-white/60 shadow-inner">
-              Бесплатно
-            </span>
+          {/* Store phone banner (only when the phone is set in Admin → «Витрина») */}
+          {storePhone && (
+          <div className="mx-3 mt-3 p-3 rounded-2xl neu-inset flex items-center justify-between text-xs font-semibold text-[#2D3A4E] shrink-0 border border-white/60">
+            <span className="text-[#2D3A4E] font-bold">Телефон магазина: {storePhone}</span>
+            <a
+              href={telHref(storePhone)}
+              className="text-[10px] text-[#5F6ED0] neu-button px-2.5 py-1 rounded-full font-extrabold uppercase tracking-wider"
+            >
+              Позвонить
+            </a>
           </div>
+          )}
 
           {/* Messages Area */}
           <div className="flex-1 p-3.5 overflow-y-auto space-y-3.5 bg-[#E3E8EF] no-scrollbar">

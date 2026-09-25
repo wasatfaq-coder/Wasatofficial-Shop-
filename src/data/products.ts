@@ -1,4 +1,4 @@
-import { Product, DeliveryMethod, Order } from '../types';
+import { Product, DeliveryMethod, Order, UserProfile } from '../types';
 import { generateDefaultSKUs } from '../utils/inventory';
 
 export const CATEGORIES = [
@@ -337,65 +337,20 @@ export const DELIVERY_METHODS: DeliveryMethod[] = [
   }
 ];
 
-export const INITIAL_USER_PROFILE = {
-  name: 'Администратор MANSTYLE',
-  email: 'gunh83975@gmail.com',
-  phone: '+7 (999) 000-11-22',
-  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
-  address: {
-    street: 'Пресненская наб.',
-    house: '12',
-    entrance: '1',
-    floor: '45',
-    apartment: 'оф. 4502',
-    intercom: '4502',
-    city: 'Москва',
-    postalCode: '123317'
-  },
-  savedAddresses: [
-    {
-      id: 'addr-1',
-      title: 'Офис MANSTYLE',
-      city: 'Москва',
-      street: 'Пресненская наб.',
-      house: '12',
-      entrance: '1',
-      floor: '45',
-      apartment: 'оф. 4502',
-      intercom: '4502',
-      postalCode: '123317',
-      isDefault: true
-    },
-    {
-      id: 'addr-2',
-      title: 'Дом',
-      city: 'Москва',
-      street: 'ул. Тверская',
-      house: '7',
-      entrance: '2',
-      floor: '4',
-      apartment: 'кв. 18',
-      intercom: '18K',
-      postalCode: '125009',
-      isDefault: false
-    }
-  ],
+/**
+ * Profile of a visitor who has not filled anything in yet. Must stay free of personal
+ * data: it is what every guest sees in the profile and at checkout.
+ */
+export const GUEST_USER_PROFILE: UserProfile = {
+  name: '',
+  email: '',
+  phone: '',
+  avatar: '',
+  address: { street: '', city: 'Москва', postalCode: '' },
+  savedAddresses: [],
   savedCards: [],
   notificationsEnabled: true,
-  bonusPoints: 1500,
-  bodyMeasurements: {
-    height: 184,
-    weight: 94,
-    chest: 104,
-    waist: 95,
-    hips: 98,
-    fitPreference: 'regular' as const,
-    preferredSize: 'XL',
-    russianSizeTop: 'RU 52 (XL)',
-    russianSizeBottom: 'RU 52 (W35–W36)',
-    heightGroup: '5-я ростовка (182–188 см)',
-    bodyType: '3-я (Плотное телосложение)'
-  }
+  bonusPoints: 0,
 };
 
 export const INITIAL_ORDERS: Order[] = [];
