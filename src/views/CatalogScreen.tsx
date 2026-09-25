@@ -8,17 +8,9 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product, UserProfile, BodyMeasurements } from '../types';
-import { CATEGORIES } from '../data/products';
 import { ProductCard } from '../components/ProductCard';
 import { QuickViewModal } from '../components/QuickViewModal';
 import { AutocompleteSearch } from '../components/AutocompleteSearch';
-import {
-  ShirtIcon,
-  TShirtIcon,
-  JacketIcon,
-  PantsIcon,
-  SweatshirtIcon,
-} from '../components/CategoryIcons';
 import {
   CatalogAdvancedFilter,
   FilterState,
@@ -29,8 +21,12 @@ import {
 } from '../components/CatalogAdvancedFilter';
 import { productRatingValue } from '../utils/productRating';
 import { NotConfigured } from '../components/NotConfigured';
+import type { StoreCategory } from '../types';
+import { categoryIcon } from '../utils/categories';
 
 interface CatalogScreenProps {
+  /** From Admin → «Категории» */
+  categories?: StoreCategory[];
   products: Product[];
   favorites: string[];
   cartItemIds: string[];
@@ -54,6 +50,7 @@ interface CatalogScreenProps {
 }
 
 export const CatalogScreen: React.FC<CatalogScreenProps> = ({
+  categories = [],
   products,
   favorites,
   cartItemIds,
@@ -204,6 +201,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
       <div className="flex items-center gap-3 pt-1">
         <div className="flex-1">
           <AutocompleteSearch
+            categories={categories}
             products={products}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
@@ -233,28 +231,14 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
         </button>
       </div>
 
-      {/* 2. Category Carousel with Neumorphic Hierarchy */}
+      {/* 2. Category Carousel: categories from Admin → «Категории» */}
+      {categories.length === 0 && <NotConfigured title="Категории" />}
+      {categories.length > 0 && (
       <div className="relative -mx-4 px-4">
         <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-2 scroll-smooth">
-          {CATEGORIES.map((cat) => {
+          {[{ id: 'all', name: 'Все' }, ...categories].map((cat) => {
             const isSelected = selectedCategory === cat.id;
-            const getCategoryIcon = (id: string) => {
-              switch (id) {
-                case 'shirts':
-                  return ShirtIcon;
-                case 'tshirts':
-                  return TShirtIcon;
-                case 'jackets':
-                  return JacketIcon;
-                case 'trousers':
-                  return PantsIcon;
-                case 'sweatshirts':
-                  return SweatshirtIcon;
-                default:
-                  return Sparkles;
-              }
-            };
-            const IconComp = getCategoryIcon(cat.id);
+            const IconComp = cat.id === 'all' ? Sparkles : categoryIcon(cat);
 
             return (
               <button
@@ -279,6 +263,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
         {/* Soft edge fade mask indicating horizontal scroll */}
         <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#E3E8EF] to-transparent z-10" />
       </div>
+      )}
 
       {/* 3. Collapsible Advanced Filter Drawer / Modal (Local Fallback) */}
       {!onOpenFilters && (

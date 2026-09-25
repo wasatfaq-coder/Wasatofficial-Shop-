@@ -79,6 +79,8 @@ export interface CartItem {
   selectedColor: string;
   selectedSize: string;
   quantity: number;
+  /** Ordered while out of stock in preorder mode: not deducted from (or returned to) stock */
+  isPreorder?: boolean;
 }
 
 export interface SavedAddress {
@@ -425,7 +427,8 @@ export interface StorefrontSettings {
   postDeliveryPrice?: number;    // Cost for Russian Post delivery (default: 350)
   isStoreOnline: boolean;
   isExpressEnabled: boolean;
-  isAutoDiscount: boolean;
+  /** Removed from Admin → «Витрина»: never had any effect; may still be stored in Firestore */
+  isAutoDiscount?: boolean;
   isPreorderMode?: boolean;
   lowStockThreshold: number;
   legalEntityName?: string;
@@ -458,6 +461,38 @@ export interface StorefrontSettings {
   brandCraftsmanshipText?: string;
   brandGuaranteesTitle?: string;
   brandGuaranteesList?: string[];
+
+  /** Admin → «Оплата». Checkout offers only these; none configured → ordering is disabled */
+  paymentMethods?: StorePaymentMethod[];
+  /** Admin → «FAQ» */
+  faqItems?: StoreFaqItem[];
+  /** Admin → «Категории»: the single list used by the storefront and the admin panel */
+  categories?: StoreCategory[];
+}
+
+export interface StorePaymentMethod {
+  id: string;
+  title: string;
+  /** Instructions shown to the buyer when this method is selected (e.g. transfer details) */
+  description?: string;
+  /** Paid when the order is received: the order gets «оплата при получении» */
+  onDelivery?: boolean;
+  isActive?: boolean;
+}
+
+export interface StoreFaqItem {
+  id: string;
+  question: string;
+  answer: string;
+  isActive?: boolean;
+}
+
+export interface StoreCategory {
+  /** Stored in product.category */
+  id: string;
+  name: string;
+  /** Key from CATEGORY_ICONS (src/utils/categories.ts) */
+  icon?: string;
 }
 
 export interface AdminCredentials {

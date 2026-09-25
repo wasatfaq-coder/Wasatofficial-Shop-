@@ -20,7 +20,14 @@ import {
   matchesMaterialFilter,
   isProductAvailableInSize,
 } from './components/CatalogAdvancedFilter';
-import { deductStockWithLogs, loadStorefrontSettings, saveStorefrontSettings, getVariantStock, isProductInStock } from './utils/inventory';
+import {
+  deductStockWithLogs,
+  loadStorefrontSettings,
+  saveStorefrontSettings,
+  getOrderableStock,
+  isPreorderVariant,
+  isProductInStock,
+} from './utils/inventory';
 import { getDefaultDeliveryStages, getDefaultHistorySteps, getSynchronizedDeliveryStages } from './utils/deliveryStages';
 import { formatAddress } from './utils/addressFormat';
 import { ADMIN_EMAIL, useAuth } from './context/AuthContext';
@@ -68,9 +75,10 @@ import { FavoritesScreen } from './views/FavoritesScreen';
 import { OrderSuccessScreen } from './views/OrderSuccessScreen';
 import { validatePromo, PricingLine, QUICK_ORDER_DELIVERY_ID } from './shared/orderPricing';
 import { extractColorName, extractSizeName } from './utils/inventory';
-import { getStoreContacts, getStoreName, withStoreNameFields } from './utils/storeContacts';
+import { getStoreContacts, getStoreName, publicSetting, withStoreName, withStoreNameFields } from './utils/storeContacts';
 import { formatDays } from './utils/pluralize';
 import { productRatingValue } from './utils/productRating';
+import { getCategories } from './utils/categories';
 
 // Unique across customers: messages are create-only for customers (see firestore.rules)
 function newChatMessageId(): string {
@@ -201,6 +209,8 @@ export default function App() {
   // When true, orders are placed and validated by the placeOrder Cloud Function
   const [serverOrdersEnabled, setServerOrdersEnabled] = useState(false);
   const [storefrontSettings, setStorefrontSettings] = useState<StorefrontSettings>(loadStorefrontSettings);
+  // Admin → «Витрина» → «Предзаказ»: sold-out variants can still be ordered
+  const preorderMode = storefrontSettings?.isPreorderMode === true;
 
   // Sync storefront settings on custom update event
   React.useEffect(() => {
@@ -570,6 +580,7 @@ export default function App() {
     totalPrice: number;
     deliveryMethod: string;
     deliveryAddress: string;
+    paymentMethod?: string;
   } | null>(null);
 
   // Global tactile feedback on button click/tap
@@ -708,10 +719,16 @@ export default function App() {
     e.stopPropagation();
     const defaultColor = product.colors?.[0]?.name || 'Бежевый';
     const defaultSize = product.sizes?.[0] || 'M';
-    const variantStock = getVariantStock(product, defaultColor, defaultSize);
+    const maxAllowed = getOrderableStock(product, defaultColor, defaultSize, preorderMode);
 
-    if (variantStock <= 0 && !isProductInStock(product)) {
-      addToast(`Товар "${product.title}" временно закончился`, 'error');
+    if (maxAllowed <= 0) {
+      if (isProductInStock(product)) {
+        // The default variant is sold out, others are not: let the customer pick one
+        addToast(`Выберите доступный размер или цвет: ${product.title}`, 'info');
+        handleSelectProduct(product);
+      } else {
+        addToast(`Товар "${product.title}" временно закончился`, 'error');
+      }
       return;
     }
 
@@ -724,7 +741,6 @@ export default function App() {
 
     if (existingIndex > -1) {
       const currentItem = cartItems[existingIndex];
-      const maxAllowed = variantStock > 0 ? variantStock : 99;
       if (currentItem.quantity >= maxAllowed) {
         addToast(`Достигнут максимум в наличии (${maxAllowed} шт.) для ${product.title}`, 'info');
         return;
@@ -744,7 +760,12 @@ export default function App() {
         quantity: 1,
       };
       setCartItems((prev) => [...prev, newItem]);
-      addToast(`Добавлено в корзину: ${product.title}`, 'success');
+      addToast(
+        isPreorderVariant(product, defaultColor, defaultSize, preorderMode)
+          ? `Предзаказ добавлен в корзину: ${product.title}`
+          : `Добавлено в корзину: ${product.title}`,
+        'success'
+      );
     }
   };
 
@@ -755,7 +776,7 @@ export default function App() {
     size: string,
     quantity: number
   ) => {
-    const availableStock = getVariantStock(product, color, size);
+    const availableStock = getOrderableStock(product, color, size, preorderMode);
     if (availableStock <= 0) {
       addToast(`К сожалению, ${product.title} (${color}, ${size}) нет в наличии`, 'error');
       return;
@@ -798,7 +819,7 @@ export default function App() {
     let skipped = 0;
     items.forEach((item, idx) => {
       const product = products.find((p) => p.id === item.product?.id);
-      const stock = product ? getVariantStock(product, item.selectedColor, item.selectedSize) : 0;
+      const stock = product ? getOrderableStock(product, item.selectedColor, item.selectedSize, preorderMode) : 0;
       if (!product || stock <= 0) {
         skipped += 1;
         return;
@@ -827,7 +848,7 @@ export default function App() {
             c.selectedSize === add.selectedSize
         );
         if (i > -1) {
-          const stock = getVariantStock(add.product, add.selectedColor, add.selectedSize);
+          const stock = getOrderableStock(add.product, add.selectedColor, add.selectedSize, preorderMode);
           next[i] = { ...next[i], quantity: Math.min(next[i].quantity + add.quantity, stock) };
         } else {
           next.push(add);
@@ -852,7 +873,7 @@ export default function App() {
       setCartItems((prev) =>
         prev.map((item) => {
           if (item.id === cartItemId) {
-            const stock = getVariantStock(item.product, item.selectedColor, item.selectedSize);
+            const stock = getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode);
             const clamped = stock > 0 ? Math.min(newQty, stock) : newQty;
             return { ...item, quantity: clamped };
           }
@@ -876,7 +897,7 @@ export default function App() {
     setCartItems((prev) =>
       prev.map((item) => {
         if (item.id === cartItemId) {
-          const availableStock = getVariantStock(item.product, newColor, newSize);
+          const availableStock = getOrderableStock(item.product, newColor, newSize, preorderMode);
           const clampedQty = Math.max(1, Math.min(item.quantity, Math.max(1, availableStock)));
           return {
             ...item,
@@ -1123,13 +1144,15 @@ export default function App() {
     const deliveryAddress =
       orderData.address ||
       (userProfile.savedAddresses?.[0] ? formatAddress(userProfile.savedAddresses[0]) : '') ||
-      (userProfile.address ? formatAddress(userProfile.address) : 'Москва, Пресненская наб., д. 12');
-    const deliveryMethod = orderData.deliveryMethod || 'Курьерская доставка';
-    const paymentMethod = orderData.paymentMethod || 'Карта (онлайн)';
+      (userProfile.address ? formatAddress(userProfile.address) : '') ||
+      'Уточнит менеджер';
+    // Quick (1-click) orders have no delivery or payment choice: the manager agrees them with the buyer
+    const deliveryMethod = orderData.deliveryMethod || 'Уточнит менеджер';
+    const paymentMethod = orderData.paymentMethod || 'Уточнит менеджер';
     return { customerName, customerPhone, customerEmail, deliveryAddress, deliveryMethod, paymentMethod };
   };
 
-  const finishOrder = (order: Pick<Order, 'id' | 'totalPrice' | 'deliveryMethod' | 'deliveryAddress'>) => {
+  const finishOrder = (order: Pick<Order, 'id' | 'totalPrice' | 'deliveryMethod' | 'deliveryAddress'> & { paymentMethod?: string }) => {
     setCartItems([]);
     setAppliedPromo(null);
     setLatestOrder({
@@ -1137,6 +1160,7 @@ export default function App() {
       totalPrice: order.totalPrice,
       deliveryMethod: order.deliveryMethod,
       deliveryAddress: order.deliveryAddress,
+      paymentMethod: order.paymentMethod,
     });
     addToast(`Заказ № ${order.id} успешно оформлен!`, 'success');
     setActiveTab('order-success');
@@ -1198,10 +1222,17 @@ export default function App() {
       ? 'paid_on_delivery'
       : 'paid';
 
+    // Sold-out variants ordered in preorder mode are marked and not taken from stock
+    const orderItems: CartItem[] = orderData.items.map((item) =>
+      isPreorderVariant(item.product, item.selectedColor, item.selectedSize, preorderMode)
+        ? { ...item, isPreorder: true }
+        : item
+    );
+
     const newOrderBase = {
       id: newOrderId,
       date: `Сегодня, ${nowStr}`,
-      items: orderData.items,
+      items: orderItems,
       status: 'accepted' as const,
       totalPrice,
       deliveryAddress,
@@ -1225,7 +1256,7 @@ export default function App() {
     // Deduct stock per size/color SKU and automatically write off log
     const { updatedProducts } = deductStockWithLogs(
       products,
-      orderData.items,
+      orderItems,
       newOrderId,
       customerName
     );
@@ -1274,7 +1305,7 @@ export default function App() {
     const modifiedProducts = updatedProducts.filter((p) => orderedProductIds.has(p.id));
     saveModifiedProductsToFirestore(modifiedProducts);
 
-    finishOrder({ id: newOrderId, totalPrice, deliveryMethod, deliveryAddress });
+    finishOrder({ id: newOrderId, totalPrice, deliveryMethod, deliveryAddress, paymentMethod });
     return true;
   };
 
@@ -1410,6 +1441,20 @@ export default function App() {
           promos={promos}
         />
 
+        {/* Promo message from Admin → «Витрина»: shown when switched on and filled in */}
+        {storefrontSettings?.isStoreBannerVisible && publicSetting(storefrontSettings.storeBannerText) && (
+          <div className="px-4 pt-2">
+            <p className="max-w-lg mx-auto neu-flat-sm rounded-2xl px-3 py-2 flex items-center justify-center gap-2 text-center text-xs font-bold text-[#2D3A4E]">
+              {storefrontSettings.bannerBadgeText?.trim() && (
+                <span className="px-1.5 py-0.5 rounded-md bg-accent text-white text-[11px] font-black uppercase shrink-0">
+                  {storefrontSettings.bannerBadgeText.trim()}
+                </span>
+              )}
+              <span>{withStoreName(publicSetting(storefrontSettings.storeBannerText), getStoreName(storefrontSettings))}</span>
+            </p>
+          </div>
+        )}
+
         {/* Top Header Bar (only shown on non-home screens) */}
         {activeTab !== 'home' && (
           <Header
@@ -1460,6 +1505,7 @@ export default function App() {
 
           {activeTab === 'catalog' && (
             <CatalogScreen
+              categories={getCategories(storefrontSettings)}
               products={products}
               favorites={favorites}
               cartItemIds={cartProductIds}
@@ -1483,6 +1529,7 @@ export default function App() {
 
           {activeTab === 'product-detail' && selectedProduct && (
             <ProductDetailScreen
+              preorderMode={preorderMode}
               product={selectedProduct}
               returnPeriodDays={storefrontSettings.returnPeriodDays}
               freeDeliveryThreshold={storefrontSettings.freeDeliveryThreshold}
@@ -1505,6 +1552,7 @@ export default function App() {
 
           {activeTab === 'cart' && (
             <CartScreen
+              preorderMode={preorderMode}
               cartItems={cartItems}
               favorites={favorites}
               onUpdateQuantity={handleUpdateQuantity}
@@ -1521,7 +1569,13 @@ export default function App() {
               onRemovePromo={handleRemovePromo}
               onCompleteOrder={handleCompleteOrder}
               storefrontSettings={customerStorefront}
-              hasDeliveryMethods={deliveryMethods.some((m) => m.isActive !== false)}
+              checkoutBlocker={
+                !deliveryMethods.some((m) => m.isActive !== false)
+                  ? 'Способы доставки'
+                  : !(storefrontSettings.paymentMethods ?? []).some((m) => m.isActive !== false)
+                  ? 'Способы оплаты'
+                  : null
+              }
             />
           )}
 
@@ -1628,6 +1682,12 @@ export default function App() {
               totalPrice={latestOrder.totalPrice}
               deliveryMethod={latestOrder.deliveryMethod}
               deliveryAddress={latestOrder.deliveryAddress}
+              paymentMethod={latestOrder.paymentMethod}
+              paymentInstructions={
+                (storefrontSettings.paymentMethods ?? []).find(
+                  (m) => m.title.trim() && latestOrder.paymentMethod?.startsWith(m.title.trim())
+                )?.description
+              }
               setActiveTab={setActiveTab}
             />
           )}

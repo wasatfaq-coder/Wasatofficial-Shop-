@@ -728,13 +728,6 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
             <span>Экспорт в CSV</span>
           </button>
 
-          <button
-            onClick={() => onShowToast('Список заказов актуализирован', 'info')}
-            className="py-1.5 px-3 neu-inset rounded-xl text-xs font-bold text-accent flex items-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95 transition-transform"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Обновить</span>
-          </button>
         </div>
       </div>
 
@@ -1244,6 +1237,9 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                             <span className="text-[11px] text-[#4E5C70] shrink-0">
                               ({it.selectedColor}, {it.selectedSize})
                             </span>
+                            {it.isPreorder && (
+                              <span className="text-[11px] font-black text-accent shrink-0">Предзаказ</span>
+                            )}
                           </div>
                           <div className="text-right shrink-0">
                             <span className="font-bold text-accent whitespace-nowrap">

@@ -30,14 +30,15 @@ import {
   ChevronDown,
   GripVertical,
 } from 'lucide-react';
-import { BannerSlide, Product, PromoCode } from '../../types';
-import { CATEGORIES } from '../../data/products';
+import { BannerSlide, Product, PromoCode, StoreCategory } from '../../types';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { processImageFiles } from '../../utils/imageUpload';
 import { NotConfigured } from '../NotConfigured';
 
 interface AdminBannersTabProps {
   banners: BannerSlide[];
+  /** Admin → «Категории» (banner link to a category) */
+  categories?: StoreCategory[];
   products?: Product[];
   promos?: PromoCode[];
   onUpdateBanners: (banners: BannerSlide[]) => void;
@@ -46,6 +47,7 @@ interface AdminBannersTabProps {
 
 export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
   banners,
+  categories = [],
   products = [],
   promos = [],
   onUpdateBanners,
@@ -523,7 +525,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                   onChange={(val) => setTargetCategory(val)}
                   options={[
                     { value: 'all', label: 'Все категории' },
-                    ...CATEGORIES.map((c) => ({
+                    ...categories.map((c) => ({
                       value: c.id,
                       label: c.name,
                     })),

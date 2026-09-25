@@ -22,7 +22,6 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   postDeliveryPrice: 350,
   isStoreOnline: true,
   isExpressEnabled: true,
-  isAutoDiscount: true,
   isPreorderMode: false,
   lowStockThreshold: 3,
   legalEntityName: '',
@@ -201,6 +200,29 @@ export function getProductSKU(
 /**
  * Get available stock count for given product, color, and size
  */
+/** Most units of one out-of-stock variant a customer can preorder at once */
+export const PREORDER_MAX_QTY = 10;
+
+/**
+ * Units a customer can put in the cart: the stock, or — with «Предзаказ» on in Admin → «Витрина»
+ * and the variant sold out — up to PREORDER_MAX_QTY as a preorder.
+ */
+export function getOrderableStock(
+  product: Product,
+  colorName: unknown,
+  sizeName: unknown,
+  preorderMode: boolean
+): number {
+  const stock = getVariantStock(product, colorName, sizeName);
+  if (stock > 0) return stock;
+  return preorderMode ? PREORDER_MAX_QTY : 0;
+}
+
+/** A sold-out variant that can be ordered only as a preorder */
+export function isPreorderVariant(product: Product, colorName: unknown, sizeName: unknown, preorderMode: boolean): boolean {
+  return preorderMode && getVariantStock(product, colorName, sizeName) <= 0;
+}
+
 export function getVariantStock(
   product: Product,
   colorName?: unknown,
@@ -335,7 +357,8 @@ function applyStockChangeWithLogs(
   const nowStr = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 
   const updatedProducts = products.map((prod) => {
-    const relevantItems = items.filter((it) => it.product.id === prod.id);
+    // Preorder lines were never taken from stock, so they are neither deducted nor returned
+    const relevantItems = items.filter((it) => it.product.id === prod.id && !it.isPreorder);
     if (relevantItems.length === 0) return prod;
 
     const currentSkus = prod.skus && prod.skus.length > 0 ? prod.skus : generateDefaultSKUs(prod);

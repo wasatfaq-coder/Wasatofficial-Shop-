@@ -755,7 +755,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </span>
                 <input
                   type="checkbox"
-                  checked={localSettings.isStoreBannerVisible ?? true}
+                  checked={localSettings.isStoreBannerVisible ?? false}
                   onChange={(e) =>
                     setLocalSettings({ ...localSettings, isStoreBannerVisible: e.target.checked })
                   }
@@ -783,7 +783,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 <div className="flex items-center gap-1.5">
                   <input
                     type="text"
-                    value={localSettings.bannerBadgeText ?? 'АКЦИЯ'}
+                    value={localSettings.bannerBadgeText ?? ''}
                     onChange={(e) =>
                       setLocalSettings({ ...localSettings, bannerBadgeText: e.target.value })
                     }
@@ -797,9 +797,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         key: 'bannerBadgeText',
                         title: 'Промо-сообщение',
                         fieldLabel: 'Текст бейджа акции',
-                        value: localSettings.bannerBadgeText ?? 'АКЦИЯ',
+                        value: localSettings.bannerBadgeText ?? '',
                         badge: 'Бейдж',
-                        description: 'Короткое слово на цветном бейдже в верхней строке сайта (например: АКЦИЯ, NEW, ВНИМАНИЕ).',
+                        description: 'Необязательное короткое слово перед текстом (например: АКЦИЯ, NEW). Пусто — без бейджа.',
                       })
                     }
                     className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
@@ -819,8 +819,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   <input
                     type="text"
                     value={
-                      localSettings.storeBannerText ??
-                      'Бесплатная экспресс-доставка при заказе от 5 000 ₽'
+                      localSettings.storeBannerText ?? ''
                     }
                     onChange={(e) =>
                       setLocalSettings({ ...localSettings, storeBannerText: e.target.value })
@@ -835,11 +834,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         key: 'storeBannerText',
                         title: 'Промо-сообщение',
                         fieldLabel: 'Текст промо-сообщения',
-                        value:
-                          localSettings.storeBannerText ??
-                          'Бесплатная экспресс-доставка при заказе от 5 000 ₽',
+                        value: localSettings.storeBannerText ?? '',
                         badge: 'Верхняя строка',
-                        description: 'Текст рекламного объявления или акции, бегущий или отображаемый в шапке на всех страницах.',
+                        description: 'Строка над шапкой на всех страницах. Показывается, когда баннер включен и текст заполнен.',
                       })
                     }
                     className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
@@ -2290,10 +2287,10 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
           </div>
 
           <p className="text-[11px] text-[#4E5C70]">
-            Управление глобальным статусом онлайн-заказов, скоростной доставкой, автоматическими скидками и режимом капсульного предзаказа.
+            Прием заказов, экспресс-доставка и предзаказ товаров, которых нет на складе.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             {/* Online Storefront */}
             <div
               onClick={() =>
@@ -2367,44 +2364,6 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               </div>
             </div>
 
-            {/* Auto Discounts */}
-            <div
-              onClick={() =>
-                setLocalSettings({
-                  ...localSettings,
-                  isAutoDiscount: !localSettings.isAutoDiscount,
-                })
-              }
-              className="neu-inset p-3 rounded-2xl flex items-center justify-between cursor-pointer select-none bg-[#E3E8EF] hover:brightness-[1.01] active:scale-[0.98] transition-all border border-black/5"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className={`w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center shrink-0 transition-colors ${
-                  localSettings.isAutoDiscount ? 'text-accent' : 'text-[#8C9BAE]'
-                }`}>
-                  <Tag className="w-4 h-4" />
-                </div>
-                <div className="space-y-0.5 truncate">
-                  <span className="text-xs font-black text-[#2D3A4E] block truncate">Авто-скидки</span>
-                  <span className={`text-[11px] font-bold block truncate ${
-                    localSettings.isAutoDiscount ? 'text-success' : 'text-[#8C9BAE]'
-                  }`}>
-                    {localSettings.isAutoDiscount ? 'Акции активны' : 'Только базовая цена'}
-                  </span>
-                </div>
-              </div>
-              <div
-                className={`w-9 h-5 rounded-full transition-colors relative p-0.5 shrink-0 ml-2 shadow-inner ${
-                  localSettings.isAutoDiscount ? 'bg-accent' : 'bg-[#BAC5D5]/60'
-                }`}
-              >
-                <div
-                  className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
-                    localSettings.isAutoDiscount ? 'translate-x-4' : 'translate-x-0'
-                  }`}
-                />
-              </div>
-            </div>
-
             {/* Preorder Mode */}
             <div
               onClick={() =>
@@ -2422,11 +2381,11 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   <Sparkles className="w-4 h-4" />
                 </div>
                 <div className="space-y-0.5 truncate">
-                  <span className="text-xs font-black text-[#2D3A4E] block truncate">Предзаказ NEW</span>
+                  <span className="text-xs font-black text-[#2D3A4E] block truncate">Предзаказ</span>
                   <span className={`text-[11px] font-bold block truncate ${
                     localSettings.isPreorderMode ? 'text-accent' : 'text-[#8C9BAE]'
                   }`}>
-                    {localSettings.isPreorderMode ? 'Режим капсулы' : 'Стандартный каталог'}
+                    {localSettings.isPreorderMode ? 'Можно заказать без остатка' : 'Только в наличии'}
                   </span>
                 </div>
               </div>
