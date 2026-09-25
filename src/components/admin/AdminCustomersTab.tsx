@@ -58,12 +58,12 @@ const CUSTOMER_CATEGORY_OPTIONS: NeumorphicSelectOption[] = [
   {
     value: 'with_orders',
     label: 'С покупками',
-    icon: <ShoppingBag className="w-3.5 h-3.5 text-amber-600" />,
+    icon: <ShoppingBag className="w-3.5 h-3.5 text-warning" />,
   },
   {
     value: 'repeat',
     label: 'Постоянные (2+)',
-    icon: <UserCheck className="w-3.5 h-3.5 text-emerald-600" />,
+    icon: <UserCheck className="w-3.5 h-3.5 text-success" />,
   },
   {
     value: 'registered',
@@ -86,7 +86,7 @@ const CUSTOMER_SORT_OPTIONS: NeumorphicSelectOption[] = [
   {
     value: 'orders_desc',
     label: 'По числу заказов',
-    icon: <ShoppingBag className="w-3.5 h-3.5 text-emerald-600" />,
+    icon: <ShoppingBag className="w-3.5 h-3.5 text-success" />,
   },
   {
     value: 'name_asc',
@@ -447,13 +447,13 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
   const getOrderStatusBadge = (status: Order['status'] | string) => {
     switch (status) {
       case 'delivered':
-        return { label: ORDER_STATUS_LABELS.delivered, bg: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
+        return { label: ORDER_STATUS_LABELS.delivered, bg: 'bg-success-soft text-success border-success/25' };
       case 'in_transit':
         return { label: ORDER_STATUS_LABELS.in_transit, bg: 'bg-blue-100 text-blue-700 border-blue-200' };
       case 'ready':
         return { label: ORDER_STATUS_LABELS.ready, bg: 'bg-purple-100 text-purple-700 border-purple-200' };
       case 'assembling':
-        return { label: ORDER_STATUS_LABELS.assembling, bg: 'bg-amber-100 text-amber-700 border-amber-200' };
+        return { label: ORDER_STATUS_LABELS.assembling, bg: 'bg-warning-soft text-warning border-warning/25' };
       case 'accepted':
         return { label: ORDER_STATUS_LABELS.accepted, bg: 'bg-indigo-100 text-indigo-700 border-indigo-200' };
       default:
@@ -515,7 +515,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
         </div>
 
         <div className="neu-inset rounded-2xl p-3.5 flex items-center gap-3 bg-[#E3E8EF]">
-          <div className="w-11 h-11 rounded-xl neu-flat-sm flex items-center justify-center text-emerald-600 shrink-0">
+          <div className="w-11 h-11 rounded-xl neu-flat-sm flex items-center justify-center text-success shrink-0">
             <DollarSign className="w-5 h-5" />
           </div>
           <div className="min-w-0">
@@ -527,7 +527,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
         </div>
 
         <div className="neu-inset rounded-2xl p-3.5 flex items-center gap-3 bg-[#E3E8EF]">
-          <div className="w-11 h-11 rounded-xl neu-flat-sm flex items-center justify-center text-amber-600 shrink-0">
+          <div className="w-11 h-11 rounded-xl neu-flat-sm flex items-center justify-center text-warning shrink-0">
             <ShoppingBag className="w-5 h-5" />
           </div>
           <div className="min-w-0">
@@ -546,7 +546,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
             <span className="text-[11px] font-semibold text-[#5C6B80] block truncate">Постоянные клиенты</span>
             <div className="flex items-baseline gap-1.5">
               <span className="text-lg font-black text-[#2D3A4E]">{stats.repeatClients}</span>
-              <span className="text-[10px] text-emerald-600 font-bold">2+ заказа</span>
+              <span className="text-[10px] text-success font-bold">2+ заказа</span>
             </div>
           </div>
         </div>
@@ -698,7 +698,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                   </div>
 
                   {customer.ordersCount > 1 ? (
-                    <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                    <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-success-soft text-success border border-success/25 shrink-0">
                       Постоянный ({customer.ordersCount})
                     </span>
                   ) : customer.ordersCount === 1 ? (
@@ -853,7 +853,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                       {selectedCustomer.name}
                     </h3>
                     {selectedCustomer.ordersCount > 1 ? (
-                      <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-success-soft text-success border border-success/25">
                         Постоянный покупатель
                       </span>
                     ) : selectedCustomer.ordersCount === 1 ? (
@@ -913,7 +913,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                         className="text-[#5C6B80] hover:text-[#2D3A4E] shrink-0"
                         title="Скопировать email"
                       >
-                        {copiedField === 'email' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copiedField === 'email' ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
                       </button>
                     </div>
                   )}
@@ -921,7 +921,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                   {selectedCustomer.phone && (
                     <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-[#E3E8EF]/80 neu-flat-sm">
                       <div className="flex items-center gap-2 min-w-0">
-                        <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <Phone className="w-3.5 h-3.5 text-success shrink-0" />
                         <span className="truncate font-medium">{selectedCustomer.phone}</span>
                       </div>
                       <button
@@ -930,7 +930,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                         className="text-[#5C6B80] hover:text-[#2D3A4E] shrink-0"
                         title="Скопировать телефон"
                       >
-                        {copiedField === 'phone' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copiedField === 'phone' ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
                       </button>
                     </div>
                   )}
@@ -948,7 +948,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                         className="text-[#5C6B80] hover:text-[#2D3A4E] shrink-0"
                         title="Скопировать UID"
                       >
-                        {copiedField === 'uid' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copiedField === 'uid' ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
                       </button>
                     </div>
                   )}
@@ -975,7 +975,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                           className="hover:text-[#2D3A4E]"
                           title="Скопировать адрес"
                         >
-                          {copiedField === 'address' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                          {copiedField === 'address' ? <Check className="w-3 h-3 text-success" /> : <Copy className="w-3 h-3" />}
                         </button>
                       </div>
                       <p className="text-xs font-semibold text-[#2D3A4E] leading-relaxed">
@@ -995,7 +995,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                             <div className="flex items-center justify-between">
                               <span className="font-bold text-[#2D3A4E]">{sa.title}</span>
                               {sa.isDefault && (
-                                <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-md">
+                                <span className="text-[9px] font-bold text-success bg-success-soft px-1.5 py-0.5 rounded-md">
                                   Основной
                                 </span>
                               )}
@@ -1046,7 +1046,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                   <div className="neu-flat-sm p-2.5 rounded-xl bg-[#E3E8EF]/80">
                     <span className="text-[10px] text-[#5C6B80] block">Общий LTV</span>
-                    <span className="text-sm font-black text-emerald-600">
+                    <span className="text-sm font-black text-success">
                       {selectedCustomer.totalSpent.toLocaleString('ru-RU')} ₽
                     </span>
                   </div>
@@ -1148,7 +1148,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                         <button
                           type="button"
                           onClick={() => handleRemoveTag(tag)}
-                          className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[#5C6B80] hover:text-rose-600 hover:bg-rose-500/10 active:scale-90 transition-all cursor-pointer"
+                          className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[#5C6B80] hover:text-danger hover:bg-danger-soft active:scale-90 transition-all cursor-pointer"
                           title={`Удалить тег #${tag}`}
                         >
                           <X className="w-2.5 h-2.5 stroke-[2.5]" />
@@ -1272,7 +1272,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                               )}
                             </div>
                             <div className="flex items-center gap-1.5">
-                              <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
+                              <CreditCard className="w-3.5 h-3.5 text-success" />
                               <span>{ord.paymentMethod || 'Оплачен'}</span>
                             </div>
                           </div>
@@ -1303,7 +1303,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/50 backdrop-blur-sm animate-in fade-in">
           <div className="neu-modal rounded-3xl p-5 sm:p-6 max-w-md w-full space-y-4 text-[#2D3A4E] border border-white/80">
             <div className="flex items-center gap-3 border-b border-[#BAC5D5]/40 pb-3">
-              <div className="w-10 h-10 rounded-2xl neu-flat-sm flex items-center justify-center text-rose-600 shrink-0">
+              <div className="w-10 h-10 rounded-2xl neu-flat-sm flex items-center justify-center text-danger shrink-0">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
@@ -1313,13 +1313,13 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
             </div>
 
             <div className="neu-inset rounded-2xl p-3.5 space-y-2 text-xs text-[#2D3A4E] bg-[#E3E8EF]">
-              <p className="font-semibold text-rose-700">Внимание! Будут безвозвратно удалены:</p>
+              <p className="font-semibold text-danger">Внимание! Будут безвозвратно удалены:</p>
               <ul className="list-disc list-inside space-y-1 text-[#5C6B80]">
                 <li>Все фиктивные профили клиентов (Иван Петров, Алексей Морозов и т.д.)</li>
                 <li>Все демо-заказы (MS-8420, MS-7912, MS-9824...)</li>
                 <li>Неактуальные тестовые записи в Firestore</li>
               </ul>
-              <p className="text-[11px] text-emerald-700 font-bold pt-1 border-t border-[#BAC5D5]/40">
+              <p className="text-[11px] text-success font-bold pt-1 border-t border-[#BAC5D5]/40">
                 ✓ Ваш профиль администратора (gunh83975@gmail.com) и реальный каталог товаров останутся без изменений.
               </p>
             </div>
@@ -1361,7 +1361,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/50 backdrop-blur-sm animate-in fade-in">
           <div className="neu-modal rounded-3xl p-5 max-w-sm w-full space-y-4 text-[#2D3A4E] border border-white/80">
             <div className="flex items-center gap-3 border-b border-[#BAC5D5]/40 pb-3">
-              <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-rose-600 shrink-0">
+              <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-danger shrink-0">
                 <Trash2 className="w-4 h-4" />
               </div>
               <div className="min-w-0">

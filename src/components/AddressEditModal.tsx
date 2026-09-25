@@ -161,8 +161,8 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
 
             {/* Validation alert banner if required courier fields missing */}
             {Object.keys(errors).length > 0 && (
-              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-300 text-rose-700 text-xs flex items-center gap-2 animate-in fade-in duration-200">
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <div className="p-3 rounded-2xl bg-danger-soft border border-danger/35 text-danger text-xs flex items-center gap-2 animate-in fade-in duration-200">
+                <AlertCircle className="w-4 h-4 text-danger shrink-0" />
                 <span className="font-semibold">
                   Пожалуйста, заполните обязательные данные для курьера: номер дома, подъезд и код домофона.
                 </span>
@@ -234,7 +234,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
               <div className="grid grid-cols-3 gap-2.5">
                 <div>
                   <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
-                    Номер дома <span className="text-rose-500 font-bold">*</span>
+                    Номер дома <span className="text-danger font-bold">*</span>
                   </label>
                   <input
                     type="text"
@@ -247,18 +247,18 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                     }}
                     placeholder="д. 10 / 12к1"
                     className={`w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#5C6B80]/70 focus:outline-none bg-[#E3E8EF] transition-all ${
-                      errors.house ? 'ring-2 ring-rose-500/70 bg-rose-50/20' : ''
+                      errors.house ? 'ring-2 ring-danger/70 bg-danger-soft' : ''
                     }`}
                   />
                   {errors.house && (
-                    <p className="text-[10px] text-rose-600 font-medium mt-1 leading-tight">
+                    <p className="text-[10px] text-danger font-medium mt-1 leading-tight">
                       {errors.house}
                     </p>
                   )}
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
-                    Подъезд <span className="text-rose-500 font-bold">*</span>
+                    Подъезд <span className="text-danger font-bold">*</span>
                   </label>
                   <input
                     type="text"
@@ -271,11 +271,11 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                     }}
                     placeholder="2"
                     className={`w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#5C6B80]/70 focus:outline-none bg-[#E3E8EF] transition-all ${
-                      errors.entrance ? 'ring-2 ring-rose-500/70 bg-rose-50/20' : ''
+                      errors.entrance ? 'ring-2 ring-danger/70 bg-danger-soft' : ''
                     }`}
                   />
                   {errors.entrance && (
-                    <p className="text-[10px] text-rose-600 font-medium mt-1 leading-tight">
+                    <p className="text-[10px] text-danger font-medium mt-1 leading-tight">
                       {errors.entrance}
                     </p>
                   )}
@@ -310,7 +310,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
-                    Код домофона <span className="text-rose-500 font-bold">*</span>
+                    Код домофона <span className="text-danger font-bold">*</span>
                   </label>
                   <input
                     type="text"
@@ -323,11 +323,11 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                     }}
                     placeholder="25K / #1234"
                     className={`w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#5C6B80]/70 focus:outline-none bg-[#E3E8EF] transition-all ${
-                      errors.intercom ? 'ring-2 ring-rose-500/70 bg-rose-50/20' : ''
+                      errors.intercom ? 'ring-2 ring-danger/70 bg-danger-soft' : ''
                     }`}
                   />
                   {errors.intercom && (
-                    <p className="text-[10px] text-rose-600 font-medium mt-1 leading-tight">
+                    <p className="text-[10px] text-danger font-medium mt-1 leading-tight">
                       {errors.intercom}
                     </p>
                   )}

@@ -27,7 +27,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({
   if (favoriteProducts.length === 0) {
     return (
       <div className="py-12 space-y-5 text-center animate-in fade-in duration-300">
-        <div className="w-24 h-24 rounded-full neu-flat flex items-center justify-center mx-auto text-rose-400">
+        <div className="w-24 h-24 rounded-full neu-flat flex items-center justify-center mx-auto text-danger">
           <Heart className="w-10 h-10 stroke-[1.5]" />
         </div>
         <div className="space-y-1">

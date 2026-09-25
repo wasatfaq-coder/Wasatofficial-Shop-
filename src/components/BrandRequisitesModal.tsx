@@ -231,7 +231,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                     <Sparkles className="w-3 h-3 text-[#5F6ED0]" />
                     VIP Concierge Service 24/7
                   </span>
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-success animate-pulse" />
                 </div>
                 <p className="text-xs text-[#2D3A4E] font-medium leading-relaxed">
                   {conciergeDescription}
@@ -264,16 +264,16 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                     href={`https://wa.me/${cleanWhatsapp}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="neu-inset bg-[#E3E8EF] rounded-2xl p-3 flex items-center gap-2.5 text-[#2D3A4E] hover:text-emerald-600 transition-all cursor-pointer active:scale-[0.98] group"
+                    className="neu-inset bg-[#E3E8EF] rounded-2xl p-3 flex items-center gap-2.5 text-[#2D3A4E] hover:text-success transition-all cursor-pointer active:scale-[0.98] group"
                   >
-                    <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-emerald-600 shrink-0 group-hover:scale-105 transition-transform">
+                    <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-success shrink-0 group-hover:scale-105 transition-transform">
                       <MessageSquare className="w-4 h-4" />
                     </div>
                     <div className="min-w-0 text-left">
-                      <span className="text-[10px] text-[#5C6B80] block font-bold uppercase group-hover:text-emerald-600 transition-colors">
+                      <span className="text-[10px] text-[#5C6B80] block font-bold uppercase group-hover:text-success transition-colors">
                         WhatsApp
                       </span>
-                      <span className="text-xs font-black truncate block group-hover:text-emerald-600 transition-colors">
+                      <span className="text-xs font-black truncate block group-hover:text-success transition-colors">
                         {whatsapp}
                       </span>
                     </div>
@@ -424,8 +424,8 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                 >
                   {copiedKey === 'all' ? (
                     <>
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
-                      <span className="text-emerald-600">Скопировано</span>
+                      <Check className="w-3.5 h-3.5 text-success" />
+                      <span className="text-success">Скопировано</span>
                     </>
                   ) : (
                     <>
@@ -461,7 +461,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                     </div>
                     <div className="w-7 h-7 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] group-hover:text-[#5F6ED0] shrink-0 transition-colors">
                       {copiedKey === item.key ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" />
+                        <Check className="w-3.5 h-3.5 text-success stroke-[2.5]" />
                       ) : (
                         <Copy className="w-3.5 h-3.5" />
                       )}
@@ -518,7 +518,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
               {/* Guarantees */}
               <div className="neu-inset p-3.5 rounded-2xl bg-[#E3E8EF] space-y-2">
                 <div className="flex items-center gap-1.5 text-xs font-black text-[#2D3A4E]">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <ShieldCheck className="w-4 h-4 text-success" />
                   <span>{brandGuaranteesTitle}</span>
                 </div>
                 <ul className="text-[11px] text-[#5C6B80] space-y-1 list-disc list-inside">

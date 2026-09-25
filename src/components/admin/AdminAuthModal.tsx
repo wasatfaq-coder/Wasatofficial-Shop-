@@ -148,9 +148,9 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
         {error && (
           <div
             id="admin-auth-error-banner"
-            className="mb-4 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-start gap-2 animate-in fade-in"
+            className="mb-4 p-3 rounded-2xl bg-danger-soft border border-danger/25 text-danger text-xs font-bold flex items-start gap-2 animate-in fade-in"
           >
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+            <AlertCircle className="w-4 h-4 shrink-0 text-danger mt-0.5" />
             <span>{error}</span>
           </div>
         )}

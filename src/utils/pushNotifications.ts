@@ -125,7 +125,7 @@ export function getOrderStatusNotification(
       oldStatus,
       newStatus: effectiveNewStatus,
       badgeText: 'Отменен',
-      badgeBg: 'bg-rose-100 text-rose-700 border-rose-300',
+      badgeBg: 'bg-danger-soft text-danger border-danger/35',
     };
   }
 
@@ -144,7 +144,7 @@ export function getOrderStatusNotification(
         oldStatus,
         newStatus: effectiveNewStatus,
         badgeText: 'Сборка',
-        badgeBg: 'bg-amber-100 text-amber-800 border-amber-300',
+        badgeBg: 'bg-warning-soft text-warning border-warning/35',
       };
 
     case 'in_transit': {
@@ -185,7 +185,7 @@ export function getOrderStatusNotification(
         oldStatus,
         newStatus: effectiveNewStatus,
         badgeText: 'Готов к выдаче',
-        badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+        badgeBg: 'bg-success-soft text-success border-success/35',
       };
 
     case 'delivered':
@@ -198,7 +198,7 @@ export function getOrderStatusNotification(
         oldStatus,
         newStatus: effectiveNewStatus,
         badgeText: 'Доставлен',
-        badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+        badgeBg: 'bg-success-soft text-success border-success/35',
       };
 
     case 'accepted':

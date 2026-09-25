@@ -927,26 +927,26 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
             <button
               onClick={handleBulkRestock}
-              className="h-8 px-3 neu-button rounded-xl text-[11px] font-black text-[#5C6B80] hover:text-emerald-700 flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
+              className="h-8 px-3 neu-button rounded-xl text-[11px] font-black text-[#5C6B80] hover:text-success flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
               title="Пополнить складские остатки всех выбранных на +5 шт"
             >
-              <Boxes className="w-3.5 h-3.5 text-emerald-600" />
+              <Boxes className="w-3.5 h-3.5 text-success" />
               +5 шт на SKU
             </button>
 
             <button
               onClick={() => handleBulkToggleStock(false)}
-              className="h-8 px-3 neu-button rounded-xl text-[11px] font-black text-[#5C6B80] hover:text-amber-700 flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
+              className="h-8 px-3 neu-button rounded-xl text-[11px] font-black text-[#5C6B80] hover:text-warning flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
             >
-              <X className="w-3.5 h-3.5 text-amber-600" />
+              <X className="w-3.5 h-3.5 text-warning" />
               Снять с продажи
             </button>
 
             <button
               onClick={() => handleBulkToggleStock(true)}
-              className="h-8 px-3 neu-button rounded-xl text-[11px] font-black text-[#5C6B80] hover:text-emerald-700 flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
+              className="h-8 px-3 neu-button rounded-xl text-[11px] font-black text-[#5C6B80] hover:text-success flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
             >
-              <Check className="w-3.5 h-3.5 text-emerald-600" />
+              <Check className="w-3.5 h-3.5 text-success" />
               В продажу
             </button>
 
@@ -1028,7 +1028,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         </span>
                       )}
                       {prod.inStock === false && (
-                        <span className="text-[9px] font-black px-2 py-0.5 rounded-md neu-inset text-rose-600 shrink-0 bg-rose-50 border border-rose-200 whitespace-nowrap">
+                        <span className="text-[9px] font-black px-2 py-0.5 rounded-md neu-inset text-danger shrink-0 bg-danger-soft border border-danger/25 whitespace-nowrap">
                           Снят с витрины
                         </span>
                       )}
@@ -1050,10 +1050,10 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                       <span
                         className={`font-black text-[10px] px-2 py-0.5 rounded-lg shrink-0 whitespace-nowrap ${
                           totalStock === 0
-                            ? 'text-rose-600 bg-rose-50 border border-rose-200'
+                            ? 'text-danger bg-danger-soft border border-danger/25'
                             : totalStock < 3
-                            ? 'text-amber-700 bg-amber-50 border border-amber-200'
-                            : 'text-emerald-700 bg-emerald-50 border border-emerald-200'
+                            ? 'text-warning bg-warning-soft border border-warning/25'
+                            : 'text-success bg-success-soft border border-success/25'
                         }`}
                       >
                         Остаток: {totalStock} шт.
@@ -1078,7 +1078,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                     {/* Secondary: Duplicate */}
                     <button
                       onClick={() => handleDuplicateProduct(prod)}
-                      className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-emerald-700 active:scale-95 transition-all cursor-pointer shrink-0"
+                      className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-success active:scale-95 transition-all cursor-pointer shrink-0"
                       title="Дублировать товар (копировать)"
                     >
                       <Copy className="w-3.5 h-3.5" />
@@ -1137,10 +1137,10 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                     <span
                       className={`font-black ${
                         totalFormStock === 0
-                          ? 'text-rose-600'
+                          ? 'text-danger'
                           : totalFormStock < 5
-                          ? 'text-amber-600'
-                          : 'text-emerald-700'
+                          ? 'text-warning'
+                          : 'text-success'
                       }`}
                     >
                       Остаток: {totalFormStock} шт.
@@ -1157,7 +1157,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                     onClick={() => setFormInStock(true)}
                     className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer active:scale-95 ${
                       formInStock
-                        ? 'neu-button text-emerald-700 bg-[#E3E8EF]'
+                        ? 'neu-button text-success bg-[#E3E8EF]'
                         : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                     }`}
                   >
@@ -1168,7 +1168,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                     onClick={() => setFormInStock(false)}
                     className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer active:scale-95 ${
                       !formInStock
-                        ? 'neu-button text-rose-600 bg-[#E3E8EF]'
+                        ? 'neu-button text-danger bg-[#E3E8EF]'
                         : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                     }`}
                   >
@@ -1189,12 +1189,12 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
             {/* SKU Uniqueness & Integrity Banner */}
             {skuConflictInfo.hasConflicts ? (
-              <div className="neu-inset rounded-2xl p-3 bg-rose-50/90 border border-rose-200 text-rose-900 text-xs space-y-1.5">
+              <div className="neu-inset rounded-2xl p-3 bg-danger-soft border border-danger/25 text-danger text-xs space-y-1.5">
                 <div className="flex items-center gap-2 font-black">
-                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <AlertTriangle className="w-4 h-4 text-danger shrink-0" />
                   <span>Внимание: Обнаружены дубликаты артикулов SKU в каталоге!</span>
                 </div>
-                <div className="text-[11px] text-rose-800 space-y-0.5 pl-6">
+                <div className="text-[11px] text-danger space-y-0.5 pl-6">
                   {skuConflictInfo.duplicateCodes.map((d, i) => (
                     <div key={i}>
                       Артикул <strong className="font-mono">{d.code}</strong> уже занят товаром «{d.conflictingProduct}»
@@ -1203,8 +1203,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="neu-inset rounded-2xl p-2.5 bg-emerald-50/80 border border-emerald-200 text-emerald-900 text-xs flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="neu-inset rounded-2xl p-2.5 bg-success-soft border border-success/25 text-success text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
                 <span className="font-bold">
                   Все артикулы SKU и штрихкоды уникальны в каталоге MANSTYLE
                 </span>
@@ -1241,7 +1241,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         <button
                           type="button"
                           onClick={() => setFormBadge('')}
-                          className="text-[10px] font-bold text-rose-600 hover:text-rose-700 hover:underline cursor-pointer"
+                          className="text-[10px] font-bold text-danger hover:text-danger hover:underline cursor-pointer"
                         >
                           Снять ярлык
                         </button>
@@ -1405,7 +1405,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         Ценообразование и маржинальность
                       </span>
                       {formPrice > 0 && formCostPrice !== undefined && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-lg neu-flat bg-[#E3E8EF] text-emerald-700 font-extrabold border border-emerald-500/20">
+                        <span className="text-[10px] px-2 py-0.5 rounded-lg neu-flat bg-[#E3E8EF] text-success font-extrabold border border-success/20">
                           Маржа: {Math.round(((formPrice - formCostPrice) / formPrice) * 100)}% (+{(formPrice - formCostPrice).toLocaleString('ru-RU')} ₽)
                         </span>
                       )}
@@ -1576,7 +1576,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                                   e.stopPropagation();
                                   handleDeleteImage(idx);
                                 }}
-                                className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-[var(--neu-on-photo)] active:scale-90 transition-transform cursor-pointer z-10"
+                                className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-danger hover:bg-danger/90 text-white flex items-center justify-center shadow-[var(--neu-on-photo)] active:scale-90 transition-transform cursor-pointer z-10"
                                 title="Удалить это фото"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -1701,7 +1701,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                             <button
                               type="button"
                               onClick={() => handleRemoveColor(c.name)}
-                              className="text-[#5C6B80] hover:text-rose-600 ml-1 active:scale-90 transition-transform cursor-pointer"
+                              className="text-[#5C6B80] hover:text-danger ml-1 active:scale-90 transition-transform cursor-pointer"
                               title={`Удалить цвет «${c.name}»`}
                             >
                               <X className="w-3 h-3" />
@@ -1814,7 +1814,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                             <button
                               type="button"
                               onClick={() => handleRemoveSize(s)}
-                              className="text-[#5C6B80] hover:text-rose-600 ml-1 active:scale-90 transition-transform cursor-pointer"
+                              className="text-[#5C6B80] hover:text-danger ml-1 active:scale-90 transition-transform cursor-pointer"
                               title={`Удалить размер ${s}`}
                             >
                               <X className="w-3 h-3" />
@@ -1895,7 +1895,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         <button
                           type="button"
                           onClick={handleResetAllSkuStock}
-                          className="h-6 px-2 rounded-lg neu-button text-[10px] font-bold text-rose-600 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                          className="h-6 px-2 rounded-lg neu-button text-[10px] font-bold text-danger active:scale-95 transition-all cursor-pointer whitespace-nowrap"
                           title="Обнулить остатки всех вариаций"
                         >
                           Обнулить
@@ -1999,10 +1999,10 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                                 <span
                                   className={`w-2 h-2 rounded-full ml-1 shrink-0 ${
                                     sku.stock === 0
-                                      ? 'bg-rose-500'
+                                      ? 'bg-danger'
                                       : sku.stock < 3
-                                      ? 'bg-amber-500'
-                                      : 'bg-emerald-500'
+                                      ? 'bg-warning'
+                                      : 'bg-success'
                                   }`}
                                   title={
                                     sku.stock === 0
@@ -2043,10 +2043,10 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   <div className="p-2 sm:p-2.5 neu-inset rounded-xl bg-[#E3E8EF] flex flex-col justify-center text-center">
                     <span className="text-[10px] font-bold text-[#5C6B80] leading-tight mb-0.5">Статус товара</span>
                     <div className="flex items-center justify-center gap-1.5">
-                      <span className={`w-1.5 h-1.5 rounded-full ${formInStock ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                      <span className={`w-1.5 h-1.5 rounded-full ${formInStock ? 'bg-success' : 'bg-danger'}`} />
                       <span
                         className={`text-xs sm:text-sm font-black ${
-                          formInStock ? 'text-emerald-700' : 'text-rose-600'
+                          formInStock ? 'text-success' : 'text-danger'
                         }`}
                       >
                         {formInStock ? 'В продаже' : 'Снят'}
@@ -2288,7 +2288,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       {productToDelete && (
         <div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
           <div className="neu-modal rounded-3xl p-5 sm:p-6 max-w-sm w-full space-y-3.5 text-[#2D3A4E] border border-white/80 my-auto text-center">
-            <div className="w-12 h-12 rounded-2xl neu-inset mx-auto flex items-center justify-center text-rose-600 bg-[#E3E8EF]">
+            <div className="w-12 h-12 rounded-2xl neu-inset mx-auto flex items-center justify-center text-danger bg-[#E3E8EF]">
               <Trash2 className="w-6 h-6" />
             </div>
             <div className="space-y-1">

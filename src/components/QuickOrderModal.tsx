@@ -187,8 +187,8 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
 
             {/* Error Banner */}
             {errors.general && (
-              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-300 text-rose-800 text-xs flex items-center gap-2 animate-in fade-in duration-200">
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <div className="p-3 rounded-2xl bg-danger-soft border border-danger/35 text-danger text-xs flex items-center gap-2 animate-in fade-in duration-200">
+                <AlertCircle className="w-4 h-4 text-danger shrink-0" />
                 <span className="font-medium">{errors.general}</span>
               </div>
             )}
@@ -243,7 +243,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
               <div className="grid grid-cols-4 gap-2 text-[11px]">
                 <div>
                   <label className="text-[10px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
-                    Дом <span className="text-rose-500">*</span>
+                    Дом <span className="text-danger">*</span>
                   </label>
                   <input
                     type="text"
@@ -256,13 +256,13 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                       }
                     }}
                     className={`w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#5C6B80]/60 focus:outline-none bg-[#E3E8EF] transition-all ${
-                      errors.house ? 'ring-2 ring-rose-400 bg-rose-50/30' : ''
+                      errors.house ? 'ring-2 ring-danger/50 bg-danger-soft' : ''
                     }`}
                   />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
-                    Подъезд <span className="text-rose-500">*</span>
+                    Подъезд <span className="text-danger">*</span>
                   </label>
                   <input
                     type="text"
@@ -275,7 +275,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                       }
                     }}
                     className={`w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#5C6B80]/60 focus:outline-none bg-[#E3E8EF] transition-all ${
-                      errors.entrance ? 'ring-2 ring-rose-400 bg-rose-50/30' : ''
+                      errors.entrance ? 'ring-2 ring-danger/50 bg-danger-soft' : ''
                     }`}
                   />
                 </div>
@@ -293,7 +293,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
-                    Домофон <span className="text-rose-500">*</span>
+                    Домофон <span className="text-danger">*</span>
                   </label>
                   <input
                     type="text"
@@ -306,15 +306,15 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                       }
                     }}
                     className={`w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#5C6B80]/60 focus:outline-none bg-[#E3E8EF] transition-all ${
-                      errors.intercom ? 'ring-2 ring-rose-400 bg-rose-50/30' : ''
+                      errors.intercom ? 'ring-2 ring-danger/50 bg-danger-soft' : ''
                     }`}
                   />
                 </div>
               </div>
 
               {/* Guarantee Badge */}
-              <div className="p-2 rounded-xl neu-flat bg-[#E3E8EF] flex items-center gap-2 text-[10px] text-emerald-800 font-semibold">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="p-2 rounded-xl neu-flat bg-[#E3E8EF] flex items-center gap-2 text-[10px] text-success font-semibold">
+                <ShieldCheck className="w-4 h-4 text-success shrink-0" />
                 <span>Оплата при получении после примерки. Бесплатный возврат.</span>
               </div>
 

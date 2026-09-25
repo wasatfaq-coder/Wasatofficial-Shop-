@@ -453,21 +453,21 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
         label: 'В норме',
         badge: `${inStockNormalCount}`,
         sublabel: `Остаток больше ${lowStockThreshold} шт.`,
-        icon: <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />,
+        icon: <span className="w-2.5 h-2.5 rounded-full bg-success shrink-0" />,
       },
       {
         value: 'low_stock',
         label: 'Дефицит',
         badge: `${stats.lowStockCount}`,
         sublabel: `Остаток ≤ ${lowStockThreshold} шт. (мало на складе)`,
-        icon: <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />,
+        icon: <span className="w-2.5 h-2.5 rounded-full bg-warning shrink-0" />,
       },
       {
         value: 'out_of_stock',
         label: 'Закончились',
         badge: `${stats.outOfStockCount}`,
         sublabel: 'Нулевой остаток (нет в наличии)',
-        icon: <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" />,
+        icon: <span className="w-2.5 h-2.5 rounded-full bg-danger shrink-0" />,
       },
     ];
   }, [allProductSKUs.length, stats, lowStockThreshold]);
@@ -648,7 +648,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
           >
             <ClipboardCheck className="w-3.5 h-3.5" />
             Инвентаризация {auditStats.discrepancyCount > 0 && (
-              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-danger animate-pulse" />
             )}
           </button>
           <button
@@ -707,8 +707,8 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
         </div>
 
         <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-0.5">
-          <span className="text-[10px] uppercase font-bold text-amber-700 block">Мало на складе</span>
-          <span className="text-base font-black text-amber-600">{stats.lowStockCount} SKU</span>
+          <span className="text-[10px] uppercase font-bold text-warning block">Мало на складе</span>
+          <span className="text-base font-black text-warning">{stats.lowStockCount} SKU</span>
           {stats.lowStockCount > 0 && (
             <button
               onClick={handleBulkRestockDeficit}
@@ -720,8 +720,8 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
         </div>
 
         <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-0.5">
-          <span className="text-[10px] uppercase font-bold text-rose-700 block">Нет в наличии</span>
-          <span className="text-base font-black text-rose-600">{stats.outOfStockCount} SKU</span>
+          <span className="text-[10px] uppercase font-bold text-danger block">Нет в наличии</span>
+          <span className="text-base font-black text-danger">{stats.outOfStockCount} SKU</span>
           <span className="text-[10px] text-[#5C6B80] block font-semibold">нулевой остаток</span>
         </div>
       </div>
@@ -811,7 +811,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                           >
                             <span>{sku.skuCode}</span>
                             {isCopied ? (
-                              <Check className="w-3 h-3 text-emerald-600" />
+                              <Check className="w-3 h-3 text-success" />
                             ) : (
                               <Copy className="w-3 h-3 opacity-60" />
                             )}
@@ -830,18 +830,18 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                       {/* Status Pill */}
                       <div className="shrink-0">
                         {isOutOfStock ? (
-                          <span className="neu-button px-2 sm:px-2.5 py-1 rounded-xl text-[10px] font-black text-rose-600 bg-[#E3E8EF] inline-flex items-center gap-1 whitespace-nowrap">
-                            <XCircle className="w-3 h-3 text-rose-600 shrink-0" />
+                          <span className="neu-button px-2 sm:px-2.5 py-1 rounded-xl text-[10px] font-black text-danger bg-[#E3E8EF] inline-flex items-center gap-1 whitespace-nowrap">
+                            <XCircle className="w-3 h-3 text-danger shrink-0" />
                             <span className="sm:hidden">0 шт. (Нет)</span>
                             <span className="hidden sm:inline">0 шт. (Закончился)</span>
                           </span>
                         ) : isLowStock ? (
-                          <span className="neu-button px-2 sm:px-2.5 py-1 rounded-xl text-[10px] font-black text-amber-600 bg-[#E3E8EF] inline-flex items-center gap-1 whitespace-nowrap">
+                          <span className="neu-button px-2 sm:px-2.5 py-1 rounded-xl text-[10px] font-black text-warning bg-[#E3E8EF] inline-flex items-center gap-1 whitespace-nowrap">
                             <AlertTriangle className="w-3 h-3 shrink-0" />
                             <span>{sku.stock} шт. (Мало)</span>
                           </span>
                         ) : (
-                          <span className="neu-button px-2 sm:px-2.5 py-1 rounded-xl text-[10px] font-black text-emerald-700 bg-[#E3E8EF] inline-flex items-center gap-1 whitespace-nowrap">
+                          <span className="neu-button px-2 sm:px-2.5 py-1 rounded-xl text-[10px] font-black text-success bg-[#E3E8EF] inline-flex items-center gap-1 whitespace-nowrap">
                             <CheckCircle2 className="w-3 h-3 shrink-0" />
                             <span>{sku.stock} шт.</span>
                           </span>
@@ -965,8 +965,8 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
               </div>
 
               <div className="neu-button rounded-xl p-2.5 bg-[#E3E8EF]">
-                <span className="text-[10px] uppercase font-bold text-amber-700 block">Расхождений</span>
-                <span className={`text-sm font-black ${auditStats.discrepancyCount > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
+                <span className="text-[10px] uppercase font-bold text-warning block">Расхождений</span>
+                <span className={`text-sm font-black ${auditStats.discrepancyCount > 0 ? 'text-danger' : 'text-success'}`}>
                   {auditStats.discrepancyCount} SKU
                 </span>
                 <span className="text-[9px] text-[#5C6B80] block">
@@ -975,11 +975,11 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
               </div>
 
               <div className="neu-button rounded-xl p-2.5 bg-[#E3E8EF]">
-                <span className="text-[10px] uppercase font-bold text-rose-700 block">Недостача</span>
-                <span className="text-sm font-black text-rose-600">
+                <span className="text-[10px] uppercase font-bold text-danger block">Недостача</span>
+                <span className="text-sm font-black text-danger">
                   -{auditStats.totalShortageUnits} шт.
                 </span>
-                <span className="text-[9px] text-rose-700/80 block font-bold">
+                <span className="text-[9px] text-danger/80 block font-bold">
                   -{auditStats.totalShortageSum.toLocaleString('ru-RU')} ₽
                 </span>
               </div>
@@ -1023,7 +1023,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                   onClick={() => setAuditFilterDiscrepanciesOnly(!auditFilterDiscrepanciesOnly)}
                   className={`py-1.5 px-3 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
                     auditFilterDiscrepanciesOnly
-                      ? 'neu-button text-rose-600'
+                      ? 'neu-button text-danger'
                       : 'neu-button text-[#5C6B80] hover:text-[#2D3A4E]'
                   }`}
                 >
@@ -1080,7 +1080,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
           <div className="space-y-2">
             {filteredAuditSkus.length === 0 ? (
               <div className="neu-inset rounded-2xl p-8 text-center space-y-1 text-[#5C6B80] bg-[#E3E8EF]">
-                <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-600/70" />
+                <CheckCircle2 className="w-8 h-8 mx-auto text-success/70" />
                 <p className="text-xs font-bold text-[#2D3A4E]">
                   {auditFilterDiscrepanciesOnly
                     ? 'Расхождений не найдено! Все позиции соответствуют учетным данным.'
@@ -1102,7 +1102,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                     key={key}
                     className={`neu-inset rounded-2xl p-2.5 sm:p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 bg-[#E3E8EF] border transition-all overflow-hidden ${
                       isShortage
-                        ? 'border-rose-300 ring-1 ring-rose-300/30'
+                        ? 'border-danger/35 ring-1 ring-danger/30'
                         : isSurplus
                         ? 'border-sky-300 ring-1 ring-sky-300/30'
                         : 'border-transparent'
@@ -1184,15 +1184,15 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                       {/* Difference Badge */}
                       <div className="text-right min-w-[80px] sm:min-w-[90px] shrink-0">
                         {isMatch ? (
-                          <span className="neu-button px-2 py-1 rounded-xl text-[10px] font-black text-emerald-700 bg-[#E3E8EF] inline-flex items-center gap-1">
-                            <Check className="w-3 h-3 text-emerald-600" /> Совпадает
+                          <span className="neu-button px-2 py-1 rounded-xl text-[10px] font-black text-success bg-[#E3E8EF] inline-flex items-center gap-1">
+                            <Check className="w-3 h-3 text-success" /> Совпадает
                           </span>
                         ) : isShortage ? (
                           <div className="space-y-0.5">
-                            <span className="neu-button px-2 py-0.5 rounded-xl text-[10px] font-black text-rose-600 bg-rose-50/50 inline-flex items-center gap-1">
+                            <span className="neu-button px-2 py-0.5 rounded-xl text-[10px] font-black text-danger bg-danger-soft inline-flex items-center gap-1">
                               Недостача {diff} шт.
                             </span>
-                            <span className="text-[9px] font-bold text-rose-600 block">
+                            <span className="text-[9px] font-bold text-danger block">
                               -{(Math.abs(diff) * cost).toLocaleString('ru-RU')} ₽
                             </span>
                           </div>
@@ -1313,10 +1313,10 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                           isOrder
                             ? 'neu-inset text-[#5F6ED0]'
                             : isReturn
-                            ? 'neu-inset text-amber-600'
+                            ? 'neu-inset text-warning'
                             : isPositive
-                            ? 'neu-inset text-emerald-600'
-                            : 'neu-inset text-rose-600'
+                            ? 'neu-inset text-success'
+                            : 'neu-inset text-danger'
                         }`}
                       >
                         {isOrder ? (
@@ -1357,8 +1357,8 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                           isOrder
                             ? 'text-[#5F6ED0]'
                             : isPositive
-                            ? 'text-emerald-700'
-                            : 'text-rose-600'
+                            ? 'text-success'
+                            : 'text-danger'
                         }`}
                       >
                         {isPositive ? `+${log.changeQuantity}` : log.changeQuantity} шт.
@@ -1543,7 +1543,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
               </div>
               <button
                 onClick={() => setSelectedSkuForLabels(null)}
-                className="p-1.5 neu-button rounded-xl text-[#5C6B80] hover:text-rose-600 transition-colors"
+                className="p-1.5 neu-button rounded-xl text-[#5C6B80] hover:text-danger transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>

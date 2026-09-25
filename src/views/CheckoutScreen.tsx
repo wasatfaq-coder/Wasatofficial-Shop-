@@ -369,7 +369,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                     isCurrent
                       ? 'neu-inset-deep neu-inset-deep-animated text-[#5F6ED0] bg-[#E3E8EF] ring-2 ring-[#5F6ED0]/50 scale-105'
                       : isCompleted
-                      ? 'neu-button text-emerald-600 font-bold'
+                      ? 'neu-button text-success font-bold'
                       : 'neu-inset text-[#5C6B80]'
                   }`}
                 >
@@ -427,7 +427,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
             <div
               className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                 appliedPromo
-                  ? 'neu-inset bg-[#dbe4f0] text-emerald-700 font-bold'
+                  ? 'neu-inset bg-[#dbe4f0] text-success font-bold'
                   : 'neu-button text-blue-900'
               }`}
             >
@@ -518,7 +518,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                     </p>
                   </div>
                 </div>
-                <span className="text-[10px] font-black text-emerald-700 neu-inset px-2.5 py-1 rounded-full bg-[#E3E8EF] uppercase tracking-wider shrink-0">
+                <span className="text-[10px] font-black text-success neu-inset px-2.5 py-1 rounded-full bg-[#E3E8EF] uppercase tracking-wider shrink-0">
                   Бесплатно
                 </span>
               </div>
@@ -564,15 +564,15 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                     }
                     className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       copiedAddressId === 'top-pickup'
-                        ? 'neu-inset text-emerald-600 bg-[#E3E8EF] ring-1.5 ring-emerald-500/50 scale-95'
+                        ? 'neu-inset text-success bg-[#E3E8EF] ring-1.5 ring-success/50 scale-95'
                         : 'neu-button text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-95'
                     }`}
                     title="Скопировать адрес пункта выдачи в буфер обмена"
                   >
                     {copiedAddressId === 'top-pickup' ? (
                       <>
-                        <Check className="w-3.5 h-3.5 text-emerald-600 animate-in zoom-in-50 duration-200" />
-                        <span className="text-[11px] text-emerald-600 font-extrabold">Скопировано!</span>
+                        <Check className="w-3.5 h-3.5 text-success animate-in zoom-in-50 duration-200" />
+                        <span className="text-[11px] text-success font-extrabold">Скопировано!</span>
                       </>
                     ) : (
                       <>
@@ -601,7 +601,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
 
                 {selectedPickupPoint?.note && (
                   <div className="flex items-start gap-1.5 text-[10px] text-[#5C6B80] neu-inset p-2 rounded-xl bg-[#E3E8EF]">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                    <Sparkles className="w-3.5 h-3.5 text-warning shrink-0 mt-0.5" />
                     <span className="leading-snug">{selectedPickupPoint.note}</span>
                   </div>
                 )}
@@ -650,7 +650,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
               {/* Structured Address Summary Display */}
               <div
                 className={`neu-inset rounded-2xl p-3.5 space-y-2 bg-[#E3E8EF] transition-all ${
-                  validationError ? 'ring-2 ring-rose-400/80 bg-rose-50/20' : ''
+                  validationError ? 'ring-2 ring-danger/80 bg-danger-soft' : ''
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -667,22 +667,22 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
 
                 {/* Validation Alert inside address card if data incomplete */}
                 {validationError && (
-                  <div className="p-2.5 rounded-xl bg-rose-100/90 border border-rose-300 text-rose-800 space-y-1.5 animate-in fade-in duration-200">
+                  <div className="p-2.5 rounded-xl bg-danger-soft border border-danger/35 text-danger space-y-1.5 animate-in fade-in duration-200">
                     <div className="flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
                       <div className="text-xs">
-                        <p className="font-bold text-rose-800">
+                        <p className="font-bold text-danger">
                           {isPostSelected
                             ? 'Данные адреса для Почты России не заполнены'
                             : 'Данные для курьера не заполнены'}
                         </p>
-                        <p className="text-[11px] text-rose-700 leading-snug">{validationError}</p>
+                        <p className="text-[11px] text-danger leading-snug">{validationError}</p>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => setIsAddressModalOpen(true)}
-                      className="w-full py-1.5 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                      className="w-full py-1.5 px-3 rounded-lg bg-danger hover:bg-danger/90 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                     >
                       <Pencil className="w-3 h-3" />
                       <span>
@@ -718,7 +718,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                         д. {addrHouse}
                       </span>
                     ) : (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-rose-600 bg-rose-100 border border-rose-300">
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-danger bg-danger-soft border border-danger/35">
                         нет дома *
                       </span>
                     )}
@@ -741,7 +741,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                         д. {addrHouse}
                       </span>
                     ) : (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-rose-600 bg-rose-100 border border-rose-300">
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-danger bg-danger-soft border border-danger/35">
                         нет дома *
                       </span>
                     )}
@@ -750,7 +750,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                         подъезд {addrEntrance}
                       </span>
                     ) : (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-rose-600 bg-rose-100 border border-rose-300">
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-danger bg-danger-soft border border-danger/35">
                         нет подъезда *
                       </span>
                     )}
@@ -772,7 +772,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                         домофон: {addrIntercom}
                       </span>
                     ) : (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-rose-600 bg-rose-100 border border-rose-300">
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-danger bg-danger-soft border border-danger/35">
                         нет домофона *
                       </span>
                     )}
@@ -797,7 +797,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
               Способ доставки
             </h3>
             {rawSubtotal >= freeThreshold && (
-              <span className="neu-inset text-emerald-600 text-[10px] font-black px-2 py-0.5 rounded-full bg-[#E3E8EF]">
+              <span className="neu-inset text-success text-[10px] font-black px-2 py-0.5 rounded-full bg-[#E3E8EF]">
                 Бесплатная доставка активна
               </span>
             )}
@@ -881,7 +881,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                     <span
                       className={`text-xs font-bold shrink-0 whitespace-nowrap pl-1 ${
                         method.price === 0
-                          ? 'text-emerald-600 font-extrabold'
+                          ? 'text-success font-extrabold'
                           : isSelected
                           ? 'text-[#5F6ED0]'
                           : 'text-[#2D3A4E]'
@@ -983,15 +983,15 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                                     }}
                                     className={`shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
                                       copiedAddressId === point.id
-                                        ? 'neu-inset text-emerald-600 bg-[#E3E8EF] ring-1.5 ring-emerald-500/50 scale-95'
+                                        ? 'neu-inset text-success bg-[#E3E8EF] ring-1.5 ring-success/50 scale-95'
                                         : 'neu-button text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-95'
                                     }`}
                                     title="Скопировать адрес в буфер обмена"
                                   >
                                     {copiedAddressId === point.id ? (
                                       <>
-                                        <Check className="w-3 h-3 text-emerald-600 animate-in zoom-in-50 duration-200" />
-                                        <span className="text-emerald-600 font-extrabold">Скопировано</span>
+                                        <Check className="w-3 h-3 text-success animate-in zoom-in-50 duration-200" />
+                                        <span className="text-success font-extrabold">Скопировано</span>
                                       </>
                                     ) : (
                                       <>
@@ -1018,7 +1018,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                               {/* Note / Amenities */}
                               {point.note && (
                                 <div className="flex items-start gap-1.5 text-[10px] text-[#5C6B80] bg-[#BAC5D5]/20 p-2 rounded-xl">
-                                  <Sparkles className="w-3 h-3 text-amber-500 shrink-0 mt-0.5" />
+                                  <Sparkles className="w-3 h-3 text-warning shrink-0 mt-0.5" />
                                   <span className="leading-snug">{point.note}</span>
                                 </div>
                               )}
@@ -1078,7 +1078,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           </div>
 
           {discountAmount > 0 && (
-            <div className="flex items-center justify-between text-emerald-700">
+            <div className="flex items-center justify-between text-success">
               <span className="font-medium">Скидка по промокоду:</span>
               <span className="font-bold">-{discountAmount.toLocaleString('ru-RU')} ₽</span>
             </div>
@@ -1086,7 +1086,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
 
           <div className="flex items-center justify-between">
             <span className="text-[#5C6B80]">Доставка ({currentDeliveryObj.title}):</span>
-            <span className={deliveryFee === 0 ? 'font-black text-emerald-600' : 'font-bold'}>
+            <span className={deliveryFee === 0 ? 'font-black text-success' : 'font-bold'}>
               {deliveryFee === 0 ? 'Бесплатно' : `${deliveryFee} ₽`}
             </span>
           </div>
@@ -1101,15 +1101,15 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
 
         {/* Error notification banner right above submit if validation failed */}
         {validationError && (
-          <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-300 text-rose-800 text-xs font-semibold flex items-center justify-between gap-3 animate-in fade-in duration-200">
+          <div className="p-3.5 rounded-2xl bg-danger-soft border border-danger/35 text-danger text-xs font-semibold flex items-center justify-between gap-3 animate-in fade-in duration-200">
             <div className="flex items-center gap-2 min-w-0">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <AlertCircle className="w-4 h-4 text-danger shrink-0" />
               <span className="line-clamp-2">{validationError}</span>
             </div>
             <button
               type="button"
               onClick={() => setIsAddressModalOpen(true)}
-              className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shrink-0 cursor-pointer shadow-xs transition-colors"
+              className="px-3 py-1.5 rounded-xl bg-danger hover:bg-danger/90 text-white font-bold text-xs shrink-0 cursor-pointer shadow-xs transition-colors"
             >
               Заполнить
             </button>

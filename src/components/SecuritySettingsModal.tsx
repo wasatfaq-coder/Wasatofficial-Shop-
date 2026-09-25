@@ -370,7 +370,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
                   <div className="flex items-center gap-2">
                     <p className="text-xs font-bold text-[#2D3A4E]">Двухфакторная защита (2FA)</p>
                     {local2FA && (
-                      <span className="text-[10px] font-black text-emerald-800 neu-inset px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] font-black text-success neu-inset px-2 py-0.5 rounded-full">
                         Активна
                       </span>
                     )}
@@ -438,7 +438,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
 
             {isGoogleUser ? (
               <div className="p-3 neu-inset rounded-xl flex items-start gap-2.5 bg-[#BAC5D5]/15">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-4 h-4 text-success shrink-0 mt-0.5" />
                 <p className="text-[11px] text-[#5C6B80] leading-relaxed">
                   Вы авторизованы через Google ID. Пароль и email привязаны к аккаунту Google и защищены центром безопасности Google.
                 </p>
@@ -511,7 +511,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
                 </div>
 
                 <div className="flex items-center gap-1.5 text-[10px] text-[#5C6B80] px-1">
-                  <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                  <AlertTriangle className="w-3 h-3 text-warning shrink-0" />
                   <span>При смене пароля все остальные устройства будут принудительно отключены.</span>
                 </div>
               </form>
@@ -524,7 +524,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
                   </label>
                   <div className="py-2 px-3 rounded-xl neu-inset text-xs text-[#2D3A4E] font-mono bg-[#E3E8EF] flex items-center justify-between">
                     <span>{userEmail || 'Не указан'}</span>
-                    <span className="text-[10px] text-emerald-700 font-bold">Активен</span>
+                    <span className="text-[10px] text-success font-bold">Активен</span>
                   </div>
                 </div>
 
@@ -553,7 +553,7 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
                 </button>
 
                 <div className="flex items-center gap-1.5 text-[10px] text-[#5C6B80] px-1">
-                  <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                  <AlertTriangle className="w-3 h-3 text-warning shrink-0" />
                   <span>При смене email все активные сеансы на сторонних устройствах автоматически завершаются.</span>
                 </div>
               </form>
@@ -569,14 +569,14 @@ export const SecuritySettingsModal: React.FC<SecuritySettingsModalProps> = ({
                   Активные сеансы
                 </h4>
               </div>
-              <span className="text-[10px] font-bold text-emerald-800 neu-inset px-2.5 py-0.5 rounded-full">
+              <span className="text-[10px] font-bold text-success neu-inset px-2.5 py-0.5 rounded-full">
                 1 сессия активна
               </span>
             </div>
 
             <div className="p-3 neu-inset rounded-xl flex items-center justify-between text-xs bg-[#E3E8EF]">
               <div className="flex items-center gap-2.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <div className="w-2.5 h-2.5 rounded-full bg-success animate-pulse shrink-0" />
                 <div>
                   <p className="font-bold text-[#2D3A4E]">Текущее устройство (Браузер)</p>
                   <p className="text-[10px] text-[#5C6B80]">

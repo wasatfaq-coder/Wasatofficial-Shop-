@@ -179,7 +179,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
           </div>
 
           <div>
-            <div className="flex items-center gap-1 text-amber-500">
+            <div className="flex items-center gap-1 text-warning">
               {[1, 2, 3, 4, 5].map((star) => (
                 <Star
                   key={star}
@@ -194,7 +194,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
             <p className="text-xs font-bold text-[#2D3A4E] mt-1">
               {product.reviewsCount || reviews.length} отзывов от покупателей
             </p>
-            <p className="text-[11px] text-emerald-800 font-semibold flex items-center gap-1 mt-0.5">
+            <p className="text-[11px] text-success font-semibold flex items-center gap-1 mt-0.5">
               <CheckCircle2 className="w-3.5 h-3.5" />
               98% покупателей рекомендуют этот товар
             </p>
@@ -244,7 +244,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-0.5 text-amber-500">
+                <div className="flex items-center gap-0.5 text-warning">
                   {[1, 2, 3, 4, 5].map((st) => (
                     <Star
                       key={st}
@@ -277,15 +277,15 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
 
               {/* Pros & Cons with tactile Neumorphic Inset (эффект углубления) */}
               {rev.pros && (
-                <div className="text-xs space-y-0.5 neu-inset p-3 rounded-2xl border border-emerald-500/25">
-                  <span className="font-extrabold text-emerald-700">Достоинства: </span>
+                <div className="text-xs space-y-0.5 neu-inset p-3 rounded-2xl border border-success/25">
+                  <span className="font-extrabold text-success">Достоинства: </span>
                   <span className="text-[#2D3A4E] leading-relaxed">{rev.pros}</span>
                 </div>
               )}
 
               {rev.cons && (
-                <div className="text-xs space-y-0.5 neu-inset p-3 rounded-2xl border border-rose-500/25">
-                  <span className="font-extrabold text-rose-600">Недостатки: </span>
+                <div className="text-xs space-y-0.5 neu-inset p-3 rounded-2xl border border-danger/25">
+                  <span className="font-extrabold text-danger">Недостатки: </span>
                   <span className="text-[#2D3A4E] leading-relaxed">{rev.cons}</span>
                 </div>
               )}
@@ -296,10 +296,10 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                   type="button"
                   onClick={() => handleToggleHelpful(rev.id)}
                   className={`neu-button px-2.5 py-1 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                    isLiked ? 'text-emerald-600' : 'text-[#5C6B80] hover:text-[#2D3A4E]'
+                    isLiked ? 'text-success' : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                   }`}
                 >
-                  <ThumbsUp className={`w-3.5 h-3.5 ${isLiked ? 'fill-emerald-500' : ''}`} />
+                  <ThumbsUp className={`w-3.5 h-3.5 ${isLiked ? 'fill-success' : ''}`} />
                   <span>Полезно ({currentHelpful})</span>
                 </button>
               </div>
@@ -337,7 +337,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
               {/* Rating stars picker */}
               <div className="space-y-1.5 text-center p-3 neu-inset rounded-2xl">
                 <p className="text-xs font-bold text-[#2D3A4E]">Ваша оценка товару:</p>
-                <div className="flex items-center justify-center gap-2 text-amber-500 py-1">
+                <div className="flex items-center justify-center gap-2 text-warning py-1">
                   {[1, 2, 3, 4, 5].map((st) => (
                     <button
                       key={st}

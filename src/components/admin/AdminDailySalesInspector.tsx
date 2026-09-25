@@ -50,11 +50,11 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
 
   const statusLabelMap: Record<string, { label: string; color: string }> = {
     accepted: { label: 'Принят', color: 'text-blue-700 bg-blue-100' },
-    assembling: { label: 'Собирается', color: 'text-amber-700 bg-amber-100' },
+    assembling: { label: 'Собирается', color: 'text-warning bg-warning-soft' },
     in_transit: { label: 'В доставке', color: 'text-purple-700 bg-purple-100' },
-    ready: { label: 'Готов к выдаче', color: 'text-emerald-700 bg-emerald-100' },
-    delivered: { label: 'Вручен', color: 'text-emerald-800 bg-emerald-100/90 font-black' },
-    cancelled: { label: 'Отменен', color: 'text-rose-700 bg-rose-100' },
+    ready: { label: 'Готов к выдаче', color: 'text-success bg-success-soft' },
+    delivered: { label: 'Вручен', color: 'text-success bg-success-soft font-black' },
+    cancelled: { label: 'Отменен', color: 'text-danger bg-danger-soft' },
   };
 
   return (
@@ -77,8 +77,8 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
                 </span>
               )}
               {dayData.isPeakDay && (
-                <span className="text-[9px] font-black text-amber-800 bg-amber-200/90 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
-                  <Flame className="w-3 h-3 text-amber-600 fill-amber-500" />
+                <span className="text-[9px] font-black text-warning bg-warning-soft px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                  <Flame className="w-3 h-3 text-warning fill-warning" />
                   Пиковый день периода
                 </span>
               )}
@@ -184,11 +184,11 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
         <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-1">
           <div className="flex items-center justify-between text-[#5C6B80]">
             <span className="text-[10px] font-bold uppercase tracking-wider">Средний чек дня</span>
-            <div className="w-5 h-5 rounded-lg neu-inset flex items-center justify-center text-emerald-600 bg-[#E3E8EF]">
+            <div className="w-5 h-5 rounded-lg neu-inset flex items-center justify-center text-success bg-[#E3E8EF]">
               <TrendingUp className="w-3 h-3" />
             </div>
           </div>
-          <p className="text-base sm:text-lg font-black text-emerald-700 tracking-tight">
+          <p className="text-base sm:text-lg font-black text-success tracking-tight">
             {dayData.avgCheck.toLocaleString('ru-RU')} ₽
           </p>
           <div className="text-[10px] text-[#5C6B80]">
@@ -200,7 +200,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
         <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-1">
           <div className="flex items-center justify-between text-[#5C6B80]">
             <span className="text-[10px] font-bold uppercase tracking-wider">Рекламации</span>
-            <div className="w-5 h-5 rounded-lg neu-inset flex items-center justify-center text-amber-600 bg-[#E3E8EF]">
+            <div className="w-5 h-5 rounded-lg neu-inset flex items-center justify-center text-warning bg-[#E3E8EF]">
               <RotateCcw className="w-3 h-3" />
             </div>
           </div>
@@ -209,9 +209,9 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
           </p>
           <div className="text-[10px] text-[#5C6B80]">
             {dayData.returns === 0 ? (
-              <span className="text-emerald-700 font-bold">Без возвратов ✓</span>
+              <span className="text-success font-bold">Без возвратов ✓</span>
             ) : (
-              <span className="text-amber-700 font-bold">Учтены в расчете</span>
+              <span className="text-warning font-bold">Учтены в расчете</span>
             )}
           </div>
         </div>
@@ -257,7 +257,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
                         {statusCfg.label}
                       </span>
                       {ord.isAdjusted && (
-                        <span className="text-[9px] font-black text-amber-800 bg-amber-200 px-1.5 py-0.2 rounded-md">
+                        <span className="text-[9px] font-black text-warning bg-warning-soft px-1.5 py-0.2 rounded-md">
                           Скорректирован (-{ord.refundAmount || 0} ₽)
                         </span>
                       )}

@@ -181,7 +181,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
               <span>Только товары в наличии</span>
               <span
                 className={`w-2 h-2 rounded-full inline-block transition-colors ${
-                  filterState.onlyInStock ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+                  filterState.onlyInStock ? 'bg-success animate-pulse' : 'bg-slate-400'
                 }`}
               />
             </div>
@@ -295,7 +295,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
               onClick={() =>
                 onChangeFilterState((prev) => ({ ...prev, selectedMaterials: [] }))
               }
-              className="text-[10px] font-bold text-rose-500 hover:text-rose-600 transition-colors neu-inset px-2 py-0.5 rounded-lg border border-white/40 cursor-pointer"
+              className="text-[10px] font-bold text-danger hover:text-danger transition-colors neu-inset px-2 py-0.5 rounded-lg border border-white/40 cursor-pointer"
             >
               Сбросить ({filterState.selectedMaterials.length})
             </button>
@@ -345,7 +345,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
               onClick={() =>
                 onChangeFilterState((prev) => ({ ...prev, selectedSizes: [] }))
               }
-              className="text-[10px] font-bold text-rose-500 hover:text-rose-600 transition-colors neu-inset px-2 py-0.5 rounded-lg border border-white/40 cursor-pointer"
+              className="text-[10px] font-bold text-danger hover:text-danger transition-colors neu-inset px-2 py-0.5 rounded-lg border border-white/40 cursor-pointer"
             >
               Сбросить ({filterState.selectedSizes.length})
             </button>
@@ -457,7 +457,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 <button
                   type="button"
                   onClick={onResetFilters}
-                  className="py-2.5 px-4 rounded-xl neu-inset text-xs font-bold text-[#5C6B80] hover:text-rose-600 transition-colors flex items-center gap-1.5 border border-white/40 cursor-pointer"
+                  className="py-2.5 px-4 rounded-xl neu-inset text-xs font-bold text-[#5C6B80] hover:text-danger transition-colors flex items-center gap-1.5 border border-white/40 cursor-pointer"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   <span>Сбросить</span>
@@ -525,7 +525,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 <button
                   type="button"
                   onClick={onResetFilters}
-                  className="py-3 px-4 rounded-2xl neu-inset text-xs font-bold text-[#5C6B80] hover:text-rose-600 shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 border border-white/40 active:scale-95"
+                  className="py-3 px-4 rounded-2xl neu-inset text-xs font-bold text-[#5C6B80] hover:text-danger shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 border border-white/40 active:scale-95"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   <span>Сбросить</span>

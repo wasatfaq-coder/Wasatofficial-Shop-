@@ -433,7 +433,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] border border-transparent space-y-1">
             <span className="text-[10px] font-bold text-[#5C6B80] uppercase tracking-wider flex items-center gap-1">
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+              <TrendingUp className="w-3.5 h-3.5 text-success" />
               Привлеченная выручка
             </span>
             <p className="text-lg font-black text-[#2D3A4E]">
@@ -459,7 +459,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
 
           <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] border border-transparent space-y-1">
             <span className="text-[10px] font-bold text-[#5C6B80] uppercase tracking-wider flex items-center gap-1">
-              <Users className="w-3.5 h-3.5 text-amber-600" />
+              <Users className="w-3.5 h-3.5 text-warning" />
               Заказов от партнеров
             </span>
             <p className="text-lg font-black text-[#2D3A4E]">
@@ -612,8 +612,8 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 >
                   {isBatchCopied ? (
                     <>
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span className="text-emerald-700 font-bold">Скопировано!</span>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                      <span className="text-success font-bold">Скопировано!</span>
                     </>
                   ) : (
                     <>
@@ -1156,7 +1156,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
 
                     <span
                       className={`text-xs font-black neu-button px-2.5 py-0.5 rounded-lg bg-[#E3E8EF] ${
-                        isFixed ? 'text-amber-600' : 'text-[#5F6ED0]'
+                        isFixed ? 'text-warning' : 'text-[#5F6ED0]'
                       }`}
                     >
                       {discountLabel}
@@ -1188,7 +1188,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                       onClick={() => handleToggleActive(promo.id)}
                       className={`h-8 px-3 rounded-xl text-[10px] font-black transition-all cursor-pointer flex items-center justify-center active:scale-95 ${
                         promo.active
-                          ? 'neu-button text-emerald-700 bg-[#E3E8EF]'
+                          ? 'neu-button text-success bg-[#E3E8EF]'
                           : 'neu-inset text-[#5C6B80] bg-[#E3E8EF]'
                       }`}
                     >
@@ -1237,7 +1237,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                         </strong>
                       </span>
                     </div>
-                    <span className="text-[10px] text-emerald-700 font-bold">
+                    <span className="text-[10px] text-success font-bold">
                       Привлечено заказов: {promo.usedCount}
                     </span>
                   </div>

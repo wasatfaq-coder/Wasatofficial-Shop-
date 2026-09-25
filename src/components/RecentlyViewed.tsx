@@ -83,7 +83,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
                         e.stopPropagation();
                         onRemoveFromRecentlyViewed(product.id);
                       }}
-                      className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full neu-photo-btn flex items-center justify-center text-[#5C6B80] hover:text-rose-600 transition-transform active:scale-90 z-10"
+                      className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full neu-photo-btn flex items-center justify-center text-[#5C6B80] hover:text-danger transition-transform active:scale-90 z-10"
                       title="Удалить из истории"
                       aria-label="Удалить из истории"
                     >
@@ -98,13 +98,13 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
                         e.stopPropagation();
                         onToggleFavorite(product, e);
                       }}
-                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full neu-photo-btn flex items-center justify-center text-[#5C6B80] hover:text-rose-500 transition-transform active:scale-90 z-10"
+                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full neu-photo-btn flex items-center justify-center text-[#5C6B80] hover:text-danger transition-transform active:scale-90 z-10"
                       title="В избранное"
                       aria-label="В избранное"
                     >
                       <Heart
                         className={`w-3.5 h-3.5 ${
-                          isFav ? 'fill-rose-500 text-rose-500' : 'text-[#5C6B80]'
+                          isFav ? 'fill-danger text-danger' : 'text-[#5C6B80]'
                         }`}
                       />
                     </button>

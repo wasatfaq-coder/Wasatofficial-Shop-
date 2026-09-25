@@ -166,7 +166,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                   </span>
                 )}
               </div>
-              <span className="text-xs font-bold text-emerald-600 neu-inset px-2.5 py-0.5 rounded-full">
+              <span className="text-xs font-bold text-success neu-inset px-2.5 py-0.5 rounded-full">
                 В наличии
               </span>
             </div>

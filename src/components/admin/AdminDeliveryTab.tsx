@@ -385,11 +385,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
             <span className="text-[10px] font-bold text-[#5C6B80] block uppercase tracking-wider">
               Активных модулей
             </span>
-            <span className="text-xl font-black text-emerald-600 block mt-0.5">
+            <span className="text-xl font-black text-success block mt-0.5">
               {activeMethodsCount}
             </span>
           </div>
-          <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-emerald-600">
+          <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-success">
             <CheckCircle2 className="w-4 h-4" />
           </div>
         </div>
@@ -417,7 +417,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               {storefrontSettings?.freeDeliveryThreshold ? `${storefrontSettings.freeDeliveryThreshold.toLocaleString()} ₽` : '5 000 ₽'}
             </span>
           </div>
-          <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-amber-500">
+          <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-warning">
             <Sparkles className="w-4 h-4" />
           </div>
         </div>
@@ -608,12 +608,12 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                           onClick={(e) => handleToggleMethodActive(method.id, e)}
                           className={`p-1.5 rounded-xl transition-all cursor-pointer ${
                             isActive
-                              ? 'neu-button text-emerald-600 hover:text-emerald-700'
+                              ? 'neu-button text-success hover:text-success'
                               : 'neu-inset text-[#5C6B80]'
                           }`}
                           title={isActive ? 'Отключить способ' : 'Включить способ'}
                         >
-                          <span className={`w-2 h-2 rounded-full block ${isActive ? 'bg-emerald-500' : 'bg-[#BAC5D5]'}`} />
+                          <span className={`w-2 h-2 rounded-full block ${isActive ? 'bg-success' : 'bg-[#BAC5D5]'}`} />
                         </button>
 
                         <button
@@ -649,7 +649,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                         <span className="text-[11px] font-bold text-[#5C6B80]">Стоимость:</span>
                         <span
                           className={`font-black ${
-                            method.price === 0 ? 'text-emerald-600 font-extrabold' : 'text-[#2D3A4E]'
+                            method.price === 0 ? 'text-success font-extrabold' : 'text-[#2D3A4E]'
                           }`}
                         >
                           {method.price === 0 ? 'Бесплатно' : `${method.price.toLocaleString()} ₽`}
@@ -657,7 +657,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                       </div>
 
                       {method.freeThreshold !== undefined && method.freeThreshold > 0 && (
-                        <span className="text-[10px] font-bold text-emerald-700 neu-inset px-2 py-0.5 rounded-lg bg-[#E3E8EF]">
+                        <span className="text-[10px] font-bold text-success neu-inset px-2 py-0.5 rounded-lg bg-[#E3E8EF]">
                           Бесплатно от {method.freeThreshold.toLocaleString()} ₽
                         </span>
                       )}
@@ -1173,7 +1173,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
       {deletingMethodId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2D3A4E]/40 backdrop-blur-xs animate-in fade-in">
           <div className="neu-modal rounded-3xl p-5 max-w-sm w-full space-y-4 border border-white/80 text-[#2D3A4E]">
-            <div className="flex items-center gap-2.5 text-rose-600">
+            <div className="flex items-center gap-2.5 text-danger">
               <AlertCircle className="w-5 h-5 shrink-0" />
               <h4 className="text-sm font-black">Удалить способ доставки?</h4>
             </div>
@@ -1203,7 +1203,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
       {deletingPointId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2D3A4E]/40 backdrop-blur-xs animate-in fade-in">
           <div className="neu-modal rounded-3xl p-5 max-w-sm w-full space-y-4 border border-white/80 text-[#2D3A4E]">
-            <div className="flex items-center gap-2.5 text-rose-600">
+            <div className="flex items-center gap-2.5 text-danger">
               <AlertCircle className="w-5 h-5 shrink-0" />
               <h4 className="text-sm font-black">Удалить пункт самовывоза?</h4>
             </div>

@@ -869,19 +869,19 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   // Helper for tracking progress % and stage colors
   const getOrderStatusProgress = (status: Order['status'], isCancelled?: boolean) => {
     if (isCancelled) {
-      return { percent: 0, label: 'Отменен', color: 'bg-rose-500', text: 'text-rose-700' };
+      return { percent: 0, label: 'Отменен', color: 'bg-danger', text: 'text-danger' };
     }
     switch (status) {
       case 'accepted':
         return { percent: 20, label: ORDER_STATUS_LABELS.accepted, color: 'bg-blue-600', text: 'text-blue-900' };
       case 'assembling':
-        return { percent: 45, label: ORDER_STATUS_LABELS.assembling, color: 'bg-amber-500', text: 'text-amber-700' };
+        return { percent: 45, label: ORDER_STATUS_LABELS.assembling, color: 'bg-warning', text: 'text-warning' };
       case 'in_transit':
         return { percent: 75, label: ORDER_STATUS_LABELS.in_transit, color: 'bg-indigo-600', text: 'text-indigo-800' };
       case 'ready':
-        return { percent: 90, label: ORDER_STATUS_LABELS.ready, color: 'bg-emerald-600', text: 'text-emerald-800' };
+        return { percent: 90, label: ORDER_STATUS_LABELS.ready, color: 'bg-success', text: 'text-success' };
       case 'delivered':
-        return { percent: 100, label: ORDER_STATUS_LABELS.delivered, color: 'bg-emerald-600', text: 'text-emerald-800' };
+        return { percent: 100, label: ORDER_STATUS_LABELS.delivered, color: 'bg-success', text: 'text-success' };
       default:
         return { percent: 10, label: 'В обработке', color: 'bg-blue-600', text: 'text-blue-800' };
     }
@@ -1032,8 +1032,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-sm font-bold text-[#2D3A4E]">{isFirebaseAdmin ? 'Синхронизация данных' : 'Аккаунт'}</h3>
                   {isFirebaseAdmin && (
-                    <span className="neu-button px-2 py-0.5 rounded-full text-[10px] font-black text-emerald-600 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="neu-button px-2 py-0.5 rounded-full text-[10px] font-black text-success flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                       База данных подключена
                     </span>
                   )}
@@ -1173,7 +1173,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-[#2D3A4E]">{addr.title}</span>
                       {addr.isDefault && (
-                        <span className="text-[10px] font-bold text-emerald-800 neu-inset px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] font-bold text-success neu-inset px-2 py-0.5 rounded-full">
                           Основной
                         </span>
                       )}
@@ -1250,7 +1250,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         {card.cardNumber}
                       </span>
                       {card.isDefault && (
-                        <span className="text-[10px] font-bold text-emerald-800 neu-inset px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] font-bold text-success neu-inset px-2 py-0.5 rounded-full">
                           Основная
                         </span>
                       )}
@@ -1445,7 +1445,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 <p className="text-[10px] text-[#5C6B80] font-medium">{storeSlogan}</p>
               </div>
             </div>
-            <span className="neu-inset px-2.5 py-1 rounded-xl text-[10px] font-black text-emerald-700 bg-[#E3E8EF]">
+            <span className="neu-inset px-2.5 py-1 rounded-xl text-[10px] font-black text-success bg-[#E3E8EF]">
               Открыт
             </span>
           </div>
@@ -1572,8 +1572,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     Управление
                   </span>
                   {isAdminAuthenticated && isFirebaseAdmin ? (
-                    <span className="neu-button px-2 py-0.5 rounded-full text-[10px] font-black text-emerald-600 bg-[#E3E8EF] flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="neu-button px-2 py-0.5 rounded-full text-[10px] font-black text-success bg-[#E3E8EF] flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                       Админ Firebase
                     </span>
                   ) : (
@@ -1775,8 +1775,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                     {ord.trackingNumber}
                                   </span>
                                 ) : (
-                                  <span className="text-[10px] font-medium text-amber-800 neu-inset px-2 py-0.5 rounded-lg flex items-center gap-1 bg-amber-50/60">
-                                    <Clock className="w-3 h-3 text-amber-600" />
+                                  <span className="text-[10px] font-medium text-warning neu-inset px-2 py-0.5 rounded-lg flex items-center gap-1 bg-warning-soft">
+                                    <Clock className="w-3 h-3 text-warning" />
                                     Трек формируется
                                   </span>
                                 )}
@@ -1790,8 +1790,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                   </span>
                                 </div>
                               ) : (
-                                <span className="text-[10px] font-medium text-amber-800 neu-inset px-2 py-0.5 rounded-lg flex items-center gap-1 bg-amber-50/60">
-                                  <Clock className="w-3 h-3 text-amber-600" />
+                                <span className="text-[10px] font-medium text-warning neu-inset px-2 py-0.5 rounded-lg flex items-center gap-1 bg-warning-soft">
+                                  <Clock className="w-3 h-3 text-warning" />
                                   Трек-номер формируется
                                 </span>
                               )
@@ -1801,7 +1801,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                   {isPickup ? (
                                     <Store className="w-3 h-3 text-[#5F6ED0]" />
                                   ) : isExpress ? (
-                                    <Zap className="w-3 h-3 text-amber-500" />
+                                    <Zap className="w-3 h-3 text-warning" />
                                   ) : (
                                     <Bike className="w-3 h-3 text-[#5F6ED0]" />
                                   )}
@@ -1966,7 +1966,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                           <span>Копия трека</span>
                         </button>
                       ) : (
-                        <span className="text-[10px] font-bold text-amber-800 neu-inset px-2.5 py-1 rounded-lg bg-amber-50">
+                        <span className="text-[10px] font-bold text-warning neu-inset px-2.5 py-1 rounded-lg bg-warning-soft">
                           Формируется
                         </span>
                       )}
@@ -2011,14 +2011,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 }
 
                 return (
-                  <div className="neu-inset rounded-2xl p-3.5 bg-amber-50/80 border border-amber-300/70 space-y-2 text-amber-900">
+                  <div className="neu-inset rounded-2xl p-3.5 bg-warning-soft border border-warning/70 space-y-2 text-warning">
                     <div className="flex items-start gap-2.5">
-                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <AlertCircle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
                       <div className="space-y-0.5">
-                        <p className="text-xs font-black text-amber-900">
+                        <p className="text-xs font-black text-warning">
                           Трек-номер формируется транспортной компанией
                         </p>
-                        <p className="text-[11px] text-amber-800 leading-snug">
+                        <p className="text-[11px] text-warning leading-snug">
                           Заказ принят и готовится к передаче в транспортную компанию. Как только перевозчик зарегистрирует отправление, трек-номер появится в личном кабинете.
                         </p>
                       </div>
@@ -2033,7 +2033,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <span className="text-[10px] font-bold text-[#5C6B80] uppercase tracking-wider flex items-center gap-1">
-                        {isPickup ? <Store className="w-3.5 h-3.5 text-[#5F6ED0]" /> : isExpress ? <Zap className="w-3.5 h-3.5 text-amber-500" /> : <Bike className="w-3.5 h-3.5 text-[#5F6ED0]" />}
+                        {isPickup ? <Store className="w-3.5 h-3.5 text-[#5F6ED0]" /> : isExpress ? <Zap className="w-3.5 h-3.5 text-warning" /> : <Bike className="w-3.5 h-3.5 text-[#5F6ED0]" />}
                         {isPickup ? 'Самовывоз из бутика' : isExpress ? 'Срочная экспресс-доставка' : 'Курьерская служба MANSTYLE'}
                       </span>
                       <p className="text-xs font-black text-[#2D3A4E]">
@@ -2283,7 +2283,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                     isActive
                                       ? 'text-[#5F6ED0] neu-inset bg-[#E3E8EF]'
                                       : isCompleted
-                                      ? 'text-emerald-800 neu-flat bg-[#E3E8EF]'
+                                      ? 'text-success neu-flat bg-[#E3E8EF]'
                                       : 'text-[#5C6B80]'
                                   }`}
                                 >
@@ -2417,20 +2417,20 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </div>
               {/* Adjusted Order & Partial Refund Notice for Client */}
               {selectedOrderForTracking.isAdjusted && (
-                <div className="neu-inset rounded-2xl p-3 bg-emerald-50/60 border border-emerald-300/60 space-y-1.5 text-xs text-emerald-900">
+                <div className="neu-inset rounded-2xl p-3 bg-success-soft border border-success/60 space-y-1.5 text-xs text-success">
                   <div className="flex items-center justify-between">
-                    <span className="font-extrabold flex items-center gap-1.5 text-emerald-800">
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="font-extrabold flex items-center gap-1.5 text-success">
+                      <Sparkles className="w-3.5 h-3.5 text-success" />
                       Состав заказа был скорректирован
                     </span>
                     {selectedOrderForTracking.refundAmount && selectedOrderForTracking.refundAmount > 0 && (
-                      <span className="font-black text-emerald-700 neu-flat px-2 py-0.5 rounded-lg text-[11px]">
+                      <span className="font-black text-success neu-flat px-2 py-0.5 rounded-lg text-[11px]">
                         Возврат: {selectedOrderForTracking.refundAmount.toLocaleString('ru-RU')} ₽
                       </span>
                     )}
                   </div>
                   {selectedOrderForTracking.adjustmentReason && (
-                    <p className="text-[11px] text-emerald-700">
+                    <p className="text-[11px] text-success">
                       Причина: {selectedOrderForTracking.adjustmentReason}
                     </p>
                   )}
@@ -2551,7 +2551,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                           <p className="text-xs font-black text-[#2D3A4E] truncate">
                             {isExpress ? 'Иван (Экспресс)' : 'Алексей Смирнов'}
                           </p>
-                          <span className="text-[9px] font-bold text-amber-700 neu-flat px-1 py-0.2 rounded bg-amber-50 shrink-0">
+                          <span className="text-[9px] font-bold text-warning neu-flat px-1 py-0.2 rounded bg-warning-soft shrink-0">
                             ★ 4.96
                           </span>
                         </div>
@@ -2600,7 +2600,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               return (
                 <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-[#E3E8EF] flex items-center justify-between gap-3 border border-white/70">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center bg-white text-emerald-600 font-black text-xs shrink-0 border border-emerald-200/80">
+                    <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center bg-white text-success font-black text-xs shrink-0 border border-success/25">
                       ТК
                     </div>
                     <div className="min-w-0">
@@ -2677,7 +2677,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-black text-slate-900">{addr.title}</span>
                       {addr.isDefault && (
-                        <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] font-bold text-success bg-success-soft px-2 py-0.5 rounded-full">
                           Основной
                         </span>
                       )}
@@ -2986,7 +2986,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         {card.cardNumber}
                       </span>
                       {card.isDefault && (
-                        <span className="text-[10px] font-bold text-emerald-700 neu-inset px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] font-bold text-success neu-inset px-2 py-0.5 rounded-full">
                           Основная
                         </span>
                       )}
@@ -3488,8 +3488,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="text-sm sm:text-base font-extrabold text-[#2D3A4E] truncate">Панель администратора</h3>
-                    <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black text-success bg-success-soft border border-success/25">
+                      <span className="w-1.5 h-1.5 rounded-full bg-success" />
                       {adminCreds.username}
                     </span>
                   </div>

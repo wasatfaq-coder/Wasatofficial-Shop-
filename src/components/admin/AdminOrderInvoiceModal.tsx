@@ -177,7 +177,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
             <div>
               <span className="text-[10px] uppercase font-bold text-slate-400 block">Оплата & Доставка</span>
               <span className="font-bold text-slate-800 flex items-center gap-1">
-                <CreditCard className="w-3 h-3 text-emerald-600" />
+                <CreditCard className="w-3 h-3 text-success" />
                 {order.paymentMethod || 'Банковская карта онлайн'}
               </span>
               <span className="text-[11px] text-slate-500 font-mono block">
@@ -251,14 +251,14 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
                 </span>
               </div>
               {discountAmount > 0 && (
-                <div className="flex justify-between text-emerald-600 font-semibold">
+                <div className="flex justify-between text-success font-semibold">
                   <span>Скидка по акции:</span>
                   <span>-{discountAmount.toLocaleString()} ₽</span>
                 </div>
               )}
               <div className="flex justify-between">
                 <span>Доставка:</span>
-                <span className="font-semibold text-emerald-600">Бесплатно</span>
+                <span className="font-semibold text-success">Бесплатно</span>
               </div>
               <div className="border-t border-slate-200 pt-2 flex justify-between items-baseline font-black text-slate-900 text-sm">
                 <span>ИТОГО К ОПЛАТЕ:</span>
