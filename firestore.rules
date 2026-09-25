@@ -1,82 +1,155 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Default-deny catch-all
-    match /{document=**} {
-      allow read, write: if false;
-    }
+    // ------------------------------------------------------------------
+    // Helpers
+    // ------------------------------------------------------------------
 
     function isSignedIn() {
       return request.auth != null;
+    }
+
+    // Администратор: верифицированный Google-аккаунт владельца
+    // или пользователь, для которого вручную создан документ /admins/{uid}
+    // (создаётся только через Firebase Console / Admin SDK).
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email == 'gunh83975@gmail.com'
+          && request.auth.token.email_verified == true)
+        || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
     }
 
     function isValidId(id) {
       return id is string && id.size() > 0 && id.size() <= 128;
     }
 
-    // Products catalog: public read & write with valid ID
+    // Изменены только перечисленные поля существующего документа
+    function onlyChanges(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ------------------------------------------------------------------
+    // Каталог и витрина: читают все, меняет только администратор
+    // ------------------------------------------------------------------
+
     match /products/{productId} {
       allow read: if true;
-      allow write: if isValidId(productId);
+      allow create, delete: if isAdmin() && isValidId(productId);
+      // Покупатели могут менять только остатки (списание при заказе)
+      // и отзывы/рейтинг. Остальные поля — только администратор.
+      allow update: if isAdmin()
+        || onlyChanges(['skus', 'inStock', 'reviews', 'rating', 'reviewsCount']);
     }
 
-    // Promo codes: public read & write with valid ID
     match /promos/{promoId} {
       allow read: if true;
-      allow write: if isValidId(promoId);
+      allow create, delete: if isAdmin() && isValidId(promoId);
+      // Покупатели могут обновлять только счётчики использования промокода
+      allow update: if isAdmin()
+        || (onlyChanges(['usedCount', 'generatedRevenue', 'commissionEarned'])
+          && request.resource.data.get('usedCount', 0) >= resource.data.get('usedCount', 0));
     }
 
-    // Storefront banners: public read & write with valid ID
     match /banners/{bannerId} {
       allow read: if true;
-      allow write: if isValidId(bannerId);
+      allow write: if isAdmin() && isValidId(bannerId);
     }
 
-    // Storefront & brand settings: public read & write with valid ID
     match /settings/{settingId} {
       allow read: if true;
-      allow write: if isValidId(settingId);
+      allow write: if isAdmin() && isValidId(settingId);
     }
 
-    // Delivery shipping methods: public read & write with valid ID
     match /delivery_methods/{methodId} {
       allow read: if true;
-      allow write: if isValidId(methodId);
+      allow write: if isAdmin() && isValidId(methodId);
     }
 
-    // Pickup points: public read & write with valid ID
     match /pickup_points/{pointId} {
       allow read: if true;
-      allow write: if isValidId(pointId);
+      allow write: if isAdmin() && isValidId(pointId);
     }
 
-    // Orders collection: public read & write with valid ID
+    // ------------------------------------------------------------------
+    // Заказы: оформить может любой (включая гостей), читать —
+    // владелец (по customerUid) или администратор, менять — администратор
+    // ------------------------------------------------------------------
+
     match /orders/{orderId} {
-      allow read: if true;
-      allow write: if isValidId(orderId);
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.get('customerUid', null) == request.auth.uid);
+
+      allow create: if isAdmin() || (
+        isValidId(orderId)
+        && request.resource.data.id == orderId
+        && request.resource.data.status == 'accepted'
+        && request.resource.data.items is list
+        && request.resource.data.items.size() > 0
+        && request.resource.data.totalPrice is number
+        && request.resource.data.totalPrice >= 0
+        && request.resource.data.get('isCancelled', false) == false
+        && request.resource.data.get('paymentStatus', 'pending') in ['pending', 'paid', 'paid_on_delivery']
+        // Гость не указывает customerUid, авторизованный — только свой
+        && (request.resource.data.get('customerUid', null) == null
+          || (isSignedIn() && request.resource.data.customerUid == request.auth.uid))
+      );
+
+      allow update, delete: if isAdmin();
     }
 
-    // Customer support chat messages: public read & write with valid ID
+    // ------------------------------------------------------------------
+    // Чат поддержки
+    // ------------------------------------------------------------------
+
     match /chat_messages/{messageId} {
+      // ВНИМАНИЕ: чат пока общий для всех покупателей (нет разделения по
+      // пользователям), поэтому чтение открыто. См. SECURITY.md.
       allow read: if true;
-      allow write: if isValidId(messageId);
+      // Покупатель может только создавать свои сообщения (и ответы бота),
+      // но не сообщения от имени администратора и не внутренние заметки.
+      allow create: if isAdmin() || (
+        isValidId(messageId)
+        && request.resource.data.sender in ['user', 'bot']
+        && request.resource.data.get('isInternalNote', false) == false
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 5000
+      );
+      allow update, delete: if isAdmin();
     }
 
-    // User profiles: public read & write with valid ID
+    // ------------------------------------------------------------------
+    // Профили пользователей: свой профиль или администратор
+    // ------------------------------------------------------------------
+
     match /users/{userId} {
-      allow read: if true;
-      allow write: if isValidId(userId);
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+      allow create, update: if isAdmin() || (
+        isSignedIn() && request.auth.uid == userId
+        && request.resource.data.get('uid', userId) == userId
+      );
+      allow delete: if isAdmin();
     }
 
-    // Admins registry: public read & write with valid ID
+    // ------------------------------------------------------------------
+    // Реестр администраторов: только чтение своей записи.
+    // Добавлять администраторов — вручную через Firebase Console.
+    // ------------------------------------------------------------------
+
     match /admins/{adminId} {
-      allow read: if true;
-      allow write: if isValidId(adminId);
+      allow read: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
+      allow write: if false;
     }
 
-    // Test connectivity probe
+    // Проверка соединения при старте приложения (только чтение)
     match /test/{testId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if false;
     }
   }
 }

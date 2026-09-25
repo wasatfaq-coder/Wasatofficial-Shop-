@@ -320,12 +320,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [adminCreds, setAdminCreds] = useState<AdminCredentials>(() => getAdminCredentials());
   const [isChangeCredentialsModalOpen, setIsChangeCredentialsModalOpen] = useState(false);
 
-  // If Firebase user is verified admin, keep admin authenticated
+  // Admin access requires a Firebase admin account (enforced by firestore.rules);
+  // the local password is only a second step. Drop the session when admin rights are lost.
   React.useEffect(() => {
-    if (isFirebaseAdmin) {
-      setIsAdminAuthenticated(true);
+    if (!isFirebaseAdmin) {
+      setIsAdminAuthenticated(false);
       try {
-        sessionStorage.setItem('manstyle_admin_auth', 'true');
+        sessionStorage.removeItem('manstyle_admin_auth');
       } catch {
         // ignore
       }
@@ -340,7 +341,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   }, []);
 
   const handleOpenAdminPanel = () => {
-    if (isAdminAuthenticated || isFirebaseAdmin) {
+    if (!isFirebaseAdmin) {
+      onShowToast(
+        currentUser
+          ? 'У этого аккаунта нет прав администратора'
+          : 'Войдите через Google под аккаунтом администратора',
+        'error'
+      );
+      return;
+    }
+    if (isAdminAuthenticated) {
       setActiveModal('admin');
     } else {
       setIsAdminAuthModalOpen(true);
@@ -364,10 +374,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       const user = await loginWithGoogle();
       if (user) {
         onShowToast(`Вы успешно вошли: ${user.displayName || user.email}`, 'success');
-        if (user.email?.toLowerCase() === 'gunh83975@gmail.com') {
-          setIsAdminAuthenticated(true);
-          sessionStorage.setItem('manstyle_admin_auth', 'true');
-        }
       }
     } catch (err: unknown) {
       console.error('Google Auth Error:', err);
@@ -1488,15 +1494,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   <span className="neu-button-accent text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
                     Управление
                   </span>
-                  {isAdminAuthenticated || isFirebaseAdmin ? (
+                  {isAdminAuthenticated && isFirebaseAdmin ? (
                     <span className="neu-button px-2 py-0.5 rounded-full text-[10px] font-black text-emerald-600 bg-[#E3E8EF] flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      {isFirebaseAdmin ? 'Админ Firebase' : 'Доступ открыт'}
+                      Админ Firebase
                     </span>
                   ) : (
                     <span className="neu-inset px-2 py-0.5 rounded-full text-[10px] font-bold text-[#5C6B80] bg-[#E3E8EF] flex items-center gap-1">
                       <Lock className="w-2.5 h-2.5" />
-                      Требуется пароль
+                      {isFirebaseAdmin ? 'Требуется пароль' : 'Требуется вход Google'}
                     </span>
                   )}
                 </div>
@@ -3339,7 +3345,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
       {/* ================= MODAL: ADMIN PANEL ================= */}
       <AnimatePresence>
-        {activeModal === 'admin' && isAdminAuthenticated && (
+        {activeModal === 'admin' && isFirebaseAdmin && isAdminAuthenticated && (
           <motion.div
             key="admin-panel-overlay"
             initial={{ opacity: 0 }}

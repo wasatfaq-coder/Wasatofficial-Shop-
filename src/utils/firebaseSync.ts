@@ -6,6 +6,7 @@ import {
   deleteDoc,
   onSnapshot,
   query,
+  where,
   limit,
   writeBatch,
 } from 'firebase/firestore';
@@ -350,13 +351,19 @@ function normalizeOrderFromFirestore(raw: any, docId?: string): Order {
   return order;
 }
 
+/**
+ * Subscribes to orders. Admins receive every order; customers pass their uid
+ * and only receive their own orders (required by firestore.rules).
+ */
 export function subscribeToOrders(
   onUpdate: (orders: Order[]) => void,
-  onError?: (error: unknown) => void
+  onError?: (error: unknown) => void,
+  customerUid?: string
 ) {
   const colRef = collection(db, 'orders');
+  const source = customerUid ? query(colRef, where('customerUid', '==', customerUid)) : colRef;
   return onSnapshot(
-    colRef,
+    source,
     async (snapshot) => {
       if (snapshot.empty) {
         // If collection in database is empty, return empty real array
@@ -784,6 +791,26 @@ export function subscribeToUsers(
     },
     (error) => {
       console.warn('Users subscription warning:', error);
+      if (onError) onError(error);
+    }
+  );
+}
+
+/**
+ * Subscribes to a single customer's own profile document (users/{uid}).
+ */
+export function subscribeToOwnUserProfile(
+  uid: string,
+  onUpdate: (users: UserProfile[]) => void,
+  onError?: (error: unknown) => void
+) {
+  return onSnapshot(
+    doc(db, 'users', uid),
+    (snap) => {
+      onUpdate(snap.exists() ? [snap.data() as UserProfile] : []);
+    },
+    (error) => {
+      console.warn('User profile subscription warning:', error);
       if (onError) onError(error);
     }
   );

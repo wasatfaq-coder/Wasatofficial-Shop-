@@ -1,0 +1,29 @@
+name: Ошибка
+description: Сообщить о неправильной работе магазина
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: Что произошло
+      description: Опишите проблему и что ожидалось вместо неё
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Как воспроизвести
+      placeholder: |
+        1. Открыть …
+        2. Нажать …
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Устройство и браузер
+      placeholder: iPhone 15, Safari 18
+  - type: textarea
+    id: extra
+    attributes:
+      label: Скриншоты / логи консоли

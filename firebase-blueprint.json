@@ -21,7 +21,7 @@
       "type": "object",
       "properties": {
         "id": { "type": "string", "maxLength": 128 },
-        "userId": { "type": "string", "maxLength": 128 },
+        "customerUid": { "type": "string", "maxLength": 128 },
         "customerName": { "type": "string", "maxLength": 128 },
         "customerEmail": { "type": "string", "maxLength": 256 },
         "customerPhone": { "type": "string", "maxLength": 64 },
