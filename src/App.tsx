@@ -145,7 +145,7 @@ export default function App() {
         if (Array.isArray(parsed)) return parsed;
       }
     } catch {}
-    return ['linen-shirt-01', 'polo-classic-02'];
+    return [];
   });
 
   React.useEffect(() => {
@@ -207,38 +207,19 @@ export default function App() {
     return () => window.removeEventListener('manstyle_storefront_settings_updated', handleStorefrontUpdate);
   }, []);
 
-  // Pre-load cart with saved items or 3 default items
+  // Saved cart, or empty. Earlier versions put three demo items (ids 'cart-init-*') into every new
+  // visitor's cart and brought them back after the cart was emptied; those items are dropped here.
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     try {
       const saved = localStorage.getItem('manstyle_cart');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.filter((item: CartItem) => !String(item?.id).startsWith('cart-init-'));
+        }
       }
     } catch {}
-    return [
-      {
-        id: 'cart-init-1',
-        product: PRODUCTS[0], // Рубашка льняная (2990 ₽)
-        selectedColor: 'Бежевый',
-        selectedSize: 'M',
-        quantity: 1,
-      },
-      {
-        id: 'cart-init-2',
-        product: PRODUCTS[1], // Поло классическое (2490 ₽)
-        selectedColor: 'Темно-синий',
-        selectedSize: 'L',
-        quantity: 1,
-      },
-      {
-        id: 'cart-init-3',
-        product: PRODUCTS[2], // Куртка бомбер (4990 ₽)
-        selectedColor: 'Серый',
-        selectedSize: 'L',
-        quantity: 1,
-      },
-    ];
+    return [];
   });
 
   React.useEffect(() => {
@@ -791,6 +772,58 @@ export default function App() {
       setCartItems((prev) => [...prev, newItem]);
       addToast(`${product.title} (${color}, ${size}) добавлено в корзину!`, 'success');
     }
+    setActiveTab('cart');
+  };
+
+  // Repeat a past order: current product data and stock, unavailable items are skipped
+  const handleRepeatOrder = (items: CartItem[]) => {
+    const toAdd: CartItem[] = [];
+    let skipped = 0;
+    items.forEach((item, idx) => {
+      const product = products.find((p) => p.id === item.product?.id);
+      const stock = product ? getVariantStock(product, item.selectedColor, item.selectedSize) : 0;
+      if (!product || stock <= 0) {
+        skipped += 1;
+        return;
+      }
+      toAdd.push({
+        id: `cart-${Date.now()}-${idx}`,
+        product,
+        selectedColor: item.selectedColor,
+        selectedSize: item.selectedSize,
+        quantity: Math.min(item.quantity, stock),
+      });
+    });
+
+    if (toAdd.length === 0) {
+      addToast('Товаров из этого заказа сейчас нет в наличии', 'error');
+      return;
+    }
+
+    setCartItems((prev) => {
+      const next = [...prev];
+      for (const add of toAdd) {
+        const i = next.findIndex(
+          (c) =>
+            c.product.id === add.product.id &&
+            c.selectedColor === add.selectedColor &&
+            c.selectedSize === add.selectedSize
+        );
+        if (i > -1) {
+          const stock = getVariantStock(add.product, add.selectedColor, add.selectedSize);
+          next[i] = { ...next[i], quantity: Math.min(next[i].quantity + add.quantity, stock) };
+        } else {
+          next.push(add);
+        }
+      }
+      return next;
+    });
+    addToast(
+      skipped > 0
+        ? `Товары добавлены в корзину. Нет в наличии: ${skipped}`
+        : 'Товары заказа добавлены в корзину',
+      skipped > 0 ? 'info' : 'success'
+    );
     setActiveTab('cart');
   };
 
@@ -1514,6 +1547,7 @@ export default function App() {
               onToggleFavorite={handleToggleFavorite}
               onUpdateProfile={handleUpdateProfile}
               setActiveTab={setActiveTab}
+              onRepeatOrder={handleRepeatOrder}
               onShowToast={addToast}
               onOpenSupportChat={() => setIsSupportChatOpen(true)}
               onUpdateProducts={(updatedProds) => {

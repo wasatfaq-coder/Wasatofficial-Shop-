@@ -68,7 +68,7 @@ import {
 import { NeumorphicSlider } from '../components/NeumorphicSlider';
 import { calculateRussianPattern, RUSSIAN_SIZE_TABLE_ROWS } from '../utils/russianSizing';
 import { useAuth } from '../context/AuthContext';
-import { UserProfile, Order, OrderStatusHistoryStep, ActiveTab, SavedAddress, SavedCard, Product, PromoCode, BannerSlide, ChatMessage, StorefrontSettings, AdminCredentials, DeliveryMethod, PickupPoint } from '../types';
+import { UserProfile, Order, CartItem, OrderStatusHistoryStep, ActiveTab, SavedAddress, SavedCard, Product, PromoCode, BannerSlide, ChatMessage, StorefrontSettings, AdminCredentials, DeliveryMethod, PickupPoint } from '../types';
 import { formatAddress } from '../utils/addressFormat';
 import { PRODUCTS } from '../data/products';
 import { INITIAL_PROMO_CODES, INITIAL_BANNER_SLIDES, INITIAL_CHAT_MESSAGES } from '../data/marketingAndSupport';
@@ -120,6 +120,7 @@ interface ProfileScreenProps {
   onToggleFavorite?: (product: Product, e: React.MouseEvent) => void;
   onUpdateProfile: (updated: UserProfile) => void;
   setActiveTab: (tab: ActiveTab) => void;
+  onRepeatOrder?: (items: CartItem[]) => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   onOpenSupportChat?: () => void;
   onUpdateProducts?: (products: Product[]) => void;
@@ -162,6 +163,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onToggleFavorite,
   onUpdateProfile,
   setActiveTab,
+  onRepeatOrder,
   onShowToast,
   onOpenSupportChat,
   onUpdateProducts,
@@ -2632,7 +2634,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  onShowToast('Товары заказа снова добавлены в корзину', 'success');
+                  if (!onRepeatOrder) return;
+                  onRepeatOrder(selectedOrderForTracking.items);
+                  setSelectedOrderIdForTracking(null);
                 }}
                 className="w-full neu-button-accent py-3 px-4 rounded-2xl text-xs font-extrabold text-white flex items-center justify-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
               >
