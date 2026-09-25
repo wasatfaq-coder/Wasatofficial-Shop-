@@ -1568,9 +1568,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
       {/* ================= MODAL: ORDER HISTORY & TRACKING ================= */}
       {activeModal === 'orders' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in">
-          <div className="neu-modal rounded-3xl p-5 max-w-lg w-full space-y-4 max-h-[88vh] overflow-y-auto no-scrollbar border border-white/80 text-[#2D3A4E]">
-            <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="neu-modal rounded-3xl max-w-lg w-full max-h-[88vh] flex flex-col border border-white/80 text-[#2D3A4E] shadow-2xl overflow-hidden transform-gpu">
+            {/* Sticky Fixed Header */}
+            <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 p-4 sm:p-5 shrink-0 bg-[#E3E8EF]">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-2xl neu-inset flex items-center justify-center text-[#5F6ED0]">
                   <Package className="w-5 h-5 stroke-[2.2]" />
@@ -1582,14 +1583,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </div>
               <button
                 onClick={() => setActiveModal(null)}
-                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer"
+                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer active:scale-95 transition-transform"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Order Filter Pills */}
-            <div className="flex items-center gap-2 border-b border-[#BAC5D5]/50 pb-3">
+            {/* Sticky Fixed Filter Pills */}
+            <div className="flex items-center gap-2 border-b border-[#BAC5D5]/50 px-4 sm:px-5 py-2.5 shrink-0 bg-[#E3E8EF]">
               {[
                 { id: 'all', label: 'Все заказы' },
                 { id: 'active', label: 'Активные' },
@@ -1609,22 +1610,24 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               ))}
             </div>
 
-            {/* Order list */}
-            {filteredOrders.length === 0 ? (
-              <div className="text-center py-10 space-y-2 neu-inset rounded-2xl p-6">
-                <ShoppingBag className="w-10 h-10 text-[#5C6B80] mx-auto opacity-50" />
-                <p className="text-xs font-extrabold text-[#2D3A4E]">Заказов не найдено</p>
-                <p className="text-[11px] text-[#5C6B80]">Сделайте первый заказ в нашем каталоге!</p>
-              </div>
-            ) : (
-              <div className="space-y-3.5">
-                {filteredOrders.map((ord) => {
-                  const statusInfo = getOrderStatusProgress(ord.status, ord.isCancelled);
-                  return (
-                    <div
-                      key={ord.id}
-                      className="neu-inset rounded-2xl p-4 space-y-3 bg-[#E3E8EF]"
-                    >
+            {/* Smooth Scrollable Order List Container */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 no-scrollbar overscroll-contain transform-gpu">
+              {filteredOrders.length === 0 ? (
+                <div className="text-center py-10 space-y-2 neu-inset rounded-2xl p-6">
+                  <ShoppingBag className="w-10 h-10 text-[#5C6B80] mx-auto opacity-50" />
+                  <p className="text-xs font-extrabold text-[#2D3A4E]">Заказов не найдено</p>
+                  <p className="text-[11px] text-[#5C6B80]">Сделайте первый заказ в нашем каталоге!</p>
+                </div>
+              ) : (
+                <div className="space-y-3.5">
+                  {filteredOrders.map((ord) => {
+                    const statusInfo = getOrderStatusProgress(ord.status, ord.isCancelled);
+                    return (
+                      <div
+                        key={ord.id}
+                        className="neu-inset rounded-2xl p-4 space-y-3 bg-[#E3E8EF]"
+                        style={{ contain: 'layout paint' }}
+                      >
                       {/* Top Header info */}
                       <div className="flex items-center justify-between">
                         <div>
@@ -1815,14 +1818,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             )}
           </div>
         </div>
+      </div>
       )}
 
       {/* ================= DETAILED ORDER TRACKING MODAL ================= */}
       {selectedOrderForTracking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="neu-modal rounded-3xl p-5 max-w-md w-full space-y-4 max-h-[90vh] overflow-y-auto no-scrollbar border border-white/80 text-[#2D3A4E] overscroll-contain transform-gpu">
-            {/* Header */}
-            <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
+          <div className="neu-modal rounded-3xl max-w-md w-full max-h-[90vh] flex flex-col border border-white/80 text-[#2D3A4E] shadow-2xl overflow-hidden transform-gpu">
+            {/* Sticky Fixed Header */}
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[#BAC5D5]/50 shrink-0 bg-[#E3E8EF]">
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-base font-extrabold text-[#2D3A4E]">
@@ -1839,11 +1843,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
               <button
                 onClick={() => setSelectedOrderIdForTracking(null)}
-                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer"
+                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer active:scale-95 transition-transform"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Smooth Scrollable Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 no-scrollbar overscroll-contain transform-gpu">
 
             {/* Tracking Code Banner OR Clean Delivery Info Notice */}
             {(() => {
@@ -2543,13 +2550,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               );
             })()}
 
-            {/* Action buttons */}
-            <div className="flex items-center gap-2 pt-1">
+            </div>
+
+            {/* Sticky Action Footer */}
+            <div className="p-3.5 sm:p-4 border-t border-[#BAC5D5]/50 shrink-0 bg-[#E3E8EF]">
               <button
+                type="button"
                 onClick={() => {
                   onShowToast('Товары заказа снова добавлены в корзину', 'success');
                 }}
-                className="flex-1 neu-button-accent py-3 px-4 rounded-2xl text-xs font-extrabold text-white flex items-center justify-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
+                className="w-full neu-button-accent py-3 px-4 rounded-2xl text-xs font-extrabold text-white flex items-center justify-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
               >
                 <ShoppingBag className="w-4 h-4" />
                 <span>Повторить заказ</span>
@@ -2561,22 +2571,24 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
       {/* ================= MODAL: SAVED ADDRESSES MANAGEMENT ================= */}
       {activeModal === 'addresses' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in">
-          <div className="neu-modal rounded-3xl p-5 max-w-md w-full space-y-4 max-h-[85vh] overflow-y-auto no-scrollbar border border-white/80 text-[#2D3A4E]">
-            <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="neu-modal rounded-3xl max-w-md w-full max-h-[85vh] flex flex-col border border-white/80 text-[#2D3A4E] shadow-2xl overflow-hidden transform-gpu">
+            {/* Sticky Fixed Header */}
+            <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 p-4 sm:p-5 shrink-0 bg-[#E3E8EF]">
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-[#5F6ED0]" />
                 <h3 className="text-base font-extrabold text-[#2D3A4E]">Адреса доставки</h3>
               </div>
               <button
                 onClick={() => setActiveModal(null)}
-                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer"
+                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer active:scale-95 transition-transform"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="space-y-3">
+            {/* Smooth Scrollable Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3 no-scrollbar overscroll-contain transform-gpu">
               {profile.savedAddresses.map((addr) => (
                 <div key={addr.id} className="neu-inset rounded-2xl p-3.5 space-y-2 bg-[#E3E8EF]">
                   <div className="flex items-center justify-between">
@@ -2652,13 +2664,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               ))}
             </div>
 
-            <button
-              onClick={handleOpenAddAddress}
-              className="w-full neu-button-accent rounded-2xl py-3 text-xs font-extrabold text-white flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <Plus className="w-4 h-4 stroke-[3]" />
-              <span>Добавить новый адрес</span>
-            </button>
+            {/* Sticky Action Footer */}
+            <div className="p-3.5 sm:p-4 border-t border-[#BAC5D5]/50 shrink-0 bg-[#E3E8EF]">
+              <button
+                type="button"
+                onClick={handleOpenAddAddress}
+                className="w-full neu-button-accent rounded-2xl py-3 text-xs font-extrabold text-white flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
+              >
+                <Plus className="w-4 h-4 stroke-[3]" />
+                <span>Добавить новый адрес</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -2861,22 +2877,24 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
       {/* ================= MODAL: SAVED CARDS MANAGEMENT ================= */}
       {activeModal === 'cards' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in">
-          <div className="neu-modal rounded-3xl p-5 max-w-md w-full space-y-4 max-h-[85vh] overflow-y-auto no-scrollbar border border-white/80 text-[#2D3A4E]">
-            <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="neu-modal rounded-3xl max-w-md w-full max-h-[85vh] flex flex-col border border-white/80 text-[#2D3A4E] shadow-2xl overflow-hidden transform-gpu">
+            {/* Sticky Fixed Header */}
+            <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 p-4 sm:p-5 shrink-0 bg-[#E3E8EF]">
               <div className="flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-[#5F6ED0]" />
                 <h3 className="text-base font-extrabold text-[#2D3A4E]">Способы оплаты</h3>
               </div>
               <button
                 onClick={() => setActiveModal(null)}
-                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer"
+                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer active:scale-95 transition-transform"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="space-y-3">
+            {/* Smooth Scrollable Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3 no-scrollbar overscroll-contain transform-gpu">
               {profile.savedCards.map((card) => (
                 <div key={card.id} className="neu-inset rounded-2xl p-3.5 space-y-2 bg-[#E3E8EF]">
                   <div className="flex items-center justify-between">
@@ -2925,13 +2943,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               ))}
             </div>
 
-            <button
-              onClick={handleOpenAddCard}
-              className="w-full neu-button-accent rounded-2xl py-3 text-xs font-extrabold text-white flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <Plus className="w-4 h-4 stroke-[3]" />
-              <span>Привязать карту</span>
-            </button>
+            {/* Sticky Action Footer */}
+            <div className="p-3.5 sm:p-4 border-t border-[#BAC5D5]/50 shrink-0 bg-[#E3E8EF]">
+              <button
+                type="button"
+                onClick={handleOpenAddCard}
+                className="w-full neu-button-accent rounded-2xl py-3 text-xs font-extrabold text-white flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
+              >
+                <Plus className="w-4 h-4 stroke-[3]" />
+                <span>Привязать карту</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -3076,10 +3098,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
       {/* ================= MODAL: EDIT BODY MEASUREMENTS & RUSSIAN PATTERN ================= */}
       {isEditingMeasurements && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in">
-          <div className="neu-modal rounded-3xl p-4 sm:p-6 max-w-lg w-full space-y-4 max-h-[92vh] overflow-y-auto no-scrollbar border border-white/80 text-[#2D3A4E] shadow-2xl">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="neu-modal rounded-3xl max-w-lg w-full max-h-[92vh] flex flex-col border border-white/80 text-[#2D3A4E] shadow-2xl overflow-hidden transform-gpu">
+            {/* Sticky Fixed Header */}
+            <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 p-4 sm:p-5 shrink-0 bg-[#E3E8EF]">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-2xl neu-inset flex items-center justify-center text-[#5F6ED0] bg-[#E3E8EF]">
                   <Ruler className="w-5 h-5 stroke-[2.2]" />
@@ -3101,6 +3123,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Form wrapping body and sticky footer */}
+            <form onSubmit={handleSaveMeasurements} className="flex-1 flex flex-col min-h-0">
+              {/* Smooth Scrollable Body */}
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 no-scrollbar overscroll-contain transform-gpu">
 
             {/* Russian Sizing Pattern (Лекало РФ) Live Summary */}
             <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] space-y-3 border border-white/60">
@@ -3218,8 +3245,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               )}
             </div>
 
-            {/* Sliders Form with Neumorphic Tactile Sliders */}
-            <form onSubmit={handleSaveMeasurements} className="space-y-3.5">
+            {/* Sliders Container with Neumorphic Tactile Sliders */}
+            <div className="space-y-3.5">
               {/* Height Slider */}
               <NeumorphicSlider
                 id="meas-slider-height"
@@ -3309,7 +3336,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         onClick={() => setMeasFit(pref.id as any)}
                         className={`py-2 px-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                           isActive
-                            ? 'neu-inset-deep neu-inset-deep-animated text-[#5F6ED0] font-black bg-[#E3E8EF] border border-[#5F6ED0]/40'
+                            ? 'neu-inset-deep text-[#5F6ED0] font-black bg-[#E3E8EF] border border-[#5F6ED0]/40'
                             : 'neu-button text-[#5C6B80] hover:text-[#2D3A4E]'
                         }`}
                       >
@@ -3320,9 +3347,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   })}
                 </div>
               </div>
+            </div>
+          </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-2.5 pt-2 border-t border-[#BAC5D5]/50">
+              {/* Action Buttons - Sticky Footer */}
+              <div className="p-3.5 sm:p-4 border-t border-[#BAC5D5]/50 flex gap-2.5 shrink-0 bg-[#E3E8EF]">
                 <button
                   type="button"
                   onClick={() => setIsEditingMeasurements(false)}

@@ -77,20 +77,24 @@
   }
 }
 
-/* neu-inset-deep CSS animations for active status trackers - GPU accelerated */
+/* neu-inset-deep CSS animations for active status trackers - GPU accelerated & isolated */
 .neu-inset-deep-animated,
 .neu-inset-deep-pulse {
+  isolation: isolate;
+  contain: paint;
   will-change: opacity;
-  animation: neu-inset-deep-pulse 2.4s ease-in-out infinite;
+  animation: neu-inset-deep-pulse 3s ease-in-out infinite;
 }
 
 .neu-inset-deep-tracker {
   background-color: var(--neu-bg);
+  isolation: isolate;
+  contain: paint;
   will-change: opacity;
-  animation: neu-inset-deep-tracker-pulse 2.4s ease-in-out infinite;
+  animation: neu-inset-deep-tracker-pulse 3s ease-in-out infinite;
 }
 
-/* Order Status Tracker Progress Bar & Path Filling Animations */
+/* Order Status Tracker Progress Bar & Path Filling Animations - GPU-only transforms */
 @keyframes neu-progress-flow {
   0% {
     background-position: 0% 50%;
@@ -105,35 +109,19 @@
 
 @keyframes neu-progress-beam {
   0% {
-    transform: translateX(-100%) translateZ(0);
-    opacity: 0;
-  }
-  30% {
-    opacity: 0.75;
-  }
-  70% {
-    opacity: 0.75;
+    transform: translate3d(-100%, 0, 0);
   }
   100% {
-    transform: translateX(100%) translateZ(0);
-    opacity: 0;
+    transform: translate3d(250%, 0, 0);
   }
 }
 
 @keyframes neu-progress-beam-vertical {
   0% {
-    transform: translateY(-100%) translateZ(0);
-    opacity: 0;
-  }
-  30% {
-    opacity: 0.8;
-  }
-  70% {
-    opacity: 0.8;
+    transform: translate3d(0, -100%, 0);
   }
   100% {
-    transform: translateY(100%) translateZ(0);
-    opacity: 0;
+    transform: translate3d(0, 250%, 0);
   }
 }
 
@@ -155,21 +143,23 @@
 .neu-progress-beam {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.65) 50%, transparent 100%);
-  will-change: transform, opacity;
-  transform: translateZ(0);
-  animation: neu-progress-beam 2.4s ease-in-out infinite;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%);
+  will-change: transform;
+  transform: translate3d(-100%, 0, 0);
+  animation: neu-progress-beam 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   pointer-events: none;
+  contain: paint;
 }
 
 .neu-progress-beam-vertical {
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%);
-  will-change: transform, opacity;
-  transform: translateZ(0);
-  animation: neu-progress-beam-vertical 2.2s ease-in-out infinite;
+  will-change: transform;
+  transform: translate3d(0, -100%, 0);
+  animation: neu-progress-beam-vertical 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   pointer-events: none;
+  contain: paint;
 }
 
 .neu-node-active-ring {
@@ -478,6 +468,18 @@ input[type="range"].neu-range::-moz-range-thumb {
   transform: translateZ(0);
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  contain: paint layout;
+}
+
+/* Modal Smooth Scrolling Subcontainer */
+.neu-modal-body,
+.neu-modal-scroll {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  will-change: scroll-position;
+  transform: translateZ(0);
 }
 
 /* Recharts Neumorphic Overrides & Black Focus Border Removal */

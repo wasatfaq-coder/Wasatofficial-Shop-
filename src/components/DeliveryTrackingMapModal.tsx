@@ -59,17 +59,17 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
   const [isRefreshingGps, setIsRefreshingGps] = useState<boolean>(false);
 
   useEffect(() => {
-    if (!isOpen || !isSimulating) return;
+    if (!isOpen || !isSimulating || order?.status === 'delivered' || order?.isCancelled) return;
 
     const interval = setInterval(() => {
       setCourierProgress((prev) => {
         if (prev >= 0.95) return 0.2;
         return +(prev + 0.015).toFixed(3);
       });
-    }, 1200);
+    }, 1500);
 
     return () => clearInterval(interval);
-  }, [isOpen, isSimulating]);
+  }, [isOpen, isSimulating, order?.status, order?.isCancelled]);
 
   useEffect(() => {
     // Dynamic remaining ETA based on courier progress
@@ -153,38 +153,41 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.94, opacity: 0, y: 12 }}
             transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-            className="neu-modal rounded-3xl p-4 sm:p-6 max-w-2xl w-full text-[#2D3A4E] space-y-4 my-auto relative border border-white/80 max-h-[94vh] overflow-y-auto no-scrollbar z-10 bg-[#E3E8EF]"
+            className="neu-modal rounded-3xl max-w-2xl w-full text-[#2D3A4E] my-auto relative border border-white/80 max-h-[92vh] flex flex-col z-10 bg-[#E3E8EF] overflow-hidden shadow-2xl"
           >
-        {/* Top Header */}
-        <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3 gap-2">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="w-10 h-10 rounded-2xl neu-button flex items-center justify-center text-[#5F6ED0] shrink-0">
-              <Navigation className="w-5 h-5 text-[#5F6ED0]" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-sm sm:text-base font-black text-[#2D3A4E] leading-tight whitespace-nowrap">
-                  Онлайн-трекинг доставки
-                </h3>
-                <span className="text-[11px] font-mono font-black neu-inset px-2.5 py-0.5 rounded-lg text-[#5F6ED0] bg-[#E3E8EF] whitespace-nowrap shrink-0">
-                  № {order.id}
-                </span>
+            {/* Top Header - Sticky */}
+            <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 p-4 sm:p-5 gap-2 shrink-0 bg-[#E3E8EF]">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="w-10 h-10 rounded-2xl neu-button flex items-center justify-center text-[#5F6ED0] shrink-0">
+                  <Navigation className="w-5 h-5 text-[#5F6ED0]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-sm sm:text-base font-black text-[#2D3A4E] leading-tight whitespace-nowrap">
+                      Онлайн-трекинг доставки
+                    </h3>
+                    <span className="text-[11px] font-mono font-black neu-inset px-2.5 py-0.5 rounded-lg text-[#5F6ED0] bg-[#E3E8EF] whitespace-nowrap shrink-0">
+                      № {order.id}
+                    </span>
+                  </div>
+                  <p className="text-[11px] sm:text-xs text-[#5C6B80] font-medium truncate">
+                    Интерактивная карта и статус перемещения курьера
+                  </p>
+                </div>
               </div>
-              <p className="text-[11px] sm:text-xs text-[#5C6B80] font-medium truncate">
-                Интерактивная карта и статус перемещения курьера
-              </p>
-            </div>
-          </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer shrink-0 active:scale-95 transition-transform"
-            title="Закрыть окно"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer shrink-0 active:scale-95 transition-transform"
+                title="Закрыть окно"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Modal Content */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 no-scrollbar overscroll-contain transform-gpu">
 
         {/* Tracking Number Bar OR Clean Delivery Method Notice */}
         {(() => {
@@ -381,10 +384,10 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                   d={`M ${startPoint.x} ${startPoint.y} C 190 220, 310 140, ${endPoint.x} ${endPoint.y}`}
                   fill="none"
                   stroke="#5F6ED0"
-                  strokeWidth="4.5"
+                  strokeWidth="4"
                   strokeLinecap="round"
                   strokeDasharray="6 4"
-                  className="animate-pulse"
+                  opacity="0.85"
                 />
 
                 {/* Covered Path (Already traversed by courier) */}
@@ -392,13 +395,13 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                   d={`M ${startPoint.x} ${startPoint.y} C 190 220, 310 140, ${courierPos.x} ${courierPos.y}`}
                   fill="none"
                   stroke="#3B49A8"
-                  strokeWidth="5"
+                  strokeWidth="4.5"
                   strokeLinecap="round"
                 />
 
                 {/* Warehouse / Hub Pin (Start Point) */}
                 <g transform={`translate(${startPoint.x}, ${startPoint.y})`}>
-                  <circle r="14" fill="#5F6ED0" fillOpacity="0.2" className="animate-ping" />
+                  <circle r="15" fill="#5F6ED0" fillOpacity="0.15" />
                   <circle r="10" fill="#3B49A8" />
                   <circle r="4" fill="#FFFFFF" />
                   <text x="-32" y="24" fill="#2D3A4E" fontSize="9" fontWeight="900">
@@ -408,7 +411,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
 
                 {/* Client Destination Pin (End Point) */}
                 <g transform={`translate(${endPoint.x}, ${endPoint.y})`}>
-                  <circle r="16" fill="#10B981" fillOpacity="0.25" className="animate-ping" />
+                  <circle r="16" fill="#10B981" fillOpacity="0.18" />
                   <circle r="11" fill="#059669" />
                   <circle r="4" fill="#FFFFFF" />
                   <text x="-40" y="-16" fill="#065F46" fontSize="10" fontWeight="900">
@@ -420,20 +423,20 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                 {order.trackingNumber && (
                   <g
                     transform={`translate(${courierPos.x}, ${courierPos.y})`}
-                    className="transition-transform duration-500"
+                    className="transition-transform duration-300"
                   >
-                    {/* Ripple Radar waves */}
-                    <circle r="20" fill="#5F6ED0" fillOpacity="0.2" className="animate-ping" />
-                    <circle r="14" fill="#5F6ED0" fillOpacity="0.4" />
-                    <circle r="9" fill="#1E293B" stroke="#FFFFFF" strokeWidth="2" />
+                    {/* Radar ripple rings */}
+                    <circle r="18" fill="#5F6ED0" fillOpacity="0.2" />
+                    <circle r="12" fill="#5F6ED0" fillOpacity="0.45" />
+                    <circle r="8" fill="#1E293B" stroke="#FFFFFF" strokeWidth="2" />
                     {/* Directional pointer / car symbol */}
-                    <polygon points="0,-4 4,4 -4,4" fill="#FFFFFF" />
+                    <polygon points="0,-4 3.5,3.5 -3.5,3.5" fill="#FFFFFF" />
                   </g>
                 )}
               </svg>
 
               {/* Floating Live Courier Status Badge on Map */}
-              <div className="absolute bottom-2 left-2 right-2 bg-[#E3E8EF]/95 backdrop-blur-md rounded-2xl p-2.5 sm:p-3 neu-inset-deep neu-inset-deep-animated flex items-center justify-between text-xs border border-white/90">
+              <div className="absolute bottom-2 left-2 right-2 bg-[#E3E8EF]/95 rounded-2xl p-2.5 sm:p-3 neu-flat-sm flex items-center justify-between text-xs border border-white/90 shadow-sm">
                 <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
                   <div className="w-8 h-8 rounded-xl bg-[#5F6ED0] text-white flex items-center justify-center shrink-0">
                     <Truck className="w-4 h-4" />
@@ -630,7 +633,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                     isCompleted
                       ? 'neu-flat bg-[#E3E8EF] border border-emerald-400/40 shadow-xs'
                       : isActive
-                      ? 'neu-inset-deep neu-inset-deep-animated bg-[#E3E8EF] border border-[#5F6ED0]/70 ring-1 ring-[#5F6ED0]/30'
+                      ? 'neu-inset-deep bg-[#E3E8EF] border border-[#5F6ED0]/70 ring-1 ring-[#5F6ED0]/30'
                       : 'neu-flat bg-[#E3E8EF]/60 opacity-65 border border-white/50'
                   }`}
                 >
@@ -639,7 +642,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                       isCompleted
                         ? 'bg-emerald-600 text-white'
                         : isActive
-                        ? 'neu-inset-deep neu-inset-deep-animated text-[#5F6ED0] bg-[#E3E8EF] border border-[#5F6ED0]'
+                        ? 'neu-inset-deep text-[#5F6ED0] bg-[#E3E8EF] border border-[#5F6ED0]'
                         : 'neu-button text-[#5C6B80]'
                     }`}
                   >
@@ -656,7 +659,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                           isCompleted
                             ? 'text-emerald-800 bg-emerald-100/80 border border-emerald-200'
                             : isActive
-                            ? 'neu-inset-deep neu-inset-deep-animated text-[#5F6ED0] bg-[#E3E8EF] border border-[#5F6ED0]/50'
+                            ? 'neu-inset-deep text-[#5F6ED0] bg-[#E3E8EF] border border-[#5F6ED0]/50'
                             : 'text-[#5C6B80] bg-[#DDE3EC] border border-[#BAC5D5]/50'
                         }`}
                       >
@@ -673,8 +676,10 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
           </div>
         </div>
 
-        {/* Modal Bottom Actions */}
-        <div className="pt-2 border-t border-[#BAC5D5]/50 flex items-center justify-between gap-2.5">
+        </div>
+
+        {/* Modal Bottom Actions - Sticky Footer */}
+        <div className="p-3.5 sm:px-6 border-t border-[#BAC5D5]/50 flex items-center justify-between gap-2.5 shrink-0 bg-[#E3E8EF]">
           <button
             type="button"
             disabled={isRefreshingGps}
