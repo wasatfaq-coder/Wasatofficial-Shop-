@@ -102,8 +102,6 @@ import {
   getDefaultHistorySteps,
 } from '../utils/deliveryStages';
 import {
-  INITIAL_DELIVERY_METHODS,
-  INITIAL_PICKUP_POINTS,
   loadLocalDeliveryMethods,
   saveLocalDeliveryMethods,
   loadLocalPickupPoints,

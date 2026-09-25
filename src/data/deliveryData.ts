@@ -106,14 +106,13 @@ export function loadLocalDeliveryMethods(): DeliveryMethod[] {
     const saved = localStorage.getItem('manstyle_delivery_methods');
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
+      if (Array.isArray(parsed)) return parsed;
     }
   } catch (e) {
     console.warn('Error reading delivery methods from localStorage:', e);
   }
-  return INITIAL_DELIVERY_METHODS;
+  // No demo fallback: the list comes from Firestore (settings in Admin → «Доставка и ПВЗ»)
+  return [];
 }
 
 export function saveLocalDeliveryMethods(methods: DeliveryMethod[]) {
@@ -129,14 +128,12 @@ export function loadLocalPickupPoints(): PickupPoint[] {
     const saved = localStorage.getItem('manstyle_pickup_points');
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
+      if (Array.isArray(parsed)) return parsed;
     }
   } catch (e) {
     console.warn('Error reading pickup points from localStorage:', e);
   }
-  return INITIAL_PICKUP_POINTS;
+  return [];
 }
 
 export function saveLocalPickupPoints(points: PickupPoint[]) {

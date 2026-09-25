@@ -25,7 +25,6 @@ import {
   Copy,
 } from 'lucide-react';
 import { CartItem, DeliveryMethod, PickupPoint, UserProfile, ActiveTab, AppliedPromoInfo, StorefrontSettings, SavedAddress } from '../types';
-import { INITIAL_DELIVERY_METHODS, INITIAL_PICKUP_POINTS } from '../data/deliveryData';
 import { AddressEditModal } from '../components/AddressEditModal';
 import { formatAddress } from '../utils/addressFormat';
 import {
@@ -126,11 +125,11 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   };
 
   // Pickup Points Setup
-  const activePickupPoints = (pickupPoints && pickupPoints.length > 0 ? pickupPoints : INITIAL_PICKUP_POINTS).filter(
+  const activePickupPoints = (pickupPoints ?? []).filter(
     (p) => p.isActive !== false
   );
   const defaultPickupPoint = activePickupPoints.find((p) => p.isDefault) || activePickupPoints[0];
-  const [selectedPickupPointId, setSelectedPickupPointId] = useState<string>(() => defaultPickupPoint?.id || 'pickup-presnya');
+  const [selectedPickupPointId, setSelectedPickupPointId] = useState<string>(() => defaultPickupPoint?.id || '');
 
   const selectedPickupPoint =
     activePickupPoints.find((p) => p.id === selectedPickupPointId) || activePickupPoints[0];
@@ -204,7 +203,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
 
   const freeThreshold = storefrontSettings?.freeDeliveryThreshold ?? DEFAULT_FREE_DELIVERY_THRESHOLD;
 
-  const baseDeliveryMethods = deliveryMethods && deliveryMethods.length > 0 ? deliveryMethods : INITIAL_DELIVERY_METHODS;
+  const baseDeliveryMethods = deliveryMethods ?? [];
   const availableDeliveryMethods = getAvailableDeliveryMethods(baseDeliveryMethods, storefrontSettings, rawSubtotal);
 
   // Keep selected delivery valid
@@ -223,10 +222,11 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
 
   const currentDeliveryObj: Pick<DeliveryMethod, 'id' | 'title' | 'price' | 'duration' | 'type'> =
     availableDeliveryMethods.find((d) => d.id === selectedDelivery) || availableDeliveryMethods[0] || {
-      id: 'courier',
-      title: 'Курьерская доставка',
-      price: 350,
-      duration: '1-2 дня',
+      // No methods configured yet: nothing to charge, the order cannot be placed
+      id: '',
+      title: 'не выбрана',
+      price: 0,
+      duration: '',
     };
   const deliveryFee = currentDeliveryObj.price || 0;
   
@@ -239,7 +239,13 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   // Progress over the single-page form: a step is done when its section is filled in
   const contactsDone =
     name.trim().length >= 2 && phone.replace(/\D/g, '').length >= 10 && /\S+@\S+\.\S+/.test(email.trim());
-  const deliveryDone = isPickupSelected
+  // Nothing to choose from until the owner adds delivery methods / pickup points in the admin
+  const noDeliveryMethods = availableDeliveryMethods.length === 0;
+  const noPickupPoints = isPickupSelected && activePickupPoints.length === 0;
+  const deliveryUnavailable = noDeliveryMethods || noPickupPoints;
+  const deliveryDone = deliveryUnavailable
+    ? false
+    : isPickupSelected
     ? Boolean(selectedPickupPoint)
     : isPostSelected
     ? Boolean(addrStreet.trim() && addrHouse?.trim())
@@ -258,6 +264,15 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (cartItems.length === 0 || isSubmitting) return;
+
+    if (deliveryUnavailable) {
+      const text = noDeliveryMethods
+        ? 'Способы доставки пока не настроены. Свяжитесь с магазином через чат поддержки.'
+        : 'Пункты выдачи пока не добавлены. Выберите другой способ доставки.';
+      setValidationError(text);
+      onShowToast?.(text, 'error');
+      return;
+    }
 
     // Validate courier delivery required fields (street, house, entrance, intercom)
     if (isCourierSelected) {
@@ -810,7 +825,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
             <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase">
               Способ доставки
             </h3>
-            {rawSubtotal >= freeThreshold && (
+            {rawSubtotal >= freeThreshold && !noDeliveryMethods && (
               <span className="neu-inset text-success text-[11px] font-black px-2 py-0.5 rounded-full bg-[#E3E8EF]">
                 Бесплатная доставка активна
               </span>
@@ -818,6 +833,12 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           </div>
 
           <div className="space-y-3">
+            {noDeliveryMethods && (
+              <p className="neu-inset rounded-2xl p-3 text-xs font-bold text-warning bg-warning-soft">
+                Способы доставки пока не настроены. Оформить заказ можно будет, когда магазин их добавит —
+                напишите нам в чат поддержки.
+              </p>
+            )}
             {availableDeliveryMethods.map((method) => {
               const isSelected = selectedDelivery === method.id;
               const isPickupMethod = method.id === 'pickup' || method.type === 'pickup';
@@ -919,6 +940,11 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                       </div>
 
                       <div className="space-y-2">
+                        {activePickupPoints.length === 0 && (
+                          <p className="text-xs font-bold text-warning">
+                            Пункты выдачи пока не добавлены. Выберите другой способ доставки.
+                          </p>
+                        )}
                         {activePickupPoints.map((point) => {
                           const isPointSelected = selectedPickupPointId === point.id;
                           return (
@@ -1134,10 +1160,12 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
         <button
           id="checkout-confirm"
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || deliveryUnavailable}
           className={`w-full py-4 rounded-2xl btn-confirm-order font-bold text-sm flex items-center justify-center gap-2 cursor-pointer transition-all ${
             isSubmitting
               ? 'neu-inset-deep neu-inset-deep-animated text-accent bg-[#E3E8EF] ring-2 ring-accent/40'
+              : deliveryUnavailable
+              ? 'neu-inset text-[#4E5C70] cursor-not-allowed'
               : 'neu-button-accent text-white active:scale-[0.98]'
           }`}
         >
