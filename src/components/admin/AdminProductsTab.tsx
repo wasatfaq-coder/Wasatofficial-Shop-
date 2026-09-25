@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { ConfirmDialog } from '../ConfirmDialog';
+import { pluralRu } from '../../utils/pluralize';
 import {
   Search,
   Plus,
@@ -79,6 +81,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 }) => {
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
+  const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [stockFilter, setStockFilter] = useState<'all' | 'in_stock' | 'out_of_stock'>('all');
 
@@ -813,7 +816,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       {/* Filters Toolbar: Stock Filter & Neumorphic Category Dropdown */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {/* Stock Filter Segmented Control */}
-        <div className="neu-inset rounded-xl p-1 flex gap-1 bg-[#E3E8EF] items-center h-10">
+        <div className="neu-flat-sm rounded-xl p-1 flex gap-1 bg-[#E3E8EF] items-center h-10">
           {[
             { id: 'all', label: `Все (${products.length})` },
             {
@@ -830,7 +833,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               onClick={() => setStockFilter(sf.id as any)}
               className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] transition-all cursor-pointer text-center ${
                 stockFilter === sf.id
-                  ? 'neu-button text-[#5F6ED0] font-black'
+                  ? 'neu-pill-active font-black'
                   : 'text-[#5C6B80] font-bold hover:text-[#2D3A4E]'
               }`}
             >
@@ -883,7 +886,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
           <div className="flex flex-wrap items-center gap-2 pt-1.5 animate-in fade-in duration-150">
             <button
               onClick={() => setIsBulkOperationsModalOpen(true)}
-              className="h-8 px-3 neu-button-accent rounded-xl text-[11px] font-black text-white flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
+              className="h-8 px-3 neu-button rounded-xl text-[11px] font-black text-[#5F6ED0] flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
               Массовые операции
@@ -948,10 +951,10 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
             </button>
 
             <button
-              onClick={handleBulkDelete}
-              className="h-8 px-3 neu-button rounded-xl text-[11px] font-black text-rose-600 hover:text-rose-800 flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
+              onClick={() => setIsBulkDeleteConfirmOpen(true)}
+              className="h-8 px-3 neu-button-danger rounded-xl text-[11px] font-black flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 transition-all"
             >
-              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+              <Trash2 className="w-3.5 h-3.5" />
               Удалить
             </button>
           </div>
@@ -1020,7 +1023,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         {prod.categoryLabel || prod.category}
                       </span>
                       {prod.badge && (
-                        <span className="text-[9px] font-black px-2 py-0.5 rounded-md neu-button-accent text-white shrink-0 leading-tight whitespace-nowrap">
+                        <span className="text-[9px] font-black px-2 py-0.5 rounded-md neu-fill-accent text-white shrink-0 leading-tight whitespace-nowrap">
                           {prod.badge}
                         </span>
                       )}
@@ -1084,7 +1087,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                     {/* Danger / Destructive: Delete */}
                     <button
                       onClick={() => setProductToDelete(prod)}
-                      className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-rose-500 hover:text-rose-700 hover:bg-rose-50/50 active:scale-95 transition-all cursor-pointer shrink-0"
+                      className="w-8 h-8 rounded-xl neu-button-danger flex items-center justify-center active:scale-95 transition-all cursor-pointer shrink-0"
                       title="Удалить товар"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -1094,7 +1097,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   {/* Primary Action: Edit */}
                   <button
                     onClick={() => handleOpenEditProduct(prod)}
-                    className="h-8 px-3.5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shrink-0"
+                    className="h-8 px-3.5 neu-button rounded-xl text-xs font-black text-[#5F6ED0] flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shrink-0"
                     title="Редактировать товар"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
@@ -1254,7 +1257,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                           onClick={() => setFormBadge(formBadge === b ? '' : b)}
                           className={`h-7 px-2.5 rounded-xl text-[10px] font-black whitespace-nowrap cursor-pointer transition-all active:scale-95 flex items-center justify-center border ${
                             formBadge === b
-                              ? 'neu-button-accent text-white border-transparent shadow-md'
+                              ? 'neu-pill-active border-transparent'
                               : 'neu-button text-[#5C6B80] hover:text-[#2D3A4E] border-white/60 bg-[#E3E8EF]'
                           }`}
                         >
@@ -1305,7 +1308,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                               value: formMaterial,
                             })
                           }
-                          className="text-[10px] font-bold text-[#5F6ED0] hover:text-[#4A58B8] flex items-center gap-0.5 cursor-pointer"
+                          className="text-[10px] font-bold text-[#5F6ED0] hover:text-[#4F5DC0] flex items-center gap-0.5 cursor-pointer"
                           title="Редактировать в модальном окне"
                         >
                           <Pencil className="w-2.5 h-2.5" />
@@ -1359,7 +1362,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                             value: formDescription,
                           })
                         }
-                        className="text-[10px] font-bold text-[#5F6ED0] hover:text-[#4A58B8] flex items-center gap-0.5 cursor-pointer"
+                        className="text-[10px] font-bold text-[#5F6ED0] hover:text-[#4F5DC0] flex items-center gap-0.5 cursor-pointer"
                         title="Открыть окно редактирования описания"
                       >
                         <Maximize2 className="w-2.5 h-2.5" />
@@ -1476,7 +1479,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                           <button
                             type="button"
                             onClick={handleClearAllImages}
-                            className="h-6 px-2.5 rounded-lg neu-button text-[10px] font-black text-rose-600 hover:text-rose-700 active:scale-95 transition-all cursor-pointer flex items-center gap-1"
+                            className="h-6 px-2.5 rounded-lg neu-button-danger text-[10px] font-black active:scale-95 transition-all cursor-pointer flex items-center gap-1"
                             title="Удалить все фото"
                           >
                             <Trash2 className="w-2.5 h-2.5" />
@@ -1515,7 +1518,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         type="button"
                         onClick={() => galleryFileInputRef.current?.click()}
                         disabled={isUploadingImage}
-                        className="w-full py-2.5 px-3 neu-button rounded-xl text-xs font-black text-[#5F6ED0] hover:text-[#4A58B8] flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all shadow-sm"
+                        className="w-full py-2.5 px-3 neu-button rounded-xl text-xs font-black text-[#5F6ED0] hover:text-[#4F5DC0] flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
                       >
                         {isUploadingImage ? (
                           <>
@@ -1548,7 +1551,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                             <div
                               key={idx}
                               className={`relative rounded-xl overflow-hidden neu-flat border-2 group transition-all aspect-[3/4] flex flex-col justify-between bg-slate-900 ${
-                                idx === 0 ? 'border-[#5F6ED0] shadow-md shadow-[#5F6ED0]/20' : 'border-white/80'
+                                idx === 0 ? 'border-[#5F6ED0]' : 'border-white/80'
                               }`}
                             >
                               <img
@@ -1573,7 +1576,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                                   e.stopPropagation();
                                   handleDeleteImage(idx);
                                 }}
-                                className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-md active:scale-90 transition-transform cursor-pointer z-10"
+                                className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-[var(--neu-on-photo)] active:scale-90 transition-transform cursor-pointer z-10"
                                 title="Удалить это фото"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -1629,7 +1632,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                                         e.stopPropagation();
                                         handleSetCoverImage(idx);
                                       }}
-                                      className="text-[8px] font-black bg-[#5F6ED0] hover:bg-[#4A58B8] text-white px-1.5 py-0.5 rounded cursor-pointer"
+                                      className="text-[8px] font-black bg-[#5F6ED0] hover:bg-[#4F5DC0] text-white px-1.5 py-0.5 rounded cursor-pointer"
                                       title="Сделать главной обложкой"
                                     >
                                       Обложка
@@ -1833,7 +1836,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                             onClick={() => handleTogglePresetSize(sz)}
                             className={`h-6 px-2 rounded-lg text-[10px] font-black transition-all active:scale-95 cursor-pointer whitespace-nowrap ${
                               isSelected
-                                ? 'neu-inset text-[#5F6ED0] bg-[#E3E8EF]'
+                                ? 'neu-pill-active'
                                 : 'neu-button text-[#5C6B80] hover:text-[#2D3A4E]'
                             }`}
                           >
@@ -1986,7 +1989,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                                       )
                                     );
                                   }}
-                                  className="w-6 h-6 rounded-lg neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4a58b8] active:scale-95 transition-all cursor-pointer font-bold text-xs"
+                                  className="w-6 h-6 rounded-lg neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-95 transition-all cursor-pointer font-bold text-xs"
                                 >
                                   <Plus className="w-3 h-3" />
                                 </button>
@@ -2182,7 +2185,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                 referrerPolicy="no-referrer"
               />
               {productToInspect.badge && (
-                <span className="absolute top-2.5 left-2.5 neu-button-accent text-white text-[10px] font-black px-2 py-0.5 rounded-lg">
+                <span className="absolute top-2.5 left-2.5 neu-fill-accent text-white text-[10px] font-black px-2 py-0.5 rounded-lg">
                   {productToInspect.badge}
                 </span>
               )}
@@ -2314,7 +2317,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   onShowToast(`Товар «${productToDelete.title}» удален`, 'info');
                   setProductToDelete(null);
                 }}
-                className="flex-1 py-2.5 neu-button rounded-xl text-xs font-black text-rose-600 hover:bg-rose-50 active:scale-95 transition-all cursor-pointer"
+                className="flex-1 py-2.5 neu-button-danger rounded-xl text-xs font-black active:scale-95 transition-all cursor-pointer"
               >
                 Удалить
               </button>
@@ -2349,7 +2352,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   onClick={() => setBulkDiscountPercent(pct)}
                   className={`py-2 rounded-xl text-xs font-black transition-all active:scale-95 cursor-pointer ${
                     bulkDiscountPercent === pct
-                      ? 'neu-button-accent text-white'
+                      ? 'neu-pill-active'
                       : 'neu-button text-[#2D3A4E] hover:text-[#5F6ED0]'
                   }`}
                 >
@@ -2391,7 +2394,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
             <button
               type="button"
               onClick={() => setPreviewZoomImage(null)}
-              className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center cursor-pointer transition-colors shadow-lg"
+              className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center cursor-pointer transition-colors shadow-[var(--neu-on-photo)]"
             >
               <X className="w-5 h-5" />
             </button>
@@ -2444,6 +2447,14 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
           onShowToast={onShowToast}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={isBulkDeleteConfirmOpen}
+        title="Удалить выбранные товары?"
+        message={`Из каталога будут удалены ${selectedProductIds.length} ${pluralRu(selectedProductIds.length, ['товар', 'товара', 'товаров'])}. Это действие нельзя отменить.`}
+        onConfirm={handleBulkDelete}
+        onClose={() => setIsBulkDeleteConfirmOpen(false)}
+      />
     </div>
   );
 };

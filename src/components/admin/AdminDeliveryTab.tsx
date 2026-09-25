@@ -426,13 +426,13 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
       {/* Subtabs Switcher & Actions */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
         {/* Subtabs */}
-        <div className="p-1 neu-inset rounded-2xl flex items-center gap-1 bg-[#E3E8EF]">
+        <div className="p-1 neu-flat-sm rounded-2xl flex items-center gap-1 bg-[#E3E8EF]">
           <button
             type="button"
             onClick={() => setActiveSubTab('methods')}
             className={`flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeSubTab === 'methods'
-                ? 'neu-button text-[#5F6ED0] bg-[#E3E8EF] shadow-xs'
+                ? 'neu-pill-active'
                 : 'text-[#5C6B80] hover:text-[#2D3A4E]'
             }`}
           >
@@ -448,7 +448,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
             onClick={() => setActiveSubTab('pickup_points')}
             className={`flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeSubTab === 'pickup_points'
-                ? 'neu-button text-[#5F6ED0] bg-[#E3E8EF] shadow-xs'
+                ? 'neu-pill-active'
                 : 'text-[#5C6B80] hover:text-[#2D3A4E]'
             }`}
           >
@@ -466,7 +466,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
             <button
               type="button"
               onClick={handleOpenAddMethod}
-              className="flex-1 sm:flex-none py-2 px-3.5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-transform"
+              className="flex-1 sm:flex-none py-2 px-3.5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
               <span>Добавить способ</span>
@@ -475,7 +475,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
             <button
               type="button"
               onClick={handleOpenAddPoint}
-              className="flex-1 sm:flex-none py-2 px-3.5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-transform"
+              className="flex-1 sm:flex-none py-2 px-3.5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
               <span>Добавить пункт выдачи</span>
@@ -534,7 +534,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 onClick={() => setTypeFilter(f.id as any)}
                 className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all shrink-0 cursor-pointer ${
                   typeFilter === f.id
-                    ? 'neu-button text-[#5F6ED0] bg-[#E3E8EF]'
+                    ? 'neu-pill-active'
                     : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                 }`}
               >
@@ -568,7 +568,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 return (
                   <div
                     key={method.id}
-                    className={`neu-card rounded-2xl p-4 transition-all space-y-3 relative ${
+                    className={`neu-flat rounded-2xl p-4 transition-all space-y-3 relative ${
                       !isActive ? 'opacity-60 grayscale-[30%]' : ''
                     }`}
                   >
@@ -578,7 +578,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                         <div
                           className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
                             isActive
-                              ? 'neu-inset text-[#5F6ED0] bg-[#E3E8EF]'
+                              ? 'neu-pill-active'
                               : 'neu-button text-[#5C6B80]'
                           }`}
                         >
@@ -590,7 +590,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                               {method.title}
                             </h4>
                             {method.highlightBadge && (
-                              <span className="neu-button-accent text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                              <span className="neu-fill-accent text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
                                 {method.highlightBadge}
                               </span>
                             )}
@@ -628,7 +628,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                         <button
                           type="button"
                           onClick={() => setDeletingMethodId(method.id)}
-                          className="p-1.5 neu-button rounded-xl text-[#5C6B80] hover:text-rose-600 cursor-pointer"
+                          className="p-1.5 neu-button-danger rounded-xl cursor-pointer"
                           title="Удалить способ доставки"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -697,7 +697,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 return (
                   <div
                     key={point.id}
-                    className={`neu-card rounded-2xl p-4 transition-all space-y-3 relative ${
+                    className={`neu-flat rounded-2xl p-4 transition-all space-y-3 relative ${
                       !isActive ? 'opacity-60 grayscale-[30%]' : ''
                     } ${isDefault ? 'ring-1.5 ring-[#5F6ED0]/50' : ''}`}
                   >
@@ -755,7 +755,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                         <button
                           type="button"
                           onClick={() => setDeletingPointId(point.id)}
-                          className="p-1.5 neu-button rounded-xl text-[#5C6B80] hover:text-rose-600 cursor-pointer"
+                          className="p-1.5 neu-button-danger rounded-xl cursor-pointer"
                           title="Удалить пункт выдачи"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -893,7 +893,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                   <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     Иконка модуля
                   </label>
-                  <div className="grid grid-cols-5 gap-1.5 p-1 neu-inset rounded-xl bg-[#E3E8EF]">
+                  <div className="grid grid-cols-5 gap-1.5 p-1 neu-flat-sm rounded-xl bg-[#E3E8EF]">
                     {[
                       { id: 'Bike', icon: Bike },
                       { id: 'Store', icon: Store },
@@ -909,7 +909,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                           type="button"
                           onClick={() => setFormMethodIcon(ic.id)}
                           className={`py-1.5 flex items-center justify-center rounded-lg transition-all cursor-pointer ${
-                            isSel ? 'neu-button text-[#5F6ED0] bg-[#E3E8EF]' : 'text-[#5C6B80] hover:text-[#2D3A4E]'
+                            isSel ? 'neu-pill-active' : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                           }`}
                         >
                           <IconComp className="w-4 h-4" />
@@ -1191,7 +1191,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               <button
                 type="button"
                 onClick={() => handleDeleteMethod(deletingMethodId)}
-                className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer"
+                className="neu-button-danger flex-1 py-2 rounded-xl text-xs font-black cursor-pointer"
               >
                 Удалить
               </button>
@@ -1221,7 +1221,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               <button
                 type="button"
                 onClick={() => handleDeletePoint(deletingPointId)}
-                className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer"
+                className="neu-button-danger flex-1 py-2 rounded-xl text-xs font-black cursor-pointer"
               >
                 Удалить
               </button>

@@ -140,19 +140,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             )}
           </div>
 
-          {/* Plus button with solid accent fill & white icon */}
+          {/* Add to cart: secondary action repeated on every card, so not filled */}
           <button
             onClick={handleAddToCart}
             className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0 mb-0.5 cursor-pointer ${
               justAdded
-                ? 'neu-button-success text-white'
-                : 'neu-button-accent text-white'
+                ? 'neu-inset text-[#3F6E58]'
+                : 'neu-button text-[#5F6ED0]'
             }`}
             aria-label={justAdded ? 'Добавлено в корзину' : 'Добавить в корзину'}
             title={justAdded ? 'Добавлено в корзину' : 'Добавить в корзину'}
           >
             {justAdded ? (
-              <Check className="w-4 h-4 stroke-[3] text-white animate-in zoom-in-50 duration-200" />
+              <Check className="w-4 h-4 stroke-[3] animate-in zoom-in-50 duration-200" />
             ) : (
               <Plus className="w-4 h-4 stroke-[2.5]" />
             )}

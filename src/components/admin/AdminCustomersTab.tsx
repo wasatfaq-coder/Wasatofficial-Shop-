@@ -481,10 +481,10 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
           <button
             type="button"
             onClick={() => setShowPurgeModal(true)}
-            className="neu-inset px-3.5 py-2 rounded-xl text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center justify-center gap-2 active:scale-95 transition-all bg-[#E3E8EF] cursor-pointer"
+            className="neu-button-danger px-3.5 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
             title="Очистить базу данных от нереальных клиентов и фиктивных заказов"
           >
-            <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+            <Trash2 className="w-3.5 h-3.5" />
             <span>Очистить базу от демо-данных</span>
           </button>
 
@@ -815,7 +815,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     <button
                       type="button"
                       onClick={() => setCustomerToDelete(customer)}
-                      className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-rose-600 shrink-0 cursor-pointer"
+                      className="w-9 h-9 rounded-xl neu-button-danger flex items-center justify-center shrink-0 cursor-pointer"
                       title="Удалить запись клиента"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -831,7 +831,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       {/* ================= 5. CUSTOMER DETAIL & ORDER HISTORY MODAL ================= */}
       {selectedCustomer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in">
-          <div className="neu-modal rounded-3xl p-5 sm:p-6 max-w-2xl w-full max-h-[90vh] flex flex-col space-y-4 text-[#2D3A4E] border border-white/80 shadow-2xl overflow-hidden">
+          <div className="neu-modal rounded-3xl p-5 sm:p-6 max-w-2xl w-full max-h-[90vh] flex flex-col space-y-4 text-[#2D3A4E] border border-white/80 overflow-hidden">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/40 pb-3 shrink-0">
               <div className="flex items-center gap-3 min-w-0">
@@ -877,7 +877,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                   <button
                     type="button"
                     onClick={() => setCustomerToDelete(selectedCustomer)}
-                    className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-rose-600"
+                    className="w-9 h-9 rounded-xl neu-button-danger flex items-center justify-center"
                     title="Удалить клиента из базы данных"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -1121,7 +1121,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     type="button"
                     onClick={handleSaveNotes}
                     disabled={isSavingNotes}
-                    className="neu-button px-3 py-1.5 rounded-xl text-xs font-black text-[#5F6ED0] flex items-center gap-1.5 hover:text-[#4F5EB8]"
+                    className="neu-button px-3 py-1.5 rounded-xl text-xs font-black text-[#5F6ED0] flex items-center gap-1.5 hover:text-[#4F5DC0]"
                   >
                     <Save className="w-3.5 h-3.5" />
                     <span>{isSavingNotes ? 'Сохранение...' : 'Сохранить'}</span>
@@ -1204,7 +1204,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                         onOpenSupportChat(selectedCustomer.orders[0]?.id, selectedCustomer.name);
                         setSelectedCustomer(null);
                       }}
-                      className="neu-button px-3 py-1.5 rounded-xl text-xs font-bold text-[#5F6ED0] hover:text-[#4F5EB8] flex items-center gap-1.5 shrink-0 whitespace-nowrap active:scale-95 transition-all"
+                      className="neu-button px-3 py-1.5 rounded-xl text-xs font-bold text-[#5F6ED0] hover:text-[#4F5DC0] flex items-center gap-1.5 shrink-0 whitespace-nowrap active:scale-95 transition-all"
                     >
                       <MessageSquare className="w-3.5 h-3.5 text-[#5F6ED0]" />
                       <span>Открыть диалог</span>
@@ -1301,7 +1301,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       {/* ================= 6. PURGE DATABASE CONFIRMATION MODAL ================= */}
       {showPurgeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/50 backdrop-blur-sm animate-in fade-in">
-          <div className="neu-modal rounded-3xl p-5 sm:p-6 max-w-md w-full space-y-4 text-[#2D3A4E] border border-white/80 shadow-2xl">
+          <div className="neu-modal rounded-3xl p-5 sm:p-6 max-w-md w-full space-y-4 text-[#2D3A4E] border border-white/80">
             <div className="flex items-center gap-3 border-b border-[#BAC5D5]/40 pb-3">
               <div className="w-10 h-10 rounded-2xl neu-flat-sm flex items-center justify-center text-rose-600 shrink-0">
                 <AlertTriangle className="w-5 h-5" />
@@ -1337,7 +1337,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 type="button"
                 onClick={handlePurgeFakeData}
                 disabled={isPurging}
-                className="px-5 py-2.5 rounded-xl text-xs font-black text-white bg-rose-600 hover:bg-rose-700 active:scale-95 transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                className="neu-button-danger px-5 py-2.5 rounded-xl text-xs font-black active:scale-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {isPurging ? (
                   <>
@@ -1359,7 +1359,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       {/* ================= 7. DELETE SINGLE CUSTOMER CONFIRMATION MODAL ================= */}
       {customerToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/50 backdrop-blur-sm animate-in fade-in">
-          <div className="neu-modal rounded-3xl p-5 max-w-sm w-full space-y-4 text-[#2D3A4E] border border-white/80 shadow-2xl">
+          <div className="neu-modal rounded-3xl p-5 max-w-sm w-full space-y-4 text-[#2D3A4E] border border-white/80">
             <div className="flex items-center gap-3 border-b border-[#BAC5D5]/40 pb-3">
               <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-rose-600 shrink-0">
                 <Trash2 className="w-4 h-4" />
@@ -1387,7 +1387,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 type="button"
                 onClick={handleDeleteCustomer}
                 disabled={isDeletingCustomer}
-                className="px-4 py-2 rounded-xl text-xs font-black text-white bg-rose-600 hover:bg-rose-700 active:scale-95 transition-all shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="neu-button-danger px-4 py-2 rounded-xl text-xs font-black active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 {isDeletingCustomer ? (
                   <>

@@ -191,7 +191,7 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
             exit={{ scale: 0.93, opacity: 0, y: 12 }}
             transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
             id="admin-change-credentials-card"
-            className="neu-modal rounded-3xl p-5 sm:p-7 max-w-lg w-full border border-white/90 text-[#2D3A4E] shadow-2xl relative my-auto max-h-[95vh] overflow-y-auto z-10"
+            className="neu-modal rounded-3xl p-5 sm:p-7 max-w-lg w-full border border-white/90 text-[#2D3A4E] relative my-auto max-h-[95vh] overflow-y-auto z-10"
           >
         {/* Close Button */}
         <button
@@ -432,7 +432,7 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
               <button
                 id="admin-change-credentials-save-btn"
                 type="submit"
-                className="w-full py-3 px-5 neu-button-accent rounded-2xl text-xs sm:text-sm font-black text-white flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer shadow-md"
+                className="w-full py-3 px-5 neu-button-accent rounded-2xl text-xs sm:text-sm font-black text-white flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer"
               >
                 <Save className="w-4 h-4" />
                 <span>Сохранить новые данные</span>

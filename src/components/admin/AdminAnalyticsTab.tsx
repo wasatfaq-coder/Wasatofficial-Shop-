@@ -514,17 +514,6 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-sm" />
               <span>База данных: {realOrdersCount} заказов онлайн</span>
             </div>
-
-            {/* Functional Delete All Statistics Button in Header */}
-            <button
-              type="button"
-              onClick={() => setIsConfirmDeleteModalOpen(true)}
-              className="neu-button px-2.5 py-1 rounded-xl text-[11px] font-bold text-rose-600 hover:text-rose-700 active:scale-95 flex items-center gap-1.5 cursor-pointer border border-rose-200/60 bg-[#E3E8EF] transition-all ml-auto md:ml-0"
-              title="Полностью удалить статистические данные и заказы из базы данных Firestore"
-            >
-              <Trash2 className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-              <span>Очистить статистику базы</span>
-            </button>
           </div>
 
           <h3 className="text-base sm:text-lg font-black text-[#2D3A4E] tracking-tight flex items-center gap-2">
@@ -542,7 +531,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
           <span className="text-[11px] font-bold text-[#5C6B80] hidden lg:inline mr-1">
             Период:
           </span>
-          <div className="neu-inset rounded-xl p-1 flex gap-1 bg-[#E3E8EF] flex-wrap shadow-inner">
+          <div className="neu-flat-sm rounded-xl p-1 flex gap-1 bg-[#E3E8EF] flex-wrap">
             {[
               { id: '7d', label: '7 дней' },
               { id: '14d', label: '14 дней' },
@@ -562,7 +551,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
                   }}
                   className={`py-1 px-3 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer ${
                     isActive
-                      ? 'neu-inset text-[#5F6ED0] font-black bg-[#E3E8EF] border border-[#5F6ED0]/40 shadow-inner scale-100'
+                      ? 'neu-pill-active font-black'
                       : 'text-[#5C6B80] hover:text-[#2D3A4E] hover:bg-white/30'
                   }`}
                 >
@@ -596,10 +585,10 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
               setAnimationCycle((c) => c + 1);
               triggerChartHapticFeedback('light');
             }}
-            className={`neu-inset rounded-2xl p-3.5 space-y-1.5 transition-all duration-200 cursor-pointer relative overflow-hidden bg-[#E3E8EF] border group ${
+            className={`rounded-2xl p-3.5 space-y-1.5 transition-all duration-200 cursor-pointer relative overflow-hidden border group ${
               activeMetric === 'revenue'
-                ? 'border-[#5F6ED0] neu-inset-deep ring-2 ring-[#5F6ED0]/25 shadow-md'
-                : 'border-transparent hover:border-[#5F6ED0]/40 hover:-translate-y-0.5'
+                ? 'neu-pill-active border-transparent'
+                : 'neu-flat border-transparent hover:-translate-y-0.5'
             }`}
           >
             <div className="flex items-center justify-between text-[#5C6B80]">
@@ -627,10 +616,10 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
           {/* Card 2: Daily Average & Peak Day */}
           <div
             onClick={handleInspectPeakDay}
-            className={`neu-inset rounded-2xl p-3.5 space-y-1.5 transition-all duration-200 cursor-pointer relative overflow-hidden bg-[#E3E8EF] border group ${
+            className={`rounded-2xl p-3.5 space-y-1.5 transition-all duration-200 cursor-pointer relative overflow-hidden border group ${
               selectedDay?.isPeakDay
-                ? 'border-amber-500 neu-inset-deep ring-2 ring-amber-500/25 shadow-md'
-                : 'border-transparent hover:border-amber-500/40 hover:-translate-y-0.5'
+                ? 'neu-pill-active border-transparent'
+                : 'neu-flat border-transparent hover:-translate-y-0.5'
             }`}
             title="Нажмите для мгновенной детализации пикового дня периода"
           >
@@ -663,10 +652,10 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
               setAnimationCycle((c) => c + 1);
               triggerChartHapticFeedback('light');
             }}
-            className={`neu-inset rounded-2xl p-3.5 space-y-1.5 transition-all duration-200 cursor-pointer relative overflow-hidden bg-[#E3E8EF] border group ${
+            className={`rounded-2xl p-3.5 space-y-1.5 transition-all duration-200 cursor-pointer relative overflow-hidden border group ${
               activeMetric === 'orders'
-                ? 'border-[#10B981] neu-inset-deep ring-2 ring-[#10B981]/25 shadow-md'
-                : 'border-transparent hover:border-[#10B981]/40 hover:-translate-y-0.5'
+                ? 'neu-pill-active border-transparent'
+                : 'neu-flat border-transparent hover:-translate-y-0.5'
             }`}
           >
             <div className="flex items-center justify-between text-[#5C6B80]">
@@ -698,10 +687,10 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
               setAnimationCycle((c) => c + 1);
               triggerChartHapticFeedback('light');
             }}
-            className={`neu-inset rounded-2xl p-3.5 space-y-1.5 transition-all duration-200 cursor-pointer relative overflow-hidden bg-[#E3E8EF] border group ${
+            className={`rounded-2xl p-3.5 space-y-1.5 transition-all duration-200 cursor-pointer relative overflow-hidden border group ${
               activeMetric === 'avgCheck'
-                ? 'border-[#0284C7] neu-inset-deep ring-2 ring-[#0284C7]/25 shadow-md'
-                : 'border-transparent hover:border-[#0284C7]/40 hover:-translate-y-0.5'
+                ? 'neu-pill-active border-transparent'
+                : 'neu-flat border-transparent hover:-translate-y-0.5'
             }`}
           >
             <div className="flex items-center justify-between text-[#5C6B80]">
@@ -726,11 +715,11 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
       {/* ============================================================ */}
       {/* SECTION 3: RECHARTS CHART CONTAINER WITH ANIMATION & CONTROLS */}
       {/* ============================================================ */}
-      <div className="neu-inset rounded-2xl p-4 sm:p-5 space-y-4 bg-[#E3E8EF] border border-white/70 shadow-inner">
+      <div className="neu-inset rounded-2xl p-4 sm:p-5 space-y-4 bg-[#E3E8EF] border border-white/70">
         {/* Chart Block Header: Dynamic Title + Live Badge + Neumorphic 'Обновить данные' Button */}
         <div className="flex items-center justify-between gap-3 flex-wrap border-b border-[#BAC5D5]/50 pb-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] shadow-xs shrink-0">
+            <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] shrink-0">
               <Activity className="w-4 h-4 text-[#5F6ED0]" />
             </div>
             <div>
@@ -756,7 +745,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
             disabled={isRefreshing}
             className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all cursor-pointer select-none ${
               isRefreshing
-                ? 'neu-inset text-[#5F6ED0] bg-[#E3E8EF] shadow-inner scale-[0.98]'
+                ? 'neu-inset text-[#5F6ED0] bg-[#E3E8EF] scale-[0.98]'
                 : 'neu-button text-[#2D3A4E] hover:text-[#5F6ED0] active:scale-95'
             }`}
             title="Принудительно переподписаться на данные Firestore и обновить метрики в реальном времени"
@@ -792,7 +781,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
                   }}
                   className={`px-2.5 py-1 rounded-xl text-[11px] font-extrabold transition-all duration-200 cursor-pointer ${
                     isSelected
-                      ? `neu-inset ${m.color} bg-[#E3E8EF] border shadow-inner font-black scale-100`
+                      ? `neu-pill-active font-black`
                       : 'neu-button text-[#5C6B80] hover:text-[#2D3A4E]'
                   }`}
                 >
@@ -805,7 +794,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
           {/* Right Toolbar: Order Status Filter, Comparison Toggle & Chart Type */}
           <div className="flex items-center gap-2 flex-wrap">
             {/* Order Status Filter Chips */}
-            <div className="neu-inset rounded-xl p-0.5 flex gap-0.5 bg-[#E3E8EF] text-[10px] font-bold">
+            <div className="neu-flat-sm rounded-xl p-0.5 flex gap-0.5 bg-[#E3E8EF] text-[10px] font-bold">
               {[
                 { id: 'all', label: 'Все' },
                 { id: 'paid', label: 'Оплаченные' },
@@ -821,7 +810,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
                   }}
                   className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
                     statusFilter === f.id
-                      ? 'neu-inset text-[#5F6ED0] bg-[#E3E8EF] font-black border border-[#5F6ED0]/30'
+                      ? 'neu-pill-active font-black'
                       : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                   }`}
                 >
@@ -831,7 +820,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
             </div>
 
             {/* Chart Type Switcher: Area | Bar | Composed */}
-            <div className="neu-inset rounded-xl p-0.5 flex gap-0.5 bg-[#E3E8EF]">
+            <div className="neu-flat-sm rounded-xl p-0.5 flex gap-0.5 bg-[#E3E8EF]">
               <button
                 type="button"
                 onClick={() => {
@@ -841,7 +830,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
                 }}
                 className={`p-1.5 rounded-lg transition-all cursor-pointer ${
                   chartType === 'area'
-                    ? 'neu-inset text-[#5F6ED0] bg-[#E3E8EF] border border-[#5F6ED0]/30 font-black'
+                    ? 'neu-pill-active font-black'
                     : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                 }`}
                 title="График площади с градиентом (Area Chart)"
@@ -857,7 +846,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
                 }}
                 className={`p-1.5 rounded-lg transition-all cursor-pointer ${
                   chartType === 'bar'
-                    ? 'neu-inset text-[#5F6ED0] bg-[#E3E8EF] border border-[#5F6ED0]/30 font-black'
+                    ? 'neu-pill-active font-black'
                     : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                 }`}
                 title="Столбчатая диаграмма по дням (Bar Chart)"
@@ -873,7 +862,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
                 }}
                 className={`px-2 py-1 rounded-lg transition-all cursor-pointer text-[10px] font-black flex items-center gap-1 ${
                   chartType === 'composed'
-                    ? 'neu-inset text-[#5F6ED0] bg-[#E3E8EF] border border-[#5F6ED0]/30'
+                    ? 'neu-pill-active'
                     : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                 }`}
                 title="Комбинированный график (Микс)"
@@ -892,7 +881,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
             <span>Нажмите на столбец или точку графика для детального среза дня</span>
           </div>
 
-          <div className="flex items-center gap-1 text-[9px] font-bold text-[#5F6ED0] neu-inset px-2.5 py-0.5 rounded-full bg-[#E3E8EF] shadow-inner">
+          <div className="flex items-center gap-1 text-[9px] font-bold text-[#5F6ED0] neu-inset px-2.5 py-0.5 rounded-full bg-[#E3E8EF]">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-sm" />
             <span>Тактильный отклик Neumorphism</span>
           </div>
@@ -1392,7 +1381,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
       {/* ============================================================ */}
       {/* SECTION 7: REPORTS & FIRESTORE SYNC FOOTER BAR               */}
       {/* ============================================================ */}
-      <div className="neu-inset rounded-2xl p-4 space-y-3 bg-[#E3E8EF] border border-white/60 shadow-inner">
+      <div className="neu-inset rounded-2xl p-4 space-y-3 bg-[#E3E8EF] border border-white/60">
         <div className="flex items-center justify-between text-xs font-bold text-[#5C6B80] px-0.5 flex-wrap gap-2">
           <span className="flex items-center gap-1.5 text-[#2D3A4E]">
             <FileText className="w-4 h-4 text-[#5F6ED0]" />
@@ -1408,7 +1397,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
           <button
             onClick={handleExportPDF}
             disabled={isExportingPDF}
-            className="flex-1 py-3 px-4 neu-button-accent rounded-2xl font-black text-xs text-white flex items-center justify-center gap-2 hover:opacity-95 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50 shadow-md"
+            className="flex-1 py-3 px-4 neu-button-accent rounded-2xl font-black text-xs text-white flex items-center justify-center gap-2 hover:opacity-95 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
           >
             {isExportingPDF ? (
               <>
@@ -1425,10 +1414,10 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
 
           <button
             onClick={() => setIsConfirmDeleteModalOpen(true)}
-            className="py-3 px-4 neu-button rounded-2xl font-black text-xs text-rose-600 hover:text-rose-700 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2 border border-rose-200 bg-[#E3E8EF] shrink-0"
+            className="py-3 px-4 neu-button-danger rounded-2xl font-black text-xs active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
             title="Удалить все статистические данные и заказы из базы данных Firestore"
           >
-            <Trash2 className="w-4 h-4 text-rose-600" />
+            <Trash2 className="w-4 h-4" />
             <span className="hidden sm:inline">Очистить статистику базы</span>
             <span className="sm:hidden">Очистить</span>
           </button>
@@ -1450,14 +1439,14 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
       {isConfirmDeleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-xs animate-in fade-in duration-200">
           <div
-            className="relative w-full max-w-md neu-modal rounded-3xl p-5 sm:p-6 space-y-4 bg-[#E3E8EF] border border-white/80 shadow-2xl animate-in zoom-in-95 duration-150"
+            className="relative w-full max-w-md neu-modal rounded-3xl p-5 sm:p-6 space-y-4 bg-[#E3E8EF] border border-white/80 animate-in zoom-in-95 duration-150"
             role="dialog"
             aria-modal="true"
           >
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl neu-inset flex items-center justify-center text-rose-600 bg-[#E3E8EF] shadow-inner">
+                <div className="w-9 h-9 rounded-2xl neu-inset flex items-center justify-center text-rose-600 bg-[#E3E8EF]">
                   <AlertTriangle className="w-5 h-5" />
                 </div>
                 <div>
@@ -1508,7 +1497,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
                 type="button"
                 onClick={handleDeleteAllStats}
                 disabled={isDeletingStats}
-                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md disabled:opacity-50"
+                className="neu-button-danger flex-1 py-2.5 px-4 rounded-xl text-xs font-black active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
                 {isDeletingStats ? (
                   <>

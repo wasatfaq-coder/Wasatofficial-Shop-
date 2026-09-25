@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, ArrowLeft, Trash2, Settings } from 'lucide-react';
+import { Menu, ArrowLeft, Settings } from 'lucide-react';
 import { ActiveTab } from '../types';
 
 interface HeaderProps {
@@ -7,7 +7,6 @@ interface HeaderProps {
   setActiveTab: (tab: ActiveTab) => void;
   cartCount: number;
   onOpenDrawer: () => void;
-  onClearCart?: () => void;
   selectedProductTitle?: string;
 }
 
@@ -16,7 +15,6 @@ export const Header: React.FC<HeaderProps> = ({
   setActiveTab,
   cartCount,
   onOpenDrawer,
-  onClearCart,
   selectedProductTitle,
 }) => {
   const isHome = activeTab === 'home';
@@ -85,16 +83,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Right Action Button */}
-        {activeTab === 'cart' && cartCount > 0 ? (
-          <button
-            onClick={onClearCart}
-            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-rose-600 transition-colors shrink-0"
-            title="Очистить корзину"
-            aria-label="Очистить корзину"
-          >
-            <Trash2 className="w-5 h-5 stroke-[2]" />
-          </button>
-        ) : activeTab === 'profile' ? (
+        {activeTab === 'profile' ? (
           <button
             onClick={onOpenDrawer}
             className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-[#5F6ED0] transition-colors shrink-0"

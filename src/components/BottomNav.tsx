@@ -68,7 +68,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
   return (
     <div className="fixed bottom-3 left-1/2 -translate-x-1/2 w-full max-w-md md:max-w-lg z-40 px-3 pointer-events-none">
-      <nav className="pointer-events-auto max-w-sm mx-auto neu-flat rounded-[26px] p-1.5 flex items-center justify-between gap-1 bg-[#E3E8EF] border border-white/70 shadow-lg shadow-[#BAC5D5]/40">
+      <nav className="pointer-events-auto max-w-sm mx-auto neu-flat rounded-[26px] p-1.5 flex items-center justify-between gap-1 bg-[#E3E8EF] border border-white/70">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive =
@@ -93,7 +93,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               {isActive && (
                 <motion.div
                   layoutId="bottomNavPill"
-                  className="absolute inset-0 rounded-2xl neu-button bg-[#E3E8EF] z-0"
+                  className="absolute inset-0 rounded-2xl neu-pill-active z-0"
                   transition={{ type: 'spring', stiffness: 450, damping: 35 }}
                 />
               )}
@@ -128,7 +128,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                       }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.9, times: [0, 0.2, 0.7, 1], ease: 'easeOut' }}
-                      className="absolute -top-1 left-1/2 -translate-x-1/2 z-30 bg-[#5F6ED0] text-white text-[11px] font-black px-1.5 py-0.5 rounded-full shadow-md shadow-[#5F6ED0]/40 pointer-events-none ring-1 ring-white/80"
+                      className="absolute -top-1 left-1/2 -translate-x-1/2 z-30 bg-[#5F6ED0] text-white text-[11px] font-black px-1.5 py-0.5 rounded-full shadow-[var(--neu-fill-accent-shadow)] pointer-events-none ring-1 ring-white/80"
                     >
                       {cartPlusBadge.text}
                     </motion.span>

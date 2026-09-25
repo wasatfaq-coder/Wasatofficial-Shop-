@@ -135,7 +135,7 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
                 onClick={() => handleSelect(opt.value)}
                 className={`w-full px-3 py-2 rounded-xl text-left text-xs transition-all flex items-center justify-between gap-2 cursor-pointer ${
                   isSelected
-                    ? 'neu-inset text-[#5F6ED0] font-black bg-[#BAC5D5]/40'
+                    ? 'neu-pill-active font-black'
                     : 'text-[#2D3A4E] font-bold hover:bg-[#BAC5D5]/20'
                 }`}
               >
@@ -156,7 +156,7 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
                   )}
                 </div>
                 {isSelected ? (
-                  <div className="w-5 h-5 rounded-full neu-button-accent text-white flex items-center justify-center shrink-0">
+                  <div className="w-5 h-5 rounded-full neu-fill-accent text-white flex items-center justify-center shrink-0">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </div>
                 ) : (

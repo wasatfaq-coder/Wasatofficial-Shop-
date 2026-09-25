@@ -204,7 +204,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
           <div
             className={`w-5 h-5 rounded-full transition-transform duration-200 ease-in-out flex items-center justify-center ${
               filterState.onlyInStock
-                ? 'translate-x-6 bg-white text-[#5F6ED0] shadow-md'
+                ? 'translate-x-6 bg-white text-[#5F6ED0] shadow-[var(--neu-raised-sm)]'
                 : 'translate-x-0 bg-[#E3E8EF] text-[#5C6B80] shadow-sm'
             }`}
           >
@@ -271,7 +271,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 }}
                 className={`text-[11px] font-bold px-2.5 py-1.5 rounded-xl transition-all active:scale-95 cursor-pointer ${
                   isPresetActive
-                    ? 'neu-inset-deep text-[#5F6ED0] border border-[#5F6ED0]/60 bg-[#E3E8EF] shadow-inner font-black'
+                    ? 'neu-pill-active font-black'
                     : 'neu-inset text-[#2D3A4E] hover:text-[#5F6ED0] bg-[#E3E8EF] border border-white/40'
                 }`}
               >
@@ -313,7 +313,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 onClick={() => toggleMaterial(cat.id)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer ${
                   isSelected
-                    ? 'neu-inset-deep text-[#5F6ED0] border border-[#5F6ED0]/60 bg-[#E3E8EF] font-black'
+                    ? 'neu-pill-active font-black'
                     : 'neu-inset text-[#2D3A4E] hover:text-[#5F6ED0] bg-[#E3E8EF] border border-white/40'
                 }`}
               >
@@ -321,7 +321,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 <span>{cat.name}</span>
                 <span
                   className={`text-[10px] font-medium px-1.5 py-0.2 rounded-md ${
-                    isSelected ? 'neu-inset-deep text-[#5F6ED0] font-bold' : 'neu-inset text-[#5C6B80]'
+                    isSelected ? 'neu-pill-active font-bold' : 'neu-inset text-[#5C6B80]'
                   }`}
                 >
                   {count}
@@ -368,7 +368,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                   isOutOfStock
                     ? 'opacity-40 cursor-not-allowed neu-inset bg-[#E3E8EF]/50 border border-white/20'
                     : isSelected
-                    ? 'neu-inset-deep font-black text-[#5F6ED0] border border-[#5F6ED0]/60 bg-[#E3E8EF]'
+                    ? 'neu-pill-active font-black'
                     : 'neu-inset font-bold text-[#2D3A4E] hover:text-[#5F6ED0] bg-[#E3E8EF] border border-white/40'
                 }`}
               >
@@ -433,7 +433,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
             transition={{ duration: 0.25, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="neu-flat rounded-3xl p-4 bg-[#E3E8EF] border border-white/80 space-y-4 shadow-sm">
+            <div className="neu-flat rounded-3xl p-4 bg-[#E3E8EF] border border-white/80 space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
                 <div className="flex items-center gap-2">
                   <SlidersHorizontal className="w-4 h-4 text-[#5F6ED0]" />
@@ -539,7 +539,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                       onCloseModal();
                     }
                   }}
-                  className="flex-1 py-3.5 px-5 rounded-2xl neu-inset-deep font-bold text-xs text-center active:scale-98 transition-all cursor-pointer bg-[#E3E8EF] text-[#5F6ED0] border border-[#5F6ED0]/60 shadow-inner flex items-center justify-center gap-2"
+                  className="flex-1 py-3.5 px-5 rounded-2xl neu-inset-deep font-bold text-xs text-center active:scale-98 transition-all cursor-pointer bg-[#E3E8EF] text-[#5F6ED0] border border-[#5F6ED0]/60 flex items-center justify-center gap-2"
                 >
                   <span>Показать {filteredCount} товаров</span>
                 </button>

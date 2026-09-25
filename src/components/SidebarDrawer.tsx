@@ -81,7 +81,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-            className="relative w-4/5 max-w-xs h-full neu-modal p-5 sm:p-6 flex flex-col justify-between z-10 border-r border-white/60 overflow-hidden bg-[#E3E8EF] shadow-2xl"
+            className="relative w-4/5 max-w-xs h-full neu-modal p-5 sm:p-6 flex flex-col justify-between z-10 border-r border-white/60 overflow-hidden bg-[#E3E8EF]"
           >
             <div className="flex flex-col min-h-0 flex-1">
               {/* Drawer Header */}
@@ -98,14 +98,14 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
             </button>
           </div>
 
-          {/* Navigation Links with Neumorphic Inset (Recessed) Effect */}
+          {/* Navigation: the current section is pressed in */}
           <nav className="my-4 flex flex-col gap-2.5 overflow-y-auto pr-1 custom-scrollbar flex-1">
             <button
               onClick={() => navigateTo('home')}
-              className={`neu-inset bg-[#E3E8EF] rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer active:scale-[0.98] group ${
+              className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer active:scale-[0.98] group ${
                 activeTab === 'home'
-                  ? 'text-[#5F6ED0] font-bold'
-                  : 'text-[#2D3A4E] hover:text-[#5F6ED0]'
+                  ? 'neu-pill-active font-bold'
+                  : 'neu-button text-[#2D3A4E] hover:text-[#5F6ED0]'
               }`}
             >
               <div className="flex items-center gap-3">
@@ -123,10 +123,10 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
 
             <button
               onClick={() => navigateTo('catalog')}
-              className={`neu-inset bg-[#E3E8EF] rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer active:scale-[0.98] group ${
+              className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer active:scale-[0.98] group ${
                 activeTab === 'catalog'
-                  ? 'text-[#5F6ED0] font-bold'
-                  : 'text-[#2D3A4E] hover:text-[#5F6ED0]'
+                  ? 'neu-pill-active font-bold'
+                  : 'neu-button text-[#2D3A4E] hover:text-[#5F6ED0]'
               }`}
             >
               <div className="flex items-center gap-3">
@@ -155,7 +155,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                   Фильтры товаров
                 </span>
               </div>
-              <span className="neu-inset-deep text-[#5F6ED0] text-[10px] px-2.5 py-0.5 rounded-full font-extrabold uppercase tracking-wide border border-[#5F6ED0]/30 shadow-inner">
+              <span className="neu-inset-deep text-[#5F6ED0] text-[10px] px-2.5 py-0.5 rounded-full font-extrabold uppercase tracking-wide border border-[#5F6ED0]/30">
                 Поиск
               </span>
             </button>
@@ -173,17 +173,17 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                   Мои размеры
                 </span>
               </div>
-              <span className="neu-accent-button text-white text-[10px] px-2.5 py-0.5 rounded-full font-extrabold uppercase tracking-wide shadow-xs">
+              <span className="neu-fill-accent text-white text-[10px] px-2.5 py-0.5 rounded-full font-extrabold uppercase tracking-wide">
                 Подбор
               </span>
             </button>
 
             <button
               onClick={() => navigateTo('cart')}
-              className={`neu-inset bg-[#E3E8EF] rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer active:scale-[0.98] group ${
+              className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer active:scale-[0.98] group ${
                 activeTab === 'cart'
-                  ? 'text-[#5F6ED0] font-bold'
-                  : 'text-[#2D3A4E] hover:text-[#5F6ED0]'
+                  ? 'neu-pill-active font-bold'
+                  : 'neu-button text-[#2D3A4E] hover:text-[#5F6ED0]'
               }`}
             >
               <div className="flex items-center gap-3">
@@ -191,7 +191,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                 <span className="group-hover:text-[#5F6ED0] transition-colors">Корзина</span>
               </div>
               {cartCount > 0 ? (
-                <span className="neu-accent-button text-white text-xs px-2 py-0.5 rounded-full font-bold shadow-xs">
+                <span className="neu-fill-accent text-white text-xs px-2 py-0.5 rounded-full font-bold">
                   {cartCount}
                 </span>
               ) : (
@@ -207,10 +207,10 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
 
             <button
               onClick={() => navigateTo('favorites')}
-              className={`neu-inset bg-[#E3E8EF] rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer active:scale-[0.98] group ${
+              className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer active:scale-[0.98] group ${
                 activeTab === 'favorites'
-                  ? 'text-[#5F6ED0] font-bold'
-                  : 'text-[#2D3A4E] hover:text-[#5F6ED0]'
+                  ? 'neu-pill-active font-bold'
+                  : 'neu-button text-[#2D3A4E] hover:text-[#5F6ED0]'
               }`}
             >
               <div className="flex items-center gap-3">
@@ -234,10 +234,10 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
 
             <button
               onClick={() => navigateTo('profile')}
-              className={`neu-inset bg-[#E3E8EF] rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer active:scale-[0.98] group ${
+              className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer active:scale-[0.98] group ${
                 activeTab === 'profile'
-                  ? 'text-[#5F6ED0] font-bold'
-                  : 'text-[#2D3A4E] hover:text-[#5F6ED0]'
+                  ? 'neu-pill-active font-bold'
+                  : 'neu-button text-[#2D3A4E] hover:text-[#5F6ED0]'
               }`}
             >
               <div className="flex items-center gap-3">

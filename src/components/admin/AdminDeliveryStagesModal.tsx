@@ -278,7 +278,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                   <button
                     type="button"
                     onClick={() => setIsAddingCustomStage(!isAddingCustomStage)}
-                    className="neu-button-accent px-2.5 py-1 rounded-xl text-[10px] font-black text-white flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
+                    className="neu-button px-2.5 py-1 rounded-xl text-[10px] font-black text-[#5F6ED0] flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
                   >
                     <Plus className="w-3 h-3" />
                     <span>Добавить этап</span>
@@ -339,7 +339,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                           onClick={() => setNewStatus(st.id as any)}
                           className={`flex-1 py-1.5 px-2 rounded-xl text-[10px] font-black transition-all cursor-pointer ${
                             newStatus === st.id
-                              ? 'neu-button-accent text-white'
+                              ? 'neu-pill-active'
                               : 'neu-button text-[#5C6B80]'
                           }`}
                         >
@@ -373,7 +373,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-1 neu-button-accent rounded-xl text-xs font-black text-white cursor-pointer"
+                    className="px-4 py-1 neu-button rounded-xl text-xs font-black text-[#5F6ED0] cursor-pointer"
                   >
                     Добавить в список
                   </button>
@@ -482,7 +482,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                         <button
                           type="button"
                           onClick={() => handleDeleteStage(idx)}
-                          className="w-7 h-7 rounded-lg neu-button flex items-center justify-center text-rose-500 hover:text-rose-700"
+                          className="w-7 h-7 rounded-lg neu-button-danger flex items-center justify-center"
                           title="Удалить этап"
                         >
                           <Trash2 className="w-3 h-3" />

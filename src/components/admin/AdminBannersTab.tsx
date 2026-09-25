@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { ConfirmDialog } from '../ConfirmDialog';
 import {
   Image as ImageIcon,
   ImagePlus,
@@ -50,6 +51,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
   onShowToast,
 }) => {
   const [isCreating, setIsCreating] = useState(false);
+  const [bannerToDelete, setBannerToDelete] = useState<BannerSlide | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('mobile');
 
@@ -393,12 +395,12 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
             </span>
 
             {/* Live Device Preview Switcher in Form */}
-            <div className="flex items-center gap-1 neu-inset p-0.5 rounded-xl bg-[#E3E8EF]">
+            <div className="flex items-center gap-1 neu-flat-sm p-0.5 rounded-xl bg-[#E3E8EF]">
               <button
                 type="button"
                 onClick={() => setPreviewDevice('mobile')}
                 className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all ${
-                  previewDevice === 'mobile' ? 'neu-flat text-[#5F6ED0] bg-[#E3E8EF]' : 'text-[#5C6B80]'
+                  previewDevice === 'mobile' ? 'neu-pill-active' : 'text-[#5C6B80]'
                 }`}
               >
                 <Smartphone className="w-3 h-3" />
@@ -408,7 +410,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                 type="button"
                 onClick={() => setPreviewDevice('desktop')}
                 className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all ${
-                  previewDevice === 'desktop' ? 'neu-flat text-[#5F6ED0] bg-[#E3E8EF]' : 'text-[#5C6B80]'
+                  previewDevice === 'desktop' ? 'neu-pill-active' : 'text-[#5C6B80]'
                 }`}
               >
                 <Monitor className="w-3 h-3" />
@@ -500,7 +502,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                   onClick={() => setActionType(act.id as any)}
                   className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
                     actionType === act.id
-                      ? 'neu-button text-[#5F6ED0] font-black'
+                      ? 'neu-pill-active font-black'
                       : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                   }`}
                 >
@@ -637,7 +639,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                         <button
                           type="button"
                           onClick={() => setPreviewZoomImage(mobileImage || image)}
-                          className="w-6 h-6 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center shadow-md active:scale-90 transition-transform cursor-pointer"
+                          className="w-6 h-6 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center shadow-[var(--neu-on-photo)] active:scale-90 transition-transform cursor-pointer"
                           title="Увеличить"
                         >
                           <Maximize2 className="w-3 h-3" />
@@ -645,7 +647,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                         <button
                           type="button"
                           onClick={handleClearMobileImage}
-                          className="w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-md active:scale-90 transition-transform cursor-pointer"
+                          className="w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-[var(--neu-on-photo)] active:scale-90 transition-transform cursor-pointer"
                           title="Удалить фото"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -689,7 +691,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     type="button"
                     onClick={() => mobileFileInputRef.current?.click()}
                     disabled={isUploadingMobile}
-                    className="flex-1 h-7 px-2.5 rounded-lg neu-button text-[10px] font-bold text-[#5F6ED0] hover:text-[#4A58B8] active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
+                    className="flex-1 h-7 px-2.5 rounded-lg neu-button text-[10px] font-bold text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
                   >
                     <Upload className="w-3 h-3" />
                     <span>{mobileImage || image ? 'Заменить' : 'Выбрать файл'}</span>
@@ -699,7 +701,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     <button
                       type="button"
                       onClick={handleClearMobileImage}
-                      className="h-7 px-2.5 rounded-lg neu-button text-[10px] font-bold text-rose-600 hover:text-rose-700 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
+                      className="h-7 px-2.5 rounded-lg neu-button-danger text-[10px] font-bold active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
                       title="Удалить фото"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -758,7 +760,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                         <button
                           type="button"
                           onClick={() => setPreviewZoomImage(desktopImage)}
-                          className="w-6 h-6 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center shadow-md active:scale-90 transition-transform cursor-pointer"
+                          className="w-6 h-6 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center shadow-[var(--neu-on-photo)] active:scale-90 transition-transform cursor-pointer"
                           title="Увеличить"
                         >
                           <Maximize2 className="w-3 h-3" />
@@ -766,7 +768,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                         <button
                           type="button"
                           onClick={handleClearDesktopImage}
-                          className="w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-md active:scale-90 transition-transform cursor-pointer"
+                          className="w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-[var(--neu-on-photo)] active:scale-90 transition-transform cursor-pointer"
                           title="Удалить фото"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -810,7 +812,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     type="button"
                     onClick={() => desktopFileInputRef.current?.click()}
                     disabled={isUploadingDesktop}
-                    className="flex-1 h-7 px-2.5 rounded-lg neu-button text-[10px] font-bold text-[#5F6ED0] hover:text-[#4A58B8] active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
+                    className="flex-1 h-7 px-2.5 rounded-lg neu-button text-[10px] font-bold text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
                   >
                     <Upload className="w-3 h-3" />
                     <span>{desktopImage ? 'Заменить' : 'Выбрать файл'}</span>
@@ -820,7 +822,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     <button
                       type="button"
                       onClick={handleClearDesktopImage}
-                      className="h-7 px-2.5 rounded-lg neu-button text-[10px] font-bold text-rose-600 hover:text-rose-700 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
+                      className="h-7 px-2.5 rounded-lg neu-button-danger text-[10px] font-bold active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
                       title="Удалить фото"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -1039,7 +1041,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     </span>
 
                     {slide.badge && (
-                      <span className="text-[10px] font-bold neu-button-accent text-white px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] font-bold neu-fill-accent text-white px-2 py-0.5 rounded-full">
                         {slide.badge}
                       </span>
                     )}
@@ -1075,8 +1077,8 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDelete(slide.id)}
-                      className="w-7 h-7 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#7E525E] active:scale-95 cursor-pointer"
+                      onClick={() => setBannerToDelete(slide)}
+                      className="w-7 h-7 rounded-xl neu-button-danger flex items-center justify-center active:scale-95 cursor-pointer"
                       title="Удалить"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -1162,6 +1164,14 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={bannerToDelete !== null}
+        title="Удалить баннер?"
+        message={`Баннер «${bannerToDelete?.title || ''}» исчезнет с главной страницы. Это действие нельзя отменить.`}
+        onConfirm={() => bannerToDelete && handleDelete(bannerToDelete.id)}
+        onClose={() => setBannerToDelete(null)}
+      />
     </div>
   );
 };

@@ -184,7 +184,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             <button
               type="button"
               onClick={() => setIsClientModalOpen(true)}
-              className="py-1.5 px-2.5 sm:px-3 neu-inset rounded-lg text-xs font-bold text-[#5F6ED0] hover:text-[#4553b8] transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 bg-[#E3E8EF]"
+              className="py-1.5 px-2.5 sm:px-3 neu-inset rounded-lg text-xs font-bold text-[#5F6ED0] hover:text-[#4F5DC0] transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 bg-[#E3E8EF]"
               title="Открыть модальное окно «Бренд & Реквизиты» от лица клиента"
             >
               <Crown className="w-3.5 h-3.5" />
@@ -210,7 +210,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             <button
               type="button"
               onClick={() => setIsResetConfirmOpen(true)}
-              className="py-2 px-3 neu-inset rounded-xl text-xs font-bold text-[#7E8B9B] hover:text-rose-600 transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95 bg-[#E3E8EF]"
+              className="py-2 px-3 neu-button-danger rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95"
               title="Сбросить все настройки к стандартным значениям"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -219,7 +219,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             <button
               type="button"
               onClick={() => handleSave()}
-              className="py-2 px-4.5 neu-inset rounded-xl text-xs font-black text-[#5F6ED0] hover:text-[#4553b8] flex items-center gap-2 cursor-pointer active:scale-95 transition-all bg-[#E3E8EF]"
+              className="py-2 px-4.5 neu-inset rounded-xl text-xs font-black text-[#5F6ED0] hover:text-[#4F5DC0] flex items-center gap-2 cursor-pointer active:scale-95 transition-all bg-[#E3E8EF]"
               title="Применить все изменения к витрине"
             >
               {isSaved ? <Check className="w-4 h-4 text-emerald-600" /> : <Save className="w-4 h-4 text-[#5F6ED0]" />}
@@ -239,7 +239,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm neu-flat rounded-3xl bg-[#E3E8EF] p-5 sm:p-6 space-y-4 border border-white/80 shadow-2xl animate-in zoom-in-95 duration-150"
+            className="w-full max-w-sm neu-flat rounded-3xl bg-[#E3E8EF] p-5 sm:p-6 space-y-4 border border-white/80 animate-in zoom-in-95 duration-150"
           >
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-2xl neu-flat-sm flex items-center justify-center text-amber-600 bg-[#E3E8EF] shrink-0 border border-white/80">
@@ -268,7 +268,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   setIsResetConfirmOpen(false);
                   handleResetToDefaults();
                 }}
-                className="py-2 px-4 neu-button rounded-xl text-xs font-black text-rose-600 hover:text-rose-700 active:scale-95 transition-all cursor-pointer bg-[#E3E8EF] border border-rose-300/70 shadow-sm"
+                className="py-2 px-4 neu-button rounded-xl text-xs font-black text-rose-600 hover:text-rose-700 active:scale-95 transition-all cursor-pointer bg-[#E3E8EF] border border-rose-300/70"
               >
                 Да, сбросить
               </button>
@@ -497,7 +497,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       description: 'Официальное наименование магазина в интерфейсе, логотипе, шапке и уведомлениях.',
                     })
                   }
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -531,7 +531,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       description: 'Короткий слоган или дескриптор бутика, отображаемый под логотипом.',
                     })
                   }
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -563,7 +563,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       description: 'Номер телефона для звонков клиентов, кликабелен в шапке сайта и в карточке заказа.',
                     })
                   }
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -595,7 +595,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       description: 'Адрес электронной почты для официальных запросов клиентов и счетов.',
                     })
                   }
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -627,7 +627,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       description: 'Имя пользователя или ссылка на Telegram для оперативной связи.',
                     })
                   }
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -659,7 +659,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       description: 'Номер WhatsApp стилиста для отправки фото и быстрой примерки.',
                     })
                   }
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -692,7 +692,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       description: 'Точный физический адрес бутика, отображаемый для самовывоза и визитов.',
                     })
                   }
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -725,7 +725,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       description: 'Часы работы бутика и операторов консьерж-службы.',
                     })
                   }
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -741,7 +741,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 <Tag className="w-3.5 h-3.5 text-[#5F6ED0] shrink-0" />
                 Промо-сообщение в шапке сайта
               </span>
-              <label className="flex items-center gap-2 cursor-pointer select-none shrink-0 self-start sm:self-auto neu-button px-2.5 py-1 rounded-xl bg-[#E3E8EF] border border-white/80 shadow-sm active:scale-95 transition-all">
+              <label className="flex items-center gap-2 cursor-pointer select-none shrink-0 self-start sm:self-auto neu-button px-2.5 py-1 rounded-xl bg-[#E3E8EF] border border-white/80 active:scale-95 transition-all">
                 <span className="text-[10px] font-bold text-[#5C6B80] whitespace-nowrap">
                   {localSettings.isStoreBannerVisible ? 'Баннер включен' : 'Баннер скрыт'}
                 </span>
@@ -794,7 +794,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         description: 'Короткое слово на цветном бейдже в верхней строке сайта (например: АКЦИЯ, NEW, ВНИМАНИЕ).',
                       })
                     }
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                     title="Редактировать в модальном окне"
                   >
                     <Pencil className="w-3.5 h-3.5" />
@@ -833,7 +833,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         description: 'Текст рекламного объявления или акции, бегущий или отображаемый в шапке на всех страницах.',
                       })
                     }
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                     title="Редактировать в модальном окне"
                   >
                     <Pencil className="w-3.5 h-3.5" />
@@ -889,7 +889,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       description: 'Текст первого экрана в окне консьерж-сервиса, разъясняющий привилегии персонального обслуживания.',
                     })
                   }
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -942,7 +942,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Краткое название услуги персонального консьержа.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -982,7 +982,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Развернутое описание услуги консьержа.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -1034,7 +1034,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Краткое название второй услуги персонального сервиса.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -1074,7 +1074,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Развернутое описание услуги консьержа.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -1123,7 +1123,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Краткое название третьей услуги персонального сервиса.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -1163,7 +1163,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Развернутое описание услуги консьержа.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -1226,7 +1226,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Полное юридическое наименование компании для договоров и чеков.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -1258,7 +1258,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'ФИО первого лица компании или индивидуального предпринимателя.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -1292,7 +1292,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Адрес места нахождения согласно выписке из ЕГРЮЛ.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -1324,7 +1324,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Оператор и идентификатор участника ЭДО (Диадок, СБИС и др.).',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -1366,7 +1366,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Идентификационный номер налогоплательщика (10 или 12 цифр).',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -1398,7 +1398,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Код причины постановки на учет (9 цифр для юрлиц).',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -1430,7 +1430,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Основной государственный регистрационный номер (13 или 15 цифр).',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -1472,7 +1472,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Полное фирменное наименование банка и город филиала.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -1504,7 +1504,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Банковский идентификационный код (9 цифр).',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -1538,7 +1538,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: '20-значный расчетный номер счета организации.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -1572,7 +1572,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: '20-значный корреспондентский счет банка в Банке России.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -1630,7 +1630,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         description: 'Главный заголовок раздела о ценностях и концепции модного дома.',
                       })
                     }
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                     title="Редактировать в модальном окне"
                   >
                     <Pencil className="w-3.5 h-3.5" />
@@ -1669,7 +1669,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         description: 'Полный текст манифеста и истории бренда во вкладке «О бренде».',
                       })
                     }
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm mt-0.5"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 mt-0.5"
                     title="Редактировать в модальном окне"
                   >
                     <Pencil className="w-3.5 h-3.5" />
@@ -1711,7 +1711,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Краткий заголовок раздела о качестве сырья и производителях тканей.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -1750,7 +1750,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Развернутое описание мануфактур, пряжи и свойств тканей.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm mt-0.5"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 mt-0.5"
                       title="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -1793,7 +1793,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Краткий заголовок раздела о мастерстве сборки и посадке.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -1835,7 +1835,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Развернутое описание лекал, ручных швов и технологии сборки.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm mt-0.5"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 mt-0.5"
                       title="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -1883,7 +1883,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         description: 'Заголовок секции гарантий подлинности и сервисных стандартов.',
                       })
                     }
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                     title="Редактировать в модальном окне"
                   >
                     <Pencil className="w-3.5 h-3.5" />
@@ -1924,7 +1924,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         description: 'Первое гарантийное обязательство перед клиентом.',
                       })
                     }
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                     title="Редактировать в модальном окне"
                   >
                     <Pencil className="w-3.5 h-3.5" />
@@ -1959,7 +1959,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         description: 'Второе гарантийное обязательство перед клиентом.',
                       })
                     }
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                     title="Редактировать в модальном окне"
                   >
                     <Pencil className="w-3.5 h-3.5" />
@@ -1994,7 +1994,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         description: 'Третье гарантийное обязательство перед клиентом.',
                       })
                     }
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                     title="Редактировать в модальном окне"
                   >
                     <Pencil className="w-3.5 h-3.5" />
@@ -2062,7 +2062,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       unit: '₽',
                     })
                   }
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -2114,7 +2114,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       unit: '₽',
                     })
                   }
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -2166,7 +2166,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       unit: '₽',
                     })
                   }
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -2221,7 +2221,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       unit: 'дн.',
                     })
                   }
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4553B8] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 shadow-sm"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -2419,7 +2419,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               id="admin-storefront-change-creds-btn"
               type="button"
               onClick={() => setIsChangeCredsModalOpen(true)}
-              className="neu-button px-3.5 py-2 rounded-xl text-xs font-black text-[#5F6ED0] hover:text-[#2D3A4E] active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+              className="neu-button px-3.5 py-2 rounded-xl text-xs font-black text-[#5F6ED0] hover:text-[#2D3A4E] active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <KeyRound className="w-3.5 h-3.5" />
               <span>Изменить логин и пароль</span>
@@ -2465,7 +2465,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
           <button
             type="button"
             onClick={() => setIsClientModalOpen(true)}
-            className="py-3 px-5 neu-inset rounded-2xl text-xs font-bold text-[#5F6ED0] hover:text-[#4a58b0] flex items-center gap-2 cursor-pointer transition-colors active:scale-95 bg-[#E3E8EF]"
+            className="py-3 px-5 neu-inset rounded-2xl text-xs font-bold text-[#5F6ED0] hover:text-[#4F5DC0] flex items-center gap-2 cursor-pointer transition-colors active:scale-95 bg-[#E3E8EF]"
           >
             <Crown className="w-4 h-4 text-[#5F6ED0]" />
             <span>Проверить окно «Бренд & Реквизиты»</span>
@@ -2473,7 +2473,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
           <button
             type="submit"
-            className="py-3 px-6 neu-inset rounded-2xl text-xs font-black text-[#5F6ED0] hover:text-[#4a58b0] flex items-center gap-2 cursor-pointer active:scale-95 transition-transform bg-[#E3E8EF]"
+            className="py-3 px-6 neu-inset rounded-2xl text-xs font-black text-[#5F6ED0] hover:text-[#4F5DC0] flex items-center gap-2 cursor-pointer active:scale-95 transition-transform bg-[#E3E8EF]"
           >
             {isSaved ? <Check className="w-4 h-4 text-emerald-600" /> : <Save className="w-4 h-4 text-[#5F6ED0]" />}
             <span>{isSaved ? 'Сохранено!' : 'Применить настройки к витрине'}</span>

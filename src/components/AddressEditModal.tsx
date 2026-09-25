@@ -352,7 +352,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                 <div
                   className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
                     isDefault
-                      ? 'neu-button-accent text-white'
+                      ? 'neu-fill-accent text-white'
                       : 'neu-inset text-transparent bg-[#E3E8EF]'
                   }`}
                 >

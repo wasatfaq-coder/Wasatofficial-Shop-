@@ -3,12 +3,44 @@
 @layer base {
   :root {
     --neu-bg: #E3E8EF;
-    --neu-light: #FFFFFF;
-    --neu-dark: #B8C1CF;
     --text-primary: #2D3A4E;
     --text-secondary: #5C6B80;
     --accent-periwinkle: #5F6ED0;
     --accent-dark: #4F5DC0;
+
+    /* Status colors (muted palette) */
+    --success: #3F6E58;
+    --warning: #8C733E;
+    --danger: #7E525E;
+
+    /* Neumorphic shadows: light falls from the top-left (135°) */
+    --neu-shadow-dark: rgb(163 177 198 / 0.65);
+    --neu-shadow-dark-strong: rgb(163 177 198 / 0.9);
+    --neu-shadow-light: rgb(255 255 255 / 0.95);
+
+    --neu-raised-sm: 3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light);
+    --neu-raised-md: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light);
+    --neu-raised-lg: 7px 7px 16px var(--neu-shadow-dark-strong), -7px -7px 16px var(--neu-shadow-light);
+    --neu-inset-sm: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light);
+    --neu-inset-lg: inset 5px 5px 11px var(--neu-shadow-dark-strong), inset -5px -5px 11px var(--neu-shadow-light);
+    --neu-edge-highlight: inset 0 0 0 1px rgb(255 255 255 / 0.75);
+    --neu-floating: 6px 12px 24px var(--neu-shadow-dark), -4px -4px 12px var(--neu-shadow-light), inset 1px 1px 0 var(--neu-shadow-light);
+    --neu-modal: 0 24px 48px -12px rgb(15 23 42 / 0.45), 0 8px 16px -4px rgb(15 23 42 / 0.25),
+      inset 1px 1px 0 var(--neu-shadow-light), inset -1px -1px 0 var(--neu-shadow-dark);
+
+    /* Over photos: dark shadow only, a white one leaves a halo on dark fabric */
+    --neu-on-photo: 0 2px 6px rgb(20 28 40 / 0.35);
+    --neu-on-photo-hover: 0 3px 8px rgb(20 28 40 / 0.45);
+    --neu-on-photo-pressed: inset 0 2px 4px rgb(20 28 40 / 0.4);
+
+    /* Filled elements cast a shadow of their own color */
+    --neu-raised-accent: 4px 5px 14px rgb(95 110 208 / 0.45), -3px -3px 10px var(--neu-shadow-light);
+    --neu-raised-accent-hover: 5px 7px 18px rgb(95 110 208 / 0.55), -4px -4px 12px var(--neu-shadow-light);
+    --neu-pressed-accent: inset 3px 3px 6px rgb(45 55 130 / 0.85), inset -2px -2px 5px rgb(255 255 255 / 0.25);
+    --neu-fill-accent-shadow: 2px 3px 6px rgb(95 110 208 / 0.35);
+    --neu-raised-success: 4px 5px 14px rgb(16 185 129 / 0.4), -3px -3px 10px var(--neu-shadow-light);
+    --neu-pressed-success: inset 3px 3px 6px rgb(4 100 75 / 0.85), inset -2px -2px 5px rgb(255 255 255 / 0.25);
+    --neu-raised-dark: 4px 5px 14px rgb(30 39 54 / 0.4), -3px -3px 10px var(--neu-shadow-light);
   }
 
   body {
@@ -20,45 +52,29 @@
   }
 }
 
-/* Single Base Neumorphic Design System - Calibrated Symmetrical Dual-Light Physics (Light from top-left: 135°) */
-.neu-card,
+/* Surfaces */
 .neu-flat {
   background-color: var(--neu-bg);
-  box-shadow: 5px 5px 12px rgba(163, 177, 198, 0.65), -5px -5px 12px rgba(255, 255, 255, 0.95);
+  box-shadow: var(--neu-raised-md);
 }
 
 .neu-flat-sm {
   background-color: var(--neu-bg);
-  box-shadow: 3px 3px 7px rgba(163, 177, 198, 0.55), -3px -3px 7px rgba(255, 255, 255, 0.95);
-}
-
-.neu-flat-lg {
-  background-color: var(--neu-bg);
-  box-shadow: 8px 8px 18px rgba(163, 177, 198, 0.65), -8px -8px 18px rgba(255, 255, 255, 0.95);
-}
-
-.neu-convex {
-  background: linear-gradient(145deg, #edf2f9, #d8dfeb);
-  box-shadow: 5px 5px 12px rgba(163, 177, 198, 0.6), -5px -5px 12px rgba(255, 255, 255, 0.95);
-}
-
-.neu-concave {
-  background: linear-gradient(145deg, #d8dfeb, #edf2f9);
-  box-shadow: 5px 5px 12px rgba(163, 177, 198, 0.55), -5px -5px 12px rgba(255, 255, 255, 0.85);
+  box-shadow: var(--neu-raised-sm);
 }
 
 .neu-inset {
   background-color: var(--neu-bg);
-  box-shadow: inset 3px 3px 6px rgba(163, 177, 198, 0.65), inset -3px -3px 6px rgba(255, 255, 255, 0.95);
+  box-shadow: var(--neu-inset-sm);
 }
 
 .neu-inset-deep {
   background-color: var(--neu-bg);
-  box-shadow: inset 5px 5px 11px rgba(150, 166, 189, 0.78), inset -5px -5px 11px rgba(255, 255, 255, 0.96);
+  box-shadow: var(--neu-inset-lg);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Keyframes for neu-inset-deep breathing depth and tactile feedback (GPU optimized) */
+/* Breathing depth for active status trackers (opacity only, GPU friendly) */
 @keyframes neu-inset-deep-pulse {
   0%, 100% {
     opacity: 0.92;
@@ -68,45 +84,14 @@
   }
 }
 
-@keyframes neu-inset-deep-tracker-pulse {
-  0%, 100% {
-    opacity: 0.88;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-/* neu-inset-deep CSS animations for active status trackers - GPU accelerated & isolated */
-.neu-inset-deep-animated,
-.neu-inset-deep-pulse {
+.neu-inset-deep-animated {
   isolation: isolate;
   contain: paint;
   will-change: opacity;
   animation: neu-inset-deep-pulse 3s ease-in-out infinite;
 }
 
-.neu-inset-deep-tracker {
-  background-color: var(--neu-bg);
-  isolation: isolate;
-  contain: paint;
-  will-change: opacity;
-  animation: neu-inset-deep-tracker-pulse 3s ease-in-out infinite;
-}
-
-/* Order Status Tracker Progress Bar & Path Filling Animations - GPU-only transforms */
-@keyframes neu-progress-flow {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
+/* Order status tracker: light beam running along the progress path */
 @keyframes neu-progress-beam {
   0% {
     transform: translate3d(-100%, 0, 0);
@@ -122,21 +107,6 @@
   }
   100% {
     transform: translate3d(0, 250%, 0);
-  }
-}
-
-@keyframes neu-node-pulse-ring {
-  0% {
-    transform: scale(1) translateZ(0);
-    opacity: 0.85;
-  }
-  50% {
-    transform: scale(1.06) translateZ(0);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1) translateZ(0);
-    opacity: 0.85;
   }
 }
 
@@ -162,59 +132,7 @@
   contain: paint;
 }
 
-.neu-node-active-ring {
-  will-change: transform, opacity;
-  transform: translateZ(0);
-  animation: neu-node-pulse-ring 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-.neu-progress-flow {
-  background-size: 200% 200%;
-  animation: neu-progress-flow 4s ease infinite;
-}
-
-/* Confirm Order Button Tactile neu-inset-deep Feedback & Transitions */
-.btn-confirm-order,
-.neu-confirm-order-btn {
-  position: relative;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  user-select: none;
-}
-
-.btn-confirm-order:active,
-.neu-confirm-order-btn:active,
-.neu-button-accent.btn-confirm-order:active,
-.neu-accent-button.btn-confirm-order:active,
-button.active\:neu-inset-deep:active {
-  box-shadow: inset 6px 6px 14px rgba(30, 40, 105, 0.95), inset -4px -4px 10px rgba(255, 255, 255, 0.35) !important;
-  transform: translateY(1.5px) scale(0.975) !important;
-}
-
-.neu-button-primary.btn-confirm-order:active,
-.neu-button-primary.active\:neu-inset-deep:active {
-  box-shadow: inset 6px 6px 14px rgba(10, 15, 25, 0.95), inset -3px -3px 8px rgba(255, 255, 255, 0.2) !important;
-  transform: translateY(1.5px) scale(0.975) !important;
-}
-
-.btn-confirm-order.is-submitting,
-.neu-confirm-order-btn.is-submitting {
-  animation: neu-inset-deep-pulse 1.2s ease-in-out infinite;
-}
-
-.neu-button {
-  background: linear-gradient(145deg, #ebf0f7, #d9dfeb);
-  box-shadow: 4px 4px 10px rgba(163, 177, 198, 0.6), -4px -4px 10px rgba(255, 255, 255, 0.95);
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-}
-
-.neu-button:hover {
-  background: linear-gradient(145deg, #f0f5fc, #dce2ee);
-  box-shadow: 6px 6px 14px rgba(158, 172, 194, 0.7), -6px -6px 14px rgba(255, 255, 255, 1);
-  transform: translateY(-1px);
-}
-
-/* Tactile Neumorphic Product Card with Micro-Scaling and Soft Elevation */
+/* Product card: lifts on hover, presses in on tap */
 .neu-product-card {
   transition: transform 0.28s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.28s cubic-bezier(0.25, 1, 0.5, 1), border-color 0.28s ease;
   will-change: transform, box-shadow;
@@ -224,22 +142,24 @@ button.active\:neu-inset-deep:active {
 
 .neu-product-card:hover {
   transform: translateY(-3px) scale(1.025) translateZ(0);
-  box-shadow: 6px 9px 20px rgba(150, 166, 190, 0.65), -6px -6px 18px rgba(255, 255, 255, 0.98), inset 0 0 0 1px rgba(255, 255, 255, 0.75);
+  box-shadow: var(--neu-raised-lg), var(--neu-edge-highlight);
   border-color: rgba(255, 255, 255, 0.85);
 }
 
 .neu-product-card:active {
   transform: translateY(1px) scale(0.985) translateZ(0);
-  box-shadow: inset 3px 3px 6px rgba(155, 170, 192, 0.75), inset -3px -3px 6px rgba(255, 255, 255, 0.95) !important;
+  box-shadow: var(--neu-inset-sm) !important;
   transition-duration: 0.12s;
 }
 
-/* Universal Tactile Neumorphic Pressing Effect for All Buttons & Interactive Elements */
+/* Buttons. One filled button per screen: neu-button-accent is the main action.
+   Everything else is neu-button; neu-button-danger for delete, clear and sign out. */
 button,
 [role="button"],
 .neu-button,
-.neu-button-primary,
+.neu-button-danger,
 .neu-button-accent,
+.neu-button-success,
 .neu-pressable,
 input[type="button"],
 input[type="submit"] {
@@ -249,131 +169,138 @@ input[type="submit"] {
   outline: none;
 }
 
-/* Default Tactile Depression (Inset Dual-Sided Shadow + Micro Scale) on Press for Neumorphic Buttons */
-.neu-button:active,
-.neu-button-pressed,
-.neu-pressable:active,
-input[type="button"].neu-button:active,
-input[type="submit"].neu-button:active {
-  box-shadow: inset 3px 3px 6px rgba(155, 170, 192, 0.75), inset -3px -3px 6px rgba(255, 255, 255, 0.95) !important;
-  transform: translateY(1px) scale(0.98) !important;
-}
-
-/* Active or Selected Neumorphic Inset State */
-.neu-active,
-[aria-selected="true"],
-.neu-pill-active {
-  background-color: var(--neu-bg);
-  box-shadow: inset 3px 3px 6px rgba(160, 174, 195, 0.7), inset -3px -3px 6px rgba(255, 255, 255, 0.95);
-}
-
-.neu-button-primary {
-  background: linear-gradient(135deg, #2D3A4E 0%, #1E2736 100%);
-  color: #FFFFFF;
-  box-shadow: 4px 5px 14px rgba(30, 39, 54, 0.4), -3px -3px 10px rgba(255, 255, 255, 0.85);
-  transition: all 0.15s ease;
+.neu-button,
+.neu-button-danger {
+  background: linear-gradient(145deg, #ebf0f7, #d9dfeb);
+  box-shadow: var(--neu-raised-md);
   cursor: pointer;
 }
 
-.neu-button-primary:hover {
-  background: linear-gradient(135deg, #3A4A63 0%, #2D3A4E 100%);
-  box-shadow: 5px 7px 16px rgba(30, 39, 54, 0.5), -4px -4px 12px rgba(255, 255, 255, 0.9);
+.neu-button:hover,
+.neu-button-danger:hover {
+  background: linear-gradient(145deg, #f0f5fc, #dce2ee);
+  box-shadow: var(--neu-raised-lg);
   transform: translateY(-1px);
 }
 
-.neu-button-primary:active {
-  box-shadow: inset 3px 3px 6px rgba(10, 15, 22, 0.85), inset -2px -2px 5px rgba(255, 255, 255, 0.15) !important;
+.neu-button:active,
+.neu-button-danger:active,
+.neu-pressable:active {
+  box-shadow: var(--neu-inset-sm) !important;
   transform: translateY(1px) scale(0.98) !important;
 }
 
-.neu-button-accent,
-.neu-accent-button {
+.neu-button-danger {
+  color: var(--danger);
+}
+
+.neu-button-danger:hover {
+  color: color-mix(in srgb, var(--danger) 80%, black);
+}
+
+.neu-button-accent {
   background: linear-gradient(145deg, #6C7BE4 0%, #4E5CBD 100%);
   color: #FFFFFF;
-  box-shadow: 4px 5px 14px rgba(95, 110, 208, 0.45), -3px -3px 10px rgba(255, 255, 255, 0.85);
-  transition: all 0.15s ease;
+  box-shadow: var(--neu-raised-accent);
   cursor: pointer;
 }
 
-.neu-button-accent:hover,
-.neu-accent-button:hover {
+.neu-button-accent:hover {
   background: linear-gradient(145deg, #7886EC 0%, #5866C7 100%);
-  box-shadow: 5px 7px 18px rgba(95, 110, 208, 0.55), -4px -4px 12px rgba(255, 255, 255, 0.95);
+  box-shadow: var(--neu-raised-accent-hover);
   transform: translateY(-1px);
 }
 
-.neu-button-accent:active,
-.neu-accent-button:active {
-  box-shadow: inset 3px 3px 6px rgba(45, 55, 130, 0.85), inset -2px -2px 5px rgba(255, 255, 255, 0.25) !important;
+.neu-button-accent:active {
+  box-shadow: var(--neu-pressed-accent) !important;
   transform: translateY(1px) scale(0.98) !important;
 }
 
-.neu-button-success,
-.neu-success-button {
+/* Short-lived "done" state of a main button (added to cart, size saved) */
+.neu-button-success {
   background: linear-gradient(135deg, #10B981 0%, #059669 100%);
   color: #FFFFFF;
-  box-shadow: 4px 5px 14px rgba(16, 185, 129, 0.4), -3px -3px 10px rgba(255, 255, 255, 0.85);
-  transition: all 0.15s ease;
+  box-shadow: var(--neu-raised-success);
   cursor: pointer;
 }
 
-.neu-button-success:hover,
-.neu-success-button:hover {
+.neu-button-success:hover {
   background: linear-gradient(135deg, #34D399 0%, #10B981 100%);
-  box-shadow: 5px 7px 18px rgba(16, 185, 129, 0.5), -4px -4px 12px rgba(255, 255, 255, 0.9);
   transform: translateY(-1px);
 }
 
-.neu-button-success:active,
-.neu-success-button:active {
-  box-shadow: inset 3px 3px 6px rgba(4, 100, 75, 0.85), inset -2px -2px 5px rgba(255, 255, 255, 0.25) !important;
+.neu-button-success:active {
+  box-shadow: var(--neu-pressed-success) !important;
   transform: translateY(1px) scale(0.98) !important;
 }
 
-/* Floating Dropdown Menus & Popovers */
+/* Main order buttons press deeper */
+.btn-confirm-order {
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.btn-confirm-order:active,
+button.active\:neu-inset-deep:active {
+  box-shadow: var(--neu-pressed-accent) !important;
+  transform: translateY(1.5px) scale(0.975) !important;
+}
+
+/* Selected option: chip, segment, tab, menu item. Pressed in, accent text */
+.neu-pill-active {
+  background-color: var(--neu-bg);
+  box-shadow: var(--neu-inset-sm);
+  color: var(--accent-periwinkle);
+}
+
+/* Accent fill for indicators that are not buttons: badges, checked boxes, switches that are on, completed steps */
+.neu-fill-accent {
+  background: linear-gradient(145deg, #6C7BE4 0%, #4E5CBD 100%);
+  color: #FFFFFF;
+  box-shadow: var(--neu-fill-accent-shadow);
+}
+
+/* Own chat messages */
+.neu-bubble-own {
+  background: linear-gradient(135deg, #2D3A4E 0%, #1E2736 100%);
+  color: #FFFFFF;
+  box-shadow: var(--neu-raised-dark);
+}
+
+/* Floating dropdown menus and popovers */
 .neu-dropdown {
   background-color: var(--neu-bg);
-  box-shadow: 
-    6px 12px 24px rgba(150, 165, 188, 0.55),
-    -4px -4px 12px rgba(255, 255, 255, 0.95),
-    inset 1px 1px 0 rgba(255, 255, 255, 0.85);
+  box-shadow: var(--neu-floating);
 }
 
-/* Capsule Badges in Base Neumorphic Material */
-.neu-badge {
-  background-color: var(--neu-bg);
-  box-shadow: none;
-  color: #2D3A4E;
-  font-weight: 700;
-}
-
-/* Overlay elements on top of photos: strictly dark shadow to eliminate white halo/bleed on dark fabrics */
+/* Buttons and badges over photos */
 .neu-photo-btn {
   background-color: var(--neu-bg);
   color: #5C6B80;
-  box-shadow: 0 2px 6px rgba(20, 28, 40, 0.35);
+  box-shadow: var(--neu-on-photo);
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
 }
 
 .neu-photo-btn:hover {
   color: #2D3A4E;
-  box-shadow: 0 3px 8px rgba(20, 28, 40, 0.45);
+  box-shadow: var(--neu-on-photo-hover);
   transform: scale(1.05);
 }
 
 .neu-photo-btn:active {
-  box-shadow: inset 0 2px 4px rgba(20, 28, 40, 0.4) !important;
+  box-shadow: var(--neu-on-photo-pressed) !important;
   transform: scale(0.92) !important;
 }
 
 .neu-photo-badge {
   background-color: var(--neu-bg);
   color: #2D3A4E;
-  box-shadow: 0 2px 6px rgba(20, 28, 40, 0.3);
+  box-shadow: var(--neu-on-photo);
 }
 
-/* Neumorphic Range Sliders */
+/* Range sliders */
 input[type="range"].neu-range {
   -webkit-appearance: none;
   appearance: none;
@@ -390,7 +317,7 @@ input[type="range"].neu-range::-webkit-slider-runnable-track {
   height: 8px;
   border-radius: 9999px;
   background-color: var(--neu-bg);
-  box-shadow: inset 2px 2px 5px rgba(160, 172, 192, 0.65), inset -2px -2px 5px rgba(255, 255, 255, 0.95);
+  box-shadow: var(--neu-inset-sm);
 }
 
 input[type="range"].neu-range::-webkit-slider-thumb {
@@ -399,7 +326,7 @@ input[type="range"].neu-range::-webkit-slider-thumb {
   width: 22px;
   border-radius: 50%;
   background: var(--neu-bg);
-  box-shadow: 3px 3px 7px rgba(165, 176, 194, 0.7), -3px -3px 7px rgba(255, 255, 255, 1);
+  box-shadow: var(--neu-raised-sm);
   border: 2.5px solid #5F6ED0;
   margin-top: -7px;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -409,14 +336,13 @@ input[type="range"].neu-range::-webkit-slider-thumb {
 input[type="range"].neu-range::-webkit-slider-thumb:active {
   cursor: grabbing;
   transform: scale(1.15);
-  box-shadow: 2px 2px 4px rgba(165, 176, 194, 0.8), -2px -2px 4px rgba(255, 255, 255, 1);
 }
 
 input[type="range"].neu-range::-moz-range-track {
   height: 8px;
   border-radius: 9999px;
   background-color: var(--neu-bg);
-  box-shadow: inset 2px 2px 5px rgba(160, 172, 192, 0.65), inset -2px -2px 5px rgba(255, 255, 255, 0.95);
+  box-shadow: var(--neu-inset-sm);
 }
 
 input[type="range"].neu-range::-moz-range-thumb {
@@ -424,7 +350,7 @@ input[type="range"].neu-range::-moz-range-thumb {
   width: 22px;
   border-radius: 50%;
   background: var(--neu-bg);
-  box-shadow: 3px 3px 7px rgba(165, 176, 194, 0.7), -3px -3px 7px rgba(255, 255, 255, 1);
+  box-shadow: var(--neu-raised-sm);
   border: 2.5px solid #5F6ED0;
   cursor: grab;
 }
@@ -438,48 +364,28 @@ input[type="range"].neu-range::-moz-range-thumb {
   scrollbar-width: none;
 }
 
-/* Admin Panel & Tab Bar Physics */
+/* Admin panel tabs: the active tab is pressed in, like any selected option */
 .admin-tab-bar {
-  box-shadow: inset 3px 3px 6px rgba(163, 177, 198, 0.65), inset -3px -3px 6px rgba(255, 255, 255, 0.95) !important;
-}
-.admin-tab-active {
-  background-color: var(--neu-bg) !important;
-  box-shadow: 2px 2px 5px rgba(163, 177, 198, 0.65), -2px -2px 5px rgba(255, 255, 255, 0.85) !important;
+  box-shadow: var(--neu-raised-sm);
 }
 
-/* Floating Modals Over Scrims - Completely eliminates white halo / light leak on dark overlays */
-.fixed.inset-0 > .neu-card,
-.fixed.inset-0 > .neu-flat,
-.fixed.inset-0 > .neu-flat-lg,
-.fixed.inset-0 > div > .neu-card,
-.fixed.inset-0 > div > .neu-flat,
-.fixed.inset-0 > div > .neu-flat-lg,
-.admin-no-glow > .neu-card,
-.admin-no-glow > .neu-flat,
-.admin-no-glow > div > .neu-card,
-.neu-modal,
-.neu-modal-card {
+.admin-tab-active {
   background-color: var(--neu-bg);
-  box-shadow: 
-    0 24px 48px -12px rgba(15, 23, 42, 0.45),
-    0 8px 16px -4px rgba(15, 23, 42, 0.25),
-    inset 1px 1px 0 rgba(255, 255, 255, 0.9),
-    inset -1px -1px 0 rgba(163, 177, 198, 0.45) !important;
+  box-shadow: var(--neu-inset-sm);
+}
+
+/* Modals over a dark scrim: a dark shadow without the white halo */
+.fixed.inset-0 > .neu-flat,
+.fixed.inset-0 > div > .neu-flat,
+.admin-no-glow > .neu-flat,
+.admin-no-glow > div > .neu-flat,
+.neu-modal {
+  background-color: var(--neu-bg);
+  box-shadow: var(--neu-modal) !important;
   transform: translateZ(0);
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   contain: paint layout;
-}
-
-/* Modal Smooth Scrolling Subcontainer */
-.neu-modal-body,
-.neu-modal-scroll {
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  scroll-behavior: smooth;
-  will-change: scroll-position;
-  transform: translateZ(0);
 }
 
 /* Recharts Neumorphic Overrides & Black Focus Border Removal */

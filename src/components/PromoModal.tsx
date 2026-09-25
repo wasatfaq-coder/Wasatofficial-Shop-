@@ -197,7 +197,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
           {appliedPromo && (
             <div className="neu-inset-deep rounded-2xl p-3.5 border border-[#5F6ED0]/40 flex items-center justify-between bg-[#E3E8EF]">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl neu-button-accent text-white font-black text-xs flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl neu-fill-accent text-white font-black text-xs flex items-center justify-center shrink-0">
                   {appliedPromo.discountType === 'fixed'
                     ? `-${(appliedPromo.discountValue || 0).toLocaleString('ru-RU')} ₽`
                     : `-${appliedPromo.discountValue || appliedPromo.discountPercent}%`}
@@ -252,13 +252,13 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                     key={coupon.id}
                     className={`rounded-2xl p-4 transition-all duration-200 relative overflow-hidden border ${
                       isCurrentActive
-                        ? 'neu-inset-deep border-[#5F6ED0]/50'
+                        ? 'neu-pill-active border-transparent'
                         : 'neu-flat border-white/80'
                     }`}
                   >
                     {/* Badge top right */}
                     {coupon.badgeText && (
-                      <div className="absolute top-3 right-3 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full neu-button-accent text-white flex items-center gap-1 whitespace-nowrap shrink-0">
+                      <div className="absolute top-3 right-3 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full neu-fill-accent text-white flex items-center gap-1 whitespace-nowrap shrink-0">
                         <Tag className="w-2.5 h-2.5" />
                         <span>{coupon.badgeText}</span>
                       </div>

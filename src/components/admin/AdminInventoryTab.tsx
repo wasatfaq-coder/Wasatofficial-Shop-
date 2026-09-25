@@ -626,12 +626,12 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
     <div className="space-y-4">
       {/* Top Header & Sub-tabs */}
       <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
-        <div className="neu-inset rounded-xl p-1 flex gap-1 bg-[#E3E8EF] w-full sm:w-auto overflow-x-auto no-scrollbar">
+        <div className="neu-flat-sm rounded-xl p-1 flex gap-1 bg-[#E3E8EF] w-full sm:w-auto overflow-x-auto no-scrollbar">
           <button
             onClick={() => setActiveSubTab('matrix')}
             className={`py-1.5 px-3 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               activeSubTab === 'matrix'
-                ? 'neu-button text-[#5F6ED0]'
+                ? 'neu-pill-active'
                 : 'text-[#5C6B80] hover:text-[#2D3A4E]'
             }`}
           >
@@ -642,7 +642,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
             onClick={() => setActiveSubTab('audit')}
             className={`py-1.5 px-3 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               activeSubTab === 'audit'
-                ? 'neu-button text-[#5F6ED0]'
+                ? 'neu-pill-active'
                 : 'text-[#5C6B80] hover:text-[#2D3A4E]'
             }`}
           >
@@ -655,7 +655,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
             onClick={() => setActiveSubTab('movements')}
             className={`py-1.5 px-3 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               activeSubTab === 'movements'
-                ? 'neu-button text-[#5F6ED0]'
+                ? 'neu-pill-active'
                 : 'text-[#5C6B80] hover:text-[#2D3A4E]'
             }`}
           >
@@ -695,7 +695,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                   key={th}
                   onClick={() => setLowStockThreshold(th)}
                   className={`text-[9px] font-bold px-1.5 py-0.5 rounded cursor-pointer transition-all ${
-                    lowStockThreshold === th ? 'neu-button-accent text-white' : 'neu-button text-[#2D3A4E]'
+                    lowStockThreshold === th ? 'neu-pill-active' : 'neu-button text-[#2D3A4E]'
                   }`}
                 >
                   {th}
@@ -1281,7 +1281,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                   onClick={() => setLogTypeFilter(t.id as any)}
                   className={`py-1.5 px-2.5 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer transition-all ${
                     logTypeFilter === t.id
-                      ? 'neu-button text-[#5F6ED0] font-black'
+                      ? 'neu-pill-active font-black'
                       : 'neu-button text-[#5C6B80]'
                   }`}
                 >
@@ -1419,7 +1419,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                       onClick={() => setOpType(t.id as any)}
                       className={`py-2 px-2 rounded-xl text-center font-bold text-[11px] transition-all cursor-pointer ${
                         opType === t.id
-                          ? 'neu-button text-[#5F6ED0] font-black'
+                          ? 'neu-pill-active font-black'
                           : 'neu-button text-[#5C6B80]'
                       }`}
                     >
@@ -1555,13 +1555,13 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                 <label className="block text-[11px] font-bold text-[#5C6B80] mb-1">
                   Формат этикетки
                 </label>
-                <div className="neu-inset rounded-xl p-1 bg-[#E3E8EF] flex flex-col gap-1">
+                <div className="neu-flat-sm rounded-xl p-1 bg-[#E3E8EF] flex flex-col gap-1">
                   <button
                     type="button"
                     onClick={() => setLabelFormat('58x40')}
                     className={`py-1 px-2 rounded-lg text-left text-[11px] font-bold transition-all ${
                       labelFormat === '58x40'
-                        ? 'neu-button text-[#5F6ED0]'
+                        ? 'neu-pill-active'
                         : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                     }`}
                   >
@@ -1572,7 +1572,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                     onClick={() => setLabelFormat('70x50')}
                     className={`py-1 px-2 rounded-lg text-left text-[11px] font-bold transition-all ${
                       labelFormat === '70x50'
-                        ? 'neu-button text-[#5F6ED0]'
+                        ? 'neu-pill-active'
                         : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                     }`}
                   >
@@ -1583,7 +1583,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                     onClick={() => setLabelFormat('hangtag')}
                     className={`py-1 px-2 rounded-lg text-left text-[11px] font-bold transition-all ${
                       labelFormat === 'hangtag'
-                        ? 'neu-button text-[#5F6ED0]'
+                        ? 'neu-pill-active'
                         : 'text-[#5C6B80] hover:text-[#2D3A4E]'
                     }`}
                   >

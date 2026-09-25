@@ -274,7 +274,7 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
                           {product.title}
                         </span>
                         {product.badge && (
-                          <span className="text-[9px] font-black text-white neu-button-accent px-1.5 py-0.5 rounded-md shrink-0">
+                          <span className="text-[9px] font-black text-white neu-fill-accent px-1.5 py-0.5 rounded-md shrink-0">
                             {product.badge}
                           </span>
                         )}
