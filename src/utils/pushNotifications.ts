@@ -212,7 +212,7 @@ export function getOrderStatusNotification(
         oldStatus,
         newStatus: effectiveNewStatus,
         badgeText: 'Принят',
-        badgeBg: 'bg-indigo-100 text-[#5F6ED0] border-indigo-300',
+        badgeBg: 'bg-indigo-100 text-[#4B59BB] border-indigo-300',
       };
   }
 }

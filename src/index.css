@@ -16,9 +16,10 @@
   :root {
     --neu-bg: #E3E8EF;
     --text-primary: #2D3A4E;
-    --text-secondary: #5C6B80;
+    --text-secondary: #4E5C70;
+    /* Accent for fills, borders and icons; text uses the darker --accent-text (4.5:1 on the background and on buttons) */
     --accent-periwinkle: #5F6ED0;
-    --accent-dark: #4F5DC0;
+    --accent-text: #4B59BB;
 
     /* Neumorphic shadows: light falls from the top-left (135°) */
     --neu-shadow-dark: rgb(163 177 198 / 0.65);
@@ -173,7 +174,13 @@ input[type="submit"] {
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  outline: none;
+}
+
+/* Keyboard focus: an accent outline. Only :focus-visible, so a mouse click on a button shows nothing;
+   text fields show it on any focus. An outline is not a box-shadow, so it works on neu-* elements too */
+:where(button, [role="button"], a, summary, [tabindex], input, select, textarea):focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
 }
 
 .neu-button,
@@ -206,14 +213,14 @@ input[type="submit"] {
 }
 
 .neu-button-accent {
-  background: linear-gradient(145deg, #6C7BE4 0%, #4E5CBD 100%);
+  background: linear-gradient(145deg, #5767CC 0%, #4553B8 100%);
   color: #FFFFFF;
   box-shadow: var(--neu-raised-accent);
   cursor: pointer;
 }
 
 .neu-button-accent:hover {
-  background: linear-gradient(145deg, #7886EC 0%, #5866C7 100%);
+  background: linear-gradient(145deg, #5E6ED2 0%, #4B59BF 100%);
   box-shadow: var(--neu-raised-accent-hover);
   transform: translateY(-1px);
 }
@@ -258,12 +265,12 @@ button.active\:neu-inset-deep:active {
 .neu-pill-active {
   background-color: var(--neu-bg);
   box-shadow: var(--neu-inset-sm);
-  color: var(--accent-periwinkle);
+  color: var(--accent-text);
 }
 
 /* Accent fill for indicators that are not buttons: badges, checked boxes, switches that are on, completed steps */
 .neu-fill-accent {
-  background: linear-gradient(145deg, #6C7BE4 0%, #4E5CBD 100%);
+  background: linear-gradient(145deg, #5767CC 0%, #4553B8 100%);
   color: #FFFFFF;
   box-shadow: var(--neu-fill-accent-shadow);
 }
@@ -284,7 +291,7 @@ button.active\:neu-inset-deep:active {
 /* Buttons and badges over photos */
 .neu-photo-btn {
   background-color: var(--neu-bg);
-  color: #5C6B80;
+  color: #4E5C70;
   box-shadow: var(--neu-on-photo);
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
@@ -314,10 +321,6 @@ input[type="range"].neu-range {
   background: transparent;
   cursor: pointer;
   width: 100%;
-}
-
-input[type="range"].neu-range:focus {
-  outline: none;
 }
 
 input[type="range"].neu-range::-webkit-slider-runnable-track {

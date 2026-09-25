@@ -55,19 +55,19 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               type="button"
               onClick={onClose}
               aria-label="Закрыть"
-              className="w-7 h-7 rounded-full neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer shrink-0"
+              className="w-7 h-7 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer shrink-0"
             >
               <X className="w-4 h-4 stroke-[2.5]" />
             </button>
           </div>
 
-          <p className="text-xs text-[#5C6B80] leading-relaxed">{message}</p>
+          <p className="text-xs text-[#4E5C70] leading-relaxed">{message}</p>
 
           <div className="flex items-center gap-2 pt-1">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer"
+              className="flex-1 py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
             >
               Отмена
             </button>

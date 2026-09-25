@@ -153,8 +153,8 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
           <div className="p-3.5 sm:p-4 bg-[#E3E8EF] border-b border-[#BAC5D5]/50 flex items-center justify-between gap-2.5 shrink-0 shadow-sm">
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
               <div className="relative shrink-0">
-                <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-[#5F6ED0] border border-white/80">
-                  <Headphones className="w-5 h-5 text-[#5F6ED0] stroke-[2.2]" />
+                <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-[#4B59BB] border border-white/80">
+                  <Headphones className="w-5 h-5 text-[#4B59BB] stroke-[2.2]" />
                 </div>
                 <span className="absolute bottom-0 right-0 w-3 h-3 bg-success border-2 border-[#E3E8EF] rounded-full shadow-sm" />
               </div>
@@ -163,11 +163,11 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                   <h3 className="text-xs sm:text-sm font-extrabold tracking-tight text-[#2D3A4E] truncate">
                     Служба заботы
                   </h3>
-                  <span className="text-[9px] sm:text-[10px] neu-inset bg-[#E3E8EF] text-[#5F6ED0] px-2.5 py-0.5 rounded-full font-black border border-white/70 shrink-0">
+                  <span className="text-[11px] sm:text-[11px] neu-inset bg-[#E3E8EF] text-[#4B59BB] px-2.5 py-0.5 rounded-full font-black border border-white/70 shrink-0">
                     24/7
                   </span>
                 </div>
-                <p className="text-[10px] sm:text-[11px] text-[#5C6B80] font-medium flex items-center gap-1.5 truncate">
+                <p className="text-[11px] sm:text-[11px] text-[#4E5C70] font-medium flex items-center gap-1.5 truncate">
                   <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse shrink-0" />
                   <span className="truncate">Онлайн • Подбор & помощь</span>
                 </p>
@@ -179,7 +179,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
               <a
                 href={telHref(storePhone)}
                 title={`Позвонить: ${storePhone}`}
-                className="w-9 h-9 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#2D3A4E] hover:text-[#5F6ED0] transition-all border border-white/70 active:scale-95 cursor-pointer"
+                className="w-9 h-9 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#2D3A4E] hover:text-[#4B59BB] transition-all border border-white/70 active:scale-95 cursor-pointer"
               >
                 <Phone className="w-4 h-4 text-[#2D3A4E]" />
               </a>
@@ -189,6 +189,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                 onClick={onClose}
                 title="Закрыть чат"
                 className="w-9 h-9 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#2D3A4E] hover:text-danger transition-all border border-white/70 active:scale-95 cursor-pointer"
+                aria-label="Закрыть чат"
               >
                 <X className="w-4 h-4 text-[#2D3A4E]" />
               </button>
@@ -201,7 +202,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
             <span className="text-[#2D3A4E] font-bold">Телефон магазина: {storePhone}</span>
             <a
               href={telHref(storePhone)}
-              className="text-[10px] text-[#5F6ED0] neu-button px-2.5 py-1 rounded-full font-extrabold uppercase tracking-wider"
+              className="text-[11px] text-[#4B59BB] neu-button px-2.5 py-1 rounded-full font-extrabold uppercase tracking-wider"
             >
               Позвонить
             </a>
@@ -221,11 +222,11 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                     className={`flex items-start gap-2.5 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
                   >
                     {!isUser && (
-                      <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-[#5F6ED0] shrink-0 mt-0.5 border border-white/60">
+                      <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-[#4B59BB] shrink-0 mt-0.5 border border-white/60">
                         {isAgent ? (
                           <UserCheck className="w-4 h-4 text-success" />
                         ) : (
-                          <Headphones className="w-4 h-4 text-[#5F6ED0]" />
+                          <Headphones className="w-4 h-4 text-[#4B59BB]" />
                         )}
                       </div>
                     )}
@@ -234,7 +235,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                     >
                       {!isUser && (
                         <div className="flex items-center gap-1.5 px-1">
-                          <span className="text-[10px] font-black text-[#5C6B80]">
+                          <span className="text-[11px] font-black text-[#4E5C70]">
                             {isAgent ? (
                               <span className="text-success font-black flex items-center gap-1">
                                 <span className="w-1.5 h-1.5 rounded-full bg-success" />
@@ -266,7 +267,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                           <button
                             type="button"
                             onClick={() => setPreviewImageModal(msg.imageUrl || null)}
-                            className="relative group rounded-xl overflow-hidden block border border-white/40 max-w-full bg-black/10 transition-transform active:scale-[0.98] cursor-pointer text-left focus:outline-none shadow-sm"
+                            className="relative group rounded-xl overflow-hidden block border border-white/40 max-w-full bg-black/10 transition-transform active:scale-[0.98] cursor-pointer text-left shadow-sm"
                           >
                             <img
                               src={msg.imageUrl}
@@ -274,7 +275,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                               className="max-h-60 sm:max-h-72 w-auto max-w-[240px] sm:max-w-[280px] rounded-xl object-contain block mx-auto"
                               loading="lazy"
                             />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-[10px] font-bold">
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-[11px] font-bold">
                               <Maximize2 className="w-3.5 h-3.5" />
                               <span>Увеличить фото</span>
                             </div>
@@ -286,8 +287,8 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                           <div className="pt-1.5">
                             <div className="neu-flat rounded-2xl p-3 bg-[#E3E8EF] border border-[#5F6ED0]/30 text-[#2D3A4E] space-y-2.5">
                               <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-black text-[#5F6ED0] uppercase tracking-wider flex items-center gap-1">
-                                  <Sparkles className="w-3 h-3 text-[#5F6ED0]" />
+                                <span className="text-[11px] font-black text-[#4B59BB] uppercase tracking-wider flex items-center gap-1">
+                                  <Sparkles className="w-3 h-3 text-[#4B59BB]" />
                                   Рекомендация стилиста
                                 </span>
                                 <span className="text-[11px] font-black text-[#2D3A4E]">
@@ -307,11 +308,11 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                                   <p className="font-extrabold text-xs text-[#2D3A4E] truncate">
                                     {msg.productCard.title}
                                   </p>
-                                  <p className="text-[10px] text-[#5C6B80] pt-0.5">
-                                    Размер: <strong className="text-[#5F6ED0]">{msg.productCard.size || 'M'}</strong> • {msg.productCard.color || 'Базовый'}
+                                  <p className="text-[11px] text-[#4E5C70] pt-0.5">
+                                    Размер: <strong className="text-[#4B59BB]">{msg.productCard.size || 'M'}</strong> • {msg.productCard.color || 'Базовый'}
                                   </p>
                                   {msg.productCard.note && (
-                                    <p className="text-[9px] text-[#5C6B80] italic truncate">
+                                    <p className="text-[11px] text-[#4E5C70] italic truncate">
                                       {msg.productCard.note}
                                     </p>
                                   )}
@@ -331,7 +332,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                                         );
                                       }
                                     }}
-                                    className="flex-1 py-2 px-2.5 neu-button rounded-xl text-[#5F6ED0] font-black text-[10px] flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+                                    className="flex-1 py-2 px-2.5 neu-button rounded-xl text-[#4B59BB] font-black text-[11px] flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer"
                                   >
                                     <ShoppingBag className="w-3 h-3" />
                                     <span>В корзину</span>
@@ -346,7 +347,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                                         onSelectProductById(msg.productCard.productId);
                                       }
                                     }}
-                                    className="py-2 px-3 neu-button rounded-xl text-[#5F6ED0] font-extrabold text-[10px] flex items-center justify-center gap-1 active:scale-95 transition-all cursor-pointer"
+                                    className="py-2 px-3 neu-button rounded-xl text-[#4B59BB] font-extrabold text-[11px] flex items-center justify-center gap-1 active:scale-95 transition-all cursor-pointer"
                                   >
                                     <span>Смотреть</span>
                                     <ArrowRight className="w-3 h-3" />
@@ -362,11 +363,11 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                           <div className="pt-1.5">
                             <div className="neu-flat rounded-2xl p-3 bg-indigo-50/50 border border-[#5F6ED0]/40 text-[#2D3A4E] space-y-2">
                               <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-black text-[#5F6ED0] uppercase tracking-wider flex items-center gap-1">
-                                  <Truck className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                                <span className="text-[11px] font-black text-[#4B59BB] uppercase tracking-wider flex items-center gap-1">
+                                  <Truck className="w-3.5 h-3.5 text-[#4B59BB]" />
                                   Обновление статуса заказа
                                 </span>
-                                <span className="text-[10px] font-black text-[#5F6ED0]">
+                                <span className="text-[11px] font-black text-[#4B59BB]">
                                   № {msg.orderStatusUpdate.orderId}
                                 </span>
                               </div>
@@ -379,7 +380,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                                 </span>
                               </div>
                               {msg.orderStatusUpdate.trackingNumber && (
-                                <p className="text-[10px] text-[#5C6B80] font-mono">
+                                <p className="text-[11px] text-[#4E5C70] font-mono">
                                   Трек-номер: <strong className="text-[#2D3A4E]">{msg.orderStatusUpdate.trackingNumber}</strong>
                                 </p>
                               )}
@@ -392,11 +393,11 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                           <div className="pt-2">
                             <div className="neu-flat rounded-2xl p-3 bg-gradient-to-br from-indigo-50/80 to-purple-50/60 border border-[#5F6ED0]/40 text-[#2D3A4E] space-y-2">
                               <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-black text-[#5F6ED0] uppercase tracking-wider flex items-center gap-1">
-                                  <Sparkles className="w-3 h-3 text-[#5F6ED0]" />
+                                <span className="text-[11px] font-black text-[#4B59BB] uppercase tracking-wider flex items-center gap-1">
+                                  <Sparkles className="w-3 h-3 text-[#4B59BB]" />
                                   Персональный промокод
                                 </span>
-                                <span className="text-[10px] font-extrabold text-success neu-inset px-2 py-0.5 rounded-lg bg-success-soft">
+                                <span className="text-[11px] font-extrabold text-success neu-inset px-2 py-0.5 rounded-lg bg-success-soft">
                                   {msg.promoCard.discountType === 'fixed'
                                     ? `-${msg.promoCard.discountValue.toLocaleString('ru-RU')} ₽`
                                     : `-${msg.promoCard.discountValue}%`}
@@ -417,7 +418,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                                       }
                                     }
                                   }}
-                                  className="px-2 py-1 neu-button rounded-lg text-[10px] font-black text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                                  className="px-2 py-1 neu-button rounded-lg text-[11px] font-black text-[#4B59BB] hover:text-[#3F4BA6] active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
                                   title="Скопировать и применить промокод"
                                 >
                                   <Copy className="w-3 h-3" />
@@ -425,7 +426,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                                 </button>
                               </div>
 
-                              <p className="text-[10px] text-[#5C6B80]">
+                              <p className="text-[11px] text-[#4E5C70]">
                                 {msg.promoCard.description}
                               </p>
                             </div>
@@ -465,12 +466,12 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                     </div>
 
                     <div
-                      className={`flex items-center gap-1 text-[10px] text-[#5C6B80] px-1 ${
+                      className={`flex items-center gap-1 text-[11px] text-[#4E5C70] px-1 ${
                         isUser ? 'justify-end' : 'justify-start'
                       }`}
                     >
                       <span>{msg.timestamp}</span>
-                      {isUser && <CheckCheck className="w-3 h-3 text-[#5F6ED0]" />}
+                      {isUser && <CheckCheck className="w-3 h-3 text-[#4B59BB]" />}
                     </div>
                   </div>
                 </div>
@@ -480,7 +481,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
             {/* Typing Indicator */}
             {isTyping && (
               <div className="flex items-center gap-2.5">
-                <div className="neu-flat rounded-2xl rounded-tl-none px-4 py-3 text-xs text-[#5C6B80] flex items-center gap-1.5 border border-white/80">
+                <div className="neu-flat rounded-2xl rounded-tl-none px-4 py-3 text-xs text-[#4E5C70] flex items-center gap-1.5 border border-white/80">
                   <span className="w-1.5 h-1.5 bg-[#5F6ED0] rounded-full animate-bounce" />
                   <span className="w-1.5 h-1.5 bg-[#5F6ED0] rounded-full animate-bounce [animation-delay:0.2s]" />
                   <span className="w-1.5 h-1.5 bg-[#5F6ED0] rounded-full animate-bounce [animation-delay:0.4s]" />
@@ -499,7 +500,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                   key={idx}
                   type="button"
                   onClick={() => handleSubmit(q.text)}
-                  className="neu-inset bg-[#E3E8EF] rounded-xl py-2 px-3.5 text-[#2D3A4E] text-[11px] font-bold shrink-0 flex items-center gap-1.5 hover:text-[#5F6ED0] border border-white/70 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                  className="neu-inset bg-[#E3E8EF] rounded-xl py-2 px-3.5 text-[#2D3A4E] text-[11px] font-bold shrink-0 flex items-center gap-1.5 hover:text-[#4B59BB] border border-white/70 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
                 >
                   <span>{q.label}</span>
                 </button>
@@ -520,7 +521,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                   <span className="text-xs font-bold text-[#2D3A4E] block">
                     Фото прикреплено к вопросу
                   </span>
-                  <span className="text-[10px] text-[#5C6B80]">
+                  <span className="text-[11px] text-[#4E5C70]">
                     Готово к отправке консультанту
                   </span>
                 </div>
@@ -530,6 +531,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                 onClick={() => setAttachedImage(null)}
                 className="w-7 h-7 rounded-xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-danger hover:text-danger active:scale-90 transition-all border border-white/70 cursor-pointer"
                 title="Удалить прикрепленное фото"
+                aria-label="Удалить прикрепленное фото"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -556,10 +558,11 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="w-11 h-11 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] border border-white/70 active:scale-95 transition-all shrink-0 cursor-pointer"
+              className="w-11 h-11 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] border border-white/70 active:scale-95 transition-all shrink-0 cursor-pointer"
               title="Прикрепить фото для возврата или консультации"
+              aria-label="Прикрепить фото для возврата или консультации"
             >
-              <Camera className="w-5 h-5 text-[#5F6ED0] stroke-[2.2]" />
+              <Camera className="w-5 h-5 text-[#4B59BB] stroke-[2.2]" />
             </button>
 
             <div className="flex-1 neu-inset rounded-2xl px-3.5 py-2.5 flex items-center gap-2 border border-white/70 bg-[#E3E8EF]">
@@ -569,17 +572,18 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                 onChange={(e) => setInputText(e.target.value)}
                 onPaste={handlePaste}
                 placeholder="Задайте вопрос или вставьте фото (Ctrl+V)..."
-                className="w-full bg-transparent text-xs text-[#2D3A4E] placeholder:text-[#5C6B80]/70 focus:outline-none font-medium"
+                className="w-full bg-transparent text-xs text-[#2D3A4E] placeholder:text-[#56647A] font-medium"
               />
             </div>
 
             <button
               type="submit"
               disabled={!inputText.trim() && !attachedImage}
-              className="w-11 h-11 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] border border-white/70 active:scale-95 transition-all shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-11 h-11 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] border border-white/70 active:scale-95 transition-all shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               title="Отправить сообщение"
+              aria-label="Отправить сообщение"
             >
-              <Send className="w-5 h-5 text-[#5F6ED0] stroke-[2.2]" />
+              <Send className="w-5 h-5 text-[#4B59BB] stroke-[2.2]" />
             </button>
           </form>
         </motion.div>
@@ -599,6 +603,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                 onClick={() => setPreviewImageModal(null)}
                 className="absolute top-3.5 right-3.5 z-10 w-9 h-9 rounded-2xl bg-[#2D3A4E]/85 hover:bg-[#2D3A4E] text-white flex items-center justify-center transition-all cursor-pointer shadow-[var(--neu-on-photo)] active:scale-90"
                 title="Закрыть просмотр"
+                aria-label="Закрыть просмотр"
               >
                 <X className="w-5 h-5" />
               </button>

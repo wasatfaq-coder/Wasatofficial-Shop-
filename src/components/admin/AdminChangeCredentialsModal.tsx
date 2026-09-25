@@ -198,28 +198,29 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
           id="admin-change-credentials-close-btn"
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer"
+          className="absolute top-4 right-4 w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer"
           title="Закрыть"
+          aria-label="Закрыть"
         >
           <X className="w-4 h-4" />
         </button>
 
         {/* Modal Header */}
         <div className="text-center space-y-2 mb-6">
-          <div className="w-14 h-14 rounded-2xl neu-flat flex items-center justify-center text-[#5F6ED0] mx-auto">
-            <div className="w-10 h-10 rounded-xl neu-inset flex items-center justify-center text-[#5F6ED0]">
+          <div className="w-14 h-14 rounded-2xl neu-flat flex items-center justify-center text-[#4B59BB] mx-auto">
+            <div className="w-10 h-10 rounded-xl neu-inset flex items-center justify-center text-[#4B59BB]">
               <KeyRound className="w-5 h-5 stroke-[2.2]" />
             </div>
           </div>
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#BAC5D5]/30 text-[11px] font-bold text-[#5F6ED0] mb-1">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#BAC5D5]/30 text-[11px] font-bold text-[#4B59BB] mb-1">
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>Безопасность панели управления</span>
             </div>
             <h3 className="text-lg sm:text-xl font-black text-[#2D3A4E] tracking-tight">
               Смена учетных данных
             </h3>
-            <p className="text-xs text-[#5C6B80] max-w-sm mx-auto mt-1">
+            <p className="text-xs text-[#4E5C70] max-w-sm mx-auto mt-1">
               Текущий активный логин: <strong className="text-[#2D3A4E]">{currentCreds.username}</strong>
             </p>
           </div>
@@ -258,7 +259,7 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                 Текущий пароль администратора <span className="text-danger">*</span>
               </label>
               <div className="relative flex items-center">
-                <div className="absolute left-3.5 text-[#5C6B80] pointer-events-none">
+                <div className="absolute left-3.5 text-[#4E5C70] pointer-events-none">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
@@ -271,19 +272,20 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                     if (error) setError(null);
                   }}
                   placeholder="Введите текущий пароль"
-                  className="w-full pl-10 pr-11 py-2.5 neu-inset rounded-2xl bg-[#E3E8EF] text-xs sm:text-sm font-bold text-[#2D3A4E] placeholder:text-[#5C6B80]/60 focus:outline-none focus:ring-2 focus:ring-[#5F6ED0]/40 transition-all"
+                  className="w-full pl-10 pr-11 py-2.5 neu-inset rounded-2xl bg-[#E3E8EF] text-xs sm:text-sm font-bold text-[#2D3A4E] placeholder:text-[#56647A] focus:ring-2 focus:ring-[#5F6ED0]/40 transition-all"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  className="absolute right-3 text-[#5C6B80] hover:text-[#5F6ED0] p-1 transition-colors cursor-pointer"
+                  className="absolute right-3 text-[#4E5C70] hover:text-[#4B59BB] p-1 transition-colors cursor-pointer"
                   title={showCurrentPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                  aria-label={showCurrentPassword ? 'Скрыть пароль' : 'Показать пароль'}
                 >
                   {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              <p className="text-[10px] text-[#5C6B80] px-1">
+              <p className="text-[11px] text-[#4E5C70] px-1">
                 Требуется для подтверждения прав на смену учетных данных
               </p>
             </div>
@@ -299,7 +301,7 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                 Новый логин администратора <span className="text-danger">*</span>
               </label>
               <div className="relative flex items-center">
-                <div className="absolute left-3.5 text-[#5C6B80] pointer-events-none">
+                <div className="absolute left-3.5 text-[#4E5C70] pointer-events-none">
                   <User className="w-4 h-4" />
                 </div>
                 <input
@@ -311,7 +313,7 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                     if (error) setError(null);
                   }}
                   placeholder="Введите новый логин (минимум 3 символа)"
-                  className="w-full pl-10 pr-4 py-2.5 neu-inset rounded-2xl bg-[#E3E8EF] text-xs sm:text-sm font-bold text-[#2D3A4E] placeholder:text-[#5C6B80]/60 focus:outline-none focus:ring-2 focus:ring-[#5F6ED0]/40 transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 neu-inset rounded-2xl bg-[#E3E8EF] text-xs sm:text-sm font-bold text-[#2D3A4E] placeholder:text-[#56647A] focus:ring-2 focus:ring-[#5F6ED0]/40 transition-all"
                   required
                   minLength={3}
                 />
@@ -328,13 +330,13 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                   Новый пароль <span className="text-danger">*</span>
                 </label>
                 {newPassword && (
-                  <span className="text-[10px] font-bold text-[#5C6B80]">
+                  <span className="text-[11px] font-bold text-[#4E5C70]">
                     Надежность: <strong className="text-[#2D3A4E]">{strength.label}</strong>
                   </span>
                 )}
               </div>
               <div className="relative flex items-center">
-                <div className="absolute left-3.5 text-[#5C6B80] pointer-events-none">
+                <div className="absolute left-3.5 text-[#4E5C70] pointer-events-none">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
@@ -346,15 +348,16 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                     if (error) setError(null);
                   }}
                   placeholder="Не менее 6 символов"
-                  className="w-full pl-10 pr-11 py-2.5 neu-inset rounded-2xl bg-[#E3E8EF] text-xs sm:text-sm font-bold text-[#2D3A4E] placeholder:text-[#5C6B80]/60 focus:outline-none focus:ring-2 focus:ring-[#5F6ED0]/40 transition-all"
+                  className="w-full pl-10 pr-11 py-2.5 neu-inset rounded-2xl bg-[#E3E8EF] text-xs sm:text-sm font-bold text-[#2D3A4E] placeholder:text-[#56647A] focus:ring-2 focus:ring-[#5F6ED0]/40 transition-all"
                   required
                   minLength={6}
                 />
                 <button
                   type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 text-[#5C6B80] hover:text-[#5F6ED0] p-1 transition-colors cursor-pointer"
+                  className="absolute right-3 text-[#4E5C70] hover:text-[#4B59BB] p-1 transition-colors cursor-pointer"
                   title={showNewPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                  aria-label={showNewPassword ? 'Скрыть пароль' : 'Показать пароль'}
                 >
                   {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -391,7 +394,7 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                 Повторите новый пароль <span className="text-danger">*</span>
               </label>
               <div className="relative flex items-center">
-                <div className="absolute left-3.5 text-[#5C6B80] pointer-events-none">
+                <div className="absolute left-3.5 text-[#4E5C70] pointer-events-none">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
@@ -403,7 +406,7 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                     if (error) setError(null);
                   }}
                   placeholder="Повторите новый пароль"
-                  className={`w-full pl-10 pr-11 py-2.5 neu-inset rounded-2xl bg-[#E3E8EF] text-xs sm:text-sm font-bold text-[#2D3A4E] placeholder:text-[#5C6B80]/60 focus:outline-none focus:ring-2 transition-all ${
+                  className={`w-full pl-10 pr-11 py-2.5 neu-inset rounded-2xl bg-[#E3E8EF] text-xs sm:text-sm font-bold text-[#2D3A4E] placeholder:text-[#56647A] focus:ring-2 transition-all ${
                     confirmPassword && confirmPassword !== newPassword
                       ? 'focus:ring-danger/50 border border-danger/35'
                       : 'focus:ring-[#5F6ED0]/40'
@@ -413,14 +416,15 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 text-[#5C6B80] hover:text-[#5F6ED0] p-1 transition-colors cursor-pointer"
+                  className="absolute right-3 text-[#4E5C70] hover:text-[#4B59BB] p-1 transition-colors cursor-pointer"
                   title={showConfirmPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                  aria-label={showConfirmPassword ? 'Скрыть пароль' : 'Показать пароль'}
                 >
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
               {confirmPassword && confirmPassword === newPassword && (
-                <p className="text-[10px] text-success font-bold px-1 flex items-center gap-1">
+                <p className="text-[11px] text-success font-bold px-1 flex items-center gap-1">
                   <Check className="w-3 h-3" />
                   Пароли совпадают
                 </p>
@@ -443,7 +447,7 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                   id="admin-change-credentials-cancel-btn"
                   type="button"
                   onClick={onClose}
-                  className="flex-1 py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] active:scale-98 transition-all cursor-pointer"
+                  className="flex-1 py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] active:scale-98 transition-all cursor-pointer"
                 >
                   Отмена
                 </button>
@@ -452,7 +456,7 @@ export const AdminChangeCredentialsModal: React.FC<AdminChangeCredentialsModalPr
                   id="admin-change-credentials-reset-toggle-btn"
                   type="button"
                   onClick={() => setShowResetConfirm(!showResetConfirm)}
-                  className="py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-[#5C6B80] hover:text-warning active:scale-98 transition-all cursor-pointer flex items-center gap-1.5"
+                  className="py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-warning active:scale-98 transition-all cursor-pointer flex items-center gap-1.5"
                   title="Сбросить к заводским настройкам (Admin / 12345678)"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />

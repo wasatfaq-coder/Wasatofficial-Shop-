@@ -117,28 +117,29 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
           id="admin-auth-close-btn"
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer"
+          className="absolute top-4 right-4 w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer"
           title="Закрыть"
+          aria-label="Закрыть"
         >
           <X className="w-4 h-4" />
         </button>
 
         {/* Header Icon and Title */}
         <div className="text-center space-y-2 mb-6">
-          <div className="w-14 h-14 rounded-2xl neu-flat flex items-center justify-center text-[#5F6ED0] mx-auto relative group">
-            <div className="w-10 h-10 rounded-xl neu-inset flex items-center justify-center text-[#5F6ED0]">
+          <div className="w-14 h-14 rounded-2xl neu-flat flex items-center justify-center text-[#4B59BB] mx-auto relative group">
+            <div className="w-10 h-10 rounded-xl neu-inset flex items-center justify-center text-[#4B59BB]">
               <ShieldCheck className="w-5 h-5 stroke-[2.2]" />
             </div>
           </div>
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#BAC5D5]/30 text-[11px] font-bold text-[#5F6ED0] mb-1">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#BAC5D5]/30 text-[11px] font-bold text-[#4B59BB] mb-1">
               <KeyRound className="w-3 h-3" />
               <span>Безопасный доступ</span>
             </div>
             <h3 className="text-lg sm:text-xl font-black text-[#2D3A4E] tracking-tight">
               Панель администратора
             </h3>
-            <p className="text-xs text-[#5C6B80] max-w-xs mx-auto mt-1">
+            <p className="text-xs text-[#4E5C70] max-w-xs mx-auto mt-1">
               Введите учетные данные для доступа к управлению каталогом, заказами и складом
             </p>
           </div>
@@ -166,7 +167,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
               Логин администратора
             </label>
             <div className="relative flex items-center">
-              <div className="absolute left-3.5 text-[#5C6B80] pointer-events-none">
+              <div className="absolute left-3.5 text-[#4E5C70] pointer-events-none">
                 <User className="w-4 h-4" />
               </div>
               <input
@@ -180,7 +181,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                   if (error) setError(null);
                 }}
                 placeholder="Введите логин"
-                className="w-full pl-10 pr-4 py-2.5 neu-inset rounded-2xl bg-[#E3E8EF] text-xs sm:text-sm font-bold text-[#2D3A4E] placeholder:text-[#5C6B80]/60 focus:outline-none focus:ring-2 focus:ring-[#5F6ED0]/40 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 neu-inset rounded-2xl bg-[#E3E8EF] text-xs sm:text-sm font-bold text-[#2D3A4E] placeholder:text-[#56647A] focus:ring-2 focus:ring-[#5F6ED0]/40 transition-all"
                 required
               />
             </div>
@@ -195,7 +196,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
               Пароль
             </label>
             <div className="relative flex items-center">
-              <div className="absolute left-3.5 text-[#5C6B80] pointer-events-none">
+              <div className="absolute left-3.5 text-[#4E5C70] pointer-events-none">
                 <Lock className="w-4 h-4" />
               </div>
               <input
@@ -208,14 +209,15 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                   if (error) setError(null);
                 }}
                 placeholder="Введите пароль"
-                className="w-full pl-10 pr-11 py-2.5 neu-inset rounded-2xl bg-[#E3E8EF] text-xs sm:text-sm font-bold text-[#2D3A4E] placeholder:text-[#5C6B80]/60 focus:outline-none focus:ring-2 focus:ring-[#5F6ED0]/40 transition-all"
+                className="w-full pl-10 pr-11 py-2.5 neu-inset rounded-2xl bg-[#E3E8EF] text-xs sm:text-sm font-bold text-[#2D3A4E] placeholder:text-[#56647A] focus:ring-2 focus:ring-[#5F6ED0]/40 transition-all"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 text-[#5C6B80] hover:text-[#5F6ED0] p-1 transition-colors cursor-pointer"
+                className="absolute right-3 text-[#4E5C70] hover:text-[#4B59BB] p-1 transition-colors cursor-pointer"
                 title={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
               >
                 {showPassword ? (
                   <EyeOff className="w-4 h-4" />
@@ -241,7 +243,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
               id="admin-auth-cancel-btn"
               type="button"
               onClick={onClose}
-              className="w-full py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] active:scale-98 transition-all cursor-pointer"
+              className="w-full py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] active:scale-98 transition-all cursor-pointer"
             >
               Отмена
             </button>

@@ -92,7 +92,7 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
         {/* Header */}
         <div className="flex items-start justify-between gap-3 pb-2 border-b border-[#BAC5D5]/40">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl neu-flat-sm flex items-center justify-center text-[#5F6ED0] bg-[#E3E8EF] shrink-0">
+            <div className="w-10 h-10 rounded-2xl neu-flat-sm flex items-center justify-center text-[#4B59BB] bg-[#E3E8EF] shrink-0">
               <Pencil className="w-4 h-4" />
             </div>
             <div>
@@ -101,12 +101,12 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
                   {config.title}
                 </h3>
                 {config.badge && (
-                  <span className="text-[10px] font-black text-[#5F6ED0] neu-inset px-2 py-0.5 rounded-md">
+                  <span className="text-[11px] font-black text-[#4B59BB] neu-inset px-2 py-0.5 rounded-md">
                     {config.badge}
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-[#5C6B80] font-medium mt-0.5">
+              <p className="text-[11px] text-[#4E5C70] font-medium mt-0.5">
                 {config.fieldLabel}
               </p>
             </div>
@@ -115,8 +115,9 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full neu-flat-sm flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] active:scale-95 transition-all shrink-0 cursor-pointer bg-[#E3E8EF]"
+            className="w-8 h-8 rounded-full neu-flat-sm flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all shrink-0 cursor-pointer bg-[#E3E8EF]"
             title="Закрыть (Esc)"
+            aria-label="Закрыть (Esc)"
           >
             <X className="w-4 h-4" />
           </button>
@@ -124,22 +125,22 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
 
         {/* Optional Description / Context Help */}
         {config.description && (
-          <div className="neu-inset p-3 rounded-2xl bg-[#E3E8EF]/80 text-[11px] text-[#5C6B80] leading-relaxed flex items-start gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-[#5F6ED0] shrink-0 mt-0.5" />
+          <div className="neu-inset p-3 rounded-2xl bg-[#E3E8EF]/80 text-[11px] text-[#4E5C70] leading-relaxed flex items-start gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-[#4B59BB] shrink-0 mt-0.5" />
             <span>{config.description}</span>
           </div>
         )}
 
         {/* Input Area */}
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-[10px] font-bold text-[#5C6B80] px-1">
+          <div className="flex items-center justify-between text-[11px] font-bold text-[#4E5C70] px-1">
             <span>Текстовое значение</span>
             <div className="flex items-center gap-2">
               {isChanged && (
                 <button
                   type="button"
                   onClick={handleResetToInitial}
-                  className="text-[#5F6ED0] hover:underline flex items-center gap-1 cursor-pointer"
+                  className="text-[#4B59BB] hover:underline flex items-center gap-1 cursor-pointer"
                   title="Сбросить к исходному значению"
                 >
                   <RotateCcw className="w-3 h-3" />
@@ -163,7 +164,7 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
                   handleSave();
                 }
               }}
-              className="w-full px-3.5 py-3 neu-inset rounded-2xl text-xs sm:text-sm text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none resize-y leading-relaxed font-medium"
+              className="w-full px-3.5 py-3 neu-inset rounded-2xl text-xs sm:text-sm text-[#2D3A4E] bg-[#E3E8EF] resize-y leading-relaxed font-medium"
             />
           ) : (
             <div className="relative flex items-center">
@@ -182,18 +183,18 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
                     handleSave();
                   }
                 }}
-                className={`w-full px-3.5 py-2.5 neu-inset rounded-xl text-xs sm:text-sm text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none font-medium ${
+                className={`w-full px-3.5 py-2.5 neu-inset rounded-xl text-xs sm:text-sm text-[#2D3A4E] bg-[#E3E8EF] font-medium ${
                   config.unit ? 'pr-12' : ''
                 }`}
               />
               {config.unit && (
-                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#5C6B80]">
+                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4E5C70]">
                   {config.unit}
                 </span>
               )}
             </div>
           )}
-          <span className="text-[10px] text-[#5C6B80] block px-1">
+          <span className="text-[11px] text-[#4E5C70] block px-1">
             {config.isMultiline
               ? 'Нажмите Ctrl + Enter для быстрого сохранения'
               : 'Нажмите Enter для быстрого сохранения'}
@@ -205,7 +206,7 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer active:scale-95 transition-transform"
+            className="py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer active:scale-95 transition-transform"
           >
             Отмена
           </button>

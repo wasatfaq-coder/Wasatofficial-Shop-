@@ -50,7 +50,7 @@ export const AnimatedFavoriteButton: React.FC<AnimatedFavoriteButtonProps> = ({
       type="button"
       onClick={handleClick}
       whileTap={{ scale: 0.82 }}
-      className={`relative rounded-full flex items-center justify-center cursor-pointer select-none outline-none focus:outline-none transition-colors ${currentSize.btn} ${className}`}
+      className={`relative rounded-full flex items-center justify-center cursor-pointer select-none transition-colors ${currentSize.btn} ${className}`}
       aria-label={ariaLabel}
       title={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}
     >
@@ -93,7 +93,7 @@ export const AnimatedFavoriteButton: React.FC<AnimatedFavoriteButtonProps> = ({
           className={`${currentSize.icon} transition-colors duration-200 ${
             isFavorite
               ? 'fill-danger text-danger stroke-danger drop-shadow-xs'
-              : 'text-[#5C6B80] stroke-[1.8] hover:text-[#2D3A4E]'
+              : 'text-[#4E5C70] stroke-[1.8] hover:text-[#2D3A4E]'
           } ${iconClassName}`}
         />
       </motion.div>

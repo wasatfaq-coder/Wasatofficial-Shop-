@@ -53,7 +53,7 @@ const CUSTOMER_CATEGORY_OPTIONS: NeumorphicSelectOption[] = [
   {
     value: 'all',
     label: 'Все клиенты',
-    icon: <Users className="w-3.5 h-3.5 text-[#5F6ED0]" />,
+    icon: <Users className="w-3.5 h-3.5 text-[#4B59BB]" />,
   },
   {
     value: 'with_orders',
@@ -68,12 +68,12 @@ const CUSTOMER_CATEGORY_OPTIONS: NeumorphicSelectOption[] = [
   {
     value: 'registered',
     label: 'Firebase Auth',
-    icon: <ShieldCheck className="w-3.5 h-3.5 text-[#5F6ED0]" />,
+    icon: <ShieldCheck className="w-3.5 h-3.5 text-[#4B59BB]" />,
   },
   {
     value: 'guest',
     label: 'Гостевые профили',
-    icon: <Filter className="w-3.5 h-3.5 text-[#5C6B80]" />,
+    icon: <Filter className="w-3.5 h-3.5 text-[#4E5C70]" />,
   },
 ];
 
@@ -81,7 +81,7 @@ const CUSTOMER_SORT_OPTIONS: NeumorphicSelectOption[] = [
   {
     value: 'ltv_desc',
     label: 'LTV (по убыванию)',
-    icon: <DollarSign className="w-3.5 h-3.5 text-[#5F6ED0]" />,
+    icon: <DollarSign className="w-3.5 h-3.5 text-[#4B59BB]" />,
   },
   {
     value: 'orders_desc',
@@ -91,7 +91,7 @@ const CUSTOMER_SORT_OPTIONS: NeumorphicSelectOption[] = [
   {
     value: 'name_asc',
     label: 'По имени (А–Я)',
-    icon: <ArrowUpDown className="w-3.5 h-3.5 text-[#5C6B80]" />,
+    icon: <ArrowUpDown className="w-3.5 h-3.5 text-[#4E5C70]" />,
   },
 ];
 
@@ -429,7 +429,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
     {
       value: '',
       label: 'Все клиенты (без фильтра)',
-      icon: <Users className="w-3.5 h-3.5 text-[#5F6ED0]" />,
+      icon: <Users className="w-3.5 h-3.5 text-[#4B59BB]" />,
     },
     ...filteredCustomers.map((c) => ({
       value: c.id,
@@ -437,7 +437,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       sublabel: `${c.phone || c.email || 'Без контактов'} • Заказов: ${c.ordersCount} (${c.totalSpent.toLocaleString('ru-RU')} ₽)`,
       badge: c.isRegisteredUser ? 'Auth' : 'Гость',
       icon: (
-        <div className="w-5 h-5 rounded-full neu-inset flex items-center justify-center text-[10px] font-black text-[#5F6ED0] shrink-0">
+        <div className="w-5 h-5 rounded-full neu-inset flex items-center justify-center text-[11px] font-black text-[#4B59BB] shrink-0">
           {c.name.charAt(0)}
         </div>
       ),
@@ -468,11 +468,11 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-black text-[#2D3A4E]">Клиенты & CRM</h2>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-[#5F6ED0]/15 text-[#5F6ED0]">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-[#5F6ED0]/15 text-[#4B59BB]">
               {customerRecords.length} чел.
             </span>
           </div>
-          <p className="text-xs text-[#5C6B80] mt-0.5">
+          <p className="text-xs text-[#4E5C70] mt-0.5">
             База авторизованных покупателей Firebase Auth и гостевых профилей с заказами
           </p>
         </div>
@@ -491,9 +491,9 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
           <button
             type="button"
             onClick={handleExportCSV}
-            className="neu-inset px-3.5 py-2 rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#5F6ED0] flex items-center justify-center gap-2 active:scale-95 transition-all bg-[#E3E8EF] cursor-pointer"
+            className="neu-inset px-3.5 py-2 rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#4B59BB] flex items-center justify-center gap-2 active:scale-95 transition-all bg-[#E3E8EF] cursor-pointer"
           >
-            <Download className="w-3.5 h-3.5 text-[#5F6ED0]" />
+            <Download className="w-3.5 h-3.5 text-[#4B59BB]" />
             <span>Экспорт в CSV</span>
           </button>
         </div>
@@ -502,14 +502,14 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       {/* 2. Neumorphic KPI Cards (Inset) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="neu-inset rounded-2xl p-3.5 flex items-center gap-3 bg-[#E3E8EF]">
-          <div className="w-11 h-11 rounded-xl neu-flat-sm flex items-center justify-center text-[#5F6ED0] shrink-0">
+          <div className="w-11 h-11 rounded-xl neu-flat-sm flex items-center justify-center text-[#4B59BB] shrink-0">
             <Users className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <span className="text-[11px] font-semibold text-[#5C6B80] block truncate">Всего клиентов</span>
+            <span className="text-[11px] font-semibold text-[#4E5C70] block truncate">Всего клиентов</span>
             <div className="flex items-baseline gap-1.5">
               <span className="text-lg font-black text-[#2D3A4E]">{stats.totalClients}</span>
-              <span className="text-[10px] text-[#5F6ED0] font-bold">({stats.registeredCount} Auth)</span>
+              <span className="text-[11px] text-[#4B59BB] font-bold">({stats.registeredCount} Auth)</span>
             </div>
           </div>
         </div>
@@ -519,7 +519,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
             <DollarSign className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <span className="text-[11px] font-semibold text-[#5C6B80] block truncate">Суммарный LTV</span>
+            <span className="text-[11px] font-semibold text-[#4E5C70] block truncate">Суммарный LTV</span>
             <span className="text-lg font-black text-[#2D3A4E] block truncate">
               {stats.totalLTV.toLocaleString('ru-RU')} ₽
             </span>
@@ -531,7 +531,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
             <ShoppingBag className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <span className="text-[11px] font-semibold text-[#5C6B80] block truncate">Средний чек (AOV)</span>
+            <span className="text-[11px] font-semibold text-[#4E5C70] block truncate">Средний чек (AOV)</span>
             <span className="text-lg font-black text-[#2D3A4E] block truncate">
               {stats.avgOrderValue.toLocaleString('ru-RU')} ₽
             </span>
@@ -539,14 +539,14 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
         </div>
 
         <div className="neu-inset rounded-2xl p-3.5 flex items-center gap-3 bg-[#E3E8EF]">
-          <div className="w-11 h-11 rounded-xl neu-flat-sm flex items-center justify-center text-[#5F6ED0] shrink-0">
+          <div className="w-11 h-11 rounded-xl neu-flat-sm flex items-center justify-center text-[#4B59BB] shrink-0">
             <UserCheck className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <span className="text-[11px] font-semibold text-[#5C6B80] block truncate">Постоянные клиенты</span>
+            <span className="text-[11px] font-semibold text-[#4E5C70] block truncate">Постоянные клиенты</span>
             <div className="flex items-baseline gap-1.5">
               <span className="text-lg font-black text-[#2D3A4E]">{stats.repeatClients}</span>
-              <span className="text-[10px] text-success font-bold">2+ заказа</span>
+              <span className="text-[11px] text-success font-bold">2+ заказа</span>
             </div>
           </div>
         </div>
@@ -556,19 +556,20 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       <div className="neu-inset rounded-2xl p-3 space-y-2.5 relative z-20 bg-[#E3E8EF]">
         {/* Search Input */}
         <div className="relative">
-          <Search className="w-4 h-4 text-[#5C6B80] absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-[#4E5C70] absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Поиск по имени, email, телефону, городу или № заказа..."
-            className="w-full pl-9.5 pr-8 py-2.5 text-xs rounded-xl neu-inset text-[#2D3A4E] placeholder-[#5C6B80] outline-none font-medium bg-[#E3E8EF]"
+            className="w-full pl-9.5 pr-8 py-2.5 text-xs rounded-xl neu-inset text-[#2D3A4E] placeholder:text-[#56647A] font-medium bg-[#E3E8EF]"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#5C6B80] hover:text-[#2D3A4E]"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#4E5C70] hover:text-[#2D3A4E]"
+              aria-label="Закрыть"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -623,11 +624,11 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       {/* 4. Customer Cards Grid */}
       {filteredCustomers.length === 0 ? (
         <div className="neu-inset rounded-3xl p-8 text-center space-y-3 bg-[#E3E8EF]">
-          <div className="w-14 h-14 rounded-2xl neu-inset flex items-center justify-center mx-auto text-[#5C6B80]">
+          <div className="w-14 h-14 rounded-2xl neu-inset flex items-center justify-center mx-auto text-[#4E5C70]">
             <Users className="w-7 h-7" />
           </div>
           <h3 className="text-base font-bold text-[#2D3A4E]">Клиенты не найдены</h3>
-          <p className="text-xs text-[#5C6B80] max-w-sm mx-auto">
+          <p className="text-xs text-[#4E5C70] max-w-sm mx-auto">
             Попробуйте изменить параметры поиска или сбросить фильтры по категории.
           </p>
           <button
@@ -636,7 +637,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
               setSearchQuery('');
               setFilterType('all');
             }}
-            className="neu-button px-4 py-2 rounded-xl text-xs font-bold text-[#5F6ED0]"
+            className="neu-button px-4 py-2 rounded-xl text-xs font-bold text-[#4B59BB]"
           >
             Сбросить фильтры
           </button>
@@ -660,7 +661,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                         className="w-12 h-12 rounded-2xl object-cover neu-flat-sm shrink-0 border border-white/80"
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-2xl neu-flat-sm flex items-center justify-center font-black text-sm text-[#5F6ED0] shrink-0">
+                      <div className="w-12 h-12 rounded-2xl neu-flat-sm flex items-center justify-center font-black text-sm text-[#4B59BB] shrink-0">
                         {customer.name.slice(0, 2).toUpperCase()}
                       </div>
                     )}
@@ -669,7 +670,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                         <h4 className="text-sm font-black text-[#2D3A4E] truncate">{customer.name}</h4>
                         {customer.isRegisteredUser ? (
                           <span
-                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-200"
+                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-bold bg-blue-50 text-blue-600 border border-blue-200"
                             title="Пользователь зарегистрирован в Firebase Auth"
                           >
                             <ShieldCheck className="w-3 h-3 text-blue-600" />
@@ -677,14 +678,14 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                           </span>
                         ) : (
                           <span
-                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-600"
+                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-gray-100 text-gray-600"
                             title="Заказ оформлен без регистрации учетной записи"
                           >
                             <span>Гость</span>
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-[11px] text-[#5C6B80] mt-0.5 truncate">
+                      <div className="flex items-center gap-2 text-[11px] text-[#4E5C70] mt-0.5 truncate">
                         {customer.email && (
                           <span className="truncate" title={customer.email}>
                             {customer.email}
@@ -714,8 +715,8 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
 
                 {/* Primary Address & City */}
                 {customer.primaryAddress && (
-                  <div className="flex items-center gap-1.5 text-[11px] text-[#5C6B80] neu-inset px-2.5 py-1.5 rounded-xl truncate">
-                    <MapPin className="w-3.5 h-3.5 text-[#5F6ED0] shrink-0" />
+                  <div className="flex items-center gap-1.5 text-[11px] text-[#4E5C70] neu-inset px-2.5 py-1.5 rounded-xl truncate">
+                    <MapPin className="w-3.5 h-3.5 text-[#4B59BB] shrink-0" />
                     <span className="truncate">{customer.primaryAddress}</span>
                   </div>
                 )}
@@ -723,31 +724,31 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 {/* KPI Matrix Strip */}
                 <div className="grid grid-cols-4 gap-1.5 py-1 text-center border-y border-[#BAC5D5]/30">
                   <div className="px-1">
-                    <span className="text-[10px] text-[#5C6B80] block">LTV</span>
+                    <span className="text-[11px] text-[#4E5C70] block">LTV</span>
                     <span className="text-xs font-black text-[#2D3A4E]">
                       {customer.totalSpent > 0 ? `${(customer.totalSpent / 1000).toFixed(1)}k ₽` : '0 ₽'}
                     </span>
                   </div>
                   <div className="px-1 border-l border-[#BAC5D5]/30">
-                    <span className="text-[10px] text-[#5C6B80] block">Заказов</span>
+                    <span className="text-[11px] text-[#4E5C70] block">Заказов</span>
                     <span className="text-xs font-black text-[#2D3A4E]">{customer.ordersCount}</span>
                   </div>
                   <div className="px-1 border-l border-[#BAC5D5]/30">
-                    <span className="text-[10px] text-[#5C6B80] block">Ср. чек</span>
+                    <span className="text-[11px] text-[#4E5C70] block">Ср. чек</span>
                     <span className="text-xs font-black text-[#2D3A4E]">
                       {customer.averageOrderValue > 0 ? `${Math.round(customer.averageOrderValue / 1000)}k ₽` : '—'}
                     </span>
                   </div>
                   <div className="px-1 border-l border-[#BAC5D5]/30">
-                    <span className="text-[10px] text-[#5C6B80] block">Бонусы</span>
-                    <span className="text-xs font-black text-[#5F6ED0]">{customer.bonusPoints}</span>
+                    <span className="text-[11px] text-[#4E5C70] block">Бонусы</span>
+                    <span className="text-xs font-black text-[#4B59BB]">{customer.bonusPoints}</span>
                   </div>
                 </div>
 
                 {/* Order History Micro-Chips */}
                 {customer.orders.length > 0 && (
                   <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-[#5C6B80] uppercase tracking-wider block">
+                    <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider block">
                       История заказов ({customer.orders.length}):
                     </span>
                     <div className="flex flex-wrap gap-1.5 max-h-16 overflow-y-auto pr-1">
@@ -756,18 +757,18 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                         return (
                           <div
                             key={`cust-${customer.id}-ord-${ord.id}-${oIdx}`}
-                            className="text-[10px] px-2 py-0.5 rounded-lg neu-flat-sm flex items-center gap-1.5 font-medium text-[#2D3A4E]"
+                            className="text-[11px] px-2 py-0.5 rounded-lg neu-flat-sm flex items-center gap-1.5 font-medium text-[#2D3A4E]"
                           >
-                            <span className="font-bold text-[#5F6ED0]">#{ord.id}</span>
+                            <span className="font-bold text-[#4B59BB]">#{ord.id}</span>
                             <span>{ord.totalPrice} ₽</span>
-                            <span className={`px-1 py-0.2 rounded text-[9px] font-bold border ${statusBadge.bg}`}>
+                            <span className={`px-1 py-0.2 rounded text-[11px] font-bold border ${statusBadge.bg}`}>
                               {statusBadge.label}
                             </span>
                           </div>
                         );
                       })}
                       {customer.orders.length > 4 && (
-                        <span className="text-[10px] text-[#5C6B80] self-center">
+                        <span className="text-[11px] text-[#4E5C70] self-center">
                           +{customer.orders.length - 4} еще...
                         </span>
                       )}
@@ -781,7 +782,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     {customer.tags.map((tag, tIdx) => (
                       <span
                         key={`cust-${customer.id}-tag-${tag}-${tIdx}`}
-                        className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#BAC5D5]/20 text-[#5C6B80]"
+                        className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-[#BAC5D5]/20 text-[#4E5C70]"
                       >
                         #{tag}
                       </span>
@@ -794,7 +795,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                   <button
                     type="button"
                     onClick={() => handleOpenDetail(customer)}
-                    className="flex-1 py-2 px-3 rounded-xl neu-button text-xs font-black text-[#2D3A4E] hover:text-[#5F6ED0] flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    className="flex-1 py-2 px-3 rounded-xl neu-button text-xs font-black text-[#2D3A4E] hover:text-[#4B59BB] flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                   >
                     <span>Подробнее & Заказы</span>
                     <ChevronRight className="w-3.5 h-3.5" />
@@ -804,8 +805,9 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     <button
                       type="button"
                       onClick={() => onOpenSupportChat(customer.orders[0]?.id, customer.name)}
-                      className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#5F6ED0] shrink-0 cursor-pointer"
+                      className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#4B59BB] shrink-0 cursor-pointer"
                       title="Открыть чат с клиентом"
+                      aria-label="Открыть чат с клиентом"
                     >
                       <MessageSquare className="w-4 h-4" />
                     </button>
@@ -817,6 +819,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                       onClick={() => setCustomerToDelete(customer)}
                       className="w-9 h-9 rounded-xl neu-button-danger flex items-center justify-center shrink-0 cursor-pointer"
                       title="Удалить запись клиента"
+                      aria-label="Удалить запись клиента"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -843,7 +846,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     className="w-12 h-12 rounded-2xl object-cover neu-flat-sm border border-white shrink-0"
                   />
                 ) : (
-                  <div className="w-12 h-12 rounded-2xl neu-flat-sm flex items-center justify-center font-black text-base text-[#5F6ED0] shrink-0">
+                  <div className="w-12 h-12 rounded-2xl neu-flat-sm flex items-center justify-center font-black text-base text-[#4B59BB] shrink-0">
                     {selectedCustomer.name.slice(0, 2).toUpperCase()}
                   </div>
                 )}
@@ -866,7 +869,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-[#5C6B80] mt-0.5">
+                  <p className="text-xs text-[#4E5C70] mt-0.5">
                     {selectedCustomer.isRegisteredUser ? 'Учетная запись Firebase Auth' : 'Гостевой покупатель'} • В базе с {selectedCustomer.registeredAt}
                   </p>
                 </div>
@@ -879,6 +882,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     onClick={() => setCustomerToDelete(selectedCustomer)}
                     className="w-9 h-9 rounded-xl neu-button-danger flex items-center justify-center"
                     title="Удалить клиента из базы данных"
+                    aria-label="Удалить клиента из базы данных"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -886,7 +890,8 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 <button
                   type="button"
                   onClick={() => setSelectedCustomer(null)}
-                  className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E]"
+                  className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E]"
+                  aria-label="Закрыть"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -897,21 +902,22 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
             <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
               {/* Contact & Identifiers Card */}
               <div className="neu-inset rounded-2xl p-3.5 space-y-2.5">
-                <span className="text-[11px] font-bold text-[#5C6B80] uppercase tracking-wider block">
+                <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider block">
                   Контакты и реквизиты
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
                   {selectedCustomer.email && (
                     <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-[#E3E8EF]/80 neu-flat-sm">
                       <div className="flex items-center gap-2 min-w-0">
-                        <Mail className="w-3.5 h-3.5 text-[#5F6ED0] shrink-0" />
+                        <Mail className="w-3.5 h-3.5 text-[#4B59BB] shrink-0" />
                         <span className="truncate font-medium">{selectedCustomer.email}</span>
                       </div>
                       <button
                         type="button"
                         onClick={() => handleCopy(selectedCustomer.email, 'email')}
-                        className="text-[#5C6B80] hover:text-[#2D3A4E] shrink-0"
+                        className="text-[#4E5C70] hover:text-[#2D3A4E] shrink-0"
                         title="Скопировать email"
+                        aria-label="Скопировать email"
                       >
                         {copiedField === 'email' ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
                       </button>
@@ -927,8 +933,9 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                       <button
                         type="button"
                         onClick={() => handleCopy(selectedCustomer.phone, 'phone')}
-                        className="text-[#5C6B80] hover:text-[#2D3A4E] shrink-0"
+                        className="text-[#4E5C70] hover:text-[#2D3A4E] shrink-0"
                         title="Скопировать телефон"
+                        aria-label="Скопировать телефон"
                       >
                         {copiedField === 'phone' ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
                       </button>
@@ -939,14 +946,15 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-[#E3E8EF]/80 neu-flat-sm sm:col-span-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <ShieldCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                        <span className="text-[#5C6B80] shrink-0">UID:</span>
+                        <span className="text-[#4E5C70] shrink-0">UID:</span>
                         <code className="text-[11px] truncate font-mono text-[#2D3A4E]">{selectedCustomer.uid}</code>
                       </div>
                       <button
                         type="button"
                         onClick={() => handleCopy(selectedCustomer.uid!, 'uid')}
-                        className="text-[#5C6B80] hover:text-[#2D3A4E] shrink-0"
+                        className="text-[#4E5C70] hover:text-[#2D3A4E] shrink-0"
                         title="Скопировать UID"
+                        aria-label="Скопировать UID"
                       >
                         {copiedField === 'uid' ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
                       </button>
@@ -959,21 +967,22 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
               {(selectedCustomer.primaryAddress || (selectedCustomer.savedAddresses && selectedCustomer.savedAddresses.length > 0)) && (
                 <div className="neu-inset rounded-2xl p-3.5 space-y-2.5">
                   <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-[#5F6ED0]" />
-                    <span className="text-[11px] font-bold text-[#5C6B80] uppercase tracking-wider">
+                    <MapPin className="w-4 h-4 text-[#4B59BB]" />
+                    <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider">
                       Адрес доставки и реквизиты
                     </span>
                   </div>
 
                   {selectedCustomer.primaryAddress && (
                     <div className="p-2.5 rounded-xl bg-[#E3E8EF]/80 neu-flat-sm space-y-1">
-                      <div className="flex items-center justify-between text-[11px] font-bold text-[#5C6B80]">
+                      <div className="flex items-center justify-between text-[11px] font-bold text-[#4E5C70]">
                         <span>Адрес для курьера:</span>
                         <button
                           type="button"
                           onClick={() => handleCopy(selectedCustomer.primaryAddress!, 'address')}
                           className="hover:text-[#2D3A4E]"
                           title="Скопировать адрес"
+                          aria-label="Скопировать адрес"
                         >
                           {copiedField === 'address' ? <Check className="w-3 h-3 text-success" /> : <Copy className="w-3 h-3" />}
                         </button>
@@ -986,7 +995,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
 
                   {selectedCustomer.savedAddresses && selectedCustomer.savedAddresses.length > 0 && (
                     <div className="space-y-1.5 pt-1">
-                      <span className="text-[10px] font-bold text-[#5C6B80] uppercase">
+                      <span className="text-[11px] font-bold text-[#4E5C70] uppercase">
                         Сохраненные адреса ({selectedCustomer.savedAddresses.length}):
                       </span>
                       <div className="grid grid-cols-1 gap-2">
@@ -995,37 +1004,37 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                             <div className="flex items-center justify-between">
                               <span className="font-bold text-[#2D3A4E]">{sa.title}</span>
                               {sa.isDefault && (
-                                <span className="text-[9px] font-bold text-success bg-success-soft px-1.5 py-0.5 rounded-md">
+                                <span className="text-[11px] font-bold text-success bg-success-soft px-1.5 py-0.5 rounded-md">
                                   Основной
                                 </span>
                               )}
                             </div>
-                            <p className="text-[11px] text-[#5C6B80]">{formatAddress(sa)}</p>
+                            <p className="text-[11px] text-[#4E5C70]">{formatAddress(sa)}</p>
                             <div className="flex flex-wrap gap-1 pt-0.5">
                               {sa.house && (
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-white/80">
+                                <span className="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-white/80">
                                   д. {sa.house}
                                 </span>
                               )}
                               {sa.entrance && (
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-white/80">
+                                <span className="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-white/80">
                                   подъезд {sa.entrance}
                                 </span>
                               )}
                               {sa.floor && (
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-white/80">
+                                <span className="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-white/80">
                                   эт. {sa.floor}
                                 </span>
                               )}
                               {sa.apartment && (
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-white/80">
+                                <span className="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-white/80">
                                   {sa.apartment.toLowerCase().includes('кв') || sa.apartment.toLowerCase().includes('оф')
                                     ? sa.apartment
                                     : `кв. ${sa.apartment}`}
                                 </span>
                               )}
                               {sa.intercom && (
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold text-[#5F6ED0] bg-[#5F6ED0]/15">
+                                <span className="px-1.5 py-0.5 rounded text-[11px] font-semibold text-[#4B59BB] bg-[#5F6ED0]/15">
                                   домофон: {sa.intercom}
                                 </span>
                               )}
@@ -1040,31 +1049,31 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
 
               {/* Financial Metrics & Loyalty Card */}
               <div className="neu-inset rounded-2xl p-4 bg-[#E3E8EF] space-y-3">
-                <span className="text-[11px] font-bold text-[#5C6B80] uppercase tracking-wider block">
+                <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider block">
                   Финансовые показатели & Лояльность
                 </span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                   <div className="neu-flat-sm p-2.5 rounded-xl bg-[#E3E8EF]/80">
-                    <span className="text-[10px] text-[#5C6B80] block">Общий LTV</span>
+                    <span className="text-[11px] text-[#4E5C70] block">Общий LTV</span>
                     <span className="text-sm font-black text-success">
                       {selectedCustomer.totalSpent.toLocaleString('ru-RU')} ₽
                     </span>
                   </div>
                   <div className="neu-flat-sm p-2.5 rounded-xl bg-[#E3E8EF]/80">
-                    <span className="text-[10px] text-[#5C6B80] block">Всего заказов</span>
+                    <span className="text-[11px] text-[#4E5C70] block">Всего заказов</span>
                     <span className="text-sm font-black text-[#2D3A4E]">
                       {selectedCustomer.ordersCount} шт.
                     </span>
                   </div>
                   <div className="neu-flat-sm p-2.5 rounded-xl bg-[#E3E8EF]/80">
-                    <span className="text-[10px] text-[#5C6B80] block">Средний чек</span>
+                    <span className="text-[11px] text-[#4E5C70] block">Средний чек</span>
                     <span className="text-sm font-black text-[#2D3A4E]">
                       {selectedCustomer.averageOrderValue.toLocaleString('ru-RU')} ₽
                     </span>
                   </div>
                   <div className="neu-flat-sm p-2.5 rounded-xl bg-[#E3E8EF]/80">
-                    <span className="text-[10px] text-[#5C6B80] block">Бонусные баллы</span>
-                    <span className="text-sm font-black text-[#5F6ED0]">
+                    <span className="text-[11px] text-[#4E5C70] block">Бонусные баллы</span>
+                    <span className="text-sm font-black text-[#4B59BB]">
                       {selectedCustomer.bonusPoints} Б
                     </span>
                   </div>
@@ -1076,34 +1085,34 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 <div className="neu-inset rounded-2xl p-4 bg-[#E3E8EF] space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Ruler className="w-4 h-4 text-[#5F6ED0]" />
+                      <Ruler className="w-4 h-4 text-[#4B59BB]" />
                       <span className="text-xs font-black text-[#2D3A4E]">Параметры фигуры (Размеры)</span>
                     </div>
                     {selectedCustomer.bodyMeasurements.preferredSize && (
-                      <span className="px-2.5 py-1 rounded-lg text-xs font-black bg-[#5F6ED0]/15 text-[#5F6ED0] neu-flat-sm">
+                      <span className="px-2.5 py-1 rounded-lg text-xs font-black bg-[#5F6ED0]/15 text-[#4B59BB] neu-flat-sm">
                         Размер: {selectedCustomer.bodyMeasurements.preferredSize}
                       </span>
                     )}
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 text-center text-xs">
                     <div className="neu-flat-sm p-2 rounded-xl bg-[#E3E8EF]/80">
-                      <span className="text-[10px] text-[#5C6B80] block">Рост</span>
+                      <span className="text-[11px] text-[#4E5C70] block">Рост</span>
                       <span className="font-bold">{selectedCustomer.bodyMeasurements.height || '—'} см</span>
                     </div>
                     <div className="neu-flat-sm p-2 rounded-xl bg-[#E3E8EF]/80">
-                      <span className="text-[10px] text-[#5C6B80] block">Вес</span>
+                      <span className="text-[11px] text-[#4E5C70] block">Вес</span>
                       <span className="font-bold">{selectedCustomer.bodyMeasurements.weight || '—'} кг</span>
                     </div>
                     <div className="neu-flat-sm p-2 rounded-xl bg-[#E3E8EF]/80">
-                      <span className="text-[10px] text-[#5C6B80] block">Грудь</span>
+                      <span className="text-[11px] text-[#4E5C70] block">Грудь</span>
                       <span className="font-bold">{selectedCustomer.bodyMeasurements.chest || '—'} см</span>
                     </div>
                     <div className="neu-flat-sm p-2 rounded-xl bg-[#E3E8EF]/80">
-                      <span className="text-[10px] text-[#5C6B80] block">Талия</span>
+                      <span className="text-[11px] text-[#4E5C70] block">Талия</span>
                       <span className="font-bold">{selectedCustomer.bodyMeasurements.waist || '—'} см</span>
                     </div>
                     <div className="neu-flat-sm p-2 rounded-xl bg-[#E3E8EF]/80">
-                      <span className="text-[10px] text-[#5C6B80] block">Бедра</span>
+                      <span className="text-[11px] text-[#4E5C70] block">Бедра</span>
                       <span className="font-bold">{selectedCustomer.bodyMeasurements.hips || '—'} см</span>
                     </div>
                   </div>
@@ -1114,14 +1123,14 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
               <div className="neu-inset rounded-2xl p-4 bg-[#E3E8EF] space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Edit3 className="w-4 h-4 text-[#5F6ED0]" />
+                    <Edit3 className="w-4 h-4 text-[#4B59BB]" />
                     <span className="text-xs font-black text-[#2D3A4E]">CRM Заметки & Теги менеджера</span>
                   </div>
                   <button
                     type="button"
                     onClick={handleSaveNotes}
                     disabled={isSavingNotes}
-                    className="neu-button px-3 py-1.5 rounded-xl text-xs font-black text-[#5F6ED0] flex items-center gap-1.5 hover:text-[#4F5DC0]"
+                    className="neu-button px-3 py-1.5 rounded-xl text-xs font-black text-[#4B59BB] flex items-center gap-1.5 hover:text-[#3F4BA6]"
                   >
                     <Save className="w-3.5 h-3.5" />
                     <span>{isSavingNotes ? 'Сохранение...' : 'Сохранить'}</span>
@@ -1133,7 +1142,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                   onChange={(e) => setEditingNotes(e.target.value)}
                   placeholder="Внутренняя заметка о клиенте (предпочтения, особенности доставки, договоренности)..."
                   rows={3}
-                  className="w-full p-2.5 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder-[#5C6B80] outline-none resize-none font-medium bg-[#E3E8EF]"
+                  className="w-full p-2.5 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A] resize-none font-medium bg-[#E3E8EF]"
                 />
 
                 {/* Tags management */}
@@ -1148,15 +1157,16 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                         <button
                           type="button"
                           onClick={() => handleRemoveTag(tag)}
-                          className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[#5C6B80] hover:text-danger hover:bg-danger-soft active:scale-90 transition-all cursor-pointer"
+                          className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[#4E5C70] hover:text-danger hover:bg-danger-soft active:scale-90 transition-all cursor-pointer"
                           title={`Удалить тег #${tag}`}
+                          aria-label="Закрыть"
                         >
                           <X className="w-2.5 h-2.5 stroke-[2.5]" />
                         </button>
                       </span>
                     ))}
                     {selectedCustomer.tags.length === 0 && (
-                      <span className="text-[11px] text-[#5C6B80] italic">
+                      <span className="text-[11px] text-[#4E5C70] italic">
                         Теги еще не добавлены
                       </span>
                     )}
@@ -1167,7 +1177,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                       value={newTagInput}
                       onChange={(e) => setNewTagInput(e.target.value)}
                       placeholder="Новый тег (напр. Стилист, Оптовик)..."
-                      className="flex-1 py-1.5 px-3 rounded-lg neu-inset text-xs text-[#2D3A4E] placeholder-[#5C6B80] outline-none bg-[#E3E8EF]"
+                      className="flex-1 py-1.5 px-3 rounded-lg neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
@@ -1190,7 +1200,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-2.5 flex-wrap">
                   <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-7 h-7 rounded-lg neu-flat-sm flex items-center justify-center text-[#5F6ED0] shrink-0 bg-[#E3E8EF]">
+                    <div className="w-7 h-7 rounded-lg neu-flat-sm flex items-center justify-center text-[#4B59BB] shrink-0 bg-[#E3E8EF]">
                       <Package className="w-3.5 h-3.5" />
                     </div>
                     <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] truncate">
@@ -1204,16 +1214,16 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                         onOpenSupportChat(selectedCustomer.orders[0]?.id, selectedCustomer.name);
                         setSelectedCustomer(null);
                       }}
-                      className="neu-button px-3 py-1.5 rounded-xl text-xs font-bold text-[#5F6ED0] hover:text-[#4F5DC0] flex items-center gap-1.5 shrink-0 whitespace-nowrap active:scale-95 transition-all"
+                      className="neu-button px-3 py-1.5 rounded-xl text-xs font-bold text-[#4B59BB] hover:text-[#3F4BA6] flex items-center gap-1.5 shrink-0 whitespace-nowrap active:scale-95 transition-all"
                     >
-                      <MessageSquare className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                      <MessageSquare className="w-3.5 h-3.5 text-[#4B59BB]" />
                       <span>Открыть диалог</span>
                     </button>
                   )}
                 </div>
 
                 {selectedCustomer.orders.length === 0 ? (
-                  <div className="neu-inset p-4 rounded-2xl text-center text-xs text-[#5C6B80] bg-[#E3E8EF]">
+                  <div className="neu-inset p-4 rounded-2xl text-center text-xs text-[#4E5C70] bg-[#E3E8EF]">
                     У данного пользователя пока нет зарегистрированных заказов.
                   </div>
                 ) : (
@@ -1225,7 +1235,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                           <div className="flex items-center justify-between gap-2 flex-wrap">
                             <div className="flex items-center gap-2">
                               <span className="font-black text-sm text-[#2D3A4E]">№ {ord.id}</span>
-                              <span className="text-xs text-[#5C6B80]">• {ord.date}</span>
+                              <span className="text-xs text-[#4E5C70]">• {ord.date}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className={`px-2.5 py-0.5 rounded-lg text-xs font-bold border ${statusBadge.bg}`}>
@@ -1240,7 +1250,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                           {/* Line Items Preview */}
                           <div className="space-y-1.5 border-t border-[#BAC5D5]/30 pt-2">
                             {ord.items.map((it, idx) => (
-                              <div key={idx} className="flex items-center justify-between text-xs text-[#5C6B80]">
+                              <div key={idx} className="flex items-center justify-between text-xs text-[#4E5C70]">
                                 <div className="flex items-center gap-2 min-w-0">
                                   {it.product.images?.[0] && (
                                     <img
@@ -1263,9 +1273,9 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                           </div>
 
                           {/* Order Logistics & Details Bar */}
-                          <div className="flex items-center justify-between gap-2 text-[11px] text-[#5C6B80] bg-[#BAC5D5]/15 px-2.5 py-1.5 rounded-xl flex-wrap">
+                          <div className="flex items-center justify-between gap-2 text-[11px] text-[#4E5C70] bg-[#BAC5D5]/15 px-2.5 py-1.5 rounded-xl flex-wrap">
                             <div className="flex items-center gap-2">
-                              <Truck className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                              <Truck className="w-3.5 h-3.5 text-[#4B59BB]" />
                               <span>{ord.deliveryMethod || 'Доставка'}</span>
                               {isTransportCompanyDelivery(ord.deliveryMethod, ord.trackingCompany) && ord.trackingNumber && (
                                 <span className="font-bold text-[#2D3A4E]">Трек (ТК): {ord.trackingNumber}</span>
@@ -1289,7 +1299,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
               <button
                 type="button"
                 onClick={() => setSelectedCustomer(null)}
-                className="neu-inset px-6 py-2.5 rounded-xl text-xs font-black text-[#2D3A4E] hover:text-[#5F6ED0] bg-[#E3E8EF] active:scale-95 transition-all"
+                className="neu-inset px-6 py-2.5 rounded-xl text-xs font-black text-[#2D3A4E] hover:text-[#4B59BB] bg-[#E3E8EF] active:scale-95 transition-all"
               >
                 Закрыть
               </button>
@@ -1308,13 +1318,13 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
               </div>
               <div>
                 <h3 className="text-base font-black text-[#2D3A4E]">Очистка базы данных</h3>
-                <p className="text-xs text-[#5C6B80]">Удаление тестовых и неактуальных записей</p>
+                <p className="text-xs text-[#4E5C70]">Удаление тестовых и неактуальных записей</p>
               </div>
             </div>
 
             <div className="neu-inset rounded-2xl p-3.5 space-y-2 text-xs text-[#2D3A4E] bg-[#E3E8EF]">
               <p className="font-semibold text-danger">Внимание! Будут безвозвратно удалены:</p>
-              <ul className="list-disc list-inside space-y-1 text-[#5C6B80]">
+              <ul className="list-disc list-inside space-y-1 text-[#4E5C70]">
                 <li>Все фиктивные профили клиентов (Иван Петров, Алексей Морозов и т.д.)</li>
                 <li>Все демо-заказы (MS-8420, MS-7912, MS-9824...)</li>
                 <li>Неактуальные тестовые записи в Firestore</li>
@@ -1329,7 +1339,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 type="button"
                 onClick={() => setShowPurgeModal(false)}
                 disabled={isPurging}
-                className="neu-inset px-4 py-2.5 rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] bg-[#E3E8EF] active:scale-95 transition-all cursor-pointer"
+                className="neu-inset px-4 py-2.5 rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] bg-[#E3E8EF] active:scale-95 transition-all cursor-pointer"
               >
                 Отмена
               </button>
@@ -1366,11 +1376,11 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
               </div>
               <div className="min-w-0">
                 <h3 className="text-sm font-black text-[#2D3A4E] truncate">Удалить клиента?</h3>
-                <p className="text-xs text-[#5C6B80] truncate">{customerToDelete.name}</p>
+                <p className="text-xs text-[#4E5C70] truncate">{customerToDelete.name}</p>
               </div>
             </div>
 
-            <p className="text-xs text-[#5C6B80]">
+            <p className="text-xs text-[#4E5C70]">
               Вы действительно хотите удалить профиль <strong className="text-[#2D3A4E]">{customerToDelete.name}</strong> ({customerToDelete.email || customerToDelete.phone || 'Гость'}) из базы данных Firestore?
             </p>
 
@@ -1379,7 +1389,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 type="button"
                 onClick={() => setCustomerToDelete(null)}
                 disabled={isDeletingCustomer}
-                className="neu-inset px-4 py-2 rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] bg-[#E3E8EF] active:scale-95 transition-all cursor-pointer"
+                className="neu-inset px-4 py-2 rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] bg-[#E3E8EF] active:scale-95 transition-all cursor-pointer"
               >
                 Отмена
               </button>

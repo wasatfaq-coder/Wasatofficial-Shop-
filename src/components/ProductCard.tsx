@@ -66,7 +66,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {/* Badge in top-left corner */}
         {product.badge && (
           <div className="absolute top-2.5 left-2.5 z-10">
-            <span className="h-6 px-2.5 rounded-full neu-photo-badge text-[10px] tracking-wider uppercase text-[#2D3A4E] font-bold inline-flex items-center justify-center leading-none">
+            <span className="h-6 px-2.5 rounded-full neu-photo-badge text-[11px] tracking-wider uppercase text-[#2D3A4E] font-bold inline-flex items-center justify-center leading-none">
               {product.badge}
             </span>
           </div>
@@ -80,7 +80,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 e.stopPropagation();
                 onQuickView(product, e);
               }}
-              className="w-7 h-7 rounded-full neu-photo-btn flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] transition-transform active:scale-90"
+              className="w-7 h-7 rounded-full neu-photo-btn flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-transform active:scale-90"
               title="Быстрый просмотр"
               aria-label="Быстрый просмотр"
             >
@@ -101,11 +101,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <div>
           {/* Category & Rating Row */}
           <div className="flex items-center justify-between text-[11px] mb-1">
-            <span className="text-[10px] font-bold text-[#5C6B80] uppercase tracking-wider truncate">
+            <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider truncate">
               {product.categoryLabel}
             </span>
             <div className="flex items-center gap-1 font-bold text-[#2D3A4E] text-[11px] shrink-0">
-              <Star className="w-3 h-3 fill-[#5C6B80] text-[#5C6B80] shrink-0" strokeWidth={0} />
+              <Star className="w-3 h-3 fill-[#4E5C70] text-[#4E5C70] shrink-0" strokeWidth={0} />
               <span>{formattedRating}</span>
             </div>
           </div>
@@ -124,7 +124,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 {product.price.toLocaleString('ru-RU')} ₽
               </span>
               {discountPercent ? (
-                <span className="text-[10px] font-bold text-[#5F6ED0] bg-[#E3E8EF] px-1.5 py-0.5 rounded-md border border-white/60 leading-none">
+                <span className="text-[11px] font-bold text-[#4B59BB] bg-[#E3E8EF] px-1.5 py-0.5 rounded-md border border-white/60 leading-none">
                   -{discountPercent}%
                 </span>
               ) : null}
@@ -146,7 +146,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0 mb-0.5 cursor-pointer ${
               justAdded
                 ? 'neu-inset text-success'
-                : 'neu-button text-[#5F6ED0]'
+                : 'neu-button text-[#4B59BB]'
             }`}
             aria-label={justAdded ? 'Добавлено в корзину' : 'Добавить в корзину'}
             title={justAdded ? 'Добавлено в корзину' : 'Добавить в корзину'}

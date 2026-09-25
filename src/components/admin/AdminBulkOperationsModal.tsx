@@ -194,7 +194,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
             {/* Header */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl neu-button flex items-center justify-center text-[#5F6ED0]">
+                <div className="w-10 h-10 rounded-2xl neu-button flex items-center justify-center text-[#4B59BB]">
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
@@ -202,18 +202,19 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                     <h3 className="text-sm sm:text-base font-black text-[#2D3A4E]">
                       Массовые операции каталога
                     </h3>
-                    <span className="neu-inset px-2.5 py-0.5 rounded-lg text-xs font-black text-[#5F6ED0] bg-[#E3E8EF]">
+                    <span className="neu-inset px-2.5 py-0.5 rounded-lg text-xs font-black text-[#4B59BB] bg-[#E3E8EF]">
                       Выбрано: {selectedProducts.length} тов.
                     </span>
                   </div>
-                  <p className="text-[11px] text-[#5C6B80] font-medium">
+                  <p className="text-[11px] text-[#4E5C70] font-medium">
                     Пакетное изменение цен, скидок и категорий в один клик
                   </p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer"
+                className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                aria-label="Закрыть"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -233,7 +234,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as BulkTab)}
                     className={`relative flex-1 py-2 px-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer select-none ${
-                      isActive ? 'text-[#5F6ED0]' : 'text-[#5C6B80] hover:text-[#2D3A4E]'
+                      isActive ? 'text-[#4B59BB]' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
                     }`}
                   >
                     {isActive && (
@@ -266,7 +267,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
                     priceAdjustmentType === 'percent'
                       ? 'neu-pill-active font-black'
-                      : 'text-[#5C6B80]'
+                      : 'text-[#4E5C70]'
                   }`}
                 >
                   Процент (%)
@@ -277,7 +278,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
                     priceAdjustmentType === 'fixed'
                       ? 'neu-pill-active font-black'
-                      : 'text-[#5C6B80]'
+                      : 'text-[#4E5C70]'
                   }`}
                 >
                   Рубли (₽)
@@ -287,7 +288,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
 
             {/* Input & Quick Presets */}
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-[#5C6B80]">
+              <label className="text-[11px] font-bold text-[#4E5C70]">
                 {priceAdjustmentType === 'percent'
                   ? 'Изменение цены в % (+ повышение, - снижение):'
                   : 'Изменение цены в ₽ (+ повышение, - снижение):'}
@@ -297,9 +298,9 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                   type="number"
                   value={priceAdjustmentValue}
                   onChange={(e) => setPriceAdjustmentValue(Number(e.target.value))}
-                  className="w-32 px-3 py-2 neu-inset rounded-xl text-sm font-black text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                  className="w-32 px-3 py-2 neu-inset rounded-xl text-sm font-black text-[#2D3A4E] bg-[#E3E8EF]"
                 />
-                <span className="text-xs font-black text-[#5F6ED0]">
+                <span className="text-xs font-black text-[#4B59BB]">
                   {priceAdjustmentType === 'percent' ? '%' : '₽'}
                 </span>
               </div>
@@ -315,7 +316,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                       className={`px-2.5 py-1 rounded-xl text-xs font-extrabold cursor-pointer transition-all ${
                         priceAdjustmentValue === val
                           ? 'neu-pill-active font-black'
-                          : 'neu-button text-[#5C6B80] hover:text-[#2D3A4E]'
+                          : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
                       }`}
                     >
                       {val > 0 ? `+${val}` : val}
@@ -328,7 +329,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
 
             {/* Rounding Mode */}
             <div className="space-y-1.5 pt-2 border-t border-[#BAC5D5]/40">
-              <label className="text-[11px] font-bold text-[#5C6B80]">
+              <label className="text-[11px] font-bold text-[#4E5C70]">
                 Правило округления цен:
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
@@ -345,7 +346,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                     className={`py-1.5 px-2 rounded-xl text-[11px] font-bold transition-all text-center cursor-pointer ${
                       priceRounding === r.id
                         ? 'neu-pill-active font-black'
-                        : 'neu-button text-[#5C6B80]'
+                        : 'neu-button text-[#4E5C70]'
                     }`}
                   >
                     {r.label}
@@ -370,7 +371,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                 className={`py-1.5 px-3 rounded-xl text-xs font-extrabold flex items-center gap-1.5 cursor-pointer transition-all ${
                   isRemoveDiscountMode
                     ? 'neu-inset text-warning bg-warning-soft'
-                    : 'neu-button text-[#5C6B80] hover:text-[#2D3A4E]'
+                    : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
                 }`}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -382,7 +383,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
               <>
                 {/* Discount percentage presets */}
                 <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-[#5C6B80]">
+                  <label className="text-[11px] font-bold text-[#4E5C70]">
                     Размер скидки от текущей/базовой цены:
                   </label>
                   <div className="flex items-center gap-2">
@@ -392,9 +393,9 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                       max="90"
                       value={discountPercent}
                       onChange={(e) => setDiscountPercent(Math.max(1, Math.min(90, Number(e.target.value))))}
-                      className="w-24 px-3 py-2 neu-inset rounded-xl text-sm font-black text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                      className="w-24 px-3 py-2 neu-inset rounded-xl text-sm font-black text-[#2D3A4E] bg-[#E3E8EF]"
                     />
-                    <span className="text-sm font-black text-[#5F6ED0]">%</span>
+                    <span className="text-sm font-black text-[#4B59BB]">%</span>
                   </div>
 
                   <div className="flex flex-wrap gap-1.5 pt-1">
@@ -406,7 +407,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                         className={`px-3 py-1 rounded-xl text-xs font-extrabold cursor-pointer transition-all ${
                           discountPercent === p
                             ? 'neu-pill-active font-black'
-                            : 'neu-button text-[#5C6B80] hover:text-[#2D3A4E]'
+                            : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
                         }`}
                       >
                         -{p}%
@@ -417,7 +418,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
 
                 {/* Badge assignment */}
                 <div className="space-y-2 pt-2 border-t border-[#BAC5D5]/40">
-                  <label className="text-[11px] font-bold text-[#5C6B80]">
+                  <label className="text-[11px] font-bold text-[#4E5C70]">
                     Назначить бейдж акции на карточки:
                   </label>
                   <div className="flex flex-wrap gap-1.5">
@@ -429,7 +430,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                         className={`px-3 py-1 rounded-xl text-xs font-extrabold cursor-pointer transition-all ${
                           discountBadge === b
                             ? 'neu-pill-active font-black'
-                            : 'neu-button text-[#5C6B80]'
+                            : 'neu-button text-[#4E5C70]'
                         }`}
                       >
                         {b}
@@ -439,7 +440,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                 </div>
               </>
             ) : (
-              <div className="neu-inset rounded-xl p-3 bg-[#E3E8EF] text-xs text-[#5C6B80] space-y-1">
+              <div className="neu-inset rounded-xl p-3 bg-[#E3E8EF] text-xs text-[#4E5C70] space-y-1">
                 <p className="font-bold text-[#2D3A4E]">Снятие скидок:</p>
                 <p>
                   Для всех выбранных товаров цены будут возвращены к базовым (`originalPrice`), а скидочные бейджи удалены.
@@ -478,7 +479,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                 >
                   <span>{cat.label}</span>
                   {targetCategory === cat.id && (
-                    <Check className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                    <Check className="w-3.5 h-3.5 text-[#4B59BB]" />
                   )}
                 </button>
               ))}
@@ -490,7 +491,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
         <div className="space-y-2">
           <label className="text-xs font-black uppercase text-[#2D3A4E] tracking-wider flex items-center justify-between">
             <span>Предпросмотр изменений ({selectedProducts.length} позиций)</span>
-            <span className="text-[11px] text-[#5C6B80] lowercase">
+            <span className="text-[11px] text-[#4E5C70] lowercase">
               было → станет
             </span>
           </label>
@@ -513,7 +514,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                       <p className="font-extrabold text-[#2D3A4E] truncate text-[11px]">
                         {p.title}
                       </p>
-                      <p className="text-[10px] text-[#5C6B80] truncate">
+                      <p className="text-[11px] text-[#4E5C70] truncate">
                         Категория: {p.categoryLabel || p.category}
                       </p>
                     </div>
@@ -523,11 +524,11 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                   <div className="flex items-center gap-2 shrink-0">
                     {activeTab === 'pricing' && (
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] text-[#5C6B80] line-through">
+                        <span className="text-[11px] text-[#4E5C70] line-through">
                           {original.price.toLocaleString('ru-RU')} ₽
                         </span>
-                        <ArrowRight className="w-3 h-3 text-[#5F6ED0]" />
-                        <span className="font-black text-[#5F6ED0] text-xs">
+                        <ArrowRight className="w-3 h-3 text-[#4B59BB]" />
+                        <span className="font-black text-[#4B59BB] text-xs">
                           {p.price.toLocaleString('ru-RU')} ₽
                         </span>
                       </div>
@@ -541,15 +542,15 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                           </span>
                         ) : (
                           <>
-                            <span className="text-[11px] text-[#5C6B80] line-through">
+                            <span className="text-[11px] text-[#4E5C70] line-through">
                               {(p.originalPrice || original.price).toLocaleString('ru-RU')} ₽
                             </span>
-                            <ArrowRight className="w-3 h-3 text-[#5F6ED0]" />
-                            <span className="font-black text-[#5F6ED0] text-xs">
+                            <ArrowRight className="w-3 h-3 text-[#4B59BB]" />
+                            <span className="font-black text-[#4B59BB] text-xs">
                               {p.price.toLocaleString('ru-RU')} ₽
                             </span>
                             {p.badge && (
-                              <span className="neu-flat text-[9px] font-black px-1.5 py-0.5 rounded text-[#5F6ED0]">
+                              <span className="neu-flat text-[11px] font-black px-1.5 py-0.5 rounded text-[#4B59BB]">
                                 {p.badge}
                               </span>
                             )}
@@ -560,9 +561,9 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
 
                     {activeTab === 'categories' && (
                       <div className="flex items-center gap-1.5 text-[11px]">
-                        <span className="text-[#5C6B80]">{original.categoryLabel}</span>
-                        <ArrowRight className="w-3 h-3 text-[#5F6ED0]" />
-                        <span className="font-black text-[#5F6ED0]">{p.categoryLabel}</span>
+                        <span className="text-[#4E5C70]">{original.categoryLabel}</span>
+                        <ArrowRight className="w-3 h-3 text-[#4B59BB]" />
+                        <span className="font-black text-[#4B59BB]">{p.categoryLabel}</span>
                       </div>
                     )}
                   </div>
@@ -577,7 +578,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
           <button
             type="button"
             onClick={onClose}
-            className="w-full sm:w-auto py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer text-center"
+            className="w-full sm:w-auto py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer text-center"
           >
             Отмена
           </button>

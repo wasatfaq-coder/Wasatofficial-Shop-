@@ -614,7 +614,7 @@ export const NeumorphicRechartsLegend: React.FC<NeumorphicRechartsLegendProps> =
 
             {/* Metric Label */}
             <span
-              className={`text-[10.5px] sm:text-[11px] tracking-tight ${
+              className={`text-[11px] sm:text-[11px] tracking-tight ${
                 isPrev ? 'font-bold text-[#64748B]' : 'font-extrabold text-[#2D3A4E]'
               }`}
             >

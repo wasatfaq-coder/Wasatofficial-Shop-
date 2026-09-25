@@ -51,7 +51,8 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
             </div>
             <button
               onClick={onClose}
-              className="w-7 h-7 rounded-full neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer"
+              className="w-7 h-7 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+              aria-label="Закрыть"
             >
               <X className="w-4 h-4 stroke-[2.5]" />
             </button>
@@ -66,16 +67,16 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
             />
             <div className="flex-1 min-w-0">
               <p className="font-black text-xs text-[#2D3A4E] truncate">{item.product.title}</p>
-              <p className="text-[11px] text-[#5C6B80]">
+              <p className="text-[11px] text-[#4E5C70]">
                 {item.selectedColor} • {item.selectedSize} ({item.quantity} шт.)
               </p>
-              <p className="text-xs font-black text-[#5F6ED0] pt-0.5">
+              <p className="text-xs font-black text-[#4B59BB] pt-0.5">
                 {(item.product.price * item.quantity).toLocaleString('ru-RU')} ₽
               </p>
             </div>
           </div>
 
-          <p className="text-xs text-[#5C6B80] leading-relaxed text-center">
+          <p className="text-xs text-[#4E5C70] leading-relaxed text-center">
             Вы можете удалить товар из корзины или сохранить его в <strong>Избранное</strong>, чтобы вернуться к покупке позже.
           </p>
 
@@ -86,16 +87,16 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
                 onMoveToFavorites(item);
                 onClose();
               }}
-              className="w-full py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-[#5F6ED0] hover:scale-102 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-[#4B59BB] hover:scale-102 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Heart className="w-4 h-4 stroke-[2.2] fill-[#5F6ED0]/20 text-[#5F6ED0]" />
+              <Heart className="w-4 h-4 stroke-[2.2] fill-[#5F6ED0]/20 text-[#4B59BB]" />
               <span>Переместить в Избранное</span>
             </button>
 
             <div className="flex items-center gap-2">
               <button
                 onClick={onClose}
-                className="flex-1 py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer"
+                className="flex-1 py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
               >
                 Оставить
               </button>

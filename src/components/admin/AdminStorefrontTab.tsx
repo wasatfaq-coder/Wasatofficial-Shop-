@@ -169,10 +169,10 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
       <div className="flex items-center justify-between gap-3 flex-wrap pb-2 border-b border-[#BAC5D5]/50">
         <div>
           <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-2">
-            <Store className="w-4 h-4 text-[#5F6ED0]" />
+            <Store className="w-4 h-4 text-[#4B59BB]" />
             <span>Управление витриной, брендом & реквизитами</span>
           </h3>
-          <p className="text-[11px] text-[#5C6B80] font-medium mt-0.5">
+          <p className="text-[11px] text-[#4E5C70] font-medium mt-0.5">
             Редактирование контактов, VIP-консьержа, юридических реквизитов и философии бренда
           </p>
         </div>
@@ -184,7 +184,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             <button
               type="button"
               onClick={() => setIsClientModalOpen(true)}
-              className="py-1.5 px-2.5 sm:px-3 neu-inset rounded-lg text-xs font-bold text-[#5F6ED0] hover:text-[#4F5DC0] transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 bg-[#E3E8EF]"
+              className="py-1.5 px-2.5 sm:px-3 neu-inset rounded-lg text-xs font-bold text-[#4B59BB] hover:text-[#3F4BA6] transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 bg-[#E3E8EF]"
               title="Открыть модальное окно «Бренд & Реквизиты» от лица клиента"
             >
               <Crown className="w-3.5 h-3.5" />
@@ -195,8 +195,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               onClick={() => setShowLivePreview(!showLivePreview)}
               className={`py-1.5 px-2.5 sm:px-3 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
                 showLivePreview
-                  ? 'neu-inset text-[#5F6ED0] font-black bg-[#E3E8EF]'
-                  : 'neu-inset text-[#5C6B80] hover:text-[#2D3A4E] bg-[#E3E8EF]'
+                  ? 'neu-inset text-[#4B59BB] font-black bg-[#E3E8EF]'
+                  : 'neu-inset text-[#4E5C70] hover:text-[#2D3A4E] bg-[#E3E8EF]'
               }`}
               title={showLivePreview ? 'Скрыть интерактивную сводку' : 'Показать интерактивную сводку'}
             >
@@ -219,10 +219,10 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             <button
               type="button"
               onClick={() => handleSave()}
-              className="py-2 px-4.5 neu-inset rounded-xl text-xs font-black text-[#5F6ED0] hover:text-[#4F5DC0] flex items-center gap-2 cursor-pointer active:scale-95 transition-all bg-[#E3E8EF]"
+              className="py-2 px-4.5 neu-inset rounded-xl text-xs font-black text-[#4B59BB] hover:text-[#3F4BA6] flex items-center gap-2 cursor-pointer active:scale-95 transition-all bg-[#E3E8EF]"
               title="Применить все изменения к витрине"
             >
-              {isSaved ? <Check className="w-4 h-4 text-success" /> : <Save className="w-4 h-4 text-[#5F6ED0]" />}
+              {isSaved ? <Check className="w-4 h-4 text-success" /> : <Save className="w-4 h-4 text-[#4B59BB]" />}
               <span>{isSaved ? 'Сохранено!' : 'Применить'}</span>
             </button>
           </div>
@@ -249,7 +249,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E]">
                   Сброс настроек витрины
                 </h4>
-                <p className="text-[11px] text-[#5C6B80] mt-1 leading-relaxed">
+                <p className="text-[11px] text-[#4E5C70] mt-1 leading-relaxed">
                   Вернуть все контакты, реквизиты, описание консьержа, манифест и тарифы доставки к исходным эталонным значениям?
                 </p>
               </div>
@@ -258,7 +258,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               <button
                 type="button"
                 onClick={() => setIsResetConfirmOpen(false)}
-                className="py-2 px-3.5 neu-button rounded-xl text-xs font-bold text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer active:scale-95 transition-all bg-[#E3E8EF] border border-white/80"
+                className="py-2 px-3.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer active:scale-95 transition-all bg-[#E3E8EF] border border-white/80"
               >
                 Отмена
               </button>
@@ -281,14 +281,14 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
       {showLivePreview && (
         <div className="neu-inset rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-3 bg-[#E3E8EF] border border-[#5F6ED0]/30">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-[#5F6ED0] flex items-center gap-1.5">
+            <span className="text-[11px] font-black uppercase tracking-wider text-[#4B59BB] flex items-center gap-1.5">
               <Eye className="w-3.5 h-3.5" />
               Интерактивный сводный статус
             </span>
             <button
               type="button"
               onClick={() => setIsClientModalOpen(true)}
-              className="text-[10px] text-[#5F6ED0] hover:underline font-bold flex items-center gap-1 cursor-pointer"
+              className="text-[11px] text-[#4B59BB] hover:underline font-bold flex items-center gap-1 cursor-pointer"
             >
               <span>Посмотреть как у клиента</span>
               <ExternalLink className="w-3 h-3" />
@@ -301,7 +301,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               <AlertCircle className="w-4 h-4 text-warning shrink-0" />
               <div className="text-xs">
                 <span className="font-black block">Режим закрытой примерки</span>
-                <span className="text-[11px] text-[#5C6B80]">
+                <span className="text-[11px] text-[#4E5C70]">
                   Онлайн-оформление приостановлено. Заказы принимаются через консьержа:{' '}
                   {localSettings.phone}
                 </span>
@@ -327,8 +327,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               title="Нажмите для быстрого редактирования названия бренда"
             >
               <div className="flex items-center justify-center gap-1">
-                <span className="text-[9px] text-[#5C6B80] block font-bold">Бренд</span>
-                <Pencil className="w-2.5 h-2.5 text-[#5F6ED0] opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="text-[11px] text-[#4E5C70] block font-bold">Бренд</span>
+                <Pencil className="w-2.5 h-2.5 text-[#4B59BB] opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
               <span className="text-xs font-black text-[#2D3A4E] truncate block">
                 {localSettings.storeName}
@@ -351,8 +351,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               title="Нажмите для быстрого редактирования юр. лица"
             >
               <div className="flex items-center justify-center gap-1">
-                <span className="text-[9px] text-[#5C6B80] block font-bold">Юр. лицо</span>
-                <Pencil className="w-2.5 h-2.5 text-[#5F6ED0] opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="text-[11px] text-[#4E5C70] block font-bold">Юр. лицо</span>
+                <Pencil className="w-2.5 h-2.5 text-[#4B59BB] opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
               <span className="text-xs font-black text-[#2D3A4E] truncate block">
                 {localSettings.legalEntityName || '—'}
@@ -375,8 +375,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               title="Нажмите для быстрого редактирования ИНН"
             >
               <div className="flex items-center justify-center gap-1">
-                <span className="text-[9px] text-[#5C6B80] block font-bold">ИНН / КПП</span>
-                <Pencil className="w-2.5 h-2.5 text-[#5F6ED0] opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="text-[11px] text-[#4E5C70] block font-bold">ИНН / КПП</span>
+                <Pencil className="w-2.5 h-2.5 text-[#4B59BB] opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
               <span className="text-xs font-black text-[#2D3A4E] truncate block">
                 {localSettings.inn || '—'} / {localSettings.kpp || '—'}
@@ -399,8 +399,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               title="Нажмите для быстрого редактирования руководителя"
             >
               <div className="flex items-center justify-center gap-1">
-                <span className="text-[9px] text-[#5C6B80] block font-bold">Руководитель</span>
-                <Pencil className="w-2.5 h-2.5 text-[#5F6ED0] opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="text-[11px] text-[#4E5C70] block font-bold">Руководитель</span>
+                <Pencil className="w-2.5 h-2.5 text-[#4B59BB] opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
               <span className="text-xs font-black text-[#2D3A4E] truncate block">
                 {localSettings.ceo || '—'}
@@ -423,8 +423,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               title="Нажмите для редактирования порога бесплатной доставки"
             >
               <div className="flex items-center justify-center gap-1">
-                <span className="text-[9px] text-[#5C6B80] block font-bold">Беспл. доставка</span>
-                <Pencil className="w-2.5 h-2.5 text-[#5F6ED0] opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="text-[11px] text-[#4E5C70] block font-bold">Беспл. доставка</span>
+                <Pencil className="w-2.5 h-2.5 text-[#4B59BB] opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
               <span className="text-xs font-black text-success block">
                 от {localSettings.freeDeliveryThreshold?.toLocaleString('ru-RU') || 5000} ₽
@@ -445,8 +445,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               title="Нажмите для быстрого переключения экспресс-доставки"
             >
               <div className="flex items-center justify-center gap-1">
-                <span className="text-[9px] text-[#5C6B80] block font-bold">Экспресс 2ч</span>
-                <Sliders className="w-2.5 h-2.5 text-[#5F6ED0] opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="text-[11px] text-[#4E5C70] block font-bold">Экспресс 2ч</span>
+                <Sliders className="w-2.5 h-2.5 text-[#4B59BB] opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
               <span
                 className={`text-xs font-black block ${
@@ -465,17 +465,17 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
         <div className="neu-inset rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-3.5 bg-[#E3E8EF] border border-transparent">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
-              <Phone className="w-3.5 h-3.5 text-[#5F6ED0]" />
+              <Phone className="w-3.5 h-3.5 text-[#4B59BB]" />
               Основные контакты бутика & витрины
             </h4>
-            <span className="text-[10px] font-extrabold text-[#5F6ED0] neu-button px-2.5 py-1 rounded-lg bg-[#E3E8EF] border border-white/80">
+            <span className="text-[11px] font-extrabold text-[#4B59BB] neu-button px-2.5 py-1 rounded-lg bg-[#E3E8EF] border border-white/80">
               Шапка и футер
             </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div>
-              <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+              <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                 Название бутика / бренда
               </label>
               <div className="flex items-center gap-2">
@@ -483,7 +483,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   type="text"
                   value={localSettings.storeName}
                   onChange={(e) => setLocalSettings({ ...localSettings, storeName: e.target.value })}
-                  className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                  className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF]"
                 />
                 <button
                   type="button"
@@ -497,8 +497,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       description: 'Официальное наименование магазина в интерфейсе, логотипе, шапке и уведомлениях.',
                     })
                   }
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
+                  aria-label="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -506,7 +507,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+              <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                 Слоган / Описание витрины
               </label>
               <div className="flex items-center gap-2">
@@ -517,7 +518,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     setLocalSettings({ ...localSettings, storeSlogan: e.target.value })
                   }
                   placeholder="Бутик премиальной мужской одежды"
-                  className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                  className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF]"
                 />
                 <button
                   type="button"
@@ -531,8 +532,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       description: 'Короткий слоган или дескриптор бутика, отображаемый под логотипом.',
                     })
                   }
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
+                  aria-label="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -540,7 +542,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+              <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                 Телефон горячей линии
               </label>
               <div className="flex items-center gap-2">
@@ -549,7 +551,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   value={localSettings.phone}
                   onChange={(e) => setLocalSettings({ ...localSettings, phone: e.target.value })}
                   placeholder="+7 (495) 123-45-67"
-                  className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                  className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF]"
                 />
                 <button
                   type="button"
@@ -563,8 +565,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       description: 'Номер телефона для звонков клиентов, кликабелен в шапке сайта и в карточке заказа.',
                     })
                   }
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
+                  aria-label="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -572,7 +575,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+              <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                 Email клиентской службы
               </label>
               <div className="flex items-center gap-2">
@@ -581,7 +584,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   value={localSettings.email}
                   onChange={(e) => setLocalSettings({ ...localSettings, email: e.target.value })}
                   placeholder="concierge@manstyle.ru"
-                  className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                  className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF]"
                 />
                 <button
                   type="button"
@@ -595,8 +598,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       description: 'Адрес электронной почты для официальных запросов клиентов и счетов.',
                     })
                   }
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
+                  aria-label="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -604,7 +608,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+              <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                 Telegram канал / бот
               </label>
               <div className="flex items-center gap-2">
@@ -613,7 +617,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   value={localSettings.telegram}
                   onChange={(e) => setLocalSettings({ ...localSettings, telegram: e.target.value })}
                   placeholder="@manstyle_official"
-                  className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                  className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF]"
                 />
                 <button
                   type="button"
@@ -627,8 +631,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       description: 'Имя пользователя или ссылка на Telegram для оперативной связи.',
                     })
                   }
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
+                  aria-label="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -636,7 +641,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+              <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                 WhatsApp для консультаций
               </label>
               <div className="flex items-center gap-2">
@@ -645,7 +650,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   value={localSettings.whatsapp}
                   onChange={(e) => setLocalSettings({ ...localSettings, whatsapp: e.target.value })}
                   placeholder="+7 (999) 000-00-00"
-                  className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                  className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF]"
                 />
                 <button
                   type="button"
@@ -659,8 +664,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       description: 'Номер WhatsApp стилиста для отправки фото и быстрой примерки.',
                     })
                   }
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
+                  aria-label="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -668,7 +674,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+              <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                 Адрес бутика / шоурума
               </label>
               <div className="flex items-center gap-2">
@@ -678,7 +684,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   onChange={(e) =>
                     setLocalSettings({ ...localSettings, pickupAddress: e.target.value })
                   }
-                  className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                  className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF]"
                 />
                 <button
                   type="button"
@@ -692,8 +698,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       description: 'Точный физический адрес бутика, отображаемый для самовывоза и визитов.',
                     })
                   }
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
+                  aria-label="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -701,7 +708,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+              <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                 Режим работы
               </label>
               <div className="flex items-center gap-2">
@@ -711,7 +718,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   onChange={(e) =>
                     setLocalSettings({ ...localSettings, workingHours: e.target.value })
                   }
-                  className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                  className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF]"
                 />
                 <button
                   type="button"
@@ -725,8 +732,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       description: 'Часы работы бутика и операторов консьерж-службы.',
                     })
                   }
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
+                  aria-label="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -737,12 +745,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
           {/* Top Promotional Announcement Banner */}
           <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-2.5 pt-2.5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-black/5 pb-2">
-              <span className="text-[11px] font-black uppercase tracking-wider text-[#5F6ED0] flex items-center gap-1.5">
-                <Tag className="w-3.5 h-3.5 text-[#5F6ED0] shrink-0" />
+              <span className="text-[11px] font-black uppercase tracking-wider text-[#4B59BB] flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5 text-[#4B59BB] shrink-0" />
                 Промо-сообщение в шапке сайта
               </span>
               <label className="flex items-center gap-2 cursor-pointer select-none shrink-0 self-start sm:self-auto neu-button px-2.5 py-1 rounded-xl bg-[#E3E8EF] border border-white/80 active:scale-95 transition-all">
-                <span className="text-[10px] font-bold text-[#5C6B80] whitespace-nowrap">
+                <span className="text-[11px] font-bold text-[#4E5C70] whitespace-nowrap">
                   {localSettings.isStoreBannerVisible ? 'Баннер включен' : 'Баннер скрыт'}
                 </span>
                 <input
@@ -769,7 +777,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
               <div className="sm:col-span-1">
-                <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                   Текст бейджа
                 </label>
                 <div className="flex items-center gap-1.5">
@@ -780,7 +788,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       setLocalSettings({ ...localSettings, bannerBadgeText: e.target.value })
                     }
                     placeholder="АКЦИЯ"
-                    className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-black text-[#5F6ED0] bg-[#E3E8EF] focus:outline-none"
+                    className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-black text-[#4B59BB] bg-[#E3E8EF]"
                   />
                   <button
                     type="button"
@@ -794,8 +802,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         description: 'Короткое слово на цветном бейдже в верхней строке сайта (например: АКЦИЯ, NEW, ВНИМАНИЕ).',
                       })
                     }
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                     title="Редактировать в модальном окне"
+                    aria-label="Редактировать в модальном окне"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
@@ -803,7 +812,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               </div>
 
               <div className="sm:col-span-3">
-                <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                   Текст промо-сообщения
                 </label>
                 <div className="flex items-center gap-1.5">
@@ -817,7 +826,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       setLocalSettings({ ...localSettings, storeBannerText: e.target.value })
                     }
                     placeholder="Текст баннера в верхней строке сайта"
-                    className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-medium text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                    className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-medium text-[#2D3A4E] bg-[#E3E8EF]"
                   />
                   <button
                     type="button"
@@ -833,8 +842,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         description: 'Текст рекламного объявления или акции, бегущий или отображаемый в шапке на всех страницах.',
                       })
                     }
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                     title="Редактировать в модальном окне"
+                    aria-label="Редактировать в модальном окне"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
@@ -848,17 +858,17 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
         <div className="neu-inset rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-3.5 bg-[#E3E8EF] border border-transparent">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-[#5F6ED0]" />
+              <Sparkles className="w-3.5 h-3.5 text-[#4B59BB]" />
               Вкладка «Консьерж»: Описание и перечень услуг
             </h4>
-            <span className="text-[10px] font-extrabold text-[#5F6ED0] neu-button px-2.5 py-1 rounded-lg bg-[#E3E8EF] border border-white/80">
+            <span className="text-[11px] font-extrabold text-[#4B59BB] neu-button px-2.5 py-1 rounded-lg bg-[#E3E8EF] border border-white/80">
               Модальное окно • Вкладка 1
             </span>
           </div>
 
           <div className="space-y-3 text-xs">
             <div>
-              <label className="block text-[11px] font-bold text-[#5C6B80] mb-1.5">
+              <label className="block text-[11px] font-bold text-[#4E5C70] mb-1.5">
                 Приветственное описание консьерж-сервиса (Intro)
               </label>
               <div className="flex items-start gap-2">
@@ -871,7 +881,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   onChange={(e) =>
                     setLocalSettings({ ...localSettings, conciergeDescription: e.target.value })
                   }
-                  className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none resize-none leading-relaxed"
+                  className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] resize-none leading-relaxed"
                 />
                 <button
                   type="button"
@@ -889,15 +899,16 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       description: 'Текст первого экрана в окне консьерж-сервиса, разъясняющий привилегии персонального обслуживания.',
                     })
                   }
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
+                  aria-label="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
 
-            <span className="text-[11px] font-black uppercase text-[#5F6ED0] block pt-1">
+            <span className="text-[11px] font-black uppercase text-[#4B59BB] block pt-1">
               Перечень услуг консьерж-сервиса
             </span>
 
@@ -906,7 +917,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-lg neu-flat-sm flex items-center justify-center text-[#5F6ED0] font-black text-[10px] shrink-0 bg-[#E3E8EF]">
+                    <span className="w-5 h-5 rounded-lg neu-flat-sm flex items-center justify-center text-[#4B59BB] font-black text-[11px] shrink-0 bg-[#E3E8EF]">
                       1
                     </span>
                     <span className="text-[11px] font-black text-[#2D3A4E]">Услуга 1</span>
@@ -914,7 +925,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Заголовок
                   </label>
                   <div className="flex items-center gap-1.5">
@@ -927,7 +938,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           conciergeService1Title: e.target.value,
                         })
                       }
-                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF]"
                     />
                     <button
                       type="button"
@@ -942,8 +953,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Краткое название услуги персонального консьержа.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
+                      aria-label="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -951,7 +963,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Описание
                   </label>
                   <div className="flex items-start gap-1.5">
@@ -964,7 +976,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       onChange={(e) =>
                         setLocalSettings({ ...localSettings, conciergeService1Desc: e.target.value })
                       }
-                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-[11px] text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none resize-none leading-relaxed"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-[11px] text-[#2D3A4E] bg-[#E3E8EF] resize-none leading-relaxed"
                     />
                     <button
                       type="button"
@@ -982,8 +994,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Развернутое описание услуги консьержа.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
+                      aria-label="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -995,7 +1008,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-lg neu-flat-sm flex items-center justify-center text-[#5F6ED0] font-black text-[10px] shrink-0 bg-[#E3E8EF]">
+                    <span className="w-5 h-5 rounded-lg neu-flat-sm flex items-center justify-center text-[#4B59BB] font-black text-[11px] shrink-0 bg-[#E3E8EF]">
                       2
                     </span>
                     <span className="text-[11px] font-black text-[#2D3A4E]">Услуга 2</span>
@@ -1003,7 +1016,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Заголовок
                   </label>
                   <div className="flex items-center gap-1.5">
@@ -1018,7 +1031,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           conciergeService2Title: e.target.value,
                         })
                       }
-                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF]"
                     />
                     <button
                       type="button"
@@ -1034,8 +1047,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Краткое название второй услуги персонального сервиса.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
+                      aria-label="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1043,7 +1057,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Описание
                   </label>
                   <div className="flex items-start gap-1.5">
@@ -1056,7 +1070,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       onChange={(e) =>
                         setLocalSettings({ ...localSettings, conciergeService2Desc: e.target.value })
                       }
-                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-[11px] text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none resize-none leading-relaxed"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-[11px] text-[#2D3A4E] bg-[#E3E8EF] resize-none leading-relaxed"
                     />
                     <button
                       type="button"
@@ -1074,8 +1088,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Развернутое описание услуги консьержа.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
+                      aria-label="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1087,7 +1102,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-lg neu-flat-sm flex items-center justify-center text-[#5F6ED0] font-black text-[10px] shrink-0 bg-[#E3E8EF]">
+                    <span className="w-5 h-5 rounded-lg neu-flat-sm flex items-center justify-center text-[#4B59BB] font-black text-[11px] shrink-0 bg-[#E3E8EF]">
                       3
                     </span>
                     <span className="text-[11px] font-black text-[#2D3A4E]">Услуга 3</span>
@@ -1095,7 +1110,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Заголовок
                   </label>
                   <div className="flex items-center gap-1.5">
@@ -1108,7 +1123,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           conciergeService3Title: e.target.value,
                         })
                       }
-                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF]"
                     />
                     <button
                       type="button"
@@ -1123,8 +1138,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Краткое название третьей услуги персонального сервиса.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
+                      aria-label="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1132,7 +1148,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Описание
                   </label>
                   <div className="flex items-start gap-1.5">
@@ -1145,7 +1161,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       onChange={(e) =>
                         setLocalSettings({ ...localSettings, conciergeService3Desc: e.target.value })
                       }
-                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-[11px] text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none resize-none leading-relaxed"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-[11px] text-[#2D3A4E] bg-[#E3E8EF] resize-none leading-relaxed"
                     />
                     <button
                       type="button"
@@ -1163,8 +1179,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Развернутое описание услуги консьержа.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
+                      aria-label="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1179,15 +1196,15 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
         <div className="neu-inset rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-3.5 bg-[#E3E8EF] border border-transparent">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
-              <Building2 className="w-3.5 h-3.5 text-[#5F6ED0]" />
+              <Building2 className="w-3.5 h-3.5 text-[#4B59BB]" />
               Вкладка «Реквизиты»: Официальные юридические данные
             </h4>
-            <span className="text-[10px] font-extrabold text-[#5F6ED0] neu-button px-2.5 py-1 rounded-lg bg-[#E3E8EF] border border-white/80">
+            <span className="text-[11px] font-extrabold text-[#4B59BB] neu-button px-2.5 py-1 rounded-lg bg-[#E3E8EF] border border-white/80">
               Модальное окно • Вкладка 2
             </span>
           </div>
 
-          <p className="text-[11px] text-[#5C6B80]">
+          <p className="text-[11px] text-[#4E5C70]">
             Данные поля транслируются в карточки реквизитов и копируются клиентами при формировании официальных счетов и договоров.
           </p>
 
@@ -1195,13 +1212,13 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             {/* 1. Organization & Addresses */}
             <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] space-y-3">
               <div className="flex items-center gap-1.5 border-b border-black/5 pb-2">
-                <Building2 className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                <Building2 className="w-3.5 h-3.5 text-[#4B59BB]" />
                 <span className="text-[11px] font-black text-[#2D3A4E]">Организация и адреса</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Юридическое лицо / Организация
                   </label>
                   <div className="flex items-center gap-1.5">
@@ -1212,7 +1229,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         setLocalSettings({ ...localSettings, legalEntityName: e.target.value })
                       }
                       placeholder="ООО «МЭНСТАЙЛ РУС»"
-                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF]"
                     />
                     <button
                       type="button"
@@ -1226,8 +1243,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Полное юридическое наименование компании для договоров и чеков.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
+                      aria-label="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1235,7 +1253,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Руководитель / Генеральный директор
                   </label>
                   <div className="flex items-center gap-1.5">
@@ -1244,7 +1262,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       value={localSettings.ceo || ''}
                       onChange={(e) => setLocalSettings({ ...localSettings, ceo: e.target.value })}
                       placeholder="Смирнов Александр Владимирович"
-                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E] bg-[#E3E8EF]"
                     />
                     <button
                       type="button"
@@ -1258,8 +1276,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'ФИО первого лица компании или индивидуального предпринимателя.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
+                      aria-label="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1267,7 +1286,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Юридический адрес компании
                   </label>
                   <div className="flex items-center gap-1.5">
@@ -1278,7 +1297,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         setLocalSettings({ ...localSettings, legalAddress: e.target.value })
                       }
                       placeholder="125009, г. Москва, Столешников переулок, д. 14, стр. 1, офис 402"
-                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E] bg-[#E3E8EF]"
                     />
                     <button
                       type="button"
@@ -1292,8 +1311,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Адрес места нахождения согласно выписке из ЕГРЮЛ.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
+                      aria-label="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1301,7 +1321,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Система электронного документооборота (ЭДО)
                   </label>
                   <div className="flex items-center gap-1.5">
@@ -1310,7 +1330,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       value={localSettings.edo || ''}
                       onChange={(e) => setLocalSettings({ ...localSettings, edo: e.target.value })}
                       placeholder="Диадок (ID: 2BM-7704829104-770401001), СБИС"
-                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E] bg-[#E3E8EF]"
                     />
                     <button
                       type="button"
@@ -1324,8 +1344,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Оператор и идентификатор участника ЭДО (Диадок, СБИС и др.).',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
+                      aria-label="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1337,13 +1358,13 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             {/* 2. Tax Registration: INN, KPP, OGRN */}
             <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] space-y-3">
               <div className="flex items-center gap-1.5 border-b border-black/5 pb-2">
-                <FileText className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                <FileText className="w-3.5 h-3.5 text-[#4B59BB]" />
                 <span className="text-[11px] font-black text-[#2D3A4E]">Государственная регистрация (ФНС)</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     ИНН
                   </label>
                   <div className="flex items-center gap-1.5">
@@ -1352,7 +1373,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       value={localSettings.inn || ''}
                       onChange={(e) => setLocalSettings({ ...localSettings, inn: e.target.value })}
                       placeholder="7704829104"
-                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-mono font-bold text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-mono font-bold text-[#2D3A4E] bg-[#E3E8EF]"
                     />
                     <button
                       type="button"
@@ -1366,8 +1387,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Идентификационный номер налогоплательщика (10 или 12 цифр).',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
+                      aria-label="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1375,7 +1397,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     КПП
                   </label>
                   <div className="flex items-center gap-1.5">
@@ -1384,7 +1406,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       value={localSettings.kpp || ''}
                       onChange={(e) => setLocalSettings({ ...localSettings, kpp: e.target.value })}
                       placeholder="770401001"
-                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-mono text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-mono text-[#2D3A4E] bg-[#E3E8EF]"
                     />
                     <button
                       type="button"
@@ -1398,8 +1420,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Код причины постановки на учет (9 цифр для юрлиц).',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
+                      aria-label="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1407,7 +1430,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     ОГРН / ОГРНИП
                   </label>
                   <div className="flex items-center gap-1.5">
@@ -1416,7 +1439,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       value={localSettings.ogrn || ''}
                       onChange={(e) => setLocalSettings({ ...localSettings, ogrn: e.target.value })}
                       placeholder="1217700458921"
-                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-mono text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-mono text-[#2D3A4E] bg-[#E3E8EF]"
                     />
                     <button
                       type="button"
@@ -1430,8 +1453,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Основной государственный регистрационный номер (13 или 15 цифр).',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
+                      aria-label="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1443,13 +1467,13 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             {/* 3. Banking: Bank, BIK, Checking, Corr */}
             <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] space-y-3">
               <div className="flex items-center gap-1.5 border-b border-black/5 pb-2">
-                <CreditCard className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                <CreditCard className="w-3.5 h-3.5 text-[#4B59BB]" />
                 <span className="text-[11px] font-black text-[#2D3A4E]">Банковский счет и расчеты</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Банк обслуживания
                   </label>
                   <div className="flex items-center gap-1.5">
@@ -1458,7 +1482,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       value={localSettings.bankName || ''}
                       onChange={(e) => setLocalSettings({ ...localSettings, bankName: e.target.value })}
                       placeholder="ПАО «Сбербанк России», г. Москва"
-                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E] bg-[#E3E8EF]"
                     />
                     <button
                       type="button"
@@ -1472,8 +1496,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Полное фирменное наименование банка и город филиала.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
+                      aria-label="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1481,7 +1506,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     БИК банка
                   </label>
                   <div className="flex items-center gap-1.5">
@@ -1490,7 +1515,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       value={localSettings.bik || ''}
                       onChange={(e) => setLocalSettings({ ...localSettings, bik: e.target.value })}
                       placeholder="044525225"
-                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-mono text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-mono text-[#2D3A4E] bg-[#E3E8EF]"
                     />
                     <button
                       type="button"
@@ -1504,8 +1529,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Банковский идентификационный код (9 цифр).',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
+                      aria-label="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1513,7 +1539,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Расчетный счет (Р/С)
                   </label>
                   <div className="flex items-center gap-1.5">
@@ -1524,7 +1550,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         setLocalSettings({ ...localSettings, checkingAccount: e.target.value })
                       }
                       placeholder="40702810938000012345"
-                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-mono font-bold text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-mono font-bold text-[#2D3A4E] bg-[#E3E8EF]"
                     />
                     <button
                       type="button"
@@ -1538,8 +1564,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: '20-значный расчетный номер счета организации.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
+                      aria-label="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1547,7 +1574,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Корреспондентский счет (К/С)
                   </label>
                   <div className="flex items-center gap-1.5">
@@ -1558,7 +1585,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         setLocalSettings({ ...localSettings, corrAccount: e.target.value })
                       }
                       placeholder="30101810400000000225"
-                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-mono text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-mono text-[#2D3A4E] bg-[#E3E8EF]"
                     />
                     <button
                       type="button"
@@ -1572,8 +1599,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: '20-значный корреспондентский счет банка в Банке России.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
+                      aria-label="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1588,10 +1616,10 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
         <div className="neu-inset rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-3.5 bg-[#E3E8EF] border border-transparent">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
-              <Crown className="w-3.5 h-3.5 text-[#5F6ED0]" />
+              <Crown className="w-3.5 h-3.5 text-[#4B59BB]" />
               Вкладка «Бренд»: Философия, ткани, крой и гарантии
             </h4>
-            <span className="text-[10px] font-extrabold text-[#5F6ED0] neu-button px-2.5 py-1 rounded-lg bg-[#E3E8EF] border border-white/80">
+            <span className="text-[11px] font-extrabold text-[#4B59BB] neu-button px-2.5 py-1 rounded-lg bg-[#E3E8EF] border border-white/80">
               Модальное окно • Вкладка 3
             </span>
           </div>
@@ -1600,11 +1628,11 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             {/* Brand Philosophy */}
             <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] space-y-2">
               <div className="flex items-center gap-1.5">
-                <Crown className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                <Crown className="w-3.5 h-3.5 text-[#4B59BB]" />
                 <span className="text-[11px] font-black text-[#2D3A4E]">Философия бренда</span>
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                   Заголовок блока
                 </label>
                 <div className="flex items-center gap-1.5">
@@ -1614,7 +1642,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     onChange={(e) =>
                       setLocalSettings({ ...localSettings, brandPhilosophyTitle: e.target.value })
                     }
-                    className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                    className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF]"
                   />
                   <button
                     type="button"
@@ -1630,15 +1658,16 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         description: 'Главный заголовок раздела о ценностях и концепции модного дома.',
                       })
                     }
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                     title="Редактировать в модальном окне"
+                    aria-label="Редактировать в модальном окне"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                   Текст манифеста бренда
                 </label>
                 <div className="flex items-start gap-1.5">
@@ -1651,7 +1680,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     onChange={(e) =>
                       setLocalSettings({ ...localSettings, brandPhilosophyText: e.target.value })
                     }
-                    className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none resize-none leading-relaxed"
+                    className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E] bg-[#E3E8EF] resize-none leading-relaxed"
                   />
                   <button
                     type="button"
@@ -1669,8 +1698,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         description: 'Полный текст манифеста и истории бренда во вкладке «О бренде».',
                       })
                     }
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 mt-0.5"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 mt-0.5"
                     title="Редактировать в модальном окне"
+                    aria-label="Редактировать в модальном окне"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
@@ -1683,11 +1713,11 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               {/* Materials */}
               <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] space-y-2">
                 <div className="flex items-center gap-1.5">
-                  <Scissors className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                  <Scissors className="w-3.5 h-3.5 text-[#4B59BB]" />
                   <span className="text-[11px] font-black text-[#2D3A4E]">Материалы и ткани</span>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Заголовок
                   </label>
                   <div className="flex items-center gap-1.5">
@@ -1697,7 +1727,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       onChange={(e) =>
                         setLocalSettings({ ...localSettings, brandMaterialsTitle: e.target.value })
                       }
-                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF]"
                     />
                     <button
                       type="button"
@@ -1711,15 +1741,16 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Краткий заголовок раздела о качестве сырья и производителях тканей.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
+                      aria-label="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Описание
                   </label>
                   <div className="flex items-start gap-1.5">
@@ -1732,7 +1763,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       onChange={(e) =>
                         setLocalSettings({ ...localSettings, brandMaterialsText: e.target.value })
                       }
-                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-[11px] text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none resize-none leading-relaxed"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-[11px] text-[#2D3A4E] bg-[#E3E8EF] resize-none leading-relaxed"
                     />
                     <button
                       type="button"
@@ -1750,8 +1781,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Развернутое описание мануфактур, пряжи и свойств тканей.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 mt-0.5"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 mt-0.5"
                       title="Редактировать в модальном окне"
+                      aria-label="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1762,11 +1794,11 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               {/* Craftsmanship */}
               <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] space-y-2">
                 <div className="flex items-center gap-1.5">
-                  <Award className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                  <Award className="w-3.5 h-3.5 text-[#4B59BB]" />
                   <span className="text-[11px] font-black text-[#2D3A4E]">Крой и пошив</span>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Заголовок
                   </label>
                   <div className="flex items-center gap-1.5">
@@ -1779,7 +1811,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           brandCraftsmanshipTitle: e.target.value,
                         })
                       }
-                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF]"
                     />
                     <button
                       type="button"
@@ -1793,15 +1825,16 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Краткий заголовок раздела о мастерстве сборки и посадке.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                       title="Редактировать в модальном окне"
+                      aria-label="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Описание
                   </label>
                   <div className="flex items-start gap-1.5">
@@ -1817,7 +1850,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           brandCraftsmanshipText: e.target.value,
                         })
                       }
-                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-[11px] text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none resize-none leading-relaxed"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-[11px] text-[#2D3A4E] bg-[#E3E8EF] resize-none leading-relaxed"
                     />
                     <button
                       type="button"
@@ -1835,8 +1868,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                           description: 'Развернутое описание лекал, ручных швов и технологии сборки.',
                         })
                       }
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 mt-0.5"
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80 mt-0.5"
                       title="Редактировать в модальном окне"
+                      aria-label="Редактировать в модальном окне"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1857,7 +1891,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-[#5C6B80] mb-1">
+                <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                   Заголовок блока гарантий
                 </label>
                 <div className="flex items-center gap-1.5">
@@ -1867,7 +1901,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     onChange={(e) =>
                       setLocalSettings({ ...localSettings, brandGuaranteesTitle: e.target.value })
                     }
-                    className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                    className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF]"
                   />
                   <button
                     type="button"
@@ -1883,8 +1917,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         description: 'Заголовок секции гарантий подлинности и сервисных стандартов.',
                       })
                     }
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                     title="Редактировать в модальном окне"
+                    aria-label="Редактировать в модальном окне"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
@@ -1892,12 +1927,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               </div>
 
               <div className="space-y-2 pt-1">
-                <span className="text-[10px] uppercase font-bold text-[#5C6B80] block">
+                <span className="text-[11px] uppercase font-bold text-[#4E5C70] block">
                   Пункты гарантийных обязательств (3 пункта)
                 </span>
 
                 <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-md neu-flat-sm flex items-center justify-center text-success font-bold text-[10px] shrink-0 bg-[#E3E8EF]">
+                  <span className="w-5 h-5 rounded-md neu-flat-sm flex items-center justify-center text-success font-bold text-[11px] shrink-0 bg-[#E3E8EF]">
                     ✓
                   </span>
                   <input
@@ -1908,7 +1943,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     }
                     onChange={(e) => updateGuaranteeItem(0, e.target.value)}
                     placeholder="Пункт гарантии 1"
-                    className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                    className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E] bg-[#E3E8EF]"
                   />
                   <button
                     type="button"
@@ -1924,15 +1959,16 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         description: 'Первое гарантийное обязательство перед клиентом.',
                       })
                     }
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                     title="Редактировать в модальном окне"
+                    aria-label="Редактировать в модальном окне"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-md neu-flat-sm flex items-center justify-center text-success font-bold text-[10px] shrink-0 bg-[#E3E8EF]">
+                  <span className="w-5 h-5 rounded-md neu-flat-sm flex items-center justify-center text-success font-bold text-[11px] shrink-0 bg-[#E3E8EF]">
                     ✓
                   </span>
                   <input
@@ -1943,7 +1979,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     }
                     onChange={(e) => updateGuaranteeItem(1, e.target.value)}
                     placeholder="Пункт гарантии 2"
-                    className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                    className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E] bg-[#E3E8EF]"
                   />
                   <button
                     type="button"
@@ -1959,15 +1995,16 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         description: 'Второе гарантийное обязательство перед клиентом.',
                       })
                     }
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                     title="Редактировать в модальном окне"
+                    aria-label="Редактировать в модальном окне"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-md neu-flat-sm flex items-center justify-center text-success font-bold text-[10px] shrink-0 bg-[#E3E8EF]">
+                  <span className="w-5 h-5 rounded-md neu-flat-sm flex items-center justify-center text-success font-bold text-[11px] shrink-0 bg-[#E3E8EF]">
                     ✓
                   </span>
                   <input
@@ -1978,7 +2015,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     }
                     onChange={(e) => updateGuaranteeItem(2, e.target.value)}
                     placeholder="Пункт гарантии 3"
-                    className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none"
+                    className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E] bg-[#E3E8EF]"
                   />
                   <button
                     type="button"
@@ -1994,8 +2031,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         description: 'Третье гарантийное обязательство перед клиентом.',
                       })
                     }
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                     title="Редактировать в модальном окне"
+                    aria-label="Редактировать в модальном окне"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
@@ -2009,22 +2047,22 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
         <div className="neu-inset rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-3.5 bg-[#E3E8EF] border border-transparent">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
-              <Truck className="w-3.5 h-3.5 text-[#5F6ED0]" />
+              <Truck className="w-3.5 h-3.5 text-[#4B59BB]" />
               Тарифы доставки, порог и срок возврата
             </h4>
-            <span className="text-[10px] font-extrabold text-[#5F6ED0] neu-button px-2.5 py-1 rounded-lg bg-[#E3E8EF] border border-white/80">
+            <span className="text-[11px] font-extrabold text-[#4B59BB] neu-button px-2.5 py-1 rounded-lg bg-[#E3E8EF] border border-white/80">
               Динамический расчет в корзине
             </span>
           </div>
 
-          <p className="text-[11px] text-[#5C6B80]">
+          <p className="text-[11px] text-[#4E5C70]">
             Укажите базовую стоимость курьерской доставки и сумму заказа, начиная с которой доставка автоматически становится бесплатной (0 ₽) в корзине и чекауте.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
             {/* Free Delivery Threshold */}
             <div className="neu-inset p-3 rounded-2xl bg-[#E3E8EF] space-y-1.5">
-              <label className="block text-[10px] font-bold text-[#2D3A4E] mb-1 truncate">
+              <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1 truncate">
                 Порог бесплатной доставки
               </label>
               <div className="flex items-center gap-1.5">
@@ -2040,9 +2078,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         freeDeliveryThreshold: Math.max(0, Number(e.target.value) || 0),
                       })
                     }
-                    className="w-full px-3 py-2 neu-button rounded-xl text-xs font-black text-success bg-[#E3E8EF] focus:outline-none pr-8"
+                    className="w-full px-3 py-2 neu-button rounded-xl text-xs font-black text-success bg-[#E3E8EF] pr-8"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#5C6B80]">
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4E5C70]">
                     ₽
                   </span>
                 </div>
@@ -2062,13 +2100,14 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       unit: '₽',
                     })
                   }
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
+                  aria-label="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <div className="flex items-center justify-between text-[10px] text-[#5C6B80] pt-0.5">
+              <div className="flex items-center justify-between text-[11px] text-[#4E5C70] pt-0.5">
                 <span>Свыше суммы: 0 ₽</span>
                 <span className="font-bold text-success">0 ₽ от порога</span>
               </div>
@@ -2076,7 +2115,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
             {/* Courier Delivery Cost */}
             <div className="neu-inset p-3 rounded-2xl bg-[#E3E8EF] space-y-1.5">
-              <label className="block text-[10px] font-bold text-[#2D3A4E] mb-1 truncate">
+              <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1 truncate">
                 Курьер (базовый тариф)
               </label>
               <div className="flex items-center gap-1.5">
@@ -2092,9 +2131,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         courierDeliveryPrice: Math.max(0, Number(e.target.value) || 0),
                       })
                     }
-                    className="w-full px-3 py-2 neu-button rounded-xl text-xs font-black text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none pr-8"
+                    className="w-full px-3 py-2 neu-button rounded-xl text-xs font-black text-[#2D3A4E] bg-[#E3E8EF] pr-8"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#5C6B80]">
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4E5C70]">
                     ₽
                   </span>
                 </div>
@@ -2114,13 +2153,14 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       unit: '₽',
                     })
                   }
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
+                  aria-label="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <div className="flex items-center justify-between text-[10px] text-[#5C6B80] pt-0.5">
+              <div className="flex items-center justify-between text-[11px] text-[#4E5C70] pt-0.5">
                 <span>До порога</span>
                 <span className="font-semibold text-[#2D3A4E]">Стандарт</span>
               </div>
@@ -2128,7 +2168,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
             {/* Pickup Point Cost */}
             <div className="neu-inset p-3 rounded-2xl bg-[#E3E8EF] space-y-1.5">
-              <label className="block text-[10px] font-bold text-[#2D3A4E] mb-1 truncate">
+              <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1 truncate">
                 Самовывоз из бутика
               </label>
               <div className="flex items-center gap-1.5">
@@ -2144,9 +2184,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         pickupDeliveryPrice: Math.max(0, Number(e.target.value) || 0),
                       })
                     }
-                    className="w-full px-3 py-2 neu-button rounded-xl text-xs font-black text-[#2D3A4E] bg-[#E3E8EF] focus:outline-none pr-8"
+                    className="w-full px-3 py-2 neu-button rounded-xl text-xs font-black text-[#2D3A4E] bg-[#E3E8EF] pr-8"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#5C6B80]">
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4E5C70]">
                     ₽
                   </span>
                 </div>
@@ -2166,13 +2206,14 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       unit: '₽',
                     })
                   }
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
+                  aria-label="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <div className="flex items-center justify-between text-[10px] text-[#5C6B80] pt-0.5">
+              <div className="flex items-center justify-between text-[11px] text-[#4E5C70] pt-0.5">
                 <span>Шоурум бутика</span>
                 <span className="font-bold text-success">
                   {localSettings.pickupDeliveryPrice === 0 ? 'Бесплатно' : `${localSettings.pickupDeliveryPrice} ₽`}
@@ -2182,7 +2223,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
             {/* Return Period */}
             <div className="neu-inset p-3 rounded-2xl bg-[#E3E8EF] space-y-1.5">
-              <label className="block text-[10px] font-bold text-[#2D3A4E] mb-1 truncate">
+              <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1 truncate">
                 Срок возврата & примерки
               </label>
               <div className="flex items-center gap-1.5">
@@ -2198,9 +2239,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         returnPeriodDays: Number(e.target.value) || 14,
                       })
                     }
-                    className="w-full px-3 py-2 neu-button rounded-xl text-xs font-black text-[#5F6ED0] bg-[#E3E8EF] focus:outline-none pr-10"
+                    className="w-full px-3 py-2 neu-button rounded-xl text-xs font-black text-[#4B59BB] bg-[#E3E8EF] pr-10"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#5C6B80]">
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4E5C70]">
                     дн.
                   </span>
                 </div>
@@ -2221,15 +2262,16 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       unit: 'дн.',
                     })
                   }
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#5F6ED0] hover:text-[#4F5DC0] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] hover:text-[#3F4BA6] active:scale-90 transition-all shrink-0 cursor-pointer bg-[#E3E8EF] border border-white/80"
                   title="Редактировать в модальном окне"
+                  aria-label="Редактировать в модальном окне"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <div className="flex items-center justify-between text-[10px] text-[#5C6B80] pt-0.5">
+              <div className="flex items-center justify-between text-[11px] text-[#4E5C70] pt-0.5">
                 <span>В карточках товаров</span>
-                <span className="font-bold text-[#5F6ED0]">{localSettings.returnPeriodDays} дн.</span>
+                <span className="font-bold text-[#4B59BB]">{localSettings.returnPeriodDays} дн.</span>
               </div>
             </div>
           </div>
@@ -2239,15 +2281,15 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
         <div className="neu-inset rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-3.5 bg-[#E3E8EF] border border-transparent">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
-              <Sliders className="w-3.5 h-3.5 text-[#5F6ED0]" />
+              <Sliders className="w-3.5 h-3.5 text-[#4B59BB]" />
               Системные режимы витрины & логистики
             </h4>
-            <span className="text-[10px] font-extrabold text-[#5F6ED0] neu-button px-2.5 py-1 rounded-lg bg-[#E3E8EF] border border-white/80">
+            <span className="text-[11px] font-extrabold text-[#4B59BB] neu-button px-2.5 py-1 rounded-lg bg-[#E3E8EF] border border-white/80">
               Глобальные переключатели
             </span>
           </div>
 
-          <p className="text-[11px] text-[#5C6B80]">
+          <p className="text-[11px] text-[#4E5C70]">
             Управление глобальным статусом онлайн-заказов, скоростной доставкой, автоматическими скидками и режимом капсульного предзаказа.
           </p>
 
@@ -2261,13 +2303,13 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className={`w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center shrink-0 transition-colors ${
-                  localSettings.isStoreOnline ? 'text-[#5F6ED0]' : 'text-[#8C9BAE]'
+                  localSettings.isStoreOnline ? 'text-[#4B59BB]' : 'text-[#8C9BAE]'
                 }`}>
                   <Store className="w-4 h-4" />
                 </div>
                 <div className="space-y-0.5 truncate">
                   <span className="text-xs font-black text-[#2D3A4E] block truncate">Онлайн-витрина</span>
-                  <span className={`text-[10px] font-bold block truncate ${
+                  <span className={`text-[11px] font-bold block truncate ${
                     localSettings.isStoreOnline ? 'text-success' : 'text-warning'
                   }`}>
                     {localSettings.isStoreOnline ? 'Прием заказов активен' : 'Технические работы'}
@@ -2299,13 +2341,13 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className={`w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center shrink-0 transition-colors ${
-                  localSettings.isExpressEnabled ? 'text-[#5F6ED0]' : 'text-[#8C9BAE]'
+                  localSettings.isExpressEnabled ? 'text-[#4B59BB]' : 'text-[#8C9BAE]'
                 }`}>
                   <Clock className="w-4 h-4" />
                 </div>
                 <div className="space-y-0.5 truncate">
                   <span className="text-xs font-black text-[#2D3A4E] block truncate">Экспресс 2 часа</span>
-                  <span className={`text-[10px] font-bold block truncate ${
+                  <span className={`text-[11px] font-bold block truncate ${
                     localSettings.isExpressEnabled ? 'text-success' : 'text-[#8C9BAE]'
                   }`}>
                     {localSettings.isExpressEnabled ? 'Доступна клиентам' : 'Временно отключена'}
@@ -2337,13 +2379,13 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className={`w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center shrink-0 transition-colors ${
-                  localSettings.isAutoDiscount ? 'text-[#5F6ED0]' : 'text-[#8C9BAE]'
+                  localSettings.isAutoDiscount ? 'text-[#4B59BB]' : 'text-[#8C9BAE]'
                 }`}>
                   <Tag className="w-4 h-4" />
                 </div>
                 <div className="space-y-0.5 truncate">
                   <span className="text-xs font-black text-[#2D3A4E] block truncate">Авто-скидки</span>
-                  <span className={`text-[10px] font-bold block truncate ${
+                  <span className={`text-[11px] font-bold block truncate ${
                     localSettings.isAutoDiscount ? 'text-success' : 'text-[#8C9BAE]'
                   }`}>
                     {localSettings.isAutoDiscount ? 'Акции активны' : 'Только базовая цена'}
@@ -2375,14 +2417,14 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className={`w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center shrink-0 transition-colors ${
-                  localSettings.isPreorderMode ? 'text-[#5F6ED0]' : 'text-[#8C9BAE]'
+                  localSettings.isPreorderMode ? 'text-[#4B59BB]' : 'text-[#8C9BAE]'
                 }`}>
                   <Sparkles className="w-4 h-4" />
                 </div>
                 <div className="space-y-0.5 truncate">
                   <span className="text-xs font-black text-[#2D3A4E] block truncate">Предзаказ NEW</span>
-                  <span className={`text-[10px] font-bold block truncate ${
-                    localSettings.isPreorderMode ? 'text-[#5F6ED0]' : 'text-[#8C9BAE]'
+                  <span className={`text-[11px] font-bold block truncate ${
+                    localSettings.isPreorderMode ? 'text-[#4B59BB]' : 'text-[#8C9BAE]'
                   }`}>
                     {localSettings.isPreorderMode ? 'Режим капсулы' : 'Стандартный каталог'}
                   </span>
@@ -2407,19 +2449,19 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
         <div id="admin-security-credentials-card" className="neu-flat p-4 sm:p-5 rounded-3xl space-y-4 border border-white/60">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-[#5F6ED0] shrink-0">
+              <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-[#4B59BB] shrink-0">
                 <KeyRound className="w-5 h-5" />
               </div>
               <div>
                 <h4 className="text-sm font-black text-[#2D3A4E]">Безопасность и учетные данные администратора</h4>
-                <p className="text-[11px] text-[#5C6B80]">Управление логином и паролем для входа в панель управления MANSTYLE</p>
+                <p className="text-[11px] text-[#4E5C70]">Управление логином и паролем для входа в панель управления MANSTYLE</p>
               </div>
             </div>
             <button
               id="admin-storefront-change-creds-btn"
               type="button"
               onClick={() => setIsChangeCredsModalOpen(true)}
-              className="neu-button px-3.5 py-2 rounded-xl text-xs font-black text-[#5F6ED0] hover:text-[#2D3A4E] active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+              className="neu-button px-3.5 py-2 rounded-xl text-xs font-black text-[#4B59BB] hover:text-[#2D3A4E] active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <KeyRound className="w-3.5 h-3.5" />
               <span>Изменить логин и пароль</span>
@@ -2428,15 +2470,15 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
             <div className="neu-inset p-3 rounded-2xl bg-[#E3E8EF] space-y-1">
-              <span className="text-[10px] font-bold text-[#5C6B80] block uppercase tracking-wider">Текущий логин</span>
+              <span className="text-[11px] font-bold text-[#4E5C70] block uppercase tracking-wider">Текущий логин</span>
               <div className="flex items-center gap-1.5 font-black text-sm text-[#2D3A4E]">
-                <UserCheck className="w-4 h-4 text-[#5F6ED0]" />
+                <UserCheck className="w-4 h-4 text-[#4B59BB]" />
                 <span className="truncate">{adminCreds.username}</span>
               </div>
             </div>
 
             <div className="neu-inset p-3 rounded-2xl bg-[#E3E8EF] space-y-1">
-              <span className="text-[10px] font-bold text-[#5C6B80] block uppercase tracking-wider">Статус пароля</span>
+              <span className="text-[11px] font-bold text-[#4E5C70] block uppercase tracking-wider">Статус пароля</span>
               <div className="flex items-center gap-1.5 font-black text-sm text-[#2D3A4E]">
                 <ShieldCheck className="w-4 h-4 text-success" />
                 <span>Защищен (••••••••)</span>
@@ -2444,8 +2486,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             </div>
 
             <div className="neu-inset p-3 rounded-2xl bg-[#E3E8EF] space-y-1">
-              <span className="text-[10px] font-bold text-[#5C6B80] block uppercase tracking-wider">Синхронизация</span>
-              <span className="text-xs font-bold text-[#5C6B80] block truncate">
+              <span className="text-[11px] font-bold text-[#4E5C70] block uppercase tracking-wider">Синхронизация</span>
+              <span className="text-xs font-bold text-[#4E5C70] block truncate">
                 {adminCreds.updatedAt
                   ? new Date(adminCreds.updatedAt).toLocaleDateString('ru-RU', {
                       day: '2-digit',
@@ -2465,17 +2507,17 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
           <button
             type="button"
             onClick={() => setIsClientModalOpen(true)}
-            className="py-3 px-5 neu-inset rounded-2xl text-xs font-bold text-[#5F6ED0] hover:text-[#4F5DC0] flex items-center gap-2 cursor-pointer transition-colors active:scale-95 bg-[#E3E8EF]"
+            className="py-3 px-5 neu-inset rounded-2xl text-xs font-bold text-[#4B59BB] hover:text-[#3F4BA6] flex items-center gap-2 cursor-pointer transition-colors active:scale-95 bg-[#E3E8EF]"
           >
-            <Crown className="w-4 h-4 text-[#5F6ED0]" />
+            <Crown className="w-4 h-4 text-[#4B59BB]" />
             <span>Проверить окно «Бренд & Реквизиты»</span>
           </button>
 
           <button
             type="submit"
-            className="py-3 px-6 neu-inset rounded-2xl text-xs font-black text-[#5F6ED0] hover:text-[#4F5DC0] flex items-center gap-2 cursor-pointer active:scale-95 transition-transform bg-[#E3E8EF]"
+            className="py-3 px-6 neu-inset rounded-2xl text-xs font-black text-[#4B59BB] hover:text-[#3F4BA6] flex items-center gap-2 cursor-pointer active:scale-95 transition-transform bg-[#E3E8EF]"
           >
-            {isSaved ? <Check className="w-4 h-4 text-success" /> : <Save className="w-4 h-4 text-[#5F6ED0]" />}
+            {isSaved ? <Check className="w-4 h-4 text-success" /> : <Save className="w-4 h-4 text-[#4B59BB]" />}
             <span>{isSaved ? 'Сохранено!' : 'Применить настройки к витрине'}</span>
           </button>
         </div>

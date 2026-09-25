@@ -33,11 +33,11 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
     <div className={`space-y-3 pt-2 ${className}`}>
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-xl neu-inset flex items-center justify-center text-[#5F6ED0] bg-[#E3E8EF]">
+          <div className="w-7 h-7 rounded-xl neu-inset flex items-center justify-center text-[#4B59BB] bg-[#E3E8EF]">
             <Clock className="w-4 h-4 stroke-[2.2]" />
           </div>
           <h3 className="text-sm font-bold text-[#2D3A4E] tracking-tight">{title}</h3>
-          <span className="text-[11px] font-bold text-[#5C6B80] neu-photo-badge px-2 py-0.5 rounded-full">
+          <span className="text-[11px] font-bold text-[#4E5C70] neu-photo-badge px-2 py-0.5 rounded-full">
             {recentlyViewed.length}
           </span>
         </div>
@@ -83,7 +83,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
                         e.stopPropagation();
                         onRemoveFromRecentlyViewed(product.id);
                       }}
-                      className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full neu-photo-btn flex items-center justify-center text-[#5C6B80] hover:text-danger transition-transform active:scale-90 z-10"
+                      className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full neu-photo-btn flex items-center justify-center text-[#4E5C70] hover:text-danger transition-transform active:scale-90 z-10"
                       title="Удалить из истории"
                       aria-label="Удалить из истории"
                     >
@@ -98,13 +98,13 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
                         e.stopPropagation();
                         onToggleFavorite(product, e);
                       }}
-                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full neu-photo-btn flex items-center justify-center text-[#5C6B80] hover:text-danger transition-transform active:scale-90 z-10"
+                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full neu-photo-btn flex items-center justify-center text-[#4E5C70] hover:text-danger transition-transform active:scale-90 z-10"
                       title="В избранное"
                       aria-label="В избранное"
                     >
                       <Heart
                         className={`w-3.5 h-3.5 ${
-                          isFav ? 'fill-danger text-danger' : 'text-[#5C6B80]'
+                          isFav ? 'fill-danger text-danger' : 'text-[#4E5C70]'
                         }`}
                       />
                     </button>
@@ -112,7 +112,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
 
                   {/* Badge */}
                   {product.badge && (
-                    <span className="absolute bottom-1.5 left-1.5 neu-photo-badge font-bold text-[9px] uppercase px-2 py-0.5 rounded-full text-[#2D3A4E] z-10">
+                    <span className="absolute bottom-1.5 left-1.5 neu-photo-badge font-bold text-[11px] uppercase px-2 py-0.5 rounded-full text-[#2D3A4E] z-10">
                       {product.badge}
                     </span>
                   )}
@@ -120,10 +120,10 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
 
                 {/* Info */}
                 <div className="space-y-0.5">
-                  <p className="text-[10px] font-bold text-[#5C6B80] uppercase tracking-wider truncate">
+                  <p className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider truncate">
                     {product.categoryLabel}
                   </p>
-                  <h4 className="text-xs font-bold text-[#2D3A4E] truncate leading-tight group-hover:text-[#5F6ED0] transition-colors">
+                  <h4 className="text-xs font-bold text-[#2D3A4E] truncate leading-tight group-hover:text-[#4B59BB] transition-colors">
                     {product.title}
                   </h4>
                 </div>
@@ -136,7 +136,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
                     {product.price.toLocaleString('ru-RU')} ₽
                   </span>
                   {product.originalPrice && (
-                    <span className="text-[9px] text-[#5C6B80] line-through block leading-none">
+                    <span className="text-[11px] text-[#4E5C70] line-through block leading-none">
                       {product.originalPrice.toLocaleString('ru-RU')} ₽
                     </span>
                   )}

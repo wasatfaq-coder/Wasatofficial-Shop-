@@ -158,19 +158,19 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
             {/* Top Header - Sticky */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 p-4 sm:p-5 gap-2 shrink-0 bg-[#E3E8EF]">
               <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="w-10 h-10 rounded-2xl neu-button flex items-center justify-center text-[#5F6ED0] shrink-0">
-                  <Navigation className="w-5 h-5 text-[#5F6ED0]" />
+                <div className="w-10 h-10 rounded-2xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0">
+                  <Navigation className="w-5 h-5 text-[#4B59BB]" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-sm sm:text-base font-black text-[#2D3A4E] leading-tight whitespace-nowrap">
                       Онлайн-трекинг доставки
                     </h3>
-                    <span className="text-[11px] font-mono font-black neu-inset px-2.5 py-0.5 rounded-lg text-[#5F6ED0] bg-[#E3E8EF] whitespace-nowrap shrink-0">
+                    <span className="text-[11px] font-mono font-black neu-inset px-2.5 py-0.5 rounded-lg text-[#4B59BB] bg-[#E3E8EF] whitespace-nowrap shrink-0">
                       № {order.id}
                     </span>
                   </div>
-                  <p className="text-[11px] sm:text-xs text-[#5C6B80] font-medium truncate">
+                  <p className="text-[11px] sm:text-xs text-[#4E5C70] font-medium truncate">
                     Интерактивная карта и статус перемещения курьера
                   </p>
                 </div>
@@ -179,8 +179,9 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
               <button
                 type="button"
                 onClick={onClose}
-                className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#5C6B80] hover:text-[#2D3A4E] cursor-pointer shrink-0 active:scale-95 transition-transform"
+                className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer shrink-0 active:scale-95 transition-transform"
                 title="Закрыть окно"
+                aria-label="Закрыть окно"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -201,10 +202,10 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
               return (
                 <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-[#E3E8EF] space-y-2 border border-white/60">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-black text-[#5C6B80] uppercase tracking-wider">
+                    <span className="text-[11px] font-black text-[#4E5C70] uppercase tracking-wider">
                       Трек-номер отправления (ТК)
                     </span>
-                    <span className="text-[10px] font-bold text-success neu-inset-deep neu-inset-deep-animated px-2 py-0.5 rounded-lg whitespace-nowrap shrink-0 flex items-center gap-1 border border-success/30">
+                    <span className="text-[11px] font-bold text-success neu-inset-deep neu-inset-deep-animated px-2 py-0.5 rounded-lg whitespace-nowrap shrink-0 flex items-center gap-1 border border-success/30">
                       <span className="w-1.5 h-1.5 rounded-full bg-success inline-block animate-ping" />
                       Активен
                     </span>
@@ -217,7 +218,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                     <button
                       type="button"
                       onClick={handleCopyTrack}
-                      className="neu-button px-3 py-1.5 rounded-xl text-xs font-bold text-[#5F6ED0] flex items-center gap-1.5 hover:scale-105 active:scale-95 transition-transform cursor-pointer whitespace-nowrap shrink-0"
+                      className="neu-button px-3 py-1.5 rounded-xl text-xs font-bold text-[#4B59BB] flex items-center gap-1.5 hover:scale-105 active:scale-95 transition-transform cursor-pointer whitespace-nowrap shrink-0"
                       title="Скопировать трек-номер"
                     >
                       <Copy className="w-3.5 h-3.5" />
@@ -247,11 +248,11 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
           return (
             <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-[#E3E8EF] space-y-2 border border-white/60">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-black text-[#5C6B80] uppercase tracking-wider flex items-center gap-1.5">
-                  <Truck className="w-3.5 h-3.5 text-[#5F6ED0]" />
+                <span className="text-[11px] font-black text-[#4E5C70] uppercase tracking-wider flex items-center gap-1.5">
+                  <Truck className="w-3.5 h-3.5 text-[#4B59BB]" />
                   {isPickup ? 'Самовывоз из бутика' : isExpress ? 'Срочная экспресс-доставка' : 'Курьерская служба MANSTYLE'}
                 </span>
-                <span className="text-[10px] font-bold text-success neu-inset-deep neu-inset-deep-animated px-2.5 py-0.5 rounded-lg whitespace-nowrap shrink-0 flex items-center gap-1 border border-success/30">
+                <span className="text-[11px] font-bold text-success neu-inset-deep neu-inset-deep-animated px-2.5 py-0.5 rounded-lg whitespace-nowrap shrink-0 flex items-center gap-1 border border-success/30">
                   <span className="w-1.5 h-1.5 rounded-full bg-success inline-block animate-ping" />
                   {isDelivered ? 'Заказ доставлен' : 'Прямая доставка без трек-номера'}
                 </span>
@@ -269,11 +270,11 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
           <div className="flex flex-col sm:flex-row sm:items-center justify-between z-20 relative px-1 gap-2">
             <div className="flex items-center justify-between sm:justify-start gap-2">
               <span className="text-xs font-extrabold text-[#2D3A4E] flex items-center gap-1.5 whitespace-nowrap">
-                <MapPin className="w-3.5 h-3.5 text-[#5F6ED0] shrink-0" />
+                <MapPin className="w-3.5 h-3.5 text-[#4B59BB] shrink-0" />
                 Карта маршрута курьера
               </span>
               {order.trackingNumber && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-success neu-inset-deep neu-inset-deep-animated px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0 border border-success/30">
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-success neu-inset-deep neu-inset-deep-animated px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0 border border-success/30">
                   <span className="w-1.5 h-1.5 rounded-full bg-success animate-ping shrink-0" />
                   Прямой эфир
                 </span>
@@ -286,6 +287,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                 onClick={() => setZoomLevel((prev) => Math.min(prev + 0.15, 1.4))}
                 className="w-7 h-7 rounded-lg neu-button flex items-center justify-center text-[#2D3A4E] cursor-pointer hover:scale-105 active:scale-95 transition-transform"
                 title="Приблизить"
+                aria-label="Приблизить"
               >
                 <ZoomIn className="w-3.5 h-3.5" />
               </button>
@@ -294,14 +296,15 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                 onClick={() => setZoomLevel((prev) => Math.max(prev - 0.15, 0.85))}
                 className="w-7 h-7 rounded-lg neu-button flex items-center justify-center text-[#2D3A4E] cursor-pointer hover:scale-105 active:scale-95 transition-transform"
                 title="Отдалить"
+                aria-label="Отдалить"
               >
                 <ZoomOut className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
                 onClick={() => setShowTraffic(!showTraffic)}
-                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                  showTraffic ? 'neu-button text-[#5F6ED0]' : 'text-[#5C6B80] hover:text-[#2D3A4E]'
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                  showTraffic ? 'neu-button text-[#4B59BB]' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
                 }`}
                 title="Пробки на дорогах"
               >
@@ -449,17 +452,17 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                         ? 'Курьер в пути к вам'
                         : 'Ожидается передача курьеру'}
                     </p>
-                    <p className="text-[10px] text-[#5C6B80] truncate leading-tight mt-0.5">
+                    <p className="text-[11px] text-[#4E5C70] truncate leading-tight mt-0.5">
                       {order.deliveryAddress || 'ул. Ленина, д. 10, кв. 25, Москва'}
                     </p>
                   </div>
                 </div>
 
                 <div className="text-right shrink-0 pl-2.5 border-l border-[#BAC5D5]/50 whitespace-nowrap">
-                  <span className="font-black text-[#5F6ED0] text-xs sm:text-sm block leading-tight">
+                  <span className="font-black text-[#4B59BB] text-xs sm:text-sm block leading-tight">
                     {isDelivered ? '0 мин' : `~${estimatedMinutes} мин`}
                   </span>
-                  <span className="text-[9px] text-[#5C6B80] font-bold block leading-tight mt-0.5">
+                  <span className="text-[11px] text-[#4E5C70] font-bold block leading-tight mt-0.5">
                     {isDelivered ? 'Вручено' : 'Ожидаемое время'}
                   </span>
                 </div>
@@ -485,11 +488,11 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                   <div className="min-w-0 flex-1 space-y-0.5">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-black text-[#2D3A4E] truncate">Почта России</span>
-                      <span className="text-[10px] font-bold text-blue-700 neu-flat px-1.5 py-0.5 rounded-lg bg-blue-50 whitespace-nowrap shrink-0">
+                      <span className="text-[11px] font-bold text-blue-700 neu-flat px-1.5 py-0.5 rounded-lg bg-blue-50 whitespace-nowrap shrink-0">
                         1-й класс
                       </span>
                     </div>
-                    <p className="text-[11px] text-[#5C6B80] truncate">
+                    <p className="text-[11px] text-[#4E5C70] truncate">
                       Доставка в почтовое отделение связи РФ
                     </p>
                   </div>
@@ -521,12 +524,12 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
             return (
               <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-[#E3E8EF] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border border-white/70">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-11 h-11 rounded-2xl neu-flat flex items-center justify-center bg-white text-[#5F6ED0] shrink-0 font-black text-sm border border-white/90">
+                  <div className="w-11 h-11 rounded-2xl neu-flat flex items-center justify-center bg-white text-[#4B59BB] shrink-0 font-black text-sm border border-white/90">
                     MS
                   </div>
                   <div className="min-w-0 flex-1 space-y-0.5">
                     <span className="text-xs font-black text-[#2D3A4E] truncate">Бутик MANSTYLE</span>
-                    <p className="text-[11px] text-[#5C6B80] truncate">
+                    <p className="text-[11px] text-[#4E5C70] truncate">
                       Выдача заказов &bull; Персональный стилист и примерка
                     </p>
                   </div>
@@ -543,10 +546,10 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                         onShowToast(`Открыт чат поддержки по заказу #${order?.id || ''}`, 'info');
                       }
                     }}
-                    className="flex-1 sm:flex-initial py-2 px-4 rounded-xl neu-button text-[#2D3A4E] hover:text-[#5F6ED0] hover:scale-105 active:scale-95 transition-transform cursor-pointer flex items-center justify-center gap-1.5 text-xs font-bold whitespace-nowrap"
+                    className="flex-1 sm:flex-initial py-2 px-4 rounded-xl neu-button text-[#2D3A4E] hover:text-[#4B59BB] hover:scale-105 active:scale-95 transition-transform cursor-pointer flex items-center justify-center gap-1.5 text-xs font-bold whitespace-nowrap"
                     title="Написать консультанту бутика"
                   >
-                    <MessageSquare className="w-3.5 h-3.5 text-[#5F6ED0] shrink-0" />
+                    <MessageSquare className="w-3.5 h-3.5 text-[#4B59BB] shrink-0" />
                     <span>Консьерж бутика</span>
                   </button>
                 </div>
@@ -557,7 +560,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
           return (
             <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-[#E3E8EF] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border border-white/70">
               <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="w-11 h-11 rounded-2xl neu-flat flex items-center justify-center bg-white text-[#5F6ED0] shrink-0 font-black text-sm border border-white/90">
+                <div className="w-11 h-11 rounded-2xl neu-flat flex items-center justify-center bg-white text-[#4B59BB] shrink-0 font-black text-sm border border-white/90">
                   АС
                 </div>
                 <div className="min-w-0 flex-1 space-y-0.5">
@@ -565,11 +568,11 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                     <span className="text-xs font-black text-[#2D3A4E] truncate">
                       {isExpress ? 'Иван (Экспресс)' : 'Алексей Смирнов'}
                     </span>
-                    <span className="text-[10px] font-bold text-warning neu-flat px-1.5 py-0.5 rounded-lg bg-warning-soft whitespace-nowrap shrink-0">
+                    <span className="text-[11px] font-bold text-warning neu-flat px-1.5 py-0.5 rounded-lg bg-warning-soft whitespace-nowrap shrink-0">
                       ★ 4.96
                     </span>
                   </div>
-                  <p className="text-[11px] text-[#5C6B80] truncate">
+                  <p className="text-[11px] text-[#4E5C70] truncate">
                     {isExpress ? 'Срочный курьер ManStyle' : 'Курьер ManStyle • Lada Largus (о742ве777)'}
                   </p>
                 </div>
@@ -580,7 +583,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                   <a
                     href="tel:+79165550199"
                     onClick={() => onShowToast('Вызов курьера: +7 (916) 555-01-99', 'info')}
-                    className="flex-1 sm:flex-initial py-2 px-3 rounded-xl neu-button text-[#5F6ED0] hover:scale-105 active:scale-95 transition-transform cursor-pointer flex items-center justify-center gap-1.5 text-xs font-bold whitespace-nowrap"
+                    className="flex-1 sm:flex-initial py-2 px-3 rounded-xl neu-button text-[#4B59BB] hover:scale-105 active:scale-95 transition-transform cursor-pointer flex items-center justify-center gap-1.5 text-xs font-bold whitespace-nowrap"
                     title="Позвонить курьеру (+7 916 555-01-99)"
                   >
                     <Phone className="w-3.5 h-3.5 shrink-0" />
@@ -597,10 +600,10 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                       onShowToast(`Открыт чат поддержки по заказу #${order?.id || ''}`, 'info');
                     }
                   }}
-                  className="flex-1 sm:flex-initial py-2 px-3 rounded-xl neu-button text-[#2D3A4E] hover:text-[#5F6ED0] hover:scale-105 active:scale-95 transition-transform cursor-pointer flex items-center justify-center gap-1.5 text-xs font-bold whitespace-nowrap"
+                  className="flex-1 sm:flex-initial py-2 px-3 rounded-xl neu-button text-[#2D3A4E] hover:text-[#4B59BB] hover:scale-105 active:scale-95 transition-transform cursor-pointer flex items-center justify-center gap-1.5 text-xs font-bold whitespace-nowrap"
                   title="Написать в чат поддержки по заказу"
                 >
-                  <MessageSquare className="w-3.5 h-3.5 text-[#5F6ED0] shrink-0" />
+                  <MessageSquare className="w-3.5 h-3.5 text-[#4B59BB] shrink-0" />
                   <span>Чат по заказу</span>
                 </button>
               </div>
@@ -612,10 +615,10 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
         <div className="neu-inset rounded-2xl p-4 bg-[#E3E8EF] space-y-3 border border-white/60">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-[#5F6ED0]" />
+              <Clock className="w-3.5 h-3.5 text-[#4B59BB]" />
               Статусы этапов доставки
             </h4>
-            <span className="text-[10px] font-bold text-[#5C6B80] whitespace-nowrap shrink-0">
+            <span className="text-[11px] font-bold text-[#4E5C70] whitespace-nowrap shrink-0">
               {deliveryStages.length} контрольных этапа
             </span>
           </div>
@@ -642,8 +645,8 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                       isCompleted
                         ? 'bg-success text-white'
                         : isActive
-                        ? 'neu-inset-deep text-[#5F6ED0] bg-[#E3E8EF] border border-[#5F6ED0]'
-                        : 'neu-button text-[#5C6B80]'
+                        ? 'neu-inset-deep text-[#4B59BB] bg-[#E3E8EF] border border-[#5F6ED0]'
+                        : 'neu-button text-[#4E5C70]'
                     }`}
                   >
                     {isCompleted ? <CheckCircle className="w-3.5 h-3.5" /> : idx + 1}
@@ -651,23 +654,23 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
 
                   <div className="flex-1 min-w-0 space-y-0.5">
                     <div className="flex items-start justify-between gap-2 text-xs">
-                      <span className={`font-extrabold leading-snug flex-1 min-w-0 ${isActive ? 'text-[#5F6ED0]' : 'text-[#2D3A4E]'}`}>
+                      <span className={`font-extrabold leading-snug flex-1 min-w-0 ${isActive ? 'text-[#4B59BB]' : 'text-[#2D3A4E]'}`}>
                         {step.title}
                       </span>
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-lg whitespace-nowrap shrink-0 ${
+                        className={`text-[11px] font-bold px-2 py-0.5 rounded-lg whitespace-nowrap shrink-0 ${
                           isCompleted
                             ? 'text-success bg-success-soft border border-success/25'
                             : isActive
-                            ? 'neu-inset-deep text-[#5F6ED0] bg-[#E3E8EF] border border-[#5F6ED0]/50'
-                            : 'text-[#5C6B80] bg-[#DDE3EC] border border-[#BAC5D5]/50'
+                            ? 'neu-inset-deep text-[#4B59BB] bg-[#E3E8EF] border border-[#5F6ED0]/50'
+                            : 'text-[#4E5C70] bg-[#DDE3EC] border border-[#BAC5D5]/50'
                         }`}
                       >
                         {step.time}
                       </span>
                     </div>
                     {step.desc && (
-                      <p className="text-[11px] text-[#5C6B80] leading-snug">{step.desc}</p>
+                      <p className="text-[11px] text-[#4E5C70] leading-snug">{step.desc}</p>
                     )}
                   </div>
                 </div>
@@ -691,7 +694,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                 onShowToast('Геопозиция курьера обновлена со спутника ГЛОНАСС/GPS', 'success');
               }, 600);
             }}
-            className="neu-button py-2.5 px-4 rounded-xl text-xs font-extrabold text-[#5F6ED0] flex items-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95 transition-transform whitespace-nowrap disabled:opacity-50"
+            className="neu-button py-2.5 px-4 rounded-xl text-xs font-extrabold text-[#4B59BB] flex items-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95 transition-transform whitespace-nowrap disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingGps ? 'animate-spin' : ''}`} />
             <span>{isRefreshingGps ? 'Синхронизация...' : 'Обновить геопозицию'}</span>
