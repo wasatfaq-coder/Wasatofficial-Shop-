@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { isPreorderVariant } from '../utils/inventory';
 import {
   User,
   Phone,
@@ -444,6 +445,9 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                 <p className="text-xs font-bold text-[#2D3A4E] truncate">{item.product.title}</p>
                 <p className="text-[11px] text-[#4E5C70]">
                   Размер: {item.selectedSize} / Цвет: {item.selectedColor}
+                  {isPreorderVariant(item.product, item.selectedColor, item.selectedSize, storefrontSettings?.isPreorderMode === true) && (
+                    <span className="font-bold text-accent"> • Предзаказ</span>
+                  )}
                 </p>
               </div>
               <div className="text-right shrink-0">

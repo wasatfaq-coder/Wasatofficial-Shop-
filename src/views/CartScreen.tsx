@@ -15,7 +15,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { CartItem, Product, ActiveTab, AppliedPromoInfo } from '../types';
-import { getVariantStock, getProductTotalStock } from '../utils/inventory';
+import { getVariantStock, getProductTotalStock, getOrderableStock } from '../utils/inventory';
 import { CartRemoveConfirmModal } from '../components/CartRemoveConfirmModal';
 import { QuickOrderModal } from '../components/QuickOrderModal';
 import { NotConfigured } from '../components/NotConfigured';
@@ -39,6 +39,8 @@ interface CartScreenProps {
   storefrontSettings?: import('../types').StorefrontSettings;
   /** What is missing for checkout (e.g. «Способы доставки»); null when checkout is possible */
   checkoutBlocker?: string | null;
+  /** Admin → «Витрина» → «Предзаказ»: sold-out variants can be preordered */
+  preorderMode?: boolean;
 }
 
 export const CartScreen: React.FC<CartScreenProps> = ({
@@ -59,11 +61,16 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   onCompleteOrder,
   storefrontSettings,
   checkoutBlocker = null,
+  preorderMode = false,
 }) => {
   const [promoInput, setPromoInput] = useState('');
   const [itemToRemove, setItemToRemove] = useState<CartItem | null>(null);
   const [editingVariantItemId, setEditingVariantItemId] = useState<string | null>(null);
   const [isQuickOrderOpen, setIsQuickOrderOpen] = useState(false);
+  // Lines whose quantity is no longer available (sold out while in the cart)
+  const unavailableCount = cartItems.filter(
+    (item) => item.quantity > getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode)
+  ).length;
   const [isClearCartConfirmOpen, setIsClearCartConfirmOpen] = useState(false);
 
   // Calculate totals
@@ -186,7 +193,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
       <div className="space-y-3">
         {cartItems.map((item, itemIdx) => {
           const isFav = favorites.includes(item.product.id);
-          const availableStock = getVariantStock(item.product, item.selectedColor, item.selectedSize);
+          const inStock = getVariantStock(item.product, item.selectedColor, item.selectedSize);
+          const availableStock = getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode);
+          const isPreorder = inStock === 0 && availableStock > 0;
           const isAtMaxStock = item.quantity >= availableStock;
           const isEditingVariant = editingVariantItemId === item.id;
 
@@ -245,9 +254,17 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                       <SlidersHorizontal className="w-3 h-3 text-accent" />
                     </button>
 
-                    <span className="text-[11px] font-semibold text-[#4E5C70]">
-                      {availableStock <= 2 ? `Осталось: ${availableStock} шт.` : `В наличии: ${availableStock} шт.`}
-                    </span>
+                    {isPreorder ? (
+                      <span className="text-[11px] font-bold text-accent">Предзаказ</span>
+                    ) : availableStock === 0 ? (
+                      <span className="text-[11px] font-bold text-danger">Нет в наличии</span>
+                    ) : item.quantity > availableStock ? (
+                      <span className="text-[11px] font-bold text-danger">Доступно: {availableStock} шт.</span>
+                    ) : (
+                      <span className="text-[11px] font-semibold text-[#4E5C70]">
+                        {availableStock <= 2 ? `Осталось: ${availableStock} шт.` : `В наличии: ${availableStock} шт.`}
+                      </span>
+                    )}
                   </div>
 
                   <p className="text-sm font-extrabold text-[#2D3A4E] pt-0.5">
@@ -279,14 +296,20 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                           if (item.quantity < availableStock) {
                             onUpdateQuantity(item.id, item.quantity + 1);
                           } else {
-                            onShowToast(`Достигнут максимум наличия (${availableStock} шт.)`, 'info');
+                            onShowToast(`Достигнут максимум (${availableStock} шт.)`, 'info');
                           }
                         }}
                         disabled={isAtMaxStock}
                         className={`w-6 h-6 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] transition-opacity cursor-pointer ${
                           isAtMaxStock ? 'opacity-30 cursor-not-allowed' : 'hover:text-accent'
                         }`}
-                        title={isAtMaxStock ? `На складе всего ${availableStock} шт.` : 'Добавить'}
+                        title={
+                          isAtMaxStock
+                            ? isPreorder
+                              ? `Предзаказ — не больше ${availableStock} шт.`
+                              : `На складе всего ${availableStock} шт.`
+                            : 'Добавить'
+                        }
                         aria-label="Увеличить количество"
                       >
                         <Plus className="w-3 h-3 stroke-[2.5]" />
@@ -344,7 +367,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                         const colorHex = typeof c === 'object' && c !== null ? (c as any).hex : undefined;
                         const isCurrent = colorName === item.selectedColor;
                         const colStock = getVariantStock(item.product, colorName, item.selectedSize);
-                        const isOutOfStock = colStock <= 0;
+                        const isOutOfStock = colStock <= 0 && !preorderMode;
 
                         return (
                           <button
@@ -386,7 +409,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                       {item.product.sizes.map((sz, szIdx) => {
                         const isCurrent = sz === item.selectedSize;
                         const szStock = getVariantStock(item.product, item.selectedColor, sz);
-                        const isOutOfStock = szStock <= 0;
+                        const isOutOfStock = szStock <= 0 && !preorderMode;
 
                         return (
                           <button
@@ -423,14 +446,18 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                       <span className="shrink-0">Наличие:</span>
                       <span
                         className={`truncate font-extrabold ${
-                          availableStock === 0
+                          isPreorder
+                            ? 'text-accent'
+                            : availableStock === 0
                             ? 'text-danger'
                             : availableStock <= 2
                             ? 'text-warning'
                             : 'text-success'
                         }`}
                       >
-                        {availableStock === 0
+                        {isPreorder
+                          ? 'Предзаказ'
+                          : availableStock === 0
                           ? 'Нет в наличии'
                           : availableStock <= 2
                           ? `Осталось мало (${availableStock} шт.)`
@@ -558,6 +585,11 @@ export const CartScreen: React.FC<CartScreenProps> = ({
 
         {/* Action Buttons: 1-Click Quick Order + Full Checkout */}
         <div className="space-y-2">
+          {unavailableCount > 0 && (
+            <p className="neu-inset rounded-2xl p-3 text-[11px] font-bold text-danger bg-danger-soft">
+              Часть товаров закончилась: уменьшите количество или удалите их из корзины ({unavailableCount}).
+            </p>
+          )}
           {checkoutBlocker && (
             <NotConfigured
               title={checkoutBlocker}
@@ -566,9 +598,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
           )}
           <button
             onClick={() => setActiveTab('checkout')}
-            disabled={Boolean(checkoutBlocker)}
+            disabled={Boolean(checkoutBlocker) || unavailableCount > 0}
             className={`w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-              !checkoutBlocker
+              !checkoutBlocker && unavailableCount === 0
                 ? 'neu-button-accent btn-confirm-order active:neu-inset-deep active:scale-[0.98] cursor-pointer'
                 : 'neu-inset text-[#4E5C70] cursor-not-allowed'
             }`}
@@ -580,7 +612,8 @@ export const CartScreen: React.FC<CartScreenProps> = ({
           <button
             type="button"
             onClick={() => setIsQuickOrderOpen(true)}
-            className="w-full py-2.5 rounded-2xl neu-button font-bold text-xs text-accent flex items-center justify-center transition-all active:scale-[0.98] cursor-pointer"
+            disabled={unavailableCount > 0}
+            className="w-full py-2.5 rounded-2xl neu-button font-bold text-xs text-accent flex items-center justify-center transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span>Быстрый заказ в 1 клик</span>
           </button>

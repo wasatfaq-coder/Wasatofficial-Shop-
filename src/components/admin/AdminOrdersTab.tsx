@@ -1237,6 +1237,9 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                             <span className="text-[11px] text-[#4E5C70] shrink-0">
                               ({it.selectedColor}, {it.selectedSize})
                             </span>
+                            {it.isPreorder && (
+                              <span className="text-[11px] font-black text-accent shrink-0">Предзаказ</span>
+                            )}
                           </div>
                           <div className="text-right shrink-0">
                             <span className="font-bold text-accent whitespace-nowrap">

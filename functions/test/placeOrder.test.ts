@@ -111,6 +111,34 @@ describe('placeOrderCore', () => {
     expect((await db.collection('orders').get()).size).toBe(1);
   });
 
+  test('preorder mode accepts sold-out variants without touching stock', async () => {
+    const soldOut = request({ items: [{ productId: 'shirt', color: 'Белый', size: 'L', quantity: 3 }] });
+    await expectOrderError(placeOrderCore(db, soldOut, null), 'failed-precondition', /Недостаточно товара/);
+
+    await db.doc('settings/storefront').set({ isPreorderMode: true }, { merge: true });
+    const order = await placeOrderCore(
+      db,
+      request({
+        items: [
+          { productId: 'shirt', color: 'Белый', size: 'L', quantity: 3 },
+          { productId: 'shirt', color: 'Белый', size: 'M', quantity: 1 },
+        ],
+      }),
+      null
+    );
+    expect(order.items.map((i) => Boolean(i.isPreorder))).toEqual([true, false]);
+    const skus = (await db.doc('products/shirt').get()).data()!.skus as { id: string; stock: number }[];
+    expect(skus.find((s) => s.id === 'shirt-w-l')!.stock).toBe(0);
+    expect(skus.find((s) => s.id === 'shirt-w-m')!.stock).toBe(1);
+
+    // A variant still in stock cannot be oversold even in preorder mode
+    await expectOrderError(
+      placeOrderCore(db, request({ items: [{ productId: 'shirt', color: 'Белый', size: 'M', quantity: 5 }] }), null),
+      'failed-precondition',
+      /Недостаточно товара/
+    );
+  });
+
   test('sums duplicate lines of the same variant when checking stock', async () => {
     await expectOrderError(
       placeOrderCore(

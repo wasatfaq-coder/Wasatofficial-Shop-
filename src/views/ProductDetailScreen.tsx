@@ -36,7 +36,7 @@ import { ProductImageZoomModal, ANGLE_LABELS } from '../components/ProductImageZ
 import { QuickOrderModal } from '../components/QuickOrderModal';
 import { AnimatedFavoriteButton } from '../components/AnimatedFavoriteButton';
 import { ProductReviewsSection } from '../components/ProductReviewsSection';
-import { getVariantStock, getProductSKU, getProductTotalStock } from '../utils/inventory';
+import { getVariantStock, getProductSKU, getProductTotalStock, getOrderableStock } from '../utils/inventory';
 import {
   getProductFabricComposition,
   getProductCareInstructions,
@@ -46,6 +46,8 @@ import { getProductRating } from '../utils/productRating';
 
 interface ProductDetailScreenProps {
   product: Product;
+  /** Admin → «Витрина» → «Предзаказ»: a sold-out variant can be preordered */
+  preorderMode?: boolean;
   isFavorite: boolean;
   cartCount: number;
   recentlyViewed?: Product[];
@@ -89,6 +91,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   onAddToCartWithOptions,
   onSelectProduct,
   onUpdateProduct,
+  preorderMode = false,
   setActiveTab,
   onCompleteOrder,
   onShowToast,
@@ -138,15 +141,18 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   const currentStock = getVariantStock(product, selectedColor, selectedSize);
   const currentSKU = getProductSKU(product, selectedColor, selectedSize);
   const totalStockAcrossAll = getProductTotalStock(product);
+  // Units that can be ordered: the stock, or a preorder limit for a sold-out variant
+  const orderableStock = getOrderableStock(product, selectedColor, selectedSize, preorderMode);
+  const isPreorder = currentStock === 0 && orderableStock > 0;
 
   // Ensure quantity does not exceed available variant stock
   useEffect(() => {
-    if (currentStock > 0) {
-      setQuantity((prev) => (prev > currentStock ? currentStock : prev));
+    if (orderableStock > 0) {
+      setQuantity((prev) => (prev > orderableStock ? orderableStock : prev));
     } else {
       setQuantity(1);
     }
-  }, [selectedColor, selectedSize, currentStock]);
+  }, [selectedColor, selectedSize, orderableStock]);
 
   const selectedColorObj = product?.colors?.find((c) => c.name === selectedColor) || product?.colors?.[0] || { name: 'Основной', hex: '#2D3A4E' };
 
@@ -492,6 +498,11 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
                 <span>Осталось {currentStock} шт.</span>
               </div>
+            ) : isPreorder ? (
+              <div className="neu-flat text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-accent border border-white/60 bg-[#E3E8EF]">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                <span>Предзаказ</span>
+              </div>
             ) : (
               <div className="neu-flat text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-[#4E5C70] border border-white/60 bg-[#E3E8EF]">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#BAC5D5]" />
@@ -504,9 +515,15 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           {currentStock === 0 && (
             <div className="p-2.5 rounded-xl neu-inset bg-[#E3E8EF] border border-white/60 text-[11px] text-[#4E5C70] flex items-center gap-2">
               <Info className="w-4 h-4 text-accent shrink-0" />
-              <span>
-                Размер <strong className="text-[#2D3A4E]">{selectedSize}</strong> в цвете <strong className="text-[#2D3A4E]">{selectedColor}</strong> временно закончился на складе. Попробуйте выбрать другой цвет или размер.
-              </span>
+              {isPreorder ? (
+                <span>
+                  Размера <strong className="text-[#2D3A4E]">{selectedSize}</strong> в цвете <strong className="text-[#2D3A4E]">{selectedColor}</strong> сейчас нет на складе. Его можно заказать заранее: срок поставки сообщит менеджер.
+                </span>
+              ) : (
+                <span>
+                  Размер <strong className="text-[#2D3A4E]">{selectedSize}</strong> в цвете <strong className="text-[#2D3A4E]">{selectedColor}</strong> временно закончился на складе. Попробуйте выбрать другой цвет или размер.
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -518,22 +535,22 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             <div className="neu-inset rounded-full p-1 flex items-center gap-2">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                disabled={quantity <= 1 || currentStock === 0}
+                disabled={quantity <= 1 || orderableStock === 0}
                 className={`w-9 h-9 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] transition-opacity cursor-pointer ${
-                  quantity <= 1 || currentStock === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:text-accent'
+                  quantity <= 1 || orderableStock === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:text-accent'
                 }`}
                 aria-label="Уменьшить количество"
               >
                 <Minus className="w-4 h-4 stroke-[2.5]" />
               </button>
               <span className="text-sm font-bold text-[#2D3A4E] w-6 text-center">
-                {currentStock === 0 ? 0 : quantity}
+                {orderableStock === 0 ? 0 : quantity}
               </span>
               <button
-                onClick={() => setQuantity(Math.min(currentStock, quantity + 1))}
-                disabled={quantity >= currentStock || currentStock === 0}
+                onClick={() => setQuantity(Math.min(orderableStock, quantity + 1))}
+                disabled={quantity >= orderableStock || orderableStock === 0}
                 className={`w-9 h-9 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] transition-opacity cursor-pointer ${
-                  quantity >= currentStock || currentStock === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:text-accent'
+                  quantity >= orderableStock || orderableStock === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:text-accent'
                 }`}
                 aria-label="Увеличить количество"
               >
@@ -544,16 +561,16 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             {/* Action Button: Add to Cart */}
             <button
               onClick={handleAddToCart}
-              disabled={isAdded || currentStock === 0}
+              disabled={isAdded || orderableStock === 0}
               className={`flex-1 py-3.5 px-6 rounded-2xl font-bold text-sm flex items-center justify-center gap-2.5 transition-all duration-300 active:scale-95 cursor-pointer ${
-                currentStock === 0
+                orderableStock === 0
                   ? 'neu-inset bg-slate-200/80 text-slate-400 cursor-not-allowed'
                   : isAdded
                   ? 'bg-success text-white neu-inset'
                   : 'neu-button-accent'
               }`}
             >
-              {currentStock === 0 ? (
+              {orderableStock === 0 ? (
                 <>
                   <X className="w-4 h-4" />
                   <span>Нет в наличии</span>
@@ -566,14 +583,14 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               ) : (
                 <>
                   <ShoppingBag className="w-4 h-4 stroke-[2]" />
-                  <span>В корзину</span>
+                  <span>{isPreorder ? 'Предзаказ' : 'В корзину'}</span>
                 </>
               )}
             </button>
           </div>
 
           {/* Fast 1-Click Order Button */}
-          {currentStock > 0 && (
+          {orderableStock > 0 && (
             <button
               onClick={() => setIsQuickOrderOpen(true)}
               className="w-full py-2.5 px-4 rounded-2xl neu-button text-xs font-bold text-accent hover:scale-101 active:scale-99 transition-all flex items-center justify-center gap-2 cursor-pointer"

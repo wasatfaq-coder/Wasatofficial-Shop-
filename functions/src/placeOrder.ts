@@ -180,6 +180,9 @@ export async function placeOrderCore(
     });
 
     const stockUpdates: { ref: DocumentReference; skus: ProductSKU[] }[] = [];
+    // Admin → «Витрина» → «Предзаказ»: a sold-out variant is ordered without taking it from stock
+    const preorderMode = settings?.isPreorderMode === true;
+    const preorderKeys = new Set<string>(); // productId|skuKey
     for (const [productId, requested] of requestedBySku) {
       const { ref, data: product } = products.get(productId)!;
       const skus = product.skus && product.skus.length > 0 ? product.skus : generateDefaultSKUs(product);
@@ -190,6 +193,10 @@ export async function placeOrderCore(
         if (!sku) {
           throw new OrderError('invalid-argument', `Вариант «${product.title}» (${color}, ${size}) не найден`);
         }
+        if (preorderMode && sku.stock <= 0) {
+          preorderKeys.add(`${productId}|${key}`);
+          continue;
+        }
         if (sku.stock < quantity) {
           throw new OrderError(
             'failed-precondition',
@@ -199,6 +206,11 @@ export async function placeOrderCore(
         sku.stock -= quantity;
       }
       stockUpdates.push({ ref, skus: updatedSkus });
+    }
+    for (const item of cartItems) {
+      if (preorderKeys.has(`${item.product.id}|${skuKey(item.selectedColor, item.selectedSize)}`)) {
+        item.isPreorder = true;
+      }
     }
 
     // ---- Promo & delivery ----

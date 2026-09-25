@@ -79,6 +79,8 @@ export interface CartItem {
   selectedColor: string;
   selectedSize: string;
   quantity: number;
+  /** Ordered while out of stock in preorder mode: not deducted from (or returned to) stock */
+  isPreorder?: boolean;
 }
 
 export interface SavedAddress {
@@ -425,7 +427,8 @@ export interface StorefrontSettings {
   postDeliveryPrice?: number;    // Cost for Russian Post delivery (default: 350)
   isStoreOnline: boolean;
   isExpressEnabled: boolean;
-  isAutoDiscount: boolean;
+  /** Removed from Admin → «Витрина»: never had any effect; may still be stored in Firestore */
+  isAutoDiscount?: boolean;
   isPreorderMode?: boolean;
   lowStockThreshold: number;
   legalEntityName?: string;

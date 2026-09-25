@@ -2243,6 +2243,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         </p>
                         <p className="text-[11px] text-[#4E5C70]">
                           {it.selectedColor}, разм. {it.selectedSize} • {it.quantity} шт.
+                          {it.isPreorder && <span className="font-bold text-accent"> • Предзаказ</span>}
                         </p>
                       </div>
                     </div>
