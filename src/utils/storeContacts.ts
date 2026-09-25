@@ -41,6 +41,12 @@ export function getStoreName(settings?: Partial<StorefrontSettings> | null): str
   return saved;
 }
 
+/** Two-letter monogram of the store name for avatar badges: «Wasat Shop» → «WS» */
+export function storeInitials(name: string): string {
+  const letters = name.trim().split(/\s+/).map((word) => word[0] ?? '').join('');
+  return (letters || name.slice(0, 2)).slice(0, 2).toUpperCase();
+}
+
 /** Store name for code without access to the settings props: read from the cached settings */
 export function currentStoreName(): string {
   return getStoreName(loadStorefrontSettings());

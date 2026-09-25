@@ -4,6 +4,7 @@ import { Product } from '../types';
 import { CATEGORIES } from '../data/products';
 import { RatingBadge } from './RatingBadge';
 import { photoBadgeClass } from '../utils/productBadge';
+import { getProductRating } from '../utils/productRating';
 
 interface AutocompleteSearchProps {
   products: Product[];
@@ -301,7 +302,7 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
 
                     {/* Price & Rating Action */}
                     <div className="text-right shrink-0 space-y-1">
-                      <RatingBadge rating={product.rating} className="ml-auto" />
+                      <RatingBadge rating={getProductRating(product)?.rating} className="ml-auto" />
                       <div>
                         <span className="text-xs font-black text-[#2D3A4E] block">
                           {product.price.toLocaleString('ru-RU')} ₽

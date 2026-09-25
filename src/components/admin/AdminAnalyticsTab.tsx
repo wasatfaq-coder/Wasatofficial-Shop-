@@ -285,12 +285,8 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({
         }
       });
 
-      if (p.usedCount && p.usedCount > realOrdersCount) {
-        realOrdersCount = p.usedCount;
-      }
-      if (p.generatedRevenue && p.generatedRevenue > realRevenue) {
-        realRevenue = p.generatedRevenue;
-      }
+      // Counted from orders only: the stored usedCount / generatedRevenue of template promos held
+      // made-up numbers (e.g. 142 uses with 4 orders in the shop, a 3550% conversion)
 
       const totalActiveOrders = activeOrders.filter((o) => !o.isCancelled).length;
       const conversion =

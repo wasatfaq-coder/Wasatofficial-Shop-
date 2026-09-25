@@ -17,7 +17,6 @@ import {
   ZoomOut,
   Compass,
   Sparkles,
-  RefreshCw,
   Play,
   Pause,
   Mail,
@@ -34,7 +33,7 @@ import {
   isPickupDelivery,
 } from '../utils/deliveryStages';
 import { motion, AnimatePresence } from 'motion/react';
-import { currentStoreName, telHref } from '../utils/storeContacts';
+import { currentStoreName, storeInitials, telHref } from '../utils/storeContacts';
 
 interface DeliveryTrackingMapModalProps {
   order: Order | null;
@@ -55,31 +54,16 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
   onShowToast,
 }) => {
   const [zoomLevel, setZoomLevel] = useState<number>(1);
-  const [isSimulating, setIsSimulating] = useState<boolean>(true);
-  const [courierProgress, setCourierProgress] = useState<number>(0.65); // 0 (warehouse) to 1 (customer)
-  const [activeLayer, setActiveLayer] = useState<'streets' | 'satellite'>('streets');
-  const [showTraffic, setShowTraffic] = useState<boolean>(true);
-  const [estimatedMinutes, setEstimatedMinutes] = useState<number>(22);
-  const [isRefreshingGps, setIsRefreshingGps] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (!isOpen || !isSimulating || order?.status === 'delivered' || order?.isCancelled) return;
-
-    const interval = setInterval(() => {
-      setCourierProgress((prev) => {
-        if (prev >= 0.95) return 0.2;
-        return +(prev + 0.015).toFixed(3);
-      });
-    }, 1500);
-
-    return () => clearInterval(interval);
-  }, [isOpen, isSimulating, order?.status, order?.isCancelled]);
-
-  useEffect(() => {
-    // Dynamic remaining ETA based on courier progress
-    const remaining = Math.max(4, Math.round((1 - courierProgress) * 45));
-    setEstimatedMinutes(remaining);
-  }, [courierProgress]);
+  // A schematic map: there is no live courier location. The marker position follows the
+  // order status only; no made-up ETA, GPS updates or traffic.
+  const STATUS_PROGRESS: Record<string, number> = {
+    accepted: 0.05,
+    assembling: 0.15,
+    in_transit: 0.6,
+    ready: 0.9,
+    delivered: 1,
+  };
+  const courierProgress = order?.isCancelled ? 0 : STATUS_PROGRESS[order?.status ?? ''] ?? 0.05;
 
   // Path coordinates for the SVG route (start: warehouse, end: client destination)
   // Route points: (80, 260) -> (170, 220) -> (240, 160) -> (320, 190) -> (420, 120) -> (500, 90)
@@ -304,16 +288,6 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
               >
                 <ZoomOut className="w-3.5 h-3.5" />
               </button>
-              <button
-                type="button"
-                onClick={() => setShowTraffic(!showTraffic)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                  showTraffic ? 'neu-button text-accent' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
-                }`}
-                title="Пробки на дорогах"
-              >
-                Пробки: {showTraffic ? 'Вкл' : 'Выкл'}
-              </button>
             </div>
           </div>
 
@@ -374,17 +348,6 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                     strokeDasharray="8 4"
                   />
                 </g>
-
-                {/* Traffic Overlay (if enabled) */}
-                {showTraffic && (
-                  <g strokeLinecap="round" opacity="0.85">
-                    <line x1="70" y1="100" x2="70" y2="240" stroke="#10B981" strokeWidth="3" />
-                    <line x1="180" y1="40" x2="180" y2="170" stroke="#10B981" strokeWidth="3" />
-                    <line x1="290" y1="90" x2="290" y2="210" stroke="#F59E0B" strokeWidth="3.5" />
-                    <line x1="190" y1="120" x2="390" y2="120" stroke="#10B981" strokeWidth="3" />
-                    <line x1="410" y1="120" x2="520" y2="120" stroke="#EF4444" strokeWidth="3.5" />
-                  </g>
-                )}
 
                 {/* Delivery Route Path */}
                 <path
@@ -457,17 +420,17 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                         : 'Ожидается передача курьеру'}
                     </p>
                     <p className="text-[11px] text-[#4E5C70] truncate leading-tight mt-0.5">
-                      {order.deliveryAddress || 'ул. Ленина, д. 10, кв. 25, Москва'}
+                      {order.deliveryAddress || 'Адрес не указан'}
                     </p>
                   </div>
                 </div>
 
                 <div className="text-right shrink-0 pl-2.5 border-l border-[#BAC5D5]/50 whitespace-nowrap">
                   <span className="font-black text-accent text-xs sm:text-sm block leading-tight">
-                    {isDelivered ? '0 мин' : `~${estimatedMinutes} мин`}
+                    {isDelivered ? 'Вручено' : isInTransit ? 'В пути' : 'Готовится'}
                   </span>
                   <span className="text-[11px] text-[#4E5C70] font-bold block leading-tight mt-0.5">
-                    {isDelivered ? 'Вручено' : 'Ожидаемое время'}
+                    Схема без геолокации
                   </span>
                 </div>
               </div>
@@ -529,12 +492,12 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
               <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-[#E3E8EF] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border border-white/70">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className="w-11 h-11 rounded-2xl neu-flat flex items-center justify-center bg-white text-accent shrink-0 font-black text-sm border border-white/90">
-                    MS
+                    {storeInitials(currentStoreName())}
                   </div>
                   <div className="min-w-0 flex-1 space-y-0.5">
                     <span className="text-xs font-black text-[#2D3A4E] truncate">Бутик {currentStoreName()}</span>
                     <p className="text-[11px] text-[#4E5C70] truncate">
-                      Выдача заказов &bull; Персональный стилист и примерка
+                      {order.deliveryAddress || 'Выдача заказов'}
                     </p>
                   </div>
                 </div>
@@ -685,23 +648,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
         </div>
 
         {/* Modal Bottom Actions - Sticky Footer */}
-        <div className="p-3.5 sm:px-6 border-t border-[#BAC5D5]/50 flex items-center justify-between gap-2.5 shrink-0 bg-[#E3E8EF]">
-          <button
-            type="button"
-            disabled={isRefreshingGps}
-            onClick={() => {
-              setIsRefreshingGps(true);
-              setTimeout(() => {
-                setIsRefreshingGps(false);
-                setEstimatedMinutes(Math.max(12, estimatedMinutes - 2));
-                onShowToast('Геопозиция курьера обновлена со спутника ГЛОНАСС/GPS', 'success');
-              }, 600);
-            }}
-            className="neu-button py-2.5 px-4 rounded-xl text-xs font-extrabold text-accent flex items-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95 transition-transform whitespace-nowrap disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingGps ? 'animate-spin' : ''}`} />
-            <span>{isRefreshingGps ? 'Синхронизация...' : 'Обновить геопозицию'}</span>
-          </button>
+        <div className="p-3.5 sm:px-6 border-t border-[#BAC5D5]/50 flex items-center justify-end gap-2.5 shrink-0 bg-[#E3E8EF]">
 
           <button
             type="button"

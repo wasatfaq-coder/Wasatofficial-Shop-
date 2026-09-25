@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { motion, AnimatePresence } from 'motion/react';
 import { SecuritySettingsModal } from '../components/SecuritySettingsModal';
-import { currentStoreName, getStoreContacts, getStoreName, telHref } from '../utils/storeContacts';
+import { currentStoreName, getStoreContacts, getStoreName, storeInitials, telHref } from '../utils/storeContacts';
 import { GUEST_USER_PROFILE } from '../data/products';
 import { FAQModal } from '../components/FAQModal';
 import {
@@ -71,8 +71,6 @@ import { calculateRussianPattern, RUSSIAN_SIZE_TABLE_ROWS } from '../utils/russi
 import { useAuth } from '../context/AuthContext';
 import { UserProfile, Order, CartItem, OrderStatusHistoryStep, ActiveTab, SavedAddress, SavedCard, Product, PromoCode, BannerSlide, ChatMessage, StorefrontSettings, AdminCredentials, DeliveryMethod, PickupPoint } from '../types';
 import { formatAddress } from '../utils/addressFormat';
-import { PRODUCTS } from '../data/products';
-import { INITIAL_PROMO_CODES, INITIAL_BANNER_SLIDES, INITIAL_CHAT_MESSAGES } from '../data/marketingAndSupport';
 import { AdminAnalyticsTab } from '../components/admin/AdminAnalyticsTab';
 import { AdminPromoConstructorTab } from '../components/admin/AdminPromoConstructorTab';
 import { AdminBannersTab } from '../components/admin/AdminBannersTab';
@@ -155,7 +153,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   profile,
   allUsers = [],
   orders,
-  products = PRODUCTS,
+  products = [],
   favoritesCount,
   recentlyViewed = [],
   favorites = [],
@@ -168,11 +166,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onOpenSupportChat,
   onUpdateProducts,
   onUpdateOrders,
-  promos = INITIAL_PROMO_CODES,
+  promos = [],
   onUpdatePromos,
-  bannerSlides = INITIAL_BANNER_SLIDES,
+  bannerSlides = [],
   onUpdateBannerSlides,
-  chatMessages = INITIAL_CHAT_MESSAGES,
+  chatMessages = [],
   onSendMessageAsAdmin,
   onClearChat,
   storefrontSettings,
@@ -894,7 +892,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // Storefront & Boutique settings values with defaults
   const storeName = getStoreName(storefrontSettings);
-  const storeSlogan = storefrontSettings?.storeSlogan || 'Бутик мужской одежды и аксессуаров';
+  const storeSlogan = (storefrontSettings?.storeSlogan ?? '').trim();
   // Demo template contacts are never shown to customers (see storeContacts.ts)
   const {
     phone: storePhone,
@@ -902,7 +900,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     telegram: storeTelegram,
     pickupAddress,
   } = getStoreContacts(storefrontSettings);
-  const workingHours = storefrontSettings?.workingHours || 'Ежедневно с 10:00 до 22:00';
+  const workingHours = (storefrontSettings?.workingHours ?? '').trim();
 
   return (
     <div className="space-y-5 pb-28 animate-in fade-in duration-300">
@@ -1444,14 +1442,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </div>
               <div>
                 <h3 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E]">
-                  {storeName} • Флагманский бутик
+                  {storeName}
                 </h3>
-                <p className="text-[11px] text-[#4E5C70] font-medium">{storeSlogan}</p>
+                {storeSlogan && <p className="text-[11px] text-[#4E5C70] font-medium">{storeSlogan}</p>}
               </div>
             </div>
-            <span className="neu-inset px-2.5 py-1 rounded-xl text-[11px] font-black text-success bg-[#E3E8EF]">
-              Открыт
-            </span>
           </div>
 
           <div className="space-y-2 text-xs text-[#2D3A4E] pt-1">
@@ -1464,7 +1459,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               )}
               <div className="flex items-center gap-2 pt-1">
                 <Clock className="w-3.5 h-3.5 text-[#4E5C70] shrink-0" />
-                <span className="text-[11px] text-[#4E5C70] font-medium">{workingHours}</span>
+                <span className="text-[11px] text-[#4E5C70] font-medium">
+                  {workingHours || 'Часы работы: не настроено'}
+                </span>
               </div>
             </div>
 
@@ -1526,7 +1523,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </div>
               <div>
                 <p className="text-sm font-bold text-[#2D3A4E]">Служба поддержки</p>
-                <p className="text-xs text-[#4E5C70]">Помощь и консультации 24/7</p>
+                <p className="text-xs text-[#4E5C70]">Онлайн-чат с магазином</p>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-[#4E5C70]" />
@@ -2515,11 +2512,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-[#E3E8EF] flex items-center justify-between gap-3 border border-white/70">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center bg-white text-accent font-black text-xs shrink-0 border border-white/90">
-                        MS
+                        {storeInitials(storeName)}
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-black text-[#2D3A4E] truncate">Бутик {storeName}</p>
-                        <p className="text-[11px] text-[#4E5C70] truncate">Персональный стилист &bull; Примерочный зал</p>
+                        <p className="text-[11px] text-[#4E5C70] truncate">Выдача заказов</p>
                       </div>
                     </div>
                     {onOpenSupportChat && (
@@ -3855,7 +3852,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                       <Phone className="w-4 h-4" />
                     </a>
                   </div>
-                  <p className="text-[11px] text-[#4E5C70]">{workingHours}</p>
+                  {workingHours && <p className="text-[11px] text-[#4E5C70]">{workingHours}</p>}
                 </div>
                 )}
 

@@ -163,13 +163,9 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                   <h3 className="text-xs sm:text-sm font-extrabold tracking-tight text-[#2D3A4E] truncate">
                     Служба заботы
                   </h3>
-                  <span className="text-[11px] sm:text-[11px] neu-inset bg-[#E3E8EF] text-accent px-2.5 py-0.5 rounded-full font-black border border-white/70 shrink-0">
-                    24/7
-                  </span>
                 </div>
                 <p className="text-[11px] sm:text-[11px] text-[#4E5C70] font-medium flex items-center gap-1.5 truncate">
-                  <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse shrink-0" />
-                  <span className="truncate">Онлайн • Подбор и помощь</span>
+                  <span className="truncate">Ответим здесь, в чате</span>
                 </p>
               </div>
             </div>
@@ -289,7 +285,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                               <div className="flex items-center justify-between">
                                 <span className="text-[11px] font-black text-accent uppercase tracking-wider flex items-center gap-1">
                                   <Sparkles className="w-3 h-3 text-accent" />
-                                  Рекомендация стилиста
+                                  Рекомендация магазина
                                 </span>
                                 <span className="text-[11px] font-black text-[#2D3A4E]">
                                   {msg.productCard.price.toLocaleString('ru-RU')} ₽

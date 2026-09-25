@@ -31,6 +31,7 @@ import {
 import { PromoCode, Product } from '../../types';
 import { CATEGORIES } from '../../data/products';
 import { copyToClipboard } from '../../utils/clipboard';
+import { NotConfigured } from '../NotConfigured';
 
 interface AdminPromoConstructorTabProps {
   promos: PromoCode[];
@@ -1134,6 +1135,9 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
         </div>
 
         <div className="space-y-3 w-full min-w-0">
+          {promos.length === 0 && (
+            <NotConfigured title="Промокоды" hint="Покупатели видят «Промокоды: не настроено»." />
+          )}
           {filteredPromos.map((promo, prIdx) => {
             const isFixed = promo.discountType === 'fixed';
             const discountLabel = isFixed

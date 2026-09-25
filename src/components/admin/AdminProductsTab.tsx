@@ -53,6 +53,7 @@ import {
 import { AdminBulkOperationsModal } from './AdminBulkOperationsModal';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { TextEditModal } from './TextEditModal';
+import { NotConfigured } from '../NotConfigured';
 
 interface AdminProductsTabProps {
   products: Product[];
@@ -467,8 +468,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         colors: formColors,
         skus: formSkus,
         inStock: formInStock && (formSkus.length === 0 || formSkus.some((s) => s.stock > 0)),
-        rating: 5.0,
-        reviewsCount: 1,
+        rating: 0,
+        reviewsCount: 0,
         isNew: true,
       };
 
@@ -723,8 +724,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
           sizes,
           colors,
           skus: [],
-          rating: 4.9,
-          reviewsCount: 8,
+          rating: 0,
+          reviewsCount: 0,
         };
         fullProd.skus = generateDefaultSKUs(fullProd);
         return fullProd;
@@ -963,7 +964,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
       {/* Products List Grid */}
       <div className="space-y-2">
-        {filteredProducts.length === 0 ? (
+        {products.length === 0 ? (
+          <NotConfigured title="Каталог" hint="Добавьте первый товар кнопкой «Добавить товар». Покупатели пока видят «Каталог: не настроено»." />
+        ) : filteredProducts.length === 0 ? (
           <div className="neu-inset rounded-2xl p-8 text-center space-y-1 text-[#4E5C70] bg-[#E3E8EF]">
             <p className="text-xs font-bold text-[#2D3A4E]">Товары не найдены</p>
             <p className="text-[11px]">Попробуйте изменить поисковый запрос или фильтры</p>

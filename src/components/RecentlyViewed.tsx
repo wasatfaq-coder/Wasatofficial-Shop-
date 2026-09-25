@@ -4,6 +4,7 @@ import { Product } from '../types';
 import { RatingBadge } from './RatingBadge';
 import { NeumorphicImage } from './NeumorphicImage';
 import { photoBadgeClass } from '../utils/productBadge';
+import { getProductRating } from '../utils/productRating';
 
 interface RecentlyViewedProps {
   recentlyViewed: Product[];
@@ -142,7 +143,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
                     </span>
                   )}
                 </div>
-                <RatingBadge rating={product.rating} size="sm" />
+                <RatingBadge rating={getProductRating(product)?.rating} size="sm" />
               </div>
             </div>
           );

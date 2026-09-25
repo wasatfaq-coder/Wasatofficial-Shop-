@@ -1,19 +1,20 @@
 import { Product, ProductSKU, CartItem, StockMovementLog, StorefrontSettings } from '../types';
 
-// Contacts and legal details are intentionally empty: real values are entered in
-// Admin → «Витрина». Customer screens hide anything that is not filled in.
+// Everything a customer reads (texts, contacts, legal details) is empty until the owner fills it
+// in Admin → «Витрина»; customer screens hide or mark as «Не настроено» what is not filled in.
+// Only numeric policies keep defaults: pricing and delivery rules need a value.
 export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   storeName: 'Wasat Shop',
-  storeSlogan: 'Бутик премиальной мужской одежды и обуви',
-  storeBannerText: 'Бесплатная экспресс-доставка при заказе от 5 000 ₽',
-  isStoreBannerVisible: true,
-  bannerBadgeText: 'АКЦИЯ',
+  storeSlogan: '',
+  storeBannerText: '',
+  isStoreBannerVisible: false,
+  bannerBadgeText: '',
   phone: '',
   email: '',
   telegram: '',
   whatsapp: '',
   pickupAddress: '',
-  workingHours: 'Ежедневно с 10:00 до 22:00',
+  workingHours: '',
   returnPeriodDays: 14,
   freeDeliveryThreshold: 5000,
   courierDeliveryPrice: 350,
@@ -36,35 +37,22 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   edo: '',
   ceo: '',
 
-  // Concierge Service Defaults
-  conciergeDescription:
-    'Персональный ассистент по стилю и сопровождению заказов. Помощь в выборе размера, бронирование закрытых моделей, организация выездной примерки и консультации стилиста.',
-  conciergeService1Title: 'Персональный подбор капсулы',
-  conciergeService1Desc:
-    'Составление законченного гардероба на сезон или под деловые мероприятия стилистом бутика.',
-  conciergeService2Title: 'Выездная примерка на дом и в офис',
-  conciergeService2Desc:
-    'Курьер доставит смежные размеры и фасоны с ожиданием до 30 минут без предоплаты.',
-  conciergeService3Title: 'Подгонка в ателье бутика',
-  conciergeService3Desc:
-    'Бесплатная корректировка длины брюк и посадки пиджака нашим мастером-портным.',
+  conciergeDescription: '',
+  conciergeService1Title: '',
+  conciergeService1Desc: '',
+  conciergeService2Title: '',
+  conciergeService2Desc: '',
+  conciergeService3Title: '',
+  conciergeService3Desc: '',
 
-  // Brand Philosophy & Guarantees Defaults
-  brandPhilosophyTitle: 'Философия бренда Wasat Shop',
-  brandPhilosophyText:
-    'Wasat Shop — премиальный бутик мужской одежды, основанный на эстетике сдержанной роскоши («Quiet Luxury») и безупречном архитектурном крое. Мы создаем гардероб вне времени, который подчеркивает статус и харизму мужчины без кричащих логотипов.',
-  brandMaterialsTitle: 'Итальянские ткани',
-  brandMaterialsText:
-    'Селективная шерсть Super 150’s от мануфактур Loro Piana и Zegna, длинноволокнистый хлопок Supima и натуральный лен.',
-  brandCraftsmanshipTitle: 'Эталонный крой',
-  brandCraftsmanshipText:
-    'Каждая модель разработана с учетом анатомических особенностей мужской фигуры. Полуручная сборка и безупречные строчки.',
-  brandGuaranteesTitle: 'Стандарты подлинности и гарантии',
-  brandGuaranteesList: [
-    '100% оригинальность и сертификация каждого изделия.',
-    'Расширенная гарантия качества на швы и фурнитуру.',
-    'Примерка перед оплатой и легкий возврат без лишних вопросов.',
-  ],
+  brandPhilosophyTitle: '',
+  brandPhilosophyText: '',
+  brandMaterialsTitle: '',
+  brandMaterialsText: '',
+  brandCraftsmanshipTitle: '',
+  brandCraftsmanshipText: '',
+  brandGuaranteesTitle: '',
+  brandGuaranteesList: [],
 };
 
 const STOREFRONT_STORAGE_KEY = 'manstyle_storefront_settings';

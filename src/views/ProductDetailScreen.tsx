@@ -42,6 +42,7 @@ import {
   getProductCareInstructions,
 } from '../utils/productAttributes';
 import { photoBadgeClass } from '../utils/productBadge';
+import { getProductRating } from '../utils/productRating';
 
 interface ProductDetailScreenProps {
   product: Product;
@@ -109,7 +110,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   const handleAddReview = (newReview: ProductReview) => {
     const existing = product.reviews || [];
     const updatedReviews = [newReview, ...existing];
-    const newCount = (product.reviewsCount || existing.length) + 1;
+    const newCount = updatedReviews.length;
     const totalRatingSum = updatedReviews.reduce((sum, r) => sum + r.rating, 0);
     const newAvgRating = parseFloat((totalRatingSum / updatedReviews.length).toFixed(1));
 
@@ -361,8 +362,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 </span>
               )}
               <RatingBadge
-                rating={product.rating}
-                reviewsCount={product.reviewsCount}
+                rating={getProductRating(product)?.rating}
+                reviewsCount={getProductRating(product)?.count}
                 showLabel
                 size="md"
               />

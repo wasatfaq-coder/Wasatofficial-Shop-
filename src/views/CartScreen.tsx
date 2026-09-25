@@ -18,6 +18,7 @@ import { CartItem, Product, ActiveTab, AppliedPromoInfo } from '../types';
 import { getVariantStock, getProductTotalStock } from '../utils/inventory';
 import { CartRemoveConfirmModal } from '../components/CartRemoveConfirmModal';
 import { QuickOrderModal } from '../components/QuickOrderModal';
+import { NotConfigured } from '../components/NotConfigured';
 
 interface CartScreenProps {
   cartItems: CartItem[];
@@ -36,6 +37,8 @@ interface CartScreenProps {
   onRemovePromo: () => void;
   onCompleteOrder?: (orderData: any) => void;
   storefrontSettings?: import('../types').StorefrontSettings;
+  /** False until the owner adds a delivery method: checkout is not possible then */
+  hasDeliveryMethods?: boolean;
 }
 
 export const CartScreen: React.FC<CartScreenProps> = ({
@@ -55,6 +58,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   onRemovePromo,
   onCompleteOrder,
   storefrontSettings,
+  hasDeliveryMethods = true,
 }) => {
   const [promoInput, setPromoInput] = useState('');
   const [itemToRemove, setItemToRemove] = useState<CartItem | null>(null);
@@ -554,9 +558,20 @@ export const CartScreen: React.FC<CartScreenProps> = ({
 
         {/* Action Buttons: 1-Click Quick Order + Full Checkout */}
         <div className="space-y-2">
+          {!hasDeliveryMethods && (
+            <NotConfigured
+              title="Способы доставки"
+              hint="Оформить заказ можно будет, когда магазин их добавит. Пока доступен заказ в 1 клик."
+            />
+          )}
           <button
             onClick={() => setActiveTab('checkout')}
-            className="w-full py-3.5 rounded-2xl neu-button-accent font-bold text-sm flex items-center justify-center gap-2 transition-all btn-confirm-order active:neu-inset-deep active:scale-[0.98] cursor-pointer"
+            disabled={!hasDeliveryMethods}
+            className={`w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+              hasDeliveryMethods
+                ? 'neu-button-accent btn-confirm-order active:neu-inset-deep active:scale-[0.98] cursor-pointer'
+                : 'neu-inset text-[#4E5C70] cursor-not-allowed'
+            }`}
           >
             <span>Оформить заказ</span>
             <ArrowRight className="w-4 h-4" />

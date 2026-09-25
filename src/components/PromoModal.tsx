@@ -15,8 +15,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PromoCode, CartItem, AppliedPromoInfo } from '../types';
-import { INITIAL_PROMO_CODES } from '../data/marketingAndSupport';
 import { copyToClipboard } from '../utils/clipboard';
+import { NotConfigured } from './NotConfigured';
 
 interface PromoModalProps {
   isOpen: boolean;
@@ -37,7 +37,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
   onRemovePromo,
   cartSubtotal = 0,
   cartItems = [],
-  promos = INITIAL_PROMO_CODES,
+  promos = [],
 }) => {
   const [customInput, setCustomInput] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -237,6 +237,9 @@ export const PromoModal: React.FC<PromoModalProps> = ({
             </h4>
 
             <div className="space-y-3">
+              {activePromos.length === 0 && (
+                <NotConfigured title="Промокоды" hint="Активных промокодов сейчас нет." />
+              )}
               {activePromos.map((coupon) => {
                 const isCurrentActive = appliedPromo?.code.toUpperCase() === coupon.code;
                 const isFixed = coupon.discountType === 'fixed';

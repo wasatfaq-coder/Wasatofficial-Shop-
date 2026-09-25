@@ -14,6 +14,7 @@ import {
   Check,
 } from 'lucide-react';
 import { Product, ProductReview, UserProfile } from '../types';
+import { getProductRating } from '../utils/productRating';
 
 interface ProductReviewsSectionProps {
   product: Product;
@@ -66,36 +67,19 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
 
   const currentColorObj = product.colors.find((c) => c.name === selectedColor) || product.colors[0];
 
-  // Default seed reviews if product has none
-  const reviews: ProductReview[] = product.reviews && product.reviews.length > 0
-    ? product.reviews
-    : [
-        {
-          id: `rev-${product.id}-1`,
-          authorName: 'Александр В.',
-          rating: 5,
-          date: '12 сентября 2026',
-          comment: 'Отличное качество пошива! Ткань приятная к телу, не мнется сильно. Село идеально размер в размер.',
-          sizePurchased: product.sizes[1] || 'L',
-          colorPurchased: product.colors[0]?.name || 'Основной',
-          verifiedPurchase: true,
-          pros: 'Премиальный материал, ровные швы, идеальная посадка',
-          cons: 'Нет',
-          helpfulCount: 14,
-        },
-        {
-          id: `rev-${product.id}-2`,
-          authorName: 'Дмитрий К.',
-          rating: 5,
-          date: '28 августа 2026',
-          comment: 'Беру уже вторую вещь этого бренда. После стирки не садится и цвет не теряет. Очень рекомендую к покупке!',
-          sizePurchased: product.sizes[0] || 'M',
-          colorPurchased: product.colors[1]?.name || product.colors[0]?.name || 'Основной',
-          verifiedPurchase: true,
-          pros: 'Долговечность, стиль, приятная цена по акции',
-          helpfulCount: 9,
-        },
-      ];
+  // Only real reviews; the summary is computed from them (stored rating fields may be template numbers)
+  const reviews: ProductReview[] = product.reviews ?? [];
+  const ratingInfo = getProductRating(product);
+  const recommendShare = reviews.length > 0
+    ? Math.round((reviews.filter((r) => r.rating >= 4).length / reviews.length) * 100)
+    : 0;
+
+  const pluralReviews = (n: number) => {
+    const m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return 'отзыв';
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'отзыва';
+    return 'отзывов';
+  };
 
   const handleToggleHelpful = (reviewId: string) => {
     const isLiked = helpfulLikedIds[reviewId];
@@ -168,12 +152,19 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
         </button>
       </div>
 
+      {!ratingInfo && (
+        <p className="neu-inset rounded-2xl p-3 text-xs font-bold text-[#4E5C70] text-center">
+          Отзывов пока нет. Станьте первым, кто оценит этот товар.
+        </p>
+      )}
+
       {/* Rating Summary Card */}
+      {ratingInfo && (
       <div className="neu-flat rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-2xl neu-inset flex flex-col items-center justify-center shrink-0">
             <span className="text-2xl font-black text-accent leading-none">
-              {product.rating.toFixed(1)}
+              {ratingInfo.rating.toFixed(1)}
             </span>
             <span className="text-[11px] text-[#4E5C70] font-bold mt-1">из 5.0</span>
           </div>
@@ -184,7 +175,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                 <Star
                   key={star}
                   className={`w-4 h-4 ${
-                    star <= Math.round(product.rating)
+                    star <= Math.round(ratingInfo.rating)
                       ? 'fill-amber-400 text-amber-400'
                       : 'text-[#BAC5D5]'
                   }`}
@@ -192,11 +183,11 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
               ))}
             </div>
             <p className="text-xs font-bold text-[#2D3A4E] mt-1">
-              {product.reviewsCount || reviews.length} отзывов от покупателей
+              {ratingInfo.count} {pluralReviews(ratingInfo.count)}
             </p>
             <p className="text-[11px] text-success font-semibold flex items-center gap-1 mt-0.5">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              98% покупателей рекомендуют этот товар
+              {recommendShare}% покупателей оценили на 4–5
             </p>
           </div>
         </div>
@@ -223,6 +214,8 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
           </button>
         </div>
       </div>
+
+      )}
 
       {/* Reviews List */}
       <div className="space-y-3">

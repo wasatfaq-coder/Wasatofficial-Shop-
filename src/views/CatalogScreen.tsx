@@ -27,6 +27,8 @@ import {
   isProductInStock,
   MATERIAL_CATEGORIES,
 } from '../components/CatalogAdvancedFilter';
+import { productRatingValue } from '../utils/productRating';
+import { NotConfigured } from '../components/NotConfigured';
 
 interface CatalogScreenProps {
   products: Product[];
@@ -168,7 +170,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
         // 7. Badges and Ratings
         const matchesNew = !filterState.onlyNew || p.isNew;
         const matchesDiscount = !filterState.onlyDiscount || (p.originalPrice && p.originalPrice > p.price);
-        const matchesRating = p.rating >= filterState.minRating;
+        const matchesRating = productRatingValue(p) >= filterState.minRating;
 
         return (
           matchesCategory &&
@@ -186,7 +188,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
         if (sortBy === 'price-asc') return a.price - b.price;
         if (sortBy === 'price-desc') return b.price - a.price;
         if (sortBy === 'newest') return (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0);
-        return (b.rating || 0) - (a.rating || 0); // popular
+        return productRatingValue(b) - productRatingValue(a); // popular
       });
   }, [
     products,
@@ -519,7 +521,9 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           exit={{ opacity: 0, y: -6 }}
           transition={{ duration: 0.18 }}
         >
-          {filteredProducts.length === 0 ? (
+          {products.length === 0 ? (
+            <NotConfigured title="Каталог" hint="Товары появятся здесь, когда магазин их добавит." />
+          ) : filteredProducts.length === 0 ? (
             <div className="neu-inset rounded-3xl p-8 text-center space-y-3 bg-[#E3E8EF] border border-white/60">
               <div className="w-12 h-12 rounded-2xl neu-button mx-auto flex items-center justify-center text-accent bg-[#E3E8EF]">
                 <SlidersHorizontal className="w-6 h-6 stroke-[1.8]" />
