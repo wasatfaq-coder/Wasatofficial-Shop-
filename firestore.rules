@@ -29,6 +29,14 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
     }
 
+    // settings/server.serverOrdersEnabled: заказы оформляет Cloud Function placeOrder
+    // (Admin SDK, правила не применяются). Клиентам запрещено создавать заказы,
+    // списывать остатки и менять счётчики промокодов напрямую.
+    function serverOrdersEnabled() {
+      let path = /databases/$(database)/documents/settings/server;
+      return exists(path) && get(path).data.get('serverOrdersEnabled', false) == true;
+    }
+
     // Default-deny catch-all
     match /{document=**} {
       allow read, write: if false;
@@ -41,18 +49,22 @@ service cloud.firestore {
     match /products/{productId} {
       allow read: if true;
       allow create, delete: if isAdmin() && isValidId(productId);
-      // Покупатели могут менять только остатки (списание при заказе)
-      // и отзывы/рейтинг. Остальные поля — только администратор.
+      // Покупатели могут оставлять отзывы, а пока заказы не оформляются на сервере —
+      // ещё и списывать остатки. Остальные поля — только администратор.
       allow update: if isAdmin()
-        || onlyChanges(['skus', 'inStock', 'reviews', 'rating', 'reviewsCount']);
+        || onlyChanges(['reviews', 'rating', 'reviewsCount'])
+        || (!serverOrdersEnabled()
+          && onlyChanges(['skus', 'inStock', 'reviews', 'rating', 'reviewsCount']));
     }
 
     match /promos/{promoId} {
       allow read: if true;
       allow create, delete: if isAdmin() && isValidId(promoId);
       // Покупатели могут обновлять только счётчики использования промокода
+      // (и только пока заказы не оформляются на сервере)
       allow update: if isAdmin()
-        || (onlyChanges(['usedCount', 'generatedRevenue', 'commissionEarned'])
+        || (!serverOrdersEnabled()
+          && onlyChanges(['usedCount', 'generatedRevenue', 'commissionEarned'])
           && request.resource.data.get('usedCount', 0) >= resource.data.get('usedCount', 0));
     }
 
@@ -83,10 +95,11 @@ service cloud.firestore {
 
     match /orders/{orderId} {
       allow read: if isAdmin()
-        || (isSignedIn() && resource.data.get('customerUid', null) == request.auth.uid);
+        || (isSignedIn() && resource.data.customerUid == request.auth.uid);
 
       allow create: if isAdmin() || (
-        isValidId(orderId)
+        !serverOrdersEnabled()
+        && isValidId(orderId)
         && request.resource.data.id == orderId
         && request.resource.data.status == 'accepted'
         && request.resource.data.items is list
@@ -108,13 +121,21 @@ service cloud.firestore {
     // ------------------------------------------------------------------
 
     match /chat_messages/{messageId} {
-      // ВНИМАНИЕ: чат пока общий для всех покупателей (нет разделения по
-      // пользователям), поэтому чтение открыто. См. SECURITY.md.
-      allow read: if true;
-      // Покупатель может только создавать свои сообщения (и ответы бота),
-      // но не сообщения от имени администратора и не внутренние заметки.
+      // У каждого покупателя свой диалог: threadId = uid (для гостей — анонимный uid).
+      // Внутренние заметки сотрудников покупателю не видны.
+      // Прямое обращение к полям (не .get() с умолчанием): так правило проверяется
+      // по фильтрам запроса, и список без where('isInternalNote', '==', false) отклоняется.
+      allow read: if isAdmin() || (
+        isSignedIn()
+        && resource.data.threadId == request.auth.uid
+        && resource.data.isInternalNote == false
+      );
+      // Покупатель пишет только в свой диалог, только от себя (и ответы бота),
+      // без внутренних заметок.
       allow create: if isAdmin() || (
-        isValidId(messageId)
+        isSignedIn()
+        && isValidId(messageId)
+        && request.resource.data.get('threadId', null) == request.auth.uid
         && request.resource.data.sender in ['user', 'bot']
         && request.resource.data.get('isInternalNote', false) == false
         && request.resource.data.text is string
@@ -127,13 +148,29 @@ service cloud.firestore {
     // Профили пользователей: свой профиль или администратор
     // ------------------------------------------------------------------
 
+    // Бонусы и заметки менеджера меняет только администратор
+    function adminOnlyProfileFields() {
+      return ['bonusPoints', 'managerNotes', 'tags'];
+    }
+
     match /users/{userId} {
       allow read: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
-      allow create, update: if isAdmin() || (
+      allow create: if isAdmin() || (
         isSignedIn() && request.auth.uid == userId
         && request.resource.data.get('uid', userId) == userId
+        && !request.resource.data.keys().hasAny(adminOnlyProfileFields())
+      );
+      allow update: if isAdmin() || (
+        isSignedIn() && request.auth.uid == userId
+        && request.resource.data.get('uid', userId) == userId
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(adminOnlyProfileFields())
       );
       allow delete: if isAdmin();
+    }
+
+    // Заметки и теги менеджера о покупателе — только администратор
+    match /customer_notes/{userId} {
+      allow read, write: if isAdmin();
     }
 
     // ------------------------------------------------------------------

@@ -28,6 +28,13 @@ import { CartItem, DeliveryMethod, PickupPoint, UserProfile, ActiveTab, AppliedP
 import { INITIAL_DELIVERY_METHODS, INITIAL_PICKUP_POINTS } from '../data/deliveryData';
 import { AddressEditModal } from '../components/AddressEditModal';
 import { formatAddress } from '../utils/addressFormat';
+import {
+  DEFAULT_FREE_DELIVERY_THRESHOLD,
+  calcOrderTotals,
+  calcPromoDiscount,
+  calcSubtotal,
+  getAvailableDeliveryMethods,
+} from '../shared/orderPricing';
 
 interface CheckoutScreenProps {
   cartItems: CartItem[];
@@ -37,10 +44,11 @@ interface CheckoutScreenProps {
     contact: { name: string; phone: string; email: string };
     address: string;
     deliveryMethod: string;
+    deliveryMethodId?: string;
     totalPrice: number;
     paymentMethod?: string;
     usedBonusPoints?: number;
-  }) => void;
+  }) => void | Promise<boolean>;
   setActiveTab: (tab: ActiveTab) => void;
   appliedPromo: AppliedPromoInfo | null;
   onOpenPromoModal: () => void;
@@ -183,49 +191,20 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   const [selectedDelivery, setSelectedDelivery] = useState<string>('courier');
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'sbp' | 'cash'>('card');
 
-  // Calculations
-  const rawSubtotal = cartItems.reduce(
-    (acc, item) => acc + item.product.price * item.quantity,
-    0
-  );
+  // Calculations (shared with the server-side order validation)
+  const pricingLines = cartItems.map((item) => ({
+    productId: item.product.id,
+    category: item.product.category,
+    price: item.product.price,
+    quantity: item.quantity,
+  }));
+  const rawSubtotal = calcSubtotal(pricingLines);
+  const discountAmount = calcPromoDiscount(pricingLines, appliedPromo);
 
-  let discountAmount = 0;
-  if (appliedPromo) {
-    if (appliedPromo.discountType === 'fixed' && appliedPromo.discountValue) {
-      discountAmount = Math.min(rawSubtotal, appliedPromo.discountValue);
-    } else if (appliedPromo.discountPercent) {
-      discountAmount = Math.round((rawSubtotal * appliedPromo.discountPercent) / 100);
-    } else if (appliedPromo.discountValue) {
-      discountAmount = Math.round((rawSubtotal * appliedPromo.discountValue) / 100);
-    }
-  }
-  
-  const freeThreshold = storefrontSettings?.freeDeliveryThreshold ?? 5000;
-  const isExpressAllowed = storefrontSettings?.isExpressEnabled !== false;
+  const freeThreshold = storefrontSettings?.freeDeliveryThreshold ?? DEFAULT_FREE_DELIVERY_THRESHOLD;
 
   const baseDeliveryMethods = deliveryMethods && deliveryMethods.length > 0 ? deliveryMethods : INITIAL_DELIVERY_METHODS;
-  const activeDeliveryMethods = baseDeliveryMethods.filter((d) => d.isActive !== false);
-
-  const availableDeliveryMethods = activeDeliveryMethods.map((d) => {
-    let effectivePrice = d.price;
-    const threshold = d.freeThreshold !== undefined ? d.freeThreshold : freeThreshold;
-    if (threshold > 0 && rawSubtotal >= threshold) {
-      effectivePrice = 0;
-    } else if (d.id === 'courier' && storefrontSettings?.courierDeliveryPrice !== undefined) {
-      effectivePrice = rawSubtotal >= freeThreshold ? 0 : storefrontSettings.courierDeliveryPrice;
-    } else if (d.id === 'pickup' && storefrontSettings?.pickupDeliveryPrice !== undefined) {
-      effectivePrice = storefrontSettings.pickupDeliveryPrice;
-    } else if (d.id === 'post' && storefrontSettings?.postDeliveryPrice !== undefined) {
-      effectivePrice = storefrontSettings.postDeliveryPrice;
-    }
-    return {
-      ...d,
-      price: effectivePrice,
-    };
-  }).filter((d) => {
-    if (d.id === 'express' && !isExpressAllowed) return false;
-    return true;
-  });
+  const availableDeliveryMethods = getAvailableDeliveryMethods(baseDeliveryMethods, storefrontSettings, rawSubtotal);
 
   // Keep selected delivery valid
   React.useEffect(() => {
@@ -241,7 +220,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
     }
   }, [activePickupPoints, selectedPickupPointId]);
 
-  const currentDeliveryObj =
+  const currentDeliveryObj: Pick<DeliveryMethod, 'id' | 'title' | 'price' | 'duration' | 'type'> =
     availableDeliveryMethods.find((d) => d.id === selectedDelivery) || availableDeliveryMethods[0] || {
       id: 'courier',
       title: 'Курьерская доставка',
@@ -250,7 +229,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
     };
   const deliveryFee = currentDeliveryObj.price || 0;
   
-  const totalPrice = Math.max(0, rawSubtotal - discountAmount + deliveryFee);
+  const { total: totalPrice } = calcOrderTotals(pricingLines, appliedPromo, deliveryFee);
 
   const isPickupSelected = selectedDelivery === 'pickup' || currentDeliveryObj.type === 'pickup';
   const isPostSelected = selectedDelivery === 'post' || currentDeliveryObj.type === 'post' || (currentDeliveryObj.title || '').toLowerCase().includes('почт');
@@ -323,15 +302,20 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           }`
         : formattedAddress;
 
-    setTimeout(() => {
-      onCompleteOrder({
+    setTimeout(async () => {
+      const placed = await onCompleteOrder({
         items: cartItems,
         contact: { name, phone, email },
         address: finalOrderAddress,
         deliveryMethod: currentDeliveryObj.title || 'Курьер',
+        deliveryMethodId: currentDeliveryObj.id,
         totalPrice,
         paymentMethod: paymentLabel,
       });
+      // The server may reject the order (e.g. out of stock) — let the user retry
+      if (placed === false) {
+        setIsSubmitting(false);
+      }
     }, 450);
   };
 

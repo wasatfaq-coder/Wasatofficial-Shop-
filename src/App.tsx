@@ -25,6 +25,13 @@ import { getDefaultDeliveryStages, getDefaultHistorySteps, getSynchronizedDelive
 import { formatAddress } from './utils/addressFormat';
 import { useAuth } from './context/AuthContext';
 import {
+  ChatIdentity,
+  createGuestChatIdentity,
+  db,
+  placeOrderOnServer,
+  restoreGuestChatIdentity,
+} from './firebase';
+import {
   subscribeToProducts,
   subscribeToOrders,
   subscribeToPromos,
@@ -46,6 +53,7 @@ import {
   subscribeToDeliveryMethods,
   syncAllDeliveryMethodsToFirestore,
   subscribeToPickupPoints,
+  subscribeToServerConfig,
   syncAllPickupPointsToFirestore,
 } from './utils/firebaseSync';
 
@@ -57,8 +65,26 @@ import { CheckoutScreen } from './views/CheckoutScreen';
 import { ProfileScreen } from './views/ProfileScreen';
 import { FavoritesScreen } from './views/FavoritesScreen';
 import { OrderSuccessScreen } from './views/OrderSuccessScreen';
+import { validatePromo, PricingLine, QUICK_ORDER_DELIVERY_ID } from './shared/orderPricing';
+import { extractColorName, extractSizeName } from './utils/inventory';
+
+// Unique across customers: messages are create-only for customers (see firestore.rules)
+function newChatMessageId(): string {
+  return `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function toPricingLine(item: CartItem): PricingLine {
+  return {
+    productId: item.product.id,
+    category: item.product.category,
+    price: item.product.price,
+    quantity: item.quantity,
+  };
+}
 
 const GUEST_ORDERS_STORAGE_KEY = 'manstyle_guest_orders';
+// v2: the chat is per customer now; don't show the old shared-chat cache
+const CHAT_CACHE_STORAGE_KEY = 'manstyle_chat_messages_v2';
 
 // Guests cannot read orders back from Firestore, so their history lives in this browser
 function loadGuestOrders(): Order[] {
@@ -140,7 +166,7 @@ export default function App() {
 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
     try {
-      const saved = localStorage.getItem('manstyle_chat_messages');
+      const saved = localStorage.getItem(CHAT_CACHE_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -151,11 +177,14 @@ export default function App() {
 
   React.useEffect(() => {
     try {
-      localStorage.setItem('manstyle_chat_messages', JSON.stringify(chatMessages));
+      localStorage.setItem(CHAT_CACHE_STORAGE_KEY, JSON.stringify(chatMessages));
     } catch {}
   }, [chatMessages]);
 
   const [isChatTyping, setIsChatTyping] = useState(false);
+  const [chatIdentity, setChatIdentity] = useState<ChatIdentity | null>(null);
+  // When true, orders are placed and validated by the placeOrder Cloud Function
+  const [serverOrdersEnabled, setServerOrdersEnabled] = useState(false);
   const [storefrontSettings, setStorefrontSettings] = useState<StorefrontSettings>(loadStorefrontSettings);
 
   // Sync storefront settings on custom update event
@@ -366,15 +395,13 @@ export default function App() {
       }
     });
 
+    const unsubServerConfig = subscribeToServerConfig((config) => {
+      setServerOrdersEnabled(config.serverOrdersEnabled === true);
+    });
+
     const unsubSettings = subscribeToStorefrontSettings((loadedSettings) => {
       if (loadedSettings) {
         setStorefrontSettings(loadedSettings);
-      }
-    });
-
-    const unsubChat = subscribeToChatMessages((loadedMsgs) => {
-      if (loadedMsgs) {
-        setChatMessages(loadedMsgs);
       }
     });
 
@@ -405,7 +432,7 @@ export default function App() {
       unsubProds();
       unsubPromos();
       unsubSettings();
-      unsubChat();
+      unsubServerConfig();
       unsubBanners();
       unsubDelivery();
       unsubPickup();
@@ -445,6 +472,39 @@ export default function App() {
     setOrders(loadGuestOrders());
     setAllUsers([]);
   }, [authLoading, isAdmin, currentUser]);
+
+  // 1c. Support chat identity: signed-in customers chat as themselves, guests reuse
+  // an anonymous chat session if they started one earlier (created on first message).
+  React.useEffect(() => {
+    if (authLoading) return;
+    if (currentUser) {
+      setChatIdentity({ uid: currentUser.uid, db, isGuest: false });
+      return;
+    }
+    let cancelled = false;
+    setChatIdentity(null);
+    restoreGuestChatIdentity().then((identity) => {
+      if (!cancelled) setChatIdentity(identity);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, currentUser]);
+
+  // 1d. Chat messages: admins see every thread, customers only their own
+  React.useEffect(() => {
+    if (authLoading) return;
+    if (isAdmin) {
+      return subscribeToChatMessages((loadedMsgs) => setChatMessages(loadedMsgs));
+    }
+    if (chatIdentity) {
+      return subscribeToChatMessages((loadedMsgs) => setChatMessages(loadedMsgs), undefined, {
+        threadId: chatIdentity.uid,
+        db: chatIdentity.db,
+      });
+    }
+    setChatMessages(INITIAL_CHAT_MESSAGES);
+  }, [authLoading, isAdmin, chatIdentity]);
 
   // 2. Sync profile from Firebase Auth user & users collection
   React.useEffect(() => {
@@ -791,64 +851,10 @@ export default function App() {
       return false;
     }
 
-    if (!foundPromo.active) {
-      addToast('Срок действия промокода приостановлен или завершен', 'error');
+    const promoError = validatePromo(foundPromo, cartItems.map(toPricingLine));
+    if (promoError) {
+      addToast(promoError, 'error');
       return false;
-    }
-
-    if (foundPromo.usageLimit && foundPromo.usedCount >= foundPromo.usageLimit) {
-      addToast('Лимит использований данного промокода исчерпан', 'error');
-      return false;
-    }
-
-    if (foundPromo.expiresAt) {
-      // Check standard date formats like "2026-08-31" or "31 августа 2026 г."
-      const expDateClean = foundPromo.expiresAt.toLowerCase();
-      if (foundPromo.expiresAt.includes('-')) {
-        const expTime = new Date(foundPromo.expiresAt).getTime();
-        if (!isNaN(expTime) && expTime < Date.now()) {
-          addToast(`Срок действия промокода ${foundPromo.code} истек`, 'error');
-          return false;
-        }
-      }
-    }
-
-    const subtotal = cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
-    if (foundPromo.minOrderAmount && subtotal < foundPromo.minOrderAmount) {
-      addToast(`Минимальная сумма заказа для промокода ${foundPromo.code}: ${foundPromo.minOrderAmount.toLocaleString('ru-RU')} ₽ (в корзине: ${subtotal.toLocaleString('ru-RU')} ₽)`, 'error');
-      return false;
-    }
-
-    if (foundPromo.applicableCategories && foundPromo.applicableCategories.length > 0) {
-      const hasMatchingCategory = cartItems.some((item) =>
-        foundPromo.applicableCategories!.includes(item.product.category)
-      );
-      if (!hasMatchingCategory && cartItems.length > 0) {
-        addToast(`Промокод ${foundPromo.code} действует только на выбранные категории (рубашки, пиджаки и др.)`, 'error');
-        return false;
-      }
-    }
-
-    if (foundPromo.applicableProductIds && foundPromo.applicableProductIds.length > 0) {
-      const hasMatchingProduct = cartItems.some((item) =>
-        foundPromo.applicableProductIds!.includes(item.product.id)
-      );
-      if (!hasMatchingProduct && cartItems.length > 0) {
-        addToast(`Промокод ${foundPromo.code} действует только на выбранные товары`, 'error');
-        return false;
-      }
-    }
-
-    // Calculate eligible base amount for category/product-restricted coupons
-    let eligibleSubtotal = subtotal;
-    if (foundPromo.applicableProductIds && foundPromo.applicableProductIds.length > 0) {
-      eligibleSubtotal = cartItems
-        .filter((item) => foundPromo.applicableProductIds!.includes(item.product.id))
-        .reduce((acc, item) => acc + item.product.price * item.quantity, 0);
-    } else if (foundPromo.applicableCategories && foundPromo.applicableCategories.length > 0) {
-      eligibleSubtotal = cartItems
-        .filter((item) => foundPromo.applicableCategories!.includes(item.product.category))
-        .reduce((acc, item) => acc + item.product.price * item.quantity, 0);
     }
 
     // Increment used count and update promo state
@@ -867,6 +873,8 @@ export default function App() {
       isReferral: foundPromo.isReferral,
       partnerName: foundPromo.partnerName,
       partnerCommissionPercent: foundPromo.partnerCommissionPercent,
+      applicableCategories: foundPromo.applicableCategories,
+      applicableProductIds: foundPromo.applicableProductIds,
     });
 
     const discountText = isFixed
@@ -883,16 +891,42 @@ export default function App() {
   };
 
   // Support Chat Message Handlers (Live client + automated assistant + admin responses + media)
-  const handleSendMessageFromUser = (text: string, imageUrl?: string) => {
+  const handleSendMessageFromUser = async (text: string, imageUrl?: string) => {
+    // Each customer has a private thread; guests get an anonymous chat identity on first message
+    let identity = chatIdentity;
+    if (!identity) {
+      try {
+        identity = await createGuestChatIdentity();
+        setChatIdentity(identity);
+      } catch (err) {
+        console.error('Guest chat sign-in failed:', err);
+        const code = (err as { code?: string })?.code;
+        // Anonymous sign-in disabled in Firebase Console → guests must use Google sign-in
+        const anonymousDisabled = code === 'auth/operation-not-allowed' || code === 'auth/admin-restricted-operation';
+        addToast(
+          anonymousDisabled
+            ? 'Чтобы написать в поддержку, войдите через Google в разделе «Профиль»'
+            : 'Не удалось подключиться к чату. Проверьте соединение и попробуйте ещё раз.',
+          'error'
+        );
+        return;
+      }
+    }
+    const thread = {
+      threadId: identity.uid,
+      threadName: userProfile.name || userProfile.email || currentUser?.email || 'Гость',
+    };
+
     const userMsg: ChatMessage = {
-      id: `msg-${Date.now()}`,
+      id: newChatMessageId(),
       sender: 'user',
       text,
       imageUrl,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      ...thread,
     };
     setChatMessages((prev) => [...prev, userMsg]);
-    saveChatMessageToFirestore(userMsg);
+    saveChatMessageToFirestore(userMsg, identity.db);
     setIsChatTyping(true);
 
     setTimeout(() => {
@@ -912,13 +946,14 @@ export default function App() {
       }
 
       const botMsg: ChatMessage = {
-        id: `msg-${Date.now() + 1}`,
+        id: newChatMessageId(),
         sender: 'bot',
         text: replyText,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        ...thread,
       };
       setChatMessages((prev) => [...prev, botMsg]);
-      saveChatMessageToFirestore(botMsg);
+      saveChatMessageToFirestore(botMsg, identity.db);
     }, 1000);
   };
 
@@ -929,10 +964,12 @@ export default function App() {
     tag?: ChatMessage['tag'],
     isInternalNote?: boolean,
     productCard?: ChatMessage['productCard'],
-    orderStatusUpdate?: ChatMessage['orderStatusUpdate']
+    orderStatusUpdate?: ChatMessage['orderStatusUpdate'],
+    thread?: Pick<ChatMessage, 'threadId' | 'threadName'>
   ) => {
     const adminMsg: ChatMessage = {
-      id: `msg-${Date.now()}`,
+      id: newChatMessageId(),
+      ...thread,
       sender: 'admin',
       text,
       imageUrl,
@@ -971,28 +1008,38 @@ export default function App() {
     }
   };
 
-  const handleClearChat = async () => {
-    setChatMessages([]);
-    await clearChatMessagesInFirestore();
-    addToast('История чата поддержки очищена', 'info');
+  /** threadId: undefined — whole chat, null — legacy messages without a thread, string — one customer */
+  const handleClearChat = async (threadId?: string | null) => {
+    setChatMessages((prev) =>
+      threadId === undefined ? [] : prev.filter((m) => (m.threadId ?? null) !== threadId)
+    );
+    await clearChatMessagesInFirestore(threadId);
+    addToast(threadId === undefined ? 'История чата поддержки очищена' : 'Диалог очищен', 'info');
   };
 
+  // Admins load every thread; in the storefront chat they only see their own
+  const adminOwnThread = isAdmin ? chatMessages.filter((m) => m.threadId === currentUser?.uid) : [];
+  const customerChatMessages = isAdmin
+    ? adminOwnThread.length > 0
+      ? adminOwnThread
+      : INITIAL_CHAT_MESSAGES
+    : chatMessages;
+
   // Complete Order
-  const handleCompleteOrder = (orderData: {
+  type CompleteOrderData = {
     items: CartItem[];
     contact?: { name: string; phone: string; email?: string };
     address?: string;
     deliveryMethod?: string;
+    deliveryMethodId?: string; // absent for the one-click quick order
     totalPrice?: number;
     paymentMethod?: string;
     customerName?: string;
     customerPhone?: string;
     customerEmail?: string;
-  }) => {
-    // Orders are create-only for customers, so IDs must not collide with existing ones
-    const newOrderId = `MS-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
-    const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
 
+  const resolveOrderDetails = (orderData: CompleteOrderData) => {
     const customerName =
       orderData.contact?.name ||
       orderData.customerName ||
@@ -1014,6 +1061,73 @@ export default function App() {
       (userProfile.address ? formatAddress(userProfile.address) : 'Москва, Пресненская наб., д. 12');
     const deliveryMethod = orderData.deliveryMethod || 'Курьерская доставка';
     const paymentMethod = orderData.paymentMethod || 'Карта (онлайн)';
+    return { customerName, customerPhone, customerEmail, deliveryAddress, deliveryMethod, paymentMethod };
+  };
+
+  const finishOrder = (order: Pick<Order, 'id' | 'totalPrice' | 'deliveryMethod' | 'deliveryAddress'>) => {
+    setCartItems([]);
+    setAppliedPromo(null);
+    setLatestOrder({
+      id: order.id,
+      totalPrice: order.totalPrice,
+      deliveryMethod: order.deliveryMethod,
+      deliveryAddress: order.deliveryAddress,
+    });
+    addToast(`Заказ № ${order.id} успешно оформлен!`, 'success');
+    setActiveTab('order-success');
+  };
+
+  // Server-validated checkout: the placeOrder Cloud Function recalculates prices,
+  // delivery and promo discount and deducts stock in a transaction.
+  const completeOrderOnServer = async (orderData: CompleteOrderData): Promise<boolean> => {
+    const details = resolveOrderDetails(orderData);
+    try {
+      const { order } = await placeOrderOnServer({
+        items: orderData.items.map((item) => ({
+          productId: item.product.id,
+          color: extractColorName(item.selectedColor),
+          size: extractSizeName(item.selectedSize),
+          quantity: item.quantity,
+        })),
+        deliveryMethodId: orderData.deliveryMethodId || QUICK_ORDER_DELIVERY_ID,
+        deliveryAddress: details.deliveryAddress,
+        paymentMethod: details.paymentMethod,
+        promoCode: orderData.deliveryMethodId ? appliedPromo?.code : undefined,
+        contact: {
+          name: details.customerName,
+          phone: details.customerPhone,
+          email: details.customerEmail || undefined,
+        },
+      });
+      setOrders((prev) => [order, ...prev.filter((o) => o.id !== order.id)]);
+      if (!currentUser) {
+        saveGuestOrder(order);
+      }
+      finishOrder(order);
+      return true;
+    } catch (err) {
+      console.error('placeOrder failed:', err);
+      // HttpsError messages from placeOrder are user-facing; transport errors are just "internal"
+      const message =
+        err instanceof Error && err.message && err.message !== 'internal'
+          ? err.message
+          : 'Не удалось оформить заказ. Проверьте соединение и попробуйте ещё раз.';
+      addToast(message, 'error');
+      return false;
+    }
+  };
+
+  const handleCompleteOrder = (orderData: CompleteOrderData): Promise<boolean> =>
+    serverOrdersEnabled ? completeOrderOnServer(orderData) : Promise.resolve(completeOrderLocally(orderData));
+
+  // Legacy client-side checkout, used until the Cloud Function is deployed and enabled
+  const completeOrderLocally = (orderData: CompleteOrderData): boolean => {
+    // Orders are create-only for customers, so IDs must not collide with existing ones
+    const newOrderId = `MS-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
+    const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const { customerName, customerPhone, customerEmail, deliveryAddress, deliveryMethod, paymentMethod } =
+      resolveOrderDetails(orderData);
     const totalPrice = orderData.totalPrice ?? 0;
     const paymentStatus: Order['paymentStatus'] = paymentMethod.toLowerCase().includes('получении')
       ? 'paid_on_delivery'
@@ -1095,16 +1209,8 @@ export default function App() {
     const modifiedProducts = updatedProducts.filter((p) => orderedProductIds.has(p.id));
     saveModifiedProductsToFirestore(modifiedProducts);
 
-    setCartItems([]);
-    setAppliedPromo(null);
-    setLatestOrder({
-      id: newOrderId,
-      totalPrice,
-      deliveryMethod,
-      deliveryAddress,
-    });
-    addToast(`Заказ № ${newOrderId} успешно оформлен!`, 'success');
-    setActiveTab('order-success');
+    finishOrder({ id: newOrderId, totalPrice, deliveryMethod, deliveryAddress });
+    return true;
   };
 
   // Product Selection handler
@@ -1194,7 +1300,7 @@ export default function App() {
           onClose={() => setIsSupportChatOpen(false)}
           onOpenMySizes={() => setIsMySizesModalOpen(true)}
           onNavigateTab={(tab) => setActiveTab(tab)}
-          messages={chatMessages}
+          messages={customerChatMessages}
           onSendMessage={handleSendMessageFromUser}
           isTyping={isChatTyping}
           onApplyPromo={handleApplyPromo}

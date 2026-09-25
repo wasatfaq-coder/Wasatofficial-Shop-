@@ -66,7 +66,7 @@ interface ProductDetailScreenProps {
     address: string;
     deliveryMethod: string;
     totalPrice: number;
-  }) => void;
+  }) => void | Promise<boolean>;
   onShowToast?: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
@@ -181,7 +181,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     }, 1000);
   };
 
-  const handleQuickOrderSuccess = (details: { name: string; phone: string; address: string }) => {
+  const handleQuickOrderSuccess = async (details: { name: string; phone: string; address: string }) => {
     if (onCompleteOrder) {
       const quickItem: CartItem = {
         id: `cart-quick-${Date.now()}`,
@@ -190,13 +190,14 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
         selectedSize,
         quantity,
       };
-      onCompleteOrder({
+      const placed = await onCompleteOrder({
         items: [quickItem],
         contact: { name: details.name, phone: details.phone },
         address: details.address || 'Уточняется оператором',
         deliveryMethod: 'Экспресс курьер (1 клик)',
         totalPrice: product.price * quantity,
       });
+      if (placed === false) return;
       if (onShowToast) {
         onShowToast(`Заказ успешно оформлен! Менеджер свяжется с вами по номеру ${details.phone}`, 'success');
       }

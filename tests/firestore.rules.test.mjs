@@ -133,6 +133,8 @@ describe('orders', () => {
     const db = customer('alice');
     await assertSucceeds(getDocs(query(collection(db, 'orders'), where('customerUid', '==', 'alice'))));
     await assertFails(getDoc(doc(db, 'orders/MS-bob')));
+    await assertFails(getDocs(query(collection(db, 'orders'), where('customerUid', '==', 'bob'))));
+    await assertFails(getDocs(query(collection(db, 'orders'), where('status', '==', 'accepted'))));
     await assertFails(getDocs(collection(db, 'orders')));
   });
 
@@ -144,19 +146,88 @@ describe('orders', () => {
   });
 });
 
-describe('chat', () => {
-  test('customer can post user messages only', async () => {
-    await assertSucceeds(setDoc(doc(guest(), 'chat_messages/m1'), { id: 'm1', sender: 'user', text: 'Привет' }));
-    await assertFails(setDoc(doc(guest(), 'chat_messages/m2'), { id: 'm2', sender: 'admin', text: 'fake' }));
-    await assertFails(
-      setDoc(doc(guest(), 'chat_messages/m3'), { id: 'm3', sender: 'user', text: 'x', isInternalNote: true })
+describe('server-side orders enabled (settings/server)', () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled((ctx) =>
+      setDoc(doc(ctx.firestore(), 'settings/server'), { serverOrdersEnabled: true })
     );
-    await assertSucceeds(setDoc(doc(owner(), 'chat_messages/m4'), { id: 'm4', sender: 'admin', text: 'ok' }));
   });
 
-  test('only admin deletes messages', async () => {
-    await assertFails(deleteDoc(doc(guest(), 'chat_messages/m1')));
-    await assertSucceeds(deleteDoc(doc(owner(), 'chat_messages/m1')));
+  test('clients can no longer create orders, deduct stock or bump promo counters', async () => {
+    await assertFails(setDoc(doc(guest(), 'orders/MS-9'), order({ id: 'MS-9' })));
+    await assertFails(setDoc(doc(customer('alice'), 'orders/MS-10'), order({ id: 'MS-10', customerUid: 'alice' })));
+    await assertFails(updateDoc(doc(guest(), 'products/p1'), { skus: [{ size: 'M', stock: 0 }], inStock: false }));
+    await assertFails(updateDoc(doc(guest(), 'promos/promo1'), { usedCount: 1 }));
+  });
+
+  test('reviews and admin actions still work', async () => {
+    await assertSucceeds(updateDoc(doc(customer(), 'products/p1'), { reviews: [{ rating: 5 }], reviewsCount: 1 }));
+    await assertSucceeds(setDoc(doc(owner(), 'orders/MS-11'), order({ id: 'MS-11' })));
+  });
+
+  test('only admin can toggle the flag', async () => {
+    await assertFails(setDoc(doc(customer(), 'settings/server'), { serverOrdersEnabled: false }));
+    await assertSucceeds(getDoc(doc(guest(), 'settings/server')));
+  });
+});
+
+describe('chat', () => {
+  const msg = (id, overrides = {}) => ({ id, sender: 'user', text: 'Привет', isInternalNote: false, ...overrides });
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'chat_messages/a1'), msg('a1', { threadId: 'alice' }));
+      await setDoc(doc(db, 'chat_messages/a2'), msg('a2', { threadId: 'alice', sender: 'admin', isInternalNote: true }));
+      await setDoc(doc(db, 'chat_messages/b1'), msg('b1', { threadId: 'bob' }));
+    });
+  });
+
+  test('customer reads only own thread without internal notes', async () => {
+    const db = customer('alice');
+    const ownThread = query(
+      collection(db, 'chat_messages'),
+      where('threadId', '==', 'alice'),
+      where('isInternalNote', '==', false)
+    );
+    const snap = await assertSucceeds(getDocs(ownThread));
+    if (snap.size !== 1) throw new Error(`expected 1 message, got ${snap.size}`);
+    await assertFails(getDoc(doc(db, 'chat_messages/b1')));
+    await assertFails(getDoc(doc(db, 'chat_messages/a2')));
+    await assertFails(getDocs(query(collection(db, 'chat_messages'), where('threadId', '==', 'alice'))));
+    await assertFails(getDocs(collection(db, 'chat_messages')));
+  });
+
+  test('unauthenticated visitors cannot read or post', async () => {
+    await assertFails(getDocs(collection(guest(), 'chat_messages')));
+    await assertFails(setDoc(doc(guest(), 'chat_messages/g1'), msg('g1', { threadId: 'x' })));
+  });
+
+  test('anonymous guest can chat in own thread', async () => {
+    const anon = env.authenticatedContext('anon-1', { firebase: { sign_in_provider: 'anonymous' } }).firestore();
+    await assertSucceeds(setDoc(doc(anon, 'chat_messages/g2'), msg('g2', { threadId: 'anon-1' })));
+    await assertSucceeds(getDoc(doc(anon, 'chat_messages/g2')));
+  });
+
+  test('customer cannot post into another thread, as admin, or as an internal note', async () => {
+    const db = customer('alice');
+    await assertSucceeds(setDoc(doc(db, 'chat_messages/m1'), msg('m1', { threadId: 'alice' })));
+    await assertSucceeds(setDoc(doc(db, 'chat_messages/m1b'), msg('m1b', { threadId: 'alice', sender: 'bot' })));
+    await assertFails(setDoc(doc(db, 'chat_messages/m2'), msg('m2', { threadId: 'bob' })));
+    await assertFails(setDoc(doc(db, 'chat_messages/m3'), msg('m3', { threadId: 'alice', sender: 'admin' })));
+    await assertFails(
+      setDoc(doc(db, 'chat_messages/m4'), msg('m4', { threadId: 'alice', isInternalNote: true }))
+    );
+    await assertFails(setDoc(doc(db, 'chat_messages/a1'), msg('a1', { threadId: 'alice', text: 'edited' })));
+  });
+
+  test('admin reads all threads and manages messages', async () => {
+    await assertSucceeds(getDocs(collection(owner(), 'chat_messages')));
+    await assertSucceeds(
+      setDoc(doc(owner(), 'chat_messages/m5'), msg('m5', { threadId: 'alice', sender: 'admin', isInternalNote: true }))
+    );
+    await assertFails(deleteDoc(doc(customer('alice'), 'chat_messages/a1')));
+    await assertSucceeds(deleteDoc(doc(owner(), 'chat_messages/a1')));
   });
 });
 
@@ -171,6 +242,26 @@ describe('users & admins', () => {
   test('customer writes only own profile', async () => {
     await assertSucceeds(setDoc(doc(customer('alice'), 'users/alice'), { uid: 'alice', name: 'A' }));
     await assertFails(setDoc(doc(customer('alice'), 'users/bob'), { uid: 'bob', name: 'B' }));
+  });
+
+  test('customer cannot grant themselves bonus points or edit manager notes', async () => {
+    const db = customer('carol');
+    await assertFails(setDoc(doc(db, 'users/carol'), { uid: 'carol', bonusPoints: 99999 }));
+    await assertSucceeds(setDoc(doc(db, 'users/carol'), { uid: 'carol', name: 'C' }));
+    await env.withSecurityRulesDisabled((ctx) =>
+      setDoc(doc(ctx.firestore(), 'users/carol'), { bonusPoints: 100 }, { merge: true })
+    );
+    await assertFails(updateDoc(doc(db, 'users/carol'), { bonusPoints: 99999 }));
+    await assertFails(updateDoc(doc(db, 'users/carol'), { managerNotes: 'VIP' }));
+    // merge-save of editable fields keeps admin-owned fields untouched
+    await assertSucceeds(setDoc(doc(db, 'users/carol'), { name: 'Carol' }, { merge: true }));
+    await assertSucceeds(updateDoc(doc(owner(), 'users/carol'), { bonusPoints: 500 }));
+  });
+
+  test('manager notes are admin-only', async () => {
+    await assertFails(getDoc(doc(customer('alice'), 'customer_notes/alice')));
+    await assertFails(setDoc(doc(customer('alice'), 'customer_notes/alice'), { managerNotes: 'x' }));
+    await assertSucceeds(setDoc(doc(owner(), 'customer_notes/alice'), { managerNotes: 'x' }));
   });
 
   test('nobody can grant admin rights from the client', async () => {

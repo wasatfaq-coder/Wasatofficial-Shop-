@@ -241,6 +241,12 @@ export interface Order {
   customerPhone?: string;
   customerEmail?: string;
   customerUid?: string; // Firebase Auth uid of the customer (absent for guest orders)
+  // Set by the placeOrder Cloud Function (server-validated orders)
+  placedVia?: 'server';
+  createdAt?: string; // ISO timestamp
+  promoCode?: string;
+  discountAmount?: number;
+  deliveryFee?: number;
 }
 
 export type ActiveTab = 'home' | 'catalog' | 'cart' | 'favorites' | 'profile' | 'product-detail' | 'checkout' | 'order-success';
@@ -325,6 +331,8 @@ export interface ChatMessage {
   sender: 'bot' | 'user' | 'agent' | 'admin';
   text: string;
   timestamp: string;
+  threadId?: string; // Chat identity uid of the customer this message belongs to
+  threadName?: string; // Customer display name/email, shown in the admin inbox
   actionKey?: 'size_calc' | 'catalog' | 'orders';
   unreadByAdmin?: boolean;
   imageUrl?: string; // Photo attachment (e.g., return item defect, tag, size check)
@@ -375,6 +383,8 @@ export interface AppliedPromoInfo {
   discountPercent?: number;
   discountType?: 'percent' | 'fixed';
   discountValue?: number;
+  applicableCategories?: string[];
+  applicableProductIds?: string[];
   isReferral?: boolean;
   partnerName?: string;
   partnerCommissionPercent?: number;

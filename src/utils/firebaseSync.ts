@@ -9,6 +9,7 @@ import {
   where,
   limit,
   writeBatch,
+  Firestore,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Product, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, UserProfile, BannerSlide, DeliveryMethod, PickupPoint } from '../types';
@@ -18,6 +19,7 @@ import { INITIAL_DELIVERY_METHODS, INITIAL_PICKUP_POINTS } from '../data/deliver
 import { INITIAL_FIRESTORE_USERS } from '../data/initialCustomers';
 import { DEFAULT_STOREFRONT_SETTINGS } from './inventory';
 import { compressBase64Image } from './imageUpload';
+import { SERVER_CONFIG_DOC_ID, ServerConfig } from '../shared/orderApi';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages, isTransportCompanyDelivery } from './deliveryStages';
 
 /**
@@ -683,46 +685,69 @@ export async function deleteBannerFromFirestore(bannerId: string) {
 }
 
 /**
+ * Server feature flags (settings/server), e.g. whether orders go through Cloud Functions.
+ */
+export function subscribeToServerConfig(onUpdate: (config: ServerConfig) => void) {
+  return onSnapshot(
+    doc(db, 'settings', SERVER_CONFIG_DOC_ID),
+    (snap) => onUpdate(snap.exists() ? (snap.data() as ServerConfig) : {}),
+    (error) => {
+      console.warn('Server config subscription warning:', error);
+      onUpdate({});
+    }
+  );
+}
+
+/**
  * 5. REAL-TIME SUPPORT CHAT MESSAGES
  */
+/** Numeric timestamp prefix of ids like `msg-1727000000000` or `msg-1727000000000-ab12`. */
+function chatMessageOrder(msg: ChatMessage): number {
+  const match = msg.id.match(/\d+/);
+  return match ? Number(match[0]) : 0;
+}
+
+/**
+ * Admins (no `thread`) receive every message; customers pass their chat identity and
+ * receive only their own thread without internal staff notes (enforced by firestore.rules).
+ */
 export function subscribeToChatMessages(
-  onUpdate: (messages: ChatMessage[]) => void,
-  onError?: (error: unknown) => void
+  onUpdate: (msgs: ChatMessage[]) => void,
+  onError?: (error: unknown) => void,
+  thread?: { threadId: string; db: Firestore }
 ) {
+  if (thread) {
+    const threadQuery = query(
+      collection(thread.db, 'chat_messages'),
+      where('threadId', '==', thread.threadId),
+      where('isInternalNote', '==', false)
+    );
+    return onSnapshot(
+      threadQuery,
+      (snapshot) => {
+        const loaded = snapshot.docs.map((snap) => snap.data() as ChatMessage);
+        loaded.sort((a, b) => chatMessageOrder(a) - chatMessageOrder(b));
+        // Local welcome messages always open the dialog (they are not stored)
+        onUpdate([...INITIAL_CHAT_MESSAGES, ...loaded]);
+      },
+      (error) => {
+        console.warn('Chat thread subscription warning:', error);
+        if (onError) onError(error);
+      }
+    );
+  }
+
   const colRef = collection(db, 'chat_messages');
-  const q = query(colRef, limit(100));
+  const q = query(colRef, limit(500));
   return onSnapshot(
     q,
     async (snapshot) => {
-      if (snapshot.empty) {
-        if (!hasAlreadySeeded('chat_messages') && !inFlightSeedOperations.has('chat_messages')) {
-          inFlightSeedOperations.add('chat_messages');
-          try {
-            const batch = writeBatch(db);
-            for (const msg of INITIAL_CHAT_MESSAGES) {
-              batch.set(doc(db, 'chat_messages', msg.id), sanitizeForFirestore(msg));
-            }
-            await batch.commit();
-            markCollectionSeeded('chat_messages');
-          } catch (e) {
-            console.warn('Could not seed chat messages:', e);
-          } finally {
-            inFlightSeedOperations.delete('chat_messages');
-          }
-        }
-        onUpdate(INITIAL_CHAT_MESSAGES);
-        return;
-      }
-      markCollectionSeeded('chat_messages');
+      // Demo messages are no longer seeded: every message belongs to a customer's thread
       const loaded: ChatMessage[] = [];
       snapshot.forEach((snap) => {
         loaded.push(snap.data() as ChatMessage);
       });
-      loaded.sort((a, b) => {
-        const numA = parseInt(a.id.replace(/\D/g, ''), 10) || 0;
-        const numB = parseInt(b.id.replace(/\D/g, ''), 10) || 0;
-        return numA - numB;
-      });
+      loaded.sort((a, b) => chatMessageOrder(a) - chatMessageOrder(b));
       onUpdate(loaded);
     },
     (error) => {
@@ -732,13 +757,19 @@ export function subscribeToChatMessages(
   );
 }
 
-export async function clearChatMessagesInFirestore() {
+/**
+ * Admin: deletes one customer's thread (string), legacy messages without a thread (null),
+ * or every message (undefined).
+ */
+export async function clearChatMessagesInFirestore(threadId?: string | null) {
   try {
     const colRef = collection(db, 'chat_messages');
-    const snap = await getDocs(colRef);
-    if (!snap.empty) {
+    const snap = await getDocs(threadId ? query(colRef, where('threadId', '==', threadId)) : colRef);
+    const docs = threadId === null ? snap.docs.filter((d) => !d.data().threadId) : snap.docs;
+    // A batch holds at most 500 writes
+    for (let i = 0; i < docs.length; i += 500) {
       const batch = writeBatch(db);
-      for (const d of snap.docs) {
+      for (const d of docs.slice(i, i + 500)) {
         batch.delete(d.ref);
       }
       await batch.commit();
@@ -748,13 +779,14 @@ export async function clearChatMessagesInFirestore() {
   }
 }
 
-export async function saveChatMessageToFirestore(msg: ChatMessage) {
+export async function saveChatMessageToFirestore(msg: ChatMessage, targetDb: Firestore = db) {
   try {
-    let sanitizedMsg = { ...msg };
+    // isInternalNote must always be present: customers query their thread by isInternalNote == false
+    let sanitizedMsg = { ...msg, isInternalNote: msg.isInternalNote === true };
     if (sanitizedMsg.imageUrl && sanitizedMsg.imageUrl.startsWith('data:image/') && sanitizedMsg.imageUrl.length > 300 * 1024) {
       sanitizedMsg.imageUrl = await compressBase64Image(sanitizedMsg.imageUrl, 800, 800, 0.72);
     }
-    await setDoc(doc(db, 'chat_messages', msg.id), sanitizeForFirestore(sanitizedMsg));
+    await setDoc(doc(targetDb, 'chat_messages', msg.id), sanitizeForFirestore(sanitizedMsg));
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `chat_messages/${msg.id}`);
   }
@@ -763,12 +795,38 @@ export async function saveChatMessageToFirestore(msg: ChatMessage) {
 /**
  * 6. USER PROFILE & CUSTOMERS SYNC
  */
+/**
+ * Admin only: all customer profiles merged with manager notes/tags, which live in the
+ * admin-only `customer_notes` collection (customers can read their own users/{uid} doc).
+ */
 export function subscribeToUsers(
   onUpdate: (users: UserProfile[]) => void,
   onError?: (error: unknown) => void
 ) {
+  let users: { docId: string; data: UserProfile }[] | null = null;
+  let notes = new Map<string, Pick<UserProfile, 'managerNotes' | 'tags'>>();
+
+  const emit = () => {
+    if (!users) return;
+    onUpdate(
+      users.map(({ docId, data }) => {
+        const note = notes.get(docId);
+        return note ? { ...data, ...note } : data;
+      })
+    );
+  };
+
+  const unsubNotes = onSnapshot(
+    collection(db, 'customer_notes'),
+    (snapshot) => {
+      notes = new Map(snapshot.docs.map((d) => [d.id, d.data() as Pick<UserProfile, 'managerNotes' | 'tags'>]));
+      emit();
+    },
+    (error) => console.warn('Customer notes subscription warning:', error)
+  );
+
   const colRef = collection(db, 'users');
-  return onSnapshot(
+  const unsubUsers = onSnapshot(
     colRef,
     async (snapshot) => {
       if (snapshot.empty) {
@@ -783,17 +841,19 @@ export function subscribeToUsers(
         return;
       }
       markCollectionSeeded('users');
-      const loaded: UserProfile[] = [];
-      snapshot.forEach((snap) => {
-        loaded.push(snap.data() as UserProfile);
-      });
-      onUpdate(loaded);
+      users = snapshot.docs.map((snap) => ({ docId: snap.id, data: snap.data() as UserProfile }));
+      emit();
     },
     (error) => {
       console.warn('Users subscription warning:', error);
       if (onError) onError(error);
     }
   );
+
+  return () => {
+    unsubNotes();
+    unsubUsers();
+  };
 }
 
 /**
@@ -834,15 +894,23 @@ export async function seedInitialUsers() {
   }
 }
 
+/** Fields only admins may change (enforced by firestore.rules); never sent from the profile screen. */
+const ADMIN_ONLY_PROFILE_FIELDS = ['bonusPoints', 'managerNotes', 'tags'] as const;
+
 export async function saveUserProfileToFirestore(uid: string, profile: UserProfile) {
   try {
+    const editable: Record<string, unknown> = { ...profile };
+    for (const field of ADMIN_ONLY_PROFILE_FIELDS) {
+      delete editable[field];
+    }
     await setDoc(
       doc(db, 'users', uid),
       sanitizeForFirestore({
-        ...profile,
+        ...editable,
         uid,
         updatedAt: new Date().toISOString(),
-      })
+      }),
+      { merge: true }
     );
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `users/${uid}`);
@@ -851,7 +919,7 @@ export async function saveUserProfileToFirestore(uid: string, profile: UserProfi
 
 export async function updateCustomerNotesInFirestore(uidOrDocId: string, notes: string, tags?: string[]) {
   try {
-    const docRef = doc(db, 'users', uidOrDocId);
+    const docRef = doc(db, 'customer_notes', uidOrDocId);
     const updatePayload: Record<string, unknown> = {
       managerNotes: notes,
       updatedAt: new Date().toISOString(),
@@ -861,13 +929,14 @@ export async function updateCustomerNotesInFirestore(uidOrDocId: string, notes: 
     }
     await setDoc(docRef, sanitizeForFirestore(updatePayload), { merge: true });
   } catch (error) {
-    handleFirestoreError(error, OperationType.UPDATE, `users/${uidOrDocId}`);
+    handleFirestoreError(error, OperationType.UPDATE, `customer_notes/${uidOrDocId}`);
   }
 }
 
 export async function deleteUserFromFirestore(userId: string) {
   try {
     await deleteDoc(doc(db, 'users', userId));
+    await deleteDoc(doc(db, 'customer_notes', userId));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `users/${userId}`);
   }
