@@ -54,7 +54,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             <div className="flex items-center gap-2 min-w-0">
               <div
                 className={`w-8 h-8 rounded-xl neu-inset flex items-center justify-center shrink-0 ${
-                  tone === 'danger' ? 'text-danger' : 'text-[#4B59BB]'
+                  tone === 'danger' ? 'text-danger' : 'text-accent'
                 }`}
               >
                 <AlertTriangle className="w-4 h-4" />
@@ -88,7 +88,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                 onClose();
               }}
               className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 cursor-pointer ${
-                tone === 'danger' ? 'neu-button-danger' : 'neu-button text-[#4B59BB]'
+                tone === 'danger' ? 'neu-button-danger' : 'neu-button text-accent'
               }`}
             >
               {confirmIcon ?? <Trash2 className="w-3.5 h-3.5" />}

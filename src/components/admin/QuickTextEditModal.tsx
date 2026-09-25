@@ -92,7 +92,7 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
         {/* Header */}
         <div className="flex items-start justify-between gap-3 pb-2 border-b border-[#BAC5D5]/40">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl neu-flat-sm flex items-center justify-center text-[#4B59BB] bg-[#E3E8EF] shrink-0">
+            <div className="w-10 h-10 rounded-2xl neu-flat-sm flex items-center justify-center text-accent bg-[#E3E8EF] shrink-0">
               <Pencil className="w-4 h-4" />
             </div>
             <div>
@@ -101,7 +101,7 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
                   {config.title}
                 </h3>
                 {config.badge && (
-                  <span className="text-[11px] font-black text-[#4B59BB] neu-inset px-2 py-0.5 rounded-md">
+                  <span className="text-[11px] font-black text-accent neu-inset px-2 py-0.5 rounded-md">
                     {config.badge}
                   </span>
                 )}
@@ -126,7 +126,7 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
         {/* Optional Description / Context Help */}
         {config.description && (
           <div className="neu-inset p-3 rounded-2xl bg-[#E3E8EF]/80 text-[11px] text-[#4E5C70] leading-relaxed flex items-start gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-[#4B59BB] shrink-0 mt-0.5" />
+            <Sparkles className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
             <span>{config.description}</span>
           </div>
         )}
@@ -140,7 +140,7 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
                 <button
                   type="button"
                   onClick={handleResetToInitial}
-                  className="text-[#4B59BB] hover:underline flex items-center gap-1 cursor-pointer"
+                  className="text-accent hover:underline flex items-center gap-1 cursor-pointer"
                   title="Сбросить к исходному значению"
                 >
                   <RotateCcw className="w-3 h-3" />

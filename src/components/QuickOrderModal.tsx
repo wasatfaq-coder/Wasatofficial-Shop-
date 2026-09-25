@@ -138,8 +138,8 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
             {/* Header */}
             <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-[#4B59BB]">
-                  <ShoppingBag className="w-4 h-4 text-[#4B59BB]" />
+                <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-accent">
+                  <ShoppingBag className="w-4 h-4 text-accent" />
                 </div>
                 <div>
                   <h3 className="text-sm font-extrabold text-[#2D3A4E]">Быстрый заказ в 1 клик</h3>
@@ -171,7 +171,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                     <p className="text-[11px] text-[#4E5C70]">{item.variant}</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="font-extrabold text-[#4B59BB]">{item.price.toLocaleString('ru-RU')} ₽</p>
+                    <p className="font-extrabold text-accent">{item.price.toLocaleString('ru-RU')} ₽</p>
                     <p className="text-[11px] text-[#4E5C70]">{item.qty} шт.</p>
                   </div>
                 </div>
@@ -198,7 +198,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
             <form onSubmit={handleSubmit} className="space-y-3">
               <div className="space-y-1">
                 <label className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-[#4B59BB]" />
+                  <User className="w-3.5 h-3.5 text-accent" />
                   <span>Ваше имя *</span>
                 </label>
                 <input
@@ -213,7 +213,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
 
               <div className="space-y-1">
                 <label className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5 text-[#4B59BB]" />
+                  <Phone className="w-3.5 h-3.5 text-accent" />
                   <span>Номер телефона *</span>
                 </label>
                 <input
@@ -228,7 +228,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
 
               <div className="space-y-1">
                 <label className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-[#4B59BB]" />
+                  <MapPin className="w-3.5 h-3.5 text-accent" />
                   <span>Город и улица доставки</span>
                 </label>
                 <input
@@ -333,7 +333,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   disabled={isSubmitting || !name.trim() || phone.length < 11}
                   className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black cursor-pointer transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 btn-confirm-order ${
                     isSubmitting
-                      ? 'neu-inset-deep neu-inset-deep-animated text-[#4B59BB] bg-[#E3E8EF] ring-2 ring-[#5F6ED0]/40'
+                      ? 'neu-inset-deep neu-inset-deep-animated text-accent bg-[#E3E8EF] ring-2 ring-accent/40'
                       : 'neu-button-accent text-white hover:scale-102 active:neu-inset-deep active:scale-98'
                   }`}
                 >

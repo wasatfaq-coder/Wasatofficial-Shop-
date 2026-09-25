@@ -3,6 +3,7 @@ import { Clock, Heart, Trash2, X } from 'lucide-react';
 import { Product } from '../types';
 import { RatingBadge } from './RatingBadge';
 import { NeumorphicImage } from './NeumorphicImage';
+import { photoBadgeClass } from '../utils/productBadge';
 
 interface RecentlyViewedProps {
   recentlyViewed: Product[];
@@ -33,7 +34,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
     <div className={`space-y-3 pt-2 ${className}`}>
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-xl neu-inset flex items-center justify-center text-[#4B59BB] bg-[#E3E8EF]">
+          <div className="w-7 h-7 rounded-xl neu-inset flex items-center justify-center text-accent bg-[#E3E8EF]">
             <Clock className="w-4 h-4 stroke-[2.2]" />
           </div>
           <h3 className="text-sm font-bold text-[#2D3A4E] tracking-tight">{title}</h3>
@@ -112,7 +113,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
 
                   {/* Badge */}
                   {product.badge && (
-                    <span className="absolute bottom-1.5 left-1.5 neu-photo-badge font-bold text-[11px] uppercase px-2 py-0.5 rounded-full text-[#2D3A4E] z-10">
+                    <span className={`absolute bottom-1.5 left-1.5 ${photoBadgeClass(product.badge)} font-bold text-[11px] uppercase px-2 py-0.5 rounded-full z-10`}>
                       {product.badge}
                     </span>
                   )}
@@ -123,7 +124,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
                   <p className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider truncate">
                     {product.categoryLabel}
                   </p>
-                  <h4 className="text-xs font-bold text-[#2D3A4E] truncate leading-tight group-hover:text-[#4B59BB] transition-colors">
+                  <h4 className="text-xs font-bold text-[#2D3A4E] truncate leading-tight group-hover:text-accent transition-colors">
                     {product.title}
                   </h4>
                 </div>

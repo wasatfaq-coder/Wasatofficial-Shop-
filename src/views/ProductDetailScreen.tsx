@@ -41,6 +41,7 @@ import {
   getProductFabricComposition,
   getProductCareInstructions,
 } from '../utils/productAttributes';
+import { photoBadgeClass } from '../utils/productBadge';
 
 interface ProductDetailScreenProps {
   product: Product;
@@ -233,7 +234,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           {/* Badge in top-left */}
           {product.badge && (
             <div className="absolute top-3 left-3 z-10">
-              <span className="h-6 px-3 rounded-full neu-photo-badge text-[11px] tracking-wider uppercase text-[#2D3A4E] font-bold inline-flex items-center justify-center leading-none">
+              <span className={`h-6 px-3 rounded-full ${photoBadgeClass(product.badge)} text-[11px] tracking-wider uppercase font-bold inline-flex items-center justify-center leading-none`}>
                 {product.badge}
               </span>
             </div>
@@ -258,7 +259,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             className="absolute bottom-3 right-3 neu-photo-btn px-3 py-1.5 rounded-full z-10 flex items-center gap-1.5 text-xs font-bold text-[#2D3A4E] hover:scale-105 active:scale-95 transition-transform"
             title="Открыть зум в высоком разрешении"
           >
-            <ZoomIn className="w-3.5 h-3.5 text-[#4B59BB]" />
+            <ZoomIn className="w-3.5 h-3.5 text-accent" />
             <span className="text-[11px]">HD Зум</span>
           </button>
 
@@ -300,7 +301,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                   }}
                   className={`transition-all duration-300 ${
                     selectedImageIndex === idx
-                      ? 'w-5 h-2 bg-[#5F6ED0] rounded-full'
+                      ? 'w-5 h-2 bg-accent rounded-full'
                       : 'w-2 h-2 bg-[#BAC5D5] rounded-full'
                   }`}
                   aria-label={`Перейти к фото ${idx + 1}`}
@@ -317,7 +318,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               <span className="text-[11px] font-bold text-[#4E5C70]">
                 Ракурсы и детали:
               </span>
-              <span className="text-[11px] font-semibold text-[#4B59BB]">
+              <span className="text-[11px] font-semibold text-accent">
                 {ANGLE_LABELS[selectedImageIndex % ANGLE_LABELS.length]}
               </span>
             </div>
@@ -328,7 +329,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                   onClick={() => setSelectedImageIndex(idx)}
                   className={`relative p-0.5 rounded-2xl transition-all duration-200 shrink-0 flex flex-col items-center cursor-pointer ${
                     selectedImageIndex === idx
-                      ? 'neu-inset ring-2 ring-[#5F6ED0] scale-105 bg-[#E3E8EF]'
+                      ? 'neu-inset ring-2 ring-accent scale-105 bg-[#E3E8EF]'
                       : 'neu-button opacity-80 hover:opacity-100 hover:scale-102 bg-[#E3E8EF]'
                   }`}
                   aria-label={`Миниатюра ${idx + 1}`}
@@ -355,7 +356,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {product.badge && (
-                <span className="neu-flat text-[#4B59BB] font-extrabold text-[11px] px-3 py-1 rounded-full uppercase tracking-wider">
+                <span className="neu-flat text-accent font-extrabold text-[11px] px-3 py-1 rounded-full uppercase tracking-wider">
                   {product.badge}
                 </span>
               )}
@@ -386,7 +387,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-[#2D3A4E]">Выберите цвет:</span>
-              <span className="text-[11px] font-bold text-[#4B59BB]">{selectedColor}</span>
+              <span className="text-[11px] font-bold text-accent">{selectedColor}</span>
             </div>
             <div className="flex items-center gap-2.5 flex-wrap">
               {product.colors.map((c) => {
@@ -398,7 +399,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                     onClick={() => setSelectedColor(c.name)}
                     className={`w-9 h-9 rounded-full p-0.5 flex items-center justify-center transition-all cursor-pointer ${
                       isSelected
-                        ? 'neu-inset ring-2 ring-[#5F6ED0] scale-105'
+                        ? 'neu-inset ring-2 ring-accent scale-105'
                         : 'neu-button hover:scale-105'
                     }`}
                     title={c.name}
@@ -422,7 +423,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             <div className="flex items-center justify-between gap-1.5 pb-0.5">
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-semibold text-[#2D3A4E]">Выберите размер:</span>
-                <span className="text-[11px] font-extrabold text-[#4B59BB]">{selectedSize}</span>
+                <span className="text-[11px] font-extrabold text-accent">{selectedSize}</span>
               </div>
             </div>
 
@@ -443,7 +444,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                           : 'neu-flat text-[#4E5C70]/40 opacity-70 hover:opacity-100 line-through'
                         : isSelected
                         ? 'neu-pill-active'
-                        : 'neu-button text-[#2D3A4E] hover:text-[#4B59BB]'
+                        : 'neu-button text-[#2D3A4E] hover:text-accent'
                     }`}
                   >
                     <span>{sz}</span>
@@ -452,7 +453,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                         isOutOfStock
                           ? 'text-[#4E5C70]/50 font-medium no-underline'
                           : isSelected
-                          ? 'text-[#4B59BB] font-semibold'
+                          ? 'text-accent font-semibold'
                           : 'text-[#4E5C70] font-medium'
                       }`}
                     >
@@ -482,12 +483,12 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             {/* Dynamic SKU Stock Badge */}
             {currentStock > 2 ? (
               <div className="neu-flat text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-[#4E5C70] border border-white/60 bg-[#E3E8EF]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#5F6ED0]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-accent" />
                 <span>В наличии: {currentStock} шт.</span>
               </div>
             ) : currentStock > 0 ? (
               <div className="neu-flat text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-[#2D3A4E] border border-white/60 bg-[#E3E8EF]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#5F6ED0]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-accent" />
                 <span>Осталось {currentStock} шт.</span>
               </div>
             ) : (
@@ -501,7 +502,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           {/* Granular SKU Info helper message if variant is out of stock */}
           {currentStock === 0 && (
             <div className="p-2.5 rounded-xl neu-inset bg-[#E3E8EF] border border-white/60 text-[11px] text-[#4E5C70] flex items-center gap-2">
-              <Info className="w-4 h-4 text-[#4B59BB] shrink-0" />
+              <Info className="w-4 h-4 text-accent shrink-0" />
               <span>
                 Размер <strong className="text-[#2D3A4E]">{selectedSize}</strong> в цвете <strong className="text-[#2D3A4E]">{selectedColor}</strong> временно закончился на складе. Попробуйте выбрать другой цвет или размер.
               </span>
@@ -518,7 +519,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
                 disabled={quantity <= 1 || currentStock === 0}
                 className={`w-9 h-9 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] transition-opacity cursor-pointer ${
-                  quantity <= 1 || currentStock === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:text-[#4B59BB]'
+                  quantity <= 1 || currentStock === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:text-accent'
                 }`}
                 aria-label="Уменьшить количество"
               >
@@ -531,7 +532,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 onClick={() => setQuantity(Math.min(currentStock, quantity + 1))}
                 disabled={quantity >= currentStock || currentStock === 0}
                 className={`w-9 h-9 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] transition-opacity cursor-pointer ${
-                  quantity >= currentStock || currentStock === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:text-[#4B59BB]'
+                  quantity >= currentStock || currentStock === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:text-accent'
                 }`}
                 aria-label="Увеличить количество"
               >
@@ -574,9 +575,9 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           {currentStock > 0 && (
             <button
               onClick={() => setIsQuickOrderOpen(true)}
-              className="w-full py-2.5 px-4 rounded-2xl neu-button text-xs font-bold text-[#4B59BB] hover:scale-101 active:scale-99 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-2.5 px-4 rounded-2xl neu-button text-xs font-bold text-accent hover:scale-101 active:scale-99 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <ShoppingBag className="w-3.5 h-3.5 text-[#4B59BB]" />
+              <ShoppingBag className="w-3.5 h-3.5 text-accent" />
               <span>Купить в 1 клик без регистрации</span>
             </button>
           )}
@@ -640,7 +641,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                   </div>
                 </div>
                 <div className="neu-flat rounded-xl p-2.5 bg-[#E3E8EF] flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-[#4B59BB] shrink-0" />
+                  <ShieldCheck className="w-4 h-4 text-accent shrink-0" />
                   <div>
                     <p className="font-black text-[11px] text-[#2D3A4E]">Европейское качество</p>
                     <p className="text-[11px] text-[#4E5C70]">Контроль каждого шва</p>
@@ -656,10 +657,10 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
-                    <Layers className="w-3.5 h-3.5 text-[#4B59BB]" />
+                    <Layers className="w-3.5 h-3.5 text-accent" />
                     Состав и структура ткани
                   </span>
-                  <span className="text-[11px] font-bold text-[#4B59BB] neu-flat px-2 py-0.5 rounded-lg">
+                  <span className="text-[11px] font-bold text-accent neu-flat px-2 py-0.5 rounded-lg">
                     {product.fabricDensity || '185 г/м²'}
                   </span>
                 </div>
@@ -669,11 +670,11 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                     <div key={idx} className="space-y-1">
                       <div className="flex justify-between text-xs font-bold text-[#2D3A4E]">
                         <span>{item.fiber}</span>
-                        <span className="text-[#4B59BB] font-black">{item.percentage}%</span>
+                        <span className="text-accent font-black">{item.percentage}%</span>
                       </div>
                       <div className="w-full h-2 rounded-full overflow-hidden neu-inset bg-[#BAC5D5]/40">
                         <div
-                          className="h-full bg-gradient-to-r from-[#5F6ED0] to-[#7B8AF0] rounded-full transition-all duration-500"
+                          className="h-full bg-gradient-to-r from-accent to-[#7B8AF0] rounded-full transition-all duration-500"
                           style={{ width: `${item.percentage}%` }}
                         />
                       </div>
@@ -705,7 +706,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 </div>
                 <div className="flex items-center justify-between gap-2 py-1.5 border-b border-[#BAC5D5]/40">
                   <span className="text-[#4E5C70] shrink-0">Артикул:</span>
-                  <span className="font-mono font-bold text-[#4B59BB] text-[11px] bg-slate-100/90 px-2 py-0.5 rounded-lg neu-inset border border-white/60">
+                  <span className="font-mono font-bold text-accent text-[11px] bg-slate-100/90 px-2 py-0.5 rounded-lg neu-inset border border-white/60">
                     {currentSKU?.skuCode || `MS-${product.id.slice(0, 4).toUpperCase()}-${selectedSize}`}
                   </span>
                 </div>
@@ -734,7 +735,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                   key={idx}
                   className="neu-flat rounded-xl p-2.5 bg-[#E3E8EF] flex items-start gap-2.5 border border-white/60"
                 >
-                  <div className="w-6 h-6 rounded-lg neu-inset flex items-center justify-center shrink-0 mt-0.5 text-[#4B59BB]">
+                  <div className="w-6 h-6 rounded-lg neu-inset flex items-center justify-center shrink-0 mt-0.5 text-accent">
                     <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -785,8 +786,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             className="w-full p-4 flex items-center justify-between text-left transition-colors group active:scale-[0.99] cursor-pointer"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full neu-button flex items-center justify-center text-[#4B59BB] group-hover:scale-105 transition-transform">
-                <Sparkles className="w-5 h-5 text-[#4B59BB]" />
+              <div className="w-10 h-10 rounded-full neu-button flex items-center justify-center text-accent group-hover:scale-105 transition-transform">
+                <Sparkles className="w-5 h-5 text-accent" />
               </div>
               <div>
                 <p className="text-sm font-bold text-[#2D3A4E]">Подбор размера</p>

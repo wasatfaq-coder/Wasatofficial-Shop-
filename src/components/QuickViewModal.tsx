@@ -80,7 +80,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
             >
             {/* Header / Close */}
             <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/60">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-[#4B59BB] neu-inset px-3 py-1 rounded-full">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-accent neu-inset px-3 py-1 rounded-full">
                 Быстрый просмотр
               </span>
               <button
@@ -120,7 +120,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                       onClick={() => setSelectedImageIndex(idx)}
                       className={`w-12 h-12 rounded-xl overflow-hidden p-0.5 transition-all shrink-0 ${
                         selectedImageIndex === idx
-                          ? 'neu-inset ring-2 ring-[#5F6ED0] scale-105'
+                          ? 'neu-inset ring-2 ring-accent scale-105'
                           : 'neu-button opacity-75 hover:opacity-100'
                       }`}
                     >
@@ -205,7 +205,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                 <span className="text-xs font-bold text-[#2D3A4E]">Размер: {selectedSize}</span>
                 <button
                   onClick={() => setIsSizeCalcOpen(true)}
-                  className="text-[11px] font-bold text-[#4B59BB] hover:underline flex items-center gap-1 cursor-pointer"
+                  className="text-[11px] font-bold text-accent hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <Ruler className="w-3.5 h-3.5" />
                   <span>Подобрать размер</span>
@@ -259,7 +259,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                   onClose();
                   onSelectFullProduct(product);
                 }}
-                className="neu-button p-3.5 rounded-2xl text-[#2D3A4E] hover:text-[#4B59BB] flex items-center justify-center shrink-0 cursor-pointer"
+                className="neu-button p-3.5 rounded-2xl text-[#2D3A4E] hover:text-accent flex items-center justify-center shrink-0 cursor-pointer"
                 title="Перейти к подробному описанию"
                 aria-label="Перейти к подробному описанию"
               >

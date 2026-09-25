@@ -90,7 +90,7 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
           triggerClassName || 'rounded-xl'
         } text-xs font-bold text-[#2D3A4E] bg-[#E3E8EF] flex items-center justify-between gap-2 transition-all cursor-pointer text-left ${
           disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#BAC5D5]/30'
-        } ${isOpen ? 'ring-2 ring-[#5F6ED0]/50' : ''}`}
+        } ${isOpen ? 'ring-2 ring-accent/50' : ''}`}
       >
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {selectedOption?.icon && <span className="shrink-0">{selectedOption.icon}</span>}
@@ -106,7 +106,7 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
             <span
               className={`${
                 variant === 'inset' ? 'neu-button' : 'neu-flat'
-              } text-[11px] px-2 py-0.5 rounded-md text-[#4B59BB] font-black shrink-0`}
+              } text-[11px] px-2 py-0.5 rounded-md text-accent font-black shrink-0`}
             >
               {selectedOption.badge}
             </span>
@@ -114,7 +114,7 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
         </div>
         <ChevronDown
           className={`w-4 h-4 text-[#4E5C70] shrink-0 transition-transform duration-200 ${
-            isOpen ? 'rotate-180 text-[#4B59BB]' : ''
+            isOpen ? 'rotate-180 text-accent' : ''
           }`}
         />
       </button>
@@ -150,7 +150,7 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
                     )}
                   </div>
                   {opt.badge && (
-                    <span className="neu-flat text-[11px] px-1.5 py-0.5 rounded text-[#4B59BB] font-black shrink-0 whitespace-nowrap">
+                    <span className="neu-flat text-[11px] px-1.5 py-0.5 rounded text-accent font-black shrink-0 whitespace-nowrap">
                       {opt.badge}
                     </span>
                   )}

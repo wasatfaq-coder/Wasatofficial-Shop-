@@ -84,7 +84,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               onClick={() => setActiveTab(tab.id)}
               className={`relative flex-1 h-11 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-colors duration-200 select-none ${
                 isActive
-                  ? 'text-[#4B59BB] font-bold'
+                  ? 'text-accent font-bold'
                   : 'text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95'
               }`}
               title={tab.label}
@@ -108,7 +108,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                       animate={{ scale: 2, opacity: 0 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.6, ease: 'easeOut' }}
-                      className="absolute inset-2 rounded-2xl bg-[#5F6ED0]/25 pointer-events-none z-0"
+                      className="absolute inset-2 rounded-2xl bg-accent/25 pointer-events-none z-0"
                     />
                   )}
                 </AnimatePresence>
@@ -128,7 +128,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                       }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.9, times: [0, 0.2, 0.7, 1], ease: 'easeOut' }}
-                      className="absolute -top-1 left-1/2 -translate-x-1/2 z-30 bg-[#5F6ED0] text-white text-[11px] font-black px-1.5 py-0.5 rounded-full shadow-[var(--neu-fill-accent-shadow)] pointer-events-none ring-1 ring-white/80"
+                      className="absolute -top-1 left-1/2 -translate-x-1/2 z-30 bg-accent text-white text-[11px] font-black px-1.5 py-0.5 rounded-full shadow-[var(--neu-fill-accent-shadow)] pointer-events-none ring-1 ring-white/80"
                     >
                       {cartPlusBadge.text}
                     </motion.span>
@@ -154,7 +154,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   >
                     <Icon
                       className={`w-5 h-5 transition-colors duration-200 ${
-                        isActive ? 'stroke-[2.2] text-[#4B59BB] scale-105' : 'stroke-[1.8]'
+                        isActive ? 'stroke-[2.2] text-accent scale-105' : 'stroke-[1.8]'
                       }`}
                     />
                   </motion.div>
@@ -172,14 +172,14 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   >
                     <Icon
                       className={`w-5 h-5 transition-colors duration-200 ${
-                        isActive ? 'stroke-[2.2] text-[#4B59BB] scale-105' : 'stroke-[1.8]'
+                        isActive ? 'stroke-[2.2] text-accent scale-105' : 'stroke-[1.8]'
                       }`}
                     />
                   </motion.div>
                 ) : (
                   <Icon
                     className={`w-5 h-5 transition-transform duration-200 ${
-                      isActive ? 'stroke-[2.2] text-[#4B59BB] scale-105' : 'stroke-[1.8]'
+                      isActive ? 'stroke-[2.2] text-accent scale-105' : 'stroke-[1.8]'
                     }`}
                   />
                 )}
@@ -187,7 +187,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 {isActive && (
                   <motion.div
                     layoutId="bottomNavDot"
-                    className="w-1.5 h-1.5 rounded-full bg-[#5F6ED0] mt-0.5"
+                    className="w-1.5 h-1.5 rounded-full bg-accent mt-0.5"
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   />
                 )}
@@ -200,7 +200,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   initial={{ scale: 0.4, opacity: 0 }}
                   animate={{ scale: [0.4, 1.3, 0.9, 1.05, 1], opacity: 1 }}
                   transition={{ duration: 0.35, ease: 'backOut' }}
-                  className="absolute -top-1 -right-1 z-20 bg-[#5F6ED0] text-white font-bold text-[11px] min-w-[17px] h-[17px] px-1 rounded-full flex items-center justify-center ring-2 ring-[#E3E8EF] shadow-sm shadow-[#5F6ED0]/30"
+                  className="absolute -top-1 -right-1 z-20 bg-accent text-white font-bold text-[11px] min-w-[17px] h-[17px] px-1 rounded-full flex items-center justify-center ring-2 ring-[#E3E8EF] shadow-sm shadow-accent/30"
                 >
                   {tab.badge > 99 ? '99+' : tab.badge}
                 </motion.span>

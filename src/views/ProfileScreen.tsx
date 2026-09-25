@@ -874,17 +874,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     }
     switch (status) {
       case 'accepted':
-        return { percent: 20, label: ORDER_STATUS_LABELS.accepted, color: 'bg-blue-600', text: 'text-blue-900' };
+        return { percent: 20, label: ORDER_STATUS_LABELS.accepted, color: 'bg-accent', text: 'text-accent-strong' };
       case 'assembling':
         return { percent: 45, label: ORDER_STATUS_LABELS.assembling, color: 'bg-warning', text: 'text-warning' };
       case 'in_transit':
-        return { percent: 75, label: ORDER_STATUS_LABELS.in_transit, color: 'bg-indigo-600', text: 'text-indigo-800' };
+        return { percent: 75, label: ORDER_STATUS_LABELS.in_transit, color: 'bg-accent', text: 'text-accent-strong' };
       case 'ready':
         return { percent: 90, label: ORDER_STATUS_LABELS.ready, color: 'bg-success', text: 'text-success' };
       case 'delivered':
         return { percent: 100, label: ORDER_STATUS_LABELS.delivered, color: 'bg-success', text: 'text-success' };
       default:
-        return { percent: 10, label: 'В обработке', color: 'bg-blue-600', text: 'text-blue-800' };
+        return { percent: 10, label: 'В обработке', color: 'bg-accent', text: 'text-accent-strong' };
     }
   };
 
@@ -920,7 +920,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   className="w-full h-full object-cover rounded-full"
                 />
               ) : (
-                <div className="w-full h-full rounded-full flex items-center justify-center text-[#4B59BB] text-xl font-black">
+                <div className="w-full h-full rounded-full flex items-center justify-center text-accent text-xl font-black">
                   {profile.name?.trim() ? profile.name.trim()[0].toUpperCase() : <User className="w-7 h-7" />}
                 </div>
               )}
@@ -936,9 +936,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
               <button
                 onClick={() => setIsEditingProfile(true)}
-                className="neu-button rounded-full px-3 py-1 text-[11px] font-bold text-[#2D3A4E] hover:text-[#4B59BB] inline-flex items-center gap-1.5 mt-1 cursor-pointer active:scale-95 transition-transform"
+                className="neu-button rounded-full px-3 py-1 text-[11px] font-bold text-[#2D3A4E] hover:text-accent inline-flex items-center gap-1.5 mt-1 cursor-pointer active:scale-95 transition-transform"
               >
-                <Pencil className="w-3 h-3 text-[#4B59BB]" />
+                <Pencil className="w-3 h-3 text-accent" />
                 <span>Редактировать</span>
               </button>
             </div>
@@ -1003,14 +1003,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             className="w-full p-3.5 neu-inset rounded-2xl flex items-center justify-between text-left hover:opacity-95 transition-all cursor-pointer active:scale-[0.98]"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0">
+              <div className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-accent shrink-0">
                 <ShoppingBag className="w-5 h-5" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-bold text-[#2D3A4E]">Заказы и трекинг</p>
                   {orders.some((o) => o.status !== 'delivered') && (
-                    <span className="neu-inset-deep neu-inset-deep-animated text-[#4B59BB] font-extrabold text-[11px] px-2.5 py-0.5 rounded-full border border-[#5F6ED0]/30">
+                    <span className="neu-inset-deep neu-inset-deep-animated text-accent font-extrabold text-[11px] px-2.5 py-0.5 rounded-full border border-accent/30">
                       Активен
                     </span>
                   )}
@@ -1028,7 +1028,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <div className="neu-inset rounded-2xl p-3.5 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0">
+              <div className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-accent shrink-0">
                 {isFirebaseAdmin ? <Database className="w-5 h-5 stroke-[2.2]" /> : <User className="w-5 h-5 stroke-[2.2]" />}
               </div>
               <div>
@@ -1061,10 +1061,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               onClick={handleTriggerSync}
               disabled={isSyncingFirebase}
               title="Принудительно синхронизировать все данные с облаком"
-              className="neu-button rounded-xl p-2.5 text-[#4B59BB] hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0 disabled:opacity-60"
+              className="neu-button rounded-xl p-2.5 text-accent hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0 disabled:opacity-60"
               aria-label="Принудительно синхронизировать все данные с облаком"
             >
-              <RefreshCw className={`w-4 h-4 ${isSyncingFirebase ? 'animate-spin text-[#4B59BB]' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isSyncingFirebase ? 'animate-spin text-accent' : ''}`} />
             </button>
             )}
           </div>
@@ -1080,7 +1080,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     className="w-7 h-7 rounded-full object-cover shrink-0 border border-white/60"
                   />
                 ) : (
-                  <div className="w-7 h-7 rounded-full neu-button flex items-center justify-center font-bold text-[#4B59BB] shrink-0 text-xs">
+                  <div className="w-7 h-7 rounded-full neu-button flex items-center justify-center font-bold text-accent shrink-0 text-xs">
                     {(currentUser.displayName || currentUser.email || 'U')[0].toUpperCase()}
                   </div>
                 )}
@@ -1110,7 +1110,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 type="button"
                 onClick={handleGoogleAuthClick}
                 disabled={isGoogleSigningIn}
-                className="w-full neu-button rounded-xl py-2 px-3 flex items-center justify-center gap-2 font-bold text-[#2D3A4E] hover:text-[#4B59BB] active:scale-95 transition-all text-xs cursor-pointer disabled:opacity-60"
+                className="w-full neu-button rounded-xl py-2 px-3 flex items-center justify-center gap-2 font-bold text-[#2D3A4E] hover:text-accent active:scale-95 transition-all text-xs cursor-pointer disabled:opacity-60"
               >
                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                   <path
@@ -1145,7 +1145,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           </h3>
           <button
             onClick={() => setActiveModal('addresses')}
-            className="text-[11px] font-bold text-[#4B59BB] hover:underline flex items-center gap-1 cursor-pointer"
+            className="text-[11px] font-bold text-accent hover:underline flex items-center gap-1 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Управление ({profile.savedAddresses.length})</span>
@@ -1158,7 +1158,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               Сохраненных адресов нет.{' '}
               <button
                 onClick={handleOpenAddAddress}
-                className="text-[#4B59BB] font-bold underline ml-1 cursor-pointer"
+                className="text-accent font-bold underline ml-1 cursor-pointer"
               >
                 Добавить адрес
               </button>
@@ -1170,7 +1170,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 className="neu-inset rounded-2xl p-3 flex items-center justify-between gap-2"
               >
                 <div className="flex items-start gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0 mt-0.5">
+                  <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent shrink-0 mt-0.5">
                     <MapPin className="w-4 h-4 stroke-[2.2]" />
                   </div>
                   <div className="min-w-0 space-y-0.5">
@@ -1204,7 +1204,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
           <button
             onClick={handleOpenAddAddress}
-            className="w-full py-3 neu-button rounded-2xl text-xs font-bold text-[#4B59BB] flex items-center justify-center gap-1.5 hover:opacity-95 active:scale-[0.98] transition-all cursor-pointer"
+            className="w-full py-3 neu-button rounded-2xl text-xs font-bold text-accent flex items-center justify-center gap-1.5 hover:opacity-95 active:scale-[0.98] transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             <span>Добавить новый адрес</span>
@@ -1220,7 +1220,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           </h3>
           <button
             onClick={() => setActiveModal('cards')}
-            className="text-[11px] font-bold text-[#4B59BB] hover:underline flex items-center gap-1 cursor-pointer"
+            className="text-[11px] font-bold text-accent hover:underline flex items-center gap-1 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Управление ({profile.savedCards.length})</span>
@@ -1233,7 +1233,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               Сохраненных карт нет.{' '}
               <button
                 onClick={handleOpenAddCard}
-                className="text-[#4B59BB] font-bold underline ml-1 cursor-pointer"
+                className="text-accent font-bold underline ml-1 cursor-pointer"
               >
                 Привязать карту
               </button>
@@ -1245,7 +1245,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 className="neu-inset rounded-2xl p-3 flex items-center justify-between gap-2"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0 font-bold text-xs uppercase">
+                  <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-accent shrink-0 font-bold text-xs uppercase">
                     <CreditCard className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 space-y-0.5">
@@ -1280,7 +1280,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
           <button
             onClick={handleOpenAddCard}
-            className="w-full py-3 neu-button rounded-2xl text-xs font-bold text-[#4B59BB] flex items-center justify-center gap-1.5 hover:opacity-95 active:scale-[0.98] transition-all cursor-pointer"
+            className="w-full py-3 neu-button rounded-2xl text-xs font-bold text-accent flex items-center justify-center gap-1.5 hover:opacity-95 active:scale-[0.98] transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             <span>Привязать новую карту</span>
@@ -1306,7 +1306,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               }
               setIsEditingMeasurements(true);
             }}
-            className="neu-button px-2.5 py-1 rounded-xl text-xs font-bold text-[#4B59BB] flex items-center gap-1.5 cursor-pointer hover:text-[#2D3A4E] active:scale-95 transition-all"
+            className="neu-button px-2.5 py-1 rounded-xl text-xs font-bold text-accent flex items-center gap-1.5 cursor-pointer hover:text-[#2D3A4E] active:scale-95 transition-all"
           >
             <Pencil className="w-3.5 h-3.5" />
             <span>Изменить</span>
@@ -1317,7 +1317,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <div className="neu-inset rounded-3xl p-4 space-y-3.5 bg-[#E3E8EF] border border-white/60">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-10 h-10 rounded-2xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0 bg-[#E3E8EF]">
+              <div className="w-10 h-10 rounded-2xl neu-button flex items-center justify-center text-accent shrink-0 bg-[#E3E8EF]">
                 <Ruler className="w-5 h-5 stroke-[2.2]" />
               </div>
               <div className="min-w-0">
@@ -1332,7 +1332,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
             <div className="text-right shrink-0">
               <span className="text-[11px] font-bold text-[#4E5C70] block">Стандартный размер</span>
-              <span className="text-sm font-black text-[#4B59BB] neu-inset px-2 py-0.5 rounded-lg inline-block bg-[#E3E8EF]">
+              <span className="text-sm font-black text-accent neu-inset px-2 py-0.5 rounded-lg inline-block bg-[#E3E8EF]">
                 {profileRussianPattern.topSizeLabel}
               </span>
             </div>
@@ -1418,8 +1418,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             className="w-full p-3.5 neu-inset rounded-2xl flex items-center justify-between text-left hover:opacity-95 transition-all cursor-pointer active:scale-[0.98]"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0">
-                <Heart className="w-5 h-5 fill-[#5F6ED0]/20" />
+              <div className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-accent shrink-0">
+                <Heart className="w-5 h-5 fill-accent/20" />
               </div>
               <div>
                 <p className="text-sm font-bold text-[#2D3A4E]">Избранные товары</p>
@@ -1441,7 +1441,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <div className="neu-inset rounded-3xl p-4 sm:p-5 space-y-3 bg-[#E3E8EF] border border-transparent">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-2xl neu-inset flex items-center justify-center text-[#4B59BB] bg-[#E3E8EF]">
+              <div className="w-9 h-9 rounded-2xl neu-inset flex items-center justify-center text-accent bg-[#E3E8EF]">
                 <MapPin className="w-4 h-4" />
               </div>
               <div>
@@ -1460,7 +1460,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <div className="neu-inset rounded-2xl p-3 space-y-1 bg-[#E3E8EF]">
               {pickupAddress && (
               <div className="flex items-start gap-2">
-                <MapPin className="w-3.5 h-3.5 text-[#4B59BB] shrink-0 mt-0.5" />
+                <MapPin className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
                 <span className="font-semibold text-[11px] leading-relaxed">{pickupAddress}</span>
               </div>
               )}
@@ -1474,9 +1474,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               {storePhone && (
               <a
                 href={telHref(storePhone)}
-                className="flex-1 min-w-[130px] py-2.5 px-3 neu-inset rounded-xl text-[11px] font-black text-[#2D3A4E] hover:text-[#4B59BB] flex items-center justify-center gap-1.5 transition-all bg-[#E3E8EF] border border-transparent hover:border-[#5F6ED0]/30"
+                className="flex-1 min-w-[130px] py-2.5 px-3 neu-inset rounded-xl text-[11px] font-black text-[#2D3A4E] hover:text-accent flex items-center justify-center gap-1.5 transition-all bg-[#E3E8EF] border border-transparent hover:border-accent/30"
               >
-                <Phone className="w-3.5 h-3.5 text-[#4B59BB]" />
+                <Phone className="w-3.5 h-3.5 text-accent" />
                 <span>{storePhone}</span>
               </a>
               )}
@@ -1495,7 +1495,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   href={`https://t.me/${storeTelegram.replace('@', '')}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex-1 min-w-[130px] py-2.5 px-3 neu-inset rounded-xl text-[11px] font-black text-[#4B59BB] flex items-center justify-center gap-1.5 bg-[#E3E8EF] border border-transparent"
+                  className="flex-1 min-w-[130px] py-2.5 px-3 neu-inset rounded-xl text-[11px] font-black text-accent flex items-center justify-center gap-1.5 bg-[#E3E8EF] border border-transparent"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>{storeTelegram}</span>
@@ -1523,7 +1523,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             className="w-full p-3.5 neu-inset rounded-2xl flex items-center justify-between text-left hover:opacity-95 transition-all cursor-pointer active:scale-[0.98]"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0">
+              <div className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-accent shrink-0">
                 <Headphones className="w-5 h-5" />
               </div>
               <div>
@@ -1539,7 +1539,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             className="w-full p-3.5 neu-inset rounded-2xl flex items-center justify-between text-left hover:opacity-95 transition-all cursor-pointer active:scale-[0.98]"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0">
+              <div className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-accent shrink-0">
                 <FileText className="w-5 h-5" />
               </div>
               <div>
@@ -1568,7 +1568,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             className="w-full p-3.5 neu-inset rounded-2xl flex items-center justify-between text-left hover:opacity-95 transition-all group cursor-pointer active:scale-[0.98]"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0 group-hover:scale-105 transition-transform">
+              <div className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-accent shrink-0 group-hover:scale-105 transition-transform">
                 <ShieldCheck className="w-5 h-5 stroke-[2.2]" />
               </div>
               <div>
@@ -1593,14 +1593,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <ChevronRight className="w-4 h-4 text-[#4E5C70] group-hover:text-[#4B59BB] transition-colors" />
+              <ChevronRight className="w-4 h-4 text-[#4E5C70] group-hover:text-accent transition-colors" />
             </div>
           </button>
           )}
 
           <div className="p-3.5 neu-inset rounded-2xl flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0">
+              <div className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-accent shrink-0">
                 <Bell className="w-5 h-5" />
               </div>
               <div>
@@ -1628,7 +1628,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             className="w-full p-3.5 neu-inset rounded-2xl flex items-center justify-between text-left hover:opacity-95 transition-all cursor-pointer active:scale-[0.98]"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0">
+              <div className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-accent shrink-0">
                 <Lock className="w-5 h-5" />
               </div>
               <div>
@@ -1659,7 +1659,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             {/* Sticky Fixed Header */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 p-4 sm:p-5 shrink-0 bg-[#E3E8EF]">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl neu-inset flex items-center justify-center text-[#4B59BB]">
+                <div className="w-9 h-9 rounded-2xl neu-inset flex items-center justify-center text-accent">
                   <Package className="w-5 h-5 stroke-[2.2]" />
                 </div>
                 <div>
@@ -1723,7 +1723,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                             <span
                               className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full whitespace-nowrap inline-flex items-center gap-1 ${
                                 !ord.isCancelled && ord.status !== 'delivered'
-                                  ? 'neu-inset-deep neu-inset-deep-animated text-[#4B59BB] bg-[#E3E8EF] border border-[#5F6ED0]/30'
+                                  ? 'neu-inset-deep neu-inset-deep-animated text-accent bg-[#E3E8EF] border border-accent/30'
                                   : `${statusInfo.text} neu-flat`
                               }`}
                             >
@@ -1747,7 +1747,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                       <div className="space-y-1">
                         <div className="flex justify-between text-[11px] font-bold text-[#4E5C70]">
                           <span>Прогресс доставки</span>
-                          <span className="text-[#4B59BB] font-black">{statusInfo.percent}%</span>
+                          <span className="text-accent font-black">{statusInfo.percent}%</span>
                         </div>
                         <div className="w-full h-2 rounded-full overflow-hidden neu-inset relative bg-[#D8DFEB]">
                           <div
@@ -1773,12 +1773,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                           <div className="flex items-center justify-between text-xs pt-0.5 flex-wrap gap-1.5">
                             {isPost ? (
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[11px] font-bold text-blue-700 neu-flat px-2 py-0.5 rounded-lg flex items-center gap-1 bg-blue-50/80 border border-blue-200/60">
-                                  <Mail className="w-3 h-3 text-blue-600" />
+                                <span className="text-[11px] font-bold text-accent neu-flat px-2 py-0.5 rounded-lg flex items-center gap-1 bg-accent/4 border border-accent/12">
+                                  <Mail className="w-3 h-3 text-accent" />
                                   Почта России
                                 </span>
                                 {ord.trackingNumber ? (
-                                  <span className="text-[11px] font-mono font-bold text-[#4B59BB] neu-flat px-2 py-0.5 rounded-lg flex items-center gap-1 bg-[#E3E8EF]">
+                                  <span className="text-[11px] font-mono font-bold text-accent neu-flat px-2 py-0.5 rounded-lg flex items-center gap-1 bg-[#E3E8EF]">
                                     {ord.trackingNumber}
                                   </span>
                                 ) : (
@@ -1791,8 +1791,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                             ) : isTK ? (
                               ord.trackingNumber ? (
                                 <div className="flex items-center gap-2">
-                                  <span className="text-[11px] font-mono font-bold text-[#4B59BB] neu-flat px-2 py-0.5 rounded-lg flex items-center gap-1 bg-[#E3E8EF]">
-                                    <Truck className="w-3 h-3 text-[#4B59BB]" />
+                                  <span className="text-[11px] font-mono font-bold text-accent neu-flat px-2 py-0.5 rounded-lg flex items-center gap-1 bg-[#E3E8EF]">
+                                    <Truck className="w-3 h-3 text-accent" />
                                     {ord.trackingNumber}
                                   </span>
                                 </div>
@@ -1806,11 +1806,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                               <div className="flex items-center gap-1.5">
                                 <span className="text-[11px] font-bold text-[#2D3A4E] neu-inset px-2 py-0.5 rounded-lg flex items-center gap-1 bg-[#E3E8EF]">
                                   {isPickup ? (
-                                    <Store className="w-3 h-3 text-[#4B59BB]" />
+                                    <Store className="w-3 h-3 text-accent" />
                                   ) : isExpress ? (
                                     <Zap className="w-3 h-3 text-warning" />
                                   ) : (
-                                    <Bike className="w-3 h-3 text-[#4B59BB]" />
+                                    <Bike className="w-3 h-3 text-accent" />
                                   )}
                                   {ord.deliveryMethod || 'Курьерская доставка'}
                                 </span>
@@ -1821,7 +1821,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                       e.stopPropagation();
                                       setSelectedOrderIdForMap(ord.id);
                                     }}
-                                    className="p-1 px-2 neu-button rounded-lg text-[11px] font-bold text-[#4B59BB] flex items-center gap-1 cursor-pointer hover:scale-105 active:scale-95 transition-transform"
+                                    className="p-1 px-2 neu-button rounded-lg text-[11px] font-bold text-accent flex items-center gap-1 cursor-pointer hover:scale-105 active:scale-95 transition-transform"
                                     title="Открыть карту перемещения курьера"
                                   >
                                     <Navigation className="w-3 h-3" />
@@ -1861,7 +1861,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                             <a
                               href={telHref(storePhone)}
                               onClick={(e) => e.stopPropagation()}
-                              className="p-2 rounded-xl neu-button text-[#4B59BB] hover:scale-105 active:scale-95 transition-transform flex items-center justify-center cursor-pointer"
+                              className="p-2 rounded-xl neu-button text-accent hover:scale-105 active:scale-95 transition-transform flex items-center justify-center cursor-pointer"
                               title={`Позвонить в магазин (${storePhone})`}
                               aria-label={`Позвонить в магазин (${storePhone})`}
                             >
@@ -1880,7 +1880,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                 onOpenSupportChat();
                                 onShowToast(`Чат заботы открыт по заказу #${ord.id}`, 'info');
                               }}
-                              className="p-2 rounded-xl neu-button text-[#4E5C70] hover:text-[#4B59BB] hover:scale-105 active:scale-95 transition-transform flex items-center justify-center cursor-pointer"
+                              className="p-2 rounded-xl neu-button text-[#4E5C70] hover:text-accent hover:scale-105 active:scale-95 transition-transform flex items-center justify-center cursor-pointer"
                               title="Написать в службу поддержки"
                               aria-label="Написать в службу поддержки"
                             >
@@ -1890,7 +1890,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
                           <button
                             onClick={() => setSelectedOrderIdForTracking(ord.id)}
-                            className="neu-button px-3 py-2 rounded-xl text-xs font-bold text-[#4B59BB] flex items-center gap-1 shrink-0 active:scale-95 transition-transform cursor-pointer"
+                            className="neu-button px-3 py-2 rounded-xl text-xs font-bold text-accent flex items-center gap-1 shrink-0 active:scale-95 transition-transform cursor-pointer"
                           >
                             <span>Детали</span>
                             <ChevronRight className="w-3.5 h-3.5" />
@@ -1918,7 +1918,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   <h3 className="text-base font-extrabold text-[#2D3A4E]">
                     Заказ № {selectedOrderForTracking.id}
                   </h3>
-                  <span className="text-[11px] font-extrabold text-[#4B59BB] neu-inset px-2.5 py-0.5 rounded-full">
+                  <span className="text-[11px] font-extrabold text-accent neu-inset px-2.5 py-0.5 rounded-full">
                     Трекинг
                   </span>
                 </div>
@@ -1949,11 +1949,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
               if (isPost) {
                 return (
-                  <div className="neu-inset rounded-2xl p-3.5 bg-blue-50/70 border border-blue-200/80 space-y-2.5">
+                  <div className="neu-inset rounded-2xl p-3.5 bg-accent/4 border border-accent/16 space-y-2.5">
                     <div className="flex items-center justify-between gap-2">
                       <div className="space-y-0.5">
-                        <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wider flex items-center gap-1.5">
-                          <Mail className="w-3.5 h-3.5 text-blue-600" />
+                        <span className="text-[11px] font-bold text-accent uppercase tracking-wider flex items-center gap-1.5">
+                          <Mail className="w-3.5 h-3.5 text-accent" />
                           Почта России • Отправление 1-го класса
                         </span>
                         <p className="text-xs font-black text-[#2D3A4E]">
@@ -1967,7 +1967,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                             copyToClipboard(selectedOrderForTracking.trackingNumber || '');
                             onShowToast('Трек-номер Почты России скопирован в буфер', 'success');
                           }}
-                          className="neu-button p-2 rounded-xl text-blue-700 hover:text-blue-900 flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                          className="neu-button p-2 rounded-xl text-accent hover:text-accent-strong flex items-center gap-1 text-[11px] font-bold cursor-pointer"
                         >
                           <Copy className="w-3.5 h-3.5" />
                           <span>Копия трека</span>
@@ -1992,7 +1992,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                       <div className="flex items-center justify-between">
                         <div className="space-y-0.5">
                           <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider flex items-center gap-1">
-                            <Truck className="w-3.5 h-3.5 text-[#4B59BB]" />
+                            <Truck className="w-3.5 h-3.5 text-accent" />
                             Трек-номер отправления (ТК)
                           </span>
                           <p className="text-xs font-black text-[#2D3A4E] tracking-wide font-mono">
@@ -2040,14 +2040,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider flex items-center gap-1">
-                        {isPickup ? <Store className="w-3.5 h-3.5 text-[#4B59BB]" /> : isExpress ? <Zap className="w-3.5 h-3.5 text-warning" /> : <Bike className="w-3.5 h-3.5 text-[#4B59BB]" />}
+                        {isPickup ? <Store className="w-3.5 h-3.5 text-accent" /> : isExpress ? <Zap className="w-3.5 h-3.5 text-warning" /> : <Bike className="w-3.5 h-3.5 text-accent" />}
                         {isPickup ? 'Самовывоз из бутика' : isExpress ? 'Срочная экспресс-доставка' : `Курьерская служба ${storeName}`}
                       </span>
                       <p className="text-xs font-black text-[#2D3A4E]">
                         {selectedOrderForTracking.deliveryMethod || (isPickup ? 'Самовывоз' : 'Курьерская доставка')}
                       </p>
                     </div>
-                    <span className="text-[11px] font-bold text-[#4B59BB] neu-flat px-2 py-0.5 rounded-lg bg-white/70">
+                    <span className="text-[11px] font-bold text-accent neu-flat px-2 py-0.5 rounded-lg bg-white/70">
                       {isPickup ? 'В бутике' : 'До двери'}
                     </span>
                   </div>
@@ -2062,9 +2062,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => setSelectedOrderIdForMap(selectedOrderForTracking.id)}
-                      className="w-full py-2.5 px-3.5 neu-button rounded-xl text-xs font-black text-[#4B59BB] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
+                      className="w-full py-2.5 px-3.5 neu-button rounded-xl text-xs font-black text-accent flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
                     >
-                      <Navigation className="w-4 h-4 text-[#4B59BB] animate-pulse" />
+                      <Navigation className="w-4 h-4 text-accent animate-pulse" />
                       <span>Открыть карту перемещения курьера</span>
                     </button>
                   )}
@@ -2102,7 +2102,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                           <span>{trackingStatusInfo.label}</span>
                         </span>
                         {!selectedOrderForTracking.isCancelled && (
-                          <span className="text-[11px] font-black text-[#4B59BB] neu-inset px-2.5 py-1 rounded-lg whitespace-nowrap">
+                          <span className="text-[11px] font-black text-accent neu-inset px-2.5 py-1 rounded-lg whitespace-nowrap">
                             {trackingStatusInfo.percent}% выполнено
                           </span>
                         )}
@@ -2113,7 +2113,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                       <div className="text-left sm:text-right shrink-0">
                         <span className="text-[11px] text-[#4E5C70] font-bold block mb-1">Ожидается:</span>
                         <p className="text-xs font-extrabold text-[#2D3A4E] flex items-center sm:justify-end gap-1 whitespace-nowrap neu-inset px-2.5 py-1 rounded-lg">
-                          <Clock className="w-3.5 h-3.5 text-[#4B59BB] shrink-0" />
+                          <Clock className="w-3.5 h-3.5 text-accent shrink-0" />
                           <span>{selectedOrderForTracking.estimatedDelivery}</span>
                         </p>
                       </div>
@@ -2137,7 +2137,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                 isStepDone
                                   ? 'neu-fill-accent text-white'
                                   : isStepActive
-                                  ? 'neu-inset-deep text-[#4B59BB] bg-[#E3E8EF] border border-[#5F6ED0] ring-1 ring-[#5F6ED0]/30 font-black'
+                                  ? 'neu-inset-deep text-accent bg-[#E3E8EF] border border-accent ring-1 ring-accent/30 font-black'
                                   : 'neu-inset text-[#4E5C70]/70 bg-[#E3E8EF]'
                               }`}
                             >
@@ -2152,7 +2152,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                 isStepDone
                                   ? 'text-[#2D3A4E]'
                                   : isStepActive
-                                  ? 'text-[#4B59BB] font-black'
+                                  ? 'text-accent font-black'
                                   : 'text-[#4E5C70]/70'
                               }`}
                               title={step.label}
@@ -2167,7 +2167,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     {/* Continuous Neumorphic Progress Track with Shimmer Beam */}
                     <div className="relative w-full h-2.5 rounded-full overflow-hidden neu-inset bg-[#D8DFEB]">
                       <div
-                        className="h-full rounded-full transition-all duration-500 ease-out relative bg-gradient-to-r from-[#5F6ED0] via-[#7888EC] to-[#5F6ED0]"
+                        className="h-full rounded-full transition-all duration-500 ease-out relative bg-gradient-to-r from-accent via-[#7888EC] to-accent"
                         style={{ width: `${Math.max(4, trackingStatusInfo.percent)}%` }}
                       >
                         {!selectedOrderForTracking.isCancelled &&
@@ -2185,10 +2185,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <div className="neu-inset rounded-2xl p-4 bg-[#E3E8EF] space-y-3">
               <div className="flex items-center justify-between border-b border-[#BAC5D5]/40 pb-2">
                 <span className="text-xs font-black text-[#2D3A4E] uppercase tracking-wider flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-[#4B59BB]" />
+                  <Clock className="w-3.5 h-3.5 text-accent" />
                   Этапы доставки
                 </span>
-                <span className="text-[11px] text-[#4B59BB] font-black neu-button px-2 py-0.5 rounded-full">
+                <span className="text-[11px] text-accent font-black neu-button px-2 py-0.5 rounded-full">
                   Онлайн данные
                 </span>
               </div>
@@ -2217,7 +2217,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                 isCompleted
                                   ? 'neu-fill-accent text-white'
                                   : isActive
-                                  ? 'neu-inset-deep text-[#4B59BB] bg-[#E3E8EF] border border-[#5F6ED0] ring-2 ring-[#5F6ED0]/20'
+                                  ? 'neu-inset-deep text-accent bg-[#E3E8EF] border border-accent ring-2 ring-accent/20'
                                   : 'neu-inset text-[#4E5C70] bg-[#E3E8EF]'
                               }`}
                             >
@@ -2234,9 +2234,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                 <div
                                   className={`w-full rounded-full transition-all duration-500 ease-out relative ${
                                     isPathToNextFilled
-                                      ? 'h-full bg-gradient-to-b from-[#5F6ED0] to-[#7888EC]'
+                                      ? 'h-full bg-gradient-to-b from-accent to-[#7888EC]'
                                       : isPathToNextActive
-                                      ? 'h-full bg-gradient-to-b from-[#5F6ED0] via-[#8594F7] to-[#BAC5D5]'
+                                      ? 'h-full bg-gradient-to-b from-accent via-[#8594F7] to-[#BAC5D5]'
                                       : 'h-0 bg-transparent'
                                   }`}
                                 >
@@ -2252,9 +2252,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                           <div
                             className={`flex-1 min-w-0 mb-3 rounded-2xl p-3 sm:p-3.5 border transition-all ${
                               isActive
-                                ? 'neu-inset-deep border-[#5F6ED0]/50 bg-[#E3E8EF]'
+                                ? 'neu-inset-deep border-accent/50 bg-[#E3E8EF]'
                                 : isCompleted
-                                ? 'neu-flat-sm border-[#5F6ED0]/40 bg-[#E3E8EF]'
+                                ? 'neu-flat-sm border-accent/40 bg-[#E3E8EF]'
                                 : 'neu-flat-sm border-white/60 opacity-60 bg-[#E3E8EF]'
                             }`}
                           >
@@ -2264,7 +2264,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                   <span
                                     className={`text-xs font-bold truncate ${
                                       isActive
-                                        ? 'text-[#4B59BB] font-black'
+                                        ? 'text-accent font-black'
                                         : isCompleted
                                         ? 'text-[#2D3A4E]'
                                         : 'text-[#4E5C70]'
@@ -2273,8 +2273,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                     {stage.title}
                                   </span>
                                   {isActive && (
-                                    <span className="text-[11px] font-extrabold text-[#4B59BB] neu-inset px-2 py-0.5 rounded-full flex items-center gap-1 bg-[#E3E8EF]">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-[#5F6ED0] animate-ping" />
+                                    <span className="text-[11px] font-extrabold text-accent neu-inset px-2 py-0.5 rounded-full flex items-center gap-1 bg-[#E3E8EF]">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
                                       <span>В процессе</span>
                                     </span>
                                   )}
@@ -2288,7 +2288,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                 <span
                                   className={`text-[11px] font-mono shrink-0 px-2 py-0.5 rounded-md font-bold ${
                                     isActive
-                                      ? 'text-[#4B59BB] neu-inset bg-[#E3E8EF]'
+                                      ? 'text-accent neu-inset bg-[#E3E8EF]'
                                       : isCompleted
                                       ? 'text-success neu-flat bg-[#E3E8EF]'
                                       : 'text-[#4E5C70]'
@@ -2348,7 +2348,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                             <div
                               className={`w-3.5 h-3.5 rounded-full mt-1.5 shrink-0 transition-all ${
                                 step.completed
-                                  ? 'bg-[#5F6ED0] ring-4 ring-[#5F6ED0]/20'
+                                  ? 'bg-accent ring-4 ring-accent/20'
                                   : 'bg-[#BAC5D5]'
                               }`}
                             />
@@ -2357,7 +2357,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                 <div
                                   className={`w-full h-full transition-all duration-300 ${
                                     isPathFilled
-                                      ? 'bg-[#5F6ED0]'
+                                      ? 'bg-accent'
                                       : 'bg-transparent'
                                   }`}
                                 />
@@ -2368,7 +2368,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                           <div
                             className={`flex-1 neu-flat-sm rounded-xl p-3 border mb-2.5 transition-all ${
                               step.completed
-                                ? 'border-[#5F6ED0]/50'
+                                ? 'border-accent/50'
                                 : 'border-white/60 opacity-60'
                             }`}
                           >
@@ -2453,7 +2453,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             {/* Delivery address & Payment info */}
             <div className="space-y-1.5 text-xs text-[#4E5C70] neu-inset bg-[#E3E8EF] p-3.5 rounded-2xl">
               <div className="flex items-start gap-2">
-                <MapPin className="w-4 h-4 text-[#4B59BB] shrink-0 mt-0.5" />
+                <MapPin className="w-4 h-4 text-accent shrink-0 mt-0.5" />
                 <div>
                   <span className="font-bold text-[#2D3A4E]">Адрес доставки:</span>
                   <p className="text-[11px] text-[#4E5C70]">
@@ -2463,7 +2463,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </div>
               {selectedOrderForTracking.paymentMethod && (
                 <div className="flex items-center gap-2 pt-1">
-                  <CreditCard className="w-4 h-4 text-[#4B59BB] shrink-0" />
+                  <CreditCard className="w-4 h-4 text-accent shrink-0" />
                   <span className="text-[11px] text-[#2D3A4E] font-semibold">
                     Оплата: {selectedOrderForTracking.paymentMethod}
                   </span>
@@ -2480,9 +2480,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
               if (isPost) {
                 return (
-                  <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-blue-50/40 border border-blue-200/60 flex items-center justify-between gap-3">
+                  <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-accent/2 border border-accent/12 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center bg-white text-blue-700 font-black text-xs shrink-0 border border-blue-200/80">
+                      <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center bg-white text-accent font-black text-xs shrink-0 border border-accent/16">
                         ПР
                       </div>
                       <div className="min-w-0">
@@ -2501,10 +2501,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                           onOpenSupportChat();
                           onShowToast(`Чат заботы открыт по заказу #${orderId}`, 'info');
                         }}
-                        className="py-1.5 px-3 rounded-xl neu-button text-blue-700 hover:text-blue-900 hover:scale-105 active:scale-95 transition-transform flex items-center gap-1 text-[11px] font-bold cursor-pointer shrink-0"
+                        className="py-1.5 px-3 rounded-xl neu-button text-accent hover:text-accent-strong hover:scale-105 active:scale-95 transition-transform flex items-center gap-1 text-[11px] font-bold cursor-pointer shrink-0"
                         title="Написать в чат поддержки"
                       >
-                        <MessageCircle className="w-3.5 h-3.5 text-blue-600" />
+                        <MessageCircle className="w-3.5 h-3.5 text-accent" />
                         <span>Чат заботы</span>
                       </button>
                     )}
@@ -2516,7 +2516,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 return (
                   <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-[#E3E8EF] flex items-center justify-between gap-3 border border-white/70">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center bg-white text-[#4B59BB] font-black text-xs shrink-0 border border-white/90">
+                      <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center bg-white text-accent font-black text-xs shrink-0 border border-white/90">
                         MS
                       </div>
                       <div className="min-w-0">
@@ -2535,10 +2535,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                           onOpenSupportChat();
                           onShowToast(`Чат заботы открыт по заказу #${orderId}`, 'info');
                         }}
-                        className="py-1.5 px-3 rounded-xl neu-button text-[#2D3A4E] hover:text-[#4B59BB] hover:scale-105 active:scale-95 transition-transform flex items-center gap-1 text-[11px] font-bold cursor-pointer shrink-0"
+                        className="py-1.5 px-3 rounded-xl neu-button text-[#2D3A4E] hover:text-accent hover:scale-105 active:scale-95 transition-transform flex items-center gap-1 text-[11px] font-bold cursor-pointer shrink-0"
                         title="Написать в чат поддержки"
                       >
-                        <MessageCircle className="w-3.5 h-3.5 text-[#4B59BB]" />
+                        <MessageCircle className="w-3.5 h-3.5 text-accent" />
                         <span>Консьерж</span>
                       </button>
                     )}
@@ -2550,7 +2550,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 return (
                   <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-[#E3E8EF] flex items-center justify-between gap-3 border border-white/70">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center bg-white text-[#4B59BB] font-black text-xs shrink-0 border border-white/90">
+                      <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center bg-white text-accent font-black text-xs shrink-0 border border-white/90">
                         АС
                       </div>
                       <div className="min-w-0">
@@ -2572,7 +2572,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                       {storePhone && !selectedOrderForTracking.isCancelled && selectedOrderForTracking.status !== 'delivered' && (
                         <a
                           href={telHref(storePhone)}
-                          className="py-1.5 px-2.5 rounded-xl neu-button text-[#4B59BB] hover:scale-105 active:scale-95 transition-transform flex items-center gap-1 text-[11px] font-extrabold cursor-pointer"
+                          className="py-1.5 px-2.5 rounded-xl neu-button text-accent hover:scale-105 active:scale-95 transition-transform flex items-center gap-1 text-[11px] font-extrabold cursor-pointer"
                           title={`Позвонить в магазин (${storePhone})`}
                         >
                           <Phone className="w-3.5 h-3.5" />
@@ -2590,10 +2590,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                             onOpenSupportChat();
                             onShowToast(`Чат заботы открыт по заказу #${orderId}`, 'info');
                           }}
-                          className="py-1.5 px-2.5 rounded-xl neu-button text-[#2D3A4E] hover:text-[#4B59BB] hover:scale-105 active:scale-95 transition-transform flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                          className="py-1.5 px-2.5 rounded-xl neu-button text-[#2D3A4E] hover:text-accent hover:scale-105 active:scale-95 transition-transform flex items-center gap-1 text-[11px] font-bold cursor-pointer"
                           title="Написать в чат поддержки"
                         >
-                          <MessageCircle className="w-3.5 h-3.5 text-[#4B59BB]" />
+                          <MessageCircle className="w-3.5 h-3.5 text-accent" />
                           <span>Чат</span>
                         </button>
                       )}
@@ -2625,10 +2625,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         onOpenSupportChat();
                         onShowToast(`Чат заботы открыт по заказу #${orderId}`, 'info');
                       }}
-                      className="py-1.5 px-3 rounded-xl neu-button text-[#2D3A4E] hover:text-[#4B59BB] hover:scale-105 active:scale-95 transition-transform flex items-center gap-1 text-[11px] font-bold cursor-pointer shrink-0"
+                      className="py-1.5 px-3 rounded-xl neu-button text-[#2D3A4E] hover:text-accent hover:scale-105 active:scale-95 transition-transform flex items-center gap-1 text-[11px] font-bold cursor-pointer shrink-0"
                       title="Написать в чат поддержки"
                     >
-                      <MessageCircle className="w-3.5 h-3.5 text-[#4B59BB]" />
+                      <MessageCircle className="w-3.5 h-3.5 text-accent" />
                       <span>Чат заботы</span>
                     </button>
                   )}
@@ -2664,7 +2664,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             {/* Sticky Fixed Header */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 p-4 sm:p-5 shrink-0 bg-[#E3E8EF]">
               <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-[#4B59BB]" />
+                <MapPin className="w-5 h-5 text-accent" />
                 <h3 className="text-base font-extrabold text-[#2D3A4E]">Адреса доставки</h3>
               </div>
               <button
@@ -2737,7 +2737,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                       </span>
                     )}
                     {addr.intercom && (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#4B59BB] bg-[#5F6ED0]/10">
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-accent bg-accent/10">
                         домофон: {addr.intercom}
                       </span>
                     )}
@@ -2746,7 +2746,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   {!addr.isDefault && (
                     <button
                       onClick={() => handleSetDefaultAddress(addr.id)}
-                      className="text-[11px] font-bold text-[#4B59BB] hover:underline pt-1 block cursor-pointer"
+                      className="text-[11px] font-bold text-accent hover:underline pt-1 block cursor-pointer"
                     >
                       Сделать основным адресом
                     </button>
@@ -2942,7 +2942,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 >
                   <Check className="w-3.5 h-3.5 stroke-[3]" />
                 </div>
-                <span className="font-bold text-xs text-[#2D3A4E] group-hover:text-[#4B59BB]">
+                <span className="font-bold text-xs text-[#2D3A4E] group-hover:text-accent">
                   Сделать основным адресом
                 </span>
               </div>
@@ -2974,7 +2974,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             {/* Sticky Fixed Header */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 p-4 sm:p-5 shrink-0 bg-[#E3E8EF]">
               <div className="flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-[#4B59BB]" />
+                <CreditCard className="w-5 h-5 text-accent" />
                 <h3 className="text-base font-extrabold text-[#2D3A4E]">Способы оплаты</h3>
               </div>
               <button
@@ -3029,7 +3029,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   {!card.isDefault && (
                     <button
                       onClick={() => handleSetDefaultCard(card.id)}
-                      className="text-[11px] font-bold text-[#4B59BB] hover:underline pt-1 block cursor-pointer"
+                      className="text-[11px] font-bold text-accent hover:underline pt-1 block cursor-pointer"
                     >
                       Сделать основной картой
                     </button>
@@ -3167,7 +3167,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 >
                   <Check className="w-3.5 h-3.5 stroke-[3]" />
                 </div>
-                <span className="font-bold text-xs text-[#2D3A4E] group-hover:text-[#4B59BB]">
+                <span className="font-bold text-xs text-[#2D3A4E] group-hover:text-accent">
                   Сделать основной картой
                 </span>
               </button>
@@ -3199,7 +3199,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             {/* Sticky Fixed Header */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 p-4 sm:p-5 shrink-0 bg-[#E3E8EF]">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl neu-inset flex items-center justify-center text-[#4B59BB] bg-[#E3E8EF]">
+                <div className="w-9 h-9 rounded-2xl neu-inset flex items-center justify-center text-accent bg-[#E3E8EF]">
                   <Ruler className="w-5 h-5 stroke-[2.2]" />
                 </div>
                 <div>
@@ -3230,7 +3230,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] space-y-3 border border-white/60">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-[#4B59BB]" />
+                  <Sparkles className="w-3.5 h-3.5 text-accent" />
                   <span className="text-[11px] font-black uppercase tracking-wider text-[#2D3A4E]">
                     Размерное лекало РФ
                   </span>
@@ -3238,7 +3238,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowGostTable(!showGostTable)}
-                  className="neu-button px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#4B59BB] hover:text-[#2D3A4E] cursor-pointer"
+                  className="neu-button px-2 py-0.5 rounded-lg text-[11px] font-bold text-accent hover:text-[#2D3A4E] cursor-pointer"
                 >
                   {showGostTable ? 'Скрыть таблицу' : 'Таблица ГОСТ'}
                 </button>
@@ -3248,7 +3248,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div className="neu-flat rounded-xl p-2 text-center bg-[#E3E8EF] border border-white/70">
                   <span className="text-[11px] font-bold text-[#4E5C70] block">Верх РФ</span>
-                  <span className="text-xs font-black text-[#4B59BB] block my-0.5">
+                  <span className="text-xs font-black text-accent block my-0.5">
                     {currentRussianPattern.topSizeLabel}
                   </span>
                   <span className="text-[11px] text-[#4E5C70] block truncate">
@@ -3258,7 +3258,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
                 <div className="neu-flat rounded-xl p-2 text-center bg-[#E3E8EF] border border-white/70">
                   <span className="text-[11px] font-bold text-[#4E5C70] block">Низ РФ</span>
-                  <span className="text-xs font-black text-[#4B59BB] block my-0.5">
+                  <span className="text-xs font-black text-accent block my-0.5">
                     {currentRussianPattern.bottomSizeLabel}
                   </span>
                   <span className="text-[11px] text-[#4E5C70] block truncate">
@@ -3289,7 +3289,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
               {/* Dynamic Recommendation Banner */}
               <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#4E5C70] pt-1 border-t border-[#BAC5D5]/40">
-                <Info className="w-3.5 h-3.5 text-[#4B59BB] shrink-0" />
+                <Info className="w-3.5 h-3.5 text-accent shrink-0" />
                 <span className="truncate">
                   {currentRussianPattern.recommendedFit} • ИМТ: {currentRussianPattern.bmi} ({currentRussianPattern.bmiStatus})
                 </span>
@@ -3300,7 +3300,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 <div className="neu-flat rounded-xl p-3 bg-[#E3E8EF] border border-white/80 space-y-2 mt-2 animate-in fade-in">
                   <div className="text-[11px] font-extrabold text-[#2D3A4E] flex items-center justify-between">
                     <span>Сетка размеров РФ (ГОСТ 31399-2009)</span>
-                    <span className="text-[11px] text-[#4B59BB] font-bold">Мужская одежда</span>
+                    <span className="text-[11px] text-accent font-bold">Мужская одежда</span>
                   </div>
                   <div className="overflow-x-auto no-scrollbar">
                     <table className="w-full text-[11px] text-center border-collapse">
@@ -3322,7 +3322,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                               key={row.ru}
                               className={`border-b border-[#BAC5D5]/30 transition-colors ${
                                 isMatch
-                                  ? 'neu-inset text-[#4B59BB] font-black bg-[#DDE4F0]'
+                                  ? 'neu-inset text-accent font-black bg-[#DDE4F0]'
                                   : 'text-[#2D3A4E]'
                               }`}
                             >
@@ -3497,7 +3497,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3 shrink-0 gap-2">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0">
+                <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-accent shrink-0">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
@@ -3516,7 +3516,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   id="admin-change-credentials-header-btn"
                   type="button"
                   onClick={() => setIsChangeCredentialsModalOpen(true)}
-                  className="h-9 px-3 rounded-xl neu-button flex items-center gap-1.5 text-xs font-bold text-[#4B59BB] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer"
+                  className="h-9 px-3 rounded-xl neu-button flex items-center gap-1.5 text-xs font-bold text-accent hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer"
                   title="Изменить логин и пароль администратора"
                 >
                   <KeyRound className="w-3.5 h-3.5" />
@@ -3569,7 +3569,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     }}
                     className={`relative min-w-[90px] sm:min-w-[105px] py-2 px-3 rounded-xl font-extrabold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 active:scale-95 select-none ${
                       isActive
-                        ? 'text-[#4B59BB] font-black'
+                        ? 'text-accent font-black'
                         : 'text-[#4E5C70] hover:text-[#2D3A4E]'
                     }`}
                   >
@@ -3581,7 +3581,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                       />
                     )}
                     <span className="relative z-10 flex items-center gap-1.5">
-                      <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[#4B59BB]' : 'text-[#4E5C70]'}`} />
+                      <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-accent' : 'text-[#4E5C70]'}`} />
                       <span>{tab.label}</span>
                     </span>
                   </button>
@@ -3819,7 +3819,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             >
               <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB]">
+                  <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent">
                     <Headphones className="w-4 h-4" />
                   </div>
                   <h3 className="text-sm font-black uppercase tracking-wider text-[#2D3A4E]">
@@ -3844,14 +3844,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                       <p className="font-bold text-[#2D3A4E]">Телефон магазина:</p>
                       <a
                         href={telHref(storePhone)}
-                        className="text-[#4B59BB] font-black text-base hover:underline block"
+                        className="text-accent font-black text-base hover:underline block"
                       >
                         {storePhone}
                       </a>
                     </div>
                     <a
                       href={telHref(storePhone)}
-                      className="neu-button p-2.5 rounded-xl text-[#4B59BB] hover:scale-105 active:scale-95 transition-transform"
+                      className="neu-button p-2.5 rounded-xl text-accent hover:scale-105 active:scale-95 transition-transform"
                       title="Позвонить"
                     >
                       <Phone className="w-4 h-4" />
@@ -3879,7 +3879,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   {storeEmail && (
                     <a
                       href={`mailto:${storeEmail}`}
-                      className="w-full neu-button py-2.5 px-4 rounded-xl text-xs font-bold text-[#2D3A4E] flex items-center justify-center gap-2 cursor-pointer hover:text-[#4B59BB] transition-colors"
+                      className="w-full neu-button py-2.5 px-4 rounded-xl text-xs font-bold text-[#2D3A4E] flex items-center justify-center gap-2 cursor-pointer hover:text-accent transition-colors"
                     >
                       <span>Email: {storeEmail}</span>
                     </a>

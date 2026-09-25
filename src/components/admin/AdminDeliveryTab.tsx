@@ -375,7 +375,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               {deliveryMethods.length}
             </span>
           </div>
-          <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4B59BB]">
+          <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-accent">
             <Truck className="w-4 h-4" />
           </div>
         </div>
@@ -399,11 +399,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
             <span className="text-[11px] font-bold text-[#4E5C70] block uppercase tracking-wider">
               Пунктов выдачи
             </span>
-            <span className="text-xl font-black text-[#4B59BB] block mt-0.5">
+            <span className="text-xl font-black text-accent block mt-0.5">
               {pickupPoints.length}
             </span>
           </div>
-          <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4B59BB]">
+          <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-accent">
             <Store className="w-4 h-4" />
           </div>
         </div>
@@ -558,7 +558,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               <button
                 type="button"
                 onClick={handleOpenAddMethod}
-                className="mt-2 px-3 py-1.5 neu-button rounded-xl text-xs font-bold text-[#4B59BB]"
+                className="mt-2 px-3 py-1.5 neu-button rounded-xl text-xs font-bold text-accent"
               >
                 + Добавить способ доставки
               </button>
@@ -687,7 +687,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               <button
                 type="button"
                 onClick={handleOpenAddPoint}
-                className="mt-2 px-3 py-1.5 neu-button rounded-xl text-xs font-bold text-[#4B59BB]"
+                className="mt-2 px-3 py-1.5 neu-button rounded-xl text-xs font-bold text-accent"
               >
                 + Добавить пункт выдачи
               </button>
@@ -703,7 +703,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                     key={point.id}
                     className={`neu-flat rounded-2xl p-4 transition-all space-y-3 relative ${
                       !isActive ? 'opacity-60 grayscale-[30%]' : ''
-                    } ${isDefault ? 'ring-1.5 ring-[#5F6ED0]/50' : ''}`}
+                    } ${isDefault ? 'ring-1.5 ring-accent/50' : ''}`}
                   >
                     {/* Header: Name, City & Actions */}
                     <div className="flex items-start justify-between gap-2">
@@ -711,7 +711,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                         <div
                           className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
                             isDefault
-                              ? 'neu-button text-[#4B59BB] bg-[#E3E8EF]'
+                              ? 'neu-button text-accent bg-[#E3E8EF]'
                               : 'neu-inset text-[#4E5C70]'
                           }`}
                         >
@@ -723,12 +723,12 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                               {point.name}
                             </h4>
                             {isDefault && (
-                              <span className="neu-inset text-[#4B59BB] text-[11px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider bg-[#E3E8EF]">
+                              <span className="neu-inset text-accent text-[11px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider bg-[#E3E8EF]">
                                 Основной адрес
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] font-bold text-[#4B59BB] flex items-center gap-1 mt-0.5">
+                          <p className="text-[11px] font-bold text-accent flex items-center gap-1 mt-0.5">
                             <MapPin className="w-3 h-3" />
                             <span>{point.city}</span>
                           </p>
@@ -740,7 +740,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                           <button
                             type="button"
                             onClick={(e) => handleSetDefaultPoint(point.id, e)}
-                            className="p-1.5 neu-button rounded-xl text-[#4E5C70] hover:text-[#4B59BB] cursor-pointer"
+                            className="p-1.5 neu-button rounded-xl text-[#4E5C70] hover:text-accent cursor-pointer"
                             title="Сделать основным пунктом самовывоза"
                             aria-label="Сделать основным пунктом самовывоза"
                           >
@@ -777,8 +777,8 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                       </div>
 
                       {point.metro && (
-                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#4B59BB]">
-                          <span className="w-2 h-2 rounded-full bg-[#5F6ED0] shrink-0" />
+                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-accent">
+                          <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
                           <span>м. {point.metro}</span>
                         </div>
                       )}
@@ -787,11 +787,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                     {/* Schedule & Phone */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-[#4E5C70]">
                       <div className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-[#4B59BB] shrink-0" />
+                        <Clock className="w-3.5 h-3.5 text-accent shrink-0" />
                         <span className="truncate">{point.schedule}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <Phone className="w-3.5 h-3.5 text-[#4B59BB] shrink-0" />
+                        <Phone className="w-3.5 h-3.5 text-accent shrink-0" />
                         <span className="truncate font-semibold text-[#2D3A4E]">{point.phone}</span>
                       </div>
                     </div>
@@ -799,7 +799,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                     {/* Note / Amenities */}
                     {point.note && (
                       <div className="pt-2 border-t border-[#BAC5D5]/40 text-[11px] text-[#4E5C70] flex items-start gap-1.5">
-                        <Info className="w-3 h-3 text-[#4B59BB] shrink-0 mt-0.5" />
+                        <Info className="w-3 h-3 text-accent shrink-0 mt-0.5" />
                         <span className="leading-snug">{point.note}</span>
                       </div>
                     )}
@@ -817,7 +817,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
           <div className="neu-modal rounded-3xl p-5 max-w-lg w-full space-y-4 border border-white/80 text-[#2D3A4E] max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-2.5">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB]">
+                <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent">
                   <Truck className="w-4 h-4" />
                 </div>
                 <h3 className="text-sm font-black text-[#2D3A4E]">
@@ -979,7 +979,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                   id="formMethodIsActive"
                   checked={formMethodIsActive}
                   onChange={(e) => setFormMethodIsActive(e.target.checked)}
-                  className="rounded text-[#4B59BB] focus:ring-0 w-4 h-4 cursor-pointer"
+                  className="rounded text-accent focus:ring-0 w-4 h-4 cursor-pointer"
                 />
                 <label htmlFor="formMethodIsActive" className="text-xs font-bold text-[#2D3A4E] cursor-pointer">
                   Модуль активен и отображается при оформлении заказа
@@ -1012,7 +1012,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
           <div className="neu-modal rounded-3xl p-5 max-w-lg w-full space-y-4 border border-white/80 text-[#2D3A4E] max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-2.5">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4B59BB]">
+                <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent">
                   <Store className="w-4 h-4" />
                 </div>
                 <h3 className="text-sm font-black text-[#2D3A4E]">
@@ -1137,7 +1137,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                     id="formPointIsDefault"
                     checked={formPointIsDefault}
                     onChange={(e) => setFormPointIsDefault(e.target.checked)}
-                    className="rounded text-[#4B59BB] focus:ring-0 w-4 h-4 cursor-pointer"
+                    className="rounded text-accent focus:ring-0 w-4 h-4 cursor-pointer"
                   />
                   <label htmlFor="formPointIsDefault" className="text-xs font-bold text-[#2D3A4E] cursor-pointer">
                     Основной пункт самовывоза (по умолчанию)
@@ -1150,7 +1150,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                     id="formPointIsActive"
                     checked={formPointIsActive}
                     onChange={(e) => setFormPointIsActive(e.target.checked)}
-                    className="rounded text-[#4B59BB] focus:ring-0 w-4 h-4 cursor-pointer"
+                    className="rounded text-accent focus:ring-0 w-4 h-4 cursor-pointer"
                   />
                   <label htmlFor="formPointIsActive" className="text-xs font-bold text-[#2D3A4E] cursor-pointer">
                     Пункт активен и доступен для выбора покупателями

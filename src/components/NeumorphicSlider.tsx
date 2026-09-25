@@ -98,7 +98,7 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {icon && (
-            <div className="w-7 h-7 rounded-xl neu-button flex items-center justify-center text-[#4B59BB] shrink-0 bg-[#E3E8EF]">
+            <div className="w-7 h-7 rounded-xl neu-button flex items-center justify-center text-accent shrink-0 bg-[#E3E8EF]">
               {icon}
             </div>
           )}
@@ -129,8 +129,8 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
           <div
             className={`px-2.5 py-1 rounded-xl font-extrabold text-xs tracking-tight transition-transform duration-100 ${
               isDragging
-                ? 'neu-inset-deep text-[#4B59BB] scale-105 bg-[#E3E8EF]'
-                : 'neu-inset text-[#4B59BB] bg-[#E3E8EF]'
+                ? 'neu-inset-deep text-accent scale-105 bg-[#E3E8EF]'
+                : 'neu-inset text-accent bg-[#E3E8EF]'
             }`}
           >
             {value} <span className="text-[11px] font-bold text-[#4E5C70]">{unit}</span>
@@ -163,11 +163,11 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
           aria-valuemax={max}
           aria-valuenow={value}
           aria-label={label}
-          className="relative w-full h-3 rounded-full neu-inset bg-[#D8DFEB] cursor-pointer touch-none select-none focus-visible:ring-2 focus-visible:ring-[#5F6ED0]"
+          className="relative w-full h-3 rounded-full neu-inset bg-[#D8DFEB] cursor-pointer touch-none select-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           {/* Active Gradient Rail */}
           <div
-            className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-[#5F6ED0] to-[#7888EC] transition-[width] duration-75 ease-out"
+            className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-accent to-[#7888EC] transition-[width] duration-75 ease-out"
             style={{ width: `${percent}%` }}
           >
             {isDragging && <div className="neu-progress-beam" />}
@@ -194,14 +194,14 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
             <div
               className={`w-6 h-6 rounded-full bg-[#E3E8EF] flex items-center justify-center border-2 border-white transition-transform duration-100 ease-out ${
                 isDragging
-                  ? 'scale-115 shadow-[2px_2px_5px_rgba(150,163,185,0.9),-2px_-2px_5px_rgba(255,255,255,1)] ring-4 ring-[#5F6ED0]/25'
+                  ? 'scale-115 shadow-[2px_2px_5px_rgba(150,163,185,0.9),-2px_-2px_5px_rgba(255,255,255,1)] ring-4 ring-accent/25'
                   : 'shadow-[3px_3px_6px_rgba(150,163,185,0.75),-3px_-3px_6px_rgba(255,255,255,1)] hover:scale-105'
               }`}
             >
               {/* Center Tactile Accent Core */}
               <div
                 className={`w-2.5 h-2.5 rounded-full shadow-inner transition-all duration-150 ${
-                  isDragging ? 'bg-[#5F6ED0] scale-110' : 'bg-[#5F6ED0]'
+                  isDragging ? 'bg-accent scale-110' : 'bg-accent'
                 }`}
               />
             </div>
@@ -212,7 +212,7 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
         <div className="flex justify-between items-center text-[11px] font-bold text-[#4E5C70] pt-2 px-0.5">
           <span>{min} {unit}</span>
           {recommendedValue && (
-            <span className="text-[11px] font-semibold text-[#4B59BB]/80">
+            <span className="text-[11px] font-semibold text-accent/80">
               База: {recommendedValue} {unit}
             </span>
           )}

@@ -217,7 +217,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-[#BAC5D5]/40">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-[#4B59BB] bg-[#E3E8EF]">
+                <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-accent bg-[#E3E8EF]">
                   <Ruler className="w-5 h-5 stroke-[2.2]" />
                 </div>
                 <div>
@@ -242,14 +242,14 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
             <div className="neu-inset rounded-2xl p-3.5 border border-white/50 space-y-2 bg-[#E3E8EF] transition-all duration-200">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 rounded-xl neu-button flex items-center justify-center shrink-0 text-[#4B59BB] bg-[#E3E8EF] border border-white/80">
+                  <div className="w-7 h-7 rounded-xl neu-button flex items-center justify-center shrink-0 text-accent bg-[#E3E8EF] border border-white/80">
                     <Info className="w-3.5 h-3.5 stroke-[2.4]" />
                   </div>
                   <div className="flex items-center gap-2 flex-wrap min-w-0">
                     <span className="text-xs font-black text-[#2D3A4E]">
                       Силуэт изделия:
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-full neu-inset text-[#4B59BB] text-[11px] uppercase font-black tracking-wider bg-[#E3E8EF] border border-[#5F6ED0]/30">
+                    <span className="px-2.5 py-0.5 rounded-full neu-inset text-accent text-[11px] uppercase font-black tracking-wider bg-[#E3E8EF] border border-accent/30">
                       {silhouetteData.fitBadge}
                     </span>
                     <span className="text-[11px] font-bold text-[#4E5C70] px-2 py-0.5 rounded-md neu-inset bg-[#E3E8EF] border border-white/40">
@@ -258,7 +258,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                   </div>
                 </div>
 
-                <div className="text-[11px] font-extrabold text-[#4B59BB] flex items-center gap-1.5 ml-auto">
+                <div className="text-[11px] font-extrabold text-accent flex items-center gap-1.5 ml-auto">
                   <span className="text-[#4E5C70] font-medium">Прибавка к ПОГ:</span>
                   <span className="px-1.5 py-0.5 rounded-md neu-inset bg-[#E3E8EF] border border-white/40 font-mono">
                     {silhouetteData.allowance}
@@ -280,7 +280,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                 </div>
                 <div className="neu-flat rounded-lg px-2 py-1 bg-[#E3E8EF] border border-white/60 text-center">
                   <span className="text-[#4E5C70] text-[11px] block">Дроп (ОГ − ОТ)</span>
-                  <span className="font-extrabold text-[#4B59BB]">
+                  <span className="font-extrabold text-accent">
                     {silhouetteData.drop > 0 ? `+${silhouetteData.drop}` : silhouetteData.drop} см
                   </span>
                 </div>
@@ -297,7 +297,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
             <div className="neu-inset rounded-2xl p-3.5 space-y-3 bg-[#E3E8EF] border border-white/50">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[#4B59BB]" />
+                  <Sparkles className="w-4 h-4 text-accent" />
                   <span className="text-xs font-black text-[#2D3A4E] uppercase tracking-wide">
                     Рассчитанное лекало
                   </span>
@@ -306,7 +306,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowSizeTable(!showSizeTable)}
-                    className="text-[11px] font-bold text-[#4B59BB] neu-button px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer bg-[#E3E8EF]"
+                    className="text-[11px] font-bold text-accent neu-button px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer bg-[#E3E8EF]"
                   >
                     <span>Таблица</span>
                     {showSizeTable ? (
@@ -330,7 +330,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div className="neu-flat rounded-xl p-2.5 text-center bg-[#E3E8EF] border border-white/70">
                   <span className="text-[11px] font-medium text-[#4E5C70] block">Верхняя одежда</span>
-                  <span className="text-xs font-black text-[#4B59BB] block my-0.5">
+                  <span className="text-xs font-black text-accent block my-0.5">
                     {russianPattern.topSizeLabel}
                   </span>
                   <span className="text-[11px] text-[#4E5C70] block">
@@ -370,7 +370,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
               {/* Dynamic Status Strip */}
               <div className="flex items-center justify-between text-[11px] font-medium text-[#4E5C70] pt-1 border-t border-[#BAC5D5]/40 flex-wrap gap-1">
                 <span>{russianPattern.recommendedFit}</span>
-                <span className="text-[#4B59BB] font-bold">Точность {confidence}%</span>
+                <span className="text-accent font-bold">Точность {confidence}%</span>
               </div>
 
               {/* Collapsible Russian Size Grid Table */}
@@ -378,7 +378,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                 <div className="neu-flat rounded-xl p-3 bg-[#E3E8EF] border border-white/80 space-y-2 mt-2 animate-in fade-in">
                   <div className="text-[11px] font-extrabold text-[#2D3A4E] flex items-center justify-between">
                     <span>Сетка размеров мужской одежды</span>
-                    <span className="text-[11px] text-[#4B59BB] font-bold">Стандарт РФ</span>
+                    <span className="text-[11px] text-accent font-bold">Стандарт РФ</span>
                   </div>
                   <div className="overflow-x-auto no-scrollbar">
                     <table className="w-full text-[11px] text-center border-collapse">
@@ -400,7 +400,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                               key={row.ru}
                               className={`border-b border-[#BAC5D5]/30 transition-colors ${
                                 isMatch
-                                  ? 'neu-inset text-[#4B59BB] font-black bg-[#DDE4F0]'
+                                  ? 'neu-inset text-accent font-black bg-[#DDE4F0]'
                                   : 'text-[#2D3A4E]'
                               }`}
                             >
@@ -540,7 +540,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                 <Check className="w-3.5 h-3.5 stroke-[3]" />
               </div>
               <span className="text-xs font-bold text-[#2D3A4E] flex items-center gap-1.5">
-                <BookmarkCheck className="w-3.5 h-3.5 text-[#4B59BB]" />
+                <BookmarkCheck className="w-3.5 h-3.5 text-accent" />
                 <span>Сохранить параметры в моем профиле</span>
               </span>
             </button>

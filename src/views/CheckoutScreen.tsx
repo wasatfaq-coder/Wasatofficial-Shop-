@@ -381,7 +381,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                 <div
                   className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
                     isCurrent
-                      ? 'neu-inset-deep neu-inset-deep-animated text-[#4B59BB] bg-[#E3E8EF] ring-2 ring-[#5F6ED0]/50 scale-105'
+                      ? 'neu-inset-deep neu-inset-deep-animated text-accent bg-[#E3E8EF] ring-2 ring-accent/50 scale-105'
                       : isCompleted
                       ? 'neu-button text-success font-bold'
                       : 'neu-inset text-[#4E5C70]'
@@ -391,7 +391,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                 </div>
                 <span
                   className={`text-[11px] font-semibold ${
-                    isCurrent ? 'text-[#4B59BB] font-bold' : 'text-[#4E5C70]'
+                    isCurrent ? 'text-accent font-bold' : 'text-[#4E5C70]'
                   }`}
                 >
                   {st.label}
@@ -442,7 +442,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
               className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                 appliedPromo
                   ? 'neu-inset bg-[#dbe4f0] text-success font-bold'
-                  : 'neu-button text-blue-900'
+                  : 'neu-button text-accent-strong'
               }`}
             >
               <Tag className="w-3.5 h-3.5 stroke-[2.2]" />
@@ -460,7 +460,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-1 text-[#4B59BB] font-extrabold text-xs">
+          <div className="flex items-center gap-1 text-accent font-extrabold text-xs">
             <span>{appliedPromo ? 'Изменить' : 'Выбрать'}</span>
             <ChevronRight className="w-4 h-4 text-[#4E5C70] group-hover:translate-x-0.5 transition-transform" />
           </div>
@@ -520,7 +520,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-[#4B59BB] shrink-0">
+                  <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0">
                     <Store className="w-4 h-4" />
                   </div>
                   <div>
@@ -545,21 +545,21 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                       <span className="text-xs font-black text-[#2D3A4E]">
                         {selectedPickupPoint?.name || `Бутик ${currentStoreName()}`}
                       </span>
-                      <span className="text-[11px] font-bold text-[#4B59BB] neu-inset px-2 py-0.5 rounded-md bg-[#E3E8EF]">
+                      <span className="text-[11px] font-bold text-accent neu-inset px-2 py-0.5 rounded-md bg-[#E3E8EF]">
                         г. {selectedPickupPoint?.city || 'Москва'}
                       </span>
                     </div>
 
                     <div className="pt-1 text-xs font-bold text-[#2D3A4E] flex items-start gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-[#4B59BB] shrink-0 mt-0.5" />
+                      <MapPin className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
                       <span className="leading-relaxed select-all">
                         {selectedPickupPoint?.address}
                       </span>
                     </div>
 
                     {selectedPickupPoint?.metro && (
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg neu-inset text-[11px] font-bold text-[#4B59BB] bg-[#E3E8EF] mt-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#5F6ED0] animate-pulse" />
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg neu-inset text-[11px] font-bold text-accent bg-[#E3E8EF] mt-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
                         <span>м. {selectedPickupPoint.metro}</span>
                       </div>
                     )}
@@ -579,7 +579,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                     className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       copiedAddressId === 'top-pickup'
                         ? 'neu-inset text-success bg-[#E3E8EF] ring-1.5 ring-success/50 scale-95'
-                        : 'neu-button text-[#4B59BB] hover:text-[#3F4BA6] active:scale-95'
+                        : 'neu-button text-accent hover:text-accent-strong active:scale-95'
                     }`}
                     title="Скопировать адрес пункта выдачи в буфер обмена"
                   >
@@ -590,7 +590,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                       </>
                     ) : (
                       <>
-                        <Copy className="w-3.5 h-3.5 text-[#4B59BB]" />
+                        <Copy className="w-3.5 h-3.5 text-accent" />
                         <span className="text-[11px]">Скопировать</span>
                       </>
                     )}
@@ -601,13 +601,13 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2.5 border-t border-[#BAC5D5]/40 text-[11px] text-[#4E5C70]">
                   {selectedPickupPoint?.schedule && (
                     <div className="flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-[#4B59BB] shrink-0" />
+                      <Clock className="w-3.5 h-3.5 text-accent shrink-0" />
                       <span className="truncate">{selectedPickupPoint.schedule}</span>
                     </div>
                   )}
                   {selectedPickupPoint?.phone && (
                     <div className="flex items-center gap-1.5">
-                      <Phone className="w-3.5 h-3.5 text-[#4B59BB] shrink-0" />
+                      <Phone className="w-3.5 h-3.5 text-accent shrink-0" />
                       <span className="font-bold text-[#2D3A4E]">{selectedPickupPoint.phone}</span>
                     </div>
                   )}
@@ -631,7 +631,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsAddressModalOpen(true)}
-                  className="text-xs font-bold text-[#4B59BB] hover:underline flex items-center gap-1 cursor-pointer"
+                  className="text-xs font-bold text-accent hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                   <span>Редактировать адрес</span>
@@ -651,7 +651,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer ${
                           isSel
                             ? 'neu-pill-active'
-                            : 'neu-button text-[#2D3A4E] hover:text-[#4B59BB]'
+                            : 'neu-button text-[#2D3A4E] hover:text-accent'
                         }`}
                       >
                         {sa.title}
@@ -669,7 +669,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-[#2D3A4E] flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-[#4B59BB]" />
+                    <MapPin className="w-3.5 h-3.5 text-accent" />
                     {addrTitle}
                   </span>
                   {addrPostal && (
@@ -744,7 +744,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                           : `кв. ${addrApartment}`}
                       </span>
                     )}
-                    <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200">
+                    <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-accent bg-accent/5 border border-accent/20">
                       Почта России (1-й класс)
                     </span>
                   </div>
@@ -782,7 +782,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                       </span>
                     )}
                     {addrIntercom ? (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#4B59BB] bg-[#5F6ED0]/10 border border-[#5F6ED0]/20">
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-accent bg-accent/10 border border-accent/20">
                         домофон: {addrIntercom}
                       </span>
                     ) : (
@@ -854,7 +854,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                         }`}
                       >
                         {isSelected && (
-                          <div className="w-2.5 h-2.5 rounded-full bg-[#5F6ED0] animate-in zoom-in-50 duration-200" />
+                          <div className="w-2.5 h-2.5 rounded-full bg-accent animate-in zoom-in-50 duration-200" />
                         )}
                       </div>
 
@@ -872,7 +872,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <p
                             className={`text-xs leading-snug transition-colors line-clamp-2 ${
-                              isSelected ? 'font-black text-[#4B59BB]' : 'font-bold text-[#2D3A4E]'
+                              isSelected ? 'font-black text-accent' : 'font-bold text-[#2D3A4E]'
                             }`}
                           >
                             {method.title}
@@ -897,7 +897,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                         method.price === 0
                           ? 'text-success font-extrabold'
                           : isSelected
-                          ? 'text-[#4B59BB]'
+                          ? 'text-accent'
                           : 'text-[#2D3A4E]'
                       }`}
                     >
@@ -910,10 +910,10 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                     <div className="mt-3 pt-3 border-t border-[#BAC5D5]/50 space-y-2.5 animate-in fade-in duration-200">
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-extrabold text-[#2D3A4E] uppercase tracking-wider flex items-center gap-1.5">
-                          <Store className="w-3.5 h-3.5 text-[#4B59BB]" />
+                          <Store className="w-3.5 h-3.5 text-accent" />
                           <span>Выберите пункт выдачи</span>
                         </span>
-                        <span className="text-[11px] font-bold text-[#4B59BB] neu-inset px-2 py-0.5 rounded-lg bg-[#E3E8EF]">
+                        <span className="text-[11px] font-bold text-accent neu-inset px-2 py-0.5 rounded-lg bg-[#E3E8EF]">
                           {activePickupPoints.length} {activePickupPoints.length === 1 ? 'бутик' : 'адреса'}
                         </span>
                       </div>
@@ -940,26 +940,26 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                                   <div
                                     className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
                                       isPointSelected
-                                        ? 'neu-button text-[#4B59BB]'
+                                        ? 'neu-button text-accent'
                                         : 'neu-inset'
                                     }`}
                                   >
                                     {isPointSelected && (
-                                      <div className="w-2 h-2 rounded-full bg-[#5F6ED0]" />
+                                      <div className="w-2 h-2 rounded-full bg-accent" />
                                     )}
                                   </div>
                                   <div className="min-w-0">
                                     <span className="text-xs font-black text-[#2D3A4E] block leading-snug line-clamp-2">
                                       {point.name}
                                     </span>
-                                    <span className="text-[11px] font-bold text-[#4B59BB]">
+                                    <span className="text-[11px] font-bold text-accent">
                                       г. {point.city}
                                     </span>
                                   </div>
                                 </div>
 
                                 {point.isDefault && (
-                                  <span className="text-[11px] font-black text-[#4B59BB] neu-inset px-1.5 py-0.5 rounded-md uppercase shrink-0">
+                                  <span className="text-[11px] font-black text-accent neu-inset px-1.5 py-0.5 rounded-md uppercase shrink-0">
                                     Основной
                                   </span>
                                 )}
@@ -970,14 +970,14 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="space-y-1 min-w-0 flex-1">
                                     <div className="flex items-start gap-1.5">
-                                      <MapPin className="w-3.5 h-3.5 text-[#4B59BB] shrink-0 mt-0.5" />
+                                      <MapPin className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
                                       <p className="text-xs font-bold text-[#2D3A4E] leading-relaxed break-words select-all">
                                         {point.address}
                                       </p>
                                     </div>
                                     {point.metro && (
-                                      <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#4B59BB] neu-inset px-2 py-0.5 rounded-md bg-[#E3E8EF] mt-0.5">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-[#5F6ED0]" />
+                                      <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-accent neu-inset px-2 py-0.5 rounded-md bg-[#E3E8EF] mt-0.5">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-accent" />
                                         <span>м. {point.metro}</span>
                                       </div>
                                     )}
@@ -998,7 +998,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                                     className={`shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
                                       copiedAddressId === point.id
                                         ? 'neu-inset text-success bg-[#E3E8EF] ring-1.5 ring-success/50 scale-95'
-                                        : 'neu-button text-[#4B59BB] hover:text-[#3F4BA6] active:scale-95'
+                                        : 'neu-button text-accent hover:text-accent-strong active:scale-95'
                                     }`}
                                     title="Скопировать адрес в буфер обмена"
                                   >
@@ -1009,7 +1009,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                                       </>
                                     ) : (
                                       <>
-                                        <Copy className="w-3 h-3 text-[#4B59BB]" />
+                                        <Copy className="w-3 h-3 text-accent" />
                                         <span>Скопировать</span>
                                       </>
                                     )}
@@ -1020,11 +1020,11 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                               {/* Schedule & Phone */}
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] text-[#4E5C70]">
                                 <div className="flex items-center gap-1.5">
-                                  <Clock className="w-3 h-3 text-[#4B59BB] shrink-0" />
+                                  <Clock className="w-3 h-3 text-accent shrink-0" />
                                   <span className="truncate">{point.schedule}</span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
-                                  <Phone className="w-3 h-3 text-[#4B59BB] shrink-0" />
+                                  <Phone className="w-3 h-3 text-accent shrink-0" />
                                   <span className="truncate font-semibold text-[#2D3A4E]">{point.phone}</span>
                                 </div>
                               </div>
@@ -1107,7 +1107,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
 
           <div className="pt-2 border-t border-[#BAC5D5]/50 flex items-center justify-between text-sm">
             <span className="font-black text-[#2D3A4E]">Итого к оплате:</span>
-            <span className="text-base font-black text-[#4B59BB]">
+            <span className="text-base font-black text-accent">
               {totalPrice.toLocaleString('ru-RU')} ₽
             </span>
           </div>
@@ -1137,13 +1137,13 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           disabled={isSubmitting}
           className={`w-full py-4 rounded-2xl btn-confirm-order font-bold text-sm flex items-center justify-center gap-2 cursor-pointer transition-all ${
             isSubmitting
-              ? 'neu-inset-deep neu-inset-deep-animated text-[#4B59BB] bg-[#E3E8EF] ring-2 ring-[#5F6ED0]/40'
+              ? 'neu-inset-deep neu-inset-deep-animated text-accent bg-[#E3E8EF] ring-2 ring-accent/40'
               : 'neu-button-accent text-white active:scale-[0.98]'
           }`}
         >
           {isSubmitting ? (
             <>
-              <span className="w-4 h-4 border-2 border-[#5F6ED0] border-t-transparent rounded-full animate-spin" />
+              <span className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
               <span>Оформление заказа...</span>
             </>
           ) : (

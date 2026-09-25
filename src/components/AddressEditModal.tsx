@@ -145,7 +145,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
             {/* Header */}
             <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/60">
               <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-[#4B59BB]" />
+                <MapPin className="w-5 h-5 text-accent" />
                 <h3 className="text-base font-extrabold text-[#2D3A4E]">
                   {editingAddress ? 'Редактировать адрес' : 'Новый адрес доставки'}
                 </h3>
@@ -359,7 +359,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                 >
                   <Check className="w-3.5 h-3.5 stroke-[3]" />
                 </div>
-                <span className="font-bold text-xs text-[#2D3A4E] group-hover:text-[#4B59BB] transition-colors">
+                <span className="font-bold text-xs text-[#2D3A4E] group-hover:text-accent transition-colors">
                   Сделать основным адресом
                 </span>
               </div>
