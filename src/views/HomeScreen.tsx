@@ -305,7 +305,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <h2 className="text-[22px] sm:text-[24px] font-extrabold text-[#2D3A4E] leading-tight">
                 {currentSlide.title}
               </h2>
-              <p className="text-[12px] sm:text-[13px] text-[#6B7280] font-normal leading-relaxed line-clamp-2">
+              <p className="text-[12px] sm:text-[13px] text-[#4E5C70] font-normal leading-relaxed line-clamp-2">
                 {currentSlide.subtitle}
               </p>
             </div>

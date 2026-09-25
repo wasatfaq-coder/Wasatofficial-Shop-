@@ -63,8 +63,8 @@ export const NeumorphicImage: React.FC<NeumorphicImageProps> = ({
 
       {/* Fallback Single Neutral Gray Placeholder */}
       {hasError && (
-        <div className="flex flex-col items-center justify-center p-3 text-[#6B7280] select-none w-full h-full bg-[#D8DFE8]">
-          <span className="text-[11px] font-semibold text-[#6B7280] text-center line-clamp-1 px-1">
+        <div className="flex flex-col items-center justify-center p-3 text-[#4E5C70] select-none w-full h-full bg-[#D8DFE8]">
+          <span className="text-[11px] font-semibold text-[#4E5C70] text-center line-clamp-1 px-1">
             {alt || currentStoreName()}
           </span>
         </div>

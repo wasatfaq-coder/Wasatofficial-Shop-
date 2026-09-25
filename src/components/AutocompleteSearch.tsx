@@ -3,6 +3,7 @@ import { Search, X, Tag, Sparkles, Shirt, Layers, Package, Palette, ArrowRight, 
 import { Product } from '../types';
 import { CATEGORIES } from '../data/products';
 import { RatingBadge } from './RatingBadge';
+import { photoBadgeClass } from '../utils/productBadge';
 
 interface AutocompleteSearchProps {
   products: Product[];
@@ -275,7 +276,7 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
                           {product.title}
                         </span>
                         {product.badge && (
-                          <span className="text-[11px] font-black text-white neu-fill-accent px-1.5 py-0.5 rounded-md shrink-0">
+                          <span className={`text-[11px] font-black ${photoBadgeClass(product.badge)} px-1.5 py-0.5 rounded-md shrink-0`}>
                             {product.badge}
                           </span>
                         )}

@@ -11,10 +11,13 @@
   --color-warning-soft: #F3F2EF;
   --color-danger-soft: #F5F1F2;
 
-  /* Brand: graphite accent for main buttons, selection, links and icons; muted gold only for
-     brand badges (Хит, Premium, Limited) as a fill under white text (4.53:1) or as text (gold-text, 4.9:1) */
-  --color-accent: #2D3A4E;
-  --color-accent-strong: #1F2A3C;
+  /* Brand. Main buttons and fills (neu-button-accent, neu-fill-accent) are graphite #2D3A4E → #232D3D.
+     accent is a deep navy for links, selection, current steps and icons, so they stand apart from
+     the graphite body text (7.4:1 on the background, 6.8:1 on buttons); accent-strong for hover.
+     Muted gold only for brand badges (Хит, Premium, Limited): a fill under white text (4.53:1),
+     or gold-text as text (4.9:1) */
+  --color-accent: #2C4A6B;
+  --color-accent-strong: #1F3650;
   --color-gold: #8C733E;
   --color-gold-text: #75602F;
 

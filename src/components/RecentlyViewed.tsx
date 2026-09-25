@@ -64,17 +64,17 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
             <div
               key={`recently-viewed-${product.id}-${idx}`}
               onClick={() => onSelectProduct(product)}
-              className="group relative neu-inset rounded-2xl p-2.5 w-36 sm:w-40 shrink-0 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] flex flex-col justify-between select-none bg-[#E3E8EF] border border-transparent"
+              className="group relative neu-flat-sm rounded-2xl overflow-hidden w-36 sm:w-40 shrink-0 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98] flex flex-col justify-between select-none"
             >
               <div className="space-y-2">
                 {/* Thumbnail Image Container */}
-                <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden mb-1">
+                <div className="relative w-full aspect-[3/4] overflow-hidden mb-1">
                   <NeumorphicImage
                     src={thumbImage}
                     alt={product.title}
                     priority={idx < 2}
-                    containerClassName="w-full h-full rounded-xl"
-                    className="w-full h-full object-cover object-top rounded-xl group-hover:scale-105 transition-transform duration-300"
+                    containerClassName="w-full h-full"
+                    className="w-full h-full object-cover object-top group-hover:scale-[1.03] transition-transform duration-500"
                   />
 
                   {/* Remove Button from History */}
@@ -120,7 +120,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
                 </div>
 
                 {/* Info */}
-                <div className="space-y-0.5">
+                <div className="space-y-0.5 px-2.5">
                   <p className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider truncate">
                     {product.categoryLabel}
                   </p>
@@ -131,7 +131,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
               </div>
 
               {/* Price & Rating */}
-              <div className="pt-2 mt-1 border-t border-[#BAC5D5]/40 flex items-center justify-between">
+              <div className="pt-2 mt-1 mx-2.5 mb-2.5 border-t border-[#BAC5D5]/40 flex items-center justify-between">
                 <div>
                   <span className="text-xs font-bold text-[#2D3A4E]">
                     {product.price.toLocaleString('ru-RU')} ₽

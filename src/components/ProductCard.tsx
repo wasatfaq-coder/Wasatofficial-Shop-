@@ -131,7 +131,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               ) : null}
             </div>
             {product.originalPrice && product.originalPrice > product.price ? (
-              <span className="text-[12px] text-[#6B7280] line-through font-normal leading-tight mt-0.5">
+              <span className="text-[12px] text-[#4E5C70] line-through font-normal leading-tight mt-0.5">
                 {product.originalPrice.toLocaleString('ru-RU')} ₽
               </span>
             ) : (

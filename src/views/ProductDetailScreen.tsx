@@ -222,13 +222,13 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
           onClick={() => setIsZoomModalOpen(true)}
-          className="relative w-full aspect-[3/4] sm:aspect-[4/5] rounded-2xl overflow-hidden select-none group/detailimg neu-inset cursor-zoom-in"
+          className="relative w-full aspect-[3/4] sm:aspect-[4/5] rounded-2xl overflow-hidden select-none group/detailimg cursor-zoom-in"
         >
           <NeumorphicImage
             src={product?.images?.[selectedImageIndex] || product?.images?.[0] || 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80'}
             alt={product?.title || ''}
             containerClassName="w-full h-full rounded-2xl"
-            className="w-full h-full object-cover object-top rounded-xl transition-transform duration-300 group-hover/detailimg:scale-105"
+            className="w-full h-full object-cover object-top transition-transform duration-500 group-hover/detailimg:scale-[1.03]"
           />
 
           {/* Badge in top-left */}

@@ -95,7 +95,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
             {/* Gallery + Image preview */}
             <div className="space-y-2.5">
               {/* Main Image Box */}
-              <div className="relative w-full aspect-[4/5] rounded-2xl overflow-hidden neu-inset flex items-center justify-center">
+              <div className="relative w-full aspect-[4/5] rounded-2xl overflow-hidden flex items-center justify-center">
                 <img
                   src={product.images?.[selectedImageIndex] || product.images?.[0] || 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80'}
                   alt={product.title}
