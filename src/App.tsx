@@ -1515,6 +1515,8 @@ export default function App() {
               userProfile={userProfile}
               onOpenMySizes={() => setIsMySizesModalOpen(true)}
               onOpenFilters={() => setIsAdvancedFilterOpen(true)}
+              onSaveMeasurements={handleSaveMeasurements}
+              onAddToCartWithOptions={handleAddToCartWithOptions}
             />
           )}
 
