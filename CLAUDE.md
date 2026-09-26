@@ -73,6 +73,11 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   по умолчанию (`DEFAULT_FILTER_STATE`).
 - CSV — только через `downloadCSV`/`csvCell` из `src/utils/csvHelpers.ts` (защита от формул Excel); импорт товаров
   не выдумывает значения и обновляет товар с тем же ID. Данные из базы в HTML-строках (отчет PDF) — экранировать.
+- Дата заказа — `createdAt` (ISO); `date` — только текст для показа (`formatOrderDate` из `src/shared/orderDate.ts`,
+  клиент и `placeOrder`). Для расчетов — `orderTimestamp` (у старых заказов «Сегодня, 14:30» даты нет).
+- Аналитика (`AdminAnalyticsTab`) считается по заказам после `settings/analytics.resetAt`; «Сбросить статистику»
+  заказы не удаляет, «Вернуть всю историю» снимает сброс. Числа экрана и PDF — `computeFirestoreDailySales`
+  и `computePeriodBreakdown` (`src/utils/analyticsEngine.ts`), по цене и названию из заказа.
 - Предзаказ (`isPreorderMode`): распроданный вариант можно заказать (`getOrderableStock`), позиция получает
   `isPreorder` и не списывается/не возвращается на склад. Логика — и в `App.tsx`, и в `placeOrder`.
 - Название магазина не прописывать в текстах: `getStoreName(settings)` / `currentStoreName()` из

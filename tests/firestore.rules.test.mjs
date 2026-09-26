@@ -248,6 +248,12 @@ describe('server-side orders enabled (settings/server)', () => {
     await assertSucceeds(setDoc(doc(owner(), 'orders/MS-11'), order({ id: 'MS-11' })));
   });
 
+  test('only admin resets the statistics (orders stay)', async () => {
+    await assertFails(setDoc(doc(customer(), 'settings/analytics'), { resetAt: 1 }));
+    await assertFails(setDoc(doc(guest(), 'settings/analytics'), { resetAt: 1 }));
+    await assertSucceeds(setDoc(doc(owner(), 'settings/analytics'), { resetAt: Date.now() }));
+  });
+
   test('only admin can toggle the flag', async () => {
     await assertFails(setDoc(doc(customer(), 'settings/server'), { serverOrdersEnabled: false }));
     await assertSucceeds(getDoc(doc(guest(), 'settings/server')));

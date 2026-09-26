@@ -19,11 +19,11 @@ interface ReportData {
   }>;
   topProducts: Array<{
     title: string;
-    price: number;
-    salesCount: number;
+    quantity: number;
     revenue: number;
-    rating?: number;
   }>;
+  /** «Статистика считается с …» after a reset */
+  resetNote?: string;
   recentOrders: Array<{
     id: string;
     date: string;
@@ -58,23 +58,24 @@ export async function generateAnalyticsPDF(data: ReportData): Promise<void> {
   });
 
   container.innerHTML = `
-    <div style="border-bottom: 2px solid #5F6ED0; padding-bottom: 18px; margin-bottom: 22px; display: flex; justify-content: space-between; align-items: flex-start;">
+    <div style="border-bottom: 2px solid #2C4A6B; padding-bottom: 18px; margin-bottom: 22px; display: flex; justify-content: space-between; align-items: flex-start;">
       <div>
         <h1 style="margin: 0; font-size: 24px; font-weight: 900; letter-spacing: -0.5px; color: #1E293B;">
-          ${esc(currentStoreName())} <span style="color: #5F6ED0; font-weight: 700; font-size: 16px;">| FINANCIAL REPORT</span>
+          ${esc(currentStoreName())} <span style="color: #2C4A6B; font-weight: 700; font-size: 16px;">| FINANCIAL REPORT</span>
         </h1>
         <p style="margin: 4px 0 0 0; font-size: 13px; color: #64748B;">
           Финансово-аналитический отчет продаж и ключевых показателей
         </p>
       </div>
       <div style="text-align: right;">
-        <span style="display: inline-block; background: #EEF2FF; color: #4F46E5; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px; text-transform: uppercase;">
+        <span style="display: inline-block; background: #E8EDF3; color: #2C4A6B; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px; text-transform: uppercase;">
           Период: ${esc(data.periodLabel)}
         </span>
         <p style="margin: 5px 0 0 0; font-size: 11px; color: #94A3B8;">Сформирован: ${dateNow}</p>
       </div>
     </div>
 
+    ${data.resetNote ? `<p style="margin: -12px 0 16px 0; font-size: 11px; color: #64748B;">${esc(data.resetNote)}</p>` : ''}
     <!-- Summary Metrics Grid -->
     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px;">
       <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px;">
@@ -82,7 +83,11 @@ export async function generateAnalyticsPDF(data: ReportData): Promise<void> {
         <p style="margin: 4px 0 0 0; font-size: 17px; font-weight: 900; color: #0F172A;">
           ${data.totalRevenue.toLocaleString('ru-RU')} ₽
         </p>
-        <span style="font-size: 10px; color: ${data.revenueGrowthPercent >= 0 ? '#16A34A' : '#DC2626'}; font-weight: 700;">${data.revenueGrowthPercent >= 0 ? '+' : ''}${esc(data.revenueGrowthPercent)}% к пред. пер.</span>
+        ${
+          data.prevRevenue
+            ? `<span style="font-size: 10px; color: ${data.revenueGrowthPercent >= 0 ? '#3B6652' : '#7E525E'}; font-weight: 700;">${data.revenueGrowthPercent > 0 ? '+' : ''}${esc(data.revenueGrowthPercent)}% к пред. периоду</span>`
+            : `<span style="font-size: 10px; color: #64748B;">нет данных за прошлый период</span>`
+        }
       </div>
       <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px;">
         <p style="margin: 0; font-size: 11px; color: #64748B; font-weight: 600;">Средний чек</p>
@@ -97,8 +102,8 @@ export async function generateAnalyticsPDF(data: ReportData): Promise<void> {
         </p>
       </div>
       <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px;">
-        <p style="margin: 0; font-size: 11px; color: #64748B; font-weight: 600;">Возвраты</p>
-        <p style="margin: 4px 0 0 0; font-size: 17px; font-weight: 900; color: #D97706;">
+        <p style="margin: 0; font-size: 11px; color: #64748B; font-weight: 600;">Отмены</p>
+        <p style="margin: 4px 0 0 0; font-size: 17px; font-weight: 900; color: #6F5B31;">
           ${esc(data.totalReturnsCount)} шт. (${esc(data.returnRate)}%)
         </p>
       </div>
@@ -120,12 +125,12 @@ export async function generateAnalyticsPDF(data: ReportData): Promise<void> {
             </tr>
           </thead>
           <tbody>
-            ${data.categoryStats
+            ${data.categoryStats.length === 0 ? '<tr><td colspan="3" style="padding: 8px 0; color: #64748B;">Продаж за период нет</td></tr>' : ''}${data.categoryStats
               .map(
                 (cat) => `
               <tr style="border-bottom: 1px solid #F1F5F9;">
                 <td style="padding: 6px 0; font-weight: 600; color: #1E293B;">${esc(cat.name)}</td>
-                <td style="padding: 6px 0; text-align: center; color: #4F46E5; font-weight: 700;">${esc(cat.share)}%</td>
+                <td style="padding: 6px 0; text-align: center; color: #2C4A6B; font-weight: 700;">${esc(cat.share)}%</td>
                 <td style="padding: 6px 0; text-align: right; font-weight: 700; color: #0F172A;">${cat.revenue.toLocaleString('ru-RU')} ₽</td>
               </tr>
             `
@@ -149,15 +154,15 @@ export async function generateAnalyticsPDF(data: ReportData): Promise<void> {
             </tr>
           </thead>
           <tbody>
-            ${data.topProducts
+            ${data.topProducts.length === 0 ? '<tr><td colspan="3" style="padding: 8px 0; color: #64748B;">Продаж за период нет</td></tr>' : ''}${data.topProducts
               .map(
                 (p, idx) => `
               <tr style="border-bottom: 1px solid #F1F5F9;">
                 <td style="padding: 6px 0; font-weight: 600; color: #1E293B;">
-                  <span style="color: #6366F1; font-weight: 800; margin-right: 4px;">#${idx + 1}</span>
+                  <span style="color: #2C4A6B; font-weight: 800; margin-right: 4px;">#${idx + 1}</span>
                   ${esc(p.title.length > 25 ? p.title.slice(0, 25) + '...' : p.title)}
                 </td>
-                <td style="padding: 6px 0; text-align: center; font-weight: 700; color: #475569;">${esc(p.salesCount)}</td>
+                <td style="padding: 6px 0; text-align: center; font-weight: 700; color: #475569;">${esc(p.quantity)}</td>
                 <td style="padding: 6px 0; text-align: right; font-weight: 700; color: #0F172A;">${p.revenue.toLocaleString('ru-RU')} ₽</td>
               </tr>
             `
@@ -192,11 +197,11 @@ export async function generateAnalyticsPDF(data: ReportData): Promise<void> {
             .map(
               (ord) => `
             <tr style="border-bottom: 1px solid #F1F5F9;">
-              <td style="padding: 6px 8px; font-weight: 700; color: #3B82F6;">#${esc(ord.id)}</td>
+              <td style="padding: 6px 8px; font-weight: 700; color: #2C4A6B;">#${esc(ord.id)}</td>
               <td style="padding: 6px 8px; color: #64748B;">${esc(ord.date)}</td>
               <td style="padding: 6px 8px; color: #475569;">${esc(ord.itemsCount)} шт.</td>
               <td style="padding: 6px 8px;">
-                <span style="background: #DCFCE7; color: #15803D; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px;">
+                <span style="background: #E6EEE9; color: #3B6652; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px;">
                   ${esc(ord.status)}
                 </span>
               </td>

@@ -383,42 +383,23 @@ export async function deleteOrderFromFirestore(orderId: string) {
   }
 }
 
-/**
- * Permanently purges and deletes all orders and analytics statistics from Firestore database.
- */
-export async function deleteAllOrdersAndStatsFromFirestore(): Promise<{ deletedCount: number }> {
+/** Admin → «Аналитика»: statistics count from this moment (orders are never deleted); null — all history */
+export function subscribeToAnalyticsResetAt(onUpdate: (resetAt: number | null) => void) {
+  return onSnapshot(
+    doc(db, 'settings', 'analytics'),
+    (snap) => {
+      const value = snap.data()?.resetAt;
+      onUpdate(typeof value === 'number' && value > 0 ? value : null);
+    },
+    (error) => console.warn('Analytics settings subscription warning:', error)
+  );
+}
+
+export async function saveAnalyticsResetAt(resetAt: number | null) {
   try {
-    const ordersSnap = await getDocs(collection(db, 'orders'));
-    if (ordersSnap.empty) {
-      return { deletedCount: 0 };
-    }
-
-    const docs = ordersSnap.docs;
-    let deletedCount = 0;
-
-    // Process in batches of 400 (Firestore writeBatch limit is 500)
-    for (let i = 0; i < docs.length; i += 400) {
-      const chunk = docs.slice(i, i + 400);
-      const batch = writeBatch(db);
-      chunk.forEach((d) => {
-        batch.delete(d.ref);
-        deletedCount++;
-      });
-      await batch.commit();
-    }
-
-    try {
-      localStorage.setItem('manstyle_orders_cleared', 'true');
-      sessionStorage.removeItem('manstyle_cached_orders');
-    } catch {
-      // Ignore storage errors
-    }
-
-    return { deletedCount };
+    await setDoc(doc(db, 'settings', 'analytics'), { resetAt: resetAt ?? null, updatedAt: Date.now() }, { merge: true });
   } catch (error) {
-    console.error('[deleteAllOrdersAndStatsFromFirestore] Error:', error);
-    handleFirestoreError(error, OperationType.DELETE, 'orders');
-    throw error;
+    handleFirestoreError(error, OperationType.WRITE, 'settings/analytics');
   }
 }
 
