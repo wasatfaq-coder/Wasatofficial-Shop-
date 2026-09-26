@@ -32,19 +32,14 @@ import {
   Pencil,
   KeyRound,
 } from 'lucide-react';
-import { StorefrontSettings, AdminCredentials } from '../../types';
+import { StorefrontSettings } from '../../types';
 import {
   loadStorefrontSettings,
   saveStorefrontSettings,
   DEFAULT_STOREFRONT_SETTINGS,
 } from '../../utils/inventory';
-import {
-  getAdminCredentials,
-  subscribeToCredentialsChanges,
-} from '../../utils/adminAuth';
 import { BrandRequisitesModal } from '../BrandRequisitesModal';
 import { QuickTextEditModal, QuickEditFieldConfig } from './QuickTextEditModal';
-import { AdminChangeCredentialsModal } from './AdminChangeCredentialsModal';
 
 export { DEFAULT_STOREFRONT_SETTINGS };
 
@@ -79,15 +74,6 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
-  // Admin Credentials and Security State
-  const [adminCreds, setAdminCreds] = useState<AdminCredentials>(() => getAdminCredentials());
-  const [isChangeCredsModalOpen, setIsChangeCredsModalOpen] = useState(false);
-
-  useEffect(() => {
-    return subscribeToCredentialsChanges((updated) => {
-      setAdminCreds(updated);
-    });
-  }, []);
 
   const openQuickEdit = (config: Omit<QuickEditFieldConfig, 'value'> & { value?: string }) => {
     setEditModalConfig({
@@ -2404,62 +2390,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
           </div>
         </div>
 
-        {/* Admin Security & Credentials Section */}
-        <div id="admin-security-credentials-card" className="neu-flat p-4 sm:p-5 rounded-3xl space-y-4 border border-white/60">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0">
-                <KeyRound className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-sm font-black text-[#2D3A4E]">Безопасность и учетные данные администратора</h4>
-                <p className="text-[11px] text-[#4E5C70]">Управление логином и паролем для входа в панель управления</p>
-              </div>
-            </div>
-            <button
-              id="admin-storefront-change-creds-btn"
-              type="button"
-              onClick={() => setIsChangeCredsModalOpen(true)}
-              className="neu-button px-3.5 py-2 rounded-xl text-xs font-black text-accent hover:text-[#2D3A4E] active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
-            >
-              <KeyRound className="w-3.5 h-3.5" />
-              <span>Изменить логин и пароль</span>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-            <div className="neu-inset p-3 rounded-2xl bg-[#E3E8EF] space-y-1">
-              <span className="text-[11px] font-bold text-[#4E5C70] block uppercase tracking-wider">Текущий логин</span>
-              <div className="flex items-center gap-1.5 font-black text-sm text-[#2D3A4E]">
-                <UserCheck className="w-4 h-4 text-accent" />
-                <span className="truncate">{adminCreds.username}</span>
-              </div>
-            </div>
-
-            <div className="neu-inset p-3 rounded-2xl bg-[#E3E8EF] space-y-1">
-              <span className="text-[11px] font-bold text-[#4E5C70] block uppercase tracking-wider">Статус пароля</span>
-              <div className="flex items-center gap-1.5 font-black text-sm text-[#2D3A4E]">
-                <ShieldCheck className="w-4 h-4 text-success" />
-                <span>Защищен (••••••••)</span>
-              </div>
-            </div>
-
-            <div className="neu-inset p-3 rounded-2xl bg-[#E3E8EF] space-y-1">
-              <span className="text-[11px] font-bold text-[#4E5C70] block uppercase tracking-wider">Синхронизация</span>
-              <span className="text-xs font-bold text-[#4E5C70] block truncate">
-                {adminCreds.updatedAt
-                  ? new Date(adminCreds.updatedAt).toLocaleDateString('ru-RU', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })
-                  : 'Синхронизировано'}
-              </span>
-            </div>
-          </div>
-        </div>
+        {/* SERVER_ORDERS_CARD */}
 
         {/* Submit Button */}
         <div className="flex items-center justify-between pt-2 gap-3 flex-wrap sm:flex-nowrap">
@@ -2497,15 +2428,6 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
         onSave={handleQuickEditSave}
       />
 
-      {/* Admin Change Credentials Modal */}
-      <AdminChangeCredentialsModal
-        isOpen={isChangeCredsModalOpen}
-        onClose={() => setIsChangeCredsModalOpen(false)}
-        onSuccess={(updated) => {
-          setAdminCreds(updated);
-        }}
-        onShowToast={onShowToast}
-      />
     </div>
   );
 };

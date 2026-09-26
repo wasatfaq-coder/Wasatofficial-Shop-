@@ -198,6 +198,14 @@ export default function App() {
     return INITIAL_CHAT_MESSAGES;
   });
 
+  // The removed local admin password was kept here in plain text: erase it
+  React.useEffect(() => {
+    try {
+      localStorage.removeItem('manstyle_admin_credentials');
+      sessionStorage.removeItem('manstyle_admin_auth');
+    } catch {}
+  }, []);
+
   React.useEffect(() => {
     try {
       localStorage.setItem(CHAT_CACHE_STORAGE_KEY, JSON.stringify(chatMessages));

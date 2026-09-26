@@ -495,10 +495,4 @@ export interface StoreCategory {
   icon?: string;
 }
 
-export interface AdminCredentials {
-  username: string;
-  password: string;
-  updatedAt?: string;
-  lastChangedBy?: string;
-}
 
