@@ -77,13 +77,14 @@ describe('catalog', () => {
     await assertFails(deleteDoc(doc(guest(), 'products/p1')));
   });
 
-  test('customer can deduct stock and add reviews', async () => {
+  test('customer can deduct stock but not rewrite reviews or rating inside the product', async () => {
     await assertSucceeds(
       updateDoc(doc(guest(), 'products/p1'), { skus: [{ size: 'M', stock: 2 }], inStock: true })
     );
-    await assertSucceeds(
+    await assertFails(
       updateDoc(doc(customer(), 'products/p1'), { reviews: [{ rating: 4 }], rating: 4, reviewsCount: 1 })
     );
+    await assertFails(updateDoc(doc(guest(), 'products/p1'), { reviews: [{ rating: 1 }] }));
   });
 
   test('admins (owner email or /admins doc) can manage products', async () => {
@@ -146,6 +147,73 @@ describe('orders', () => {
   });
 });
 
+const review = (uid, overrides = {}) => ({
+  id: `p1_${uid}`,
+  productId: 'p1',
+  uid,
+  authorName: 'Алиса',
+  rating: 5,
+  comment: 'Отличное пальто',
+  date: '26 сентября 2026 г.',
+  createdAt: '2026-09-26T10:00:00.000Z',
+  ...overrides,
+});
+
+describe('reviews', () => {
+  test('anyone reads reviews and votes', async () => {
+    await assertSucceeds(getDocs(collection(guest(), 'reviews')));
+    await assertSucceeds(getDocs(collection(guest(), 'review_votes')));
+  });
+
+  test('signed-in customer writes one review per product under their own id', async () => {
+    await assertSucceeds(setDoc(doc(customer('alice'), 'reviews/p1_alice'), review('alice')));
+    // Someone else's id, uid or a made-up id
+    await assertFails(setDoc(doc(customer('alice'), 'reviews/p1_bob'), review('bob')));
+    await assertFails(setDoc(doc(customer('alice'), 'reviews/p1_bob'), review('alice', { id: 'p1_bob' })));
+    await assertFails(setDoc(doc(customer('alice'), 'reviews/x'), review('alice', { id: 'x' })));
+  });
+
+  test('guests, anonymous chat accounts and invalid reviews are rejected', async () => {
+    await assertFails(setDoc(doc(guest(), 'reviews/p1_alice'), review('alice')));
+    const anon = env.authenticatedContext('anon-1', { firebase: { sign_in_provider: 'anonymous' } }).firestore();
+    await assertFails(setDoc(doc(anon, 'reviews/p1_anon-1'), review('anon-1')));
+    const db = customer('alice');
+    await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { rating: 6 })));
+    await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { comment: '' })));
+    await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { helpfulCount: 100 })));
+    await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { verifiedPurchase: true })));
+    await assertFails(
+      setDoc(doc(db, 'reviews/nope_alice'), review('alice', { id: 'nope_alice', productId: 'nope' }))
+    );
+  });
+
+  test('only the author edits a review; the author or admin deletes it', async () => {
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'reviews/p1_alice'), review('alice')));
+    await assertSucceeds(updateDoc(doc(customer('alice'), 'reviews/p1_alice'), { rating: 3, comment: 'Уже не так' }));
+    await assertFails(updateDoc(doc(customer('alice'), 'reviews/p1_alice'), { createdAt: '2020-01-01' }));
+    await assertFails(updateDoc(doc(customer('bob'), 'reviews/p1_alice'), { rating: 1 }));
+    await assertFails(deleteDoc(doc(customer('bob'), 'reviews/p1_alice')));
+    await assertFails(updateDoc(doc(owner(), 'reviews/p1_alice'), { comment: 'Исправлено админом' }));
+    await assertSucceeds(deleteDoc(doc(owner(), 'reviews/p1_alice')));
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'reviews/p1_alice'), review('alice')));
+    await assertSucceeds(deleteDoc(doc(customer('alice'), 'reviews/p1_alice')));
+  });
+
+  test('one «Полезно» vote per person, removable only by its owner', async () => {
+    const vote = (uid) => ({ reviewId: 'p1_alice', productId: 'p1', uid });
+    await assertSucceeds(setDoc(doc(customer('bob'), 'review_votes/p1_alice_bob'), vote('bob')));
+    await assertFails(setDoc(doc(customer('bob'), 'review_votes/p1_alice_carol'), vote('carol')));
+    await assertFails(setDoc(doc(customer('bob'), 'review_votes/extra'), vote('bob')));
+    await assertFails(setDoc(doc(guest(), 'review_votes/p1_alice_guest'), vote('guest')));
+    // No updates: a vote is either there or not
+    await assertFails(updateDoc(doc(customer('bob'), 'review_votes/p1_alice_bob'), { productId: 'p2' }));
+    await assertFails(deleteDoc(doc(customer('carol'), 'review_votes/p1_alice_bob')));
+    await assertSucceeds(deleteDoc(doc(customer('bob'), 'review_votes/p1_alice_bob')));
+    // Not for one's own review
+    await assertFails(setDoc(doc(customer('alice'), 'review_votes/p1_alice_alice'), vote('alice')));
+  });
+});
+
 describe('server-side orders enabled (settings/server)', () => {
   beforeEach(async () => {
     await env.withSecurityRulesDisabled((ctx) =>
@@ -161,7 +229,7 @@ describe('server-side orders enabled (settings/server)', () => {
   });
 
   test('reviews and admin actions still work', async () => {
-    await assertSucceeds(updateDoc(doc(customer(), 'products/p1'), { reviews: [{ rating: 5 }], reviewsCount: 1 }));
+    await assertSucceeds(setDoc(doc(customer('alice'), 'reviews/p1_alice'), review('alice')));
     await assertSucceeds(setDoc(doc(owner(), 'orders/MS-11'), order({ id: 'MS-11' })));
   });
 

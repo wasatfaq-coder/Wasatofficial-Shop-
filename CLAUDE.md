@@ -27,7 +27,8 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   Меняя поля документов или клиентские записи, обновляйте правила и
   `tests/firestore.rules.test.mjs`.
 - Администратор: `ADMIN_EMAIL` в `src/context/AuthContext.tsx` (дублируется в `firestore.rules`)
-  или документ `admins/{uid}`. Заказы и профили видны только владельцу и администратору.
+  или документ `admins/{uid}`; отдельного пароля панели нет. Заказы и профили видны только владельцу
+  и администратору.
   Гостевые заказы хранятся в `localStorage`.
 - ID базы Firestore — в `firebase-applet-config.json` (`firestoreDatabaseId`) и `firebase.json`.
 - `src/shared/` — код, общий с Cloud Functions (расчёт цены `orderPricing.ts`, контракт
@@ -40,6 +41,10 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   в Firestore и не подставляется покупателю; функциональная кнопка неактивна, пока нужные данные не заданы в админке.
   Списки админки сохраняются через `syncAll*` (только запись), удалённое убирает `deleteRemovedDocs`.
   Рейтинг товара — только по реальным отзывам (`getProductRating`).
+- Отзывы — коллекция `reviews/{productId}_{uid}` (меняет только автор), «Полезно» — `review_votes/{reviewId}_{uid}`.
+  В `App.tsx` они подмешиваются в `product.reviews` (`mergeProductReviews`) и вырезаются при записи товара
+  (`withoutCollectionReviews`); писать отзывы внутрь товара нельзя.
+- Режим серверных заказов включается в «Витрине» (`AdminServerOrdersCard`) только после ответа функции `placeOrder`.
 - Способы оплаты, FAQ и категории хранятся в `settings/storefront` (`paymentMethods`, `faqItems`, `categories`;
   вкладки «Оплата», «FAQ», «Категории», общий редактор `AdminListEditor`). Без способа оплаты оформление заблокировано.
 - Предзаказ (`isPreorderMode`): распроданный вариант можно заказать (`getOrderableStock`), позиция получает

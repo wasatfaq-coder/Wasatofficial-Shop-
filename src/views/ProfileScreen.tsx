@@ -52,7 +52,6 @@ import {
   Navigation,
   MessageCircle,
   Send,
-  KeyRound,
   Cloud,
   Database,
   Users,
@@ -69,7 +68,7 @@ import {
 import { NeumorphicSlider } from '../components/NeumorphicSlider';
 import { calculateRussianPattern, RUSSIAN_SIZE_TABLE_ROWS } from '../utils/russianSizing';
 import { useAuth } from '../context/AuthContext';
-import { UserProfile, Order, CartItem, OrderStatusHistoryStep, ActiveTab, SavedAddress, Product, PromoCode, BannerSlide, ChatMessage, StorefrontSettings, AdminCredentials, DeliveryMethod, PickupPoint } from '../types';
+import { UserProfile, Order, CartItem, OrderStatusHistoryStep, ActiveTab, SavedAddress, Product, PromoCode, BannerSlide, ChatMessage, StorefrontSettings, DeliveryMethod, PickupPoint } from '../types';
 import { formatAddress } from '../utils/addressFormat';
 import { AdminAnalyticsTab } from '../components/admin/AdminAnalyticsTab';
 import { AdminPromoConstructorTab } from '../components/admin/AdminPromoConstructorTab';
@@ -82,14 +81,8 @@ import { AdminCustomersTab } from '../components/admin/AdminCustomersTab';
 import { AdminStorefrontTab } from '../components/admin/AdminStorefrontTab';
 import { BrandRenameCard } from '../components/admin/BrandRenameCard';
 import { AdminDeliveryTab } from '../components/admin/AdminDeliveryTab';
-import { AdminAuthModal } from '../components/admin/AdminAuthModal';
-import { AdminChangeCredentialsModal } from '../components/admin/AdminChangeCredentialsModal';
 import { DeliveryTrackingMapModal } from '../components/DeliveryTrackingMapModal';
 import { copyToClipboard } from '../utils/clipboard';
-import {
-  getAdminCredentials,
-  subscribeToCredentialsChanges,
-} from '../utils/adminAuth';
 import {
   getSynchronizedDeliveryStages,
   ORDER_STATUS_LABELS,
@@ -367,36 +360,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [isSyncingFirebase, setIsSyncingFirebase] = useState(false);
   const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
 
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
-    try {
-      return sessionStorage.getItem('manstyle_admin_auth') === 'true';
-    } catch {
-      return false;
-    }
-  });
-  const [isAdminAuthModalOpen, setIsAdminAuthModalOpen] = useState(false);
-  const [adminCreds, setAdminCreds] = useState<AdminCredentials>(() => getAdminCredentials());
-  const [isChangeCredentialsModalOpen, setIsChangeCredentialsModalOpen] = useState(false);
-
-  // Admin access requires a Firebase admin account (enforced by firestore.rules);
-  // the local password is only a second step. Drop the session when admin rights are lost.
-  React.useEffect(() => {
-    if (!isFirebaseAdmin) {
-      setIsAdminAuthenticated(false);
-      try {
-        sessionStorage.removeItem('manstyle_admin_auth');
-      } catch {
-        // ignore
-      }
-    }
-  }, [isFirebaseAdmin]);
-
-  // Subscribe to credentials updates across tabs and modals
-  React.useEffect(() => {
-    return subscribeToCredentialsChanges((updated) => {
-      setAdminCreds(updated);
-    });
-  }, []);
 
   const handleOpenAdminPanel = () => {
     if (!isFirebaseAdmin) {
@@ -408,11 +371,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       );
       return;
     }
-    if (isAdminAuthenticated) {
-      setActiveModal('admin');
-    } else {
-      setIsAdminAuthModalOpen(true);
-    }
+    // Access is the Google admin account itself; firestore.rules enforce it on every write
+    setActiveModal('admin');
   };
 
   const handleTriggerSync = async () => {
@@ -458,27 +418,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     }
   };
 
-  const handleAdminAuthSuccess = () => {
-    setIsAdminAuthenticated(true);
-    try {
-      sessionStorage.setItem('manstyle_admin_auth', 'true');
-    } catch {
-      // ignore
-    }
-    setIsAdminAuthModalOpen(false);
-    setActiveModal('admin');
-  };
-
-  const handleAdminLogout = () => {
-    setIsAdminAuthenticated(false);
-    try {
-      sessionStorage.removeItem('manstyle_admin_auth');
-    } catch {
-      // ignore
-    }
-    setActiveModal(null);
-    onShowToast('Сессия администратора завершена. Доступ закрыт', 'info');
-  };
 
   // Admin Panel Tab & Filter state
   const [adminTab, setAdminTab] = useState<
@@ -662,9 +601,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     }
     try {
       localStorage.removeItem('manstyle_user_profile');
-      sessionStorage.removeItem('manstyle_admin_auth');
     } catch {}
-    setIsAdminAuthenticated(false);
     onUpdateProfile(GUEST_USER_PROFILE);
     onShowToast('Вы успешно вышли из аккаунта', 'info');
   };
@@ -1407,7 +1344,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   <span className="neu-fill-accent text-white text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
                     Управление
                   </span>
-                  {isAdminAuthenticated && isFirebaseAdmin ? (
+                  {isFirebaseAdmin ? (
                     <span className="neu-button px-2 py-0.5 rounded-full text-[11px] font-black text-success bg-[#E3E8EF] flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                       Доступ открыт
@@ -1415,7 +1352,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   ) : (
                     <span className="neu-inset px-2 py-0.5 rounded-full text-[11px] font-bold text-[#4E5C70] bg-[#E3E8EF] flex items-center gap-1">
                       <Lock className="w-2.5 h-2.5" />
-                      {isFirebaseAdmin ? 'Требуется пароль' : 'Требуется вход Google'}
+                      Требуется вход Google
                     </span>
                   )}
                 </div>
@@ -3077,7 +3014,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
       {/* ================= MODAL: ADMIN PANEL ================= */}
       <AnimatePresence>
-        {activeModal === 'admin' && isFirebaseAdmin && isAdminAuthenticated && (
+        {activeModal === 'admin' && isFirebaseAdmin && (
           <motion.div
             key="admin-panel-overlay"
             initial={{ opacity: 0 }}
@@ -3111,33 +3048,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     <h3 className="text-sm sm:text-base font-extrabold text-[#2D3A4E] leading-tight">Панель администратора</h3>
                     <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-black text-success bg-success-soft border border-success/25">
                       <span className="w-1.5 h-1.5 rounded-full bg-success" />
-                      {adminCreds.username}
+                      {currentUser?.email}
                     </span>
                   </div>
                   <p className="text-[11px] sm:text-[11px] font-medium text-[#4E5C70] truncate">Каталог, склад, заказы и витрина</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <button
-                  id="admin-change-credentials-header-btn"
-                  type="button"
-                  onClick={() => setIsChangeCredentialsModalOpen(true)}
-                  className="h-9 px-3 rounded-xl neu-button flex items-center gap-1.5 text-xs font-bold text-accent hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer"
-                  title="Изменить логин и пароль администратора"
-                >
-                  <KeyRound className="w-3.5 h-3.5" />
-                  <span className="hidden md:inline">Учетные данные</span>
-                </button>
-                <button
-                  id="admin-logout-btn"
-                  type="button"
-                  onClick={handleAdminLogout}
-                  className="h-9 px-3 rounded-xl neu-button-danger flex items-center gap-1.5 text-xs font-bold active:scale-95 transition-all cursor-pointer"
-                  title="Выйти из сессии администратора"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Выйти</span>
-                </button>
                 <button
                   id="admin-modal-close-btn"
                   type="button"
@@ -3537,24 +3454,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         order={selectedOrderForMap}
         storePhone={storePhone}
         onOpenSupportChat={onOpenSupportChat}
-        onShowToast={onShowToast}
-      />
-
-      {/* Neumorphic Admin Authentication Modal */}
-      <AdminAuthModal
-        isOpen={isAdminAuthModalOpen}
-        onClose={() => setIsAdminAuthModalOpen(false)}
-        onSuccess={handleAdminAuthSuccess}
-        onShowToast={onShowToast}
-      />
-
-      {/* Neumorphic Admin Change Credentials Modal */}
-      <AdminChangeCredentialsModal
-        isOpen={isChangeCredentialsModalOpen}
-        onClose={() => setIsChangeCredentialsModalOpen(false)}
-        onSuccess={(updated) => {
-          setAdminCreds(updated);
-        }}
         onShowToast={onShowToast}
       />
 

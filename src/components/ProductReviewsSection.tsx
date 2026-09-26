@@ -13,36 +13,37 @@ import {
   ChevronDown,
   Check,
 } from 'lucide-react';
-import { Product, ProductReview, UserProfile } from '../types';
+import { Product, ProductReview, StoredReview, UserProfile } from '../types';
 import { getProductRating } from '../utils/productRating';
-
-const HELPFUL_VOTES_KEY = 'manstyle_review_helpful';
-
-function loadHelpfulVotes(): Record<string, boolean> {
-  try {
-    const raw = localStorage.getItem(HELPFUL_VOTES_KEY);
-    return raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
-  } catch {
-    return {};
-  }
-}
+import { helpfulCount, reviewDocId } from '../utils/reviews';
+import {
+  deleteReviewFromFirestore,
+  saveReviewToFirestore,
+  setReviewVoteInFirestore,
+} from '../utils/firebaseSync';
+import { useAuth } from '../context/AuthContext';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface ProductReviewsSectionProps {
   product: Product;
   userProfile?: UserProfile;
-  onAddReview: (review: ProductReview) => void;
-  /** Saves the product's reviews (the «Полезно» counter) */
-  onUpdateReviews?: (reviews: ProductReview[]) => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
+/**
+ * Reviews are stored in the `reviews` collection, one per customer and product (firestore.rules
+ * let only the author change it); «Полезно» is one vote per person in `review_votes`.
+ */
 export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
   product,
   userProfile,
-  onAddReview,
-  onUpdateReviews,
   onShowToast,
 }) => {
+  const { currentUser, isAdmin } = useAuth();
+  const uid = currentUser && !currentUser.isAnonymous ? currentUser.uid : null;
+  const myReview = uid ? product.reviews?.find((r) => r.fromCollection && r.uid === uid) : undefined;
+  const [reviewToDelete, setReviewToDelete] = useState<ProductReview | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [isWriteReviewOpen, setIsWriteReviewOpen] = useState(false);
   const [selectedRating, setSelectedRating] = useState<number>(5);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
@@ -53,8 +54,6 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
   const [selectedSize, setSelectedSize] = useState(product.sizes[0] || 'M');
   const [selectedColor, setSelectedColor] = useState(product.colors[0]?.name || '');
   const [sortBy, setSortBy] = useState<'newest' | 'helpful'>('newest');
-  // Reviews this browser marked «Полезно»; the count itself is stored with the product
-  const [helpfulLikedIds, setHelpfulLikedIds] = useState<Record<string, boolean>>(loadHelpfulVotes);
 
   // Dropdown states for custom neumorphic pickers
   const [isSizeDropdownOpen, setIsSizeDropdownOpen] = useState(false);
@@ -96,62 +95,98 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
     return 'отзывов';
   };
 
-  const handleToggleHelpful = (reviewId: string) => {
-    if (!onUpdateReviews) return;
-    const isLiked = Boolean(helpfulLikedIds[reviewId]);
-    onUpdateReviews(
-      (product.reviews || []).map((r) =>
-        r.id === reviewId ? { ...r, helpfulCount: Math.max(0, (r.helpfulCount || 0) + (isLiked ? -1 : 1)) } : r
-      )
-    );
-    const next = { ...helpfulLikedIds };
-    if (isLiked) delete next[reviewId];
-    else next[reviewId] = true;
-    setHelpfulLikedIds(next);
-    try {
-      localStorage.setItem(HELPFUL_VOTES_KEY, JSON.stringify(next));
-    } catch {
-      // Storage unavailable: the vote is saved, only the mark is not remembered
+  const handleToggleHelpful = async (review: ProductReview) => {
+    if (!uid) {
+      onShowToast('Войдите через Google в профиле, чтобы отметить отзыв', 'info');
+      return;
     }
-    onShowToast(
-      isLiked ? 'Вы отменили голос' : 'Спасибо! Ваш голос учтен',
-      'info'
-    );
+    if (review.uid === uid) {
+      onShowToast('Свой отзыв отметить нельзя', 'info');
+      return;
+    }
+    const isLiked = Boolean(review.voterUids?.includes(uid));
+    try {
+      await setReviewVoteInFirestore({ reviewId: review.id, productId: product.id, uid }, !isLiked);
+      onShowToast(isLiked ? 'Вы отменили голос' : 'Спасибо! Ваш голос учтен', 'info');
+    } catch (err) {
+      console.error('Review vote failed:', err);
+      onShowToast('Не удалось сохранить голос. Попробуйте еще раз', 'error');
+    }
   };
 
-  const handleSubmitReview = (e: React.FormEvent) => {
+  const openReviewForm = () => {
+    if (!uid) {
+      onShowToast('Войдите через Google в профиле, чтобы оставить отзыв', 'info');
+      return;
+    }
+    if (myReview) {
+      // One review per customer: the form edits it
+      setSelectedRating(myReview.rating);
+      setAuthorName(myReview.authorName);
+      setCommentText(myReview.comment);
+      setProsText(myReview.pros ?? '');
+      setConsText(myReview.cons ?? '');
+      if (myReview.sizePurchased) setSelectedSize(myReview.sizePurchased);
+      if (myReview.colorPurchased) setSelectedColor(myReview.colorPurchased);
+    }
+    setIsWriteReviewOpen(true);
+  };
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!uid) return;
     if (!commentText.trim()) {
       onShowToast('Пожалуйста, напишите текст отзыва', 'error');
       return;
     }
 
-    const newRev: ProductReview = {
-      id: `rev-${Date.now()}`,
-      authorName: authorName.trim() || 'Покупатель',
+    const review: StoredReview = {
+      id: reviewDocId(product.id, uid),
+      productId: product.id,
+      uid,
+      authorName: (authorName.trim() || userProfile?.name?.trim() || 'Покупатель').slice(0, 60),
       rating: selectedRating,
-      date: 'Сегодня',
-      comment: commentText.trim(),
-      pros: prosText.trim() || undefined,
-      cons: consText.trim() || undefined,
+      comment: commentText.trim().slice(0, 2000),
+      ...(prosText.trim() ? { pros: prosText.trim().slice(0, 500) } : {}),
+      ...(consText.trim() ? { cons: consText.trim().slice(0, 500) } : {}),
       sizePurchased: selectedSize,
       colorPurchased: selectedColor,
-      verifiedPurchase: true,
-      helpfulCount: 0,
+      date: myReview?.date ?? new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }),
+      createdAt: myReview?.createdAt ?? new Date().toISOString(),
     };
 
-    onAddReview(newRev);
-    setIsWriteReviewOpen(false);
-    setCommentText('');
-    setProsText('');
-    setConsText('');
-    onShowToast('Отзыв успешно опубликован! Спасибо за обратную связь', 'success');
+    setIsSaving(true);
+    try {
+      await saveReviewToFirestore(review);
+      setIsWriteReviewOpen(false);
+      setCommentText('');
+      setProsText('');
+      setConsText('');
+      onShowToast(myReview ? 'Отзыв обновлен' : 'Отзыв опубликован! Спасибо за обратную связь', 'success');
+    } catch (err) {
+      console.error('Review save failed:', err);
+      onShowToast('Не удалось сохранить отзыв. Попробуйте еще раз', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteReview = async () => {
+    if (!reviewToDelete) return;
+    try {
+      await deleteReviewFromFirestore(reviewToDelete.id);
+      onShowToast('Отзыв удален', 'info');
+    } catch (err) {
+      console.error('Review delete failed:', err);
+      onShowToast('Не удалось удалить отзыв', 'error');
+    }
+    setReviewToDelete(null);
   };
 
   const sortedReviews = [...reviews].sort((a, b) => {
     if (sortBy === 'helpful') {
-      const aCount = a.helpfulCount || 0;
-      const bCount = b.helpfulCount || 0;
+      const aCount = helpfulCount(a);
+      const bCount = helpfulCount(b);
       return bCount - aCount;
     }
     return 0; // default order
@@ -173,11 +208,11 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
 
         <button
           type="button"
-          onClick={() => setIsWriteReviewOpen(true)}
+          onClick={openReviewForm}
           className="neu-button px-3.5 py-2 rounded-xl text-xs font-bold text-accent flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer hover:opacity-90"
         >
           <Plus className="w-4 h-4" />
-          <span>Написать отзыв</span>
+          <span>{myReview ? 'Изменить мой отзыв' : 'Написать отзыв'}</span>
         </button>
       </div>
 
@@ -249,8 +284,10 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
       {/* Reviews List */}
       <div className="space-y-3">
         {sortedReviews.map((rev) => {
-          const isLiked = !!helpfulLikedIds[rev.id];
-          const currentHelpful = rev.helpfulCount || 0;
+          const isLiked = Boolean(uid && rev.voterUids?.includes(uid));
+          const currentHelpful = helpfulCount(rev);
+          // Authors remove their own review, the admin any review from the collection
+          const canDelete = rev.fromCollection && (isAdmin || (uid !== null && rev.uid === uid));
 
           return (
             <div key={rev.id} className="neu-flat rounded-2xl p-4 space-y-3">
@@ -313,10 +350,19 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
               )}
 
               {/* Helpful footer */}
-              <div className="flex items-center justify-end pt-1">
+              <div className="flex items-center justify-end gap-2 pt-1">
+                {canDelete && (
+                  <button
+                    type="button"
+                    onClick={() => setReviewToDelete(rev)}
+                    className="neu-button-danger px-2.5 py-1 rounded-xl text-[11px] font-bold cursor-pointer"
+                  >
+                    Удалить
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => handleToggleHelpful(rev.id)}
+                  onClick={() => handleToggleHelpful(rev)}
                   className={`neu-button px-2.5 py-1 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                     isLiked ? 'text-success' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
                   }`}
@@ -553,14 +599,23 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
 
               <button
                 type="submit"
-                className="w-full py-3 rounded-2xl neu-button-accent text-white text-xs font-bold hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer"
+                disabled={isSaving}
+                className="w-full py-3 rounded-2xl neu-button-accent text-white text-xs font-bold hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-60 disabled:cursor-wait"
               >
-                Опубликовать отзыв
+                {myReview ? 'Сохранить отзыв' : 'Опубликовать отзыв'}
               </button>
             </form>
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={Boolean(reviewToDelete)}
+        title="Удалить отзыв?"
+        message="Отзыв исчезнет со страницы товара, рейтинг пересчитается."
+        onConfirm={handleDeleteReview}
+        onClose={() => setReviewToDelete(null)}
+      />
     </div>
   );
 };

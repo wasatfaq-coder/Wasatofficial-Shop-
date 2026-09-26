@@ -49,12 +49,68 @@ service cloud.firestore {
     match /products/{productId} {
       allow read: if true;
       allow create, delete: if isAdmin() && isValidId(productId);
-      // Покупатели могут оставлять отзывы, а пока заказы не оформляются на сервере —
-      // ещё и списывать остатки. Остальные поля — только администратор.
+      // Пока заказы не оформляются на сервере, покупатели списывают остатки.
+      // Остальные поля (в том числе старые отзывы внутри товара) — только администратор.
       allow update: if isAdmin()
-        || onlyChanges(['reviews', 'rating', 'reviewsCount'])
-        || (!serverOrdersEnabled()
-          && onlyChanges(['skus', 'inStock', 'reviews', 'rating', 'reviewsCount']));
+        || (!serverOrdersEnabled() && onlyChanges(['skus', 'inStock']));
+    }
+
+    // ------------------------------------------------------------------
+    // Отзывы: reviews/{productId}_{uid} — один отзыв покупателя на товар,
+    // менять может только автор, удалять — автор или администратор.
+    // «Полезно»: review_votes/{reviewId}_{uid} — один голос от человека.
+    // ------------------------------------------------------------------
+
+    // Вход через Google (не анонимный гость чата)
+    function isCustomer() {
+      return isSignedIn()
+        && request.auth.token.get('firebase', {}).get('sign_in_provider', '') != 'anonymous';
+    }
+
+    function isOptionalText(data, field, maxLength) {
+      return !(field in data) || (data[field] is string && data[field].size() <= maxLength);
+    }
+
+    function isValidReview(data, reviewId) {
+      return data.keys().hasOnly(['id', 'productId', 'uid', 'authorName', 'rating', 'comment', 'pros', 'cons',
+          'sizePurchased', 'colorPurchased', 'date', 'createdAt'])
+        && data.id == reviewId
+        && data.uid == request.auth.uid
+        && data.productId is string
+        && reviewId == data.productId + '_' + request.auth.uid
+        && exists(/databases/$(database)/documents/products/$(data.productId))
+        && data.rating is int && data.rating >= 1 && data.rating <= 5
+        && data.comment is string && data.comment.size() > 0 && data.comment.size() <= 2000
+        && data.authorName is string && data.authorName.size() > 0 && data.authorName.size() <= 60
+        && data.date is string && data.date.size() <= 40
+        && data.createdAt is string && data.createdAt.size() <= 40
+        && isOptionalText(data, 'pros', 500)
+        && isOptionalText(data, 'cons', 500)
+        && isOptionalText(data, 'sizePurchased', 40)
+        && isOptionalText(data, 'colorPurchased', 60);
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isCustomer() && isValidReview(request.resource.data, reviewId);
+      allow update: if isCustomer()
+        && resource.data.uid == request.auth.uid
+        && isValidReview(request.resource.data, reviewId)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    match /review_votes/{voteId} {
+      allow read: if true;
+      allow create: if isCustomer()
+        && request.resource.data.keys().hasOnly(['reviewId', 'productId', 'uid'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.reviewId is string
+        && request.resource.data.productId is string
+        && voteId == request.resource.data.reviewId + '_' + request.auth.uid
+        // Не за свой отзыв (его id заканчивается на uid автора)
+        && !request.resource.data.reviewId.matches('.*_' + request.auth.uid);
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
     }
 
     match /promos/{promoId} {
