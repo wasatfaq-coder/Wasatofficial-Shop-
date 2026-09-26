@@ -7,7 +7,6 @@ import {
   Plus,
   Trash2,
   Sparkles,
-  Layers,
   SlidersHorizontal,
   ChevronDown,
 } from 'lucide-react';
@@ -17,11 +16,17 @@ import {
   addQuickPhrase,
   deleteQuickPhrase,
 } from '../../utils/phrasesSync';
+import type { StoreCategory } from '../../types';
+import { categoryIcon } from '../../utils/categories';
 
 interface TextEditModalProps {
   isOpen: boolean;
   type: 'material' | 'description';
   category?: string;
+  /** Categories from Admin → «Категории»: the phrase sets offered for descriptions */
+  categories?: StoreCategory[];
+  /** Name of the product's category when it is not in the list */
+  categoryLabel?: string;
   title: string;
   subtitle: string;
   initialValue: string;
@@ -30,22 +35,47 @@ interface TextEditModalProps {
   onShowToast?: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
-const CATEGORY_TABS = [
-  { id: 'global', label: 'Общие (Все)', icon: Sparkles },
-  { id: 'linen', label: 'Лен', icon: Layers },
-  { id: 'shirts', label: 'Рубашки', icon: Layers },
-  { id: 'tshirts', label: 'Футболки', icon: Layers },
-  { id: 'jackets', label: 'Куртки', icon: Layers },
-  { id: 'trousers', label: 'Брюки', icon: Layers },
-  { id: 'sweatshirts', label: 'Свитшоты', icon: Layers },
-  { id: 'suits', label: 'Костюмы', icon: Layers },
-  { id: 'accessories', label: 'Аксессуары', icon: Layers },
-];
+/** Names of the phrase sets stored before categories were set in the admin panel */
+const LEGACY_SET_LABELS: Record<string, string> = {
+  linen: 'Лен',
+  shirts: 'Рубашки',
+  tshirts: 'Футболки',
+  jackets: 'Куртки',
+  trousers: 'Брюки',
+  sweatshirts: 'Свитшоты',
+  suits: 'Костюмы',
+  accessories: 'Аксессуары',
+};
+
+type PhraseSetGroup = 'global' | 'store' | 'other';
+
+interface PhraseSet {
+  id: string;
+  label: string;
+  group: PhraseSetGroup;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const GROUP_TITLES: Record<PhraseSetGroup, string> = {
+  global: 'Для всех товаров',
+  store: 'Категории магазина',
+  other: 'Другие наборы фраз',
+};
+
+const pluralAccents = (n: number) => {
+  const m10 = n % 10;
+  const m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'акцент';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'акцента';
+  return 'акцентов';
+};
 
 export const TextEditModal: React.FC<TextEditModalProps> = ({
   isOpen,
   type,
   category = 'global',
+  categories = [],
+  categoryLabel,
   title,
   subtitle,
   initialValue,
@@ -97,17 +127,9 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
       setIsAddingPhrase(false);
       setNewPhraseInput('');
 
-      // Auto-set category tab matching the product category if present
-      if (category && category !== 'all') {
-        const found = CATEGORY_TABS.find((t) => t.id === category);
-        if (found) {
-          setActiveCategoryTab(category);
-        } else {
-          setActiveCategoryTab('global');
-        }
-      } else {
-        setActiveCategoryTab('global');
-      }
+      // Open on the product's category (it is always in the list of phrase sets)
+      setActiveCategoryTab(category && category !== 'all' ? category : 'global');
+      setIsManageMode(false);
 
       setTimeout(() => {
         if (textareaRef.current) {
@@ -130,6 +152,34 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  // Phrase sets, top to bottom: common phrases → the store's categories (Admin → «Категории»,
+  // plus the product's own category) → sets saved earlier for other categories
+  const phraseSets = useMemo<PhraseSet[]>(() => {
+    const sets: PhraseSet[] = [{ id: 'global', label: 'Общие фразы', group: 'global', icon: Sparkles }];
+    const has = (id: string) => sets.some((set) => set.id === id);
+    for (const c of categories) {
+      sets.push({ id: c.id, label: c.name, group: 'store', icon: categoryIcon(c) });
+    }
+    if (category && category !== 'all' && !has(category)) {
+      sets.push({
+        id: category,
+        label: categoryLabel || LEGACY_SET_LABELS[category] || category,
+        group: 'store',
+        icon: categoryIcon({ id: category }),
+      });
+    }
+    for (const id of Object.keys(phrasesData?.byCategory ?? {})) {
+      if (!has(id)) {
+        sets.push({ id, label: LEGACY_SET_LABELS[id] || id, group: 'other', icon: categoryIcon({ id }) });
+      }
+    }
+    return sets;
+  }, [categories, category, categoryLabel, phrasesData]);
+
+  const phraseCount = (id: string) =>
+    id === 'global' ? phrasesData?.global.length ?? 0 : phrasesData?.byCategory[id]?.length ?? 0;
+  const activeSet = phraseSets.find((set) => set.id === activeCategoryTab) ?? phraseSets[0];
 
   // Current active phrases list based on mode (material vs description & category)
   const currentPhrases = useMemo(() => {
@@ -203,36 +253,41 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
   };
 
   const wordCount = draft.trim() ? draft.trim().split(/\s+/).length : 0;
+  const targetLabel = type === 'material' ? 'Состав ткани' : activeSet.label;
+  const ActiveIcon = activeSet.icon;
 
   return (
     <div
-      className="fixed inset-0 z-[130] bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-[130] bg-[#2D3A4E]/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-xl neu-flat rounded-3xl bg-[#E3E8EF] p-5 sm:p-6 border border-white/80 space-y-4.5 animate-in zoom-in-95 duration-150 max-h-[92vh] flex flex-col"
+        className="relative w-full max-w-xl neu-modal rounded-3xl p-4 sm:p-6 border border-white/80 space-y-4 animate-in zoom-in-95 duration-150 max-h-[92vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
       >
-        {/* Header */}
+        {/* Header: icon, title with its tag, subtitle; close button in the corner */}
         <div className="flex items-start justify-between gap-3 border-b border-[#BAC5D5]/50 pb-3 shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-start gap-3 min-w-0">
             <div className="w-10 h-10 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-accent shrink-0">
               {type === 'material' ? <Tag className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-base font-black text-[#2D3A4E] tracking-tight">{title}</h3>
-                <span className="text-[11px] font-black text-accent bg-accent/10 px-2 py-0.5 rounded-md neu-flat-sm">
+                <h3 className="text-base font-black text-[#2D3A4E] tracking-tight leading-tight">{title}</h3>
+                <span className="text-[11px] font-black text-accent bg-accent/10 px-2 py-0.5 rounded-md">
                   {type === 'material' ? 'Состав полотна' : 'Каталог акцентов'}
                 </span>
               </div>
-              <p className="text-[11px] font-bold text-[#4E5C70] truncate">{subtitle}</p>
+              <p className="text-[11px] font-semibold text-[#4E5C70] leading-snug">{subtitle}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer shrink-0"
+            className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer shrink-0"
             title="Закрыть окно (Esc)"
             aria-label="Закрыть окно (Esc)"
           >
@@ -240,149 +295,125 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
           </button>
         </div>
 
-        {/* Scrollable Middle Section: Category Filter + Inset Quick Phrases Box */}
-        <div className="space-y-3 overflow-y-auto pr-1 flex-1 min-h-0">
-          {/* Category Dropdown for Descriptions in Neomorphic Style */}
+        {/* Scrollable middle: phrase set picker, phrases, text */}
+        <div className="space-y-3.5 overflow-y-auto -mx-1 px-1 pb-1 flex-1 min-h-0">
+          {/* Phrase set picker (descriptions only) */}
           {type === 'description' && (
             <div className="space-y-1.5" ref={categoryDropdownRef}>
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-black text-[#4E5C70] uppercase tracking-wider flex items-center gap-1">
-                  <SlidersHorizontal className="w-3 h-3 text-accent" />
-                  <span>Категория одежды:</span>
+              <div className="space-y-0.5">
+                <label className="text-[11px] font-black text-[#2D3A4E] uppercase tracking-wider flex items-center gap-1.5">
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-accent shrink-0" />
+                  <span>Категория одежды</span>
                 </label>
-                <span className="text-[11px] font-bold text-accent">
-                  Синхронизировано со всеми карточками
-                </span>
+                <p className="text-[11px] font-semibold text-[#4E5C70] leading-snug">
+                  Фразы общие для всех товаров выбранной категории
+                </p>
               </div>
 
-              {/* Neomorphic Dropdown Button */}
-              {(() => {
-                const selectedTab =
-                  CATEGORY_TABS.find((t) => t.id === activeCategoryTab) || CATEGORY_TABS[0];
-                const selectedCount =
-                  selectedTab.id === 'global'
-                    ? phrasesData?.global.length || 0
-                    : phrasesData?.byCategory[selectedTab.id]?.length || 0;
-                const SelectedIcon = selectedTab.icon;
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                  aria-haspopup="listbox"
+                  aria-expanded={isCategoryDropdownOpen}
+                  className={`w-full h-12 pl-2 pr-3 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-between gap-2 text-left transition-all cursor-pointer ${
+                    isCategoryDropdownOpen ? 'ring-2 ring-accent/40' : ''
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl neu-button bg-[#E3E8EF] flex items-center justify-center text-accent shrink-0">
+                      <ActiveIcon className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-black text-[#2D3A4E] truncate">{activeSet.label}</span>
+                    <span className="text-[11px] px-2 py-0.5 rounded-lg font-black bg-accent/10 text-accent whitespace-nowrap shrink-0">
+                      {phraseCount(activeSet.id)} {pluralAccents(phraseCount(activeSet.id))}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="hidden sm:inline text-[11px] font-bold text-accent">Выбрать</span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-accent transition-transform duration-200 ${
+                        isCategoryDropdownOpen ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </div>
+                </button>
 
-                return (
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-                      className="w-full px-3.5 py-2.5 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-between text-left transition-all cursor-pointer border border-white/50 hover:border-white/80 active:scale-[0.99]"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-7 h-7 rounded-xl neu-button bg-[#E3E8EF] flex items-center justify-center text-accent shrink-0">
-                          <SelectedIcon className="w-3.5 h-3.5" />
-                        </div>
-                        <div className="min-w-0 flex items-center gap-2">
-                          <span className="text-xs font-black text-[#2D3A4E] truncate">
-                            {selectedTab.label}
-                          </span>
-                          <span className="text-[11px] px-2 py-0.5 rounded-lg font-black bg-accent/15 text-accent">
-                            {selectedCount}{' '}
-                            {selectedCount === 1
-                              ? 'акцент'
-                              : selectedCount >= 2 && selectedCount <= 4
-                              ? 'акцента'
-                              : 'акцентов'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-[#4E5C70] pl-2 shrink-0">
-                        <span className="text-[11px] font-bold text-accent">Выбрать</span>
-                        <ChevronDown
-                          className={`w-4 h-4 text-accent transition-transform duration-200 ${
-                            isCategoryDropdownOpen ? 'rotate-180' : ''
-                          }`}
-                        />
-                      </div>
-                    </button>
-
-                    {/* Dropdown Menu Popup */}
-                    {isCategoryDropdownOpen && (
-                      <div className="absolute top-full mt-1.5 left-0 right-0 z-40 neu-flat rounded-2xl bg-[#E3E8EF] border border-white/80 p-1.5 space-y-1 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150">
-                        {CATEGORY_TABS.map((tab) => {
-                          const isSelected = activeCategoryTab === tab.id;
-                          const count =
-                            tab.id === 'global'
-                              ? phrasesData?.global.length || 0
-                              : phrasesData?.byCategory[tab.id]?.length || 0;
-                          const TabIcon = tab.icon;
-
-                          return (
-                            <button
-                              key={tab.id}
-                              type="button"
-                              onClick={() => {
-                                setActiveCategoryTab(tab.id);
-                                setIsCategoryDropdownOpen(false);
-                                setIsAddingPhrase(false);
-                              }}
-                              className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between ${
-                                isSelected
-                                  ? 'neu-pill-active'
-                                  : 'neu-button text-[#2D3A4E] hover:text-accent'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <TabIcon className="w-3.5 h-3.5 text-accent" />
-                                <span className="truncate">{tab.label}</span>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <span
-                                  className={`text-[11px] px-1.5 py-0.5 rounded-md font-black ${
-                                    isSelected
-                                      ? 'bg-accent/10 text-accent'
-                                      : 'neu-inset bg-[#E3E8EF] text-[#4E5C70]'
+                {/* Menu: groups in order, the selected set pressed in */}
+                {isCategoryDropdownOpen && (
+                  <div
+                    role="listbox"
+                    className="absolute top-full mt-2 left-0 right-0 z-50 neu-dropdown rounded-2xl bg-[#E3E8EF] border border-white/80 p-1.5 max-h-72 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150"
+                  >
+                    {(['global', 'store', 'other'] as PhraseSetGroup[]).map((group) => {
+                      const sets = phraseSets.filter((set) => set.group === group);
+                      if (sets.length === 0) return null;
+                      return (
+                        <div key={group} className="py-1 first:pt-0 last:pb-0">
+                          <p className="px-2.5 pt-1 pb-1.5 text-[11px] font-black uppercase tracking-wider text-[#4E5C70]">
+                            {GROUP_TITLES[group]}
+                          </p>
+                          <div className="space-y-1">
+                            {sets.map((set) => {
+                              const isSelected = activeCategoryTab === set.id;
+                              const SetIcon = set.icon;
+                              return (
+                                <button
+                                  key={set.id}
+                                  type="button"
+                                  role="option"
+                                  aria-selected={isSelected}
+                                  onClick={() => {
+                                    setActiveCategoryTab(set.id);
+                                    setIsCategoryDropdownOpen(false);
+                                    setIsAddingPhrase(false);
+                                  }}
+                                  className={`w-full h-10 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                                    isSelected ? 'neu-pill-active' : 'text-[#2D3A4E] hover:bg-[#BAC5D5]/20'
                                   }`}
                                 >
-                                  {count}
-                                </span>
-                                {isSelected && <Check className="w-3.5 h-3.5 text-accent" />}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
+                                  <span className="flex items-center gap-2 min-w-0">
+                                    <SetIcon className="w-3.5 h-3.5 text-accent shrink-0" />
+                                    <span className="truncate">{set.label}</span>
+                                  </span>
+                                  <span className="flex items-center gap-2 shrink-0">
+                                    <span className="text-[11px] min-w-6 px-1.5 py-0.5 rounded-md font-black text-center bg-accent/10 text-accent">
+                                      {phraseCount(set.id)}
+                                    </span>
+                                    {isSelected ? (
+                                      <Check className="w-3.5 h-3.5 text-accent" />
+                                    ) : (
+                                      <span className="w-3.5 h-3.5" aria-hidden="true" />
+                                    )}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })()}
+                )}
+              </div>
             </div>
           )}
 
-          {/* Recessed Inset Container for Quick Phrases & Accents */}
-          <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] border border-white/60 space-y-2.5">
-            {/* Action Bar inside Inset */}
-            <div className="flex items-center justify-between flex-wrap gap-2 pb-1 border-b border-[#BAC5D5]/40">
-              <span className="text-[11px] font-black text-[#2D3A4E] flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-accent" />
+          {/* Phrases: title, actions, the list */}
+          <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] space-y-3">
+            <div className="space-y-2.5 pb-2.5 border-b border-[#BAC5D5]/40">
+              <p className="text-[11px] font-black text-[#2D3A4E] flex items-start gap-1.5 leading-snug">
+                <Sparkles className="w-3.5 h-3.5 text-accent shrink-0 mt-px" />
                 <span>
                   {type === 'material'
-                    ? 'Пресеты состава ткани:'
-                    : activeCategoryTab === 'global'
-                    ? 'Общие фразы для всех категорий:'
-                    : `Акценты категории «${CATEGORY_TABS.find((t) => t.id === activeCategoryTab)?.label || activeCategoryTab}»:`}
+                    ? 'Пресеты состава ткани'
+                    : activeSet.id === 'global'
+                    ? 'Общие фразы для всех категорий'
+                    : `Акценты категории «${activeSet.label}»`}
                 </span>
-              </span>
+              </p>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsManageMode(!isManageMode)}
-                  className={`text-[11px] font-bold px-2 py-0.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1 ${
-                    isManageMode
-                      ? 'bg-danger-soft text-danger font-extrabold'
-                      : 'text-[#4E5C70] hover:text-[#2D3A4E]'
-                  }`}
-                  title="Режим удаления фраз"
-                >
-                  <Trash2 className="w-3 h-3" />
-                  <span>{isManageMode ? 'Готово' : 'Удалить фразы'}</span>
-                </button>
-
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
                   onClick={() => {
@@ -391,64 +422,72 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                       setTimeout(() => newPhraseInputRef.current?.focus(), 50);
                     }
                   }}
-                  className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-accent/15 text-accent hover:bg-accent/25 transition-colors cursor-pointer flex items-center gap-1"
+                  aria-pressed={isAddingPhrase}
+                  className={`h-8 px-3 rounded-xl text-[11px] font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 ${
+                    isAddingPhrase ? 'neu-pill-active' : 'neu-button text-accent'
+                  }`}
                 >
-                  <Plus className="w-3 h-3" />
+                  <Plus className="w-3.5 h-3.5" />
                   <span>Добавить свою</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsManageMode(!isManageMode)}
+                  aria-pressed={isManageMode}
+                  className={`h-8 px-3 rounded-xl text-[11px] font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 ${
+                    isManageMode ? 'neu-button-danger' : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
+                  }`}
+                  title="Режим удаления фраз"
+                >
+                  {isManageMode ? <Check className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  <span>{isManageMode ? 'Готово' : 'Удалить фразы'}</span>
                 </button>
               </div>
             </div>
 
-            {/* Inline Add Phrase Input Form */}
+            {/* Inline add form */}
             {isAddingPhrase && (
               <form
                 onSubmit={handleAddNewPhrase}
-                className="neu-flat rounded-xl p-2.5 bg-[#E3E8EF] border border-white/80 space-y-2 animate-in fade-in zoom-in-95 duration-100"
+                className="neu-flat-sm rounded-xl p-2.5 bg-[#E3E8EF] space-y-2 animate-in fade-in zoom-in-95 duration-100"
               >
-                <div className="flex items-center justify-between text-[11px] font-bold text-[#4E5C70]">
-                  <span>
-                    Новая фраза для:{' '}
-                    <strong className="text-accent">
-                      {type === 'material'
-                        ? 'Состав ткани'
-                        : CATEGORY_TABS.find((t) => t.id === activeCategoryTab)?.label}
-                    </strong>
+                <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-[#4E5C70]">
+                  <span className="min-w-0 truncate">
+                    Новая фраза: <strong className="text-accent">{targetLabel}</strong>
                   </span>
                   <button
                     type="button"
                     onClick={() => setIsAddingPhrase(false)}
-                    className="text-[#4E5C70] hover:text-danger"
+                    className="shrink-0 text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
                   >
                     Отмена
                   </button>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <input
                     ref={newPhraseInputRef}
                     type="text"
                     value={newPhraseInput}
                     onChange={(e) => setNewPhraseInput(e.target.value)}
                     placeholder={
-                      type === 'material'
-                        ? 'Например: 95% хлопок, 5% эластан'
-                        : 'Например: Дышащая текстура, анатомический крой...'
+                      type === 'material' ? 'Например: 95% хлопок, 5% эластан' : 'Например: дышащая ткань'
                     }
-                    className="flex-1 h-8 px-3 neu-inset rounded-lg text-xs text-[#2D3A4E] bg-[#E3E8EF] placeholder:text-[#56647A]"
+                    className="flex-1 min-w-0 h-9 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] placeholder:text-[#56647A]"
                   />
                   <button
                     type="submit"
                     disabled={!newPhraseInput.trim()}
-                    className="h-8 px-3 rounded-lg neu-button text-accent text-xs font-bold active:scale-95 disabled:opacity-50 cursor-pointer flex items-center gap-1 shrink-0"
+                    className="h-9 px-3 rounded-xl neu-button text-accent text-xs font-bold active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 shrink-0"
                   >
-                    <Plus className="w-3 h-3" />
+                    <Plus className="w-3.5 h-3.5" />
                     <span>Добавить</span>
                   </button>
                 </div>
               </form>
             )}
 
-            {/* List of Phrases Chips */}
-            <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto pr-1 pb-1">
+            {/* Phrases (padding keeps the raised shadows from being cut by the scroll box) */}
+            <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1.5 -mx-1.5">
               {currentPhrases.length === 0 ? (
                 <div className="w-full py-4 text-center text-xs font-bold text-[#4E5C70]">
                   Фразы для этой категории пока не добавлены.{' '}
@@ -466,36 +505,29 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                   return (
                     <div
                       key={idx}
-                      className={`group inline-flex items-center rounded-xl text-[11px] font-bold transition-all ${
-                        isSelected
-                          ? 'neu-pill-active'
-                          : 'neu-button text-[#2D3A4E] hover:text-accent'
+                      className={`inline-flex items-stretch max-w-full rounded-xl text-[11px] font-bold transition-all ${
+                        isSelected ? 'neu-pill-active' : 'neu-button text-[#2D3A4E] hover:text-accent'
                       }`}
                     >
                       <button
                         type="button"
                         onClick={() => handleSelectPreset(phrase)}
-                        className="px-2.5 py-1.5 text-left cursor-pointer active:scale-95 flex items-center gap-1"
+                        disabled={isManageMode}
+                        className="min-w-0 px-3 py-2 text-left leading-snug cursor-pointer disabled:cursor-default"
                       >
-                        <span>{type === 'material' ? phrase : `+ ${phrase}`}</span>
+                        {type === 'material' ? phrase : `+ ${phrase}`}
                       </button>
 
-                      {/* Instant Delete Button on Chip */}
-                      {(isManageMode || true) && (
+                      {/* Delete: only in the delete mode, so a tap on the phrase never removes it */}
+                      {isManageMode && (
                         <button
                           type="button"
                           onClick={(e) => handleDeletePhrase(phrase, e)}
-                          className={`p-1.5 pr-2 rounded-r-xl transition-opacity cursor-pointer ${
-                            isManageMode
-                              ? 'text-danger hover:text-danger opacity-100'
-                              : isSelected
-                              ? 'text-accent/70 hover:text-accent opacity-0 group-hover:opacity-100'
-                              : 'text-danger hover:text-danger opacity-0 group-hover:opacity-100'
-                          }`}
+                          className="px-2.5 rounded-r-xl text-danger hover:bg-danger-soft border-l border-[#BAC5D5]/50 flex items-center cursor-pointer"
                           title="Удалить фразу из базы"
-                          aria-label="Удалить фразу из базы"
+                          aria-label={`Удалить фразу «${phrase}»`}
                         >
-                          <X className="w-3 h-3" />
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       )}
                     </div>
@@ -504,75 +536,66 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
               )}
             </div>
 
-            {/* Inset Footer Helper Note */}
-            <div className="pt-2 border-t border-[#BAC5D5]/35 text-[11px] font-semibold text-[#4E5C70] flex items-center justify-between">
-              <span>Нажмите на фразу, чтобы добавить ее в текст</span>
-            </div>
+            <p className="pt-2.5 border-t border-[#BAC5D5]/40 text-[11px] font-semibold text-[#4E5C70]">
+              {isManageMode ? 'Нажмите ×, чтобы удалить фразу из базы' : 'Нажмите на фразу, чтобы добавить ее в текст'}
+            </p>
           </div>
 
-          {/* Editor Input / Textarea */}
+          {/* Text */}
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-[11px] font-black text-[#2D3A4E] flex items-center gap-1.5">
                 <FileText className="w-3.5 h-3.5 text-accent" />
-                <span>{type === 'material' ? 'Полный текст состава ткани:' : 'Текст описания:'}</span>
+                <span>{type === 'material' ? 'Полный текст состава ткани' : 'Текст описания'}</span>
               </label>
               {draft && (
                 <button
                   type="button"
                   onClick={() => setDraft('')}
-                  className="px-2.5 py-1 rounded-lg neu-button text-[11px] font-bold text-danger hover:text-danger active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                  className="h-7 px-2.5 rounded-lg neu-button-danger text-[11px] font-bold active:scale-95 transition-all flex items-center gap-1 cursor-pointer shrink-0"
                   title="Очистить поле ввода"
                 >
-                  <Trash2 className="w-2.5 h-2.5" />
+                  <Trash2 className="w-3 h-3" />
                   <span>Очистить</span>
                 </button>
               )}
             </div>
 
-            <div className="relative">
-              <textarea
-                ref={textareaRef}
-                rows={type === 'material' ? 3 : 5}
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder={
-                  type === 'material'
-                    ? 'Например: 100% органический лен с эффектом Stonewash'
-                    : 'Введите детальное описание товара, особенности кроя, сезонность и уход...'
-                }
-                className="w-full px-4 py-3 neu-inset rounded-2xl text-xs sm:text-sm font-semibold text-[#2D3A4E] bg-[#E3E8EF] resize-none leading-relaxed placeholder:text-[#56647A] border border-white/40"
-              />
-            </div>
+            <textarea
+              ref={textareaRef}
+              rows={type === 'material' ? 3 : 5}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder={
+                type === 'material'
+                  ? 'Например: 100% органический лен с эффектом Stonewash'
+                  : 'Введите детальное описание товара, особенности кроя, сезонность и уход...'
+              }
+              className="w-full px-4 py-3 neu-inset rounded-2xl text-xs sm:text-sm font-semibold text-[#2D3A4E] bg-[#E3E8EF] resize-none leading-relaxed placeholder:text-[#56647A]"
+            />
 
-            {/* Word & Symbol count counter bar */}
-            <div className="flex items-center justify-between text-[11px] font-bold text-[#4E5C70] px-1 flex-wrap gap-1">
-              <span>
-                Слов: <strong className="text-[#2D3A4E]">{wordCount}</strong> • Символов:{' '}
-                <strong className="text-[#2D3A4E]">{draft.length}</strong>
-              </span>
-              <span className="text-accent">
-                Нажмите «Сохранить изменения» для применения
-              </span>
-            </div>
+            <p className="text-[11px] font-bold text-[#4E5C70] px-1">
+              Слов: <strong className="text-[#2D3A4E]">{wordCount}</strong> • Символов:{' '}
+              <strong className="text-[#2D3A4E]">{draft.length}</strong>
+            </p>
           </div>
         </div>
 
-        {/* Modal Action Buttons Footer */}
-        <div className="flex items-center gap-3 pt-2 border-t border-[#BAC5D5]/50 shrink-0">
+        {/* Footer: equal heights, the main action takes the remaining width */}
+        <div className="flex items-center gap-2.5 pt-3 border-t border-[#BAC5D5]/50 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer"
+            className="h-11 px-5 shrink-0 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer"
           >
             Отмена
           </button>
           <button
             type="button"
             onClick={() => onSave(draft.trim())}
-            className="flex-1 py-2.5 px-4 neu-button-accent rounded-xl text-xs font-black text-white active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+            className="h-11 flex-1 min-w-0 px-4 neu-button-accent rounded-xl text-xs font-black text-white whitespace-nowrap active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5"
           >
-            <Check className="w-4 h-4" />
+            <Check className="w-4 h-4 shrink-0" />
             <span>Сохранить изменения</span>
           </button>
         </div>
