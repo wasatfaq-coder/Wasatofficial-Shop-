@@ -217,6 +217,16 @@ input[type="submit"] {
   transform: translateY(-1px);
 }
 
+/* A raised surface that works as a button (analytics KPI cards): lifts on hover, presses in on click */
+.neu-pressable {
+  transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.neu-flat.neu-pressable:hover {
+  box-shadow: var(--neu-raised-lg);
+  transform: translateY(-1px);
+}
+
 .neu-button:active,
 .neu-button-danger:active,
 .neu-pressable:active {

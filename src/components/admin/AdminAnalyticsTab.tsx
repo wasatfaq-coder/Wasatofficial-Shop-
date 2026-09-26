@@ -31,7 +31,6 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  Legend,
 } from 'recharts';
 import { Order, PromoCode } from '../../types';
 import { generateAnalyticsPDF, preloadPdfLibraries } from '../../utils/pdfExport';
@@ -54,7 +53,6 @@ import {
   NeumorphicActiveDot,
   NeumorphicCursor,
   NeumorphicAxisTick,
-  NeumorphicRechartsLegend,
   triggerChartHapticFeedback,
 } from './AdminChartNeumorphicShapes';
 import { ConfirmDialog } from '../ConfirmDialog';
@@ -392,7 +390,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
   );
   const axes = (
     <>
-      <NeumorphicSVGDefs activeColor={metric.color} />
+      <NeumorphicSVGDefs />
       <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#BAC5D5" strokeOpacity={0.35} />
       <XAxis
         dataKey="label"
@@ -417,24 +415,25 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
     </>
   );
 
-  const kpis = [
+  // The KPI cards are also the chart's metric switch
+  const kpis: {
+    metric: ActiveMetric;
+    title: string;
+    icon: typeof TrendingUp;
+    value: string;
+    footer: React.ReactNode;
+    extra: React.ReactNode;
+  }[] = [
     {
+      metric: 'revenue',
       title: 'Выручка',
       icon: TrendingUp,
       value: rub(totalRevenue),
       footer: <Growth value={revenueGrowth} hasBase={prevTotalRevenue > 0} />,
-      extra: peakDay ? (
-        <button
-          type="button"
-          onClick={showPeakDay}
-          className="text-[11px] font-bold text-accent underline underline-offset-2 cursor-pointer flex items-center gap-1"
-        >
-          <Flame className="w-3 h-3" />
-          {isMonthly ? 'Лучший месяц' : 'Пиковый день'}: {peakDay.label}
-        </button>
-      ) : null,
+      extra: null,
     },
     {
+      metric: 'orders',
       title: 'Заказы',
       icon: ShoppingBag,
       value: `${totalOrders.toLocaleString('ru-RU')} шт.`,
@@ -446,6 +445,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       ),
     },
     {
+      metric: 'avgCheck',
       title: 'Средний чек',
       icon: Receipt,
       value: rub(avgCheck),
@@ -457,6 +457,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       extra: null,
     },
     {
+      metric: 'returns',
       title: 'Отмены',
       icon: RotateCcw,
       value: `${totalReturns} шт.`,
@@ -514,36 +515,66 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
         )}
       </section>
 
-      {/* 2. KPIs */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3" aria-label="Показатели периода">
-        {kpis.map((k) => (
-          <div key={k.title} className="neu-flat rounded-2xl p-3.5 space-y-1.5 min-w-0">
-            <div className="flex items-center justify-between gap-2 text-[#4E5C70]">
-              <span className="text-[11px] font-bold uppercase tracking-wider">{k.title}</span>
-              <span className="w-7 h-7 rounded-lg neu-inset flex items-center justify-center text-accent shrink-0">
-                <k.icon className="w-3.5 h-3.5" />
+      {/* 2. KPIs: a card shows its number and puts the metric on the chart (raised → pressed in when chosen) */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3" role="radiogroup" aria-label="Показатель на графике">
+        {kpis.map((k) => {
+          const selected = activeMetric === k.metric;
+          return (
+            <button
+              key={k.metric}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => {
+                setActiveMetric(k.metric);
+                triggerChartHapticFeedback('light');
+              }}
+              className={`neu-pressable rounded-2xl p-3.5 space-y-1.5 min-w-0 text-left cursor-pointer ${
+                selected ? 'neu-pill-active' : 'neu-flat'
+              }`}
+            >
+              <span className="flex items-center justify-between gap-2">
+                <span className={`text-[11px] font-bold uppercase tracking-wider ${selected ? 'text-accent' : 'text-[#4E5C70]'}`}>
+                  {k.title}
+                </span>
+                <span
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                    selected ? 'neu-fill-accent' : 'neu-inset text-accent'
+                  }`}
+                >
+                  <k.icon className="w-3.5 h-3.5" />
+                </span>
               </span>
-            </div>
-            <p className="text-lg sm:text-xl font-black tracking-tight tabular-nums break-words">{k.value}</p>
-            <div className="text-[11px] leading-snug">{k.footer}</div>
-            {k.extra}
-          </div>
-        ))}
+              <span className={`block text-lg sm:text-xl font-black tracking-tight tabular-nums break-words ${selected ? 'text-accent' : ''}`}>
+                {k.value}
+              </span>
+              <span className="block text-[11px] leading-snug">{k.footer}</span>
+              {k.extra}
+            </button>
+          );
+        })}
       </section>
 
       {/* 3. Chart */}
       <section className="neu-flat rounded-3xl p-4 sm:p-5 space-y-3.5">
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2.5">
-          <Segments
-            label="Показатель на графике"
-            grid="grid-cols-2 sm:grid-cols-4"
-            value={activeMetric}
-            options={METRICS.map((m) => ({ id: m.id, label: m.label }))}
-            onChange={(m) => {
-              setActiveMetric(m);
-              triggerChartHapticFeedback('light');
-            }}
-          />
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <h4 className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: metric.color }} aria-hidden="true" />
+              {metric.label} {isMonthly ? 'по месяцам' : 'по дням'}
+            </h4>
+            {peakDay && (
+              <button
+                type="button"
+                onClick={showPeakDay}
+                title={isMonthly ? 'Открыть лучший месяц' : 'Открыть пиковый день'}
+                className="h-8 px-2.5 neu-button rounded-xl text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1 cursor-pointer shrink-0"
+              >
+                <Flame className="w-3.5 h-3.5 text-accent" />
+                Пик: {peakDay.label} · {rub(peakDay.revenue)}
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Segments label="Какие заказы учитывать" grid="grid-cols-3" value={statusFilter} options={STATUS_FILTERS} onChange={setStatusFilter} />
             <Segments
@@ -639,7 +670,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
                     {p.image ? (
                       <img src={p.image} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" loading="lazy" />
                     ) : (
-                      <span className="w-10 h-10 rounded-xl neu-flat-sm shrink-0" aria-hidden="true" />
+                      <span className="w-10 h-10 rounded-xl bg-[#BAC5D5]/30 shrink-0" aria-hidden="true" />
                     )}
                     <div className="min-w-0">
                       <p className="text-xs font-bold truncate">
