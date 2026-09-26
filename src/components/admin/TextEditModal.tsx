@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   FileText,
-  Tag,
   X,
   Check,
   Plus,
@@ -22,7 +21,6 @@ import { categoryIcon } from '../../utils/categories';
 
 interface TextEditModalProps {
   isOpen: boolean;
-  type: 'material' | 'description';
   category?: string;
   /** Categories from Admin → «Категории»: the phrase sets offered for descriptions */
   categories?: StoreCategory[];
@@ -71,9 +69,14 @@ const pluralAccents = (n: number) => {
   return 'акцентов';
 };
 
+/** Last phrases snapshot: a reopened window shows them at once instead of growing after load */
+let cachedPhrases: QuickPhrasesData | null = null;
+
+/** Opening animation length: the text field is focused after it, so the window does not jump */
+const OPEN_ANIMATION_MS = 200;
+
 export const TextEditModal: React.FC<TextEditModalProps> = ({
   isOpen,
-  type,
   category = 'global',
   categories = [],
   categoryLabel,
@@ -85,7 +88,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
   onShowToast,
 }) => {
   const [draft, setDraft] = useState('');
-  const [phrasesData, setPhrasesData] = useState<QuickPhrasesData | null>(null);
+  const [phrasesData, setPhrasesData] = useState<QuickPhrasesData | null>(cachedPhrases);
   const [activeCategoryTab, setActiveCategoryTab] = useState<string>('global');
   const [newPhraseInput, setNewPhraseInput] = useState('');
   const [isAddingPhrase, setIsAddingPhrase] = useState(false);
@@ -116,6 +119,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
   // Subscribe to real-time synchronized quick phrases from Firestore
   useEffect(() => {
     const unsub = subscribeToQuickPhrases((data) => {
+      cachedPhrases = data;
       setPhrasesData(data);
     });
     return () => unsub();
@@ -132,13 +136,17 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
       setActiveCategoryTab(category && category !== 'all' ? category : 'global');
       setIsManageMode(false);
 
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.focus();
-          const len = textareaRef.current.value.length;
-          textareaRef.current.setSelectionRange(len, len);
-        }
-      }, 50);
+      // On phones focus would open the keyboard mid-animation and resize the window: the text is
+      // focused by a tap there. Elsewhere — after the animation, without scrolling the window.
+      if (window.matchMedia?.('(pointer: coarse)').matches) return;
+      const timer = window.setTimeout(() => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+        textarea.focus({ preventScroll: true });
+        const len = textarea.value.length;
+        textarea.setSelectionRange(len, len);
+      }, OPEN_ANIMATION_MS);
+      return () => window.clearTimeout(timer);
     }
   }, [isOpen, initialValue, category]);
 
@@ -182,37 +190,28 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
     id === 'global' ? phrasesData?.global.length ?? 0 : phrasesData?.byCategory[id]?.length ?? 0;
   const activeSet = phraseSets.find((set) => set.id === activeCategoryTab) ?? phraseSets[0];
 
-  // Current active phrases list based on mode (material vs description & category)
+  // Phrases of the selected set
   const currentPhrases = useMemo(() => {
     if (!phrasesData) return [];
-
-    if (type === 'material') {
-      return phrasesData.materials || [];
-    }
 
     if (activeCategoryTab === 'global') {
       return phrasesData.global || [];
     }
 
     return phrasesData.byCategory[activeCategoryTab] || [];
-  }, [phrasesData, type, activeCategoryTab]);
+  }, [phrasesData, activeCategoryTab]);
 
   if (!isOpen) return null;
 
   const handleSelectPreset = (preset: string) => {
-    if (type === 'material') {
-      setDraft(preset);
-      if (onShowToast) onShowToast('Состав ткани применен', 'info');
-    } else {
-      setDraft((prev) => {
-        const trimmed = prev.trim();
-        if (!trimmed) return preset;
-        // Avoid duplicating exact same line
-        if (trimmed.includes(preset)) return trimmed;
-        return `${trimmed}\n${preset}`;
-      });
-      if (onShowToast) onShowToast('Фраза добавлена в описание', 'info');
-    }
+    setDraft((prev) => {
+      const trimmed = prev.trim();
+      if (!trimmed) return preset;
+      // Avoid duplicating exact same line
+      if (trimmed.includes(preset)) return trimmed;
+      return `${trimmed}\n${preset}`;
+    });
+    if (onShowToast) onShowToast('Фраза добавлена в описание', 'info');
   };
 
   const handleAddNewPhrase = async (e?: React.FormEvent) => {
@@ -221,17 +220,11 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
     if (!trimmed) return;
 
     try {
-      const target = type === 'material' ? 'material' : activeCategoryTab;
-      await addQuickPhrase(target, trimmed);
+      await addQuickPhrase(activeCategoryTab, trimmed);
       setNewPhraseInput('');
       setIsAddingPhrase(false);
       if (onShowToast) {
-        onShowToast(
-          type === 'material'
-            ? 'Новый пресет состава ткани успешно сохранен'
-            : 'Новая быстрая фраза синхронизирована для всех товаров',
-          'success'
-        );
+        onShowToast('Новая быстрая фраза синхронизирована для всех товаров', 'success');
       }
     } catch (err) {
       console.error(err);
@@ -242,8 +235,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
   const handleDeletePhrase = async (phraseToDelete: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const target = type === 'material' ? 'material' : activeCategoryTab;
-      await deleteQuickPhrase(target, phraseToDelete);
+      await deleteQuickPhrase(activeCategoryTab, phraseToDelete);
       if (onShowToast) {
         onShowToast('Фраза удалена из базы быстрых фраз', 'info');
       }
@@ -254,17 +246,17 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
   };
 
   const wordCount = draft.trim() ? draft.trim().split(/\s+/).length : 0;
-  const targetLabel = type === 'material' ? 'Состав ткани' : activeSet.label;
+  const targetLabel = activeSet.label;
   const ActiveIcon = activeSet.icon;
 
   return (
     <ModalPortal>
     <div
-      className="fixed inset-0 z-[130] bg-[#2D3A4E]/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-[130] bg-[#2D3A4E]/55 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-xl neu-modal rounded-3xl p-4 sm:p-6 border border-white/80 space-y-4 animate-in zoom-in-95 duration-150 max-h-[92vh] flex flex-col"
+        className="relative w-full max-w-xl neu-modal rounded-3xl p-4 sm:p-6 border border-white/80 space-y-4 animate-in zoom-in-95 fade-in duration-200 h-[88dvh] sm:h-auto sm:max-h-[92dvh] flex flex-col will-change-transform"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -274,13 +266,13 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
         <div className="flex items-start justify-between gap-3 border-b border-[#BAC5D5]/50 pb-3 shrink-0">
           <div className="flex items-start gap-3 min-w-0">
             <div className="w-10 h-10 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-center text-accent shrink-0">
-              {type === 'material' ? <Tag className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+              <FileText className="w-5 h-5" />
             </div>
             <div className="min-w-0 space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-base font-black text-[#2D3A4E] tracking-tight leading-tight">{title}</h3>
                 <span className="text-[11px] font-black text-accent bg-accent/10 px-2 py-0.5 rounded-md">
-                  {type === 'material' ? 'Состав полотна' : 'Каталог акцентов'}
+                  Каталог акцентов
                 </span>
               </div>
               <p className="text-[11px] font-semibold text-[#4E5C70] leading-snug">{subtitle}</p>
@@ -299,107 +291,105 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
 
         {/* Scrollable middle: phrase set picker, phrases, text */}
         <div className="space-y-3.5 overflow-y-auto -mx-1 px-1 pb-1 flex-1 min-h-0">
-          {/* Phrase set picker (descriptions only) */}
-          {type === 'description' && (
-            <div className="space-y-1.5" ref={categoryDropdownRef}>
-              <div className="space-y-0.5">
-                <label className="text-[11px] font-black text-[#2D3A4E] uppercase tracking-wider flex items-center gap-1.5">
-                  <SlidersHorizontal className="w-3.5 h-3.5 text-accent shrink-0" />
-                  <span>Категория одежды</span>
-                </label>
-                <p className="text-[11px] font-semibold text-[#4E5C70] leading-snug">
-                  Фразы общие для всех товаров выбранной категории
-                </p>
-              </div>
-
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-                  aria-haspopup="listbox"
-                  aria-expanded={isCategoryDropdownOpen}
-                  className={`w-full h-12 pl-2 pr-3 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-between gap-2 text-left transition-all cursor-pointer ${
-                    isCategoryDropdownOpen ? 'ring-2 ring-accent/40' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-xl neu-button bg-[#E3E8EF] flex items-center justify-center text-accent shrink-0">
-                      <ActiveIcon className="w-4 h-4" />
-                    </div>
-                    <span className="text-xs font-black text-[#2D3A4E] truncate">{activeSet.label}</span>
-                    <span className="text-[11px] px-2 py-0.5 rounded-lg font-black bg-accent/10 text-accent whitespace-nowrap shrink-0">
-                      {phraseCount(activeSet.id)} {pluralAccents(phraseCount(activeSet.id))}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <span className="hidden sm:inline text-[11px] font-bold text-accent">Выбрать</span>
-                    <ChevronDown
-                      className={`w-4 h-4 text-accent transition-transform duration-200 ${
-                        isCategoryDropdownOpen ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </div>
-                </button>
-
-                {/* Menu: groups in order, the selected set pressed in */}
-                {isCategoryDropdownOpen && (
-                  <div
-                    role="listbox"
-                    className="absolute top-full mt-2 left-0 right-0 z-50 neu-dropdown rounded-2xl bg-[#E3E8EF] border border-white/80 p-1.5 max-h-72 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150"
-                  >
-                    {(['global', 'store', 'other'] as PhraseSetGroup[]).map((group) => {
-                      const sets = phraseSets.filter((set) => set.group === group);
-                      if (sets.length === 0) return null;
-                      return (
-                        <div key={group} className="py-1 first:pt-0 last:pb-0">
-                          <p className="px-2.5 pt-1 pb-1.5 text-[11px] font-black uppercase tracking-wider text-[#4E5C70]">
-                            {GROUP_TITLES[group]}
-                          </p>
-                          <div className="space-y-1">
-                            {sets.map((set) => {
-                              const isSelected = activeCategoryTab === set.id;
-                              const SetIcon = set.icon;
-                              return (
-                                <button
-                                  key={set.id}
-                                  type="button"
-                                  role="option"
-                                  aria-selected={isSelected}
-                                  onClick={() => {
-                                    setActiveCategoryTab(set.id);
-                                    setIsCategoryDropdownOpen(false);
-                                    setIsAddingPhrase(false);
-                                  }}
-                                  className={`w-full h-10 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between gap-2 ${
-                                    isSelected ? 'neu-pill-active' : 'text-[#2D3A4E] hover:bg-[#BAC5D5]/20'
-                                  }`}
-                                >
-                                  <span className="flex items-center gap-2 min-w-0">
-                                    <SetIcon className="w-3.5 h-3.5 text-accent shrink-0" />
-                                    <span className="truncate">{set.label}</span>
-                                  </span>
-                                  <span className="flex items-center gap-2 shrink-0">
-                                    <span className="text-[11px] min-w-6 px-1.5 py-0.5 rounded-md font-black text-center bg-accent/10 text-accent">
-                                      {phraseCount(set.id)}
-                                    </span>
-                                    {isSelected ? (
-                                      <Check className="w-3.5 h-3.5 text-accent" />
-                                    ) : (
-                                      <span className="w-3.5 h-3.5" aria-hidden="true" />
-                                    )}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+          {/* Phrase set picker */}
+          <div className="space-y-1.5" ref={categoryDropdownRef}>
+            <div className="space-y-0.5">
+              <label className="text-[11px] font-black text-[#2D3A4E] uppercase tracking-wider flex items-center gap-1.5">
+                <SlidersHorizontal className="w-3.5 h-3.5 text-accent shrink-0" />
+                <span>Категория одежды</span>
+              </label>
+              <p className="text-[11px] font-semibold text-[#4E5C70] leading-snug">
+                Фразы общие для всех товаров выбранной категории
+              </p>
             </div>
-          )}
+
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                aria-haspopup="listbox"
+                aria-expanded={isCategoryDropdownOpen}
+                className={`w-full h-12 pl-2 pr-3 rounded-2xl neu-inset bg-[#E3E8EF] flex items-center justify-between gap-2 text-left transition-all cursor-pointer ${
+                  isCategoryDropdownOpen ? 'ring-2 ring-accent/40' : ''
+                }`}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl neu-button bg-[#E3E8EF] flex items-center justify-center text-accent shrink-0">
+                    <ActiveIcon className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-black text-[#2D3A4E] truncate">{activeSet.label}</span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-lg font-black bg-accent/10 text-accent whitespace-nowrap shrink-0">
+                    {phraseCount(activeSet.id)} {pluralAccents(phraseCount(activeSet.id))}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className="hidden sm:inline text-[11px] font-bold text-accent">Выбрать</span>
+                  <ChevronDown
+                    className={`w-4 h-4 text-accent transition-transform duration-200 ${
+                      isCategoryDropdownOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                </div>
+              </button>
+
+              {/* Menu: groups in order, the selected set pressed in */}
+              {isCategoryDropdownOpen && (
+                <div
+                  role="listbox"
+                  className="absolute top-full mt-2 left-0 right-0 z-50 neu-dropdown rounded-2xl bg-[#E3E8EF] border border-white/80 p-1.5 max-h-72 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150"
+                >
+                  {(['global', 'store', 'other'] as PhraseSetGroup[]).map((group) => {
+                    const sets = phraseSets.filter((set) => set.group === group);
+                    if (sets.length === 0) return null;
+                    return (
+                      <div key={group} className="py-1 first:pt-0 last:pb-0">
+                        <p className="px-2.5 pt-1 pb-1.5 text-[11px] font-black uppercase tracking-wider text-[#4E5C70]">
+                          {GROUP_TITLES[group]}
+                        </p>
+                        <div className="space-y-1">
+                          {sets.map((set) => {
+                            const isSelected = activeCategoryTab === set.id;
+                            const SetIcon = set.icon;
+                            return (
+                              <button
+                                key={set.id}
+                                type="button"
+                                role="option"
+                                aria-selected={isSelected}
+                                onClick={() => {
+                                  setActiveCategoryTab(set.id);
+                                  setIsCategoryDropdownOpen(false);
+                                  setIsAddingPhrase(false);
+                                }}
+                                className={`w-full h-10 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                                  isSelected ? 'neu-pill-active' : 'text-[#2D3A4E] hover:bg-[#BAC5D5]/20'
+                                }`}
+                              >
+                                <span className="flex items-center gap-2 min-w-0">
+                                  <SetIcon className="w-3.5 h-3.5 text-accent shrink-0" />
+                                  <span className="truncate">{set.label}</span>
+                                </span>
+                                <span className="flex items-center gap-2 shrink-0">
+                                  <span className="text-[11px] min-w-6 px-1.5 py-0.5 rounded-md font-black text-center bg-accent/10 text-accent">
+                                    {phraseCount(set.id)}
+                                  </span>
+                                  {isSelected ? (
+                                    <Check className="w-3.5 h-3.5 text-accent" />
+                                  ) : (
+                                    <span className="w-3.5 h-3.5" aria-hidden="true" />
+                                  )}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Phrases: title, actions, the list */}
           <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] space-y-3">
@@ -407,9 +397,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
               <p className="text-[11px] font-black text-[#2D3A4E] flex items-start gap-1.5 leading-snug">
                 <Sparkles className="w-3.5 h-3.5 text-accent shrink-0 mt-px" />
                 <span>
-                  {type === 'material'
-                    ? 'Пресеты состава ткани'
-                    : activeSet.id === 'global'
+                  {activeSet.id === 'global'
                     ? 'Общие фразы для всех категорий'
                     : `Акценты категории «${activeSet.label}»`}
                 </span>
@@ -471,9 +459,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                     type="text"
                     value={newPhraseInput}
                     onChange={(e) => setNewPhraseInput(e.target.value)}
-                    placeholder={
-                      type === 'material' ? 'Например: 95% хлопок, 5% эластан' : 'Например: дышащая ткань'
-                    }
+                    placeholder="Например: дышащая ткань"
                     className="flex-1 min-w-0 h-9 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] placeholder:text-[#56647A]"
                   />
                   <button
@@ -490,7 +476,9 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
 
             {/* Phrases (padding keeps the raised shadows from being cut by the scroll box) */}
             <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1.5 -mx-1.5">
-              {currentPhrases.length === 0 ? (
+              {!phrasesData ? (
+                <div className="w-full py-4 text-center text-xs font-bold text-[#4E5C70]">Загружаем фразы…</div>
+              ) : currentPhrases.length === 0 ? (
                 <div className="w-full py-4 text-center text-xs font-bold text-[#4E5C70]">
                   Фразы для этой категории пока не добавлены.{' '}
                   <button
@@ -517,7 +505,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                         disabled={isManageMode}
                         className="min-w-0 px-3 py-2 text-left leading-snug cursor-pointer disabled:cursor-default"
                       >
-                        {type === 'material' ? phrase : `+ ${phrase}`}
+                        {`+ ${phrase}`}
                       </button>
 
                       {/* Delete: only in the delete mode, so a tap on the phrase never removes it */}
@@ -548,7 +536,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
             <div className="flex items-center justify-between gap-2">
               <label className="text-[11px] font-black text-[#2D3A4E] flex items-center gap-1.5">
                 <FileText className="w-3.5 h-3.5 text-accent" />
-                <span>{type === 'material' ? 'Полный текст состава ткани' : 'Текст описания'}</span>
+                <span>Текст описания</span>
               </label>
               {draft && (
                 <button
@@ -565,14 +553,10 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
 
             <textarea
               ref={textareaRef}
-              rows={type === 'material' ? 3 : 5}
+              rows={5}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder={
-                type === 'material'
-                  ? 'Например: 100% органический лен с эффектом Stonewash'
-                  : 'Введите детальное описание товара, особенности кроя, сезонность и уход...'
-              }
+              placeholder="Введите детальное описание товара, особенности кроя, сезонность и уход..."
               className="w-full px-4 py-3 neu-inset rounded-2xl text-xs sm:text-sm font-semibold text-[#2D3A4E] bg-[#E3E8EF] resize-none leading-relaxed placeholder:text-[#56647A]"
             />
 

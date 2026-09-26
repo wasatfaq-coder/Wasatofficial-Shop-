@@ -661,11 +661,6 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                       <Layers className="w-3.5 h-3.5 text-accent shrink-0" />
                       Состав ткани
                     </span>
-                    {product.fabricDensity?.trim() && (
-                      <span className="text-[11px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-lg whitespace-nowrap">
-                        {product.fabricDensity.trim()}
-                      </span>
-                    )}
                   </div>
 
                   {cardComposition.length > 0 && (

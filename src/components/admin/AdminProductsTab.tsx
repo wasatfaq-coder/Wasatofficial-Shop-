@@ -19,7 +19,6 @@ import {
   Eye,
   Copy,
   ChevronDown,
-  Pencil,
   RotateCcw,
   Boxes,
   Barcode,
@@ -142,14 +141,12 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   const [previewZoomImage, setPreviewZoomImage] = useState<string | null>(null);
   const [textEditModal, setTextEditModal] = useState<{
     isOpen: boolean;
-    type: 'material' | 'description';
     category?: string;
     title: string;
     subtitle: string;
     value: string;
   } | null>(null);
   const [formDescription, setFormDescription] = useState('');
-  const [formMaterial, setFormMaterial] = useState('');
   const [formSizes, setFormSizes] = useState<string[]>([]);
   const [formColors, setFormColors] = useState<{ name: string; hex: string }[]>([]);
   const [formSkus, setFormSkus] = useState<ProductSKU[]>([]);
@@ -385,7 +382,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     setFormImages([]);
     setNewImageUrlInput('');
     setFormDescription('');
-    setFormMaterial('');
     setFormSizes([]);
     setFormColors([]);
     setFormSkus([]);
@@ -405,7 +401,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     setFormImages([...(prod.images ?? [])]);
     setNewImageUrlInput('');
     setFormDescription(prod.description || '');
-    setFormMaterial(prod.material || '');
     setFormSizes([...(prod.sizes ?? [])]);
     setFormColors([...(prod.colors ?? [])]);
     // Without saved variants the stock is unknown: variants start at 0 for the admin to fill in
@@ -476,7 +471,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         originalPrice: formOldPrice ? Number(formOldPrice) : undefined,
         badge: formBadge.trim() || undefined,
         description: formDescription.trim(),
-        material: formMaterial.trim(),
         images: finalImages,
         sizes: formSizes,
         colors: formColors,
@@ -498,7 +492,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         originalPrice: formOldPrice ? Number(formOldPrice) : undefined,
         badge: formBadge.trim() || undefined,
         description: formDescription.trim(),
-        material: formMaterial.trim(),
         images: finalImages,
         sizes: formSizes,
         colors: formColors,
@@ -822,7 +815,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
           originalPrice: p.originalPrice,
           inStock: p.inStock !== false,
           description: p.description || '',
-          material: p.material || '100% натуральный лен',
+          material: p.material || '',
           images: p.images && p.images.length > 0 ? p.images : ['https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80'],
           sizes,
           colors,
@@ -893,7 +886,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
             onClick={() =>
               setTextEditModal({
                 isOpen: true,
-                type: 'description',
                 category: categoryFilter !== 'all' ? categoryFilter : 'global',
                 title: 'Быстрые фразы и акценты',
                 subtitle: 'Управление фразами и синхронизация для всех категорий одежды',
@@ -1293,7 +1285,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               value={formCard}
               onChange={setFormCard}
               hasDescription={Boolean(formDescription.trim())}
-              material={formMaterial}
               onShowToast={onShowToast}
             />
 
@@ -1385,8 +1376,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                     />
                   </div>
 
-                  {/* Category and Material */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {/* Category (the fabric is set in «Структура карточки» → «Состав ткани») */}
+                  <div>
                     <div className="min-w-0">
                       <div className="flex items-center justify-between gap-2 mb-1 min-h-5">
                         <label className="text-[11px] font-bold text-[#4E5C70]">Категория</label>
@@ -1405,43 +1396,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                       />
                     </div>
 
-                    <div className="min-w-0">
-                      <div className="flex items-center justify-between gap-2 mb-1 min-h-5">
-                        <label className="text-[11px] font-bold text-[#4E5C70] truncate">
-                          Материал ткани
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setTextEditModal({
-                              isOpen: true,
-                              type: 'material',
-                              category: formCategory,
-                              title: 'Материал ткани',
-                              subtitle: 'Укажите точный состав ткани и особенности полотна',
-                              value: formMaterial,
-                            })
-                          }
-                          className="shrink-0 text-[11px] font-bold text-accent hover:text-accent-strong flex items-center gap-1 cursor-pointer"
-                          title="Редактировать в модальном окне"
-                        >
-                          <Pencil className="w-3 h-3" />
-                          <span>Изменить</span>
-                        </button>
-                      </div>
-                      <div className="relative flex items-center">
-                        <input
-                          type="text"
-                          value={formMaterial}
-                          onChange={(e) => setFormMaterial(e.target.value)}
-                          placeholder="100% лен"
-                          className="w-full h-10 px-3 neu-inset rounded-xl text-xs font-semibold text-[#2D3A4E] bg-[#E3E8EF] truncate"
-                        />
-                      </div>
-                    </div>
                   </div>
 
-                  {/* Description Section - Positioned directly below Category and Material */}
+                  {/* Description Section - directly below Category */}
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-1 min-h-5">
                       <label className="text-[11px] font-bold text-[#4E5C70]">
@@ -1452,7 +1409,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         onClick={() =>
                           setTextEditModal({
                             isOpen: true,
-                            type: 'description',
                             category: formCategory,
                             title: 'Описание товара',
                             subtitle: 'Подробное описание фасона, преимуществ, кроя и ухода',
@@ -2315,12 +2271,12 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                     {productToInspect.categoryLabel || productToInspect.category}
                   </strong>
                 </div>
-                <div className="neu-inset rounded-xl p-2.5 bg-[#E3E8EF]">
-                  <span className="text-[#4E5C70] block">Материал:</span>
-                  <strong className="text-[#2D3A4E]">
-                    {productToInspect.material || '100% лен'}
-                  </strong>
-                </div>
+                {productToInspect.material?.trim() && (
+                  <div className="neu-inset rounded-xl p-2.5 bg-[#E3E8EF]">
+                    <span className="text-[#4E5C70] block">Состав:</span>
+                    <strong className="text-[#2D3A4E]">{productToInspect.material}</strong>
+                  </div>
+                )}
               </div>
 
               {/* SKU Breakdown in inspect modal */}
@@ -2533,11 +2489,10 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         onClose={() => setPendingRemoval(null)}
       />
 
-      {/* Dedicated Text Edit Modal for Material and Description with synchronized quick phrases and accents */}
+      {/* Dedicated Text Edit Modal for the description with synchronized quick phrases and accents */}
       {textEditModal && textEditModal.isOpen && (
         <TextEditModal
           isOpen={textEditModal.isOpen}
-          type={textEditModal.type}
           category={textEditModal.category || formCategory}
           categories={categories}
           categoryLabel={formCategoryOptions.find((o) => o.value === (textEditModal.category || formCategory))?.label}
@@ -2546,13 +2501,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
           initialValue={textEditModal.value}
           onClose={() => setTextEditModal(null)}
           onSave={(newValue) => {
-            if (textEditModal.type === 'material') {
-              setFormMaterial(newValue);
-              onShowToast('Материал ткани успешно обновлен', 'success');
-            } else {
-              setFormDescription(newValue);
-              onShowToast('Описание товара успешно обновлено', 'success');
-            }
+            setFormDescription(newValue);
+            onShowToast('Описание товара успешно обновлено', 'success');
             setTextEditModal(null);
           }}
           onShowToast={onShowToast}
