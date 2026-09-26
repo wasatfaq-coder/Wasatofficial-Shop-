@@ -1,4 +1,5 @@
 import { Product, ProductSKU, CartItem, StockMovementLog, StorefrontSettings } from '../types';
+import { collectBarcodes, generateInternalEan13 } from '../shared/barcode';
 
 // Everything a customer reads (texts, contacts, legal details) is empty until the owner fills it
 // in Admin → «Витрина»; customer screens hide or mark as «Не настроено» what is not filled in.
@@ -120,20 +121,11 @@ export function generateSkuCode(
 }
 
 /**
- * Generate a simulated EAN-13 Barcode for a SKU
+ * New unique barcode for a SKU: an internal EAN-13 starting with «2» (src/shared/barcode.ts).
+ * Pass every barcode already in the catalog; the new one is added to the set.
  */
-export function generateBarcode(product: Partial<Product> & { id: string }, color: unknown, size: unknown): string {
-  let hash = 0;
-  const colorStr = extractColorName(color);
-  const sizeStr = extractSizeName(size);
-  const str = `${product.id || 'P'}-${colorStr}-${sizeStr}`;
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash << 5) - hash + str.charCodeAt(i);
-    hash |= 0;
-  }
-  const positive = Math.abs(hash);
-  const part = String(positive).padStart(9, '0').slice(0, 9);
-  return `4607${part}`;
+export function generateBarcode(taken: Set<string> = new Set()): string {
+  return generateInternalEan13(taken);
 }
 
 /**
@@ -144,31 +136,18 @@ export function generateDefaultSKUs(product: Partial<Product> & { id: string }):
   const colors = product.colors && product.colors.length > 0 ? product.colors : [{ name: 'Основной', hex: '#2D3A4E' }];
   const sizes = product.sizes && product.sizes.length > 0 ? product.sizes : ['M', 'L'];
 
-  colors.forEach((color, cIdx) => {
+  colors.forEach((color) => {
     const colorName = extractColorName(color);
-    sizes.forEach((size, sIdx) => {
+    sizes.forEach((size) => {
       const sizeName = extractSizeName(size);
-      // Deterministic realistic stock based on indices
-      // Some SKUs will have 0 (out of stock), some 1-2 (low stock), some 3-8 (in stock)
-      let stock = 4;
-      const combinedIdx = (cIdx * 3 + sIdx * 2 + (product.id ? String(product.id).length : 0)) % 7;
-      if (combinedIdx === 0) {
-        stock = 0; // Out of stock example (e.g. М Черный - 0 шт)
-      } else if (combinedIdx === 1 || combinedIdx === 4) {
-        stock = (sIdx % 2 === 0) ? 1 : 2; // Low stock (e.g. L Синий - 2 шт)
-      } else if (combinedIdx === 2) {
-        stock = 3;
-      } else {
-        stock = 4 + (sIdx % 3);
-      }
-
+      // Stock is unknown until the admin sets it; the barcode is issued when the SKU is saved
+      // (label generator → «Выдать новые штрихкоды»), so it does not change on every render
       skus.push({
         id: `${product.id || 'P'}-${colorName}-${sizeName}`,
         color: colorName,
         size: sizeName,
-        stock,
+        stock: 0,
         skuCode: generateSkuCode(product, colorName, sizeName),
-        barcode: generateBarcode(product, colorName, sizeName),
       });
     });
   });
@@ -291,7 +270,7 @@ export function updateProductSkuStock(
       size: sizeStr,
       stock: safeStock,
       skuCode: generateSkuCode(product, colorStr, sizeStr),
-      barcode: generateBarcode(product, colorStr, sizeStr),
+      barcode: generateBarcode(collectBarcodes([{ id: product.id, skus: updatedSkus }])),
     });
   }
 

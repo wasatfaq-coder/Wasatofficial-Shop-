@@ -49,6 +49,7 @@ import {
   getProductTotalStock,
   updateProductSkuStock,
 } from '../../utils/inventory';
+import { collectBarcodes } from '../../shared/barcode';
 import { AdminBulkOperationsModal } from './AdminBulkOperationsModal';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { ModalPortal } from '../ModalPortal';
@@ -227,22 +228,36 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     if (!isProductFormOpen) return { hasConflicts: false, duplicateCodes: [] };
 
     const otherSkusMap = new Map<string, string>(); // skuCode -> productTitle
+    const otherBarcodes = new Map<string, string>(); // barcode -> productTitle
     products.forEach((p) => {
       if (editingProduct && p.id === editingProduct.id) return;
       const skus = p.skus || generateDefaultSKUs(p);
       skus.forEach((s) => {
         if (s.skuCode) otherSkusMap.set(s.skuCode.toUpperCase(), p.title);
+        if (s.barcode?.trim()) otherBarcodes.set(s.barcode.trim(), p.title);
       });
     });
 
-    const duplicates: { code: string; conflictingProduct: string }[] = [];
+    const duplicates: { code: string; conflictingProduct: string; kind: 'sku' | 'barcode' }[] = [];
+    const formBarcodes = new Set<string>();
     formSkus.forEach((s) => {
       if (s.skuCode && otherSkusMap.has(s.skuCode.toUpperCase())) {
         duplicates.push({
           code: s.skuCode,
           conflictingProduct: otherSkusMap.get(s.skuCode.toUpperCase()) || 'Другой товар',
+          kind: 'sku',
         });
       }
+      const barcode = s.barcode?.trim();
+      if (!barcode) return;
+      if (otherBarcodes.has(barcode) || formBarcodes.has(barcode)) {
+        duplicates.push({
+          code: barcode,
+          conflictingProduct: otherBarcodes.get(barcode) || 'другой вариацией этого товара',
+          kind: 'barcode',
+        });
+      }
+      formBarcodes.add(barcode);
     });
 
     return {
@@ -250,6 +265,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       duplicateCodes: duplicates,
     };
   }, [isProductFormOpen, formSkus, products, editingProduct]);
+
+  // Every barcode in the catalog and in the form: new variations get codes that are not among them
+  const takenBarcodes = () => collectBarcodes([...products, { id: 'form', skus: formSkus }]);
 
   // Selection Handlers
   const handleToggleSelectAll = () => {
@@ -348,11 +366,13 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   const handleDuplicateProduct = (prod: Product) => {
     const newId = `prod-${Date.now()}`;
     const baseSkus = prod.skus && prod.skus.length > 0 ? prod.skus : generateDefaultSKUs(prod);
+    const taken = collectBarcodes(products);
     const clonedSkus: ProductSKU[] = baseSkus.map((s, idx) => ({
       ...s,
       id: `${newId}-${s.color}-${s.size}-${idx}`,
       skuCode: s.skuCode ? `${s.skuCode}-CPY` : `WS-CPY-${newId.slice(-4)}-${s.size}`,
-      barcode: undefined,
+      // A copy is a different product: it gets its own barcodes
+      barcode: generateBarcode(taken),
     }));
 
     const cloned: Product = {
@@ -459,6 +479,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       formCategory;
     const finalImages = formImages;
     const cardFields = cardStructureToProduct(formCard);
+    // Variations without a barcode get a unique one on save
+    const taken = takenBarcodes();
+    const savedSkus = formSkus.map((s) => (s.barcode?.trim() ? s : { ...s, barcode: generateBarcode(taken) }));
 
     if (editingProduct) {
       const updated: Product = {
@@ -474,8 +497,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         images: finalImages,
         sizes: formSizes,
         colors: formColors,
-        skus: formSkus,
-        inStock: formInStock && (formSkus.length === 0 || formSkus.some((s) => s.stock > 0)),
+        skus: savedSkus,
+        inStock: formInStock && (savedSkus.length === 0 || savedSkus.some((s) => s.stock > 0)),
         ...cardFields,
       };
 
@@ -495,8 +518,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         images: finalImages,
         sizes: formSizes,
         colors: formColors,
-        skus: formSkus,
-        inStock: formInStock && (formSkus.length === 0 || formSkus.some((s) => s.stock > 0)),
+        skus: savedSkus,
+        inStock: formInStock && (savedSkus.length === 0 || savedSkus.some((s) => s.stock > 0)),
         ...cardFields,
         rating: 0,
         reviewsCount: 0,
@@ -625,13 +648,14 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     setCustomColorName('');
 
     const prodId = editingProduct ? editingProduct.id : `prod-${Date.now()}`;
+    const taken = takenBarcodes();
     const newSkus: ProductSKU[] = formSizes.map((size) => ({
       id: `${prodId}-${cleanName}-${size}`,
       color: cleanName,
       size,
       stock: 0,
       skuCode: generateSkuCode({ id: prodId, category: formCategory }, cleanName, size, 'WS'),
-      barcode: generateBarcode({ id: prodId, category: formCategory }, cleanName, size),
+      barcode: generateBarcode(taken),
     }));
 
     setFormSkus((prev) => [...prev, ...newSkus]);
@@ -679,13 +703,14 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     setCustomSizeInput('');
 
     const prodId = editingProduct ? editingProduct.id : `prod-${Date.now()}`;
+    const taken = takenBarcodes();
     const newSkus: ProductSKU[] = formColors.map((c) => ({
       id: `${prodId}-${c.name}-${size}`,
       color: c.name,
       size,
       stock: 0,
       skuCode: generateSkuCode({ id: prodId, category: formCategory }, c.name, size, 'WS'),
-      barcode: generateBarcode({ id: prodId, category: formCategory }, c.name, size),
+      barcode: generateBarcode(taken),
     }));
 
     setFormSkus((prev) => [...prev, ...newSkus]);
@@ -700,13 +725,14 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       setFormSizes(newSizes);
 
       const prodId = editingProduct ? editingProduct.id : `prod-${Date.now()}`;
+      const taken = takenBarcodes();
       const newSkus: ProductSKU[] = formColors.map((c) => ({
         id: `${prodId}-${c.name}-${size}`,
         color: c.name,
         size,
         stock: 0,
         skuCode: generateSkuCode({ id: prodId, category: formCategory }, c.name, size, 'WS'),
-        barcode: generateBarcode({ id: prodId, category: formCategory }, c.name, size),
+        barcode: generateBarcode(taken),
       }));
 
       setFormSkus((prev) => [...prev, ...newSkus]);
@@ -768,11 +794,12 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
   const handleRegenerateMissingCodes = () => {
     const prodId = editingProduct ? editingProduct.id : `prod-${Date.now()}`;
+    const taken = takenBarcodes();
     setFormSkus((prev) =>
       prev.map((s) => ({
         ...s,
         skuCode: s.skuCode || generateSkuCode({ id: prodId, category: formCategory }, s.color, s.size, 'WS'),
-        barcode: s.barcode || generateBarcode({ id: prodId, category: formCategory }, s.color, s.size),
+        barcode: s.barcode?.trim() ? s.barcode : generateBarcode(taken),
       }))
     );
     onShowToast('Артикулы и штрихкоды SKU синхронизированы', 'success');
@@ -1293,12 +1320,13 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               <div className="neu-inset rounded-2xl p-3 bg-danger-soft border border-danger/25 text-danger text-xs space-y-1.5">
                 <div className="flex items-center gap-2 font-black">
                   <AlertTriangle className="w-4 h-4 text-danger shrink-0" />
-                  <span>Внимание: Обнаружены дубликаты артикулов SKU в каталоге!</span>
+                  <span>Повторяются артикулы или штрихкоды</span>
                 </div>
                 <div className="text-[11px] text-danger space-y-0.5 pl-6">
                   {skuConflictInfo.duplicateCodes.map((d, i) => (
                     <div key={i}>
-                      Артикул <strong className="font-mono">{d.code}</strong> уже занят товаром «{d.conflictingProduct}»
+                      {d.kind === 'sku' ? 'Артикул' : 'Штрихкод'} <strong className="font-mono">{d.code}</strong> уже
+                      занят {d.conflictingProduct.startsWith('другой') ? d.conflictingProduct : `товаром «${d.conflictingProduct}»`}
                     </div>
                   ))}
                 </div>

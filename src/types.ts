@@ -515,8 +515,18 @@ export interface StorefrontSettings {
   paymentMethods?: StorePaymentMethod[];
   /** Admin → «FAQ» */
   faqItems?: StoreFaqItem[];
+  /** Admin → «Склад» → label generator: label sizes of the store's printer */
+  labelFormats?: LabelFormat[];
   /** Admin → «Категории»: the single list used by the storefront and the admin panel */
   categories?: StoreCategory[];
+}
+
+/** Label size for the label generator (Admin → «Склад») */
+export interface LabelFormat {
+  id: string;
+  name: string;
+  widthMm: number;
+  heightMm: number;
 }
 
 export interface StorePaymentMethod {

@@ -3158,6 +3158,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     if (onUpdateProducts) onUpdateProducts(upd);
                   }}
                   onShowToast={onShowToast}
+                  settings={storefrontSettings}
+                  onUpdateSettings={onUpdateStorefrontSettings}
                 />
               )}
 
