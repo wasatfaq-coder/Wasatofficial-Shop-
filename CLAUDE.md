@@ -63,6 +63,9 @@ Wasat Shop — SPA интернет-магазина мужской одежды
 - Название магазина не прописывать в текстах: `getStoreName(settings)` / `currentStoreName()` из
   `src/utils/storeContacts.ts` (там же контакты без демо-значений). Номера заказов и новые артикулы — `WS-`.
   Ключи `manstyle_*` в `localStorage` и ID базы — внутренние, не переименовывать.
+- Этикетки: «Склад и SKU» → выбор вариантов → `AdminLabelGenerator` (форматы — `settings/storefront.labelFormats`,
+  3 шаблона и PDF — `src/utils/labels.ts`, превью и PDF по одной разметке). Штрихкоды — `src/shared/barcode.ts`:
+  новые только `generateInternalEan13` (EAN-13 «2…», уникальный в каталоге), повтор/ошибка блокируют PDF.
 - `users.bonusPoints/managerNotes/tags` меняет только администратор; заметки менеджера хранятся в `customer_notes`.
 - Стили — неоморфные классы из `src/index.css`, тени только через их переменные (`--neu-*`), без `shadow-*`
   Tailwind рядом с `neu-*` (неоморфный класс их перекрывает). Одна `neu-button-accent` на экран,

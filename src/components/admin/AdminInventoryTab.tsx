@@ -31,7 +31,7 @@ import {
   Printer,
   RotateCcw,
 } from 'lucide-react';
-import { Product, ProductSKU, StockMovementLog } from '../../types';
+import { Product, ProductSKU, StockMovementLog, StorefrontSettings } from '../../types';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { copyToClipboard } from '../../utils/clipboard';
 import {
@@ -39,23 +39,52 @@ import {
   updateProductSkuStock,
   getProductTotalStock,
   generateSkuCode,
-  generateBarcode,
   getStockMovementLogs,
   saveStockMovementLogs,
 } from '../../utils/inventory';
-import { currentStoreName } from '../../utils/storeContacts';
+import { AdminLabelGenerator, type LabelTarget } from './AdminLabelGenerator';
+import { skuKey } from '../../shared/barcode';
 
 interface AdminInventoryTabProps {
   products: Product[];
   onUpdateProducts: (updated: Product[]) => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
+  /** Label formats live in settings/storefront */
+  settings?: StorefrontSettings;
+  onUpdateSettings?: (settings: StorefrontSettings) => void;
 }
 
+
+/** Box of a neumorphic checkbox: pressed in, graphite fill when ticked */
+const SelectBoxMark: React.FC<{ checked: boolean }> = ({ checked }) => (
+  <span
+    className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all ${
+      checked ? 'neu-fill-accent text-white' : 'neu-inset bg-[#E3E8EF]'
+    }`}
+  >
+    {checked && <Check className="w-3.5 h-3.5" />}
+  </span>
+);
+
+const SelectBox: React.FC<{ checked: boolean; onChange: () => void; label: string }> = ({ checked, onChange, label }) => (
+  <button
+    type="button"
+    role="checkbox"
+    aria-checked={checked}
+    aria-label={label}
+    onClick={onChange}
+    className="shrink-0 cursor-pointer"
+  >
+    <SelectBoxMark checked={checked} />
+  </button>
+);
 
 export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
   products,
   onUpdateProducts,
   onShowToast,
+  settings = {},
+  onUpdateSettings,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'matrix' | 'audit' | 'movements'>('matrix');
   const [searchQuery, setSearchQuery] = useState('');
@@ -360,12 +389,9 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
   const [opReason, setOpReason] = useState<string>('Плановое пополнение остатков');
   const [opOperator, setOpOperator] = useState<string>('Администратор');
 
-  // Barcode Label Generation & Printing Modal State
-  const [selectedSkuForLabels, setSelectedSkuForLabels] = useState<{ product: Product; sku: ProductSKU } | null>(null);
-  const [labelQuantity, setLabelQuantity] = useState<number>(2);
-  const [labelFormat, setLabelFormat] = useState<'58x40' | '70x50' | 'hangtag'>('58x40');
-  const [labelIncludePrice, setLabelIncludePrice] = useState<boolean>(true);
-  const [labelIncludeBarcode, setLabelIncludeBarcode] = useState<boolean>(true);
+  // Labels: variations ticked in the matrix, and the ones the label generator is open for
+  const [selectedSkuKeys, setSelectedSkuKeys] = useState<Set<string>>(() => new Set());
+  const [labelTargets, setLabelTargets] = useState<LabelTarget[] | null>(null);
 
   // Warehouse high-level statistics
   const stats = useMemo(() => {
@@ -433,8 +459,8 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
       const matchesSearch =
         !q ||
         product.title.toLowerCase().includes(q) ||
-        sku.skuCode.toLowerCase().includes(q) ||
-        sku.barcode.toLowerCase().includes(q) ||
+        (sku.skuCode ?? '').toLowerCase().includes(q) ||
+        (sku.barcode ?? '').toLowerCase().includes(q) ||
         sku.color.toLowerCase().includes(q) ||
         sku.size.toLowerCase().includes(q);
 
@@ -452,6 +478,26 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
       return matchesSearch && matchesCat && matchesStock;
     });
   }, [allProductSKUs, searchQuery, categoryFilter, stockFilter, lowStockThreshold]);
+
+  const toggleSkuSelection = (key: string) =>
+    setSelectedSkuKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  const allFilteredSelected =
+    filteredSkus.length > 0 && filteredSkus.every(({ product, sku }) => selectedSkuKeys.has(skuKey(product.id, sku.id)));
+  const toggleSelectAllFiltered = () =>
+    setSelectedSkuKeys((prev) => {
+      const next = new Set(prev);
+      for (const { product, sku } of filteredSkus) {
+        const key = skuKey(product.id, sku.id);
+        if (allFilteredSelected) next.delete(key);
+        else next.add(key);
+      }
+      return next;
+    });
 
   // Update Stock for a SKU with automatic log recording
   const handleUpdateStock = (
@@ -710,6 +756,47 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
             </div>
           </div>
 
+          {/* Selection for labels */}
+          {filteredSkus.length > 0 && (
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={allFilteredSelected}
+                onClick={toggleSelectAllFiltered}
+                className="flex items-center gap-2.5 text-[11px] font-bold text-[#2D3A4E] cursor-pointer"
+              >
+                <SelectBoxMark checked={allFilteredSelected} />
+                <span>Выбрать все ({filteredSkus.length})</span>
+              </button>
+              {selectedSkuKeys.size > 0 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSkuKeys(new Set())}
+                    className="h-9 px-3 rounded-xl neu-button text-[11px] font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer active:scale-95 transition-all"
+                  >
+                    Снять выбор
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setLabelTargets(
+                        allProductSKUs
+                          .filter(({ product, sku }) => selectedSkuKeys.has(skuKey(product.id, sku.id)))
+                          .map(({ product, sku }) => ({ productId: product.id, skuId: sku.id }))
+                      )
+                    }
+                    className="h-9 px-3 rounded-xl neu-button text-[11px] font-black text-accent flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    Этикетки ({selectedSkuKeys.size})
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* SKUs Matrix Cards List */}
           <div className="space-y-2">
             {filteredSkus.length === 0 ? (
@@ -729,8 +816,13 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                     key={`${product.id}-${sku.skuCode}`}
                     className="neu-inset rounded-2xl p-2.5 sm:p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 bg-[#E3E8EF] border border-transparent transition-all overflow-hidden"
                   >
-                    {/* Left: Product Thumbnail & SKU Info */}
+                    {/* Left: selection, Product Thumbnail & SKU Info */}
                     <div className="flex items-center gap-3 min-w-0">
+                      <SelectBox
+                        checked={selectedSkuKeys.has(skuKey(product.id, sku.id))}
+                        onChange={() => toggleSkuSelection(skuKey(product.id, sku.id))}
+                        label={`Выбрать для этикеток: ${product.title}, ${sku.color} / ${sku.size}`}
+                      />
                       <div className="w-11 h-13 rounded-xl overflow-hidden neu-inset shrink-0 bg-slate-200">
                         <img
                           src={
@@ -773,14 +865,14 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                           <span>|</span>
                           <span className="flex items-center gap-1">
                             <Barcode className="w-3 h-3" />
-                            {sku.barcode}
+                            {sku.barcode || 'нет штрихкода'}
                           </span>
                         </div>
                       </div>
                     </div>
 
                     {/* Right: Stock Badge & Quick Stepper Controls */}
-                    <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#BAC5D5]/40 min-w-0">
+                    <div className="flex items-center flex-wrap justify-between sm:justify-end gap-2 sm:gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#BAC5D5]/40 min-w-0">
                       {/* Status Pill */}
                       <div className="shrink-0">
                         {isOutOfStock ? (
@@ -861,9 +953,9 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                         {/* Print Thermal Label Button */}
                         <button
                           type="button"
-                          onClick={() => setSelectedSkuForLabels({ product, sku })}
+                          onClick={() => setLabelTargets([{ productId: product.id, skuId: sku.id }])}
                           className="h-7 px-2 sm:px-2.5 neu-button rounded-xl text-[11px] font-bold text-[#4E5C70] hover:text-accent flex items-center gap-1 cursor-pointer active:scale-95 transition-all shrink-0"
-                          title="Сформировать и распечатать термоэтикетку со штрихкодом"
+                          title="Этикетка этого варианта в PDF"
                         >
                           <Printer className="w-3 h-3 text-accent shrink-0" />
                           <span>Этикетка</span>
@@ -1475,226 +1567,16 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
         </div>
       )}
 
-      {/* BARCODE & THERMAL LABEL GENERATOR MODAL */}
-      {selectedSkuForLabels && (
-        <div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in">
-          <div className="w-full max-w-lg neu-modal rounded-3xl p-5 bg-[#E3E8EF] border border-white/80 space-y-4 max-h-[90vh] overflow-y-auto my-auto">
-            <div className="flex items-center justify-between border-b border-[#BAC5D5]/60 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent">
-                  <Barcode className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E]">
-                    Генератор термоэтикеток и штрихкодов
-                  </h4>
-                  <p className="text-[11px] text-[#4E5C70] font-semibold">
-                    Стандарты Wildberries / Ozon / Склад / Розничный ценник
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedSkuForLabels(null)}
-                className="p-1.5 neu-button rounded-xl text-[#4E5C70] hover:text-danger transition-colors"
-                aria-label="Закрыть"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Label Parameters Form */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div>
-                <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
-                  Формат этикетки
-                </label>
-                <div className="neu-flat-sm rounded-xl p-1 bg-[#E3E8EF] flex flex-col gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setLabelFormat('58x40')}
-                    className={`py-1 px-2 rounded-lg text-left text-[11px] font-bold transition-all ${
-                      labelFormat === '58x40'
-                        ? 'neu-pill-active'
-                        : 'text-[#4E5C70] hover:text-[#2D3A4E]'
-                    }`}
-                  >
-                    Термоэтикетка 58×40 мм
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLabelFormat('70x50')}
-                    className={`py-1 px-2 rounded-lg text-left text-[11px] font-bold transition-all ${
-                      labelFormat === '70x50'
-                        ? 'neu-pill-active'
-                        : 'text-[#4E5C70] hover:text-[#2D3A4E]'
-                    }`}
-                  >
-                    Ценник на полку 70×50 мм
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLabelFormat('hangtag')}
-                    className={`py-1 px-2 rounded-lg text-left text-[11px] font-bold transition-all ${
-                      labelFormat === 'hangtag'
-                        ? 'neu-pill-active'
-                        : 'text-[#4E5C70] hover:text-[#2D3A4E]'
-                    }`}
-                  >
-                    Навесной ярлык на одежду
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
-                    Количество копий
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={labelQuantity}
-                    onChange={(e) => setLabelQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                    className="w-full py-2 px-3 neu-inset rounded-xl font-black text-xs text-[#2D3A4E] bg-[#E3E8EF]"
-                  />
-                </div>
-
-                <div className="space-y-1.5 pt-1">
-                  <label className="flex items-center gap-2 cursor-pointer text-[11px] font-bold text-[#2D3A4E]">
-                    <input
-                      type="checkbox"
-                      checked={labelIncludePrice}
-                      onChange={(e) => setLabelIncludePrice(e.target.checked)}
-                      className="rounded accent-accent"
-                    />
-                    Печатать розничную цену
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer text-[11px] font-bold text-[#2D3A4E]">
-                    <input
-                      type="checkbox"
-                      checked={labelIncludeBarcode}
-                      onChange={(e) => setLabelIncludeBarcode(e.target.checked)}
-                      className="rounded accent-accent"
-                    />
-                    Печатать графический штрихкод
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* Live Visual Label Preview */}
-            <div className="space-y-1.5">
-              <span className="text-[11px] font-black uppercase text-[#4E5C70] tracking-wider block">
-                Предпросмотр термоэтикетки:
-              </span>
-
-              <div className="p-4 bg-white rounded-2xl border-2 border-dashed border-[#BAC5D5] flex flex-col items-center justify-center text-black font-sans">
-                <div
-                  className={`w-full max-w-[280px] bg-white p-3 border border-black/80 rounded-md flex flex-col justify-between ${
-                    labelFormat === '58x40'
-                      ? 'min-h-[160px]'
-                      : labelFormat === '70x50'
-                      ? 'min-h-[190px]'
-                      : 'min-h-[220px]'
-                  }`}
-                >
-                  <div className="border-b border-black/30 pb-1 mb-1 flex items-center justify-between">
-                    <span className="text-[11px] font-black tracking-widest uppercase">{currentStoreName()}</span>
-                    <span className="text-[11px] font-bold text-black/70">RU / EAC</span>
-                  </div>
-
-                  <div>
-                    <h5 className="text-[11px] font-black leading-tight truncate">
-                      {selectedSkuForLabels.product.title}
-                    </h5>
-                    <div className="flex items-center justify-between text-[11px] font-semibold mt-0.5">
-                      <span>Цвет: <strong>{selectedSkuForLabels.sku.color}</strong></span>
-                      <span>Размер: <strong className="text-xs">{selectedSkuForLabels.sku.size}</strong></span>
-                    </div>
-                    <div className="text-[11px] font-mono text-black/80 mt-0.5 truncate">
-                      Арт: {selectedSkuForLabels.sku.skuCode}
-                    </div>
-                  </div>
-
-                  {labelIncludeBarcode && (
-                    <div className="my-1 text-center">
-                      {/* Code128 Real-looking Vector Barcode */}
-                      <svg className="w-full h-10 mx-auto" viewBox="0 0 200 40">
-                        <rect x="10" y="0" width="3" height="30" fill="black" />
-                        <rect x="15" y="0" width="1.5" height="30" fill="black" />
-                        <rect x="18" y="0" width="4" height="30" fill="black" />
-                        <rect x="25" y="0" width="2" height="30" fill="black" />
-                        <rect x="30" y="0" width="5" height="30" fill="black" />
-                        <rect x="38" y="0" width="2" height="30" fill="black" />
-                        <rect x="42" y="0" width="3" height="30" fill="black" />
-                        <rect x="48" y="0" width="1.5" height="30" fill="black" />
-                        <rect x="52" y="0" width="4" height="30" fill="black" />
-                        <rect x="58" y="0" width="2" height="30" fill="black" />
-                        <rect x="63" y="0" width="3.5" height="30" fill="black" />
-                        <rect x="69" y="0" width="2" height="30" fill="black" />
-                        <rect x="74" y="0" width="5" height="30" fill="black" />
-                        <rect x="82" y="0" width="1.5" height="30" fill="black" />
-                        <rect x="86" y="0" width="3" height="30" fill="black" />
-                        <rect x="92" y="0" width="4" height="30" fill="black" />
-                        <rect x="99" y="0" width="2" height="30" fill="black" />
-                        <rect x="104" y="0" width="3" height="30" fill="black" />
-                        <rect x="110" y="0" width="5" height="30" fill="black" />
-                        <rect x="118" y="0" width="2" height="30" fill="black" />
-                        <rect x="123" y="0" width="3.5" height="30" fill="black" />
-                        <rect x="129" y="0" width="1.5" height="30" fill="black" />
-                        <rect x="133" y="0" width="4" height="30" fill="black" />
-                        <rect x="140" y="0" width="2" height="30" fill="black" />
-                        <rect x="145" y="0" width="3" height="30" fill="black" />
-                        <rect x="151" y="0" width="5" height="30" fill="black" />
-                        <rect x="159" y="0" width="2" height="30" fill="black" />
-                        <rect x="164" y="0" width="4" height="30" fill="black" />
-                        <rect x="171" y="0" width="2" height="30" fill="black" />
-                        <rect x="176" y="0" width="3" height="30" fill="black" />
-                        <rect x="182" y="0" width="4" height="30" fill="black" />
-                      </svg>
-                      <span className="text-[11px] font-mono font-bold tracking-widest block">
-                        {selectedSkuForLabels.sku.barcode}
-                      </span>
-                    </div>
-                  )}
-
-                  {labelIncludePrice && (
-                    <div className="border-t border-black/30 pt-1 flex items-center justify-between">
-                      <span className="text-[11px] uppercase font-bold text-black/70">Розничная цена:</span>
-                      <span className="text-sm font-black tracking-tight">
-                        {selectedSkuForLabels.product.price.toLocaleString()} ₽
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Actions */}
-            <div className="flex items-center gap-2 pt-2 border-t border-[#BAC5D5]/50">
-              <button
-                type="button"
-                onClick={() => setSelectedSkuForLabels(null)}
-                className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] cursor-pointer"
-              >
-                Закрыть
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  onShowToast(`Отправлено на печать: ${labelQuantity} шт. (${selectedSkuForLabels.sku.skuCode})`, 'success');
-                  window.print();
-                }}
-                className="flex-1 py-2.5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Печать ({labelQuantity} шт.)</span>
-              </button>
-            </div>
-          </div>
-        </div>
+      {labelTargets && (
+        <AdminLabelGenerator
+          targets={labelTargets}
+          products={products}
+          settings={settings}
+          onUpdateSettings={onUpdateSettings}
+          onUpdateProducts={onUpdateProducts}
+          onClose={() => setLabelTargets(null)}
+          onShowToast={onShowToast}
+        />
       )}
     </div>
   );
