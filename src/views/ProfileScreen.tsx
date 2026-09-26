@@ -85,6 +85,7 @@ import { BrandRenameCard } from '../components/admin/BrandRenameCard';
 import { AdminDeliveryTab } from '../components/admin/AdminDeliveryTab';
 import { DeliveryTrackingMapModal } from '../components/DeliveryTrackingMapModal';
 import { copyToClipboard } from '../utils/clipboard';
+import { isNotificationSupported, requestNotificationPermission } from '../utils/pushNotifications';
 import {
   getSynchronizedDeliveryStages,
   ORDER_STATUS_LABELS,
@@ -509,9 +510,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const toggleNotifications = async () => {
     const nextVal = !notifications;
     if (nextVal) {
-      if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (isNotificationSupported()) {
         try {
-          const perm = await Notification.requestPermission();
+          const perm = await requestNotificationPermission();
           if (perm === 'granted') {
             setNotifications(true);
             onUpdateProfile({

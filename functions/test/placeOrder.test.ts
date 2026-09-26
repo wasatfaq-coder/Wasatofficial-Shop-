@@ -167,6 +167,11 @@ describe('placeOrderCore', () => {
     await expectOrderError(placeOrderCore(db, request({ deliveryMethodId: 'teleport' }), null), 'invalid-argument');
   });
 
+  test('a product taken off sale by the admin cannot be ordered', async () => {
+    await db.doc('products/shirt').update({ inStock: false });
+    await expectOrderError(placeOrderCore(db, request(), null), 'failed-precondition', /больше не продается/);
+  });
+
   test('applies a promo on the server and updates its counters', async () => {
     await db.doc('promos/p1').set({
       id: 'p1', code: 'SALE10', title: '', description: '', discountPercent: 10,

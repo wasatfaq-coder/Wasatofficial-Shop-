@@ -30,7 +30,7 @@ import { currentStoreName, telHref } from '../utils/storeContacts';
 import { ModalPortal } from './ModalPortal';
 
 /** Firestore rules accept at most 5000 characters per message */
-export const CHAT_MESSAGE_MAX_LENGTH = 5000;
+const CHAT_MESSAGE_MAX_LENGTH = 5000;
 
 interface SupportChatModalProps {
   isOpen: boolean;

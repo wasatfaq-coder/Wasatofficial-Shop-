@@ -3,9 +3,20 @@ import { extractColorName, extractSizeName, getProductTotalStock } from './inven
 import { ORDER_STATUS_LABELS } from './deliveryStages';
 
 /**
- * Downloads a text content as a file with UTF-8 BOM for full Russian/Cyrillic support in MS Excel
+ * One CSV cell: quoted with doubled quotes. Text starting with = + - @ would run as a formula in Excel
+ * (customer names and addresses come from the storefront), so it gets a leading apostrophe.
  */
-function downloadCSV(filename: string, content: string): void {
+function csvCell(value: unknown): string {
+  if (value === undefined || value === null) return '';
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '';
+  let text = String(value);
+  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+/** Downloads rows as a CSV file with a UTF-8 BOM (Cyrillic opens correctly in Excel) */
+export function downloadCSV(filename: string, rows: unknown[][], separator = ','): void {
+  const content = rows.map((row) => row.map(csvCell).join(separator)).join('\r\n');
   const blob = new Blob(['\uFEFF' + content], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -18,123 +29,111 @@ function downloadCSV(filename: string, content: string): void {
   URL.revokeObjectURL(url);
 }
 
+const PRODUCT_CSV_HEADERS = [
+  'ID',
+  'Название',
+  'Категория',
+  'Цена (₽)',
+  'Старая цена (₽)',
+  'В наличии',
+  'Общий остаток (шт)',
+  'Размеры',
+  'Цвета',
+  'Ссылка на изображение',
+  'Описание',
+];
+
 /**
- * Export catalog products to CSV
+ * Export catalog products to CSV (the same columns the import reads)
  */
 export function exportProductsToCSV(products: Product[]): void {
-  const headers = [
-    'ID',
-    'Название',
-    'Категория',
-    'Цена (₽)',
-    'Старая цена (₽)',
-    'В наличии',
-    'Общий остаток (шт)',
-    'Размеры',
-    'Цвета',
-    'Ссылка на изображение',
-    'Описание',
-  ];
-
-  const rows = products.map((p) => {
-    const totalStock = getProductTotalStock(p);
-    const sizes = (p.sizes || []).join('; ');
-    const colors = (p.colors || []).map((c) => extractColorName(c)).join('; ');
-    const description = (p.description || '').replace(/"/g, '""');
-    const title = (p.title || '').replace(/"/g, '""');
-
-    return [
-      `"${p.id}"`,
-      `"${title}"`,
-      `"${p.category || 'linen'}"`,
-      p.price,
-      p.originalPrice || '',
-      p.inStock !== false ? 'Да' : 'Нет',
-      totalStock,
-      `"${sizes}"`,
-      `"${colors}"`,
-      `"${p.images?.[0] || ''}"`,
-      `"${description}"`,
-    ].join(',');
-  });
-
-  const csvContent = [headers.join(','), ...rows].join('\r\n');
-  const dateStr = new Date().toISOString().slice(0, 10);
-  downloadCSV(`manstyle_catalog_${dateStr}.csv`, csvContent);
+  const rows = products.map((p) => [
+    p.id,
+    p.title || '',
+    p.category || '',
+    p.price,
+    p.originalPrice ?? '',
+    p.inStock !== false ? 'Да' : 'Нет',
+    getProductTotalStock(p),
+    (p.sizes || []).join('; '),
+    (p.colors || []).map((c) => extractColorName(c)).join('; '),
+    p.images?.[0] || '',
+    p.description || '',
+  ]);
+  downloadCSV(`catalog_${new Date().toISOString().slice(0, 10)}.csv`, [PRODUCT_CSV_HEADERS, ...rows]);
 }
 
-/**
- * Parse CSV text into partial Products
- */
-export function parseProductsFromCSV(csvText: string): Partial<Product>[] {
-  const lines = csvText.split(/\r?\n/).filter((l) => l.trim().length > 0);
-  if (lines.length < 2) return [];
-
-  const results: Partial<Product>[] = [];
-
-  // Skip header line
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    // Simple CSV parser supporting quotes
-    const cells: string[] = [];
-    let cur = '';
-    let inQuotes = false;
-
-    for (let c = 0; c < line.length; c++) {
-      const char = line[c];
-      if (char === '"') {
-        if (inQuotes && line[c + 1] === '"') {
-          cur += '"';
-          c++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === ',' && !inQuotes) {
-        cells.push(cur.trim());
-        cur = '';
+/** Splits one CSV line; quotes may hold separators and doubled quotes */
+function splitCsvLine(line: string, separator: string): string[] {
+  const cells: string[] = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let c = 0; c < line.length; c++) {
+    const char = line[c];
+    if (char === '"') {
+      if (inQuotes && line[c + 1] === '"') {
+        cur += '"';
+        c++;
       } else {
-        cur += char;
+        inQuotes = !inQuotes;
       }
-    }
-    cells.push(cur.trim());
-
-    if (cells.length >= 4) {
-      const title = cells[1] || `Товар #${i}`;
-      const category = cells[2] || 'linen';
-      const price = parseFloat(cells[3]) || 2990;
-      const originalPrice = cells[4] ? parseFloat(cells[4]) : undefined;
-      const inStock = cells[5] ? cells[5].toLowerCase() !== 'нет' && cells[5].toLowerCase() !== 'false' : true;
-      const sizesStr = cells[7] || 'S; M; L; XL';
-      const colorsStr = cells[8] || 'Бежевый; Темно-синий';
-      const image = cells[9] || 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80';
-      const description = cells[10] || 'Качественная мужская одежда';
-
-      const sizes = sizesStr.split(';').map((s) => s.trim()).filter(Boolean);
-      const colorNames = colorsStr.split(';').map((c) => c.trim()).filter(Boolean);
-      const colors = colorNames.map((c) => ({
-        name: c,
-        hex: c.toLowerCase().includes('черн') ? '#0F172A' : c.toLowerCase().includes('син') ? '#1E293B' : '#D4C3B3',
-      }));
-
-      results.push({
-        id: cells[0] && cells[0].startsWith('prod-') ? cells[0] : `prod-import-${Date.now()}-${i}`,
-        title,
-        category,
-        categoryLabel: category === 'shirts' ? 'Рубашки' : category === 'trousers' ? 'Брюки' : category === 'jackets' ? 'Куртки' : 'Лен',
-        price,
-        originalPrice,
-        inStock,
-        sizes: sizes.length > 0 ? sizes : ['S', 'M', 'L', 'XL'],
-        colors: colors.length > 0 ? colors : [{ name: 'Бежевый', hex: '#D4C3B3' }],
-        images: [image],
-        description,
-        rating: 0,
-        reviewsCount: 0,
-      });
+    } else if (char === separator && !inQuotes) {
+      cells.push(cur.trim());
+      cur = '';
+    } else {
+      cur += char;
     }
   }
+  cells.push(cur.trim());
+  // the apostrophe csvCell adds in front of formula-like text
+  return cells.map((cell) => (/^'[=+\-@]/.test(cell) ? cell.slice(1) : cell));
+}
 
-  return results;
+const listCells = (value: string) =>
+  value
+    .split(';')
+    .map((v) => v.trim())
+    .filter(Boolean);
+
+/**
+ * Parse CSV text into partial Products. Only what the file has: a row without a name, a price or a photo
+ * is skipped (nothing is invented), missing sizes and colours stay empty.
+ */
+export function parseProductsFromCSV(csvText: string): { products: Partial<Product>[]; skipped: number } {
+  const lines = csvText.split(/\r?\n/).filter((l) => l.trim().length > 0);
+  if (lines.length < 2) return { products: [], skipped: 0 };
+  // files saved by Excel in the Russian locale use «;»
+  const separator = lines[0].split(';').length > lines[0].split(',').length ? ';' : ',';
+
+  const products: Partial<Product>[] = [];
+  let skipped = 0;
+  for (const line of lines.slice(1)) {
+    const cells = splitCsvLine(line, separator);
+    const [id, title, category, priceCell, oldPriceCell, inStockCell, , sizesCell, colorsCell, image, description] = cells;
+    const price = Number(String(priceCell ?? '').replace(/\s/g, '').replace(',', '.'));
+    if (!title || !(price > 0) || !image) {
+      skipped++;
+      continue;
+    }
+    const originalPrice = Number(String(oldPriceCell ?? '').replace(/\s/g, '').replace(',', '.'));
+    const inStockText = (inStockCell || '').toLowerCase();
+    products.push({
+      ...(id ? { id } : {}),
+      title,
+      category: category || '',
+      price,
+      ...(originalPrice > price ? { originalPrice } : {}),
+      inStock: inStockText !== 'нет' && inStockText !== 'false',
+      sizes: listCells(sizesCell || ''),
+      colors: listCells(colorsCell || '').map((name) => ({
+        name,
+        hex: name.toLowerCase().includes('черн') ? '#0F172A' : name.toLowerCase().includes('син') ? '#1E293B' : '#D4C3B3',
+      })),
+      images: [image],
+      description: description || '',
+    });
+  }
+  return { products, skipped };
 }
 
 /**
@@ -153,33 +152,19 @@ export function exportOrdersToCSV(orders: Order[]): void {
     'Количество позиций',
     'Состав заказа',
   ];
-
-  const rows = orders.map((ord) => {
-    const statusText = ord.isCancelled ? 'Отменен' : ORDER_STATUS_LABELS[ord.status] || ord.status;
-    const totalQty = (ord.items || []).reduce((sum, it) => sum + (it.quantity || 1), 0);
-    const itemsSummary = (ord.items || [])
-      .map(
-        (it) =>
-          `${it.product?.title || 'Товар'} (${it.selectedColor}, ${it.selectedSize}) x${it.quantity}`
-      )
-      .join('; ')
-      .replace(/"/g, '""');
-
-    return [
-      `"${ord.id}"`,
-      `"${ord.date}"`,
-      `"${statusText}"`,
-      ord.totalPrice,
-      `"${ord.deliveryMethod || 'Курьер'}"`,
-      `"${(ord.deliveryAddress || '').replace(/"/g, '""')}"`,
-      `"${ord.paymentMethod || 'Банковская карта'}"`,
-      `"${ord.trackingNumber || ''}"`,
-      totalQty,
-      `"${itemsSummary}"`,
-    ].join(',');
-  });
-
-  const csvContent = [headers.join(','), ...rows].join('\r\n');
-  const dateStr = new Date().toISOString().slice(0, 10);
-  downloadCSV(`manstyle_orders_${dateStr}.csv`, csvContent);
+  const rows = orders.map((ord) => [
+    ord.id,
+    ord.date,
+    ord.isCancelled ? 'Отменен' : ORDER_STATUS_LABELS[ord.status] || ord.status,
+    ord.totalPrice,
+    ord.deliveryMethod || '',
+    ord.deliveryAddress || '',
+    ord.paymentMethod || '',
+    ord.trackingNumber || '',
+    (ord.items || []).reduce((sum, it) => sum + (it.quantity || 1), 0),
+    (ord.items || [])
+      .map((it) => `${it.product?.title || 'Товар'} (${[it.selectedColor, it.selectedSize].filter(Boolean).join(', ')}) x${it.quantity}`)
+      .join('; '),
+  ]);
+  downloadCSV(`orders_${new Date().toISOString().slice(0, 10)}.csv`, [headers, ...rows]);
 }

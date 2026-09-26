@@ -67,6 +67,12 @@ Wasat Shop — SPA интернет-магазина мужской одежды
 - Режим серверных заказов включается в «Витрине» (`AdminServerOrdersCard`) только после ответа функции `placeOrder`.
 - Способы оплаты, FAQ и категории хранятся в `settings/storefront` (`paymentMethods`, `faqItems`, `categories`;
   вкладки «Оплата», «FAQ», «Категории», общий редактор `AdminListEditor`). Без способа оплаты оформление заблокировано.
+- `product.inStock` — и переключатель «В продаже / Снят с витрины», и флаг «распродан». `inStock == false` при
+  ненулевом остатке = снят администратором (`isHiddenFromSale`): такой товар не заказывается ни в клиенте
+  (`getOrderableStock`), ни в `placeOrder`. Фильтр каталога — один `matchesCatalogFilters`, без верхней границы цены
+  по умолчанию (`DEFAULT_FILTER_STATE`).
+- CSV — только через `downloadCSV`/`csvCell` из `src/utils/csvHelpers.ts` (защита от формул Excel); импорт товаров
+  не выдумывает значения и обновляет товар с тем же ID. Данные из базы в HTML-строках (отчет PDF) — экранировать.
 - Предзаказ (`isPreorderMode`): распроданный вариант можно заказать (`getOrderableStock`), позиция получает
   `isPreorder` и не списывается/не возвращается на склад. Логика — и в `App.tsx`, и в `placeOrder`.
 - Название магазина не прописывать в текстах: `getStoreName(settings)` / `currentStoreName()` из

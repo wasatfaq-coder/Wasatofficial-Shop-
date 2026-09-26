@@ -37,7 +37,7 @@ function isRestricted(promo: Partial<PromoForPricing>): boolean {
 }
 
 /** Subtotal of the lines a promo applies to (all lines for unrestricted promos). */
-export function calcEligibleSubtotal(lines: PricingLine[], promo: Partial<PromoForPricing>): number {
+function calcEligibleSubtotal(lines: PricingLine[], promo: Partial<PromoForPricing>): number {
   if (promo.applicableProductIds && promo.applicableProductIds.length > 0) {
     return calcSubtotal(lines.filter((l) => promo.applicableProductIds!.includes(l.productId)));
   }

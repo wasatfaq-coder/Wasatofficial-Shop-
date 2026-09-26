@@ -14,10 +14,11 @@ import { AutocompleteSearch } from '../components/AutocompleteSearch';
 import {
   CatalogAdvancedFilter,
   FilterState,
-  matchesMaterialFilter,
-  isProductAvailableInSize,
-  isProductInStock,
   MATERIAL_CATEGORIES,
+  DEFAULT_FILTER_STATE,
+  NO_MAX_PRICE,
+  hasPriceFilter,
+  matchesCatalogFilters,
 } from '../components/CatalogAdvancedFilter';
 import { productRatingValue } from '../utils/productRating';
 import { NotConfigured } from '../components/NotConfigured';
@@ -74,16 +75,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
   const [showSortMenu, setShowSortMenu] = useState(false);
   
   // Local fallback filter state if not provided from parent
-  const [localFilterState, setLocalFilterState] = useState<FilterState>({
-    minPrice: 0,
-    maxPrice: 35000,
-    selectedSizes: [],
-    selectedMaterials: [],
-    onlyInStock: false,
-    onlyNew: false,
-    onlyDiscount: false,
-    minRating: 0,
-  });
+  const [localFilterState, setLocalFilterState] = useState<FilterState>(DEFAULT_FILTER_STATE);
 
   const filterState = externalFilterState || localFilterState;
   const setFilterState = externalOnChangeFilterState || setLocalFilterState;
@@ -97,7 +89,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
   const activeFiltersCount = useMemo(() => {
     let count = 0;
     if (selectedCategory !== 'all') count++;
-    if (filterState.minPrice > 0 || filterState.maxPrice < 35000) count++;
+    if (hasPriceFilter(filterState)) count++;
     if (filterState.selectedSizes.length > 0) count += filterState.selectedSizes.length;
     if (filterState.selectedMaterials.length > 0) count += filterState.selectedMaterials.length;
     if (filterState.onlyInStock) count++;
@@ -112,16 +104,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
       externalOnResetFilters();
     } else {
       onSelectCategory('all');
-      setFilterState(() => ({
-        minPrice: 0,
-        maxPrice: 35000,
-        selectedSizes: [],
-        selectedMaterials: [],
-        onlyInStock: false,
-        onlyNew: false,
-        onlyDiscount: false,
-        minRating: 0,
-      }));
+      setFilterState(() => DEFAULT_FILTER_STATE);
     }
     setSearchQuery('');
   };
@@ -138,10 +121,6 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
   const filteredProducts = useMemo(() => {
     return products
       .filter((p) => {
-        // 1. Category match
-        const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
-        
-        // 2. Search query match
         const cleanSearch = searchQuery.toLowerCase().trim();
         const matchesQuery =
           !cleanSearch ||
@@ -149,37 +128,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           (p.description || '').toLowerCase().includes(cleanSearch) ||
           (p.categoryLabel || '').toLowerCase().includes(cleanSearch) ||
           (p.material || '').toLowerCase().includes(cleanSearch);
-
-        // 3. Price match
-        const matchesPrice = p.price >= filterState.minPrice && p.price <= filterState.maxPrice;
-
-        // 4. Material match
-        const matchesMaterial = matchesMaterialFilter(p.material, filterState.selectedMaterials);
-
-        // 5. Size Availability match
-        const matchesSize =
-          filterState.selectedSizes.length === 0 ||
-          filterState.selectedSizes.some((sz) => isProductAvailableInSize(p, sz));
-
-        // 6. In-Stock Availability match
-        const matchesInStock = !filterState.onlyInStock || isProductInStock(p);
-
-        // 7. Badges and Ratings
-        const matchesNew = !filterState.onlyNew || p.isNew;
-        const matchesDiscount = !filterState.onlyDiscount || (p.originalPrice && p.originalPrice > p.price);
-        const matchesRating = productRatingValue(p) >= filterState.minRating;
-
-        return (
-          matchesCategory &&
-          matchesQuery &&
-          matchesPrice &&
-          matchesMaterial &&
-          matchesSize &&
-          matchesInStock &&
-          matchesNew &&
-          matchesDiscount &&
-          matchesRating
-        );
+        return matchesQuery && matchesCatalogFilters(p, selectedCategory, filterState);
       })
       .sort((a, b) => {
         if (sortBy === 'price-asc') return a.price - b.price;
@@ -302,15 +251,16 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
             </span>
           )}
 
-          {(filterState.minPrice > 0 || filterState.maxPrice < 35000) && (
+          {hasPriceFilter(filterState) && (
             <span className="neu-inset text-[11px] font-bold text-[#2D3A4E] px-3 py-1.5 rounded-full flex items-center gap-1.5 bg-[#E3E8EF] border border-accent/30">
-              Цена: {filterState.minPrice > 0 ? `от ${filterState.minPrice.toLocaleString('ru-RU')} ` : ''}до {filterState.maxPrice.toLocaleString('ru-RU')} ₽
+              Цена: {filterState.minPrice > 0 ? `от ${filterState.minPrice.toLocaleString('ru-RU')} ₽ ` : ''}
+              {Number.isFinite(filterState.maxPrice) ? `до ${filterState.maxPrice.toLocaleString('ru-RU')} ₽` : ''}
               <button
                 onClick={() =>
                   setFilterState((prev) => ({
                     ...prev,
                     minPrice: 0,
-                    maxPrice: 35000,
+                    maxPrice: NO_MAX_PRICE,
                   }))
                 }
                 className="text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"

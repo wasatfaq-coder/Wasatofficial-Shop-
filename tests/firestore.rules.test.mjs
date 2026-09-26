@@ -135,6 +135,9 @@ describe('orders', () => {
     await assertFails(setDoc(doc(guest(), 'orders/MS-bob'), order({ id: 'MS-bob' })));
     await assertFails(setDoc(doc(guest(), 'orders/MS-3'), order({ id: 'MS-3', status: 'delivered' })));
     await assertFails(setDoc(doc(guest(), 'orders/MS-4'), order({ id: 'MS-4', items: [] })));
+    // markup in an order number would reach the admin's reports
+    const badId = 'MS-<img src=x onerror=alert(1)>';
+    await assertFails(setDoc(doc(guest(), 'orders', badId), order({ id: badId })));
   });
 
   test('customer cannot place an order in someone else\'s name', async () => {
@@ -308,6 +311,12 @@ describe('chat', () => {
       setDoc(doc(db, 'chat_messages/m4'), msg('m4', { threadId: 'alice', isInternalNote: true }))
     );
     await assertFails(setDoc(doc(db, 'chat_messages/a1'), msg('a1', { threadId: 'alice', text: 'edited' })));
+    // a customer cannot forge staff cards or hide own messages from the staff
+    await assertFails(
+      setDoc(doc(db, 'chat_messages/m6'), msg('m6', { threadId: 'alice', promoCard: { code: 'FAKE', discountType: 'percent', discountValue: 90, description: '' } }))
+    );
+    await assertFails(setDoc(doc(db, 'chat_messages/m7'), msg('m7', { threadId: 'alice', hiddenForStaff: true })));
+    await assertSucceeds(setDoc(doc(db, 'chat_messages/m8'), msg('m8', { threadId: 'alice', imageUrl: 'data:image/png;base64,AA', threadName: 'Алиса', timestamp: '12:00' })));
   });
 
   test('customer message takes the server send time; without it the message cannot be changed', async () => {

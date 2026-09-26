@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronDown, CheckCircle2, HelpCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 
 export interface FAQAccordionItem {
   id: string;

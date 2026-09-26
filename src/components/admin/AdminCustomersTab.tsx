@@ -32,10 +32,10 @@ import {
   ArrowUpDown,
   Trash2,
   RefreshCw,
-  AlertTriangle,
 } from 'lucide-react';
 import { UserProfile, Order, CustomerRecord, BodyMeasurements } from '../../types';
-import { updateCustomerNotesInFirestore, deleteUserFromFirestore, purgeFakeDataFromFirestore } from '../../utils/firebaseSync';
+import { updateCustomerNotesInFirestore, deleteUserFromFirestore } from '../../utils/firebaseSync';
+import { downloadCSV } from '../../utils/csvHelpers';
 import { copyToClipboard } from '../../utils/clipboard';
 import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
 import { NeumorphicSelect, NeumorphicSelectOption } from '../NeumorphicSelect';
@@ -113,29 +113,9 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [newTagInput, setNewTagInput] = useState('');
 
-  // Database Purge & Deletion state
-  const [isPurging, setIsPurging] = useState(false);
-  const [showPurgeModal, setShowPurgeModal] = useState(false);
+  // Customer deletion state
   const [customerToDelete, setCustomerToDelete] = useState<CustomerRecord | null>(null);
   const [isDeletingCustomer, setIsDeletingCustomer] = useState(false);
-
-  // Trigger full purge of mock & fake records
-  const handlePurgeFakeData = async () => {
-    setIsPurging(true);
-    try {
-      const result = await purgeFakeDataFromFirestore('gunh83975@gmail.com');
-      setShowPurgeModal(false);
-      onShowToast(
-        `База данных успешно очищена! Удалено фиктивных пользователей: ${result.deletedUsers}, фиктивных заказов: ${result.deletedOrders}`,
-        'success'
-      );
-    } catch (err) {
-      console.error('Purge error:', err);
-      onShowToast('Ошибка при очистке базы данных', 'error');
-    } finally {
-      setIsPurging(false);
-    }
-  };
 
   // Delete individual customer from Firestore
   const handleDeleteCustomer = async () => {
@@ -403,26 +383,17 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
     }
     const headers = ['Имя', 'Email', 'Телефон', 'Тип', 'LTV (₽)', 'Заказов', 'Средний чек (₽)', 'Бонусы', 'Адрес'];
     const rows = filteredCustomers.map((c) => [
-      `"${c.name.replace(/"/g, '""')}"`,
-      `"${c.email}"`,
-      `"${c.phone}"`,
-      c.isRegisteredUser ? '"Аккаунт Google"' : '"Гость"',
+      c.name,
+      c.email,
+      c.phone,
+      c.isRegisteredUser ? 'Аккаунт Google' : 'Гость',
       c.totalSpent,
       c.ordersCount,
       c.averageOrderValue,
       c.bonusPoints,
-      `"${(c.primaryAddress || '').replace(/"/g, '""')}"`,
+      c.primaryAddress || '',
     ]);
-
-    const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map((r) => r.join(';'))].join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `${currentStoreName().replace(/\s+/g, '_')}_Клиенты_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCSV(`customers_${new Date().toISOString().slice(0, 10)}.csv`, [headers, ...rows], ';');
     onShowToast(`Экспортировано ${filteredCustomers.length} клиентов в CSV`, 'success');
   };
 
@@ -479,16 +450,6 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-          <button
-            type="button"
-            onClick={() => setShowPurgeModal(true)}
-            className="neu-button-danger px-3.5 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
-            title="Очистить базу данных от нереальных клиентов и фиктивных заказов"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Очистить базу от демо-данных</span>
-          </button>
-
           <button
             type="button"
             onClick={handleExportCSV}
@@ -1303,64 +1264,6 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 className="neu-inset px-6 py-2.5 rounded-xl text-xs font-black text-[#2D3A4E] hover:text-accent bg-[#E3E8EF] active:scale-95 transition-all"
               >
                 Закрыть
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ================= 6. PURGE DATABASE CONFIRMATION MODAL ================= */}
-      {showPurgeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/50 backdrop-blur-sm animate-in fade-in">
-          <div className="neu-modal rounded-3xl p-5 sm:p-6 max-w-md w-full space-y-4 text-[#2D3A4E] border border-white/80">
-            <div className="flex items-center gap-3 border-b border-[#BAC5D5]/40 pb-3">
-              <div className="w-10 h-10 rounded-2xl neu-flat-sm flex items-center justify-center text-danger shrink-0">
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-black text-[#2D3A4E]">Очистка базы данных</h3>
-                <p className="text-xs text-[#4E5C70]">Удаление тестовых и неактуальных записей</p>
-              </div>
-            </div>
-
-            <div className="neu-inset rounded-2xl p-3.5 space-y-2 text-xs text-[#2D3A4E] bg-[#E3E8EF]">
-              <p className="font-semibold text-danger">Внимание! Будут безвозвратно удалены:</p>
-              <ul className="list-disc list-inside space-y-1 text-[#4E5C70]">
-                <li>Все фиктивные профили клиентов (Иван Петров, Алексей Морозов и т.д.)</li>
-                <li>Все демо-заказы (MS-8420, MS-7912, MS-9824...)</li>
-                <li>Неактуальные тестовые записи в базе</li>
-              </ul>
-              <p className="text-[11px] text-success font-bold pt-1 border-t border-[#BAC5D5]/40">
-                ✓ Ваш профиль администратора (gunh83975@gmail.com) и реальный каталог товаров останутся без изменений.
-              </p>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowPurgeModal(false)}
-                disabled={isPurging}
-                className="neu-inset px-4 py-2.5 rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] bg-[#E3E8EF] active:scale-95 transition-all cursor-pointer"
-              >
-                Отмена
-              </button>
-              <button
-                type="button"
-                onClick={handlePurgeFakeData}
-                disabled={isPurging}
-                className="neu-button-danger px-5 py-2.5 rounded-xl text-xs font-black active:scale-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {isPurging ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Очистка...</span>
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Подтвердить очистку</span>
-                  </>
-                )}
               </button>
             </div>
           </div>

@@ -107,7 +107,7 @@ export function subscribeToProducts(
 }
 
 
-export async function saveProductToFirestore(product: Product) {
+async function saveProductToFirestore(product: Product) {
   try {
     await setDoc(doc(db, 'products', product.id), sanitizeForFirestore(withoutCollectionReviews(product)));
   } catch (error) {
@@ -132,13 +132,6 @@ export async function saveModifiedProductsToFirestore(productsToSave: Product[])
   }
 }
 
-export async function deleteProductFromFirestore(productId: string) {
-  try {
-    await deleteDoc(doc(db, 'products', productId));
-  } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, `products/${productId}`);
-  }
-}
 
 export async function syncAllProductsToFirestore(products: Product[]) {
   try {
@@ -373,20 +366,13 @@ export function subscribeToOrders(
   );
 }
 
-
-export async function handleCompleteOrderFirestoreSync(order: Order): Promise<void> {
+export async function saveOrderToFirestore(order: Order): Promise<void> {
   try {
-    const sanitized = sanitizeForFirestore(order);
-    await setDoc(doc(db, 'orders', order.id), sanitized);
+    await setDoc(doc(db, 'orders', order.id), sanitizeForFirestore(order));
   } catch (error) {
-    console.error(`[Firestore handleCompleteOrder] Error persisting order "${order.id}":`, error);
+    console.error(`Error persisting order "${order.id}":`, error);
     handleFirestoreError(error, OperationType.WRITE, `orders/${order.id}`);
-    throw error;
   }
-}
-
-export async function saveOrderToFirestore(order: Order) {
-  return handleCompleteOrderFirestoreSync(order);
 }
 
 export async function deleteOrderFromFirestore(orderId: string) {
@@ -477,21 +463,7 @@ export function subscribeToPromos(
 }
 
 
-export async function savePromoToFirestore(promo: PromoCode) {
-  try {
-    await setDoc(doc(db, 'promos', promo.id), sanitizeForFirestore(promo));
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, `promos/${promo.id}`);
-  }
-}
 
-export async function deletePromoFromFirestore(promoId: string) {
-  try {
-    await deleteDoc(doc(db, 'promos', promoId));
-  } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, `promos/${promoId}`);
-  }
-}
 
 export async function syncAllPromosToFirestore(promos: PromoCode[]) {
   try {
@@ -580,13 +552,6 @@ export async function syncAllBannersToFirestore(banners: BannerSlide[]) {
   }
 }
 
-export async function deleteBannerFromFirestore(bannerId: string) {
-  try {
-    await deleteDoc(doc(db, 'banners', bannerId));
-  } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, `banners/${bannerId}`);
-  }
-}
 
 /**
  * Server feature flags (settings/server), e.g. whether orders go through Cloud Functions.
@@ -670,7 +635,7 @@ function chatMessageFromSnapshot(snap: QueryDocumentSnapshot): ChatMessage {
 }
 
 /** The customer edits or deletes their own message within this time (checked again by firestore.rules) */
-export const CUSTOMER_EDIT_WINDOW_MS = 15 * 60 * 1000;
+const CUSTOMER_EDIT_WINDOW_MS = 15 * 60 * 1000;
 
 export function canCustomerChangeMessage(msg: ChatMessage, now = Date.now()): boolean {
   return msg.sender === 'user' && typeof msg.sentAt === 'number' && now < msg.sentAt + CUSTOMER_EDIT_WINDOW_MS;
@@ -767,7 +732,7 @@ export async function saveChatMessageToFirestore(msg: ChatMessage, targetDb: Fir
 }
 
 /** New text of a message (the customer — own message within 15 minutes, staff — any time) */
-export async function editChatMessage(messageId: string, text: string, targetDb: Firestore = db) {
+async function editChatMessage(messageId: string, text: string, targetDb: Firestore = db) {
   try {
     await updateDoc(doc(targetDb, 'chat_messages', messageId), { text, editedAt: serverTimestamp() });
   } catch (error) {
@@ -776,7 +741,7 @@ export async function editChatMessage(messageId: string, text: string, targetDb:
 }
 
 /** «Удалить у себя»: the message stays for the other side */
-export async function setChatMessageHidden(
+async function setChatMessageHidden(
   messageId: string,
   side: 'customer' | 'staff',
   hidden: boolean,
@@ -791,7 +756,7 @@ export async function setChatMessageHidden(
 }
 
 /** «Удалить у всех» */
-export async function deleteChatMessage(messageId: string, targetDb: Firestore = db) {
+async function deleteChatMessage(messageId: string, targetDb: Firestore = db) {
   try {
     await deleteDoc(doc(targetDb, 'chat_messages', messageId));
   } catch (error) {
@@ -994,70 +959,6 @@ export async function deleteUserFromFirestore(userId: string) {
 }
 
 /**
- * Purges all fake/mock customer profiles and mock orders from Firestore,
- * preserving only real registered users.
- */
-export async function purgeFakeDataFromFirestore(adminEmail: string = 'gunh83975@gmail.com'): Promise<{ deletedUsers: number; deletedOrders: number }> {
-  let deletedUsers = 0;
-  let deletedOrders = 0;
-
-  try {
-    // 1. Clean fake users using writeBatch
-    const usersSnap = await getDocs(collection(db, 'users'));
-    const userBatch = writeBatch(db);
-    let hasUserDeletes = false;
-
-    for (const d of usersSnap.docs) {
-      const data = d.data() as UserProfile;
-      const email = (data.email || '').toLowerCase().trim();
-      const isRealAdmin = email === adminEmail.toLowerCase().trim() || d.id === 'user-admin-001';
-      const isKnownFakeUser = [
-        'ivan.petrov@gmail.com',
-        'alex.morozov@inbox.ru',
-        'dmitry.sokolov@yandex.ru',
-        'sergey.volkov@gmail.com',
-      ].includes(email) || ['user-ivan-002', 'user-alex-003', 'user-dmitry-004', 'user-sergey-005'].includes(d.id);
-
-      if (isKnownFakeUser || (!isRealAdmin && (d.id.startsWith('user-ivan') || d.id.startsWith('user-alex') || d.id.startsWith('user-dmitry') || d.id.startsWith('user-sergey')))) {
-        userBatch.delete(d.ref);
-        hasUserDeletes = true;
-        deletedUsers++;
-      }
-    }
-
-    if (hasUserDeletes) {
-      await userBatch.commit();
-    }
-
-    // 2. Clean fake mock orders using writeBatch
-    const ordersSnap = await getDocs(collection(db, 'orders'));
-    const knownMockOrderIds = new Set(['MS-8420', 'MS-7912', 'MS-9824', 'MS-5574', 'MS-1042', 'MS-3319']);
-    const orderBatch = writeBatch(db);
-    let hasOrderDeletes = false;
-
-    for (const d of ordersSnap.docs) {
-      const data = d.data() as Order;
-      const custEmail = (data.customerEmail || '').toLowerCase().trim();
-      const isFakeEmail = ['ivan.petrov@gmail.com', 'alex.morozov@inbox.ru', 'dmitry.sokolov@yandex.ru', 'sergey.volkov@gmail.com'].includes(custEmail);
-      if (knownMockOrderIds.has(d.id) || isFakeEmail) {
-        orderBatch.delete(d.ref);
-        hasOrderDeletes = true;
-        deletedOrders++;
-      }
-    }
-
-    if (hasOrderDeletes) {
-      await orderBatch.commit();
-    }
-  } catch (error) {
-    console.warn('Error during purgeFakeDataFromFirestore:', error);
-    throw error;
-  }
-
-  return { deletedUsers, deletedOrders };
-}
-
-/**
  * 7. DELIVERY METHODS SYNC
  */
 export function subscribeToDeliveryMethods(
@@ -1088,21 +989,7 @@ export function subscribeToDeliveryMethods(
   );
 }
 
-export async function saveDeliveryMethodToFirestore(method: DeliveryMethod) {
-  try {
-    await setDoc(doc(db, 'delivery_methods', method.id), sanitizeForFirestore(method));
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, `delivery_methods/${method.id}`);
-  }
-}
 
-export async function deleteDeliveryMethodFromFirestore(methodId: string) {
-  try {
-    await deleteDoc(doc(db, 'delivery_methods', methodId));
-  } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, `delivery_methods/${methodId}`);
-  }
-}
 
 export async function syncAllDeliveryMethodsToFirestore(methods: DeliveryMethod[]) {
   try {
@@ -1147,21 +1034,7 @@ export function subscribeToPickupPoints(
   );
 }
 
-export async function savePickupPointToFirestore(point: PickupPoint) {
-  try {
-    await setDoc(doc(db, 'pickup_points', point.id), sanitizeForFirestore(point));
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, `pickup_points/${point.id}`);
-  }
-}
 
-export async function deletePickupPointFromFirestore(pointId: string) {
-  try {
-    await deleteDoc(doc(db, 'pickup_points', pointId));
-  } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, `pickup_points/${pointId}`);
-  }
-}
 
 export async function syncAllPickupPointsToFirestore(points: PickupPoint[]) {
   try {

@@ -13,7 +13,7 @@ import {
   validatePromo,
   type PricingLine,
 } from '../../src/shared/orderPricing';
-import { extractColorName, extractSizeName, generateDefaultSKUs } from '../../src/utils/inventory';
+import { extractColorName, extractSizeName, generateDefaultSKUs, isHiddenFromSale } from '../../src/utils/inventory';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages } from '../../src/utils/deliveryStages';
 
 export type OrderErrorCode = 'invalid-argument' | 'failed-precondition' | 'not-found';
@@ -165,6 +165,10 @@ export async function placeOrderCore(
 
     request.items.forEach((item, idx) => {
       const product = products.get(item.productId)!.data;
+      // «Снят с витрины» in the admin: not for sale even though stock is left
+      if (isHiddenFromSale(product)) {
+        throw new OrderError('failed-precondition', `Товар «${product.title}» больше не продается`);
+      }
       lines.push({ productId: product.id, category: product.category, price: product.price, quantity: item.quantity });
       cartItems.push({
         id: `cart-${idx + 1}`,

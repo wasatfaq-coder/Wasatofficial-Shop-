@@ -205,7 +205,7 @@ export function subscribeToQuickPhrases(
 /**
  * Saves all quick phrases to Firestore & local storage.
  */
-export async function saveQuickPhrasesToFirestore(data: QuickPhrasesData): Promise<void> {
+async function saveQuickPhrasesToFirestore(data: QuickPhrasesData): Promise<void> {
   notifyListeners(data);
   try {
     const docRef = doc(db, 'settings', 'quick_phrases');
@@ -276,10 +276,3 @@ export async function deleteQuickPhrase(
   return current;
 }
 
-/**
- * Resets quick phrases back to factory defaults.
- */
-export async function resetQuickPhrasesToDefault(): Promise<QuickPhrasesData> {
-  await saveQuickPhrasesToFirestore(DEFAULT_QUICK_PHRASES);
-  return DEFAULT_QUICK_PHRASES;
-}

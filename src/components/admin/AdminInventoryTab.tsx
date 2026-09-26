@@ -44,6 +44,7 @@ import {
 } from '../../utils/inventory';
 import { AdminLabelGenerator, type LabelTarget } from './AdminLabelGenerator';
 import { skuKey } from '../../shared/barcode';
+import { downloadCSV } from '../../utils/csvHelpers';
 
 interface AdminInventoryTabProps {
   products: Product[];
@@ -198,7 +199,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
         checkedCount++;
       }
       const diff = actual - sku.stock;
-      const cost = product.costPrice || Math.round(product.price * 0.45);
+      const cost = product.costPrice || 0; // unknown cost price: not estimated
 
       if (diff > 0) {
         discrepancyCount++;
@@ -313,27 +314,16 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
 
   // Export Audit Sheet to CSV
   const handleExportAuditCSV = () => {
-    const header = 'Артикул;Штрихкод;Наименование;Цвет;Размер;Учетный остаток;Фактический остаток;Разница;Статус;Себестоимость ед.;Сумма расхождения\n';
-    const rows = allProductSKUs
-      .map(({ product, sku, key }) => {
-        const actual = auditCounts[key] !== undefined ? auditCounts[key] : sku.stock;
-        const diff = actual - sku.stock;
-        const status = diff === 0 ? 'Совпадает' : diff > 0 ? 'Излишек' : 'Недостача';
-        const cost = product.costPrice || Math.round(product.price * 0.45);
-        const diffSum = diff * cost;
-        return `"${sku.skuCode || ''}";"${sku.barcode || ''}";"${product.title.replace(/"/g, '""')}";"${sku.color}";"${sku.size}";${sku.stock};${actual};${diff};"${status}";${cost};${diffSum}`;
-      })
-      .join('\n');
-
-    const blob = new Blob(['\uFEFF' + header + rows], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `inventarizatsiya_sklad_${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const header = ['Артикул', 'Штрихкод', 'Наименование', 'Цвет', 'Размер', 'Учетный остаток', 'Фактический остаток', 'Разница', 'Статус', 'Себестоимость ед.', 'Сумма расхождения'];
+    const rows = allProductSKUs.map(({ product, sku, key }) => {
+      const actual = auditCounts[key] !== undefined ? auditCounts[key] : sku.stock;
+      const diff = actual - sku.stock;
+      const status = diff === 0 ? 'Совпадает' : diff > 0 ? 'Излишек' : 'Недостача';
+      // without a cost price in the product form the sum is unknown, not estimated
+      const cost = product.costPrice;
+      return [sku.skuCode || '', sku.barcode || '', product.title, sku.color, sku.size, sku.stock, actual, diff, status, cost ?? '', cost !== undefined ? diff * cost : ''];
+    });
+    downloadCSV(`inventarizatsiya_sklad_${new Date().toISOString().slice(0, 10)}.csv`, [header, ...rows], ';');
     onShowToast('Инвентаризационная ведомость экспортирована в CSV', 'success');
   };
 
@@ -343,22 +333,9 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
       onShowToast('Журнал пуст', 'info');
       return;
     }
-    const header = 'Дата;Тип;Товар;SKU;Цвет;Размер;Изменение;До;После;Причина;Оператор\n';
-    const rows = movementLogs
-      .map(
-        (l) =>
-          `"${l.date}";"${l.type}";"${l.productTitle.replace(/"/g, '""')}";"${l.skuCode}";"${l.color}";"${l.size}";${l.changeQuantity};${l.previousStock};${l.newStock};"${l.reason.replace(/"/g, '""')}";"${l.operator}"`
-      )
-      .join('\n');
-    const blob = new Blob(['\uFEFF' + header + rows], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `sklad_dvizheniya_${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const header = ['Дата', 'Тип', 'Товар', 'SKU', 'Цвет', 'Размер', 'Изменение', 'До', 'После', 'Причина', 'Оператор'];
+    const rows = movementLogs.map((l) => [l.date, l.type, l.productTitle, l.skuCode, l.color, l.size, l.changeQuantity, l.previousStock, l.newStock, l.reason, l.operator]);
+    downloadCSV(`sklad_dvizheniya_${new Date().toISOString().slice(0, 10)}.csv`, [header, ...rows], ';');
     onShowToast('Журнал складских движений экспортирован в CSV', 'success');
   };
 
@@ -1141,7 +1118,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
               filteredAuditSkus.map(({ product, sku, key }) => {
                 const actual = auditCounts[key] !== undefined ? auditCounts[key] : sku.stock;
                 const diff = actual - sku.stock;
-                const cost = product.costPrice || Math.round(product.price * 0.45);
+                const cost = product.costPrice || 0; // unknown cost price: not estimated
                 const isShortage = diff < 0;
                 const isSurplus = diff > 0;
                 const isMatch = diff === 0;

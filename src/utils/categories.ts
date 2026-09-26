@@ -37,9 +37,6 @@ export function getCategories(settings?: Partial<StorefrontSettings> | null): St
   return (settings?.categories ?? []).filter((c) => c.id && c.name.trim());
 }
 
-export function categoryName(categories: StoreCategory[], id: string, fallback = ''): string {
-  return categories.find((c) => c.id === id)?.name || fallback;
-}
 
 /**
  * Categories the existing products already use, for the admin's «Взять из товаров» action:
