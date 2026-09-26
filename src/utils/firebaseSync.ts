@@ -14,6 +14,8 @@ import {
   Firestore,
   QueryDocumentSnapshot,
   Timestamp,
+  WriteBatch,
+  increment,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Product, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint } from '../types';
@@ -24,12 +26,36 @@ import { SERVER_CONFIG_DOC_ID, ServerConfig } from '../shared/orderApi';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages, isTransportCompanyDelivery } from './deliveryStages';
 
 /**
- * Global locks and session tracking to prevent duplicate or overflowing write stream queues.
- */
-/**
  * An empty collection means the owner has not added anything yet (or removed it all).
  * Demo data from src/data is never written to the database or shown in its place.
  */
+
+/** A batch holds at most 500 writes: longer lists are committed in parts */
+const BATCH_LIMIT = 450;
+
+async function commitInChunks<T>(items: T[], add: (batch: WriteBatch, item: T) => void, targetDb: Firestore = db) {
+  for (let i = 0; i < items.length; i += BATCH_LIMIT) {
+    const batch = writeBatch(targetDb);
+    items.slice(i, i + BATCH_LIMIT).forEach((item) => add(batch, item));
+    await batch.commit();
+  }
+}
+
+/** set() of every document of a list (sanitized), in parts of at most BATCH_LIMIT */
+async function setDocs<T extends { id: string }>(collectionName: string, items: T[]) {
+  await commitInChunks(items, (batch, item) =>
+    batch.set(doc(db, collectionName, item.id), sanitizeForFirestore(item))
+  );
+}
+
+/**
+ * Items of `next` that are new or changed against `previous`. The admin lists replace only the
+ * edited objects, so the rest keep their identity and are not written again.
+ */
+export function changedItems<T extends { id: string }>(previous: T[], next: T[]): T[] {
+  const before = new Map(previous.map((item) => [item.id, item]));
+  return next.filter((item) => before.get(item.id) !== item);
+}
 
 /**
  * Deletes the documents the admin removed from a list. The list editors save the new list
@@ -44,9 +70,7 @@ export async function deleteRemovedDocs(
   const removed = previous.filter((item) => item.id && !keep.has(item.id));
   if (removed.length === 0) return;
   try {
-    const batch = writeBatch(db);
-    removed.forEach((item) => batch.delete(doc(db, collectionName, item.id)));
-    await batch.commit();
+    await commitInChunks(removed, (batch, item) => batch.delete(doc(db, collectionName, item.id)));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, collectionName);
   }
@@ -122,11 +146,7 @@ export async function saveModifiedProductsToFirestore(productsToSave: Product[])
     return;
   }
   try {
-    const batch = writeBatch(db);
-    for (const prod of productsToSave) {
-      batch.set(doc(db, 'products', prod.id), sanitizeForFirestore(withoutCollectionReviews(prod)));
-    }
-    await batch.commit();
+    await setDocs('products', productsToSave.map(withoutCollectionReviews));
   } catch (error) {
     console.warn('Error batch-saving modified products:', error);
   }
@@ -135,11 +155,7 @@ export async function saveModifiedProductsToFirestore(productsToSave: Product[])
 
 export async function syncAllProductsToFirestore(products: Product[]) {
   try {
-    const batch = writeBatch(db);
-    for (const prod of products) {
-      batch.set(doc(db, 'products', prod.id), sanitizeForFirestore(withoutCollectionReviews(prod)));
-    }
-    await batch.commit();
+    await setDocs('products', products.map(withoutCollectionReviews));
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'products');
   }
@@ -405,11 +421,7 @@ export async function saveAnalyticsResetAt(resetAt: number | null) {
 
 export async function syncAllOrdersToFirestore(orders: Order[]) {
   try {
-    const batch = writeBatch(db);
-    for (const ord of orders) {
-      batch.set(doc(db, 'orders', ord.id), sanitizeForFirestore(ord));
-    }
-    await batch.commit();
+    await setDocs('orders', orders);
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, 'orders');
   }
@@ -446,13 +458,28 @@ export function subscribeToPromos(
 
 
 
+/**
+ * Client checkout (server orders off): one more use of the promo. Atomic increments, so two
+ * buyers at once do not overwrite each other's count; rules allow only these counters to grow.
+ */
+export async function recordPromoUsageInFirestore(promo: PromoCode, orderTotal: number) {
+  const commission = promo.isReferral
+    ? Math.round((orderTotal * (promo.partnerCommissionPercent || 10)) / 100)
+    : 0;
+  try {
+    await updateDoc(doc(db, 'promos', promo.id), {
+      usedCount: increment(1),
+      generatedRevenue: increment(orderTotal),
+      ...(commission > 0 ? { commissionEarned: increment(commission) } : {}),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `promos/${promo.id}`);
+  }
+}
+
 export async function syncAllPromosToFirestore(promos: PromoCode[]) {
   try {
-    const batch = writeBatch(db);
-    for (const promo of promos) {
-      batch.set(doc(db, 'promos', promo.id), sanitizeForFirestore(promo));
-    }
-    await batch.commit();
+    await setDocs('promos', promos);
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, 'promos');
   }
@@ -522,12 +549,7 @@ export function subscribeToBanners(
 
 export async function syncAllBannersToFirestore(banners: BannerSlide[]) {
   try {
-    const batch = writeBatch(db);
-    for (let i = 0; i < banners.length; i++) {
-      const bannerWithOrder = { ...banners[i], order: i };
-      batch.set(doc(db, 'banners', banners[i].id), sanitizeForFirestore(bannerWithOrder));
-    }
-    await batch.commit();
+    await setDocs('banners', banners.map((banner, i) => ({ ...banner, order: i })));
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'banners');
   }
@@ -681,14 +703,7 @@ export async function clearChatMessagesInFirestore(threadId?: string | null) {
     const colRef = collection(db, 'chat_messages');
     const snap = await getDocs(threadId ? query(colRef, where('threadId', '==', threadId)) : colRef);
     const docs = threadId === null ? snap.docs.filter((d) => !d.data().threadId) : snap.docs;
-    // A batch holds at most 500 writes
-    for (let i = 0; i < docs.length; i += 500) {
-      const batch = writeBatch(db);
-      for (const d of docs.slice(i, i + 500)) {
-        batch.delete(d.ref);
-      }
-      await batch.commit();
-    }
+    await commitInChunks(docs, (batch, d) => batch.delete(d.ref));
   } catch (err) {
     console.warn('Could not clear chat messages in Firestore:', err);
   }
@@ -974,12 +989,7 @@ export function subscribeToDeliveryMethods(
 
 export async function syncAllDeliveryMethodsToFirestore(methods: DeliveryMethod[]) {
   try {
-    const batch = writeBatch(db);
-    for (let i = 0; i < methods.length; i++) {
-      const item = { ...methods[i], sortOrder: i + 1 };
-      batch.set(doc(db, 'delivery_methods', item.id), sanitizeForFirestore(item));
-    }
-    await batch.commit();
+    await setDocs('delivery_methods', methods.map((method, i) => ({ ...method, sortOrder: i + 1 })));
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'delivery_methods');
   }
@@ -1019,11 +1029,7 @@ export function subscribeToPickupPoints(
 
 export async function syncAllPickupPointsToFirestore(points: PickupPoint[]) {
   try {
-    const batch = writeBatch(db);
-    for (const pt of points) {
-      batch.set(doc(db, 'pickup_points', pt.id), sanitizeForFirestore(pt));
-    }
-    await batch.commit();
+    await setDocs('pickup_points', points);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'pickup_points');
   }

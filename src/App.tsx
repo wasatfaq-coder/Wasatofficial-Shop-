@@ -27,7 +27,7 @@ import {
   isPreorderVariant,
   isProductInStock,
 } from './utils/inventory';
-import { getDefaultDeliveryStages, getDefaultHistorySteps, getSynchronizedDeliveryStages } from './utils/deliveryStages';
+import { getDefaultHistorySteps, getSynchronizedDeliveryStages } from './utils/deliveryStages';
 import { formatAddress } from './utils/addressFormat';
 import { ADMIN_EMAIL, useAuth } from './context/AuthContext';
 import {
@@ -49,6 +49,8 @@ import {
   saveModifiedProductsToFirestore,
   syncAllProductsToFirestore,
   deleteRemovedDocs,
+  changedItems,
+  recordPromoUsageInFirestore,
   syncAllOrdersToFirestore,
   syncAllPromosToFirestore,
   saveStorefrontSettingsToFirestore,
@@ -80,25 +82,15 @@ import { CheckoutScreen } from './views/CheckoutScreen';
 import { ProfileScreen } from './views/ProfileScreen';
 import { FavoritesScreen } from './views/FavoritesScreen';
 import { OrderSuccessScreen } from './views/OrderSuccessScreen';
-import { validatePromo, PricingLine, QUICK_ORDER_DELIVERY_ID } from './shared/orderPricing';
+import { validatePromo, toPricingLine, QUICK_ORDER_DELIVERY_ID } from './shared/orderPricing';
 import { formatOrderDate } from './shared/orderDate';
 import { extractColorName, extractSizeName } from './utils/inventory';
 import { getStoreContacts, getStoreName, publicSetting, withStoreName, withStoreNameFields } from './utils/storeContacts';
-import { formatDays } from './utils/pluralize';
 import { getCategories } from './utils/categories';
 
 // Unique across customers: messages are create-only for customers (see firestore.rules)
 function newChatMessageId(): string {
   return `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function toPricingLine(item: CartItem): PricingLine {
-  return {
-    productId: item.product.id,
-    category: item.product.category,
-    price: item.product.price,
-    quantity: item.quantity,
-  };
 }
 
 // Default profile of earlier versions (the shop admin's name, email, phone and office address)
@@ -323,7 +315,6 @@ export default function App() {
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
   const [catalogFilterState, setCatalogFilterState] = useState<FilterState>(DEFAULT_FILTER_STATE);
-  const [openCatalogFiltersImmediately, setOpenCatalogFiltersImmediately] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [appliedPromo, setAppliedPromo] = useState<AppliedPromoInfo | null>(null);
 
@@ -943,11 +934,7 @@ export default function App() {
       return false;
     }
 
-    // Increment used count and update promo state
-    setPromos((prev) =>
-      prev.map((p) => (p.code === foundPromo.code ? { ...p, usedCount: p.usedCount + 1 } : p))
-    );
-
+    // usedCount grows only when an order with the promo is placed (not on applying it)
     const isFixed = foundPromo.discountType === 'fixed';
     const discValue = foundPromo.discountValue !== undefined ? foundPromo.discountValue : foundPromo.discountPercent;
 
@@ -1182,9 +1169,15 @@ export default function App() {
     return { customerName, customerPhone, customerEmail, deliveryAddress, deliveryMethod, paymentMethod };
   };
 
-  const finishOrder = (order: Pick<Order, 'id' | 'totalPrice' | 'deliveryMethod' | 'deliveryAddress'> & { paymentMethod?: string }) => {
-    setCartItems([]);
-    setAppliedPromo(null);
+  const finishOrder = (
+    order: Pick<Order, 'id' | 'totalPrice' | 'deliveryMethod' | 'deliveryAddress'> & { paymentMethod?: string },
+    orderData: CompleteOrderData
+  ) => {
+    // A 1-click order from the product page is not the cart: only the ordered lines leave it
+    const orderedLineIds = new Set(orderData.items.map((item) => item.id));
+    setCartItems((prev) => prev.filter((item) => !orderedLineIds.has(item.id)));
+    // the promo is applied only to a full checkout (1-click orders go without it)
+    if (orderData.deliveryMethodId) setAppliedPromo(null);
     setLatestOrder({
       id: order.id,
       totalPrice: order.totalPrice,
@@ -1222,7 +1215,7 @@ export default function App() {
       if (!currentUser) {
         saveGuestOrder(order);
       }
-      finishOrder(order);
+      finishOrder(order, orderData);
       return true;
     } catch (err) {
       console.error('placeOrder failed:', err);
@@ -1237,10 +1230,10 @@ export default function App() {
   };
 
   const handleCompleteOrder = (orderData: CompleteOrderData): Promise<boolean> =>
-    serverOrdersEnabled ? completeOrderOnServer(orderData) : Promise.resolve(completeOrderLocally(orderData));
+    serverOrdersEnabled ? completeOrderOnServer(orderData) : completeOrderLocally(orderData);
 
   // Legacy client-side checkout, used until the Cloud Function is deployed and enabled
-  const completeOrderLocally = (orderData: CompleteOrderData): boolean => {
+  const completeOrderLocally = async (orderData: CompleteOrderData): Promise<boolean> => {
     // Orders are create-only for customers, so IDs must not collide with existing ones
     const newOrderId = `WS-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
     const placedAt = new Date();
@@ -1285,6 +1278,16 @@ export default function App() {
       deliveryStages: getSynchronizedDeliveryStages(newOrderBase as Order),
     };
 
+    // The order must reach the database before it is shown as placed and stock is taken:
+    // a rejected write (rules, network error) used to be reported as a successful order
+    try {
+      await saveOrderToFirestore(newOrder);
+    } catch (err) {
+      console.error('Order was not saved:', err);
+      addToast('Не удалось оформить заказ. Проверьте соединение и попробуйте еще раз.', 'error');
+      return false;
+    }
+
     // Deduct stock per size/color SKU and automatically write off log
     const { updatedProducts } = deductStockWithLogs(
       products,
@@ -1302,32 +1305,15 @@ export default function App() {
       }
     }
 
-    // Update promo usage count, revenue, and referral metrics
-    if (appliedPromo?.code) {
-      setPromos((prev) => {
-        const nextPromos = prev.map((p) => {
-          if (p.code.toUpperCase() === appliedPromo.code.toUpperCase()) {
-            const commPercent = p.partnerCommissionPercent || 10;
-            const newRevenue = (p.generatedRevenue || 0) + totalPrice;
-            const newCommission = p.isReferral
-              ? (p.commissionEarned || 0) + Math.round((totalPrice * commPercent) / 100)
-              : p.commissionEarned;
-            return {
-              ...p,
-              usedCount: (p.usedCount || 0) + 1,
-              generatedRevenue: newRevenue,
-              commissionEarned: newCommission,
-            };
-          }
-          return p;
-        });
-        syncAllPromosToFirestore(nextPromos);
-        return nextPromos;
-      });
+    // Promo usage, revenue and referral commission (a 1-click order has no promo, as on the server)
+    const usedPromo = orderData.deliveryMethodId && appliedPromo?.code
+      ? promos.find((p) => p.code.toUpperCase() === appliedPromo.code.toUpperCase())
+      : undefined;
+    if (usedPromo) {
+      void recordPromoUsageInFirestore(usedPromo, totalPrice);
     }
 
     setOrders((prev) => [newOrder, ...prev]);
-    saveOrderToFirestore(newOrder);
     if (!currentUser) {
       saveGuestOrder(newOrder);
     }
@@ -1337,7 +1323,7 @@ export default function App() {
     const modifiedProducts = updatedProducts.filter((p) => orderedProductIds.has(p.id));
     saveModifiedProductsToFirestore(modifiedProducts);
 
-    finishOrder({ id: newOrderId, totalPrice, deliveryMethod, deliveryAddress, paymentMethod });
+    finishOrder({ id: newOrderId, totalPrice, deliveryMethod, deliveryAddress, paymentMethod }, orderData);
     return true;
   };
 
@@ -1655,7 +1641,7 @@ export default function App() {
               onUpdateProducts={(updatedProds) => {
                 deleteRemovedDocs('products', products, updatedProds);
                 setProducts(updatedProds);
-                syncAllProductsToFirestore(updatedProds);
+                syncAllProductsToFirestore(changedItems(products, updatedProds));
                 // Synchronize cart with updated products & remove deleted items
                 setCartItems((prevCart) =>
                   prevCart
@@ -1679,13 +1665,13 @@ export default function App() {
               }}
               onUpdateOrders={(updatedOrders) => {
                 setOrders(updatedOrders);
-                syncAllOrdersToFirestore(updatedOrders);
+                syncAllOrdersToFirestore(changedItems(orders, updatedOrders));
               }}
               promos={promos}
               onUpdatePromos={(updatedPromos) => {
                 deleteRemovedDocs('promos', promos, updatedPromos);
                 setPromos(updatedPromos);
-                syncAllPromosToFirestore(updatedPromos);
+                syncAllPromosToFirestore(changedItems(promos, updatedPromos));
               }}
               bannerSlides={bannerSlides}
               onUpdateBannerSlides={handleUpdateBannerSlides}

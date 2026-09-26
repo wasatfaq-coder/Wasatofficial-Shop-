@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, X, Tag, Sparkles, Shirt, Layers, Package, Palette, ArrowRight, Check } from 'lucide-react';
+import { Search, X, Tag, Sparkles, Palette, ArrowRight } from 'lucide-react';
 import { Product } from '../types';
 import { RatingBadge } from './RatingBadge';
 import { photoBadgeClass } from '../utils/productBadge';
 import { getProductRating } from '../utils/productRating';
 import type { StoreCategory } from '../types';
+import { productImage } from '../utils/productImage';
 
 interface AutocompleteSearchProps {
   /** From Admin → «Категории» */
@@ -103,12 +104,6 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
       matchedProducts,
     };
   }, [products, categories, cleanQuery]);
-
-  const hasResults =
-    cleanQuery.length > 0 &&
-    (searchResults.matchedCategories.length > 0 ||
-      searchResults.matchedColors.length > 0 ||
-      searchResults.matchedProducts.length > 0);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -263,7 +258,7 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
                     {/* Thumbnail */}
                     <div className="w-12 h-12 rounded-xl overflow-hidden neu-inset p-0.5 shrink-0">
                       <img
-                        src={product.images?.[0] || 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80'}
+                        src={productImage(product)}
                         alt={product.title}
                         loading="lazy"
                         decoding="async"

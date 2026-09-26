@@ -1,4 +1,4 @@
-import { doc, setDoc, onSnapshot, getDoc } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { sanitizeForFirestore } from './firebaseSync';
 
@@ -137,13 +137,6 @@ function notifyListeners(data: QuickPhrasesData) {
       console.error('Error in quick phrases listener:', e);
     }
   });
-}
-
-/**
- * Returns currently cached quick phrases data.
- */
-function getQuickPhrases(): QuickPhrasesData {
-  return cachedPhrases;
 }
 
 /**

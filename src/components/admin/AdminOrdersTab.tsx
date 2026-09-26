@@ -6,10 +6,8 @@ import {
   Printer,
   SlidersHorizontal,
   Navigation,
-  FileText,
   Clock,
   CheckCircle2,
-  AlertCircle,
   Truck,
   MapPin,
   CreditCard,
@@ -20,8 +18,6 @@ import {
   Copy,
   Check,
   X,
-  User,
-  Phone,
   RotateCcw,
   ExternalLink,
   Edit3,
@@ -36,7 +32,7 @@ import {
 import { Order, Product, OrderAdjustmentLog, OrderStatusHistoryStep, DeliveryStage, StorefrontSettings } from '../../types';
 import { exportOrdersToCSV } from '../../utils/csvHelpers';
 import { copyToClipboard } from '../../utils/clipboard';
-import { returnStockWithLogs } from '../../utils/inventory';
+import { deductStockWithLogs, returnStockWithLogs } from '../../utils/inventory';
 import { deleteOrderFromFirestore } from '../../utils/firebaseSync';
 import {
   getDefaultDeliveryStages,
@@ -195,6 +191,10 @@ const TRACKING_CARRIERS: TrackingCarrierConfig[] = [
   },
 ];
 
+/** Date of a step in the order history: «26 сент., 14:30» */
+const historyDateLabel = () =>
+  new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
 export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   orders,
   storefrontSettings,
@@ -280,7 +280,6 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   const [editingTrackOrderId, setEditingTrackOrderId] = useState<string | null>(null);
   const [tempTrackValue, setTempTrackValue] = useState<string>('');
   const [tempCarrierValue, setTempCarrierValue] = useState<NonNullable<Order['trackingCompany']>>('cdek');
-  const [openCarrierDropdownOrderId, setOpenCarrierDropdownOrderId] = useState<string | null>(null);
 
   // Quick Inline Manager Note Editor
   const [editingNoteOrderId, setEditingNoteOrderId] = useState<string | null>(null);
@@ -289,7 +288,6 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   // Filtered Orders Calculation
   const filteredOrders = useMemo(() => {
     const todayStr = new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }).toLowerCase();
-    const currentMonthNum = new Date().getMonth();
 
     return orders.filter((ord) => {
       // 1. Status Filter
@@ -368,22 +366,30 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     );
   };
 
-  const handleBulkStatusChange = (newStatus: Order['status']) => {
-    if (selectedOrderIds.length === 0) return;
-    const dateNow = new Date().toLocaleDateString('ru-RU', {
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  /**
+   * New fulfilment status of the given orders (one or a bulk selection). A cancelled order that gets
+   * a status again is active: the goods returned on cancellation are taken from stock again.
+   */
+  const changeOrdersStatus = (orderIds: string[], newStatus: Order['status'], description: string) => {
+    const ids = new Set(orderIds);
+    const dateNow = historyDateLabel();
+
+    const reactivated = orders.filter((ord) => ids.has(ord.id) && ord.isCancelled && ord.items?.length);
+    if (reactivated.length > 0 && onUpdateProducts) {
+      let currentProducts = products;
+      for (const ord of reactivated) {
+        currentProducts = deductStockWithLogs(currentProducts, ord.items, ord.id, 'Администратор').updatedProducts;
+      }
+      onUpdateProducts(currentProducts);
+    }
 
     const updated = orders.map((ord) => {
-      if (!selectedOrderIds.includes(ord.id)) return ord;
+      if (!ids.has(ord.id)) return ord;
       const newStep: OrderStatusHistoryStep = {
         title: STATUS_CONFIG[newStatus].label,
         date: dateNow,
         completed: true,
-        description: `Пакетное обновление статуса оператором на "${STATUS_CONFIG[newStatus].label}"`,
+        description,
       };
       const updatedStages = syncStagesWithOrderStatus(ord.deliveryStages, ord, newStatus);
       const updatedEst = getEstimatedDeliveryForStatus(newStatus, ord.estimatedDelivery, false);
@@ -408,7 +414,18 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     });
 
     onUpdateOrders(updated);
-    onShowToast(`Статус ${selectedOrderIds.length} заказов изменен на "${STATUS_CONFIG[newStatus].label}"`, 'success');
+    return reactivated.length;
+  };
+
+  const handleBulkStatusChange = (newStatus: Order['status']) => {
+    if (selectedOrderIds.length === 0) return;
+    const label = STATUS_CONFIG[newStatus].label;
+    const restored = changeOrdersStatus(selectedOrderIds, newStatus, `Пакетное обновление статуса оператором на "${label}"`);
+    onShowToast(
+      `Статус ${selectedOrderIds.length} заказов изменен на "${label}"` +
+        (restored > 0 ? `. Восстановлено отмененных: ${restored}, товары снова списаны со склада` : ''),
+      'success'
+    );
     setSelectedOrderIds([]);
   };
 
@@ -454,12 +471,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       onUpdateProducts(currentProducts);
     }
 
-    const dateNow = new Date().toLocaleDateString('ru-RU', {
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const dateNow = historyDateLabel();
 
     const updated = orders.map((ord) => {
       if (!selectedOrderIds.includes(ord.id) || ord.isCancelled) return ord;
@@ -487,48 +499,14 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
   // Order Status Change Handler
   const handleUpdateOrderStatus = (orderId: string, newStatus: Order['status']) => {
-    const updated = orders.map((ord) => {
-      if (ord.id !== orderId) return ord;
-
-      const dateNow = new Date().toLocaleDateString('ru-RU', {
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-
-      const newStep: OrderStatusHistoryStep = {
-        title: STATUS_CONFIG[newStatus].label,
-        date: dateNow,
-        completed: true,
-        description: `Статус изменен менеджером магазина на "${STATUS_CONFIG[newStatus].label}"`,
-      };
-
-      const existingSteps = ord.historySteps || [];
-      const updatedStages = syncStagesWithOrderStatus(ord.deliveryStages, ord, newStatus);
-      const updatedEst = getEstimatedDeliveryForStatus(newStatus, ord.estimatedDelivery, false);
-      const updatedPaymentStatus = newStatus === 'delivered' && ord.paymentStatus === 'paid_on_delivery'
-        ? 'paid'
-        : ord.paymentStatus;
-
-      // When transitioning to 'accepted', synchronize history steps so only 'Заказ принят' is completed
-      const updatedHistorySteps = newStatus === 'accepted'
-        ? existingSteps.map((s, idx) => ({ ...s, completed: idx === 0 || s.title.toLowerCase().includes('принят') }))
-        : [...existingSteps, newStep];
-
-      return {
-        ...ord,
-        status: newStatus,
-        isCancelled: false,
-        paymentStatus: updatedPaymentStatus,
-        historySteps: updatedHistorySteps,
-        deliveryStages: updatedStages,
-        estimatedDelivery: updatedEst,
-      };
-    });
-
-    onUpdateOrders(updated);
-    onShowToast(`Статус заказа ${orderId} изменен на "${STATUS_CONFIG[newStatus].label}"`, 'success');
+    const label = STATUS_CONFIG[newStatus].label;
+    const restored = changeOrdersStatus([orderId], newStatus, `Статус изменен менеджером магазина на "${label}"`);
+    onShowToast(
+      restored > 0
+        ? `Заказ ${orderId} восстановлен со статусом "${label}", товары снова списаны со склада`
+        : `Статус заказа ${orderId} изменен на "${label}"`,
+      'success'
+    );
     setOpenStatusDropdownId(null);
   };
 
@@ -600,7 +578,6 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     });
     onUpdateOrders(updated);
     setEditingTrackOrderId(null);
-    setOpenCarrierDropdownOrderId(null);
     onShowToast(
       trimmed
         ? `Трек-номер ${trimmed} (${TRACKING_CARRIERS.find((c) => c.id === tempCarrierValue)?.name}) сохранен`
@@ -625,12 +602,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       return;
     }
 
-    const dateNow = new Date().toLocaleDateString('ru-RU', {
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const dateNow = historyDateLabel();
 
     if (order.items && order.items.length > 0) {
       const resReturn = returnStockWithLogs(
@@ -1370,7 +1342,6 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                                     setEditingTrackOrderId(ord.id);
                                     setTempTrackValue(ord.trackingNumber || '');
                                     setTempCarrierValue(ord.trackingCompany || 'cdek');
-                                    setOpenCarrierDropdownOrderId(null);
                                   }}
                                   className="text-[11px] text-accent font-bold hover:underline flex items-center gap-1 cursor-pointer neu-button px-2 py-0.5 rounded-lg active:scale-95 transition-all"
                                 >
@@ -1474,7 +1445,6 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                                     type="button"
                                     onClick={() => {
                                       setEditingTrackOrderId(null);
-                                      setOpenCarrierDropdownOrderId(null);
                                     }}
                                     className="px-3.5 py-1.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer active:scale-95 transition-all"
                                   >
@@ -1484,7 +1454,6 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                                     type="button"
                                     onClick={() => {
                                       handleSaveTracking(ord.id);
-                                      setOpenCarrierDropdownOrderId(null);
                                     }}
                                     className="px-4 py-1.5 neu-button-accent rounded-xl text-xs font-black text-white hover:scale-102 active:neu-inset-deep active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
                                   >

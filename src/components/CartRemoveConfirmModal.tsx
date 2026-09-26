@@ -1,7 +1,8 @@
 import React from 'react';
-import { Trash2, Heart, X, AlertCircle } from 'lucide-react';
+import { Trash2, Heart, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CartItem } from '../types';
+import { productImage } from '../utils/productImage';
 
 interface CartRemoveConfirmModalProps {
   isOpen: boolean;
@@ -61,7 +62,7 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
           {/* Item details */}
           <div className="neu-inset rounded-2xl p-2.5 bg-[#E3E8EF] flex items-center gap-3">
             <img
-              src={item.product?.images?.[0] || 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80'}
+              src={productImage(item.product)}
               alt={item.product?.title || ''}
               className="w-12 h-12 rounded-xl object-cover neu-flat shrink-0"
             />

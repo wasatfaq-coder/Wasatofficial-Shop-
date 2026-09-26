@@ -2,7 +2,7 @@
  * Order pricing shared by the storefront (checkout UI) and Cloud Functions
  * (server-side order validation). Keep this module free of browser APIs.
  */
-import type { DeliveryMethod, PromoCode, StorefrontSettings } from '../types';
+import type { CartItem, DeliveryMethod, PromoCode, StorefrontSettings } from '../types';
 
 export const DEFAULT_FREE_DELIVERY_THRESHOLD = 5000;
 
@@ -27,6 +27,16 @@ type DeliverySettings = Pick<
   StorefrontSettings,
   'freeDeliveryThreshold' | 'courierDeliveryPrice' | 'pickupDeliveryPrice' | 'postDeliveryPrice' | 'isExpressEnabled'
 >;
+
+/** A storefront cart line as the pricing sees it */
+export function toPricingLine(item: Pick<CartItem, 'product' | 'quantity'>): PricingLine {
+  return {
+    productId: item.product.id,
+    category: item.product.category,
+    price: item.product.price,
+    quantity: item.quantity,
+  };
+}
 
 export function calcSubtotal(lines: PricingLine[]): number {
   return lines.reduce((acc, line) => acc + line.price * line.quantity, 0);

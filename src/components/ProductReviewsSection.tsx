@@ -1,18 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  Star,
-  ThumbsUp,
-  MessageSquarePlus,
-  CheckCircle2,
-  Filter,
-  User,
-  Sparkles,
-  Plus,
-  X,
-  AlertCircle,
-  ChevronDown,
-  Check,
-} from 'lucide-react';
+import { Star, ThumbsUp, MessageSquarePlus, CheckCircle2, Plus, X, ChevronDown, Check } from 'lucide-react';
 import { Product, ProductReview, StoredReview, UserProfile } from '../types';
 import { getProductRating } from '../utils/productRating';
 import { helpfulCount, reviewDocId } from '../utils/reviews';

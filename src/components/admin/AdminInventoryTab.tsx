@@ -9,23 +9,17 @@ import {
   XCircle,
   Copy,
   Check,
-  RefreshCw,
   Barcode,
   Layers,
-  Sparkles,
-  ArrowUpDown,
   Filter,
   History,
   FileText,
-  SlidersHorizontal,
   X,
   Truck,
   ArrowDownLeft,
   ArrowUpRight,
   ClipboardList,
   ClipboardCheck,
-  ChevronDown,
-  Scale,
   CheckCheck,
   FileSpreadsheet,
   Printer,
@@ -37,14 +31,13 @@ import { copyToClipboard } from '../../utils/clipboard';
 import {
   generateDefaultSKUs,
   updateProductSkuStock,
-  getProductTotalStock,
-  generateSkuCode,
   getStockMovementLogs,
   saveStockMovementLogs,
 } from '../../utils/inventory';
 import { AdminLabelGenerator, type LabelTarget } from './AdminLabelGenerator';
 import { skuKey } from '../../shared/barcode';
 import { downloadCSV } from '../../utils/csvHelpers';
+import { productImage } from '../../utils/productImage';
 
 interface AdminInventoryTabProps {
   products: Product[];
@@ -90,9 +83,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
   const [activeSubTab, setActiveSubTab] = useState<'matrix' | 'audit' | 'movements'>('matrix');
   const [searchQuery, setSearchQuery] = useState('');
   const [stockFilter, setStockFilter] = useState<'all' | 'in_stock' | 'low_stock' | 'out_of_stock'>('all');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [copiedSku, setCopiedSku] = useState<string | null>(null);
-  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
 
   // Critical Low Stock Threshold
   const [lowStockThreshold, setLowStockThreshold] = useState<number>(() => {
@@ -441,7 +432,6 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
         sku.color.toLowerCase().includes(q) ||
         sku.size.toLowerCase().includes(q);
 
-      const matchesCat = categoryFilter === 'all' || product.category === categoryFilter;
 
       let matchesStock = true;
       if (stockFilter === 'in_stock') {
@@ -452,9 +442,9 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
         matchesStock = sku.stock === 0;
       }
 
-      return matchesSearch && matchesCat && matchesStock;
+      return matchesSearch && matchesStock;
     });
-  }, [allProductSKUs, searchQuery, categoryFilter, stockFilter, lowStockThreshold]);
+  }, [allProductSKUs, searchQuery, stockFilter, lowStockThreshold]);
 
   const toggleSkuSelection = (key: string) =>
     setSelectedSkuKeys((prev) => {
@@ -803,8 +793,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                       <div className="w-11 h-13 rounded-xl overflow-hidden neu-inset shrink-0 bg-slate-200">
                         <img
                           src={
-                            product.images?.[0] ||
-                            'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80'
+                            productImage(product)
                           }
                           alt={product.title}
                           className="w-full h-full object-cover"
@@ -1139,8 +1128,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                       <div className="w-11 h-13 rounded-xl overflow-hidden neu-inset shrink-0 bg-slate-200">
                         <img
                           src={
-                            product.images?.[0] ||
-                            'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80'
+                            productImage(product)
                           }
                           alt={product.title}
                           className="w-full h-full object-cover"

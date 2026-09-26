@@ -4,7 +4,6 @@ import {
   X,
   Clock,
   CheckCircle2,
-  AlertCircle,
   Plus,
   Trash2,
   ArrowUp,
@@ -12,13 +11,15 @@ import {
   RotateCcw,
   Save,
   Check,
-  Truck,
   Sparkles,
   MapPin,
-  Calendar,
 } from 'lucide-react';
 import { Order, DeliveryStage } from '../../types';
-import { getDefaultDeliveryStages, getSynchronizedDeliveryStages, formatDeliveryTimestamp, isTransportCompanyDelivery } from '../../utils/deliveryStages';
+import {
+  getSynchronizedDeliveryStages,
+  formatDeliveryTimestamp,
+  isTransportCompanyDelivery,
+} from '../../utils/deliveryStages';
 
 interface AdminDeliveryStagesModalProps {
   isOpen: boolean;

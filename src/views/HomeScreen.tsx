@@ -1,24 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import {
-  ChevronLeft,
-  ChevronRight,
-  SlidersHorizontal,
-  Sparkles,
-  Menu,
-  Phone,
-  MessageCircle,
-  Send,
-  MapPin,
-  Clock,
-  Truck,
-  RotateCcw,
-  AlertCircle,
-  Tag,
-  Gift,
-} from 'lucide-react';
+import { ChevronRight, SlidersHorizontal, Menu, Truck, RotateCcw, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product, ActiveTab, BannerSlide, StorefrontSettings, UserProfile, BodyMeasurements } from '../types';
-import { getStoreContacts, getStoreName } from '../utils/storeContacts';
+import { getStoreContacts } from '../utils/storeContacts';
 import { ProductCard } from '../components/ProductCard';
 import { AutocompleteSearch } from '../components/AutocompleteSearch';
 import { RecentlyViewed } from '../components/RecentlyViewed';
@@ -182,7 +166,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const currentSlide = displaySlides[activeBannerSlide] || displaySlides[0];
 
   // Settings values with defaults
-  const storeName = getStoreName(storefrontSettings);
   const isOnline = storefrontSettings?.isStoreOnline !== false;
   const freeShippingLimit = storefrontSettings?.freeDeliveryThreshold ?? 5000;
   const returnPeriod = storefrontSettings?.returnPeriodDays ?? 14;

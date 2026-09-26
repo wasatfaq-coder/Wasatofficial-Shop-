@@ -1,17 +1,5 @@
 import React from 'react';
-import {
-  X,
-  Printer,
-  FileText,
-  Download,
-  CheckCircle2,
-  Package,
-  Calendar,
-  MapPin,
-  CreditCard,
-  Truck,
-  Barcode,
-} from 'lucide-react';
+import { X, Printer, FileText, CreditCard, Truck } from 'lucide-react';
 import { Order, StorefrontSettings } from '../../types';
 import { currentStoreName, getLegalDetails, getStoreContacts } from '../../utils/storeContacts';
 import { copyToClipboard } from '../../utils/clipboard';

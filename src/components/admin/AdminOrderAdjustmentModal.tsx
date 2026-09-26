@@ -9,19 +9,16 @@ import {
   Check,
   RefreshCw,
   CreditCard,
-  ArrowRight,
   Sparkles,
-  Info,
-  ShieldCheck,
   UserCheck,
   Truck,
-  Copy,
 } from 'lucide-react';
 import { Order, CartItem, Product, OrderAdjustmentLog } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { deductStockWithLogs, returnStockWithLogs, extractColorName, extractSizeName } from '../../utils/inventory';
 import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
+import { productImage } from '../../utils/productImage';
 
 interface AdminOrderAdjustmentModalProps {
   order: Order | null;
@@ -163,7 +160,6 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
       year: 'numeric',
     })} в ${now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
 
-    const removedOrChangedCount = order.items.length - items.length;
     const summaryText = isRefund
       ? `Частичный возврат: ${delta.toLocaleString('ru-RU')} ₽ (состав изменен: ${items.length} позиций)`
       : isExtraCharge
@@ -502,7 +498,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <img
-                          src={item.product.images?.[0] || 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=200'}
+                          src={productImage(item.product)}
                           alt={item.product.title}
                           className="w-12 h-12 rounded-xl object-cover shrink-0 neu-inset"
                         />

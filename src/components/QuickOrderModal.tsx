@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Phone, User, MapPin, ShieldCheck, ShoppingBag, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CartItem, Product } from '../types';
+import { productImage } from '../utils/productImage';
 
 interface QuickOrderModalProps {
   isOpen: boolean;
@@ -14,6 +15,8 @@ interface QuickOrderModalProps {
     quantity: number;
   } | null;
   totalPrice: number;
+  /** A promo is applied in the cart: it does not work for a 1-click order */
+  promoNotApplied?: boolean;
   onSuccess: (details: { name: string; phone: string; address: string }) => void;
 }
 
@@ -23,6 +26,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
   cartItems = [],
   singleProduct,
   totalPrice,
+  promoNotApplied = false,
   onSuccess,
 }) => {
   const [name, setName] = useState('');
@@ -98,7 +102,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
     ? [
         {
           title: singleProduct.product?.title || '',
-          image: singleProduct.product?.images?.[0] || 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80',
+          image: productImage(singleProduct.product),
           variant: `${singleProduct.color} • ${singleProduct.size}`,
           qty: singleProduct.quantity,
           price: (singleProduct.product?.price || 0) * singleProduct.quantity,
@@ -106,7 +110,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
       ]
     : cartItems.map((item) => ({
         title: item.product?.title || '',
-        image: item.product?.images?.[0] || 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80',
+        image: productImage(item.product),
         variant: `${item.selectedColor} • ${item.selectedSize}`,
         qty: item.quantity,
         price: (item.product?.price || 0) * item.quantity,
@@ -185,6 +189,11 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                 {totalPrice.toLocaleString('ru-RU')} ₽
               </span>
             </div>
+            {promoNotApplied && (
+              <p className="text-[11px] font-semibold text-[#4E5C70] px-1">
+                Промокод действует только при полном оформлении заказа
+              </p>
+            )}
 
             {/* Error Banner */}
             {errors.general && (

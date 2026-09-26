@@ -1,5 +1,5 @@
 import { Product, Order } from '../types';
-import { extractColorName, extractSizeName, getProductTotalStock } from './inventory';
+import { extractColorName, getProductTotalStock } from './inventory';
 import { ORDER_STATUS_LABELS } from './deliveryStages';
 
 /**

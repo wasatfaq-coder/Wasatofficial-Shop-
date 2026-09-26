@@ -9,14 +9,9 @@ import {
   TrendingUp,
   User,
   Phone,
-  CheckCircle,
-  Clock,
-  Truck,
-  AlertTriangle,
   ChevronRight,
   ChevronLeft,
   Flame,
-  CreditCard,
   Hash,
 } from 'lucide-react';
 import { DailyDataPoint } from '../../utils/analyticsEngine';

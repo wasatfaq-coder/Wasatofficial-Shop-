@@ -1,4 +1,3 @@
-import jsPDF from 'jspdf';
 import type { LabelFormat } from '../types';
 import { encodeBarcode, type EncodedBarcode } from '../shared/barcode';
 
@@ -481,7 +480,8 @@ export async function downloadLabelsPdf(
   labels: LabelData[],
   options: LabelOptions
 ): Promise<string> {
-  await loadLabelFonts();
+  // jspdf is loaded on demand (as for the analytics report), not with the main bundle
+  const [{ default: jsPDF }] = await Promise.all([import('jspdf'), loadLabelFonts()]);
   const measure = canvasMeasure();
   const orientation = format.widthMm >= format.heightMm ? 'landscape' : 'portrait';
   const pdf = new jsPDF({ unit: 'mm', format: [format.widthMm, format.heightMm], orientation, compress: true });
