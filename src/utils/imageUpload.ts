@@ -6,7 +6,7 @@
 
 const MAX_FIRESTORE_IMAGE_BYTES = 400 * 1024; // 400KB safe ceiling (well below 1MB document limit)
 
-export async function compressImageFile(
+async function compressImageFile(
   file: File,
   maxWidth = 1000,
   maxHeight = 1000,

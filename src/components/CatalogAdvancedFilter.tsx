@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product } from '../types';
+import { isProductInStock } from '../utils/inventory';
+import { productRatingValue } from '../utils/productRating';
 
 export interface FilterState {
   minPrice: number;
@@ -24,6 +26,37 @@ export interface FilterState {
   minRating: number;
 }
 
+/** No upper price bound: products of any price are shown */
+export const NO_MAX_PRICE = Number.POSITIVE_INFINITY;
+
+export const DEFAULT_FILTER_STATE: FilterState = {
+  minPrice: 0,
+  maxPrice: NO_MAX_PRICE,
+  selectedSizes: [],
+  selectedMaterials: [],
+  onlyInStock: false,
+  onlyNew: false,
+  onlyDiscount: false,
+  minRating: 0,
+};
+
+export const hasPriceFilter = (f: FilterState) => f.minPrice > 0 || Number.isFinite(f.maxPrice);
+
+/** Catalog filters (without the search text); the catalog list and the «Показать N товаров» counter use the same check */
+export function matchesCatalogFilters(p: Product, category: string, f: FilterState): boolean {
+  return (
+    (category === 'all' || p.category === category) &&
+    p.price >= f.minPrice &&
+    p.price <= f.maxPrice &&
+    matchesMaterialFilter(p.material, f.selectedMaterials) &&
+    (f.selectedSizes.length === 0 || f.selectedSizes.some((sz) => isProductAvailableInSize(p, sz))) &&
+    (!f.onlyInStock || isProductInStock(p)) &&
+    (!f.onlyNew || Boolean(p.isNew)) &&
+    (!f.onlyDiscount || Boolean(p.originalPrice && p.originalPrice > p.price)) &&
+    productRatingValue(p) >= f.minRating
+  );
+}
+
 export const MATERIAL_CATEGORIES = [
   { id: 'cotton', name: 'Хлопок / Пике', keywords: ['хлопок', 'cotton', 'пике'] },
   { id: 'linen', name: 'Лен', keywords: ['лён', 'лен', 'linen'] },
@@ -32,7 +65,7 @@ export const MATERIAL_CATEGORIES = [
   { id: 'blend', name: 'Смесовые ткани', keywords: ['полиэстер', 'вискоза', 'смесов', 'polyester'] },
 ];
 
-export const matchesMaterialFilter = (productMaterial: string, selectedMaterialIds: string[]): boolean => {
+const matchesMaterialFilter = (productMaterial: string, selectedMaterialIds: string[]): boolean => {
   if (selectedMaterialIds.length === 0) return true;
   const matLower = (productMaterial || '').toLowerCase();
   return selectedMaterialIds.some((matId) => {
@@ -44,7 +77,7 @@ export const matchesMaterialFilter = (productMaterial: string, selectedMaterialI
   });
 };
 
-export const isProductAvailableInSize = (product: Product, size: string): boolean => {
+const isProductAvailableInSize = (product: Product, size: string): boolean => {
   if (product.inStock === false) return false;
   if (!product.sizes.includes(size)) return false;
   if (product.skus && product.skus.length > 0) {
@@ -52,14 +85,6 @@ export const isProductAvailableInSize = (product: Product, size: string): boolea
     if (matchingSkus.length > 0) {
       return matchingSkus.some((sku) => sku.stock > 0);
     }
-  }
-  return true;
-};
-
-export const isProductInStock = (product: Product): boolean => {
-  if (product.inStock === false) return false;
-  if (product.skus && product.skus.length > 0) {
-    return product.skus.some((sku) => sku.stock > 0);
   }
   return true;
 };
@@ -153,11 +178,11 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
   };
 
   const pricePresets = [
-    { label: 'Все', min: minPossiblePrice, max: maxPossiblePrice },
+    { label: 'Все', min: 0, max: NO_MAX_PRICE },
     { label: 'До 3 000 ₽', min: minPossiblePrice, max: 3000 },
     { label: '3 000 – 7 000 ₽', min: 3000, max: 7000 },
     { label: '7 000 – 15 000 ₽', min: 7000, max: 15000 },
-    { label: 'От 15 000 ₽', min: 15000, max: maxPossiblePrice },
+    { label: 'От 15 000 ₽', min: 15000, max: NO_MAX_PRICE },
   ];
 
   const renderFilterContent = () => (
@@ -225,7 +250,8 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
             <span>Ценовой диапазон</span>
           </div>
           <span className="text-xs font-black text-accent neu-inset-deep px-2.5 py-0.5 rounded-lg bg-[#E3E8EF] border border-accent/40">
-            {filterState.minPrice.toLocaleString('ru-RU')} ₽ — {filterState.maxPrice.toLocaleString('ru-RU')} ₽
+            {filterState.minPrice.toLocaleString('ru-RU')} ₽ —{' '}
+            {Number.isFinite(filterState.maxPrice) ? `${filterState.maxPrice.toLocaleString('ru-RU')} ₽` : 'без ограничения'}
           </span>
         </div>
 
@@ -236,12 +262,14 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
             min={minPossiblePrice}
             max={maxPossiblePrice}
             step="500"
-            value={filterState.maxPrice}
+            value={Math.min(filterState.maxPrice, maxPossiblePrice)}
+            aria-label="Максимальная цена"
             onChange={(e) => {
               const val = Number(e.target.value);
               onChangeFilterState((prev) => ({
                 ...prev,
-                maxPrice: Math.max(val, prev.minPrice),
+                // the slider's end means «any price», so new pricier products are not hidden
+                maxPrice: val >= maxPossiblePrice ? NO_MAX_PRICE : Math.max(val, prev.minPrice),
               }));
             }}
             className="neu-range py-1 w-full"

@@ -302,14 +302,6 @@ export interface Order {
 
 export type ActiveTab = 'home' | 'catalog' | 'cart' | 'favorites' | 'profile' | 'product-detail' | 'checkout' | 'order-success';
 
-export interface FilterState {
-  category: string;
-  minPrice: number;
-  maxPrice: number;
-  sortBy: 'popular' | 'price-asc' | 'price-desc' | 'newest';
-  searchQuery: string;
-}
-
 export interface PromoCode {
   id: string;
   code: string;

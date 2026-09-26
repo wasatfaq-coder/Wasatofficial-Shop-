@@ -101,7 +101,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
 }) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [selectedColor, setSelectedColor] = useState(product?.colors?.[0]?.name || 'Бежевый');
+  const [selectedColor, setSelectedColor] = useState(product?.colors?.[0]?.name || '');
   const [selectedSize, setSelectedSize] = useState(product?.sizes?.[0] || 'M');
   const [quantity, setQuantity] = useState(1);
   const [openAccordion, setOpenAccordion] = useState<'shipping' | 'returns' | 'fabric' | null>('fabric');
@@ -114,7 +114,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   // Reset product state when a new product is loaded
   useEffect(() => {
     setSelectedImageIndex(0);
-    setSelectedColor(product?.colors?.[0]?.name || 'Бежевый');
+    setSelectedColor(product?.colors?.[0]?.name || '');
     setSelectedSize(product?.sizes?.[0] || 'M');
     setQuantity(1);
   }, [product?.id]);

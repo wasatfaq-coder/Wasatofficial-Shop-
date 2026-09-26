@@ -5,7 +5,7 @@ import type { ChatMessage } from '../types';
 import { ModalPortal } from './ModalPortal';
 
 /** Short text of a message for previews: its text, or what is attached */
-export function chatMessagePreview(msg: ChatMessage): string {
+function chatMessagePreview(msg: ChatMessage): string {
   const text = msg.text?.trim();
   if (text) return text.length > 140 ? `${text.slice(0, 140)}…` : text;
   if (msg.promoCard) return `Промокод ${msg.promoCard.code}`;

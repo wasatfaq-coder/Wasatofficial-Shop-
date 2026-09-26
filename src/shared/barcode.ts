@@ -75,7 +75,7 @@ const CODE128_START_B = 104;
 const CODE128_STOP = 106;
 
 /** Code128 set B can print ASCII 32–126 */
-export function canEncodeCode128(text: string): boolean {
+function canEncodeCode128(text: string): boolean {
   return text.length > 0 && [...text].every((ch) => ch.charCodeAt(0) >= 32 && ch.charCodeAt(0) <= 126);
 }
 

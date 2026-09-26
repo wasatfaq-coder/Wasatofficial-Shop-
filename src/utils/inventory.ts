@@ -180,7 +180,7 @@ export function getProductSKU(
  * Get available stock count for given product, color, and size
  */
 /** Most units of one out-of-stock variant a customer can preorder at once */
-export const PREORDER_MAX_QTY = 10;
+const PREORDER_MAX_QTY = 10;
 
 /**
  * Units a customer can put in the cart: the stock, or — with «Предзаказ» on in Admin → «Витрина»
@@ -192,9 +192,19 @@ export function getOrderableStock(
   sizeName: unknown,
   preorderMode: boolean
 ): number {
+  // «Снят с витрины» in the product form: not for sale even with stock left
+  if (isHiddenFromSale(product)) return 0;
   const stock = getVariantStock(product, colorName, sizeName);
   if (stock > 0) return stock;
   return preorderMode ? PREORDER_MAX_QTY : 0;
+}
+
+/**
+ * inStock is both the admin's «В продаже / Снят с витрины» switch and the «sold out» flag set when stock
+ * runs out. With stock still left, false can only mean the admin took the product off sale.
+ */
+export function isHiddenFromSale(product: Pick<Product, 'inStock' | 'skus'>): boolean {
+  return product.inStock === false && (product.skus ?? []).some((s) => s.stock > 0);
 }
 
 /** A sold-out variant that can be ordered only as a preorder */
@@ -227,13 +237,11 @@ export function getProductTotalStock(product: Product): number {
 }
 
 /**
- * Check if product is in stock (any size/color available)
+ * On sale and some size/color available (the storefront's «Только в наличии»)
  */
 export function isProductInStock(product: Product): boolean {
-  if (!product) return false;
-  if (!product.skus || product.skus.length === 0) {
-    return product.inStock !== false;
-  }
+  if (!product || product.inStock === false) return false;
+  if (!product.skus || product.skus.length === 0) return true;
   return getProductTotalStock(product) > 0;
 }
 
@@ -343,17 +351,20 @@ function applyStockChangeWithLogs(
     const currentSkus = prod.skus && prod.skus.length > 0 ? prod.skus : generateDefaultSKUs(prod);
 
     const updatedSkus = currentSkus.map((sku) => {
-      const matched = relevantItems.find(
-        (it) =>
-          extractColorName(it.selectedColor).trim().toLowerCase() === extractColorName(sku.color).trim().toLowerCase() &&
-          extractSizeName(it.selectedSize).trim().toLowerCase() === extractSizeName(sku.size).trim().toLowerCase()
-      );
+      // Several cart lines of the same variant add up
+      const matchedQuantity = relevantItems
+        .filter(
+          (it) =>
+            extractColorName(it.selectedColor).trim().toLowerCase() === extractColorName(sku.color).trim().toLowerCase() &&
+            extractSizeName(it.selectedSize).trim().toLowerCase() === extractSizeName(sku.size).trim().toLowerCase()
+        )
+        .reduce((sum, it) => sum + it.quantity, 0);
 
-      if (matched) {
+      if (matchedQuantity > 0) {
         const oldStock = sku.stock;
         const newStock = mode === 'deduct'
-          ? Math.max(0, sku.stock - matched.quantity)
-          : oldStock + matched.quantity;
+          ? Math.max(0, sku.stock - matchedQuantity)
+          : oldStock + matchedQuantity;
         const diff = newStock - oldStock;
 
         generatedLogs.push({

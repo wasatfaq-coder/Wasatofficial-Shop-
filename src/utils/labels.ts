@@ -134,7 +134,7 @@ const FONT = "'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, sans-seri
 const MONO = "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace";
 const fontCss = (sizePx: number, weight: Weight, mono?: boolean) => `${weight} ${sizePx}px ${mono ? MONO : FONT}`;
 
-export const formatLabelPrice = (value: number) => `${Math.round(value).toLocaleString('ru-RU')} ₽`;
+const formatLabelPrice = (value: number) => `${Math.round(value).toLocaleString('ru-RU')} ₽`;
 
 /** Cuts a text with «…» to fit the width */
 function fit(text: string, maxWidth: number, size: number, weight: Weight, measure: MeasureText, mono?: boolean) {

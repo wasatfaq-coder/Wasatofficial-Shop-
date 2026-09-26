@@ -845,40 +845,65 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     }
 
     try {
-      const parsed = parseProductsFromCSV(csvInputText);
+      const { products: parsed, skipped } = parseProductsFromCSV(csvInputText);
       if (parsed.length === 0) {
-        onShowToast('Не удалось распознать строки CSV', 'error');
+        onShowToast(
+          skipped > 0
+            ? `Нет подходящих строк: у каждого товара нужны название, цена и ссылка на фото (пропущено ${skipped})`
+            : 'Не удалось распознать строки CSV',
+          'error'
+        );
         return;
       }
 
-      const newProducts: Product[] = parsed.map((p, idx) => {
-        const prodId = p.id || `prod-imp-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 7)}`;
-        const colors = p.colors && p.colors.length > 0 ? p.colors : [{ name: 'Бежевый', hex: '#D4C3B3' }];
-        const sizes = p.sizes && p.sizes.length > 0 ? p.sizes : ['S', 'M', 'L', 'XL'];
+      // A row with the ID of an existing product updates it (a re-imported export does not duplicate the catalog)
+      const byId = new Map<string, Product>(products.map((p): [string, Product] => [p.id, p]));
+      let updatedCount = 0;
+      const newProducts: Product[] = [];
+      for (const [idx, p] of parsed.entries()) {
+        const existing = p.id ? byId.get(p.id) : undefined;
+        if (existing) {
+          byId.set(existing.id, {
+            ...existing,
+            ...p,
+            id: existing.id,
+            categoryLabel: categories.find((c) => c.id === p.category)?.name || existing.categoryLabel,
+          });
+          updatedCount++;
+          continue;
+        }
         const fullProd: Product = {
-          id: prodId,
-          title: p.title || 'Новый товар',
-          category: p.category || categories[0]?.id || '',
-          categoryLabel:
-            p.categoryLabel || categories.find((c) => c.id === p.category)?.name || p.category || '',
-          price: p.price || 2990,
+          id: p.id || `prod-imp-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 7)}`,
+          title: p.title!,
+          category: p.category || '',
+          categoryLabel: categories.find((c) => c.id === p.category)?.name || p.category || '',
+          price: p.price!,
           originalPrice: p.originalPrice,
           inStock: p.inStock !== false,
           description: p.description || '',
-          material: p.material || '',
-          images: p.images && p.images.length > 0 ? p.images : ['https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80'],
-          sizes,
-          colors,
+          material: '',
+          images: p.images || [],
+          sizes: p.sizes || [],
+          colors: p.colors || [],
           skus: [],
           rating: 0,
           reviewsCount: 0,
         };
         fullProd.skus = generateDefaultSKUs(fullProd);
-        return fullProd;
-      });
+        newProducts.push(fullProd);
+      }
 
-      onUpdateProducts([...newProducts, ...products]);
-      onShowToast(`Успешно импортировано товаров: ${newProducts.length}`, 'success');
+      onUpdateProducts([...newProducts, ...products.map((p) => byId.get(p.id) ?? p)]);
+      onShowToast(
+        [
+          `Добавлено: ${newProducts.length}`,
+          updatedCount ? `обновлено: ${updatedCount}` : '',
+          skipped ? `пропущено без названия, цены или фото: ${skipped}` : '',
+        ]
+          .filter(Boolean)
+          .join(', '),
+        'success'
+      );
       setIsCSVImportModalOpen(false);
       setCsvInputText('');
     } catch (err) {

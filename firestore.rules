@@ -156,6 +156,8 @@ service cloud.firestore {
       allow create: if isAdmin() || (
         !serverOrdersEnabled()
         && isValidId(orderId)
+        // номер заказа показывается в админке и отчетах: только буквы, цифры и дефис
+        && orderId.matches('^[A-Za-z0-9-]{1,40}$')
         && request.resource.data.id == orderId
         && request.resource.data.status == 'accepted'
         && request.resource.data.items is list
@@ -191,6 +193,9 @@ service cloud.firestore {
       allow create: if isAdmin() || (
         isSignedIn()
         && isValidId(messageId)
+        // только поля обычного сообщения: без карточек промокода/заказа и без пометок «скрыто»
+        && request.resource.data.keys().hasOnly(['id', 'sender', 'text', 'imageUrl', 'fileName', 'timestamp',
+            'threadId', 'threadName', 'isInternalNote', 'sentAt'])
         && request.resource.data.get('threadId', null) == request.auth.uid
         && request.resource.data.sender == 'user'
         && request.resource.data.get('isInternalNote', false) == false

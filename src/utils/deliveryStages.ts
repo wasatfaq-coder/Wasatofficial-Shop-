@@ -131,29 +131,9 @@ export function isTransportCompanyDelivery(
     dm.includes(' тк') ||
     dm.startsWith('тк ');
 
-  if (hasTKCompany) return true;
-
-  // Courier, pickup, express or quick orders are strictly non-TK
-  const isNonTK =
-    dm.includes('курьер') ||
-    dm.includes('courier') ||
-    dm.includes('самовывоз') ||
-    dm.includes('пункт выдачи') ||
-    dm.includes('pickup') ||
-    dm.includes('бутик') ||
-    dm.includes('шоурум') ||
-    dm.includes('экспресс') ||
-    dm.includes('express') ||
-    dm.includes('срочн') ||
-    dm.includes('1 клик') ||
-    dm.includes('быстрый заказ');
-
-  if (isNonTK) return false;
-
-  return false;
+  // courier, pickup, express and quick orders have no carrier tracking number
+  return hasTKCompany;
 }
-
-export const supportsTrackingNumber = isTransportCompanyDelivery;
 
 /**
  * Formats a date into a clean Russian timestamp like "21 сент., 17:30"

@@ -33,7 +33,7 @@ const DEMO_VALUES = new Set(
 export const STORE_NAME_DEFAULT = 'Wasat Shop';
 
 /** The template's brand. It is still stored in Firestore until the owner runs the rename in Admin → «Витрина». */
-export const LEGACY_BRAND_PATTERN = /MANSTYLE|ManStyle|Manstyle/g;
+const LEGACY_BRAND_PATTERN = /MANSTYLE|ManStyle|Manstyle/g;
 
 /** Store name to show: the saved one, unless it is unset or the template brand. */
 export function getStoreName(settings?: Partial<StorefrontSettings> | null): string {

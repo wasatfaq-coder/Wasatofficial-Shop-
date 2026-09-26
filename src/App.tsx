@@ -16,8 +16,8 @@ import { BrandRequisitesModal } from './components/BrandRequisitesModal';
 import {
   CatalogAdvancedFilter,
   FilterState,
-  matchesMaterialFilter,
-  isProductAvailableInSize,
+  DEFAULT_FILTER_STATE,
+  matchesCatalogFilters,
 } from './components/CatalogAdvancedFilter';
 import {
   deductStockWithLogs,
@@ -84,7 +84,6 @@ import { validatePromo, PricingLine, QUICK_ORDER_DELIVERY_ID } from './shared/or
 import { extractColorName, extractSizeName } from './utils/inventory';
 import { getStoreContacts, getStoreName, publicSetting, withStoreName, withStoreNameFields } from './utils/storeContacts';
 import { formatDays } from './utils/pluralize';
-import { productRatingValue } from './utils/productRating';
 import { getCategories } from './utils/categories';
 
 // Unique across customers: messages are create-only for customers (see firestore.rules)
@@ -322,16 +321,7 @@ export default function App() {
   const [isMySizesModalOpen, setIsMySizesModalOpen] = useState(false);
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
-  const [catalogFilterState, setCatalogFilterState] = useState<FilterState>({
-    minPrice: 0,
-    maxPrice: 35000,
-    selectedSizes: [],
-    selectedMaterials: [],
-    onlyInStock: false,
-    onlyNew: false,
-    onlyDiscount: false,
-    minRating: 0,
-  });
+  const [catalogFilterState, setCatalogFilterState] = useState<FilterState>(DEFAULT_FILTER_STATE);
   const [openCatalogFiltersImmediately, setOpenCatalogFiltersImmediately] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [appliedPromo, setAppliedPromo] = useState<AppliedPromoInfo | null>(null);
@@ -376,43 +366,12 @@ export default function App() {
 
   // Global Filter Match Counter for modal
   const filteredProductsCount = React.useMemo(() => {
-    return products.filter((p) => {
-      const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
-      const matchesPrice = p.price >= catalogFilterState.minPrice && p.price <= catalogFilterState.maxPrice;
-      const matchesMaterial = matchesMaterialFilter(p.material, catalogFilterState.selectedMaterials);
-      const matchesSize =
-        catalogFilterState.selectedSizes.length === 0 ||
-        catalogFilterState.selectedSizes.some((sz) => isProductAvailableInSize(p, sz));
-      const matchesInStock = !catalogFilterState.onlyInStock || isProductInStock(p);
-      const matchesNew = !catalogFilterState.onlyNew || p.isNew;
-      const matchesDiscount = !catalogFilterState.onlyDiscount || (p.originalPrice && p.originalPrice > p.price);
-      const matchesRating = productRatingValue(p) >= catalogFilterState.minRating;
-
-      return (
-        matchesCategory &&
-        matchesPrice &&
-        matchesMaterial &&
-        matchesSize &&
-        matchesInStock &&
-        matchesNew &&
-        matchesDiscount &&
-        matchesRating
-      );
-    }).length;
+    return products.filter((p) => matchesCatalogFilters(p, selectedCategory, catalogFilterState)).length;
   }, [products, selectedCategory, catalogFilterState]);
 
   const handleResetCatalogFilters = () => {
     setSelectedCategory('all');
-    setCatalogFilterState({
-      minPrice: 0,
-      maxPrice: 35000,
-      selectedSizes: [],
-      selectedMaterials: [],
-      onlyInStock: false,
-      onlyNew: false,
-      onlyDiscount: false,
-      minRating: 0,
-    });
+    setCatalogFilterState(DEFAULT_FILTER_STATE);
   };
 
   const { currentUser, isAdmin, loading: authLoading } = useAuth();
@@ -650,13 +609,13 @@ export default function App() {
   ) => {
     const notif = getOrderStatusNotification(order, oldStatus, newStatus);
 
-    // 1. Play auditory chime
-    playNotificationChime();
-
-    // 2. Trigger browser native notification if permitted
-    sendBrowserNotification(notif.title, {
-      body: `${notif.subtitle}\n${notif.text}`,
-    });
+    // Sound and a system notification only when the customer left notifications on in the profile
+    if (userProfile.notificationsEnabled !== false) {
+      playNotificationChime();
+      sendBrowserNotification(notif.title, {
+        body: `${notif.subtitle}\n${notif.text}`,
+      });
+    }
 
     // 3. Trigger In-App Rich Push Toast
     const id = Math.random().toString(36).substring(2, 9);
@@ -715,7 +674,9 @@ export default function App() {
         const cancelChanged = !prev.isCancelled && Boolean(currentOrder.isCancelled);
         const trackingChanged = !prev.trackingNumber && Boolean(currentOrder.trackingNumber);
 
-        if (statusChanged || cancelChanged || trackingChanged) {
+        // An admin loads every customer's orders: «ваш заказ» is only about their own
+        const isOwnOrder = !isAdmin || currentOrder.customerUid === currentUser?.uid;
+        if (isOwnOrder && (statusChanged || cancelChanged || trackingChanged)) {
           triggerOrderStatusPushNotification(currentOrder, prev.status, currentOrder.status);
         }
       }
@@ -754,8 +715,9 @@ export default function App() {
   // Add to Cart from Product Card quick plus button
   const handleAddToCartQuick = (product: Product, e: React.MouseEvent) => {
     e.stopPropagation();
-    const defaultColor = product.colors?.[0]?.name || 'Бежевый';
-    const defaultSize = product.sizes?.[0] || 'M';
+    // no invented colour or size: without them the customer picks a variant in the product card
+    const defaultColor = product.colors?.[0]?.name || '';
+    const defaultSize = product.sizes?.[0] || '';
     const maxAllowed = getOrderableStock(product, defaultColor, defaultSize, preorderMode);
 
     if (maxAllowed <= 0) {

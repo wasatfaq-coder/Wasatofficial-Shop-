@@ -40,7 +40,6 @@ import {
 import { BrandRequisitesModal } from '../BrandRequisitesModal';
 import { QuickTextEditModal, QuickEditFieldConfig } from './QuickTextEditModal';
 
-export { DEFAULT_STOREFRONT_SETTINGS };
 
 interface AdminStorefrontTabProps {
   settings?: StorefrontSettings;
