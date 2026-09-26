@@ -54,6 +54,13 @@ import { AdminBulkOperationsModal } from './AdminBulkOperationsModal';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { TextEditModal } from './TextEditModal';
 import { NotConfigured } from '../NotConfigured';
+import {
+  AdminProductCardStructure,
+  EMPTY_CARD_STRUCTURE,
+  ProductCardStructure,
+  cardStructureFromProduct,
+  cardStructureToProduct,
+} from './AdminProductCardStructure';
 import { categoryIcon } from '../../utils/categories';
 import type { StoreCategory } from '../../types';
 
@@ -121,14 +128,12 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     }
     return options;
   }, [categories, formCategory, editingProduct]);
-  const [formPrice, setFormPrice] = useState<number>(2990);
-  const [formCostPrice, setFormCostPrice] = useState<number | undefined>(1400);
-  const [formOldPrice, setFormOldPrice] = useState<number | undefined>(3490);
+  const [formPrice, setFormPrice] = useState<number>(0);
+  const [formCostPrice, setFormCostPrice] = useState<number | undefined>(undefined);
+  const [formOldPrice, setFormOldPrice] = useState<number | undefined>(undefined);
   const [formBadge, setFormBadge] = useState<string>('');
   const [formInStock, setFormInStock] = useState<boolean>(true);
-  const [formImages, setFormImages] = useState<string[]>([
-    'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80',
-  ]);
+  const [formImages, setFormImages] = useState<string[]>([]);
   const [newImageUrlInput, setNewImageUrlInput] = useState('');
   const galleryFileInputRef = useRef<HTMLInputElement | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -143,13 +148,20 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     value: string;
   } | null>(null);
   const [formDescription, setFormDescription] = useState('');
-  const [formMaterial, setFormMaterial] = useState('100% натуральный лен');
-  const [formSizes, setFormSizes] = useState<string[]>(['S', 'M', 'L', 'XL']);
-  const [formColors, setFormColors] = useState<{ name: string; hex: string }[]>([
-    { name: 'Бежевый', hex: '#D4C3B3' },
-    { name: 'Темно-синий', hex: '#1E293B' },
-  ]);
+  const [formMaterial, setFormMaterial] = useState('');
+  const [formSizes, setFormSizes] = useState<string[]>([]);
+  const [formColors, setFormColors] = useState<{ name: string; hex: string }[]>([]);
   const [formSkus, setFormSkus] = useState<ProductSKU[]>([]);
+  // Card sections (description highlights, composition, characteristics, care)
+  const [formCard, setFormCard] = useState<ProductCardStructure>(EMPTY_CARD_STRUCTURE);
+  // Removal waiting for confirmation (photo, color, size, stock reset), as in the cart
+  const [pendingRemoval, setPendingRemoval] = useState<{
+    title: string;
+    message: string;
+    preview?: React.ReactNode;
+    confirmLabel?: string;
+    run: () => void;
+  } | null>(null);
   const [customSizeInput, setCustomSizeInput] = useState('');
   const [customColorName, setCustomColorName] = useState('');
   const [customColorHex, setCustomColorHex] = useState('#2D3A4E');
@@ -360,38 +372,23 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
   // Open Form
   const handleOpenAddProduct = () => {
+    // A new product starts empty: no made-up price, photo, texts, colors, sizes or stock
     setEditingProduct(null);
     setFormTitle('');
     setFormCategory(categories[0]?.id ?? '');
-    setFormPrice(2990);
-    setFormCostPrice(1450);
-    setFormOldPrice(3490);
-    setFormBadge('NEW');
+    setFormPrice(0);
+    setFormCostPrice(undefined);
+    setFormOldPrice(undefined);
+    setFormBadge('');
     setFormInStock(true);
-    setFormImages([
-      'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80',
-    ]);
+    setFormImages([]);
     setNewImageUrlInput('');
-    setFormDescription('Стильная мужская одежда из премиальных материалов.');
-    setFormMaterial('100% натуральный лен');
-    const initialSizes = ['S', 'M', 'L', 'XL'];
-    const initialColors = [
-      { name: 'Бежевый', hex: '#D4C3B3' },
-      { name: 'Темно-синий', hex: '#1E293B' },
-    ];
-    setFormSizes(initialSizes);
-    setFormColors(initialColors);
-    const mock = {
-      id: `prod-${Date.now()}`,
-      title: 'Новый товар',
-      category: categories[0]?.id ?? '',
-      price: 2990,
-      images: ['https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80'],
-      colors: initialColors,
-      sizes: initialSizes,
-      inStock: true,
-    };
-    setFormSkus(generateDefaultSKUs(mock));
+    setFormDescription('');
+    setFormMaterial('');
+    setFormSizes([]);
+    setFormColors([]);
+    setFormSkus([]);
+    setFormCard(EMPTY_CARD_STRUCTURE);
     setIsProductFormOpen(true);
   };
 
@@ -400,21 +397,21 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     setFormTitle(prod.title);
     setFormCategory(prod.category || categories[0]?.id || '');
     setFormPrice(prod.price);
-    setFormCostPrice(prod.costPrice || Math.round(prod.price * 0.48));
+    setFormCostPrice(prod.costPrice);
     setFormOldPrice(prod.originalPrice);
     setFormBadge(prod.badge || '');
     setFormInStock(prod.inStock !== false);
-    setFormImages(
-      prod.images && prod.images.length > 0
-        ? [...prod.images]
-        : ['https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80']
-    );
+    setFormImages([...(prod.images ?? [])]);
     setNewImageUrlInput('');
     setFormDescription(prod.description || '');
-    setFormMaterial(prod.material || '100% хлопок');
-    setFormSizes(prod.sizes || ['S', 'M', 'L', 'XL']);
-    setFormColors(prod.colors || [{ name: 'Бежевый', hex: '#D4C3B3' }]);
-    setFormSkus(prod.skus && prod.skus.length > 0 ? prod.skus : generateDefaultSKUs(prod));
+    setFormMaterial(prod.material || '');
+    setFormSizes([...(prod.sizes ?? [])]);
+    setFormColors([...(prod.colors ?? [])]);
+    // Without saved variants the stock is unknown: variants start at 0 for the admin to fill in
+    setFormSkus(
+      prod.skus && prod.skus.length > 0 ? prod.skus : generateDefaultSKUs(prod).map((sku) => ({ ...sku, stock: 0 }))
+    );
+    setFormCard(cardStructureFromProduct(prod));
     setIsProductFormOpen(true);
   };
 
@@ -441,16 +438,19 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       return;
     }
 
+    if (formImages.length === 0) {
+      onShowToast('Добавьте хотя бы одно фото товара', 'error');
+      return;
+    }
+
     // A category missing from Admin → «Категории» keeps the product's current name
     const catObj = CATEGORY_OPTIONS.find((c) => c.id === formCategory);
     const catLabel =
       catObj?.name ||
       (editingProduct?.category === formCategory ? editingProduct.categoryLabel : undefined) ||
       formCategory;
-    const finalImages =
-      formImages.length > 0
-        ? formImages
-        : ['https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80'];
+    const finalImages = formImages;
+    const cardFields = cardStructureToProduct(formCard);
 
     if (editingProduct) {
       const updated: Product = {
@@ -458,7 +458,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         title: formTitle.trim(),
         category: formCategory,
         categoryLabel: catLabel,
-        price: Number(formPrice) || 2990,
+        price: numPrice,
         costPrice: formCostPrice ? Number(formCostPrice) : undefined,
         originalPrice: formOldPrice ? Number(formOldPrice) : undefined,
         badge: formBadge.trim() || undefined,
@@ -469,6 +469,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         colors: formColors,
         skus: formSkus,
         inStock: formInStock && (formSkus.length === 0 || formSkus.some((s) => s.stock > 0)),
+        ...cardFields,
       };
 
       onUpdateProducts(products.map((p) => (p.id === editingProduct.id ? updated : p)));
@@ -479,7 +480,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         title: formTitle.trim(),
         category: formCategory,
         categoryLabel: catLabel,
-        price: Number(formPrice) || 2990,
+        price: numPrice,
         costPrice: formCostPrice ? Number(formCostPrice) : undefined,
         originalPrice: formOldPrice ? Number(formOldPrice) : undefined,
         badge: formBadge.trim() || undefined,
@@ -490,6 +491,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         colors: formColors,
         skus: formSkus,
         inStock: formInStock && (formSkus.length === 0 || formSkus.some((s) => s.stock > 0)),
+        ...cardFields,
         rating: 0,
         reviewsCount: 0,
         isNew: true,
@@ -548,9 +550,27 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     }
   };
 
+  const photoPreview = (src: string, label: string) => (
+    <>
+      <img src={src} alt="" className="w-12 h-12 rounded-xl object-cover neu-flat shrink-0" referrerPolicy="no-referrer" />
+      <p className="font-black text-xs text-[#2D3A4E] min-w-0">{label}</p>
+    </>
+  );
+
   const handleDeleteImage = (indexToDelete: number) => {
-    setFormImages((prev) => prev.filter((_, idx) => idx !== indexToDelete));
-    onShowToast('Фото удалено из галереи', 'info');
+    const src = formImages[indexToDelete];
+    setPendingRemoval({
+      title: 'Удалить фото?',
+      message:
+        indexToDelete === 0
+          ? 'Это обложка товара. Обложкой станет следующее фото.'
+          : 'Фото исчезнет из галереи товара после сохранения.',
+      preview: src ? photoPreview(src, indexToDelete === 0 ? 'Обложка' : `Фото ${indexToDelete + 1}`) : undefined,
+      run: () => {
+        setFormImages((prev) => prev.filter((_, idx) => idx !== indexToDelete));
+        onShowToast('Фото удалено из галереи', 'info');
+      },
+    });
   };
 
   const handleSetCoverImage = (indexToCover: number) => {
@@ -574,8 +594,16 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   };
 
   const handleClearAllImages = () => {
-    setFormImages([]);
-    onShowToast('Все фото товара удалены', 'info');
+    setPendingRemoval({
+      title: 'Удалить все фото?',
+      message: `Будут удалены все фото (${formImages.length}). Без фото товар нельзя сохранить.`,
+      preview: formImages[0] ? photoPreview(formImages[0], `Фото в галерее: ${formImages.length}`) : undefined,
+      confirmLabel: 'Удалить все',
+      run: () => {
+        setFormImages([]);
+        onShowToast('Все фото товара удалены', 'info');
+      },
+    });
   };
 
   // Color management with SKU synchronization
@@ -595,7 +623,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       id: `${prodId}-${cleanName}-${size}`,
       color: cleanName,
       size,
-      stock: 4,
+      stock: 0,
       skuCode: generateSkuCode({ id: prodId, category: formCategory }, cleanName, size, 'WS'),
       barcode: generateBarcode({ id: prodId, category: formCategory }, cleanName, size),
     }));
@@ -609,9 +637,27 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       onShowToast('У товара должен быть хотя бы один цвет', 'error');
       return;
     }
-    setFormColors((prev) => prev.filter((c) => c.name !== colorName));
-    setFormSkus((prev) => prev.filter((s) => s.color !== colorName));
-    onShowToast(`Цвет «${colorName}» удален`, 'info');
+    const color = formColors.find((c) => c.name === colorName);
+    const variants = formSkus.filter((s) => s.color === colorName);
+    const stock = variants.reduce((sum, s) => sum + (s.stock || 0), 0);
+    setPendingRemoval({
+      title: 'Удалить цвет?',
+      message: `Вместе с цветом удалятся его вариации (${variants.length}) и их остаток: ${stock} шт.`,
+      preview: (
+        <>
+          <span
+            className="w-8 h-8 rounded-full border border-black/15 shrink-0"
+            style={{ backgroundColor: color?.hex || '#94A3B8' }}
+          />
+          <p className="font-black text-xs text-[#2D3A4E] min-w-0">{colorName}</p>
+        </>
+      ),
+      run: () => {
+        setFormColors((prev) => prev.filter((c) => c.name !== colorName));
+        setFormSkus((prev) => prev.filter((s) => s.color !== colorName));
+        onShowToast(`Цвет «${colorName}» удален`, 'info');
+      },
+    });
   };
 
   // Size management with SKU synchronization
@@ -631,7 +677,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       id: `${prodId}-${c.name}-${size}`,
       color: c.name,
       size,
-      stock: 4,
+      stock: 0,
       skuCode: generateSkuCode({ id: prodId, category: formCategory }, c.name, size, 'WS'),
       barcode: generateBarcode({ id: prodId, category: formCategory }, c.name, size),
     }));
@@ -652,7 +698,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         id: `${prodId}-${c.name}-${size}`,
         color: c.name,
         size,
-        stock: 4,
+        stock: 0,
         skuCode: generateSkuCode({ id: prodId, category: formCategory }, c.name, size, 'WS'),
         barcode: generateBarcode({ id: prodId, category: formCategory }, c.name, size),
       }));
@@ -667,9 +713,25 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       onShowToast('У товара должен быть хотя бы один размер', 'error');
       return;
     }
-    setFormSizes((prev) => prev.filter((s) => s !== sizeToRemove));
-    setFormSkus((prev) => prev.filter((s) => s.size !== sizeToRemove));
-    onShowToast(`Размер «${sizeToRemove}» удален`, 'info');
+    const variants = formSkus.filter((s) => s.size === sizeToRemove);
+    const stock = variants.reduce((sum, s) => sum + (s.stock || 0), 0);
+    setPendingRemoval({
+      title: 'Удалить размер?',
+      message: `Вместе с размером удалятся его вариации (${variants.length}) и их остаток: ${stock} шт.`,
+      preview: (
+        <>
+          <span className="h-8 min-w-8 px-2 rounded-xl neu-flat flex items-center justify-center text-xs font-black text-accent shrink-0">
+            {sizeToRemove}
+          </span>
+          <p className="font-black text-xs text-[#2D3A4E] min-w-0">Размер {sizeToRemove}</p>
+        </>
+      ),
+      run: () => {
+        setFormSizes((prev) => prev.filter((s) => s !== sizeToRemove));
+        setFormSkus((prev) => prev.filter((s) => s.size !== sizeToRemove));
+        onShowToast(`Размер «${sizeToRemove}» удален`, 'info');
+      },
+    });
   };
 
   // Bulk SKU stock adjustment helpers
@@ -684,13 +746,18 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   };
 
   const handleResetAllSkuStock = () => {
-    setFormSkus((prev) =>
-      prev.map((s) => ({
-        ...s,
-        stock: 0,
-      }))
-    );
-    onShowToast('Остатки всех вариаций SKU обнулены', 'info');
+    setPendingRemoval({
+      title: 'Обнулить остатки?',
+      message: `Остаток всех вариаций (${formSkus.length}) станет 0 шт. Сейчас на складе: ${formSkus.reduce(
+        (sum, s) => sum + (s.stock || 0),
+        0
+      )} шт.`,
+      confirmLabel: 'Обнулить',
+      run: () => {
+        setFormSkus((prev) => prev.map((s) => ({ ...s, stock: 0 })));
+        onShowToast('Остатки всех вариаций SKU обнулены', 'info');
+      },
+    });
   };
 
   const handleRegenerateMissingCodes = () => {
@@ -1220,6 +1287,15 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               </div>
             </div>
 
+            {/* Card structure: every section of the customer's card, right under the status switch */}
+            <AdminProductCardStructure
+              value={formCard}
+              onChange={setFormCard}
+              hasDescription={Boolean(formDescription.trim())}
+              material={formMaterial}
+              onShowToast={onShowToast}
+            />
+
             {/* SKU Uniqueness & Integrity Banner */}
             {skuConflictInfo.hasConflicts ? (
               <div className="neu-inset rounded-2xl p-3 bg-danger-soft border border-danger/25 text-danger text-xs space-y-1.5">
@@ -1465,9 +1541,10 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         </label>
                         <input
                           type="number"
-                          value={formPrice}
+                          value={formPrice || ''}
                           onChange={(e) => setFormPrice(Number(e.target.value))}
-                          min="100"
+                          placeholder="0"
+                          min="1"
                           className="w-full h-9 px-2.5 neu-inset rounded-xl text-xs font-black text-accent bg-[#E3E8EF]"
                           required
                         />
@@ -1589,7 +1666,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                           <ImagePlus className="w-6 h-6 text-[#4E5C70]" />
                           <p className="text-xs font-bold text-[#2D3A4E]">Галерея пока пуста</p>
                           <p className="text-[11px] text-[#4E5C70]">
-                            Нажмите «Загрузить из галереи» или перетащите фото сюда
+                            Добавьте хотя бы одно фото — без него товар не сохранить
                           </p>
                         </div>
                       ) : (
@@ -2483,6 +2560,18 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
           setSelectedProductIds([]);
         }}
         onShowToast={onShowToast}
+      />
+
+      {/* Removal confirmation for photos, colors, sizes and stock (above the product form) */}
+      <ConfirmDialog
+        isOpen={Boolean(pendingRemoval)}
+        title={pendingRemoval?.title ?? ''}
+        message={pendingRemoval?.message ?? ''}
+        preview={pendingRemoval?.preview}
+        confirmLabel={pendingRemoval?.confirmLabel}
+        cancelLabel="Оставить"
+        onConfirm={() => pendingRemoval?.run()}
+        onClose={() => setPendingRemoval(null)}
       />
 
       {/* Dedicated Text Edit Modal for Material and Description with synchronized quick phrases and accents */}
