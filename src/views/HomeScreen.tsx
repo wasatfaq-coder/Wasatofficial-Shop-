@@ -17,13 +17,14 @@ import {
   Gift,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Product, ActiveTab, BannerSlide, StorefrontSettings, UserProfile } from '../types';
+import { Product, ActiveTab, BannerSlide, StorefrontSettings, UserProfile, BodyMeasurements } from '../types';
 import { getStoreContacts, getStoreName } from '../utils/storeContacts';
 import { ProductCard } from '../components/ProductCard';
 import { AutocompleteSearch } from '../components/AutocompleteSearch';
 import { RecentlyViewed } from '../components/RecentlyViewed';
 import { NeumorphicImage } from '../components/NeumorphicImage';
 import { NotConfigured } from '../components/NotConfigured';
+import { QuickViewModal } from '../components/QuickViewModal';
 import { categoryIcon, getCategories } from '../utils/categories';
 
 interface HomeScreenProps {
@@ -47,6 +48,8 @@ interface HomeScreenProps {
   userProfile?: UserProfile;
   onOpenMySizes?: () => void;
   onOpenFilters?: () => void;
+  onSaveMeasurements?: (measurements: BodyMeasurements) => void;
+  onAddToCartWithOptions?: (product: Product, color: string, size: string, quantity: number) => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -70,7 +73,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   userProfile,
   onOpenMySizes,
   onOpenFilters,
+  onSaveMeasurements,
+  onAddToCartWithOptions,
 }) => {
+  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeBannerSlide, setActiveBannerSlide] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
@@ -378,7 +384,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       </div>
 
-      {/* 8. Popular Section Header & Horizontal Scroll */}
+      {/* 8. Popular Section: 2-column grid as in the catalog */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-[18px] font-bold text-[#2D3A4E] tracking-tight">Популярное</h2>
@@ -395,22 +401,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <NotConfigured title="Каталог" hint="Товары появятся здесь, когда магазин их добавит." />
         )}
 
-        {/* Popular Products Horizontal Scroll Row */}
-        <div className="flex overflow-x-auto no-scrollbar gap-3.5 pb-2 -mx-4 px-4 snap-x">
-          {popularProducts.map((product, index) => (
-            <div key={product.id} className="w-[165px] sm:w-[185px] shrink-0 snap-start">
+        {popularProducts.length > 0 && (
+          <div className="grid grid-cols-2 gap-3.5 sm:gap-4 p-1 -m-1">
+            {popularProducts.map((product, index) => (
               <ProductCard
+                key={product.id}
                 product={product}
-                priority={index < 2}
+                priority={index < 4}
                 isFavorite={favorites.includes(product.id)}
                 isInCart={cartItemIds.includes(product.id)}
                 onSelect={onSelectProduct}
                 onToggleFavorite={onToggleFavorite}
                 onAddToCart={onAddToCart}
+                onQuickView={(prod) => setQuickViewProduct(prod)}
               />
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Recently Viewed Block */}
@@ -424,6 +431,28 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           favorites={favorites}
         />
       )}
+
+      <QuickViewModal
+        product={quickViewProduct}
+        isOpen={!!quickViewProduct}
+        isFavorite={quickViewProduct ? favorites.includes(quickViewProduct.id) : false}
+        isInCart={quickViewProduct ? cartItemIds.includes(quickViewProduct.id) : false}
+        userProfile={userProfile}
+        onSaveMeasurements={onSaveMeasurements}
+        onClose={() => setQuickViewProduct(null)}
+        onSelectFullProduct={(prod) => {
+          setQuickViewProduct(null);
+          onSelectProduct(prod);
+        }}
+        onToggleFavorite={onToggleFavorite}
+        onAddToCartWithOptions={(prod, color, size, qty) => {
+          if (onAddToCartWithOptions) {
+            onAddToCartWithOptions(prod, color, size, qty);
+          } else {
+            onAddToCart(prod, null as any);
+          }
+        }}
+      />
     </div>
   );
 };
