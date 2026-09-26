@@ -65,8 +65,8 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
 
   const metricConfig = {
     revenue: {
-      title: isMonthly ? 'Выручка за месяц' : 'Суточная выручка',
-      color: '#5F6ED0',
+      title: isMonthly ? 'Выручка за месяц' : 'Выручка за день',
+      color: '#2C4A6B',
       badgeClass: 'text-accent bg-accent/10 border-accent/30',
       valueFormatted: `${currentVal.toLocaleString('ru-RU')} ₽`,
       prevFormatted: `${prevVal.toLocaleString('ru-RU')} ₽`,
@@ -74,7 +74,7 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
     },
     orders: {
       title: isMonthly ? 'Заказы за месяц' : 'Заказы за день',
-      color: '#10B981',
+      color: '#3B6652',
       badgeClass: 'text-success bg-success-soft border-success/30',
       valueFormatted: `${currentVal} шт.`,
       prevFormatted: `${prevVal} шт.`,
@@ -82,15 +82,15 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
     },
     avgCheck: {
       title: 'Средний чек',
-      color: '#0284C7',
-      badgeClass: 'text-sky-700 bg-sky-500/10 border-sky-500/30',
+      color: '#5A6F8C',
+      badgeClass: 'text-accent bg-accent/10 border-accent/30',
       valueFormatted: `${currentVal.toLocaleString('ru-RU')} ₽`,
       prevFormatted: `${prevVal.toLocaleString('ru-RU')} ₽`,
       diffFormatted: `${diff >= 0 ? '+' : ''}${diff.toLocaleString('ru-RU')} ₽`,
     },
     returns: {
-      title: 'Возвраты',
-      color: '#F59E0B',
+      title: 'Отмены',
+      color: '#8C733E',
       badgeClass: 'text-warning bg-warning-soft border-warning/30',
       valueFormatted: `${currentVal} шт.`,
       prevFormatted: `${prevVal} шт.`,
@@ -241,7 +241,7 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
 
         <div className="neu-inset rounded-lg p-1.5 bg-[#E3E8EF] space-y-0.5">
           <span className="text-[11px] font-bold text-[#4E5C70] block truncate">
-            Возвраты
+            Отмены
           </span>
           <p
             className={`text-[11px] font-black tabular-nums leading-tight ${

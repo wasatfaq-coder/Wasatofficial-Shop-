@@ -5,6 +5,7 @@
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 import type { CartItem, DeliveryMethod, Order, Product, ProductSKU, PromoCode, StorefrontSettings } from '../../src/types';
 import type { PlaceOrderItem, PlaceOrderRequest } from '../../src/shared/orderApi';
+import { formatOrderDate } from '../../src/shared/orderDate';
 import {
   QUICK_ORDER_DELIVERY_ID,
   QUICK_ORDER_DELIVERY_TITLE,
@@ -85,10 +86,6 @@ export function parsePlaceOrderRequest(data: unknown): PlaceOrderRequest {
       email: requireString(contact.email, 'email', 256, false),
     },
   };
-}
-
-function formatMoscowTime(now: Date): string {
-  return now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow' });
 }
 
 function randomOrderId(): string {
@@ -246,7 +243,7 @@ export async function placeOrderCore(
 
     const orderBase: Order = {
       id: orderRef.id,
-      date: `Сегодня, ${formatMoscowTime(now)}`,
+      date: formatOrderDate(now),
       createdAt: now.toISOString(),
       items: cartItems,
       status: 'accepted',

@@ -77,14 +77,14 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
                 </span>
               )}
               {dayData.isPeakDay && (
-                <span className="text-[11px] font-black text-warning bg-warning-soft px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                <span className="text-[11px] font-black text-warning bg-warning-soft px-2 py-0.5 rounded-full flex items-center gap-1">
                   <Flame className="w-3 h-3 text-warning fill-warning" />
                   Пиковый день периода
                 </span>
               )}
               {dayData.hasRealOrders && (
                 <span className="text-[11px] font-black text-accent bg-accent/10 px-2 py-0.5 rounded-full flex items-center gap-1">
-                  ⚡ Firestore ({dayData.realOrdersList.length})
+                  Заказов: {dayData.realOrdersList.length}
                 </span>
               )}
             </div>
@@ -200,7 +200,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
         {/* Card 4: Returns */}
         <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-1">
           <div className="flex items-center justify-between text-[#4E5C70]">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Рекламации</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider">Отмены</span>
             <div className="w-5 h-5 rounded-lg neu-inset flex items-center justify-center text-warning bg-[#E3E8EF]">
               <RotateCcw className="w-3 h-3" />
             </div>
@@ -210,9 +210,9 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
           </p>
           <div className="text-[11px] text-[#4E5C70]">
             {dayData.returns === 0 ? (
-              <span className="text-success font-bold">Без возвратов ✓</span>
+              <span className="text-success font-bold">Без отмен</span>
             ) : (
-              <span className="text-warning font-bold">Учтены в расчете</span>
+              <span className="text-warning font-bold">В выручку не входят</span>
             )}
           </div>
         </div>
@@ -227,7 +227,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
           </span>
           <span className="text-[11px] neu-inset px-2.5 py-1 rounded-lg bg-[#E3E8EF] text-[#2D3A4E] font-extrabold">
             {dayData.realOrdersList.length > 0
-              ? `${dayData.realOrdersList.length} заказ(ов) из базы`
+              ? `Заказов: ${dayData.realOrdersList.length}`
               : 'Заказов за день нет'}
           </span>
         </div>
@@ -240,13 +240,15 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
                 : statusLabelMap[ord.status] || { label: ord.status, color: 'text-gray-700 bg-gray-100' };
 
               return (
-                <div
+                <button
+                  type="button"
                   key={ord.id}
                   onClick={() => {
                     onSelectOrder?.(ord);
                     triggerChartHapticFeedback('medium');
                   }}
-                  className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] flex items-center justify-between gap-3 text-xs hover:border-accent/50 border border-transparent transition-all cursor-pointer group active:scale-[0.99]"
+                  disabled={!onSelectOrder}
+                  className="w-full text-left neu-inset rounded-2xl p-3 bg-[#E3E8EF] flex items-center justify-between gap-3 text-xs hover:border-accent/50 border border-transparent transition-all cursor-pointer group active:scale-[0.99] disabled:cursor-default"
                 >
                   <div className="space-y-1.5 min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -278,7 +280,10 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
                         </span>
                       )}
                       <span>
-                        Товаров: <strong className="text-[#2D3A4E]">{ord.items?.length || 1} шт.</strong>
+                        Товаров:{' '}
+                        <strong className="text-[#2D3A4E]">
+                          {(ord.items || []).reduce((sum, it) => sum + (it.quantity || 1), 0)} шт.
+                        </strong>
                       </span>
                     </div>
 
@@ -295,26 +300,19 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
                       {ord.totalPrice.toLocaleString('ru-RU')} ₽
                     </p>
                     <span className="text-[11px] text-[#4E5C70] block">
-                      {ord.paymentMethod || 'Карта онлайн'}
+                      {ord.paymentMethod}
                     </span>
                     <span className="text-[11px] font-bold text-accent group-hover:underline flex items-center justify-end gap-0.5">
                       Детали <ChevronRight className="w-2.5 h-2.5" />
                     </span>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
         ) : (
           <div className="neu-inset rounded-2xl p-3.5 text-center text-xs text-[#4E5C70] bg-[#E3E8EF] space-y-1">
-            <p className="font-semibold text-[#2D3A4E]">
-              {dayData.revenue > 0
-                ? `В этот день суммарный оборот составил ${dayData.revenue.toLocaleString('ru-RU')} ₽ (${dayData.orders} заказов).`
-                : 'В этот день заказов и продаж в базе данных не зафиксировано (0 ₽).'}
-            </p>
-            <p className="text-[11px] text-[#8F9BB3]">
-              Любые новые покупки в магазине мгновенно отображаются в суточной аналитике и реестре.
-            </p>
+            <p className="font-semibold text-[#2D3A4E]">Заказов за этот период нет</p>
           </div>
         )}
       </div>

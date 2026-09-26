@@ -3088,12 +3088,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               {adminTab === 'analytics' && (
                 <AdminAnalyticsTab
                   orders={orders}
-                  products={productsList}
                   promos={localPromos}
                   onShowToast={onShowToast}
                   onSelectOrder={(ord) => setSelectedOrderIdForTracking(ord.id)}
-                  onUpdateOrders={onUpdateOrders}
-                  onResubscribeFirestore={onSyncFirebase}
                 />
               )}
 

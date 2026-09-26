@@ -81,6 +81,7 @@ import { ProfileScreen } from './views/ProfileScreen';
 import { FavoritesScreen } from './views/FavoritesScreen';
 import { OrderSuccessScreen } from './views/OrderSuccessScreen';
 import { validatePromo, PricingLine, QUICK_ORDER_DELIVERY_ID } from './shared/orderPricing';
+import { formatOrderDate } from './shared/orderDate';
 import { extractColorName, extractSizeName } from './utils/inventory';
 import { getStoreContacts, getStoreName, publicSetting, withStoreName, withStoreNameFields } from './utils/storeContacts';
 import { formatDays } from './utils/pluralize';
@@ -1242,7 +1243,7 @@ export default function App() {
   const completeOrderLocally = (orderData: CompleteOrderData): boolean => {
     // Orders are create-only for customers, so IDs must not collide with existing ones
     const newOrderId = `WS-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
-    const nowStr = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const placedAt = new Date();
 
     const { customerName, customerPhone, customerEmail, deliveryAddress, deliveryMethod, paymentMethod } =
       resolveOrderDetails(orderData);
@@ -1260,7 +1261,9 @@ export default function App() {
 
     const newOrderBase = {
       id: newOrderId,
-      date: `Сегодня, ${nowStr}`,
+      // the exact moment is createdAt (analytics, sorting); date is its display text
+      createdAt: placedAt.toISOString(),
+      date: formatOrderDate(placedAt),
       items: orderItems,
       status: 'accepted' as const,
       totalPrice,
