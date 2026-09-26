@@ -1,7 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { MessagesSquare, Search } from 'lucide-react';
 import type { ChatMessage, Order, Product, PromoCode, StoreCategory, SupportThreadMeta } from '../../types';
-import { chatMessageOrder, saveSupportThreadMeta, subscribeToSupportThreads } from '../../utils/firebaseSync';
+import {
+  chatMessageOrder,
+  saveSupportThreadMeta,
+  subscribeToSupportThreads,
+  type ChatMessageChange,
+} from '../../utils/firebaseSync';
 import { AdminSupportChatTab, type AdminChatPayload } from './AdminSupportChatTab';
 import {
   LEGACY_THREAD_KEY,
@@ -21,6 +26,7 @@ interface AdminSupportInboxProps {
   onSend: (thread: { threadId: string; threadName: string }, payload: AdminChatPayload) => void;
   onUpdateOrders?: (orders: Order[]) => void;
   onClearThread: (threadId: string | null) => void;
+  onChangeMessage: (change: ChatMessageChange) => Promise<boolean>;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
@@ -47,6 +53,7 @@ export const AdminSupportInbox: React.FC<AdminSupportInboxProps> = ({
   onSend,
   onUpdateOrders,
   onClearThread,
+  onChangeMessage,
   onShowToast,
 }) => {
   const [threadMeta, setThreadMeta] = useState<Record<string, SupportThreadMeta>>({});
@@ -74,7 +81,8 @@ export const AdminSupportInbox: React.FC<AdminSupportInboxProps> = ({
       };
       if (msg.threadName) entry.name = msg.threadName;
       entry.count += 1;
-      if (orderNo >= entry.lastOrder) {
+      // messages the staff deleted for themselves do not count as the dialog's last message
+      if (orderNo >= entry.lastOrder && !msg.hiddenForStaff) {
         entry.lastOrder = orderNo;
         entry.lastText = `${msg.isInternalNote ? 'Заметка: ' : ''}${msg.text || (msg.imageUrl ? 'Фото' : 'Вложение')}`;
         entry.lastTime = msg.timestamp;
@@ -244,6 +252,7 @@ export const AdminSupportInbox: React.FC<AdminSupportInboxProps> = ({
           }}
           onUpdateOrders={onUpdateOrders}
           onClear={() => onClearThread(activeThread.threadId)}
+          onChangeMessage={onChangeMessage}
           onShowToast={onShowToast}
         />
       )}

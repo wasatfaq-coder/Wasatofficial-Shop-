@@ -24,6 +24,8 @@ import {
   UserCheck,
   X,
   Bot,
+  EyeOff,
+  Eye,
 } from 'lucide-react';
 import type {
   ChatMessage,
@@ -42,6 +44,10 @@ import { copyToClipboard } from '../../utils/clipboard';
 import { compressChatImageFile } from '../../utils/imageUpload';
 import { ORDER_STATUS_LABELS, isTransportCompanyDelivery } from '../../utils/deliveryStages';
 import { PRIORITY_LABELS, STATUS_LABELS, type SupportThreadSummary } from '../../utils/supportThreads';
+import type { ChatMessageChange } from '../../utils/firebaseSync';
+import { validatePromo } from '../../shared/orderPricing';
+import { ChatMessageDeleteDialog, ChatMessageMenu } from '../ChatMessageActions';
+import { NotConfigured } from '../NotConfigured';
 
 /** What an admin sends into a customer's dialog */
 export interface AdminChatPayload {
@@ -69,6 +75,8 @@ interface AdminSupportChatTabProps {
   onSend: (payload: AdminChatPayload) => void;
   onUpdateOrders?: (orders: Order[]) => void;
   onClear: () => void;
+  /** Staff edit / «удалить у себя» / «удалить у всех» — any message, any time */
+  onChangeMessage: (change: ChatMessageChange) => Promise<boolean>;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
@@ -98,6 +106,27 @@ const textareaClass =
 const labelClass = 'text-[11px] font-bold text-[#4E5C70] block mb-1';
 
 const newPromoCode = () => `CARE-${Math.floor(1000 + Math.random() * 9000)}`;
+
+/** Discount of a promo from «Промокоды» as the chat card shows it */
+function promoDiscount(p: PromoCode): { type: 'percent' | 'fixed'; value: number } {
+  const type = p.discountType ?? 'percent';
+  const value = p.discountValue ?? (type === 'percent' ? p.discountPercent : 0);
+  return { type, value: value || 0 };
+}
+
+/** «2026-08-31» → «31.08.2026»; free-form dates stay as written */
+const formatPromoDate = (value: string) => {
+  const m = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : value;
+};
+
+const formatPromoDiscount = (p: PromoCode) => {
+  const { type, value } = promoDiscount(p);
+  return type === 'fixed' ? `−${value.toLocaleString('ru-RU')} ₽` : `−${value}%`;
+};
+
+/** A code the customer can still use: active, not expired, limit not reached (the cart is checked at checkout) */
+const isPromoUsable = (p: PromoCode) => validatePromo({ ...p, minOrderAmount: 0 }, []) === null;
 
 /** Modal shell: rendered into <body>, over the admin panel */
 const Modal: React.FC<{ title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }> = ({
@@ -188,6 +217,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   onSend,
   onUpdateOrders,
   onClear,
+  onChangeMessage,
   onShowToast,
 }) => {
   const isLegacy = thread.threadId === null;
@@ -246,6 +276,16 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   const [promoCode, setPromoCode] = useState(newPromoCode);
   const [promoExpiry, setPromoExpiry] = useState('');
   const [promoReason, setPromoReason] = useState('');
+  const [promoMode, setPromoMode] = useState<'existing' | 'new'>('existing');
+  const [promoSearch, setPromoSearch] = useState('');
+  const [pickedPromoId, setPickedPromoId] = useState<string | null>(null);
+
+  // --- message actions ---
+  const [menuId, setMenuId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<ChatMessage | null>(null);
+  const [draftBeforeEdit, setDraftBeforeEdit] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<ChatMessage | null>(null);
+  const [showHidden, setShowHidden] = useState(false);
 
   // --- templates ---
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
@@ -271,8 +311,40 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
     }
   };
 
-  const visibleMessages = showNotes ? messages : messages.filter((m) => !m.isInternalNote);
+  const visibleMessages = messages.filter(
+    (m) => (showNotes || !m.isInternalNote) && (showHidden || !m.hiddenForStaff)
+  );
   const notesCount = messages.filter((m) => m.isInternalNote).length;
+  const hiddenCount = messages.filter((m) => m.hiddenForStaff).length;
+
+  const changeMessage = async (change: ChatMessageChange, toast?: string) => {
+    setMenuId(null);
+    const ok = await onChangeMessage(change);
+    if (ok && toast) onShowToast(toast, 'info');
+    return ok;
+  };
+
+  const startEdit = (msg: ChatMessage) => {
+    setMenuId(null);
+    if (!editing) setDraftBeforeEdit(replyText);
+    setEditing(msg);
+    setIsInternalNote(Boolean(msg.isInternalNote));
+    setReplyText(msg.text || '');
+    setPhoto(null);
+  };
+
+  const cancelEdit = () => {
+    setEditing(null);
+    setReplyText(draftBeforeEdit);
+    setDraftBeforeEdit('');
+  };
+
+  const usablePromos = useMemo(() => promos.filter(isPromoUsable), [promos]);
+  const foundPromos = usablePromos.filter((p) => {
+    const q = promoSearch.trim().toLowerCase();
+    return !q || p.code.toLowerCase().includes(q) || (p.title || '').toLowerCase().includes(q);
+  });
+  const pickedPromo = usablePromos.find((p) => p.id === pickedPromoId) ?? null;
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -284,8 +356,14 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
     if (toast) onShowToast(toast, 'success');
   };
 
-  const handleSendReply = () => {
+  const handleSendReply = async () => {
     const text = replyText.trim();
+    if (editing) {
+      if (!text && !editing.imageUrl) return;
+      if (text === (editing.text || '').trim()) return cancelEdit();
+      if (await changeMessage({ type: 'edit', id: editing.id, text }, 'Сообщение изменено')) cancelEdit();
+      return;
+    }
     if ((!text && !photo) || isLegacy) return;
     send(
       { text, imageUrl: photo || undefined, isInternalNote },
@@ -430,11 +508,43 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
 
   // --- promo code (registered in «Промокоды» by the app when the message is sent) ---
   const openPromoModal = () => {
+    setPromoMode(usablePromos.length > 0 ? 'existing' : 'new');
+    setPromoSearch('');
+    setPickedPromoId(null);
     setPromoCode(newPromoCode());
     setPromoValue('');
     setPromoReason('');
     setPromoExpiry('');
     setIsPromoModalOpen(true);
+  };
+
+  // An existing code from «Промокоды»: only the card is sent, nothing new is created
+  const handleSendExistingPromo = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pickedPromo) return onShowToast('Выберите промокод', 'error');
+    const { type, value } = promoDiscount(pickedPromo);
+    const amount = type === 'fixed' ? `${value.toLocaleString('ru-RU')} ₽` : `${value}%`;
+    const note = promoReason.trim();
+    const conditions = [
+      pickedPromo.minOrderAmount ? `от ${pickedPromo.minOrderAmount.toLocaleString('ru-RU')} ₽` : '',
+      pickedPromo.expiresAt ? `до ${formatPromoDate(pickedPromo.expiresAt)}` : '',
+    ].filter(Boolean);
+    send(
+      {
+        text: `Промокод для вас: ${pickedPromo.code} (скидка ${amount}${conditions.length ? `, ${conditions.join(', ')}` : ''})${
+          note ? `.\n${note}` : ''
+        }`,
+        promoCard: {
+          code: pickedPromo.code,
+          discountType: type,
+          discountValue: value,
+          description: note || pickedPromo.description || pickedPromo.title || '',
+          expiryDate: pickedPromo.expiresAt || undefined,
+        },
+      },
+      `Промокод ${pickedPromo.code} отправлен`
+    );
+    setIsPromoModalOpen(false);
   };
 
   const handleIssuePromo = (e: React.FormEvent) => {
@@ -506,7 +616,9 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
     return { text: 'Сотрудник', icon: UserCheck, cls: 'text-success' };
   };
 
-  const canSend = (replyText.trim().length > 0 || Boolean(photo)) && !isProcessingPhoto && !isLegacy;
+  const canSend = editing
+    ? replyText.trim().length > 0 || Boolean(editing.imageUrl)
+    : (replyText.trim().length > 0 || Boolean(photo)) && !isProcessingPhoto && !isLegacy;
 
   return (
     <div className="space-y-4">
@@ -654,6 +766,23 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
       <section className="neu-flat rounded-3xl p-3.5 sm:p-4 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[11px] font-black uppercase tracking-wider text-[#2D3A4E]">Переписка</span>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+          {hiddenCount > 0 && (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={showHidden}
+              onClick={() => setShowHidden((v) => !v)}
+              className="h-8 px-2.5 neu-button rounded-xl text-[11px] font-bold text-[#4E5C70] flex items-center gap-2 cursor-pointer"
+            >
+              Скрытые ({hiddenCount})
+              <span className="w-8 h-5 rounded-full neu-inset p-0.5 flex items-center">
+                <span
+                  className={`w-4 h-4 rounded-full transition-transform ${showHidden ? 'translate-x-3 neu-fill-accent' : 'neu-button'}`}
+                />
+              </span>
+            </button>
+          )}
           {notesCount > 0 && (
             <button
               type="button"
@@ -670,6 +799,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               </span>
             </button>
           )}
+          </div>
         </div>
         <div className="neu-inset rounded-2xl p-3 space-y-3 max-h-[55dvh] overflow-y-auto" aria-live="polite">
           {visibleMessages.length === 0 && <p className="text-center py-8 text-xs text-[#4E5C70]">Сообщений нет</p>}
@@ -685,10 +815,22 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 <span className={`text-[11px] font-bold flex items-center gap-1 px-1 ${who.cls}`}>
                   <WhoIcon className="w-3 h-3" />
                   {who.text}
-                  <span className="text-[#4E5C70] font-medium">· {msg.timestamp}</span>
+                  <span className="text-[#4E5C70] font-medium">
+                    · {msg.timestamp}
+                    {msg.editedAt ? ' · изменено' : ''}
+                  </span>
                 </span>
+                {(msg.hiddenForCustomer || msg.hiddenForStaff) && (
+                  <span className="text-[11px] font-bold text-[#4E5C70] flex items-center gap-1 px-1">
+                    <EyeOff className="w-3 h-3" />
+                    {msg.hiddenForStaff ? 'Скрыто у сотрудников' : 'Покупатель удалил у себя'}
+                    {msg.hiddenForStaff && msg.hiddenForCustomer ? ' и у покупателя' : ''}
+                  </span>
+                )}
                 <div
                   className={`p-3 rounded-2xl text-xs max-w-[88%] space-y-2 leading-relaxed ${
+                    msg.hiddenForStaff ? 'opacity-60' : ''
+                  } ${editing?.id === msg.id ? 'ring-2 ring-accent/50' : ''} ${
                     msg.isInternalNote
                       ? 'neu-flat-sm border border-warning/40 text-[#2D3A4E]'
                       : isCustomer
@@ -743,6 +885,30 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                     </p>
                   )}
                 </div>
+                {msg.hiddenForStaff ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      changeMessage({ type: 'hide', id: msg.id, side: 'staff', hidden: false }, 'Сообщение возвращено')
+                    }
+                    className="h-8 px-2.5 neu-button rounded-lg text-[11px] font-bold text-accent flex items-center gap-1 cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    Вернуть
+                  </button>
+                ) : (
+                  <ChatMessageMenu
+                    align={isCustomer ? 'start' : 'end'}
+                    isOpen={menuId === msg.id}
+                    onToggle={() => setMenuId((id) => (id === msg.id ? null : msg.id))}
+                    // staff edit their own replies and notes; a customer's words are not rewritten
+                    onEdit={!isCustomer && msg.sender !== 'bot' && !isLegacy && msg.text?.trim() ? () => startEdit(msg) : undefined}
+                    onDelete={() => {
+                      setMenuId(null);
+                      setDeleteTarget(msg);
+                    }}
+                  />
+                )}
               </div>
             );
           })}
@@ -753,6 +919,26 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
       {/* 4. Reply panel */}
       {!isLegacy && (
         <section className="neu-flat rounded-3xl p-3.5 sm:p-4 space-y-3">
+          {editing ? (
+            <div className="px-3 py-2 neu-inset rounded-2xl flex items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <Pencil className="w-3.5 h-3.5 text-accent shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[11px] font-black text-accent">
+                    {editing.isInternalNote ? 'Редактирование заметки' : 'Редактирование ответа'}
+                  </p>
+                  <p className="text-[11px] text-[#4E5C70] truncate">{editing.text}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={cancelEdit}
+                className="h-8 px-2.5 neu-button rounded-lg text-[11px] font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer shrink-0"
+              >
+                Отмена
+              </button>
+            </div>
+          ) : (
           <Segments
             label="Кому"
             value={isInternalNote ? 'note' : 'reply'}
@@ -762,8 +948,10 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             ]}
             onChange={(v) => setIsInternalNote(v === 'note')}
           />
+          )}
 
           {/* Attachments and helpers */}
+          {!editing && (
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -802,6 +990,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               Шаблоны{templates.length > 0 ? ` · ${templates.length}` : ''}
             </button>
           </div>
+          )}
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
 
           {photo && (
@@ -832,6 +1021,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                   e.preventDefault();
                   handleSendReply();
                 }
+                if (e.key === 'Escape' && editing) cancelEdit();
               }}
               maxLength={5000}
               placeholder={isInternalNote ? 'Заметка видна только сотрудникам…' : 'Ответ покупателю…'}
@@ -847,12 +1037,28 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               disabled={!canSend}
               className="h-11 px-5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
             >
-              {isInternalNote ? <Lock className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-              {isInternalNote ? 'Сохранить заметку' : 'Отправить'}
+              {editing ? <Check className="w-4 h-4" /> : isInternalNote ? <Lock className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+              {editing ? 'Сохранить' : isInternalNote ? 'Сохранить заметку' : 'Отправить'}
             </button>
           </div>
         </section>
       )}
+
+      <ChatMessageDeleteDialog
+        message={deleteTarget}
+        otherSide="покупателя"
+        forAllOnly={Boolean(deleteTarget?.isInternalNote)}
+        onDeleteForMe={() =>
+          deleteTarget &&
+          changeMessage({ type: 'hide', id: deleteTarget.id, side: 'staff', hidden: true }, 'Сообщение скрыто у сотрудников')
+        }
+        onDeleteForAll={() => {
+          if (!deleteTarget) return;
+          if (editing?.id === deleteTarget.id) cancelEdit();
+          changeMessage({ type: 'delete', id: deleteTarget.id }, 'Сообщение удалено у всех');
+        }}
+        onClose={() => setDeleteTarget(null)}
+      />
 
       {/* --- Modals --- */}
       {isStatusModalOpen && order && (
@@ -1024,7 +1230,96 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
       )}
 
       {isPromoModalOpen && (
-        <Modal title="Персональный промокод" onClose={() => setIsPromoModalOpen(false)}>
+        <Modal title="Промокод в чат" onClose={() => setIsPromoModalOpen(false)} wide>
+          <Segments
+            label="Какой промокод"
+            value={promoMode}
+            options={[
+              { value: 'existing', label: `Выбрать существующий (${usablePromos.length})` },
+              { value: 'new', label: 'Создать новый' },
+            ]}
+            onChange={setPromoMode}
+          />
+          {promoMode === 'existing' ? (
+            <form onSubmit={handleSendExistingPromo} className="space-y-3.5">
+              {usablePromos.length === 0 ? (
+                <NotConfigured
+                  title="Действующие промокоды"
+                  hint="В разделе «Промокоды» нет активных кодов с неистекшим сроком и лимитом. Создайте новый на соседней вкладке."
+                />
+              ) : (
+                <>
+                  <label className="relative block">
+                    <span className="sr-only">Поиск промокода</span>
+                    <Search className="w-3.5 h-3.5 text-[#4E5C70] absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      value={promoSearch}
+                      onChange={(e) => setPromoSearch(e.target.value)}
+                      placeholder="Код или название"
+                      className={`${inputClass} pl-8`}
+                    />
+                  </label>
+                  <div className="space-y-2 max-h-64 overflow-y-auto p-1 -m-1" role="radiogroup" aria-label="Промокоды">
+                    {foundPromos.length === 0 && (
+                      <p className="text-center py-4 text-xs text-[#4E5C70]">Ничего не найдено</p>
+                    )}
+                    {foundPromos.map((p) => {
+                      const picked = p.id === pickedPromoId;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={picked}
+                          onClick={() => setPickedPromoId(p.id)}
+                          className={`w-full text-left p-3 rounded-2xl flex items-center justify-between gap-3 cursor-pointer transition-all ${
+                            picked ? 'neu-pill-active' : 'neu-button'
+                          }`}
+                        >
+                          <span className="min-w-0">
+                            <span className="block font-mono font-black text-xs text-[#2D3A4E] tracking-wider break-all">
+                              {p.code}
+                            </span>
+                            <span className="block text-[11px] text-[#4E5C70] leading-snug">
+                              {[
+                                p.title,
+                                p.minOrderAmount ? `от ${p.minOrderAmount.toLocaleString('ru-RU')} ₽` : '',
+                                p.expiresAt ? `до ${formatPromoDate(p.expiresAt)}` : 'без срока',
+                                p.usageLimit ? `осталось ${Math.max(0, p.usageLimit - (p.usedCount || 0))}` : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' · ')}
+                            </span>
+                          </span>
+                          <span className="text-[11px] font-extrabold text-success bg-success-soft px-2 py-0.5 rounded-lg shrink-0">
+                            {formatPromoDiscount(p)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <label className="block">
+                    <span className={labelClass}>Сообщение покупателю (необязательно)</span>
+                    <textarea
+                      rows={3}
+                      value={promoReason}
+                      onChange={(e) => setPromoReason(e.target.value)}
+                      placeholder="Например: скидка на следующий заказ"
+                      className={textareaClass}
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={!pickedPromo}
+                    className="w-full h-11 neu-button-accent rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Send className="w-4 h-4" />
+                    {pickedPromo ? `Отправить ${pickedPromo.code}` : 'Выберите промокод'}
+                  </button>
+                </>
+              )}
+            </form>
+          ) : (
           <form onSubmit={handleIssuePromo} className="space-y-3.5">
             <Segments
               label="Тип скидки"
@@ -1086,6 +1381,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               Создать и отправить
             </button>
           </form>
+          )}
         </Modal>
       )}
 

@@ -196,14 +196,42 @@ service cloud.firestore {
         && request.resource.data.get('isInternalNote', false) == false
         && request.resource.data.text is string
         && request.resource.data.text.size() <= 5000
+        // без sentAt (старая версия сайта) сообщение уходит, но править его потом нельзя
+        && request.resource.data.get('sentAt', request.time) == request.time
       );
-      allow update, delete: if isAdmin();
+      // Свое сообщение покупатель меняет (текст, «удалить у себя») и удаляет у всех
+      // в течение 15 минут после отправки; время — серверное (sentAt). Сотрудники — без ограничений.
+      allow update: if isAdmin() || (
+        isOwnRecentChatMessage()
+        && onlyChanges(['text', 'editedAt', 'hiddenForCustomer'])
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 5000
+        && request.resource.data.get('hiddenForCustomer', false) is bool
+        && (!('editedAt' in request.resource.data.diff(resource.data).affectedKeys())
+          || request.resource.data.editedAt == request.time)
+      );
+      allow delete: if isAdmin() || isOwnRecentChatMessage();
+    }
+
+    function isOwnRecentChatMessage() {
+      return isSignedIn()
+        && resource.data.threadId == request.auth.uid
+        && resource.data.sender == 'user'
+        && resource.data.isInternalNote == false
+        && request.time < resource.data.sentAt + duration.value(15, 'm');
     }
 
     // Состояние диалога поддержки (статус, приоритет) — рабочие пометки сотрудников,
     // покупатель их не видит
     match /support_threads/{threadId} {
       allow read: if isAdmin();
+      allow write: if isAdmin() && isValidId(threadId);
+    }
+
+    // Статус обращения для покупателя (без приоритета): пишет администратор, читает сам покупатель
+    match /support_status/{threadId} {
+      allow get: if isAdmin() || (isSignedIn() && request.auth.uid == threadId);
+      allow list: if isAdmin();
       allow write: if isAdmin() && isValidId(threadId);
     }
 
