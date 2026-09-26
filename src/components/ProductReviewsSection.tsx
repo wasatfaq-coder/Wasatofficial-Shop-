@@ -100,6 +100,10 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
       onShowToast('Войдите через Google в профиле, чтобы отметить отзыв', 'info');
       return;
     }
+    if (review.uid === uid) {
+      onShowToast('Свой отзыв отметить нельзя', 'info');
+      return;
+    }
     const isLiked = Boolean(review.voterUids?.includes(uid));
     try {
       await setReviewVoteInFirestore({ reviewId: review.id, productId: product.id, uid }, !isLiked);

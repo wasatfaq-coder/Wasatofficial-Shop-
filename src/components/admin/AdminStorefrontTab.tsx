@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   Store,
+  ShieldCheck,
   Phone,
   Mail,
   MapPin,
   Clock,
   RotateCcw,
   Check,
-  ShieldCheck,
   Truck,
   Tag,
   Save,
@@ -28,10 +28,9 @@ import {
   Building2,
   FileText,
   CreditCard,
-  UserCheck,
   Pencil,
-  KeyRound,
 } from 'lucide-react';
+import { AdminServerOrdersCard } from './AdminServerOrdersCard';
 import { StorefrontSettings } from '../../types';
 import {
   loadStorefrontSettings,
@@ -2390,7 +2389,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
           </div>
         </div>
 
-        {/* SERVER_ORDERS_CARD */}
+        {/* Orders validated by the placeOrder Cloud Function */}
+        <AdminServerOrdersCard onShowToast={onShowToast} />
 
         {/* Submit Button */}
         <div className="flex items-center justify-between pt-2 gap-3 flex-wrap sm:flex-nowrap">

@@ -209,6 +209,8 @@ describe('reviews', () => {
     await assertFails(updateDoc(doc(customer('bob'), 'review_votes/p1_alice_bob'), { productId: 'p2' }));
     await assertFails(deleteDoc(doc(customer('carol'), 'review_votes/p1_alice_bob')));
     await assertSucceeds(deleteDoc(doc(customer('bob'), 'review_votes/p1_alice_bob')));
+    // Not for one's own review
+    await assertFails(setDoc(doc(customer('alice'), 'review_votes/p1_alice_alice'), vote('alice')));
   });
 });
 

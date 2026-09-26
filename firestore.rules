@@ -107,7 +107,9 @@ service cloud.firestore {
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.reviewId is string
         && request.resource.data.productId is string
-        && voteId == request.resource.data.reviewId + '_' + request.auth.uid;
+        && voteId == request.resource.data.reviewId + '_' + request.auth.uid
+        // Не за свой отзыв (его id заканчивается на uid автора)
+        && !request.resource.data.reviewId.matches('.*_' + request.auth.uid);
       allow delete: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
     }
 

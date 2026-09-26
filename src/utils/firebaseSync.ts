@@ -599,6 +599,11 @@ export function subscribeToServerConfig(onUpdate: (config: ServerConfig) => void
   );
 }
 
+/** settings/server: switches order placement to the placeOrder function (admin only) */
+export async function saveServerConfigToFirestore(config: ServerConfig) {
+  await setDoc(doc(db, 'settings', SERVER_CONFIG_DOC_ID), config, { merge: true });
+}
+
 /**
  * 4b. REVIEWS: `reviews/{productId}_{uid}` (the author edits only their own) and
  * `review_votes/{reviewId}_{uid}` (one «Полезно» per person). Not stored inside products.

@@ -52,6 +52,19 @@ if (USE_EMULATORS) {
 }
 const placeOrderCallable = httpsCallable<PlaceOrderRequest, PlaceOrderResponse>(functions, PLACE_ORDER_FUNCTION);
 
+/**
+ * True when the placeOrder function is deployed and answers: an empty request comes back as
+ * «invalid-argument». Without the function the call fails with «internal» or «not-found».
+ */
+export async function isPlaceOrderAvailable(): Promise<boolean> {
+  try {
+    await placeOrderCallable({} as PlaceOrderRequest);
+    return true;
+  } catch (err) {
+    return (err as { code?: string }).code === 'functions/invalid-argument';
+  }
+}
+
 /** Places an order through the server (prices, stock and promo are validated there). */
 export async function placeOrderOnServer(request: PlaceOrderRequest): Promise<PlaceOrderResponse> {
   const result = await placeOrderCallable(request);
