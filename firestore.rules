@@ -186,18 +186,25 @@ service cloud.firestore {
         && resource.data.threadId == request.auth.uid
         && resource.data.isInternalNote == false
       );
-      // Покупатель пишет только в свой диалог, только от себя (и ответы бота),
+      // Покупатель пишет только в свой диалог и только от себя (бота нет),
       // без внутренних заметок.
       allow create: if isAdmin() || (
         isSignedIn()
         && isValidId(messageId)
         && request.resource.data.get('threadId', null) == request.auth.uid
-        && request.resource.data.sender in ['user', 'bot']
+        && request.resource.data.sender == 'user'
         && request.resource.data.get('isInternalNote', false) == false
         && request.resource.data.text is string
         && request.resource.data.text.size() <= 5000
       );
       allow update, delete: if isAdmin();
+    }
+
+    // Состояние диалога поддержки (статус, приоритет) — рабочие пометки сотрудников,
+    // покупатель их не видит
+    match /support_threads/{threadId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin() && isValidId(threadId);
     }
 
     // ------------------------------------------------------------------

@@ -293,10 +293,10 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
               onClose();
               if (onOpenSupportChat) onOpenSupportChat();
             }}
-            className="w-full neu-inset bg-[#E3E8EF] rounded-2xl p-3 px-3.5 flex items-center justify-between text-left transition-all group cursor-pointer active:scale-[0.98]"
+            className="w-full neu-button rounded-2xl p-3 px-3.5 flex items-center justify-between text-left transition-all group cursor-pointer active:scale-[0.98]"
           >
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center shrink-0 text-accent">
+              <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center shrink-0 text-accent">
                 <Headphones className="w-4.5 h-4.5 stroke-[2.2]" />
               </div>
               <div>

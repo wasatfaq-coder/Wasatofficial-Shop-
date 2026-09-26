@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ActiveTab, Product, CartItem, UserProfile, Order, BodyMeasurements, PromoCode, BannerSlide, ChatMessage, AppliedPromoInfo, StorefrontSettings, DeliveryMethod, PickupPoint, ReviewVote, StoredReview } from './types';
 import { GUEST_USER_PROFILE } from './data/products';
-import { INITIAL_CHAT_MESSAGES } from './data/marketingAndSupport';
 import { loadLocalDeliveryMethods, saveLocalDeliveryMethods, loadLocalPickupPoints, saveLocalPickupPoints } from './data/deliveryData';
 import { playNotificationChime, sendBrowserNotification, getOrderStatusNotification } from './utils/pushNotifications';
 import { DeviceFrameWrapper } from './components/DeviceFrameWrapper';
@@ -65,6 +64,7 @@ import {
   syncAllPickupPointsToFirestore,
   subscribeToReviews,
   subscribeToReviewVotes,
+  chatMessageOrder,
 } from './utils/firebaseSync';
 import { mergeProductReviews } from './utils/reviews';
 
@@ -202,10 +202,10 @@ export default function App() {
       const saved = localStorage.getItem(CHAT_CACHE_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch {}
-    return INITIAL_CHAT_MESSAGES;
+    return [];
   });
 
   // The removed local admin password was kept here in plain text: erase it
@@ -222,7 +222,9 @@ export default function App() {
     } catch {}
   }, [chatMessages]);
 
-  const [isChatTyping, setIsChatTyping] = useState(false);
+  // Delivery state of the customer's own chat messages (a failed one stays on screen with «повторить»)
+  const [pendingChatIds, setPendingChatIds] = useState<ReadonlySet<string>>(() => new Set());
+  const [failedChatMessages, setFailedChatMessages] = useState<ChatMessage[]>([]);
   const [chatIdentity, setChatIdentity] = useState<ChatIdentity | null>(null);
   // When true, orders are placed and validated by the placeOrder Cloud Function
   const [serverOrdersEnabled, setServerOrdersEnabled] = useState(false);
@@ -549,7 +551,7 @@ export default function App() {
         db: chatIdentity.db,
       });
     }
-    setChatMessages(INITIAL_CHAT_MESSAGES);
+    setChatMessages([]);
   }, [authLoading, isAdmin, chatIdentity]);
 
   // 2. Sync profile from Firebase Auth user & users collection
@@ -999,8 +1001,27 @@ export default function App() {
     addToast('Промокод отменен', 'info');
   };
 
-  // Support Chat Message Handlers (Live client + automated assistant + admin responses + media)
-  const handleSendMessageFromUser = async (text: string, imageUrl?: string) => {
+  // Support chat: the customer writes to the store's staff (no automatic replies)
+  const deliverChatMessage = async (msg: ChatMessage, targetDb: ChatIdentity['db']) => {
+    setPendingChatIds((prev) => new Set(prev).add(msg.id));
+    setFailedChatMessages((prev) => prev.filter((m) => m.id !== msg.id));
+    try {
+      await saveChatMessageToFirestore(msg, targetDb);
+    } catch (err) {
+      console.error('Chat message was not sent:', err);
+      setFailedChatMessages((prev) => [...prev.filter((m) => m.id !== msg.id), msg]);
+      addToast('Сообщение не отправлено. Проверьте соединение и нажмите «повторить»', 'error');
+    } finally {
+      setPendingChatIds((prev) => {
+        const next = new Set(prev);
+        next.delete(msg.id);
+        return next;
+      });
+    }
+  };
+
+  /** false: the message could not be sent at all (the text stays in the field) */
+  const handleSendMessageFromUser = async (text: string, imageUrl?: string): Promise<boolean> => {
     // Each customer has a private thread; guests get an anonymous chat identity on first message
     let identity = chatIdentity;
     if (!identity) {
@@ -1018,52 +1039,29 @@ export default function App() {
             : 'Не удалось подключиться к чату. Проверьте соединение и попробуйте еще раз.',
           'error'
         );
-        return;
+        return false;
       }
     }
-    const thread = {
-      threadId: identity.uid,
-      threadName: userProfile.name || userProfile.email || currentUser?.email || 'Гость',
-    };
 
     const userMsg: ChatMessage = {
       id: newChatMessageId(),
       sender: 'user',
       text,
       imageUrl,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      ...thread,
+      timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+      threadId: identity.uid,
+      threadName: userProfile.name || userProfile.email || currentUser?.email || 'Гость',
     };
     setChatMessages((prev) => [...prev, userMsg]);
-    saveChatMessageToFirestore(userMsg, identity.db);
-    setIsChatTyping(true);
+    void deliverChatMessage(userMsg, identity.db);
+    return true;
+  };
 
-    setTimeout(() => {
-      setIsChatTyping(false);
-      let replyText = `Благодарим за обращение! Менеджер ${storeName} ответит вам в течение нескольких минут.`;
-      const lower = text.toLowerCase();
-      if (imageUrl) {
-        replyText = 'Спасибо за прикрепленное фото! Консультант уже изучает изображение и поможет с оценкой или подбором.';
-      } else if (lower.includes('размер') || lower.includes('подобрать')) {
-        replyText = 'Воспользуйтесь «Калькулятором размеров» в меню или в карточке товара — он подберет размер по вашим росту, весу и обхватам.';
-      } else if (lower.includes('доставк') || lower.includes('где заказ') || lower.includes('трек')) {
-        replyText = 'Статус и отслеживание заказов — в разделе «Профиль» → «Заказы и трекинг». Сроки доставки для вашего адреса видны при оформлении заказа.';
-      } else if (lower.includes('возврат') || lower.includes('обмен')) {
-        replyText = `Возврат и обмен возможны в течение ${formatDays(storefrontSettings.returnPeriodDays ?? 14)}. Прикрепите фото бирки и товара прямо в чат — так мы оформим все быстрее.`;
-      } else if (lower.includes('скидк') || lower.includes('промокод')) {
-        replyText = 'Доступные промокоды можно выбрать в корзине — кнопка «Добавить купоны и промокоды». Менеджер также может подобрать для вас персональное предложение.';
-      }
-
-      const botMsg: ChatMessage = {
-        id: newChatMessageId(),
-        sender: 'bot',
-        text: replyText,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        ...thread,
-      };
-      setChatMessages((prev) => [...prev, botMsg]);
-      saveChatMessageToFirestore(botMsg, identity.db);
-    }, 1000);
+  const handleRetryChatMessage = (messageId: string) => {
+    const msg = failedChatMessages.find((m) => m.id === messageId);
+    const identity = chatIdentity;
+    if (!msg || !identity) return;
+    void deliverChatMessage(msg, identity.db);
   };
 
   const handleSendMessageAsAdmin = (
@@ -1087,7 +1085,7 @@ export default function App() {
       isInternalNote,
       productCard,
       orderStatusUpdate,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
     };
     setChatMessages((prev) => [...prev, adminMsg]);
     saveChatMessageToFirestore(adminMsg);
@@ -1106,7 +1104,8 @@ export default function App() {
           description: promoCard.description || 'Персональный промокод от службы заботы',
           minOrderAmount: 0,
           active: true,
-          expiresAt: promoCard.expiryDate || '31 декабря 2026 г.',
+          // no invented deadline: without a date the code works until it is used
+          ...(promoCard.expiryDate ? { expiresAt: promoCard.expiryDate } : {}),
           usedCount: 0,
           usageLimit: 1,
         };
@@ -1127,12 +1126,12 @@ export default function App() {
   };
 
   // Admins load every thread; in the storefront chat they only see their own
-  const adminOwnThread = isAdmin ? chatMessages.filter((m) => m.threadId === currentUser?.uid) : [];
-  const customerChatMessages = isAdmin
-    ? adminOwnThread.length > 0
-      ? adminOwnThread
-      : INITIAL_CHAT_MESSAGES
-    : chatMessages;
+  const ownThread = isAdmin ? chatMessages.filter((m) => m.threadId === currentUser?.uid) : chatMessages;
+  // Failed messages are not in Firestore: keep them on screen (in send order) until they are retried
+  const customerChatMessages = [
+    ...ownThread.filter((m) => !failedChatMessages.some((f) => f.id === m.id)),
+    ...failedChatMessages,
+  ].sort((a, b) => chatMessageOrder(a) - chatMessageOrder(b));
 
   // Complete Order
   type CompleteOrderData = {
@@ -1236,7 +1235,7 @@ export default function App() {
   const completeOrderLocally = (orderData: CompleteOrderData): boolean => {
     // Orders are create-only for customers, so IDs must not collide with existing ones
     const newOrderId = `WS-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
-    const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const nowStr = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 
     const { customerName, customerPhone, customerEmail, deliveryAddress, deliveryMethod, paymentMethod } =
       resolveOrderDetails(orderData);
@@ -1410,21 +1409,23 @@ export default function App() {
           isOpen={isSupportChatOpen}
           storePhone={getStoreContacts(storefrontSettings).phone}
           onClose={() => setIsSupportChatOpen(false)}
-          onOpenMySizes={() => setIsMySizesModalOpen(true)}
-          onNavigateTab={(tab) => setActiveTab(tab)}
           messages={customerChatMessages}
           onSendMessage={handleSendMessageFromUser}
-          isTyping={isChatTyping}
+          pendingIds={pendingChatIds}
+          failedIds={new Set(failedChatMessages.map((m) => m.id))}
+          onRetry={handleRetryChatMessage}
           onApplyPromo={handleApplyPromo}
+          onShowToast={addToast}
           onAddToCart={(productId, color, size) => {
             const prod = products.find((p) => p.id === productId);
-            if (prod) {
-              handleAddToCartWithOptions(
-                prod,
-                color || prod.colors?.[0]?.name || 'Бежевый',
-                size || prod.sizes?.[0] || 'M',
-                1
-              );
+            if (!prod) return;
+            const pickColor = color || prod.colors?.[0]?.name;
+            const pickSize = size || prod.sizes?.[0];
+            // Without a colour and size the customer chooses them in the product card
+            if (pickColor && pickSize) handleAddToCartWithOptions(prod, pickColor, pickSize, 1);
+            else {
+              setIsSupportChatOpen(false);
+              handleSelectProduct(prod);
             }
           }}
           onSelectProductById={(productId) => {

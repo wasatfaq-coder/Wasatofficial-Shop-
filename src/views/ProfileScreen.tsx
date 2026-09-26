@@ -73,7 +73,8 @@ import { formatAddress } from '../utils/addressFormat';
 import { AdminAnalyticsTab } from '../components/admin/AdminAnalyticsTab';
 import { AdminPromoConstructorTab } from '../components/admin/AdminPromoConstructorTab';
 import { AdminBannersTab } from '../components/admin/AdminBannersTab';
-import { AdminSupportChatTab } from '../components/admin/AdminSupportChatTab';
+import { AdminSupportInbox } from '../components/admin/AdminSupportInbox';
+import type { AdminChatPayload } from '../components/admin/AdminSupportChatTab';
 import { AdminInventoryTab } from '../components/admin/AdminInventoryTab';
 import { AdminProductsTab } from '../components/admin/AdminProductsTab';
 import { AdminOrdersTab } from '../components/admin/AdminOrdersTab';
@@ -280,79 +281,31 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     if (onUpdateOrders) onUpdateOrders(updated);
   };
 
-  // Support inbox: one dialog per customer (messages grouped by threadId).
-  // Messages written before per-customer chats existed have no threadId.
-  const LEGACY_THREAD_KEY = '__legacy__';
-  const chatThreads = React.useMemo(() => {
-    const byKey = new Map<string, { key: string; threadId: string | null; name: string; count: number; lastOrder: number; lastText: string }>();
-    for (const msg of localChatMessages) {
-      const key = msg.threadId || LEGACY_THREAD_KEY;
-      const order = Number(msg.id.match(/\d+/)?.[0] || 0);
-      const entry = byKey.get(key) || {
-        key,
-        threadId: msg.threadId || null,
-        name: msg.threadId ? 'Покупатель' : 'Общий чат (до разделения)',
-        count: 0,
-        lastOrder: 0,
-        lastText: '',
-      };
-      if (msg.threadName) entry.name = msg.threadName;
-      entry.count += 1;
-      if (order >= entry.lastOrder) {
-        entry.lastOrder = order;
-        entry.lastText = msg.text || 'Вложение';
-      }
-      byKey.set(key, entry);
-    }
-    return [...byKey.values()].sort((a, b) => b.lastOrder - a.lastOrder);
-  }, [localChatMessages]);
-
-  const [activeChatThreadKey, setActiveChatThreadKey] = useState<string | null>(null);
-  React.useEffect(() => {
-    if (chatThreads.length > 0 && !chatThreads.some((t) => t.key === activeChatThreadKey)) {
-      setActiveChatThreadKey(chatThreads[0].key);
-    }
-  }, [chatThreads, activeChatThreadKey]);
-
-  const activeThreadMessages = localChatMessages.filter(
-    (m) => (m.threadId || LEGACY_THREAD_KEY) === activeChatThreadKey
-  );
-
-  const handleClearActiveThread = () => {
-    if (!onClearChat || !activeChatThreadKey) return;
-    onClearChat(activeChatThreadKey === LEGACY_THREAD_KEY ? null : activeChatThreadKey);
-  };
-
-  const handleSendAdminMessage = (
-    text: string,
-    imageUrl?: string,
-    promoCard?: ChatMessage['promoCard'],
-    tag?: ChatMessage['tag'],
-    isInternalNote?: boolean,
-    productCard?: ChatMessage['productCard'],
-    orderStatusUpdate?: ChatMessage['orderStatusUpdate']
-  ) => {
-    const activeThread = chatThreads.find((t) => t.key === activeChatThreadKey);
-    const thread = activeThread?.threadId
-      ? { threadId: activeThread.threadId, threadName: activeThread.name }
-      : undefined;
+  // Support inbox: one dialog per customer (AdminSupportInbox groups messages by threadId)
+  const handleSendAdminMessage = (thread: { threadId: string; threadName: string }, payload: AdminChatPayload) => {
     const newMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
       ...thread,
       sender: 'admin',
-      text,
-      imageUrl,
-      promoCard,
-      tag,
-      isInternalNote,
-      productCard,
-      orderStatusUpdate,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      text: payload.text,
+      imageUrl: payload.imageUrl,
+      promoCard: payload.promoCard,
+      isInternalNote: payload.isInternalNote,
+      productCard: payload.productCard,
+      orderStatusUpdate: payload.orderStatusUpdate,
+      timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
     };
     setLocalChatMessages((prev) => [...prev, newMsg]);
-    if (onSendMessageAsAdmin) {
-      onSendMessageAsAdmin(text, imageUrl, promoCard, tag, isInternalNote, productCard, orderStatusUpdate, thread);
-    }
+    onSendMessageAsAdmin?.(
+      payload.text,
+      payload.imageUrl,
+      payload.promoCard,
+      undefined,
+      payload.isInternalNote,
+      payload.productCard,
+      payload.orderStatusUpdate,
+      thread
+    );
   };
 
   // Admin Authentication & Credentials State
@@ -3234,50 +3187,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
               {/* --- TAB 7: REAL-TIME SUPPORT CHAT --- */}
               {adminTab === 'support' && (
-                <div className="space-y-3">
-                  <div className="neu-inset rounded-2xl p-3 space-y-2">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-[#4E5C70]">
-                      Диалоги покупателей · {chatThreads.length}
-                    </p>
-                    {chatThreads.length === 0 ? (
-                      <p className="text-xs text-[#4E5C70]">Сообщений от покупателей пока нет</p>
-                    ) : (
-                      <div className="flex gap-2 overflow-x-auto pb-1">
-                        {chatThreads.map((thread) => (
-                          <button
-                            key={thread.key}
-                            type="button"
-                            onClick={() => setActiveChatThreadKey(thread.key)}
-                            className={`shrink-0 max-w-[220px] text-left rounded-xl px-3 py-2 transition-all cursor-pointer ${
-                              thread.key === activeChatThreadKey
-                                ? 'neu-pill-active'
-                                : 'neu-button text-[#2D3A4E]'
-                            }`}
-                            title={thread.lastText}
-                          >
-                            <span className="block text-xs font-bold truncate">
-                              {thread.name} · {thread.count}
-                            </span>
-                            <span className="block text-[11px] opacity-80 truncate">{thread.lastText}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                <AdminSupportChatTab
-                  key={activeChatThreadKey || 'none'}
-                  messages={activeThreadMessages}
+                <AdminSupportInbox
+                  messages={localChatMessages}
                   orders={orders}
                   products={productsList}
                   promos={localPromos}
+                  categories={getCategories(storefrontSettings)}
                   initialOrderId={supportTargetOrderId}
-                  onSendMessageAsAdmin={handleSendAdminMessage}
+                  onSend={handleSendAdminMessage}
                   onUpdateOrders={handleUpdateOrders}
-                  onUpdatePromos={handleUpdatePromosList}
-                  onClearChat={handleClearActiveThread}
+                  onClearThread={(threadId) => onClearChat?.(threadId)}
                   onShowToast={onShowToast}
                 />
-                </div>
               )}
 
               {adminTab === 'categories' && (
