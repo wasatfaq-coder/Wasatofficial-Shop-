@@ -60,7 +60,7 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
           </div>
 
           {/* Item details */}
-          <div className="neu-inset rounded-2xl p-2.5 bg-[#E3E8EF] flex items-center gap-3">
+          <div className="neu-inset rounded-2xl p-2.5 flex items-center gap-3">
             <img
               src={productImage(item.product)}
               alt={item.product?.title || ''}
@@ -88,7 +88,7 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
                 onMoveToFavorites(item);
                 onClose();
               }}
-              className="w-full py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-accent hover:scale-102 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-accent hover:scale-102 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <Heart className="w-4 h-4 stroke-[2.2] fill-accent/20 text-accent" />
               <span>Переместить в Избранное</span>
@@ -106,7 +106,7 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
                   onConfirmRemove(item.id);
                   onClose();
                 }}
-                className="flex-1 py-2.5 px-3 neu-button-danger rounded-xl text-xs font-black hover:scale-102 active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="flex-1 py-2.5 px-3 neu-button-danger rounded-xl text-xs font-black hover:scale-102 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Удалить</span>

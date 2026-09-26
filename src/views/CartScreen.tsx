@@ -140,7 +140,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   return (
     <div className="space-y-4 pb-28 animate-in fade-in duration-300">
       {/* Free Delivery Threshold Dynamic Progress Banner */}
-      <div className="neu-flat rounded-2xl p-3.5 border border-white/60 space-y-2 bg-[#E3E8EF]">
+      <div className="neu-flat rounded-2xl p-3.5 border border-white/60 space-y-2">
         <div className="flex items-center justify-between text-xs font-bold">
           <div className="flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-accent" />
@@ -200,14 +200,14 @@ export const CartScreen: React.FC<CartScreenProps> = ({
             >
               <div className="flex gap-3.5 items-center">
                 {/* Thumbnail Image */}
-                <div className="relative w-20 h-20 aspect-square rounded-2xl overflow-hidden neu-inset p-1.5 shrink-0 bg-[#E3E8EF] flex items-center justify-center">
+                <div className="relative w-20 h-20 aspect-square rounded-2xl overflow-hidden neu-inset p-1.5 shrink-0 flex items-center justify-center">
                   <img
                     src={productImage(item.product)}
                     alt={item.product?.title || ''}
                     className="w-full h-full object-cover object-top rounded-xl"
                   />
                   {availableStock <= 2 && availableStock > 0 && (
-                    <span className="absolute bottom-1 right-1 neu-flat bg-[#E3E8EF]/95 text-[#2D3A4E] text-[11px] font-extrabold px-1.5 py-0.5 rounded-md border border-white/60">
+                    <span className="absolute bottom-1 right-1 neu-flat text-[#2D3A4E] text-[11px] font-extrabold px-1.5 py-0.5 rounded-md border border-white/60">
                       {availableStock} шт.
                     </span>
                   )}
@@ -241,7 +241,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => setEditingVariantItemId(isEditingVariant ? null : item.id)}
-                      className="neu-inset px-2.5 py-0.5 rounded-xl flex items-center gap-1.5 text-[11px] font-bold text-accent hover:scale-102 transition-transform cursor-pointer"
+                      className="neu-button px-2.5 py-0.5 rounded-xl flex items-center gap-1.5 text-[11px] font-bold text-accent hover:scale-102 transition-transform cursor-pointer"
                       title="Нажмите, чтобы изменить цвет или размер"
                     >
                       <span>{item.selectedColor} • {item.selectedSize}</span>
@@ -325,11 +325,11 @@ export const CartScreen: React.FC<CartScreenProps> = ({
 
               {/* Interactive In-Cart Variant Selector Drawer */}
               {isEditingVariant && onUpdateVariant && (
-                <div className="neu-inset rounded-2xl p-3.5 sm:p-4 bg-[#E3E8EF] space-y-3 border border-white/70 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="neu-inset rounded-2xl p-3.5 sm:p-4 space-y-3 border border-white/70 animate-in fade-in slide-in-from-top-2 duration-200">
                   {/* Header */}
                   <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-6 h-6 rounded-lg neu-flat bg-[#E3E8EF] flex items-center justify-center text-accent shrink-0 border border-white/60">
+                      <div className="w-6 h-6 rounded-lg neu-flat flex items-center justify-center text-accent shrink-0 border border-white/60">
                         <SlidersHorizontal className="w-3.5 h-3.5" />
                       </div>
                       <div className="truncate">
@@ -341,7 +341,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => setEditingVariantItemId(null)}
-                      className="px-2.5 py-1 rounded-xl neu-button text-[11px] font-extrabold text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer shrink-0"
+                      className="px-2.5 py-1 rounded-xl neu-button text-[11px] font-extrabold text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer shrink-0"
                     >
                       Закрыть
                     </button>
@@ -351,7 +351,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-bold text-[#4E5C70]">Цвет:</span>
-                      <span className="text-[11px] font-extrabold text-accent neu-inset px-2 py-0.5 rounded-lg bg-[#E3E8EF]">
+                      <span className="text-[11px] font-extrabold text-accent neu-inset px-2 py-0.5 rounded-lg">
                         {item.selectedColor}
                       </span>
                     </div>
@@ -373,9 +373,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                             }}
                             className={`min-h-[32px] px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer select-none active:scale-95 ${
                               isCurrent
-                                ? 'neu-inset bg-[#E3E8EF] text-[#1E293B] border border-accent/40 font-black'
+                                ? 'neu-inset text-[#1E293B] border border-accent/40 font-black'
                                 : isOutOfStock
-                                ? 'opacity-35 neu-inset bg-[#E3E8EF]/60 text-[#4E5C70] line-through cursor-not-allowed border border-transparent'
+                                ? 'opacity-35 neu-inset text-[#4E5C70] line-through cursor-not-allowed border border-transparent'
                                 : 'neu-button text-[#2D3A4E] hover:text-[#1E293B]'
                             }`}
                           >
@@ -395,7 +395,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-bold text-[#4E5C70]">Размер:</span>
-                      <span className="text-[11px] font-extrabold text-accent neu-inset px-2 py-0.5 rounded-lg bg-[#E3E8EF]">
+                      <span className="text-[11px] font-extrabold text-accent neu-inset px-2 py-0.5 rounded-lg">
                         {item.selectedSize}
                       </span>
                     </div>
@@ -415,9 +415,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                             }}
                             className={`min-w-[42px] min-h-[32px] px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none active:scale-95 ${
                               isCurrent
-                                ? 'neu-inset bg-[#E3E8EF] text-[#1E293B] border border-accent/40 font-black'
+                                ? 'neu-inset text-[#1E293B] border border-accent/40 font-black'
                                 : isOutOfStock
-                                ? 'opacity-35 neu-inset bg-[#E3E8EF]/60 text-[#4E5C70] line-through cursor-not-allowed border border-transparent'
+                                ? 'opacity-35 neu-inset text-[#4E5C70] line-through cursor-not-allowed border border-transparent'
                                 : 'neu-button text-[#2D3A4E] hover:text-[#1E293B]'
                             }`}
                           >
@@ -461,7 +461,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => setEditingVariantItemId(null)}
-                      className="px-3 py-1.5 rounded-xl neu-button text-[11px] font-black text-accent hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer shrink-0"
+                      className="px-3 py-1.5 rounded-xl neu-button text-[11px] font-black text-accent hover:text-[#2D3A4E] transition-all cursor-pointer shrink-0"
                     >
                       Готово
                     </button>
@@ -521,7 +521,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
 
       {/* Applied Promo discount pill */}
       {appliedPromo && (
-        <div className="neu-inset rounded-xl p-2.5 px-3.5 flex items-center justify-between text-xs font-bold text-accent border border-accent/30 bg-[#E3E8EF]">
+        <div className="neu-inset rounded-xl p-2.5 px-3.5 flex items-center justify-between text-xs font-bold text-accent border border-accent/30">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-accent" />
             <span>
@@ -547,7 +547,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
 
       {/* Summary Cost Card */}
       <div className="neu-flat rounded-3xl p-3.5 border border-white/80 space-y-3">
-        <div className="neu-inset rounded-2xl p-4 space-y-2.5 bg-[#E3E8EF]">
+        <div className="neu-inset rounded-2xl p-4 space-y-2.5">
           <div className="space-y-2 text-xs font-semibold text-[#4E5C70]">
             <div className="flex justify-between">
               <span>Товары ({totalItemsCount})</span>
@@ -584,7 +584,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         {/* Action Buttons: 1-Click Quick Order + Full Checkout */}
         <div className="space-y-2">
           {unavailableCount > 0 && (
-            <p className="neu-inset rounded-2xl p-3 text-[11px] font-bold text-danger bg-danger-soft">
+            <p className="neu-inset rounded-2xl p-3 text-[11px] font-bold text-danger">
               Часть товаров закончилась: уменьшите количество или удалите их из корзины ({unavailableCount}).
             </p>
           )}

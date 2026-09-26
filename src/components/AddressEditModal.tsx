@@ -183,7 +183,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Дом, Работа, Студия"
-                  className="w-full neu-inset rounded-2xl py-2.5 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
+                  className="w-full neu-inset rounded-2xl py-2.5 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A]"
                 />
               </div>
 
@@ -199,7 +199,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
                     placeholder="Москва"
-                    className="w-full neu-inset rounded-2xl py-2.5 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
+                    className="w-full neu-inset rounded-2xl py-2.5 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A]"
                   />
                 </div>
                 <div>
@@ -211,7 +211,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                     value={postalCode}
                     onChange={(e) => setPostalCode(e.target.value)}
                     placeholder="101000"
-                    className="w-full neu-inset rounded-2xl py-2.5 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
+                    className="w-full neu-inset rounded-2xl py-2.5 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A]"
                   />
                 </div>
               </div>
@@ -227,7 +227,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                   value={street}
                   onChange={(e) => setStreet(e.target.value)}
                   placeholder="ул. Тверская, Ленинский проспект"
-                  className="w-full neu-inset rounded-2xl py-2.5 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
+                  className="w-full neu-inset rounded-2xl py-2.5 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A]"
                 />
               </div>
 
@@ -247,7 +247,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                       }
                     }}
                     placeholder="д. 10 / 12к1"
-                    className={`w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF] transition-all ${
+                    className={`w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] transition-all ${
                       errors.house ? 'ring-2 ring-danger/70 bg-danger-soft' : ''
                     }`}
                   />
@@ -271,7 +271,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                       }
                     }}
                     placeholder="2"
-                    className={`w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF] transition-all ${
+                    className={`w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] transition-all ${
                       errors.entrance ? 'ring-2 ring-danger/70 bg-danger-soft' : ''
                     }`}
                   />
@@ -290,7 +290,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                     value={floor}
                     onChange={(e) => setFloor(e.target.value)}
                     placeholder="4"
-                    className="w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
+                    className="w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A]"
                   />
                 </div>
               </div>
@@ -306,7 +306,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                     value={apartment}
                     onChange={(e) => setApartment(e.target.value)}
                     placeholder="кв. 25 / офис 14"
-                    className="w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
+                    className="w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A]"
                   />
                 </div>
                 <div>
@@ -323,7 +323,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                       }
                     }}
                     placeholder="25K / #1234"
-                    className={`w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF] transition-all ${
+                    className={`w-full neu-inset rounded-2xl py-2.5 px-3 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] transition-all ${
                       errors.intercom ? 'ring-2 ring-danger/70 bg-danger-soft' : ''
                     }`}
                   />
@@ -336,7 +336,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
               </div>
 
               {/* Live Preview Box for Delivery */}
-              <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-1">
+              <div className="neu-inset rounded-2xl p-3 space-y-1">
                 <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider block">
                   Адрес в накладной для курьера:
                 </span>
@@ -354,7 +354,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                   className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
                     isDefault
                       ? 'neu-fill-accent text-white'
-                      : 'neu-inset text-transparent bg-[#E3E8EF]'
+                      : 'neu-inset text-transparent'
                   }`}
                 >
                   <Check className="w-3.5 h-3.5 stroke-[3]" />

@@ -35,7 +35,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
     <div className={`space-y-3 pt-2 ${className}`}>
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-xl neu-inset flex items-center justify-center text-accent bg-[#E3E8EF]">
+          <div className="w-7 h-7 rounded-xl neu-inset flex items-center justify-center text-accent">
             <Clock className="w-4 h-4 stroke-[2.2]" />
           </div>
           <h3 className="text-sm font-bold text-[#2D3A4E] tracking-tight">{title}</h3>
@@ -47,7 +47,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
         {onClearRecentlyViewed && (
           <button
             onClick={onClearRecentlyViewed}
-            className="neu-button-danger rounded-xl px-2.5 py-1 text-[11px] font-bold transition-colors flex items-center gap-1.5 active:scale-95"
+            className="neu-button-danger rounded-xl px-2.5 py-1 text-[11px] font-bold transition-colors flex items-center gap-1.5"
             title="Очистить историю просмотров"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -85,7 +85,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
                         e.stopPropagation();
                         onRemoveFromRecentlyViewed(product.id);
                       }}
-                      className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full neu-photo-btn flex items-center justify-center text-[#4E5C70] hover:text-danger transition-transform active:scale-90 z-10"
+                      className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full neu-photo-btn flex items-center justify-center text-[#4E5C70] hover:text-danger transition-transform z-10"
                       title="Удалить из истории"
                       aria-label="Удалить из истории"
                     >
@@ -100,7 +100,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
                         e.stopPropagation();
                         onToggleFavorite(product, e);
                       }}
-                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full neu-photo-btn flex items-center justify-center text-[#4E5C70] hover:text-danger transition-transform active:scale-90 z-10"
+                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full neu-photo-btn flex items-center justify-center text-[#4E5C70] hover:text-danger transition-transform z-10"
                       title="В избранное"
                       aria-label="В избранное"
                     >

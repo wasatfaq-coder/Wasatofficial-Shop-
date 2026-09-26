@@ -81,18 +81,18 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2D3A4E]/50 backdrop-blur-xs animate-in fade-in duration-200"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg neu-flat rounded-3xl bg-[#E3E8EF] p-5 sm:p-6 space-y-4 border border-white/80 relative animate-in zoom-in-95 duration-150"
+        className="w-full max-w-lg neu-flat rounded-3xl p-5 sm:p-6 space-y-4 border border-white/80 relative animate-in zoom-in-95 duration-150"
         role="dialog"
         aria-modal="true"
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-3 pb-2 border-b border-[#BAC5D5]/40">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl neu-flat-sm flex items-center justify-center text-accent bg-[#E3E8EF] shrink-0">
+            <div className="w-10 h-10 rounded-2xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
               <Pencil className="w-4 h-4" />
             </div>
             <div>
@@ -115,7 +115,7 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full neu-flat-sm flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all shrink-0 cursor-pointer bg-[#E3E8EF]"
+            className="w-8 h-8 rounded-full neu-flat-sm flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all shrink-0 cursor-pointer"
             title="Закрыть (Esc)"
             aria-label="Закрыть (Esc)"
           >
@@ -125,7 +125,7 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
 
         {/* Optional Description / Context Help */}
         {config.description && (
-          <div className="neu-inset p-3 rounded-2xl bg-[#E3E8EF]/80 text-[11px] text-[#4E5C70] leading-relaxed flex items-start gap-2">
+          <div className="neu-inset p-3 rounded-2xl text-[11px] text-[#4E5C70] leading-relaxed flex items-start gap-2">
             <Sparkles className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
             <span>{config.description}</span>
           </div>
@@ -164,7 +164,7 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
                   handleSave();
                 }
               }}
-              className="w-full px-3.5 py-3 neu-inset rounded-2xl text-xs sm:text-sm text-[#2D3A4E] bg-[#E3E8EF] resize-y leading-relaxed font-medium"
+              className="w-full px-3.5 py-3 neu-inset rounded-2xl text-xs sm:text-sm text-[#2D3A4E] resize-y leading-relaxed font-medium"
             />
           ) : (
             <div className="relative flex items-center">
@@ -183,7 +183,7 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
                     handleSave();
                   }
                 }}
-                className={`w-full px-3.5 py-2.5 neu-inset rounded-xl text-xs sm:text-sm text-[#2D3A4E] bg-[#E3E8EF] font-medium ${
+                className={`w-full px-3.5 py-2.5 neu-inset rounded-xl text-xs sm:text-sm text-[#2D3A4E] font-medium ${
                   config.unit ? 'pr-12' : ''
                 }`}
               />
@@ -206,14 +206,14 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer active:scale-95 transition-transform"
+            className="py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer transition-transform"
           >
             Отмена
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="py-2.5 px-5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
+            className="py-2.5 px-5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center gap-1.5 cursor-pointer transition-transform"
           >
             <Check className="w-4 h-4" />
             <span>Сохранить изменения</span>

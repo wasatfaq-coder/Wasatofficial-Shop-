@@ -50,7 +50,9 @@ export const AnimatedFavoriteButton: React.FC<AnimatedFavoriteButtonProps> = ({
       type="button"
       onClick={handleClick}
       whileTap={{ scale: 0.82 }}
-      className={`relative rounded-full flex items-center justify-center cursor-pointer select-none transition-colors ${currentSize.btn} ${className}`}
+      // `relative` only when the caller does not position the button itself: with both classes
+      // `relative` won and the button left its corner over the photo
+      className={`${/(^|\s)(absolute|fixed)(\s|$)/.test(className) ? '' : 'relative '}rounded-full flex items-center justify-center cursor-pointer select-none transition-colors ${currentSize.btn} ${className}`}
       aria-label={ariaLabel}
       title={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}
     >

@@ -390,7 +390,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                 <div
                   className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
                     isCurrent
-                      ? 'neu-inset-deep neu-inset-deep-animated text-accent bg-[#E3E8EF] ring-2 ring-accent/50 scale-105'
+                      ? 'neu-inset-deep neu-inset-deep-animated text-accent ring-2 ring-accent/50 scale-105'
                       : isCompleted
                       ? 'neu-button text-success font-bold'
                       : 'neu-inset text-[#4E5C70]'
@@ -447,23 +447,23 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
         <button
           type="button"
           onClick={onOpenPromoModal}
-          className="w-full neu-inset rounded-2xl p-3 flex items-center justify-between text-xs font-medium text-slate-700 hover:text-slate-900 transition-all cursor-pointer group mt-2"
+          className="w-full neu-button rounded-2xl p-3 flex items-center justify-between text-xs font-medium text-[#2D3A4E] hover:text-accent transition-all cursor-pointer group mt-2"
         >
           <div className="flex items-center gap-2.5">
             <div
               className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                 appliedPromo
-                  ? 'neu-inset bg-[#dbe4f0] text-success font-bold'
+                  ? 'neu-inset text-success font-bold'
                   : 'neu-button text-accent-strong'
               }`}
             >
               <Tag className="w-3.5 h-3.5 stroke-[2.2]" />
             </div>
             <div className="text-left">
-              <span className="font-bold text-slate-900 block">
+              <span className="font-bold text-[#2D3A4E] block">
                 {appliedPromo ? `Промокод: ${appliedPromo.code}` : 'Добавить промокод / купон'}
               </span>
-              <span className="text-[11px] text-slate-500 font-medium block">
+              <span className="text-[11px] text-[#4E5C70] font-medium block">
                 {appliedPromo
                   ? appliedPromo.discountType === 'fixed'
                     ? `Скидка ${(appliedPromo.discountValue || 0).toLocaleString('ru-RU')} ₽ применена`
@@ -482,44 +482,44 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Contact Info matching Image 5 */}
         <div id="checkout-contacts" className="neu-flat rounded-3xl p-4 space-y-3 border border-white/60">
-          <h3 className="text-xs font-bold text-slate-800 tracking-wider uppercase">
+          <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase">
             Контактные данные
           </h3>
 
           <div className="space-y-2.5">
             <div className="relative">
-              <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <User className="w-4 h-4 text-[#56647A] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="ФИО"
-                className="w-full neu-inset rounded-2xl py-3 pl-10 pr-3 text-xs font-medium text-slate-800"
+                className="w-full neu-inset rounded-2xl py-3 pl-10 pr-3 text-xs font-medium text-[#2D3A4E]"
               />
             </div>
 
             <div className="relative">
-              <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Phone className="w-4 h-4 text-[#56647A] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="tel"
                 required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+7 (999) 000-00-00"
-                className="w-full neu-inset rounded-2xl py-3 pl-10 pr-3 text-xs font-medium text-slate-800"
+                className="w-full neu-inset rounded-2xl py-3 pl-10 pr-3 text-xs font-medium text-[#2D3A4E]"
               />
             </div>
 
             <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Mail className="w-4 h-4 text-[#56647A] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="E-mail"
-                className="w-full neu-inset rounded-2xl py-3 pl-10 pr-3 text-xs font-medium text-slate-800"
+                className="w-full neu-inset rounded-2xl py-3 pl-10 pr-3 text-xs font-medium text-[#2D3A4E]"
               />
             </div>
           </div>
@@ -544,20 +544,20 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                     </p>
                   </div>
                 </div>
-                <span className="text-[11px] font-black text-success neu-inset px-2.5 py-1 rounded-full bg-[#E3E8EF] uppercase tracking-wider shrink-0">
+                <span className="text-[11px] font-black text-success neu-inset px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0">
                   Бесплатно
                 </span>
               </div>
 
               {/* Main Neumorphic Address Box with Integrated Copy Action */}
-              <div className="neu-flat rounded-2xl p-3.5 bg-[#E3E8EF] space-y-3 border border-white/70">
+              <div className="neu-flat rounded-2xl p-3.5 space-y-3 border border-white/70">
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-1 min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-xs font-black text-[#2D3A4E]">
                         {selectedPickupPoint?.name || `Бутик ${currentStoreName()}`}
                       </span>
-                      <span className="text-[11px] font-bold text-accent neu-inset px-2 py-0.5 rounded-md bg-[#E3E8EF]">
+                      <span className="text-[11px] font-bold text-accent neu-inset px-2 py-0.5 rounded-md">
                         г. {selectedPickupPoint?.city || 'Москва'}
                       </span>
                     </div>
@@ -570,7 +570,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                     </div>
 
                     {selectedPickupPoint?.metro && (
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg neu-inset text-[11px] font-bold text-accent bg-[#E3E8EF] mt-1">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg neu-inset text-[11px] font-bold text-accent mt-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
                         <span>м. {selectedPickupPoint.metro}</span>
                       </div>
@@ -590,8 +590,8 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                     }
                     className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       copiedAddressId === 'top-pickup'
-                        ? 'neu-inset text-success bg-[#E3E8EF] ring-1.5 ring-success/50 scale-95'
-                        : 'neu-button text-accent hover:text-accent-strong active:scale-95'
+                        ? 'neu-inset text-success ring-1.5 ring-success/50 scale-95'
+                        : 'neu-button text-accent hover:text-accent-strong'
                     }`}
                     title="Скопировать адрес пункта выдачи в буфер обмена"
                   >
@@ -626,7 +626,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                 </div>
 
                 {selectedPickupPoint?.note && (
-                  <div className="flex items-start gap-1.5 text-[11px] text-[#4E5C70] neu-inset p-2 rounded-xl bg-[#E3E8EF]">
+                  <div className="flex items-start gap-1.5 text-[11px] text-[#4E5C70] neu-inset p-2 rounded-xl">
                     <Sparkles className="w-3.5 h-3.5 text-warning shrink-0 mt-0.5" />
                     <span className="leading-snug">{selectedPickupPoint.note}</span>
                   </div>
@@ -675,7 +675,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
 
               {/* Structured Address Summary Display */}
               <div
-                className={`neu-inset rounded-2xl p-3.5 space-y-2 bg-[#E3E8EF] transition-all ${
+                className={`neu-inset rounded-2xl p-3.5 space-y-2 transition-all ${
                   validationError ? 'ring-2 ring-danger/80 bg-danger-soft' : ''
                 }`}
               >
@@ -740,53 +740,53 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                 {isPostSelected ? (
                   <div className="flex flex-wrap gap-1.5 pt-0.5">
                     {addrHouse ? (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] bg-[#E3E8EF]/90 border border-white/60">
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] border border-white/60">
                         д. {addrHouse}
                       </span>
                     ) : (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-danger bg-danger-soft border border-danger/35">
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-danger border border-danger/35">
                         нет дома *
                       </span>
                     )}
                     {addrApartment && (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] bg-[#E3E8EF]/90 border border-white/60">
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] border border-white/60">
                         {addrApartment.toLowerCase().includes('кв') ||
                         addrApartment.toLowerCase().includes('оф')
                           ? addrApartment
                           : `кв. ${addrApartment}`}
                       </span>
                     )}
-                    <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-accent bg-accent/5 border border-accent/20">
+                    <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-accent border border-accent/20">
                       Почта России (1-й класс)
                     </span>
                   </div>
                 ) : (
                   <div className="flex flex-wrap gap-1.5 pt-0.5">
                     {addrHouse ? (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] bg-[#E3E8EF]/90 border border-white/60">
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] border border-white/60">
                         д. {addrHouse}
                       </span>
                     ) : (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-danger bg-danger-soft border border-danger/35">
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-danger border border-danger/35">
                         нет дома *
                       </span>
                     )}
                     {addrEntrance ? (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] bg-[#E3E8EF]/90 border border-white/60">
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] border border-white/60">
                         подъезд {addrEntrance}
                       </span>
                     ) : (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-danger bg-danger-soft border border-danger/35">
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-danger border border-danger/35">
                         нет подъезда *
                       </span>
                     )}
                     {addrFloor && (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] bg-[#E3E8EF]/90 border border-white/60">
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] border border-white/60">
                         эт. {addrFloor}
                       </span>
                     )}
                     {addrApartment && (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] bg-[#E3E8EF]/90 border border-white/60">
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] border border-white/60">
                         {addrApartment.toLowerCase().includes('кв') ||
                         addrApartment.toLowerCase().includes('оф')
                           ? addrApartment
@@ -794,11 +794,11 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                       </span>
                     )}
                     {addrIntercom ? (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-accent bg-accent/10 border border-accent/20">
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-accent border border-accent/20">
                         домофон: {addrIntercom}
                       </span>
                     ) : (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-danger bg-danger-soft border border-danger/35">
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-danger border border-danger/35">
                         нет домофона *
                       </span>
                     )}
@@ -823,7 +823,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
               Способ доставки
             </h3>
             {rawSubtotal >= freeThreshold && !noDeliveryMethods && (
-              <span className="neu-inset text-success text-[11px] font-black px-2 py-0.5 rounded-full bg-[#E3E8EF]">
+              <span className="neu-inset text-success text-[11px] font-black px-2 py-0.5 rounded-full">
                 Бесплатная доставка активна
               </span>
             )}
@@ -831,7 +831,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
 
           <div className="space-y-3">
             {noDeliveryMethods && (
-              <p className="neu-inset rounded-2xl p-3 text-xs font-bold text-warning bg-warning-soft">
+              <p className="neu-inset rounded-2xl p-3 text-xs font-bold text-warning">
                 Способы доставки пока не настроены. Оформить заказ можно будет, когда магазин их добавит —
                 напишите нам в чат поддержки.
               </p>
@@ -931,7 +931,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                           <Store className="w-3.5 h-3.5 text-accent" />
                           <span>Выберите пункт выдачи</span>
                         </span>
-                        <span className="text-[11px] font-bold text-accent neu-inset px-2 py-0.5 rounded-lg bg-[#E3E8EF]">
+                        <span className="text-[11px] font-bold text-accent neu-inset px-2 py-0.5 rounded-lg">
                           {activePickupPoints.length} {activePickupPoints.length === 1 ? 'бутик' : 'адреса'}
                         </span>
                       </div>
@@ -954,7 +954,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                               className={`p-3 rounded-2xl cursor-pointer transition-all space-y-2 ${
                                 isPointSelected
                                   ? 'neu-pill-active'
-                                  : 'neu-button hover:bg-[#E3E8EF]/80'
+                                  : 'neu-button'
                               }`}
                             >
                               {/* Point Header */}
@@ -989,7 +989,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                               </div>
 
                               {/* Full Unclipped Address with Neumorphic Copy Button */}
-                              <div className="neu-flat-sm rounded-xl p-3 bg-[#E3E8EF]/90 space-y-2 border border-white/60">
+                              <div className="neu-flat-sm rounded-xl p-3 space-y-2 border border-white/60">
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="space-y-1 min-w-0 flex-1">
                                     <div className="flex items-start gap-1.5">
@@ -999,7 +999,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                                       </p>
                                     </div>
                                     {point.metro && (
-                                      <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-accent neu-inset px-2 py-0.5 rounded-md bg-[#E3E8EF] mt-0.5">
+                                      <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-accent neu-inset px-2 py-0.5 rounded-md mt-0.5">
                                         <span className="w-1.5 h-1.5 rounded-full bg-accent" />
                                         <span>м. {point.metro}</span>
                                       </div>
@@ -1020,8 +1020,8 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                                     }}
                                     className={`shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
                                       copiedAddressId === point.id
-                                        ? 'neu-inset text-success bg-[#E3E8EF] ring-1.5 ring-success/50 scale-95'
-                                        : 'neu-button text-accent hover:text-accent-strong active:scale-95'
+                                        ? 'neu-inset text-success ring-1.5 ring-success/50 scale-95'
+                                        : 'neu-button text-accent hover:text-accent-strong'
                                     }`}
                                     title="Скопировать адрес в буфер обмена"
                                   >
@@ -1168,7 +1168,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           disabled={isSubmitting || orderBlocked}
           className={`w-full py-4 rounded-2xl btn-confirm-order font-bold text-sm flex items-center justify-center gap-2 cursor-pointer transition-all ${
             isSubmitting
-              ? 'neu-inset-deep neu-inset-deep-animated text-accent bg-[#E3E8EF] ring-2 ring-accent/40'
+              ? 'neu-inset-deep neu-inset-deep-animated text-accent ring-2 ring-accent/40'
               : orderBlocked
               ? 'neu-inset text-[#4E5C70] cursor-not-allowed'
               : 'neu-button-accent text-white active:scale-[0.98]'

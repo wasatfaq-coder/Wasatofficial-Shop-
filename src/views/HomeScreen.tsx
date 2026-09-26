@@ -176,8 +176,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     <div className="space-y-5 pb-36 animate-in fade-in duration-300">
       {/* 1. Maintenance / Concierge Banner (if store is offline) */}
       {!isOnline && (
-        <div className="neu-flat rounded-2xl p-3.5 bg-warning-soft border border-warning/30 flex items-center gap-3 text-warning animate-in fade-in">
-          <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-warning shrink-0 bg-[#E3E8EF]">
+        <div className="neu-flat rounded-2xl p-3.5 border border-warning/30 flex items-center gap-3 text-warning animate-in fade-in">
+          <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-warning shrink-0">
             <AlertCircle className="w-4 h-4" />
           </div>
           <div className="text-xs space-y-0.5">
@@ -204,7 +204,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <button
             type="button"
             onClick={onOpenDrawer}
-            className="w-11 h-11 rounded-full neu-inset flex items-center justify-center text-[#2D3A4E] hover:text-accent shrink-0 active:scale-95 transition-all cursor-pointer bg-[#E3E8EF]"
+            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent shrink-0 transition-all cursor-pointer"
             aria-label="Открыть меню"
             title="Меню"
           >
@@ -237,7 +237,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               setActiveTab('catalog');
             }
           }}
-          className="w-11 h-11 rounded-full neu-inset flex items-center justify-center text-[#2D3A4E] hover:text-accent shrink-0 active:scale-95 transition-all cursor-pointer bg-[#E3E8EF]"
+          className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent shrink-0 transition-all cursor-pointer"
           title="Расширенная фильтрация"
           aria-label="Расширенная фильтрация"
         >
@@ -250,7 +250,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       <div
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className="relative neu-inset rounded-3xl p-5 overflow-hidden select-none group/banner cursor-pointer bg-[#E3E8EF] border border-transparent"
+        className="relative neu-inset rounded-3xl p-5 overflow-hidden select-none group/banner cursor-pointer border border-transparent"
         onClick={() => handleBannerClick(currentSlide)}
       >
         <AnimatePresence mode="wait">
@@ -265,7 +265,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {/* Left Text content */}
             <div className="flex-1 space-y-2 max-w-[52%]">
               {currentSlide.badge && (
-                <span className="text-[11px] font-black neu-button px-2.5 py-0.5 rounded-full text-accent uppercase tracking-wider inline-block bg-[#E3E8EF]">
+                <span className="text-[11px] font-black neu-button px-2.5 py-0.5 rounded-full text-accent uppercase tracking-wider inline-block">
                   {currentSlide.badge}
                 </span>
               )}
@@ -292,7 +292,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
         {/* Carousel Pagination Dots */}
         {displaySlides.length > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-4 relative z-20">
+          <div className="flex items-center justify-center gap-0.5 mt-2.5 relative z-20">
             {displaySlides.map((_, idx) => (
               <button
                 key={idx}
@@ -301,13 +301,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   e.stopPropagation();
                   setActiveBannerSlide(idx);
                 }}
-                className={`transition-all duration-300 cursor-pointer ${
-                  activeBannerSlide === idx
-                    ? 'w-6 h-2 bg-[#2D3A4E] rounded-full'
-                    : 'w-2 h-2 neu-inset rounded-full'
-                }`}
+                // 24 px hit area around the small dot (WCAG 2.5.8)
+                className="h-6 min-w-6 px-1 flex items-center justify-center cursor-pointer"
                 aria-label={`Слайд ${idx + 1}`}
-              />
+                aria-current={activeBannerSlide === idx}
+              >
+                <span
+                  className={`block transition-all duration-300 rounded-full ${
+                    activeBannerSlide === idx ? 'w-6 h-2 bg-[#2D3A4E]' : 'w-2 h-2 neu-inset'
+                  }`}
+                />
+              </button>
             ))}
           </div>
         )}
@@ -330,7 +334,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 }}
                 className="flex flex-col items-center gap-2 group cursor-pointer bg-transparent border-0 p-0 select-none"
               >
-                <div className="w-14 h-14 rounded-2xl neu-inset flex items-center justify-center text-[#2D3A4E] group-hover:text-accent group-hover:scale-105 group-active:scale-95 transition-all duration-150 cursor-pointer bg-[#E3E8EF]">
+                <div className="w-14 h-14 rounded-2xl neu-inset flex items-center justify-center text-[#2D3A4E] group-hover:text-accent group-hover:scale-105 group-active:scale-95 transition-all duration-150 cursor-pointer">
                   <IconComp className="w-6 h-6 stroke-[1.8]" />
                 </div>
                 <span className="text-[13px] font-medium text-[#2D3A4E] group-hover:text-accent truncate max-w-full">
@@ -343,8 +347,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {/* 7. Live Storefront Service & Trust Badges */}
       <div className="grid grid-cols-2 gap-2.5 py-1">
-        <div className="neu-inset rounded-2xl p-3 text-center space-y-1 bg-[#E3E8EF]">
-          <div className="w-7 h-7 mx-auto rounded-xl neu-button flex items-center justify-center text-accent bg-[#E3E8EF]">
+        <div className="neu-inset rounded-2xl p-3 text-center space-y-1">
+          <div className="w-7 h-7 mx-auto rounded-xl neu-flat-sm flex items-center justify-center text-accent">
             <Truck className="w-3.5 h-3.5" />
           </div>
           <span className="text-[11px] font-extrabold text-[#2D3A4E] block">
@@ -355,8 +359,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <span className="text-[11px] text-[#4E5C70] block">Условия при оформлении</span>
         </div>
 
-        <div className="neu-inset rounded-2xl p-3 text-center space-y-1 bg-[#E3E8EF]">
-          <div className="w-7 h-7 mx-auto rounded-xl neu-button flex items-center justify-center text-accent bg-[#E3E8EF]">
+        <div className="neu-inset rounded-2xl p-3 text-center space-y-1">
+          <div className="w-7 h-7 mx-auto rounded-xl neu-flat-sm flex items-center justify-center text-accent">
             <RotateCcw className="w-3.5 h-3.5" />
           </div>
           <span className="text-[11px] font-extrabold text-[#2D3A4E] block">
@@ -371,13 +375,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-[18px] font-bold text-[#2D3A4E] tracking-tight">Популярное</h2>
-          <button
-            onClick={() => setActiveTab('catalog')}
-            className="neu-inset rounded-xl px-3 py-1.5 text-[12px] font-bold text-accent hover:text-accent-strong flex items-center gap-1 transition-all active:scale-95 bg-[#E3E8EF]"
-          >
-            <span>Смотреть все</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
+          {popularProducts.length > 0 && (
+            <button
+              onClick={() => setActiveTab('catalog')}
+              className="neu-button rounded-xl px-3 py-1.5 text-[12px] font-bold text-accent hover:text-accent-strong flex items-center gap-1 transition-all"
+            >
+              <span>Смотреть все</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {popularProducts.length === 0 && (

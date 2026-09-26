@@ -384,7 +384,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
       </div>
 
       {/* Sub-Tabs: All / Referrals / Batch Generator */}
-      <div className="flex items-center gap-2 p-1.5 neu-flat-sm rounded-2xl bg-[#E3E8EF] overflow-x-auto">
+      <div className="flex items-center gap-2 p-1.5 neu-flat-sm rounded-2xl overflow-x-auto">
         <button
           type="button"
           onClick={() => setActiveSubTab('all')}
@@ -428,7 +428,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
       {/* Referral Analytics Overview (Visible in Referrals tab) */}
       {activeSubTab === 'referrals' && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] border border-transparent space-y-1">
+          <div className="neu-inset rounded-2xl p-3.5 border border-transparent space-y-1">
             <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider flex items-center gap-1">
               <TrendingUp className="w-3.5 h-3.5 text-success" />
               Привлеченная выручка
@@ -441,7 +441,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             </p>
           </div>
 
-          <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] border border-transparent space-y-1">
+          <div className="neu-inset rounded-2xl p-3.5 border border-transparent space-y-1">
             <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider flex items-center gap-1">
               <DollarSign className="w-3.5 h-3.5 text-accent" />
               Комиссия к выплате
@@ -454,7 +454,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             </p>
           </div>
 
-          <div className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] border border-transparent space-y-1">
+          <div className="neu-inset rounded-2xl p-3.5 border border-transparent space-y-1">
             <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider flex items-center gap-1">
               <Users className="w-3.5 h-3.5 text-warning" />
               Заказов от партнеров
@@ -471,7 +471,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
 
       {/* Batch Generator Tool Panel */}
       {activeSubTab === 'batch_generator' && (
-        <div className="neu-inset rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-4 bg-[#E3E8EF] border border-accent/30">
+        <div className="neu-inset rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-4 border border-accent/30">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-[#BAC5D5]/50 pb-3">
             <div>
               <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
@@ -486,7 +486,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
               <button
                 type="button"
                 onClick={() => onShowToast('Каждый купон из пачки может быть активирован покупателем только 1 раз', 'info')}
-                className="neu-button px-3 py-1.5 rounded-xl text-[11px] font-black text-accent hover:text-accent-strong flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all active:scale-95"
+                className="neu-button px-3 py-1.5 rounded-xl text-[11px] font-black text-accent hover:text-accent-strong flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all"
                 title="Лимит применения промокода"
               >
                 <Sparkles className="w-3.5 h-3.5 text-accent shrink-0" />
@@ -505,7 +505,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 value={batchPrefix}
                 onChange={(e) => setBatchPrefix(e.target.value.toUpperCase())}
                 placeholder="SMS-"
-                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-black bg-[#E3E8EF]"
+                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-black"
               />
             </div>
 
@@ -519,7 +519,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 max="100"
                 value={batchCount}
                 onChange={(e) => setBatchCount(Number(e.target.value))}
-                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-black bg-[#E3E8EF]"
+                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-black"
               />
             </div>
 
@@ -527,7 +527,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
               <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
                 Тип скидки
               </label>
-              <div className="flex rounded-xl neu-flat-sm p-1 bg-[#E3E8EF]">
+              <div className="flex rounded-xl neu-flat-sm p-1">
                 <button
                   type="button"
                   onClick={() => setBatchDiscountType('fixed')}
@@ -558,7 +558,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 min="1"
                 value={batchDiscountValue}
                 onChange={(e) => setBatchDiscountValue(Number(e.target.value))}
-                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-black bg-[#E3E8EF]"
+                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-black"
               />
             </div>
           </div>
@@ -573,7 +573,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 value={batchMinOrder}
                 onChange={(e) => setBatchMinOrder(Number(e.target.value))}
                 placeholder="2500"
-                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-bold bg-[#E3E8EF]"
+                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-bold"
               />
             </div>
 
@@ -585,7 +585,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 type="text"
                 value={batchExpiresAt}
                 onChange={(e) => setBatchExpiresAt(e.target.value)}
-                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-bold bg-[#E3E8EF]"
+                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-bold"
               />
             </div>
           </div>
@@ -625,7 +625,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
 
           {/* Generated preview list */}
           {generatedBatchPreview.length > 0 && (
-            <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-2">
+            <div className="neu-inset rounded-2xl p-3 space-y-2">
               <span className="text-[11px] font-black text-[#4E5C70] uppercase tracking-wider block">
                 Свежесгенерированные коды ({generatedBatchPreview.length} шт.):
               </span>
@@ -633,7 +633,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 {generatedBatchPreview.map((c, i) => (
                   <span
                     key={i}
-                    className="font-mono text-[11px] font-bold text-[#2D3A4E] neu-flat px-2 py-1 rounded-lg bg-[#E3E8EF]"
+                    className="font-mono text-[11px] font-bold text-[#2D3A4E] neu-flat px-2 py-1 rounded-lg"
                   >
                     {c}
                   </span>
@@ -648,7 +648,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
       {isCreating && (
         <form
           onSubmit={handleSavePromo}
-          className="neu-inset rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 space-y-3.5 bg-[#E3E8EF] border border-accent/30 animate-in fade-in slide-in-from-top-2 duration-200 w-full min-w-0"
+          className="neu-inset rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 space-y-3.5 border border-accent/30 animate-in fade-in slide-in-from-top-2 duration-200 w-full min-w-0"
         >
           <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-2.5 gap-2">
             <span className="text-xs font-black text-accent uppercase tracking-wider flex items-center gap-1.5 truncate">
@@ -676,7 +676,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 placeholder="WASAT20"
-                className="w-full px-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E] uppercase font-black bg-[#E3E8EF]"
+                className="w-full px-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E] uppercase font-black"
               />
             </div>
 
@@ -684,7 +684,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
               <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
                 Тип скидки *
               </label>
-              <div className="flex rounded-xl neu-flat-sm p-1 bg-[#E3E8EF]">
+              <div className="flex rounded-xl neu-flat-sm p-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -729,7 +729,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 required
                 value={discountValue}
                 onChange={(e) => setDiscountValue(Number(e.target.value))}
-                className="w-full px-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E] font-black bg-[#E3E8EF]"
+                className="w-full px-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E] font-black"
               />
             </div>
           </div>
@@ -779,7 +779,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     ? `Фиксированная скидка ${discountValue} ₽ на заказ`
                     : `Скидка ${discountValue}% на весь гардероб`
                 }
-                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-bold bg-[#E3E8EF]"
+                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-bold"
               />
             </div>
 
@@ -792,13 +792,13 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Применяется при оформлении заказа в корзине"
-                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF]"
+                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E]"
               />
             </div>
           </div>
 
           {/* Referral / Influencer Integration Switcher & Fields */}
-          <div className="p-3 neu-inset rounded-2xl space-y-2.5 bg-[#E3E8EF]">
+          <div className="p-3 neu-inset rounded-2xl space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Share2 className="w-4 h-4 text-accent" />
@@ -813,8 +813,11 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
               </div>
               <button
                 type="button"
+                role="switch"
+                aria-checked={isReferral}
+                aria-label="Партнерский промокод"
                 onClick={() => setIsReferral(!isReferral)}
-                className="w-11 h-6 rounded-full neu-inset p-0.5 transition-colors cursor-pointer bg-[#E3E8EF] shrink-0"
+                className="w-11 h-6 rounded-full neu-inset p-0.5 transition-colors cursor-pointer shrink-0"
               >
                 <div
                   className={`w-5 h-5 rounded-full transition-transform neu-flat ${
@@ -835,7 +838,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     value={partnerName}
                     onChange={(e) => setPartnerName(e.target.value)}
                     placeholder="Например: @alex_fashion или Блогер Максим"
-                    className="w-full px-2.5 py-1.5 neu-flat rounded-xl text-xs text-[#2D3A4E] font-bold bg-[#E3E8EF]"
+                    className="w-full px-2.5 py-1.5 neu-flat rounded-xl text-xs text-[#2D3A4E] font-bold"
                   />
                 </div>
 
@@ -850,7 +853,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     value={partnerCommissionPercent}
                     onChange={(e) => setPartnerCommissionPercent(Number(e.target.value))}
                     placeholder="10"
-                    className="w-full px-2.5 py-1.5 neu-flat rounded-xl text-xs text-[#2D3A4E] font-bold bg-[#E3E8EF]"
+                    className="w-full px-2.5 py-1.5 neu-flat rounded-xl text-xs text-[#2D3A4E] font-bold"
                   />
                 </div>
               </div>
@@ -858,7 +861,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
           </div>
 
           {/* Row 3: Limitations & Conditions (Min spend, Expiration, Usage Limit) */}
-          <div className="p-3 sm:p-3.5 neu-inset rounded-2xl space-y-3 bg-[#E3E8EF]">
+          <div className="p-3 sm:p-3.5 neu-inset rounded-2xl space-y-3">
             <span className="text-[11px] font-black text-[#2D3A4E] uppercase tracking-wider block">
               Ограничения и условия применения:
             </span>
@@ -875,7 +878,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                   value={minOrderAmount}
                   onChange={(e) => setMinOrderAmount(Number(e.target.value))}
                   placeholder="0 (без мин. чека)"
-                  className="w-full px-2.5 py-1.5 neu-flat rounded-xl text-xs text-[#2D3A4E] font-bold bg-[#E3E8EF]"
+                  className="w-full px-2.5 py-1.5 neu-flat rounded-xl text-xs text-[#2D3A4E] font-bold"
                 />
               </div>
 
@@ -888,7 +891,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                   value={expiresAt}
                   onChange={(e) => setExpiresAt(e.target.value)}
                   placeholder="31 декабря 2026 г."
-                  className="w-full px-2.5 py-1.5 neu-flat rounded-xl text-xs text-[#2D3A4E] font-bold bg-[#E3E8EF]"
+                  className="w-full px-2.5 py-1.5 neu-flat rounded-xl text-xs text-[#2D3A4E] font-bold"
                 />
               </div>
 
@@ -902,7 +905,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                   value={usageLimit || ''}
                   onChange={(e) => setUsageLimit(e.target.value ? Number(e.target.value) : undefined)}
                   placeholder="Без ограничений"
-                  className="w-full px-2.5 py-1.5 neu-flat rounded-xl text-xs text-[#2D3A4E] font-bold bg-[#E3E8EF]"
+                  className="w-full px-2.5 py-1.5 neu-flat rounded-xl text-xs text-[#2D3A4E] font-bold"
                 />
               </div>
             </div>
@@ -914,7 +917,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                   <Layers className="w-3.5 h-3.5 text-accent shrink-0" />
                   <span>Область действия скидки:</span>
                 </label>
-                <div className="flex items-center gap-1 neu-flat-sm p-1 rounded-xl bg-[#E3E8EF]">
+                <div className="flex items-center gap-1 neu-flat-sm p-1 rounded-xl">
                   <button
                     type="button"
                     onClick={() => setScopeType('all')}
@@ -1016,14 +1019,14 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#4E5C70]" />
                     <input
                       type="text"
-                      placeholder="Поиск товаров для применения промокода..."
+                      placeholder="Найти товар"
                       value={productSearchQuery}
                       onChange={(e) => setProductSearchQuery(e.target.value)}
-                      className="w-full pl-8 pr-3 py-1.5 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF]"
+                      className="w-full pl-8 pr-3 py-1.5 neu-inset rounded-xl text-xs text-[#2D3A4E]"
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-48 overflow-y-auto no-scrollbar p-1 neu-flat-sm rounded-xl bg-[#E3E8EF]">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-48 overflow-y-auto no-scrollbar p-1 neu-flat-sm rounded-xl">
                     {filteredProductsForSelect.map((prod) => {
                       const isSelected = selectedProductIds.includes(prod.id);
                       return (
@@ -1037,7 +1040,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                           }`}
                         >
                           <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 neu-inset bg-slate-200">
+                            <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 neu-inset">
                               <img
                                 src={productImage(prod)}
                                 alt={prod.title}
@@ -1081,7 +1084,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                   value={badgeText}
                   onChange={(e) => setBadgeText(e.target.value)}
                   placeholder="Например: Популярный, Выгода"
-                  className="w-full px-2.5 py-1.5 neu-flat rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF]"
+                  className="w-full px-2.5 py-1.5 neu-flat rounded-xl text-xs text-[#2D3A4E]"
                 />
               </div>
 
@@ -1091,8 +1094,11 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 </span>
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={isPopular}
+                  aria-label="Выделять в списке"
                   onClick={() => setIsPopular(!isPopular)}
-                  className="w-11 h-6 rounded-full neu-inset p-0.5 transition-colors cursor-pointer bg-[#E3E8EF] shrink-0"
+                  className="w-11 h-6 rounded-full neu-inset p-0.5 transition-colors cursor-pointer shrink-0"
                 >
                   <div
                     className={`w-5 h-5 rounded-full transition-transform neu-flat ${
@@ -1146,19 +1152,19 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             return (
               <div
                 key={`promo-card-${promo.id}-${prIdx}`}
-                className={`neu-inset rounded-2xl p-3 sm:p-4 space-y-2.5 transition-all bg-[#E3E8EF] border w-full min-w-0 overflow-hidden ${
-                  promo.active ? 'border-transparent' : 'border-slate-300/80 opacity-75'
+                className={`neu-inset rounded-2xl p-3 sm:p-4 space-y-2.5 transition-all border w-full min-w-0 overflow-hidden ${
+                  promo.active ? 'border-transparent' : 'border-[#BAC5D5] opacity-75'
                 }`}
               >
                 {/* Top Row: Code, Discount, Badges & Actions */}
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
-                    <span className="font-mono font-black text-xs sm:text-sm text-[#2D3A4E] neu-button px-2.5 py-1 rounded-xl bg-[#E3E8EF] tracking-wider">
+                    <span className="font-mono font-black text-xs sm:text-sm text-[#2D3A4E] neu-flat-sm px-2.5 py-1 rounded-xl tracking-wider">
                       {promo.code}
                     </span>
 
                     <span
-                      className={`text-xs font-black neu-button px-2.5 py-0.5 rounded-lg bg-[#E3E8EF] ${
+                      className={`text-xs font-black neu-button px-2.5 py-0.5 rounded-lg ${
                         isFixed ? 'text-warning' : 'text-accent'
                       }`}
                     >
@@ -1166,14 +1172,14 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     </span>
 
                     {promo.isReferral && (
-                      <span className="text-[11px] font-bold neu-button text-accent px-2 py-0.5 rounded-full flex items-center gap-1 bg-[#E3E8EF]">
+                      <span className="text-[11px] font-bold neu-flat-sm text-accent px-2 py-0.5 rounded-full flex items-center gap-1">
                         <Share2 className="w-3 h-3" />
                         Партнер: {promo.partnerName}
                       </span>
                     )}
 
                     {promo.isBatch && (
-                      <span className="text-[11px] font-bold neu-button text-purple-700 px-2 py-0.5 rounded-full bg-[#E3E8EF]">
+                      <span className="text-[11px] font-bold neu-flat-sm text-accent px-2 py-0.5 rounded-full">
                         Одноразовый
                       </span>
                     )}
@@ -1191,8 +1197,8 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                       onClick={() => handleToggleActive(promo.id)}
                       className={`h-8 px-3 rounded-xl text-[11px] font-black transition-all cursor-pointer flex items-center justify-center active:scale-95 ${
                         promo.active
-                          ? 'neu-button text-success bg-[#E3E8EF]'
-                          : 'neu-inset text-[#4E5C70] bg-[#E3E8EF]'
+                          ? 'neu-button text-success'
+                          : 'neu-inset text-[#4E5C70]'
                       }`}
                     >
                       {promo.active ? 'Активен' : 'Пауза'}
@@ -1200,7 +1206,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     <button
                       type="button"
                       onClick={() => handleOpenEdit(promo)}
-                      className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                      className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:scale-105 transition-all cursor-pointer"
                       title="Редактировать"
                       aria-label="Редактировать"
                     >
@@ -1209,7 +1215,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     <button
                       type="button"
                       onClick={() => setPromoToDelete(promo)}
-                      className="w-8 h-8 rounded-xl neu-button-danger flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+                      className="w-8 h-8 rounded-xl neu-button-danger flex items-center justify-center transition-all cursor-pointer"
                       title="Удалить"
                       aria-label="Удалить"
                     >
@@ -1230,7 +1236,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
 
                 {/* Partner stats row if referral */}
                 {promo.isReferral && (
-                  <div className="p-2.5 neu-button rounded-xl bg-[#E3E8EF] flex items-center justify-between gap-2 flex-wrap text-[11px]">
+                  <div className="p-2.5 neu-flat-sm rounded-xl flex items-center justify-between gap-2 flex-wrap text-[11px]">
                     <div className="flex items-center gap-3">
                       <span>
                         Выручка: <strong className="text-[#2D3A4E] font-black">{(promo.generatedRevenue || 0).toLocaleString('ru-RU')} ₽</strong>
@@ -1266,7 +1272,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                   </span>
 
                   {promo.minOrderAmount ? (
-                    <span className="font-semibold text-accent neu-button px-2 py-0.5 rounded-md bg-[#E3E8EF]">
+                    <span className="font-semibold text-accent neu-flat-sm px-2 py-0.5 rounded-md">
                       От {promo.minOrderAmount.toLocaleString('ru-RU')} ₽
                     </span>
                   ) : (
@@ -1274,14 +1280,14 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                   )}
 
                   {promo.applicableCategories && promo.applicableCategories.length > 0 && (
-                    <span className="flex items-center gap-1 font-extrabold text-accent neu-button px-2 py-0.5 rounded-md bg-[#E3E8EF] break-all">
+                    <span className="flex items-center gap-1 font-extrabold text-accent neu-flat-sm px-2 py-0.5 rounded-md break-all">
                       <Layers className="w-3 h-3 shrink-0" />
                       <span>Категории: {promo.applicableCategories.join(', ')}</span>
                     </span>
                   )}
 
                   {promo.applicableProductIds && promo.applicableProductIds.length > 0 && (
-                    <span className="flex items-center gap-1 font-extrabold text-accent neu-button px-2 py-0.5 rounded-md bg-[#E3E8EF]">
+                    <span className="flex items-center gap-1 font-extrabold text-accent neu-flat-sm px-2 py-0.5 rounded-md">
                       <Shirt className="w-3 h-3 shrink-0" />
                       <span>Выбрано товаров: {promo.applicableProductIds.length} шт.</span>
                     </span>

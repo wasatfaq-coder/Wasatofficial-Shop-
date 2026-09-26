@@ -55,7 +55,8 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   в Firestore и не подставляется покупателю; функциональная кнопка неактивна, пока нужные данные не заданы в админке.
   Списки админки сохраняются через `syncAll*` (только запись, частями по 450 — лимит батча 500), в них передаются
   только изменённые элементы (`changedItems(prev, next)`: админка заменяет объект, а не мутирует его), удалённое
-  убирает `deleteRemovedDocs`. Фото товара — `productImage(product, i)` (без фото — нейтральная заглушка, не сток).
+  убирает `deleteRemovedDocs`. Фото товара — `productImage(product, i)` (без фото — нейтральная заглушка, не сток); подписей ракурсов
+  у фото нет (магазин их не задает) — только «Фото N из M».
   Рейтинг товара — только по реальным отзывам (`getProductRating`).
 - Разделы карточки товара (преимущества, состав, плотность, сертификаты, переплетение, посадка, страна, свои
   характеристики, уход) — поля товара из блока «Структура карточки» (`AdminProductCardStructure`); пустой раздел
@@ -102,10 +103,15 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   (`unifyArticleBarcodes`); шаблон без размера печатает одну этикетку на артикул, «Скидка» — только при старой цене.
   Штрихкоды — `src/shared/barcode.ts`: новые только `generateInternalEan13` (EAN-13 «2…», уникальный в каталоге).
 - `users.bonusPoints/managerNotes/tags` меняет только администратор; заметки менеджера хранятся в `customer_notes`.
-- Стили — неоморфные классы из `src/index.css`, тени только через их переменные (`--neu-*`), без `shadow-*`
-  Tailwind рядом с `neu-*` (неоморфный класс их перекрывает). Одна `neu-button-accent` на экран,
-  выбранное — `neu-pill-active`, удаление — `neu-button-danger` + `ConfirmDialog`. Цвета статусов — только
-  токены `success/warning/danger` (и `*-soft` для подложек), не emerald/rose/amber. Подробно — `docs/ui-audit-plan.md`.
+- Стили — неоморфные классы из `src/index.css`, тени только через их переменные (`--neu-*`). Классы `neu-*` объявлены
+  вне CSS-слоев и сильнее утилит Tailwind (`@layer utilities`): рядом с `neu-*` не работают `shadow-*`, `bg-*`
+  (и `hover:bg-*`) и `active:scale-*` (у кнопок свое нажатие) — их не добавлять; цветная подложка статуса — элемент
+  без `neu-*` (`bg-danger-soft border ...`). Одна `neu-button-accent` на экран, удаление — `neu-button-danger` +
+  `ConfirmDialog`. Выпуклое `neu-button` — только то, что нажимается; статичные плитки и чипы — `neu-flat`/`neu-flat-sm`.
+  Невыбранный вариант выпуклый, выбранный вдавлен (`neu-pill-active`); `neu-inset` — лунки и поля, не варианты выбора.
+  Переключатель — `role="switch"` + `aria-checked` + `aria-label`. Цвета статусов — только токены
+  `success/warning/danger` (и `*-soft` для подложек), не emerald/rose/amber/sky/slate/gray; статус заказа —
+  `orderStatusChip` (`src/utils/orderStatusStyle.ts`), одинаково во всех разделах. Подробно — `docs/ui-audit-plan.md`.
 - Цвета бренда — токены `@theme` в `index.css`: `accent` (тёмно-синий #2C4A6B: ссылки, выбранное, иконки;
   `text-accent`, `bg-accent/10`), `accent-strong` для наведения; главная кнопка и заливки — графит
   (`neu-button-accent`, `neu-fill-accent`); золото `gold` — только бейджи «Хит/Premium» (`photoBadgeClass`

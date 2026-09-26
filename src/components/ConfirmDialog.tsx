@@ -80,7 +80,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           </div>
 
           {preview && (
-            <div className="neu-inset rounded-2xl p-2.5 bg-[#E3E8EF] flex items-center gap-3 min-w-0">{preview}</div>
+            <div className="neu-inset rounded-2xl p-2.5 flex items-center gap-3 min-w-0">{preview}</div>
           )}
 
           <p className="text-xs text-[#4E5C70] leading-relaxed">{message}</p>

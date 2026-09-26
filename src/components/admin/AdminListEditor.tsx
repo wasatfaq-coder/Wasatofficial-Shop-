@@ -167,14 +167,14 @@ export function AdminListEditor<T extends { id: string }>({
                       value={String(value ?? '')}
                       placeholder={field.placeholder}
                       onChange={(e) => setField(field.key, e.target.value)}
-                      className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] resize-y leading-relaxed"
+                      className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] resize-y leading-relaxed"
                     />
                   ) : field.type === 'select' ? (
                     <select
                       id={id}
                       value={String(value ?? '')}
                       onChange={(e) => setField(field.key, e.target.value)}
-                      className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF]"
+                      className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E]"
                     >
                       {field.options?.map((o) => (
                         <option key={o.value} value={o.value}>
@@ -189,7 +189,7 @@ export function AdminListEditor<T extends { id: string }>({
                       value={String(value ?? '')}
                       placeholder={field.placeholder}
                       onChange={(e) => setField(field.key, e.target.value)}
-                      className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF]"
+                      className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E]"
                     />
                   )}
                 </div>

@@ -89,7 +89,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3 shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl neu-button flex items-center justify-center text-accent shrink-0">
+              <div className="w-10 h-10 rounded-2xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
                 <HelpCircle className="w-5 h-5 stroke-[2.2]" />
               </div>
               <div>
@@ -101,7 +101,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
             </div>
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer active:scale-95 transition-transform"
+              className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer transition-transform"
               title="Закрыть"
               aria-label="Закрыть"
             >
@@ -114,10 +114,10 @@ export const FAQModal: React.FC<FAQModalProps> = ({
             <Search className="w-4 h-4 text-[#4E5C70] absolute left-3.5 top-3" />
             <input
               type="text"
-              placeholder="Поиск по вопросам и ответам..."
+              placeholder="Поиск по вопросам"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full py-2.5 pl-10 pr-4 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
+              className="w-full py-2.5 pl-10 pr-4 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
             />
             {searchQuery && (
               <button
@@ -150,7 +150,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
           {/* Footer Call to Action (Support Chat & Call) */}
           <div className="neu-flat rounded-2xl p-3.5 flex items-center justify-between gap-3 shrink-0 bg-gradient-to-r from-[#E3E8EF] to-[#D8E1EC] border border-white/80">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent shrink-0">
+              <div className="w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
                 <MessageSquare className="w-4 h-4" />
               </div>
               <div className="min-w-0">
@@ -177,7 +177,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
                     onClose();
                     onOpenSupportChat();
                   }}
-                  className="neu-button-accent px-3 py-1.5 rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
+                  className="neu-button-accent px-3 py-1.5 rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 cursor-pointer transition-transform"
                 >
                   <span>Написать в чат</span>
                 </button>

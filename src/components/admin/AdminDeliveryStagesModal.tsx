@@ -208,7 +208,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
             {/* Header */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3 shrink-0 gap-2">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-10 h-10 rounded-2xl neu-button flex items-center justify-center text-accent shrink-0">
+                <div className="w-10 h-10 rounded-2xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
                   <Clock className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
@@ -229,7 +229,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
               <button
                 type="button"
                 onClick={onClose}
-                className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer shrink-0"
+                className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer shrink-0"
                 title="Закрыть"
                 aria-label="Закрыть"
               >
@@ -239,7 +239,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
 
             {/* Quick Order Info Pill & Presets Bar */}
             <div className="space-y-2 shrink-0">
-              <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] flex items-center justify-between gap-3 text-xs flex-wrap">
+              <div className="neu-inset rounded-2xl p-3 flex items-center justify-between gap-3 text-xs flex-wrap">
                 <div className="flex items-center gap-2 min-w-0">
                   <MapPin className="w-3.5 h-3.5 text-accent shrink-0" />
                   <span className="truncate text-[11px] text-[#2D3A4E]">
@@ -263,7 +263,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                   <button
                     type="button"
                     onClick={handleMarkAllCompleted}
-                    className="neu-button px-2.5 py-1 rounded-xl text-[11px] font-bold text-success hover:text-success flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
+                    className="neu-button px-2.5 py-1 rounded-xl text-[11px] font-bold text-success hover:text-success flex items-center gap-1 cursor-pointer transition-all"
                   >
                     <CheckCircle2 className="w-3 h-3 text-success" />
                     <span>Все выполнены</span>
@@ -271,7 +271,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                   <button
                     type="button"
                     onClick={handleResetToDefault}
-                    className="neu-button px-2.5 py-1 rounded-xl text-[11px] font-bold text-[#4E5C70] hover:text-[#2D3A4E] flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
+                    className="neu-button px-2.5 py-1 rounded-xl text-[11px] font-bold text-[#4E5C70] hover:text-[#2D3A4E] flex items-center gap-1 cursor-pointer transition-all"
                     title="Сбросить к стандартным 5 этапам"
                   >
                     <RotateCcw className="w-3 h-3" />
@@ -280,7 +280,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                   <button
                     type="button"
                     onClick={() => setIsAddingCustomStage(!isAddingCustomStage)}
-                    className="neu-button px-2.5 py-1 rounded-xl text-[11px] font-black text-accent flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
+                    className="neu-button px-2.5 py-1 rounded-xl text-[11px] font-black text-accent flex items-center gap-1 cursor-pointer transition-all"
                   >
                     <Plus className="w-3 h-3" />
                     <span>Добавить этап</span>
@@ -293,7 +293,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
             {isAddingCustomStage && (
               <form
                 onSubmit={handleAddCustom}
-                className="neu-inset rounded-2xl p-3.5 bg-accent/3 border border-accent/16 space-y-2.5 shrink-0 animate-in fade-in"
+                className="neu-inset rounded-2xl p-3.5 border border-accent/16 space-y-2.5 shrink-0 animate-in fade-in"
               >
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-black text-accent-strong flex items-center gap-1.5">
@@ -303,7 +303,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                   <button
                     type="button"
                     onClick={() => setIsAddingCustomStage(false)}
-                    className="text-slate-400 hover:text-slate-600"
+                    className="text-[#4E5C70] hover:text-[#2D3A4E]"
                     aria-label="Закрыть"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -320,7 +320,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                       placeholder="Например: Передано в сортировочный центр"
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded-xl neu-flat bg-[#E3E8EF] text-xs font-bold text-[#2D3A4E]"
+                      className="w-full px-2.5 py-1.5 rounded-xl neu-flat text-xs font-bold text-[#2D3A4E]"
                       required
                       autoFocus
                     />
@@ -334,7 +334,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                       {[
                         { id: 'completed', label: 'Выполнен', color: 'text-success bg-success-soft' },
                         { id: 'active', label: 'В процессе', color: 'text-accent bg-accent/5' },
-                        { id: 'pending', label: 'Ожидает', color: 'text-slate-600 bg-slate-100' },
+                        { id: 'pending', label: 'Ожидает', color: 'text-[#4E5C70] bg-[#D8DFE8]' },
                       ].map((st) => (
                         <button
                           key={st.id}
@@ -362,7 +362,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                     placeholder="Например: Посылка прибыла на региональный склад СДЭК"
                     value={newDesc}
                     onChange={(e) => setNewDesc(e.target.value)}
-                    className="w-full px-2.5 py-1.5 rounded-xl neu-flat bg-[#E3E8EF] text-xs text-[#2D3A4E]"
+                    className="w-full px-2.5 py-1.5 rounded-xl neu-flat text-xs text-[#2D3A4E]"
                   />
                 </div>
 
@@ -396,10 +396,10 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                     key={stage.id || `stage-${idx}`}
                     className={`p-3 sm:p-3.5 rounded-2xl space-y-2.5 transition-all ${
                       isCompleted
-                        ? 'neu-inset bg-[#E3E8EF] border border-success/40'
+                        ? 'neu-inset border border-success/40'
                         : isActive
-                        ? 'neu-inset-deep neu-inset-deep-animated bg-[#E3E8EF] border border-accent/60 ring-1 ring-accent/20'
-                        : 'neu-inset bg-[#E3E8EF]/60 opacity-80 border border-white/50'
+                        ? 'neu-inset-deep neu-inset-deep-animated border border-accent/60 ring-1 ring-accent/20'
+                        : 'neu-inset opacity-80 border border-white/50'
                     }`}
                   >
                     {/* Top Row: Index Badge, Status Select Buttons, Reorder & Delete */}
@@ -410,7 +410,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                             isCompleted
                               ? 'bg-success text-white'
                               : isActive
-                              ? 'neu-inset-deep neu-inset-deep-animated text-accent bg-[#E3E8EF] border border-accent'
+                              ? 'neu-inset-deep neu-inset-deep-animated text-accent border border-accent'
                               : 'neu-button text-[#4E5C70]'
                           }`}
                         >
@@ -422,7 +422,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                       </div>
 
                       {/* Status Toggle Radio Pills */}
-                      <div className="flex items-center gap-1 bg-[#DDE3EC] p-0.5 rounded-xl neu-inset">
+                      <div className="flex items-center gap-1 p-0.5 rounded-xl neu-inset">
                         <button
                           type="button"
                           onClick={() => handleStatusChange(idx, 'completed')}
@@ -441,7 +441,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                           onClick={() => handleStatusChange(idx, 'active')}
                           className={`px-2 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer flex items-center gap-1 ${
                             isActive
-                              ? 'neu-inset-deep neu-inset-deep-animated text-accent bg-[#E3E8EF] border border-accent/40'
+                              ? 'neu-inset-deep neu-inset-deep-animated text-accent border border-accent/40'
                               : 'text-[#4E5C70] hover:text-[#2D3A4E]'
                           }`}
                         >
@@ -454,7 +454,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                           onClick={() => handleStatusChange(idx, 'pending')}
                           className={`px-2 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
                             isPending
-                              ? 'bg-slate-500 text-white shadow-xs'
+                              ? 'bg-[#4E5C70] text-white'
                               : 'text-[#4E5C70] hover:text-[#2D3A4E]'
                           }`}
                         >
@@ -507,7 +507,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                             type="text"
                             value={stage.title}
                             onChange={(e) => handleUpdateField(idx, 'title', e.target.value)}
-                            className="w-full px-2.5 py-1.5 rounded-xl neu-flat bg-[#E3E8EF] text-xs font-bold text-[#2D3A4E]"
+                            className="w-full px-2.5 py-1.5 rounded-xl neu-flat text-xs font-bold text-[#2D3A4E]"
                             placeholder="Название этапа"
                           />
                         </div>
@@ -529,7 +529,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                             type="text"
                             value={stage.time}
                             onChange={(e) => handleUpdateField(idx, 'time', e.target.value)}
-                            className="w-full px-2.5 py-1.5 rounded-xl neu-flat bg-[#E3E8EF] text-xs font-medium text-[#2D3A4E]"
+                            className="w-full px-2.5 py-1.5 rounded-xl neu-flat text-xs font-medium text-[#2D3A4E]"
                             placeholder="Например: 21 сент., 17:30"
                           />
                         </div>
@@ -543,7 +543,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                           type="text"
                           value={stage.desc}
                           onChange={(e) => handleUpdateField(idx, 'desc', e.target.value)}
-                          className="w-full px-2.5 py-1.5 rounded-xl neu-flat bg-[#E3E8EF] text-[11px] text-[#4E5C70]"
+                          className="w-full px-2.5 py-1.5 rounded-xl neu-flat text-[11px] text-[#4E5C70]"
                           placeholder="Пояснение для покупателя"
                         />
                       </div>
@@ -558,7 +558,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
               <button
                 type="button"
                 onClick={onClose}
-                className="neu-button py-2.5 px-4 rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer"
+                className="neu-button py-2.5 px-4 rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer"
               >
                 Отмена
               </button>
@@ -566,7 +566,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
               <button
                 type="button"
                 onClick={handleSave}
-                className="neu-button-accent py-2.5 px-6 rounded-xl text-xs font-black text-white flex items-center gap-1.5 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+                className="neu-button-accent py-2.5 px-6 rounded-xl text-xs font-black text-white flex items-center gap-1.5 hover:scale-105 transition-transform cursor-pointer"
               >
                 <Save className="w-4 h-4" />
                 <span>Сохранить этапы</span>

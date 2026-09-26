@@ -83,7 +83,7 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
                   transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
                   className="overflow-hidden"
                 >
-                  <div className="neu-inset rounded-2xl p-4 bg-[#E3E8EF] border border-white/60 space-y-3">
+                  <div className="neu-inset rounded-2xl p-4 border border-white/60 space-y-3">
                     <p className="text-xs sm:text-[13px] text-[#4A5568] leading-relaxed font-medium">
                       {item.answer}
                     </p>
@@ -93,7 +93,7 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
                         {item.highlights.map((h, i) => (
                           <span
                             key={i}
-                            className="neu-flat px-2.5 py-1 rounded-xl text-[11px] sm:text-[11px] font-bold text-success bg-white/80 border border-success/40 flex items-center gap-1.5"
+                            className="neu-flat px-2.5 py-1 rounded-xl text-[11px] sm:text-[11px] font-bold text-success border border-success/40 flex items-center gap-1.5"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0" />
                             <span>{h}</span>

@@ -354,7 +354,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
     <div className="space-y-4">
       {/* Top Bento Metrics */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-        <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] flex items-center justify-between">
+        <div className="neu-inset rounded-2xl p-3 flex items-center justify-between">
           <div>
             <span className="text-[11px] font-bold text-[#4E5C70] block uppercase tracking-wider">
               Всего способов
@@ -363,12 +363,12 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               {deliveryMethods.length}
             </span>
           </div>
-          <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-accent">
+          <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-accent">
             <Truck className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] flex items-center justify-between">
+        <div className="neu-inset rounded-2xl p-3 flex items-center justify-between">
           <div>
             <span className="text-[11px] font-bold text-[#4E5C70] block uppercase tracking-wider">
               Активных модулей
@@ -377,12 +377,12 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               {activeMethodsCount}
             </span>
           </div>
-          <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-success">
+          <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-success">
             <CheckCircle2 className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] flex items-center justify-between">
+        <div className="neu-inset rounded-2xl p-3 flex items-center justify-between">
           <div>
             <span className="text-[11px] font-bold text-[#4E5C70] block uppercase tracking-wider">
               Пунктов выдачи
@@ -391,12 +391,12 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               {pickupPoints.length}
             </span>
           </div>
-          <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-accent">
+          <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-accent">
             <Store className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] flex items-center justify-between">
+        <div className="neu-inset rounded-2xl p-3 flex items-center justify-between">
           <div>
             <span className="text-[11px] font-bold text-[#4E5C70] block uppercase tracking-wider">
               Бесплатно от
@@ -405,7 +405,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               {storefrontSettings?.freeDeliveryThreshold ? `${storefrontSettings.freeDeliveryThreshold.toLocaleString()} ₽` : '5 000 ₽'}
             </span>
           </div>
-          <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-warning">
+          <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-warning">
             <Sparkles className="w-4 h-4" />
           </div>
         </div>
@@ -414,7 +414,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
       {/* Subtabs Switcher & Actions */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
         {/* Subtabs */}
-        <div className="p-1 neu-flat-sm rounded-2xl flex items-center gap-1 bg-[#E3E8EF]">
+        <div className="p-1 neu-flat-sm rounded-2xl flex items-center gap-1">
           <button
             type="button"
             onClick={() => setActiveSubTab('methods')}
@@ -454,7 +454,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
             <button
               type="button"
               onClick={handleOpenAddMethod}
-              className="flex-1 sm:flex-none py-2 px-3.5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
+              className="flex-1 sm:flex-none py-2 px-3.5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 cursor-pointer transition-transform"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
               <span>Добавить способ</span>
@@ -463,7 +463,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
             <button
               type="button"
               onClick={handleOpenAddPoint}
-              className="flex-1 sm:flex-none py-2 px-3.5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
+              className="flex-1 sm:flex-none py-2 px-3.5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 cursor-pointer transition-transform"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
               <span>Добавить пункт выдачи</span>
@@ -530,7 +530,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
       {activeSubTab === 'methods' && (
         <div className="space-y-3">
           {filteredMethods.length === 0 ? (
-            <div className="neu-inset rounded-2xl p-8 text-center bg-[#E3E8EF] space-y-2">
+            <div className="neu-inset rounded-2xl p-8 text-center space-y-2">
               <Truck className="w-8 h-8 text-[#4E5C70] mx-auto opacity-50" />
               <p className="text-xs font-bold text-[#2D3A4E]">Способы доставки не найдены</p>
               <p className="text-[11px] text-[#4E5C70]">Попробуйте изменить поисковый запрос или добавьте новый способ</p>
@@ -640,7 +640,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                       </div>
 
                       {method.freeThreshold !== undefined && method.freeThreshold > 0 && (
-                        <span className="text-[11px] font-bold text-success neu-inset px-2 py-0.5 rounded-lg bg-[#E3E8EF]">
+                        <span className="text-[11px] font-bold text-success neu-inset px-2 py-0.5 rounded-lg">
                           Бесплатно от {method.freeThreshold.toLocaleString()} ₽
                         </span>
                       )}
@@ -657,7 +657,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
       {activeSubTab === 'pickup_points' && (
         <div className="space-y-3">
           {filteredPoints.length === 0 ? (
-            <div className="neu-inset rounded-2xl p-8 text-center bg-[#E3E8EF] space-y-2">
+            <div className="neu-inset rounded-2xl p-8 text-center space-y-2">
               <Store className="w-8 h-8 text-[#4E5C70] mx-auto opacity-50" />
               <p className="text-xs font-bold text-[#2D3A4E]">Пункты выдачи не найдены</p>
               <p className="text-[11px] text-[#4E5C70]">
@@ -690,7 +690,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                         <div
                           className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
                             isDefault
-                              ? 'neu-button text-accent bg-[#E3E8EF]'
+                              ? 'neu-button text-accent'
                               : 'neu-inset text-[#4E5C70]'
                           }`}
                         >
@@ -702,7 +702,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                               {point.name}
                             </h4>
                             {isDefault && (
-                              <span className="neu-inset text-accent text-[11px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider bg-[#E3E8EF]">
+                              <span className="neu-inset text-accent text-[11px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
                                 Основной адрес
                               </span>
                             )}
@@ -750,7 +750,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                     </div>
 
                     {/* Address Block - Detailed & Readable */}
-                    <div className="neu-inset rounded-xl p-3 bg-[#E3E8EF] space-y-1.5">
+                    <div className="neu-inset rounded-xl p-3 space-y-1.5">
                       <div className="text-xs font-extrabold text-[#2D3A4E] leading-relaxed">
                         {point.address}
                       </div>
@@ -796,7 +796,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
           <div className="neu-modal rounded-3xl p-5 max-w-lg w-full space-y-4 border border-white/80 text-[#2D3A4E] max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-2.5">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent">
+                <div className="w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center text-accent">
                   <Truck className="w-4 h-4" />
                 </div>
                 <h3 className="text-sm font-black text-[#2D3A4E]">
@@ -866,7 +866,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                   <select
                     value={formMethodType}
                     onChange={(e) => setFormMethodType(e.target.value as any)}
-                    className="w-full neu-inset rounded-xl py-2 px-3 text-[#2D3A4E] bg-[#E3E8EF]"
+                    className="w-full neu-inset rounded-xl py-2 px-3 text-[#2D3A4E]"
                   >
                     <option value="courier">Курьерская доставка</option>
                     <option value="pickup">Самовывоз (ПВЗ / Бутик)</option>
@@ -880,7 +880,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                   <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     Иконка модуля
                   </label>
-                  <div className="grid grid-cols-5 gap-1.5 p-1 neu-flat-sm rounded-xl bg-[#E3E8EF]">
+                  <div className="grid grid-cols-5 gap-1.5 p-1 neu-flat-sm rounded-xl">
                     {[
                       { id: 'Bike', icon: Bike },
                       { id: 'Store', icon: Store },
@@ -895,6 +895,8 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                           key={ic.id}
                           type="button"
                           onClick={() => setFormMethodIcon(ic.id)}
+                          aria-label={`Иконка: ${ic.id}`}
+                          aria-pressed={isSel}
                           className={`py-1.5 flex items-center justify-center rounded-lg transition-all cursor-pointer ${
                             isSel ? 'neu-pill-active' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
                           }`}
@@ -975,7 +977,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 neu-button-accent rounded-xl text-xs font-black text-white cursor-pointer active:scale-95 transition-transform"
+                  className="flex-1 py-2.5 neu-button-accent rounded-xl text-xs font-black text-white cursor-pointer transition-transform"
                 >
                   {editingMethod ? 'Сохранить изменения' : 'Создать модуль'}
                 </button>
@@ -991,7 +993,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
           <div className="neu-modal rounded-3xl p-5 max-w-lg w-full space-y-4 border border-white/80 text-[#2D3A4E] max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-2.5">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent">
+                <div className="w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center text-accent">
                   <Store className="w-4 h-4" />
                 </div>
                 <h3 className="text-sm font-black text-[#2D3A4E]">
@@ -1147,7 +1149,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 neu-button-accent rounded-xl text-xs font-black text-white cursor-pointer active:scale-95 transition-transform"
+                  className="flex-1 py-2.5 neu-button-accent rounded-xl text-xs font-black text-white cursor-pointer transition-transform"
                 >
                   {editingPoint ? 'Сохранить изменения' : 'Добавить пункт'}
                 </button>
