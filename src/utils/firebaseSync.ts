@@ -9,10 +9,14 @@ import {
   where,
   limit,
   writeBatch,
+  updateDoc,
+  serverTimestamp,
   Firestore,
+  QueryDocumentSnapshot,
+  Timestamp,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { Product, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, UserProfile, BannerSlide, DeliveryMethod, PickupPoint } from '../types';
+import { Product, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint } from '../types';
 import { DEFAULT_STOREFRONT_SETTINGS } from './inventory';
 import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
 import { compressBase64Image } from './imageUpload';
@@ -646,6 +650,32 @@ export function chatMessageOrder(msg: ChatMessage): number {
   return match ? Number(match[0]) : 0;
 }
 
+/** The old seeded greeting (`msg-welcome`, before the chat was split by customer) is never shown */
+const LEGACY_WELCOME_ID = 'msg-welcome';
+
+const toMillis = (value: unknown): number | undefined =>
+  value instanceof Timestamp ? value.toMillis() : typeof value === 'number' ? value : undefined;
+
+/** Server timestamps become milliseconds; a pending write gets the local estimate straight away */
+function chatMessageFromSnapshot(snap: QueryDocumentSnapshot): ChatMessage {
+  const data = snap.data({ serverTimestamps: 'estimate' }) as Record<string, unknown>;
+  const msg = { ...data, id: (data.id as string) || snap.id } as ChatMessage;
+  const sentAt = toMillis(data.sentAt);
+  const editedAt = toMillis(data.editedAt);
+  if (sentAt === undefined) delete msg.sentAt;
+  else msg.sentAt = sentAt;
+  if (editedAt === undefined) delete msg.editedAt;
+  else msg.editedAt = editedAt;
+  return msg;
+}
+
+/** The customer edits or deletes their own message within this time (checked again by firestore.rules) */
+export const CUSTOMER_EDIT_WINDOW_MS = 15 * 60 * 1000;
+
+export function canCustomerChangeMessage(msg: ChatMessage, now = Date.now()): boolean {
+  return msg.sender === 'user' && typeof msg.sentAt === 'number' && now < msg.sentAt + CUSTOMER_EDIT_WINDOW_MS;
+}
+
 /**
  * Admins (no `thread`) receive every message; customers pass their chat identity and
  * receive only their own thread without internal staff notes (enforced by firestore.rules).
@@ -664,7 +694,7 @@ export function subscribeToChatMessages(
     return onSnapshot(
       threadQuery,
       (snapshot) => {
-        const loaded = snapshot.docs.map((snap) => snap.data() as ChatMessage);
+        const loaded = snapshot.docs.map(chatMessageFromSnapshot).filter((m) => m.id !== LEGACY_WELCOME_ID);
         loaded.sort((a, b) => chatMessageOrder(a) - chatMessageOrder(b));
         // The greeting is drawn by the chat window itself; only real messages come from here
         onUpdate(loaded);
@@ -684,7 +714,7 @@ export function subscribeToChatMessages(
       // Demo messages are no longer seeded: every message belongs to a customer's thread
       const loaded: ChatMessage[] = [];
       snapshot.forEach((snap) => {
-        loaded.push(snap.data() as ChatMessage);
+        if (snap.id !== LEGACY_WELCOME_ID) loaded.push(chatMessageFromSnapshot(snap));
       });
       loaded.sort((a, b) => chatMessageOrder(a) - chatMessageOrder(b));
       onUpdate(loaded);
@@ -725,10 +755,85 @@ export async function saveChatMessageToFirestore(msg: ChatMessage, targetDb: Fir
     if (sanitizedMsg.imageUrl && sanitizedMsg.imageUrl.startsWith('data:image/') && sanitizedMsg.imageUrl.length > 300 * 1024) {
       sanitizedMsg.imageUrl = await compressBase64Image(sanitizedMsg.imageUrl, 800, 800, 0.72);
     }
-    await setDoc(doc(targetDb, 'chat_messages', msg.id), sanitizeForFirestore(sanitizedMsg));
+    // sentAt/editedAt are server times: firestore.rules require sentAt == request.time on create
+    const { sentAt: _sentAt, editedAt: _editedAt, ...fields } = sanitizedMsg;
+    await setDoc(doc(targetDb, 'chat_messages', msg.id), {
+      ...sanitizeForFirestore(fields),
+      sentAt: serverTimestamp(),
+    });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `chat_messages/${msg.id}`);
   }
+}
+
+/** New text of a message (the customer — own message within 15 minutes, staff — any time) */
+export async function editChatMessage(messageId: string, text: string, targetDb: Firestore = db) {
+  try {
+    await updateDoc(doc(targetDb, 'chat_messages', messageId), { text, editedAt: serverTimestamp() });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `chat_messages/${messageId}`);
+  }
+}
+
+/** «Удалить у себя»: the message stays for the other side */
+export async function setChatMessageHidden(
+  messageId: string,
+  side: 'customer' | 'staff',
+  hidden: boolean,
+  targetDb: Firestore = db
+) {
+  const field = side === 'customer' ? 'hiddenForCustomer' : 'hiddenForStaff';
+  try {
+    await updateDoc(doc(targetDb, 'chat_messages', messageId), { [field]: hidden });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `chat_messages/${messageId}`);
+  }
+}
+
+/** «Удалить у всех» */
+export async function deleteChatMessage(messageId: string, targetDb: Firestore = db) {
+  try {
+    await deleteDoc(doc(targetDb, 'chat_messages', messageId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `chat_messages/${messageId}`);
+  }
+}
+
+export type ChatMessageChange =
+  | { type: 'edit'; id: string; text: string }
+  | { type: 'hide'; id: string; side: 'customer' | 'staff'; hidden: boolean }
+  | { type: 'delete'; id: string };
+
+export function applyChatMessageChange(change: ChatMessageChange, targetDb: Firestore = db) {
+  if (change.type === 'edit') return editChatMessage(change.id, change.text, targetDb);
+  if (change.type === 'hide') return setChatMessageHidden(change.id, change.side, change.hidden, targetDb);
+  return deleteChatMessage(change.id, targetDb);
+}
+
+/** The same change applied to the local list (before the server confirms it) */
+export function applyChatMessageChangeLocally(messages: ChatMessage[], change: ChatMessageChange): ChatMessage[] {
+  if (change.type === 'delete') return messages.filter((m) => m.id !== change.id);
+  return messages.map((m) => {
+    if (m.id !== change.id) return m;
+    if (change.type === 'edit') return { ...m, text: change.text, editedAt: Date.now() };
+    return { ...m, [change.side === 'customer' ? 'hiddenForCustomer' : 'hiddenForStaff']: change.hidden };
+  });
+}
+
+/** Customer: the status of their own dialog set by the staff (null — not set yet) */
+export function subscribeToSupportStatus(
+  threadId: string,
+  targetDb: Firestore,
+  onUpdate: (status: SupportStatus | null) => void
+) {
+  return onSnapshot(
+    doc(targetDb, 'support_status', threadId),
+    (snap) => {
+      const data = snap.data() as Partial<SupportStatus> | undefined;
+      onUpdate(data?.status ? { status: data.status, updatedAt: Number(data.updatedAt) || 0 } : null);
+    },
+    (error) => console.warn('Support status subscription warning:', error)
+  );
 }
 
 /** Admin: status and priority of every support dialog, keyed by threadId */
@@ -751,7 +856,12 @@ export async function saveSupportThreadMeta(
   meta: Partial<Pick<SupportThreadMeta, 'status' | 'priority'>>
 ) {
   try {
-    await setDoc(doc(db, 'support_threads', threadId), { ...meta, threadId, updatedAt: Date.now() }, { merge: true });
+    const updatedAt = Date.now();
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'support_threads', threadId), { ...meta, threadId, updatedAt }, { merge: true });
+    // The status (not the priority) is shown to the customer
+    if (meta.status) batch.set(doc(db, 'support_status', threadId), { status: meta.status, updatedAt });
+    await batch.commit();
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `support_threads/${threadId}`);
   }

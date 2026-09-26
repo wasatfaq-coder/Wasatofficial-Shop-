@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ActiveTab, Product, CartItem, UserProfile, Order, BodyMeasurements, PromoCode, BannerSlide, ChatMessage, AppliedPromoInfo, StorefrontSettings, DeliveryMethod, PickupPoint, ReviewVote, StoredReview } from './types';
+import { ActiveTab, Product, CartItem, UserProfile, Order, BodyMeasurements, PromoCode, BannerSlide, ChatMessage, SupportStatus, AppliedPromoInfo, StorefrontSettings, DeliveryMethod, PickupPoint, ReviewVote, StoredReview } from './types';
 import { GUEST_USER_PROFILE } from './data/products';
 import { loadLocalDeliveryMethods, saveLocalDeliveryMethods, loadLocalPickupPoints, saveLocalPickupPoints } from './data/deliveryData';
 import { playNotificationChime, sendBrowserNotification, getOrderStatusNotification } from './utils/pushNotifications';
@@ -65,6 +65,10 @@ import {
   subscribeToReviews,
   subscribeToReviewVotes,
   chatMessageOrder,
+  applyChatMessageChange,
+  applyChatMessageChangeLocally,
+  ChatMessageChange,
+  subscribeToSupportStatus,
 } from './utils/firebaseSync';
 import { mergeProductReviews } from './utils/reviews';
 
@@ -553,6 +557,14 @@ export default function App() {
     }
     setChatMessages([]);
   }, [authLoading, isAdmin, chatIdentity]);
+
+  // 1e. Status of the customer's own dialog, set by the staff (shown in «Служба заботы»)
+  const [supportStatus, setSupportStatus] = useState<SupportStatus | null>(null);
+  React.useEffect(() => {
+    setSupportStatus(null);
+    if (!chatIdentity) return;
+    return subscribeToSupportStatus(chatIdentity.uid, chatIdentity.db, setSupportStatus);
+  }, [chatIdentity]);
 
   // 2. Sync profile from Firebase Auth user & users collection
   React.useEffect(() => {
@@ -1064,6 +1076,39 @@ export default function App() {
     void deliverChatMessage(msg, identity.db);
   };
 
+  /**
+   * Edit / «удалить у себя» / «удалить у всех». The customer uses their chat identity's database
+   * (rules allow own messages within 15 minutes), staff the main one. Local state first, rolled back on error.
+   */
+  const handleChangeChatMessage = async (change: ChatMessageChange, asStaff = false): Promise<boolean> => {
+    if (!asStaff && failedChatMessages.some((m) => m.id === change.id)) {
+      // never reached the server: only the local copy exists
+      if (change.type !== 'edit') {
+        setFailedChatMessages((prev) => prev.filter((m) => m.id !== change.id));
+        setChatMessages((prev) => prev.filter((m) => m.id !== change.id));
+      }
+      return true;
+    }
+    const targetDb = asStaff ? undefined : chatIdentity?.db;
+    if (!asStaff && !targetDb) return false;
+    const before = chatMessages;
+    setChatMessages((prev) => applyChatMessageChangeLocally(prev, change));
+    try {
+      await applyChatMessageChange(change, targetDb);
+      return true;
+    } catch (err) {
+      console.error('Chat message change failed:', err);
+      setChatMessages(before);
+      addToast(
+        asStaff
+          ? 'Не удалось изменить сообщение. Проверьте соединение'
+          : 'Изменить или удалить сообщение можно в течение 15 минут после отправки',
+        'error'
+      );
+      return false;
+    }
+  };
+
   const handleSendMessageAsAdmin = (
     text: string,
     imageUrl?: string,
@@ -1414,6 +1459,9 @@ export default function App() {
           pendingIds={pendingChatIds}
           failedIds={new Set(failedChatMessages.map((m) => m.id))}
           onRetry={handleRetryChatMessage}
+          onChangeMessage={(change) => handleChangeChatMessage(change)}
+          supportStatus={supportStatus}
+          statusSeenKey={chatIdentity ? chatIdentity.uid : null}
           onApplyPromo={handleApplyPromo}
           onShowToast={addToast}
           onAddToCart={(productId, color, size) => {
@@ -1679,6 +1727,7 @@ export default function App() {
               chatMessages={chatMessages}
               onSendMessageAsAdmin={handleSendMessageAsAdmin}
               onClearChat={handleClearChat}
+              onChangeChatMessage={(change) => handleChangeChatMessage(change, true)}
               storefrontSettings={storefrontSettings}
               onUpdateStorefrontSettings={(upd) => {
                 setStorefrontSettings(upd);

@@ -75,6 +75,7 @@ import { AdminPromoConstructorTab } from '../components/admin/AdminPromoConstruc
 import { AdminBannersTab } from '../components/admin/AdminBannersTab';
 import { AdminSupportInbox } from '../components/admin/AdminSupportInbox';
 import type { AdminChatPayload } from '../components/admin/AdminSupportChatTab';
+import type { ChatMessageChange } from '../utils/firebaseSync';
 import { AdminInventoryTab } from '../components/admin/AdminInventoryTab';
 import { AdminProductsTab } from '../components/admin/AdminProductsTab';
 import { AdminOrdersTab } from '../components/admin/AdminOrdersTab';
@@ -139,6 +140,8 @@ interface ProfileScreenProps {
   ) => void;
   /** undefined: whole chat, null: legacy messages without a thread, string: one customer's thread */
   onClearChat?: (threadId?: string | null) => void;
+  /** Staff: edit, «удалить у себя» / «у всех» — any message, any time */
+  onChangeChatMessage?: (change: ChatMessageChange) => Promise<boolean>;
   storefrontSettings?: StorefrontSettings;
   onUpdateStorefrontSettings?: (settings: StorefrontSettings) => void;
   onSyncFirebase?: () => Promise<void>;
@@ -172,6 +175,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   chatMessages = [],
   onSendMessageAsAdmin,
   onClearChat,
+  onChangeChatMessage,
   storefrontSettings,
   onUpdateStorefrontSettings,
   onSyncFirebase,
@@ -3197,6 +3201,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   onSend={handleSendAdminMessage}
                   onUpdateOrders={handleUpdateOrders}
                   onClearThread={(threadId) => onClearChat?.(threadId)}
+                  onChangeMessage={async (change) => (onChangeChatMessage ? onChangeChatMessage(change) : false)}
                   onShowToast={onShowToast}
                 />
               )}

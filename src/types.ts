@@ -382,6 +382,13 @@ export interface ChatMessage {
   sender: 'bot' | 'user' | 'agent' | 'admin';
   text: string;
   timestamp: string;
+  /** Server time of sending, ms (Firestore `request.time`); the customer's 15-minute edit window counts from it */
+  sentAt?: number;
+  /** Server time of the last edit, ms */
+  editedAt?: number;
+  /** «Удалить у себя»: hidden in the customer's chat / on the staff side */
+  hiddenForCustomer?: boolean;
+  hiddenForStaff?: boolean;
   threadId?: string; // Chat identity uid of the customer this message belongs to
   threadName?: string; // Customer display name/email, shown in the admin inbox
   actionKey?: 'size_calc' | 'catalog' | 'orders';
@@ -412,6 +419,12 @@ export interface SupportThreadMeta {
   threadId: string;
   status: 'open' | 'resolved' | 'closed';
   priority: 'normal' | 'urgent' | 'vip';
+  updatedAt: number;
+}
+
+/** Customer-visible status of their dialog: `support_status/{threadId}` (admin writes, the customer reads) */
+export interface SupportStatus {
+  status: SupportThreadMeta['status'];
   updatedAt: number;
 }
 

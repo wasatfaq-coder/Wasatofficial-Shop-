@@ -16,9 +16,14 @@ import {
   Loader2,
   RotateCw,
   Bot,
+  MessageCircle,
+  Pencil,
+  BellRing,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChatMessage } from '../types';
+import { ChatMessage, SupportStatus } from '../types';
+import { canCustomerChangeMessage, type ChatMessageChange } from '../utils/firebaseSync';
+import { ChatMessageDeleteDialog, ChatMessageMenu } from './ChatMessageActions';
 import { copyToClipboard } from '../utils/clipboard';
 import { compressChatImageFile } from '../utils/imageUpload';
 import { currentStoreName, telHref } from '../utils/storeContacts';
@@ -39,10 +44,44 @@ interface SupportChatModalProps {
   pendingIds?: ReadonlySet<string>;
   failedIds?: ReadonlySet<string>;
   onRetry?: (messageId: string) => void;
+  /** Own message within 15 minutes: edit, «удалить у меня», «удалить у всех». Resolves false on failure */
+  onChangeMessage?: (change: ChatMessageChange) => Promise<boolean>;
+  /** Status of this dialog set by the staff; null — not set yet */
+  supportStatus?: SupportStatus | null;
+  /** The chat identity uid: remembers which status update the customer has already seen */
+  statusSeenKey?: string | null;
   onApplyPromo?: (code: string) => boolean;
   onAddToCart?: (productId: string, color?: string, size?: string) => void;
   onSelectProductById?: (productId: string) => void;
   onShowToast?: (msg: string, type?: 'success' | 'info' | 'error') => void;
+}
+
+const CUSTOMER_STATUS: Record<SupportStatus['status'], { label: string; note: string; cls: string }> = {
+  open: {
+    label: 'В работе',
+    note: 'Сотрудник занимается вашим вопросом и ответит в этом чате.',
+    cls: 'text-accent bg-accent/10',
+  },
+  resolved: {
+    label: 'Решено',
+    note: 'Вопрос отмечен как решенный. Если что-то осталось — просто напишите, мы продолжим.',
+    cls: 'text-success bg-success-soft',
+  },
+  closed: {
+    label: 'Закрыто',
+    note: 'Обращение закрыто. Новый вопрос можно задать здесь же — сотрудник ответит.',
+    cls: 'text-[#4E5C70] bg-[#4E5C70]/10',
+  },
+};
+
+const seenStorageKey = (uid: string) => `manstyle_support_status_seen_${uid}`;
+
+function readSeenStatus(uid: string): number {
+  try {
+    return Number(localStorage.getItem(seenStorageKey(uid))) || 0;
+  } catch {
+    return 0;
+  }
 }
 
 /** Questions put into the field (the customer can edit them before sending) */
@@ -65,6 +104,9 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
   pendingIds,
   failedIds,
   onRetry,
+  onChangeMessage,
+  supportStatus = null,
+  statusSeenKey = null,
   onApplyPromo,
   onAddToCart,
   onSelectProductById,
@@ -80,8 +122,37 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const storeName = currentStoreName();
+  // Own messages can be changed for 15 minutes: re-check the window while the chat is open
+  const [now, setNow] = useState(() => Date.now());
+  const [menuId, setMenuId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<ChatMessage | null>(null);
+  const [draftBeforeEdit, setDraftBeforeEdit] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<ChatMessage | null>(null);
+  const [statusNotice, setStatusNotice] = useState<SupportStatus | null>(null);
 
-  const visibleMessages = messages.filter((m) => !m.isInternalNote);
+  useEffect(() => {
+    if (!isOpen) return;
+    setNow(Date.now());
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, [isOpen]);
+
+  // A status the staff set since the customer last looked: tell them once, on opening the chat
+  useEffect(() => {
+    if (!isOpen || !supportStatus || !statusSeenKey) return;
+    if (supportStatus.updatedAt > readSeenStatus(statusSeenKey)) setStatusNotice(supportStatus);
+  }, [isOpen, supportStatus, statusSeenKey]);
+
+  const dismissStatusNotice = () => {
+    if (statusNotice && statusSeenKey) {
+      try {
+        localStorage.setItem(seenStorageKey(statusSeenKey), String(statusNotice.updatedAt));
+      } catch {}
+    }
+    setStatusNotice(null);
+  };
+
+  const visibleMessages = messages.filter((m) => !m.isInternalNote && !m.hiddenForCustomer);
   const lastMessage = visibleMessages[visibleMessages.length - 1];
   // After the customer writes, say honestly who answers and where
   const awaitingReply = lastMessage?.sender === 'user' && !failedIds?.has(lastMessage.id);
@@ -94,12 +165,15 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
+      // the delete dialog and the status notice close themselves first
+      if (deleteTarget || statusNotice) return;
       if (previewImage) setPreviewImage(null);
+      else if (editing) cancelEdit();
       else onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [isOpen, previewImage, onClose]);
+  });
 
   const attachImageFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -132,8 +206,43 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
     }
   };
 
+  const startEdit = (msg: ChatMessage) => {
+    setMenuId(null);
+    if (!editing) setDraftBeforeEdit(inputText);
+    setEditing(msg);
+    setInputText(msg.text || '');
+    setAttachedImage(null);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+
+  function cancelEdit() {
+    setEditing(null);
+    setInputText(draftBeforeEdit);
+    setDraftBeforeEdit('');
+  }
+
+  const changeMessage = async (change: ChatMessageChange) => {
+    setMenuId(null);
+    return (await onChangeMessage?.(change)) ?? false;
+  };
+
   const handleSubmit = async () => {
     const text = inputText.trim();
+    if (editing) {
+      if (isSending) return;
+      if (!text && !editing.imageUrl) return;
+      if (text === (editing.text || '').trim()) {
+        cancelEdit();
+        return;
+      }
+      setIsSending(true);
+      try {
+        if (await changeMessage({ type: 'edit', id: editing.id, text })) cancelEdit();
+      } finally {
+        setIsSending(false);
+      }
+      return;
+    }
     if ((!text && !attachedImage) || isSending || isProcessingImage) return;
     setIsSending(true);
     try {
@@ -159,7 +268,10 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
     });
   };
 
-  const canSend = (inputText.trim().length > 0 || Boolean(attachedImage)) && !isSending && !isProcessingImage;
+  const canSend = editing
+    ? (inputText.trim().length > 0 || Boolean(editing.imageUrl)) && !isSending
+    : (inputText.trim().length > 0 || Boolean(attachedImage)) && !isSending && !isProcessingImage;
+  const statusInfo = supportStatus ? CUSTOMER_STATUS[supportStatus.status] : null;
 
   return (
     <AnimatePresence>
@@ -192,7 +304,17 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                   <Headphones className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-sm font-black tracking-tight text-[#2D3A4E] leading-tight">Служба заботы</h3>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-sm font-black tracking-tight text-[#2D3A4E] leading-tight">Служба заботы</h3>
+                    {statusInfo && (
+                      <span
+                        className={`text-[11px] font-extrabold px-2 py-0.5 rounded-lg ${statusInfo.cls}`}
+                        title="Статус вашего обращения"
+                      >
+                        {statusInfo.label}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-[11px] text-[#4E5C70] font-semibold leading-snug">
                     Отвечают сотрудники {storeName}, ответ придет сюда
                   </p>
@@ -223,25 +345,29 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
 
             {/* Messages */}
             <div className="flex-1 px-3.5 py-4 overflow-y-auto space-y-3.5 no-scrollbar" aria-live="polite">
-              {/* Greeting: on screen only, not stored */}
-              <div className="flex items-start gap-2.5">
-                <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0 mt-0.5">
-                  <Headphones className="w-4 h-4" />
-                </div>
-                <div className="max-w-[85%] space-y-1">
-                  <span className="text-[11px] font-black text-[#4E5C70] px-1">{storeName}</span>
-                  <div className="neu-flat rounded-2xl rounded-tl-none p-3.5 text-xs font-medium leading-relaxed text-[#2D3A4E]">
-                    Здравствуйте! Это служба заботы {storeName}. Напишите вопрос или прикрепите фото — сотрудник
-                    ответит здесь, в чате.
+              {/* No greeting message: an empty dialog says so */}
+              {visibleMessages.length === 0 && (
+                <div className="h-full min-h-48 flex flex-col items-center justify-center text-center gap-3 px-6">
+                  <div className="w-14 h-14 rounded-2xl neu-inset flex items-center justify-center text-accent">
+                    <MessageCircle className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-black text-[#2D3A4E]">Диалог пуст</p>
+                    <p className="text-[11px] font-semibold text-[#4E5C70] leading-snug">
+                      Здесь пока нет сообщений. Напишите вопрос или прикрепите фото — сотрудник магазина ответит
+                      в этом чате.
+                    </p>
                   </div>
                 </div>
-              </div>
+              )}
 
               {visibleMessages.map((msg, msgIdx) => {
                 const isUser = msg.sender === 'user';
                 const isStaff = msg.sender === 'agent' || msg.sender === 'admin';
                 const isPending = isUser && pendingIds?.has(msg.id);
                 const isFailed = isUser && failedIds?.has(msg.id);
+                const canChange =
+                  Boolean(onChangeMessage) && !isPending && !isFailed && canCustomerChangeMessage(msg, now);
                 return (
                   <div
                     key={msg.id ? `msg-${msg.id}-${msgIdx}` : `msg-${msgIdx}`}
@@ -266,7 +392,9 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                             : 'p-3.5 space-y-2.5'
                         } ${
                           isUser
-                            ? `neu-bubble-own rounded-tr-none ${isFailed ? 'opacity-70' : ''}`
+                            ? `neu-bubble-own rounded-tr-none ${isFailed ? 'opacity-70' : ''} ${
+                                editing?.id === msg.id ? 'ring-2 ring-accent/50' : ''
+                              }`
                             : isStaff
                             ? 'neu-flat rounded-tl-none text-[#2D3A4E] border border-success/40'
                             : 'neu-flat rounded-tl-none text-[#2D3A4E]'
@@ -426,6 +554,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                       {/* Time and the real delivery state of the customer's own messages */}
                       <div className="flex items-center gap-1.5 text-[11px] text-[#4E5C70] px-1">
                         <span>{msg.timestamp}</span>
+                        {msg.editedAt && <span>· изменено</span>}
                         {isPending && (
                           <span className="flex items-center gap-1">
                             <Loader2 className="w-3 h-3 animate-spin" />
@@ -442,7 +571,28 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                             Не отправлено — повторить
                           </button>
                         )}
+                        {isFailed && onChangeMessage && (
+                          <button
+                            type="button"
+                            onClick={() => changeMessage({ type: 'delete', id: msg.id })}
+                            className="font-bold text-[#4E5C70] underline cursor-pointer"
+                          >
+                            Удалить
+                          </button>
+                        )}
                       </div>
+                      {canChange && (
+                        <ChatMessageMenu
+                          align="end"
+                          isOpen={menuId === msg.id}
+                          onToggle={() => setMenuId((id) => (id === msg.id ? null : msg.id))}
+                          onEdit={msg.text?.trim() ? () => startEdit(msg) : undefined}
+                          onDelete={() => {
+                            setMenuId(null);
+                            setDeleteTarget(msg);
+                          }}
+                        />
+                      )}
                     </div>
                   </div>
                 );
@@ -457,7 +607,28 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
               <div ref={messagesEndRef} />
             </div>
 
+            {/* Editing one of the customer's own messages */}
+            {editing && (
+              <div className="mx-3.5 mt-2.5 px-3 py-2 neu-inset rounded-2xl flex items-center justify-between gap-2.5 shrink-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Pencil className="w-3.5 h-3.5 text-accent shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-black text-accent">Редактирование</p>
+                    <p className="text-[11px] text-[#4E5C70] truncate">{editing.text}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  className="h-8 px-2.5 neu-button rounded-lg text-[11px] font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer shrink-0"
+                >
+                  Отмена
+                </button>
+              </div>
+            )}
+
             {/* Quick questions: put a question into the field */}
+            {!editing && (
             <div className="px-3.5 pt-2.5 pb-1 border-t border-[#BAC5D5]/40 shrink-0">
               <div className="flex flex-wrap gap-2">
                 {QUICK_QUESTIONS.map((q) => (
@@ -472,6 +643,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                 ))}
               </div>
             </div>
+            )}
 
             {/* Attached photo */}
             {(attachedImage || isProcessingImage) && (
@@ -515,7 +687,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={isProcessingImage}
+                disabled={isProcessingImage || Boolean(editing)}
                 className="w-11 h-11 rounded-2xl neu-button flex items-center justify-center text-accent active:scale-95 transition-all shrink-0 cursor-pointer disabled:opacity-50"
                 title="Прикрепить фото"
                 aria-label="Прикрепить фото"
@@ -535,21 +707,76 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                     handleSubmit();
                   }
                 }}
-                aria-label="Сообщение в службу заботы"
-                placeholder="Напишите вопрос…"
+                aria-label={editing ? 'Новый текст сообщения' : 'Сообщение в службу заботы'}
+                placeholder={editing ? 'Новый текст…' : 'Напишите вопрос…'}
                 className="flex-1 min-w-0 min-h-11 max-h-40 px-3.5 py-2.5 neu-inset rounded-2xl text-base sm:text-xs text-[#2D3A4E] placeholder:text-[#56647A] font-medium leading-snug resize-y"
               />
               <button
                 type="submit"
                 disabled={!canSend}
                 className="w-11 h-11 rounded-2xl neu-button-accent flex items-center justify-center text-white active:scale-95 transition-all shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                title="Отправить (Enter)"
-                aria-label="Отправить сообщение"
+                title={editing ? 'Сохранить (Enter)' : 'Отправить (Enter)'}
+                aria-label={editing ? 'Сохранить изменения' : 'Отправить сообщение'}
               >
-                {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                {isSending ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : editing ? (
+                  <Check className="w-5 h-5" />
+                ) : (
+                  <Send className="w-5 h-5" />
+                )}
               </button>
             </form>
           </motion.div>
+
+          <ChatMessageDeleteDialog
+            message={deleteTarget}
+            otherSide="сотрудников магазина"
+            onDeleteForMe={() => deleteTarget && changeMessage({ type: 'hide', id: deleteTarget.id, side: 'customer', hidden: true })}
+            onDeleteForAll={() => deleteTarget && changeMessage({ type: 'delete', id: deleteTarget.id })}
+            onClose={() => setDeleteTarget(null)}
+          />
+
+          {statusNotice && (
+            <ModalPortal>
+              <div className="fixed inset-0 z-[215] flex items-center justify-center p-3 sm:p-4">
+                <div onClick={dismissStatusNotice} className="fixed inset-0 bg-[#2D3A4E]/40 cursor-pointer" aria-hidden="true" />
+                <div
+                  role="alertdialog"
+                  aria-modal="true"
+                  aria-labelledby="support-status-title"
+                  className="relative w-full max-w-sm neu-modal rounded-3xl p-5 space-y-4 animate-in fade-in zoom-in-95 duration-200"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-accent shrink-0">
+                      <BellRing className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 id="support-status-title" className="text-sm font-extrabold text-[#2D3A4E]">
+                        Статус обращения обновлен
+                      </h3>
+                      <span
+                        className={`inline-block mt-1 text-[11px] font-extrabold px-2 py-0.5 rounded-lg ${
+                          CUSTOMER_STATUS[statusNotice.status].cls
+                        }`}
+                      >
+                        {CUSTOMER_STATUS[statusNotice.status].label}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-[#4E5C70] leading-relaxed">{CUSTOMER_STATUS[statusNotice.status].note}</p>
+                  <button
+                    type="button"
+                    autoFocus
+                    onClick={dismissStatusNotice}
+                    className="w-full py-2.5 px-3 neu-button rounded-xl text-xs font-black text-accent cursor-pointer"
+                  >
+                    Понятно
+                  </button>
+                </div>
+              </div>
+            </ModalPortal>
+          )}
 
           {previewImage && (
             <ModalPortal>

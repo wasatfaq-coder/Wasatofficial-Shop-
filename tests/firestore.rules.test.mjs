@@ -7,7 +7,19 @@ import {
   assertSucceeds,
   initializeTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { deleteDoc, doc, getDoc, getDocs, collection, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import {
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  collection,
+  query,
+  serverTimestamp,
+  setDoc,
+  Timestamp,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
 
 const ADMIN_EMAIL = 'gunh83975@gmail.com';
 
@@ -240,7 +252,15 @@ describe('server-side orders enabled (settings/server)', () => {
 });
 
 describe('chat', () => {
-  const msg = (id, overrides = {}) => ({ id, sender: 'user', text: 'Привет', isInternalNote: false, ...overrides });
+  const msg = (id, overrides = {}) => ({
+    id,
+    sender: 'user',
+    text: 'Привет',
+    isInternalNote: false,
+    sentAt: serverTimestamp(),
+    ...overrides,
+  });
+  const minutesAgo = (m) => Timestamp.fromMillis(Date.now() - m * 60 * 1000);
 
   beforeEach(async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
@@ -290,6 +310,57 @@ describe('chat', () => {
     await assertFails(setDoc(doc(db, 'chat_messages/a1'), msg('a1', { threadId: 'alice', text: 'edited' })));
   });
 
+  test('customer message takes the server send time; without it the message cannot be changed', async () => {
+    const db = customer('alice');
+    const { sentAt: _sentAt, ...withoutTime } = msg('t1', { threadId: 'alice' });
+    await assertSucceeds(setDoc(doc(db, 'chat_messages/t1'), withoutTime));
+    await assertFails(updateDoc(doc(db, 'chat_messages/t1'), { text: 'x', editedAt: serverTimestamp() }));
+    await assertFails(deleteDoc(doc(db, 'chat_messages/t1')));
+    await assertFails(setDoc(doc(db, 'chat_messages/t2'), msg('t2', { threadId: 'alice', sentAt: minutesAgo(1) })));
+  });
+
+  test('customer edits, hides and deletes own message within 15 minutes', async () => {
+    const db = customer('alice');
+    await assertSucceeds(setDoc(doc(db, 'chat_messages/e1'), msg('e1', { threadId: 'alice' })));
+    await assertSucceeds(updateDoc(doc(db, 'chat_messages/e1'), { text: 'Исправлено', editedAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(db, 'chat_messages/e1'), { text: 'x', editedAt: Timestamp.fromMillis(1) }));
+    await assertSucceeds(updateDoc(doc(db, 'chat_messages/e1'), { hiddenForCustomer: true }));
+    await assertFails(updateDoc(doc(db, 'chat_messages/e1'), { sender: 'admin' }));
+    await assertFails(updateDoc(doc(db, 'chat_messages/e1'), { isInternalNote: true }));
+    await assertFails(updateDoc(doc(db, 'chat_messages/e1'), { sentAt: Timestamp.fromMillis(Date.now() + 3600_000) }));
+    await assertFails(updateDoc(doc(db, 'chat_messages/e1'), { hiddenForStaff: true }));
+    await assertSucceeds(deleteDoc(doc(db, 'chat_messages/e1')));
+  });
+
+  test('after 15 minutes, and for other messages, the customer cannot change anything', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const admin = ctx.firestore();
+      await setDoc(doc(admin, 'chat_messages/old'), msg('old', { threadId: 'alice', sentAt: minutesAgo(16) }));
+      await setDoc(doc(admin, 'chat_messages/staff'), msg('staff', { threadId: 'alice', sender: 'admin' }));
+      await setDoc(doc(admin, 'chat_messages/bob1'), msg('bob1', { threadId: 'bob' }));
+    });
+    const db = customer('alice');
+    await assertFails(updateDoc(doc(db, 'chat_messages/old'), { text: 'x', editedAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(db, 'chat_messages/old'), { hiddenForCustomer: true }));
+    await assertFails(deleteDoc(doc(db, 'chat_messages/old')));
+    await assertFails(updateDoc(doc(db, 'chat_messages/staff'), { text: 'x', editedAt: serverTimestamp() }));
+    await assertFails(deleteDoc(doc(db, 'chat_messages/staff')));
+    await assertFails(deleteDoc(doc(db, 'chat_messages/bob1')));
+    // staff: any message, any time
+    await assertSucceeds(updateDoc(doc(owner(), 'chat_messages/old'), { hiddenForStaff: true }));
+    await assertSucceeds(updateDoc(doc(owner(), 'chat_messages/staff'), { text: 'y', editedAt: serverTimestamp() }));
+    await assertSucceeds(deleteDoc(doc(owner(), 'chat_messages/old')));
+  });
+
+  test('customer reads only the status of own dialog', async () => {
+    await assertSucceeds(setDoc(doc(owner(), 'support_status/alice'), { status: 'resolved', updatedAt: 1 }));
+    await assertSucceeds(getDoc(doc(customer('alice'), 'support_status/alice')));
+    await assertFails(getDoc(doc(customer('bob'), 'support_status/alice')));
+    await assertFails(getDocs(collection(customer('alice'), 'support_status')));
+    await assertFails(setDoc(doc(customer('alice'), 'support_status/alice'), { status: 'open', updatedAt: 2 }));
+    await assertFails(getDoc(doc(guest(), 'support_status/alice')));
+  });
+
   test('dialog status and priority are admin-only', async () => {
     const meta = { threadId: 'alice', status: 'resolved', priority: 'vip', updatedAt: 1 };
     await assertSucceeds(setDoc(doc(owner(), 'support_threads/alice'), meta));
@@ -304,7 +375,7 @@ describe('chat', () => {
     await assertSucceeds(
       setDoc(doc(owner(), 'chat_messages/m5'), msg('m5', { threadId: 'alice', sender: 'admin', isInternalNote: true }))
     );
-    await assertFails(deleteDoc(doc(customer('alice'), 'chat_messages/a1')));
+    await assertFails(deleteDoc(doc(customer('alice'), 'chat_messages/b1')));
     await assertSucceeds(deleteDoc(doc(owner(), 'chat_messages/a1')));
   });
 });
