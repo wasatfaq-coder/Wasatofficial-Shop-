@@ -27,7 +27,7 @@ import {
   Maximize2,
 } from 'lucide-react';
 import { formatDays } from '../utils/pluralize';
-import { Product, ProductReview, ActiveTab, UserProfile, BodyMeasurements, CartItem } from '../types';
+import { Product, ActiveTab, UserProfile, BodyMeasurements, CartItem } from '../types';
 import { SizeCalculatorModal } from '../components/SizeCalculatorModal';
 import { RecentlyViewed } from '../components/RecentlyViewed';
 import { RatingBadge } from '../components/RatingBadge';
@@ -63,7 +63,6 @@ interface ProductDetailScreenProps {
     quantity: number
   ) => void;
   onSelectProduct?: (product: Product) => void;
-  onUpdateProduct?: (updatedProduct: Product) => void;
   setActiveTab: (tab: ActiveTab) => void;
   onCompleteOrder?: (orderData: {
     items: CartItem[];
@@ -90,7 +89,6 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   onToggleFavorite,
   onAddToCartWithOptions,
   onSelectProduct,
-  onUpdateProduct,
   preorderMode = false,
   setActiveTab,
   onCompleteOrder,
@@ -109,25 +107,6 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
   const [isQuickOrderOpen, setIsQuickOrderOpen] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
-
-  const handleAddReview = (newReview: ProductReview) => {
-    const existing = product.reviews || [];
-    const updatedReviews = [newReview, ...existing];
-    const newCount = updatedReviews.length;
-    const totalRatingSum = updatedReviews.reduce((sum, r) => sum + r.rating, 0);
-    const newAvgRating = parseFloat((totalRatingSum / updatedReviews.length).toFixed(1));
-
-    const updatedProduct: Product = {
-      ...product,
-      rating: newAvgRating,
-      reviewsCount: newCount,
-      reviews: updatedReviews,
-    };
-
-    if (onUpdateProduct) {
-      onUpdateProduct(updatedProduct);
-    }
-  };
 
   // Reset product state when a new product is loaded
   useEffect(() => {
@@ -849,8 +828,6 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
       <ProductReviewsSection
         product={product}
         userProfile={userProfile}
-        onAddReview={handleAddReview}
-        onUpdateReviews={onUpdateProduct ? (reviews) => onUpdateProduct({ ...product, reviews }) : undefined}
         onShowToast={onShowToast || (() => {})}
       />
 

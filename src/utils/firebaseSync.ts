@@ -12,9 +12,10 @@ import {
   Firestore,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { Product, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, UserProfile, BannerSlide, DeliveryMethod, PickupPoint } from '../types';
+import { Product, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, UserProfile, BannerSlide, DeliveryMethod, PickupPoint } from '../types';
 import { INITIAL_CHAT_MESSAGES } from '../data/marketingAndSupport';
 import { DEFAULT_STOREFRONT_SETTINGS } from './inventory';
+import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
 import { compressBase64Image } from './imageUpload';
 import { SERVER_CONFIG_DOC_ID, ServerConfig } from '../shared/orderApi';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages, isTransportCompanyDelivery } from './deliveryStages';
@@ -105,7 +106,7 @@ export function subscribeToProducts(
 
 export async function saveProductToFirestore(product: Product) {
   try {
-    await setDoc(doc(db, 'products', product.id), sanitizeForFirestore(product));
+    await setDoc(doc(db, 'products', product.id), sanitizeForFirestore(withoutCollectionReviews(product)));
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `products/${product.id}`);
   }
@@ -120,7 +121,7 @@ export async function saveModifiedProductsToFirestore(productsToSave: Product[])
   try {
     const batch = writeBatch(db);
     for (const prod of productsToSave) {
-      batch.set(doc(db, 'products', prod.id), sanitizeForFirestore(prod));
+      batch.set(doc(db, 'products', prod.id), sanitizeForFirestore(withoutCollectionReviews(prod)));
     }
     await batch.commit();
   } catch (error) {
@@ -140,7 +141,7 @@ export async function syncAllProductsToFirestore(products: Product[]) {
   try {
     const batch = writeBatch(db);
     for (const prod of products) {
-      batch.set(doc(db, 'products', prod.id), sanitizeForFirestore(prod));
+      batch.set(doc(db, 'products', prod.id), sanitizeForFirestore(withoutCollectionReviews(prod)));
     }
     await batch.commit();
   } catch (error) {
@@ -596,6 +597,40 @@ export function subscribeToServerConfig(onUpdate: (config: ServerConfig) => void
       onUpdate({});
     }
   );
+}
+
+/**
+ * 4b. REVIEWS: `reviews/{productId}_{uid}` (the author edits only their own) and
+ * `review_votes/{reviewId}_{uid}` (one «Полезно» per person). Not stored inside products.
+ */
+export function subscribeToReviews(onUpdate: (reviews: StoredReview[]) => void) {
+  return onSnapshot(
+    collection(db, 'reviews'),
+    (snap) => onUpdate(snap.docs.map((d) => ({ ...(d.data() as StoredReview), id: d.id }))),
+    (error) => console.warn('Reviews subscription warning:', error)
+  );
+}
+
+export function subscribeToReviewVotes(onUpdate: (votes: ReviewVote[]) => void) {
+  return onSnapshot(
+    collection(db, 'review_votes'),
+    (snap) => onUpdate(snap.docs.map((d) => d.data() as ReviewVote)),
+    (error) => console.warn('Review votes subscription warning:', error)
+  );
+}
+
+export async function saveReviewToFirestore(review: StoredReview) {
+  await setDoc(doc(db, 'reviews', review.id), sanitizeForFirestore(review));
+}
+
+export async function deleteReviewFromFirestore(reviewId: string) {
+  await deleteDoc(doc(db, 'reviews', reviewId));
+}
+
+export async function setReviewVoteInFirestore(vote: ReviewVote, voted: boolean) {
+  const ref = doc(db, 'review_votes', reviewVoteDocId(vote.reviewId, vote.uid));
+  if (voted) await setDoc(ref, vote);
+  else await deleteDoc(ref);
 }
 
 /**

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ActiveTab, Product, CartItem, UserProfile, Order, BodyMeasurements, PromoCode, BannerSlide, ChatMessage, AppliedPromoInfo, StorefrontSettings, DeliveryMethod, PickupPoint } from './types';
+import { ActiveTab, Product, CartItem, UserProfile, Order, BodyMeasurements, PromoCode, BannerSlide, ChatMessage, AppliedPromoInfo, StorefrontSettings, DeliveryMethod, PickupPoint, ReviewVote, StoredReview } from './types';
 import { GUEST_USER_PROFILE } from './data/products';
 import { INITIAL_CHAT_MESSAGES } from './data/marketingAndSupport';
 import { loadLocalDeliveryMethods, saveLocalDeliveryMethods, loadLocalPickupPoints, saveLocalPickupPoints } from './data/deliveryData';
@@ -63,7 +63,10 @@ import {
   subscribeToPickupPoints,
   subscribeToServerConfig,
   syncAllPickupPointsToFirestore,
+  subscribeToReviews,
+  subscribeToReviewVotes,
 } from './utils/firebaseSync';
+import { mergeProductReviews } from './utils/reviews';
 
 import { HomeScreen } from './views/HomeScreen';
 import { CatalogScreen } from './views/CatalogScreen';
@@ -147,7 +150,14 @@ export default function App() {
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   // Catalog, promos and banners come only from Firestore (Admin panel); no demo data meanwhile
-  const [products, setProducts] = useState<Product[]>([]);
+  const [catalogProducts, setProducts] = useState<Product[]>([]);
+  // Reviews live in their own collections and are merged into the products for display
+  const [storedReviews, setStoredReviews] = useState<StoredReview[]>([]);
+  const [reviewVotes, setReviewVotes] = useState<ReviewVote[]>([]);
+  const products = React.useMemo(
+    () => mergeProductReviews(catalogProducts, storedReviews, reviewVotes),
+    [catalogProducts, storedReviews, reviewVotes]
+  );
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('manstyle_favorites');
@@ -423,6 +433,9 @@ export default function App() {
       });
     });
 
+    const unsubReviews = subscribeToReviews(setStoredReviews);
+    const unsubReviewVotes = subscribeToReviewVotes(setReviewVotes);
+
     const unsubPromos = subscribeToPromos((loadedPromos) => {
       if (loadedPromos) {
         setPromos(loadedPromos);
@@ -461,6 +474,8 @@ export default function App() {
 
     return () => {
       unsubProds();
+      unsubReviews();
+      unsubReviewVotes();
       unsubPromos();
       unsubSettings();
       unsubServerConfig();
@@ -1327,14 +1342,6 @@ export default function App() {
     setActiveTab('product-detail');
   };
 
-  const handleUpdateProductInCatalog = (updatedProd: Product) => {
-    setSelectedProduct(updatedProd);
-    setProducts((prev) => {
-      const nextProds = prev.map((p) => (p.id === updatedProd.id ? updatedProd : p));
-      saveModifiedProductsToFirestore([updatedProd]);
-      return nextProds;
-    });
-  };
 
   const handleClearRecentlyViewed = () => {
     setRecentlyViewed([]);
@@ -1538,7 +1545,7 @@ export default function App() {
           {activeTab === 'product-detail' && selectedProduct && (
             <ProductDetailScreen
               preorderMode={preorderMode}
-              product={selectedProduct}
+              product={products.find((p) => p.id === selectedProduct.id) ?? selectedProduct}
               returnPeriodDays={storefrontSettings.returnPeriodDays}
               freeDeliveryThreshold={storefrontSettings.freeDeliveryThreshold}
               isFavorite={favorites.includes(selectedProduct.id)}
@@ -1551,7 +1558,6 @@ export default function App() {
               onToggleFavorite={handleToggleFavorite}
               onAddToCartWithOptions={handleAddToCartWithOptions}
               onSelectProduct={handleSelectProduct}
-              onUpdateProduct={handleUpdateProductInCatalog}
               setActiveTab={setActiveTab}
               onCompleteOrder={handleCompleteOrder}
               onShowToast={addToast}

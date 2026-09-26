@@ -44,6 +44,37 @@ export interface ProductReview {
   pros?: string;
   cons?: string;
   helpfulCount?: number;
+  /** Author's uid: reviews from the `reviews` collection (one per customer and product) */
+  uid?: string;
+  productId?: string;
+  createdAt?: string;
+  /** Loaded from the `reviews` collection and merged in; never stored inside the product */
+  fromCollection?: boolean;
+  /** Who marked the review «Полезно» (from `review_votes`) */
+  voterUids?: string[];
+}
+
+/** A document of the `reviews` collection: id = `${productId}_${uid}` */
+export interface StoredReview {
+  id: string;
+  productId: string;
+  uid: string;
+  authorName: string;
+  rating: number;
+  comment: string;
+  pros?: string;
+  cons?: string;
+  sizePurchased?: string;
+  colorPurchased?: string;
+  date: string;
+  createdAt: string;
+}
+
+/** A document of the `review_votes` collection: id = `${reviewId}_${uid}` */
+export interface ReviewVote {
+  reviewId: string;
+  productId: string;
+  uid: string;
 }
 
 export interface Product {
