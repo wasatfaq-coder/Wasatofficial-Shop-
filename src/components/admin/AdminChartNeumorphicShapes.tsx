@@ -97,28 +97,20 @@ export const NeumorphicSVGDefs: React.FC<{ activeColor?: string }> = ({ activeCo
 
       {/* 6. Soft Translucent Gradients for Area & Composed Mix fills */}
       <linearGradient id="colorRevenueArea" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="#4A6A8E" stopOpacity={0.7} />
-        <stop offset="35%" stopColor="#2C4A6B" stopOpacity={0.35} />
-        <stop offset="90%" stopColor="#E3E8EF" stopOpacity={0.05} />
-        <stop offset="100%" stopColor="#E3E8EF" stopOpacity={0.0} />
+        <stop offset="0%" stopColor="#2C4A6B" stopOpacity={0.28} />
+        <stop offset="100%" stopColor="#2C4A6B" stopOpacity={0} />
       </linearGradient>
       <linearGradient id="colorOrdersArea" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="#5E8A74" stopOpacity={0.7} />
-        <stop offset="35%" stopColor="#3B6652" stopOpacity={0.35} />
-        <stop offset="90%" stopColor="#E3E8EF" stopOpacity={0.05} />
-        <stop offset="100%" stopColor="#E3E8EF" stopOpacity={0.0} />
+        <stop offset="0%" stopColor="#3B6652" stopOpacity={0.28} />
+        <stop offset="100%" stopColor="#3B6652" stopOpacity={0} />
       </linearGradient>
       <linearGradient id="colorAvgCheckArea" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="#8196B3" stopOpacity={0.7} />
-        <stop offset="35%" stopColor="#5A6F8C" stopOpacity={0.35} />
-        <stop offset="90%" stopColor="#E3E8EF" stopOpacity={0.05} />
-        <stop offset="100%" stopColor="#E3E8EF" stopOpacity={0.0} />
+        <stop offset="0%" stopColor="#5A6F8C" stopOpacity={0.28} />
+        <stop offset="100%" stopColor="#5A6F8C" stopOpacity={0} />
       </linearGradient>
       <linearGradient id="colorReturnsArea" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="#A68B55" stopOpacity={0.7} />
-        <stop offset="35%" stopColor="#8C733E" stopOpacity={0.35} />
-        <stop offset="90%" stopColor="#E3E8EF" stopOpacity={0.05} />
-        <stop offset="100%" stopColor="#E3E8EF" stopOpacity={0.0} />
+        <stop offset="0%" stopColor="#8C733E" stopOpacity={0.28} />
+        <stop offset="100%" stopColor="#8C733E" stopOpacity={0} />
       </linearGradient>
       <linearGradient id="colorPrevArea" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stopColor="#94A3B8" stopOpacity={0.35} />
@@ -170,8 +162,6 @@ export const NeumorphicBarShape: React.FC<NeumorphicBarShapeProps> = (props) => 
   let barGradient = 'url(#neu-bar-indigo-convex)';
   if (isPrevious) {
     barGradient = 'url(#neu-bar-prev-convex)';
-  } else if (isPeak) {
-    barGradient = 'url(#neu-bar-peak-convex)';
   } else if (activeMetric === 'orders') {
     barGradient = 'url(#neu-bar-emerald-convex)';
   } else if (activeMetric === 'avgCheck') {
@@ -209,7 +199,6 @@ export const NeumorphicBarShape: React.FC<NeumorphicBarShapeProps> = (props) => 
           stroke="#2C4A6B"
           strokeWidth={2}
           strokeDasharray="4 3"
-          className="animate-pulse"
           opacity={0.85}
         />
       )}
@@ -246,9 +235,8 @@ export const NeumorphicBarShape: React.FC<NeumorphicBarShapeProps> = (props) => 
           cy={y + radius + 3}
           r={2.5}
           fill="#FFFFFF"
-          stroke="#6F5B31"
+          stroke="#2C4A6B"
           strokeWidth={1}
-          className="animate-pulse"
         />
       )}
     </g>
@@ -268,47 +256,11 @@ interface NeumorphicActiveDotProps {
  */
 export const NeumorphicActiveDot: React.FC<NeumorphicActiveDotProps> = (props) => {
   const { cx = 0, cy = 0, stroke = '#2C4A6B' } = props;
-
+  // A calm marker: no endless pulsing (it repainted the chart every frame)
   return (
-    <g className="transition-transform duration-150 select-none">
-      {/* Ambient Pulsing Radar Ring */}
-      <circle
-        cx={cx}
-        cy={cy}
-        r={14}
-        fill={stroke}
-        opacity={0.2}
-        className="animate-ping"
-      />
-
-      {/* Neumorphic Shadow Halo Plate */}
-      <circle
-        cx={cx}
-        cy={cy}
-        r={9.5}
-        fill="#E3E8EF"
-        filter="url(#neu-dot-float)"
-        stroke="#FFFFFF"
-        strokeWidth={2}
-      />
-
-      {/* Core Tactile Jewel */}
-      <circle
-        cx={cx}
-        cy={cy}
-        r={5}
-        fill={stroke}
-      />
-
-      {/* Specular Glare Reflection on Lens */}
-      <ellipse
-        cx={cx - 1.5}
-        cy={cy - 1.5}
-        rx={1.6}
-        ry={1}
-        fill="#FFFFFF"
-        opacity={0.85}
-      />
+    <g pointerEvents="none">
+      <circle cx={cx} cy={cy} r={8} fill={stroke} fillOpacity={0.14} />
+      <circle cx={cx} cy={cy} r={5} fill="#FFFFFF" stroke={stroke} strokeWidth={2.5} />
     </g>
   );
 };
@@ -347,6 +299,8 @@ interface NeumorphicCursorProps {
   y?: number;
   width?: number;
   height?: number;
+  /** Given by Recharts for line/area charts */
+  points?: { x: number; y: number }[];
 }
 
 /**
@@ -354,23 +308,25 @@ interface NeumorphicCursorProps {
  * Recessed vertical slot groove providing tactile visual confirmation upon hover.
  */
 export const NeumorphicCursor: React.FC<NeumorphicCursorProps> = (props) => {
-  const { x = 0, y = 0, width = 30, height = 220 } = props;
-
-  return (
-    <rect
-      x={x}
-      y={y}
-      width={width}
-      height={height}
-      rx={10}
-      ry={10}
-      fill="rgba(95, 110, 208, 0.05)"
-      stroke="rgba(163, 177, 198, 0.4)"
-      strokeWidth={1}
-      strokeDasharray="4 4"
-      className="transition-all duration-150"
-    />
-  );
+  const { x = 0, y = 0, width = 30, height = 220, points } = props;
+  // Line chart: a thin guide line at the hovered day
+  if (points && points.length >= 2) {
+    return (
+      <line
+        x1={points[0].x}
+        y1={points[0].y}
+        x2={points[1].x}
+        y2={points[1].y}
+        stroke="#2C4A6B"
+        strokeOpacity={0.35}
+        strokeWidth={1.5}
+        strokeDasharray="3 4"
+        pointerEvents="none"
+      />
+    );
+  }
+  // Bar chart: a soft band behind the hovered bar
+  return <rect x={x} y={y} width={width} height={height} rx={10} ry={10} fill="#2C4A6B" fillOpacity={0.06} pointerEvents="none" />;
 };
 
 interface NeumorphicAxisTickProps {

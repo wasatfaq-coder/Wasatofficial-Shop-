@@ -15,6 +15,11 @@ import {
   RotateCw,
   Trash2,
   CalendarClock,
+  CalendarRange,
+  ChevronDown,
+  Check,
+  FileDown,
+  X,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -29,7 +34,7 @@ import {
   Legend,
 } from 'recharts';
 import { Order, PromoCode } from '../../types';
-import { generateAnalyticsPDF } from '../../utils/pdfExport';
+import { generateAnalyticsPDF, preloadPdfLibraries } from '../../utils/pdfExport';
 import {
   computeFirestoreDailySales,
   computePeriodBreakdown,
@@ -53,6 +58,7 @@ import {
   triggerChartHapticFeedback,
 } from './AdminChartNeumorphicShapes';
 import { ConfirmDialog } from '../ConfirmDialog';
+import { ModalPortal } from '../ModalPortal';
 
 interface AdminAnalyticsTabProps {
   orders: Order[];
@@ -86,6 +92,94 @@ const STATUS_FILTERS: { id: OrderStatusFilter; label: string }[] = [
   { id: 'delivered', label: 'Врученные' },
 ];
 
+/** «20 сент. — 26 сент.» / «апр. 2026 — сент. 2026»: what the period covers today */
+function periodRangeText(period: AnalyticsPeriod, now = new Date()): string {
+  if (period === '6m' || period === '1y') {
+    const months = period === '6m' ? 6 : 12;
+    const start = new Date(now.getFullYear(), now.getMonth() - months + 1, 1);
+    const fmt = (d: Date) => d.toLocaleDateString('ru-RU', { month: 'short', year: 'numeric' }).replace(/\s*г\.$/, '');
+    return `${fmt(start)} — ${fmt(now)}`;
+  }
+  const days = period === '7d' ? 7 : period === '14d' ? 14 : 30;
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days + 1);
+  const fmt = (d: Date) => d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+  return `${fmt(start)} — ${fmt(now)}`;
+}
+
+/** Period picker: a modal list (on a phone five segments did not fit one row) */
+const PeriodDialog: React.FC<{
+  value: AnalyticsPeriod;
+  onChange: (p: AnalyticsPeriod) => void;
+  onClose: () => void;
+}> = ({ value, onChange, onClose }) => {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <ModalPortal>
+      <div
+        className="fixed inset-0 z-[160] bg-[#2D3A4E]/45 flex items-end sm:items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
+        onClick={onClose}
+      >
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="analytics-period-title"
+          onClick={(e) => e.stopPropagation()}
+          className="w-full max-w-sm neu-modal rounded-3xl p-4 sm:p-5 space-y-3 animate-in zoom-in-95 fade-in duration-200"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <h4 id="analytics-period-title" className="text-sm font-black text-[#2D3A4E] flex items-center gap-2">
+              <CalendarRange className="w-4 h-4 text-accent" />
+              Период аналитики
+            </h4>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Закрыть"
+              className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="space-y-2" role="radiogroup" aria-label="Период">
+            {PERIODS.map((p) => {
+              const selected = p.id === value;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  autoFocus={selected}
+                  onClick={() => {
+                    onChange(p.id);
+                    onClose();
+                  }}
+                  className={`w-full min-h-12 px-3.5 py-2.5 rounded-2xl flex items-center justify-between gap-3 text-left cursor-pointer transition-all ${
+                    selected ? 'neu-pill-active' : 'neu-button text-[#2D3A4E]'
+                  }`}
+                >
+                  <span className="min-w-0">
+                    <span className="block text-xs font-black">{p.title}</span>
+                    <span className="block text-[11px] text-[#4E5C70]">
+                      {periodRangeText(p.id)} · {p.id === '6m' || p.id === '1y' ? 'по месяцам' : 'по дням'}
+                    </span>
+                  </span>
+                  {selected && <Check className="w-4 h-4 text-accent shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </ModalPortal>
+  );
+};
+
 const rub = (value: number) => `${value.toLocaleString('ru-RU')} ₽`;
 
 const formatMoment = (ms: number) =>
@@ -115,13 +209,16 @@ const Segments = <T extends string>({
   value,
   options,
   onChange,
+  grid,
 }: {
   label: string;
   value: T;
   options: { id: T; label: React.ReactNode; title?: string }[];
   onChange: (v: T) => void;
+  /** Grid classes instead of a wrapping row (all options the same width, no lone option on a second line) */
+  grid?: string;
 }) => (
-  <div className="neu-flat-sm rounded-xl p-1 flex gap-1 flex-wrap" role="radiogroup" aria-label={label}>
+  <div className={`neu-flat-sm rounded-xl p-1 gap-1 ${grid ? `grid ${grid}` : 'flex flex-wrap'}`} role="radiogroup" aria-label={label}>
     {options.map((o) => (
       <button
         key={o.id}
@@ -154,6 +251,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [resetAt, setResetAt] = useState<number | null>(null);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [isPeriodOpen, setIsPeriodOpen] = useState(false);
 
   useEffect(() => subscribeToAnalyticsResetAt(setResetAt), []);
 
@@ -281,21 +379,15 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
   };
 
   const xAxisInterval = period === '30d' ? 3 : period === '14d' ? 1 : 0;
-  const chartKey = `${period}-${activeMetric}-${chartType}-${statusFilter}`;
+  // The chart is not re-created on every switch: Recharts animates from the old values to the new ones
   const tooltip = (
     <Tooltip
-      content={
-        <AdminChartNeumorphicTooltip
-          activeMetric={activeMetric}
-          compareWithPrevious={false}
-          avgDailyRevenue={avgDailyRevenue}
-          totalPeriodRevenue={totalRevenue}
-        />
-      }
+      content={<AdminChartNeumorphicTooltip activeMetric={activeMetric} color={metric.color} />}
       cursor={<NeumorphicCursor />}
-      allowEscapeViewBox={{ x: false, y: true }}
-      offset={10}
-      wrapperStyle={{ outline: 'none', zIndex: 100, pointerEvents: 'none' }}
+      isAnimationActive={false}
+      allowEscapeViewBox={{ x: false, y: false }}
+      offset={14}
+      wrapperStyle={{ outline: 'none', zIndex: 20, pointerEvents: 'none' }}
     />
   );
   const axes = (
@@ -311,13 +403,17 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
         interval={xAxisInterval}
         tick={<NeumorphicAxisTick selectedDate={openDay?.date} period={period} dailyData={dailyData} />}
       />
-      <YAxis stroke="#4E5C70" fontSize={11} fontWeight={700} tickLine={false} axisLine={false} tickFormatter={formatYAxis} />
-      {tooltip}
-      <Legend
-        verticalAlign="top"
-        align="left"
-        content={<NeumorphicRechartsLegend activeMetric={activeMetric} compareWithPrevious={false} chartType={chartType} />}
+      <YAxis
+        stroke="#4E5C70"
+        fontSize={11}
+        fontWeight={700}
+        tickLine={false}
+        axisLine={false}
+        tickFormatter={formatYAxis}
+        width={44}
+        allowDecimals={metric.unit === '₽'}
       />
+      {tooltip}
     </>
   );
 
@@ -380,15 +476,22 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
               Аналитика продаж
             </h3>
             <p className="text-xs text-[#4E5C70]">
-              {periodInfo.title}, {isMonthly ? 'по месяцам' : 'по дням'}. Сравнение — с предыдущим периодом той же длины
+              {isMonthly ? 'По месяцам' : 'По дням'}. Сравнение — с предыдущим периодом той же длины
             </p>
           </div>
-          <Segments
-            label="Период"
-            value={period}
-            options={PERIODS.map((p) => ({ id: p.id, label: p.label, title: p.title }))}
-            onChange={changePeriod}
-          />
+          <button
+            type="button"
+            onClick={() => setIsPeriodOpen(true)}
+            aria-haspopup="dialog"
+            className="min-h-11 px-3.5 py-2 neu-button rounded-2xl flex items-center gap-2.5 text-left cursor-pointer self-stretch sm:self-auto shrink-0"
+          >
+            <CalendarRange className="w-4 h-4 text-accent shrink-0" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs font-black">{periodInfo.title}</span>
+              <span className="block text-[11px] text-[#4E5C70]">{periodRangeText(period)}</span>
+            </span>
+            <ChevronDown className="w-4 h-4 text-[#4E5C70] shrink-0" />
+          </button>
         </div>
         {resetAt !== null && (
           <div className="neu-inset rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -433,6 +536,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2.5">
           <Segments
             label="Показатель на графике"
+            grid="grid-cols-2 sm:grid-cols-4"
             value={activeMetric}
             options={METRICS.map((m) => ({ id: m.id, label: m.label }))}
             onChange={(m) => {
@@ -441,7 +545,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
             }}
           />
           <div className="flex items-center gap-2 flex-wrap">
-            <Segments label="Какие заказы учитывать" value={statusFilter} options={STATUS_FILTERS} onChange={setStatusFilter} />
+            <Segments label="Какие заказы учитывать" grid="grid-cols-3" value={statusFilter} options={STATUS_FILTERS} onChange={setStatusFilter} />
             <Segments
               label="Вид графика"
               value={chartType}
@@ -456,31 +560,37 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
 
         <div className="neu-inset rounded-2xl p-3 sm:p-4 select-none">
           <div className="h-72 sm:h-80 w-full">
-            <ResponsiveContainer key={chartKey} width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%">
               {chartType === 'area' ? (
-                <AreaChart data={dailyData} margin={{ top: 16, right: 14, left: -6, bottom: 20 }} onClick={handleChartClick} style={{ cursor: 'pointer' }}>
+                <AreaChart data={dailyData} margin={{ top: 12, right: 12, left: 0, bottom: 20 }} onClick={handleChartClick} style={{ cursor: 'pointer' }}>
                   {axes}
                   <Area
-                    type="monotone"
+                    // monotoneX keeps the curve smooth without overshooting below zero between days
+                    type="monotoneX"
                     dataKey={activeMetric}
                     name={metric.label}
                     stroke={metric.color}
-                    strokeWidth={3}
+                    strokeWidth={2.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                     fillOpacity={1}
                     fill={metric.fill}
-                    animationDuration={700}
+                    dot={dailyData.length <= 14 ? { r: 3, fill: '#E3E8EF', stroke: metric.color, strokeWidth: 2 } : false}
                     activeDot={<NeumorphicActiveDot stroke={metric.color} activeMetric={activeMetric} />}
+                    animationDuration={450}
+                    animationEasing="ease-out"
                   />
                 </AreaChart>
               ) : (
-                <BarChart data={dailyData} margin={{ top: 16, right: 14, left: -6, bottom: 20 }} onClick={handleChartClick} style={{ cursor: 'pointer' }}>
+                <BarChart data={dailyData} margin={{ top: 12, right: 12, left: 0, bottom: 20 }} onClick={handleChartClick} style={{ cursor: 'pointer' }}>
                   {axes}
                   <Bar
                     dataKey={activeMetric}
                     name={metric.label}
                     shape={<NeumorphicBarShape selectedDate={openDay?.date} activeMetric={activeMetric} />}
                     maxBarSize={period === '30d' ? 20 : 36}
-                    animationDuration={700}
+                    animationDuration={450}
+                    animationEasing="ease-out"
                   />
                 </BarChart>
               )}
@@ -627,27 +737,39 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       </section>
 
       {/* 6. Report and reset */}
-      <section className="neu-flat rounded-3xl p-4 flex flex-col sm:flex-row gap-2.5">
+      <section className="neu-flat rounded-3xl p-4 flex flex-col sm:flex-row sm:items-stretch gap-2.5">
         <button
           type="button"
           onClick={handleExportPDF}
           disabled={isExportingPDF}
-          className="flex-1 h-11 px-4 neu-button-accent rounded-2xl font-black text-xs text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+          aria-busy={isExportingPDF}
+          onPointerEnter={preloadPdfLibraries}
+          onFocus={preloadPdfLibraries}
+          className="w-full sm:flex-1 min-h-14 px-4 py-2.5 neu-button-accent rounded-2xl text-white flex items-center gap-3 text-left cursor-pointer disabled:opacity-70 disabled:cursor-wait"
         >
-          {isExportingPDF ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-          {isExportingPDF ? 'Готовим PDF…' : `Скачать отчет за период (PDF)`}
+          <span className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+            {isExportingPDF ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+          </span>
+          <span className="min-w-0">
+            <span className="block text-xs font-black">{isExportingPDF ? 'Формируем отчет…' : 'Скачать отчет PDF'}</span>
+            <span className="block text-[11px] text-white/80 leading-snug">
+              {periodInfo.title} · {totalOrders} заказ(ов) на {rub(totalRevenue)}
+            </span>
+          </span>
         </button>
         <button
           type="button"
           onClick={() => setIsResetConfirmOpen(true)}
           disabled={countedNow.count === 0}
           title={countedNow.count === 0 ? 'С момента последнего сброса заказов нет' : undefined}
-          className="h-11 px-4 neu-button-danger rounded-2xl font-black text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto min-h-14 px-4 neu-button-danger rounded-2xl font-black text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Trash2 className="w-4 h-4" />
           Сбросить статистику
         </button>
       </section>
+
+      {isPeriodOpen && <PeriodDialog value={period} onChange={changePeriod} onClose={() => setIsPeriodOpen(false)} />}
 
       <ConfirmDialog
         isOpen={isResetConfirmOpen}

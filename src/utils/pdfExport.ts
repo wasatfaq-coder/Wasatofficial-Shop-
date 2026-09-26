@@ -1,5 +1,3 @@
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { currentStoreName } from './storeContacts';
 
 interface ReportData {
@@ -36,6 +34,12 @@ interface ReportData {
 /** Order ids, product and category names come from the database (orders can be created by customers) */
 const esc = (value: unknown) =>
   String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]!);
+
+/** Start loading the PDF libraries before the click (hover or focus on the report button) */
+export function preloadPdfLibraries(): void {
+  void import('html2canvas');
+  void import('jspdf');
+}
 
 export async function generateAnalyticsPDF(data: ReportData): Promise<void> {
   // Create an offscreen, beautifully styled element for PDF rendering with full Cyrillic support
@@ -224,6 +228,8 @@ export async function generateAnalyticsPDF(data: ReportData): Promise<void> {
   document.body.appendChild(container);
 
   try {
+    // loaded on demand: the two libraries are large and needed only for the report
+    const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
     const canvas = await html2canvas(container, {
       scale: 2,
       useCORS: true,
@@ -242,7 +248,11 @@ export async function generateAnalyticsPDF(data: ReportData): Promise<void> {
     const pageHeight = 297;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, Math.min(imgHeight, pageHeight));
+    // a long report continues on the next pages instead of being cut at the first one
+    for (let offset = 0; offset < imgHeight; offset += pageHeight) {
+      if (offset > 0) pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, -offset, imgWidth, imgHeight);
+    }
     
     const fileName = `${currentStoreName().replace(/\s+/g, '_')}_Отчет_${data.periodLabel.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
     pdf.save(fileName);

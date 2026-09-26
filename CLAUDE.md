@@ -78,6 +78,8 @@ Wasat Shop — SPA интернет-магазина мужской одежды
 - Аналитика (`AdminAnalyticsTab`) считается по заказам после `settings/analytics.resetAt`; «Сбросить статистику»
   заказы не удаляет, «Вернуть всю историю» снимает сброс. Числа экрана и PDF — `computeFirestoreDailySales`
   и `computePeriodBreakdown` (`src/utils/analyticsEngine.ts`), по цене и названию из заказа.
+  Период выбирается в модальном окне (`PeriodDialog`); график не пересоздается при переключении (без `key`),
+  библиотеки PDF (`html2canvas`, `jspdf`) грузятся по требованию (`preloadPdfLibraries` при наведении).
 - Предзаказ (`isPreorderMode`): распроданный вариант можно заказать (`getOrderableStock`), позиция получает
   `isPreorder` и не списывается/не возвращается на склад. Логика — и в `App.tsx`, и в `placeOrder`.
 - Название магазина не прописывать в текстах: `getStoreName(settings)` / `currentStoreName()` из
