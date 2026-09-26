@@ -32,6 +32,18 @@ export interface CareInstructionItem {
   desc: string;
 }
 
+/** A highlight card under the product description, e.g. «Эко-материал — 100% лен» */
+export interface ProductFeature {
+  title: string;
+  text?: string;
+}
+
+/** A characteristic row in «Состав и ткань», e.g. «Застежка — молния YKK» */
+export interface ProductSpec {
+  label: string;
+  value: string;
+}
+
 export interface ProductReview {
   id: string;
   authorName: string;
@@ -91,6 +103,12 @@ export interface Product {
   fabricComposition?: FabricCompositionItem[];
   fabricDensity?: string; // e.g. "185 г/м²"
   careInstructions?: CareInstructionItem[];
+  /** Card sections edited in Admin → product → «Структура карточки»; an empty one is not shown */
+  features?: ProductFeature[];
+  specs?: ProductSpec[];
+  weave?: string;
+  countryOfOrigin?: string;
+  certifications?: string[];
   images: string[];
   colors: { name: string; hex: string }[];
   sizes: string[];

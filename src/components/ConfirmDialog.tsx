@@ -13,6 +13,10 @@ interface ConfirmDialogProps {
   tone?: 'danger' | 'neutral';
   onConfirm: () => void;
   onClose: () => void;
+  /** What is being removed (thumbnail, name…), shown in a pressed-in box as in the cart's remove dialog */
+  preview?: React.ReactNode;
+  /** Label of the button that keeps the item; «Отмена» by default */
+  cancelLabel?: string;
 }
 
 /**
@@ -28,6 +32,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   tone = 'danger',
   onConfirm,
   onClose,
+  preview,
+  cancelLabel = 'Отмена',
 }) => (
   <AnimatePresence>
     {isOpen && (
@@ -71,6 +77,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             </button>
           </div>
 
+          {preview && (
+            <div className="neu-inset rounded-2xl p-2.5 bg-[#E3E8EF] flex items-center gap-3 min-w-0">{preview}</div>
+          )}
+
           <p className="text-xs text-[#4E5C70] leading-relaxed">{message}</p>
 
           <div className="flex items-center gap-2 pt-1">
@@ -79,7 +89,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               onClick={onClose}
               className="flex-1 py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
             >
-              Отмена
+              {cancelLabel}
             </button>
             <button
               type="button"

@@ -40,6 +40,9 @@ import { getVariantStock, getProductSKU, getProductTotalStock, getOrderableStock
 import {
   getProductFabricComposition,
   getProductCareInstructions,
+  getProductCertifications,
+  getProductFeatures,
+  getProductSpecRows,
 } from '../utils/productAttributes';
 import { photoBadgeClass } from '../utils/productBadge';
 import { getProductRating } from '../utils/productRating';
@@ -102,7 +105,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   const [selectedSize, setSelectedSize] = useState(product?.sizes?.[0] || 'M');
   const [quantity, setQuantity] = useState(1);
   const [openAccordion, setOpenAccordion] = useState<'shipping' | 'returns' | 'fabric' | null>('fabric');
-  const [detailTab, setDetailTab] = useState<'description' | 'specs' | 'care'>('specs');
+  const [detailTab, setDetailTab] = useState<'description' | 'specs' | 'care'>('description');
   const [isSizeCalcOpen, setIsSizeCalcOpen] = useState(false);
   const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
   const [isQuickOrderOpen, setIsQuickOrderOpen] = useState(false);
@@ -119,6 +122,28 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   // Calculate current SKU variant stock
   const currentStock = getVariantStock(product, selectedColor, selectedSize);
   const currentSKU = getProductSKU(product, selectedColor, selectedSize);
+
+  // Card sections from Admin → product → «Структура карточки»; a section without data is hidden
+  const cardFeatures = getProductFeatures(product);
+  const cardComposition = getProductFabricComposition(product);
+  const cardCertifications = getProductCertifications(product);
+  const cardSpecRows = getProductSpecRows(product);
+  const cardCare = getProductCareInstructions(product);
+  const detailTabs = [
+    { id: 'description' as const, label: 'Описание', icon: FileText, show: Boolean(product.description?.trim()) || cardFeatures.length > 0 },
+    {
+      id: 'specs' as const,
+      label: 'Состав и ткань',
+      icon: ListFilter,
+      show:
+        cardComposition.length > 0 ||
+        cardSpecRows.length > 0 ||
+        cardCertifications.length > 0 ||
+        Boolean(currentSKU?.skuCode || currentSKU?.barcode),
+    },
+    { id: 'care' as const, label: 'Уход и стирка', icon: Sparkles, show: cardCare.length > 0 },
+  ].filter((tab) => tab.show);
+  const activeDetailTab = detailTabs.some((tab) => tab.id === detailTab) ? detailTab : detailTabs[0]?.id;
   const totalStockAcrossAll = getProductTotalStock(product);
   // Units that can be ordered: the stock, or a preorder limit for a sold-out variant
   const orderableStock = getOrderableStock(product, selectedColor, selectedSize, preorderMode);
@@ -581,163 +606,134 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
         </div>
       </div>
 
-      {/* Neumorphic Product Information Tabs (Description, Fabric Specs, Care) */}
+      {/* Product information tabs: only sections that have data are shown */}
+      {detailTabs.length > 0 && activeDetailTab && (
       <div className="neu-flat rounded-3xl p-4 border border-white/60 space-y-3">
         {/* Tab Switcher Bar */}
-        <div className="neu-flat-sm p-1.5 rounded-2xl flex items-center justify-between gap-1">
-          <button
-            onClick={() => setDetailTab('description')}
-            className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
-              detailTab === 'description'
-                ? 'neu-pill-active'
-                : 'text-[#4E5C70] hover:text-[#2D3A4E]'
-            }`}
-          >
-            <FileText className="w-3.5 h-3.5" />
-            <span>Описание</span>
-          </button>
-
-          <button
-            onClick={() => setDetailTab('specs')}
-            className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
-              detailTab === 'specs'
-                ? 'neu-pill-active'
-                : 'text-[#4E5C70] hover:text-[#2D3A4E]'
-            }`}
-          >
-            <ListFilter className="w-3.5 h-3.5" />
-            <span>Состав и ткань</span>
-          </button>
-
-          <button
-            onClick={() => setDetailTab('care')}
-            className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
-              detailTab === 'care'
-                ? 'neu-pill-active'
-                : 'text-[#4E5C70] hover:text-[#2D3A4E]'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Уход и стирка</span>
-          </button>
+        <div className="neu-flat-sm p-1.5 rounded-2xl flex items-stretch justify-between gap-1" role="tablist">
+          {detailTabs.map((tab) => {
+            const TabIcon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={activeDetailTab === tab.id}
+                onClick={() => setDetailTab(tab.id)}
+                className={`flex-1 min-h-10 py-2 px-2 rounded-xl text-xs font-bold leading-tight transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
+                  activeDetailTab === tab.id ? 'neu-pill-active' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
+                }`}
+              >
+                <TabIcon className="w-3.5 h-3.5 shrink-0" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Active Tab Content Panel */}
         <div className="neu-flat-sm rounded-2xl p-3.5 border border-white/80 space-y-3 text-xs text-[#2D3A4E] transition-all duration-200">
-          {detailTab === 'description' && (
+          {activeDetailTab === 'description' && (
             <div className="space-y-3 leading-relaxed text-[#4E5C70]">
-              <p>
-                {product.description} Изготовлено из премиального 100% органического волокна с выверенным лекалом для безупречной посадки.
-              </p>
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <div className="neu-flat rounded-xl p-2.5 bg-[#E3E8EF] flex items-center gap-2">
-                  <Leaf className="w-4 h-4 text-success shrink-0" />
-                  <div>
-                    <p className="font-black text-[11px] text-[#2D3A4E]">Эко-материал</p>
-                    <p className="text-[11px] text-[#4E5C70]">100% биоразлагаемо</p>
-                  </div>
-                </div>
-                <div className="neu-flat rounded-xl p-2.5 bg-[#E3E8EF] flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-accent shrink-0" />
-                  <div>
-                    <p className="font-black text-[11px] text-[#2D3A4E]">Европейское качество</p>
-                    <p className="text-[11px] text-[#4E5C70]">Контроль каждого шва</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {detailTab === 'specs' && (
-            <div className="space-y-3">
-              {/* Fabric Composition Breakdown Block */}
-              <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
-                    <Layers className="w-3.5 h-3.5 text-accent" />
-                    Состав и структура ткани
-                  </span>
-                  <span className="text-[11px] font-bold text-accent neu-flat px-2 py-0.5 rounded-lg">
-                    {product.fabricDensity || '185 г/м²'}
-                  </span>
-                </div>
-
-                <div className="space-y-2 pt-1">
-                  {getProductFabricComposition(product).map((item, idx) => (
-                    <div key={idx} className="space-y-1">
-                      <div className="flex justify-between text-xs font-bold text-[#2D3A4E]">
-                        <span>{item.fiber}</span>
-                        <span className="text-accent font-black">{item.percentage}%</span>
-                      </div>
-                      <div className="w-full h-2 rounded-full overflow-hidden neu-inset bg-[#BAC5D5]/40">
-                        <div
-                          className="h-full bg-gradient-to-r from-accent to-[#7B8AF0] rounded-full transition-all duration-500"
-                          style={{ width: `${item.percentage}%` }}
-                        />
+              {product.description?.trim() && <p className="whitespace-pre-line">{product.description.trim()}</p>}
+              {cardFeatures.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  {cardFeatures.map((feature, idx) => (
+                    <div key={idx} className="neu-inset rounded-xl p-2.5 bg-[#E3E8EF] flex items-start gap-2">
+                      <ShieldCheck className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <p className="font-black text-[11px] text-[#2D3A4E]">{feature.title}</p>
+                        {feature.text && <p className="text-[11px] text-[#4E5C70] leading-snug">{feature.text}</p>}
                       </div>
                     </div>
                   ))}
                 </div>
-
-                <div className="pt-1.5 flex items-center gap-1.5 text-[11px] text-success font-semibold border-t border-[#BAC5D5]/40">
-                  <ShieldCheck className="w-4 h-4 text-success shrink-0" />
-                  <span>Сертифицировано OEKO-TEX® Standard 100 • Гипоаллергенный натуральный состав</span>
-                </div>
-              </div>
-
-              {/* Main Technical Specs List */}
-              <div className="space-y-2 text-xs">
-                <div className="flex items-center justify-between gap-2 py-1.5 border-b border-[#BAC5D5]/40">
-                  <span className="text-[#4E5C70] shrink-0">Плотность ткани:</span>
-                  <span className="font-bold text-[#2D3A4E] text-right">{product.fabricDensity || '185 г/м² (средняя плотность)'}</span>
-                </div>
-                <div className="flex items-center justify-between gap-2 py-1.5 border-b border-[#BAC5D5]/40">
-                  <span className="text-[#4E5C70] shrink-0">Тип переплетения:</span>
-                  <span className="font-bold text-[#2D3A4E] text-right">Саржевое / Полотняное</span>
-                </div>
-                <div className="flex items-center justify-between gap-2 py-1.5 border-b border-[#BAC5D5]/40">
-                  <span className="text-[#4E5C70] shrink-0">Покрой / Посадка:</span>
-                  <span className="font-bold text-[#2D3A4E] text-right">
-                    {product.fit === 'slim' ? 'Приталенный (Slim Fit)' : product.fit === 'oversize' ? 'Свободный (Oversize)' : 'Классический (Regular Fit)'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-2 py-1.5 border-b border-[#BAC5D5]/40">
-                  <span className="text-[#4E5C70] shrink-0">Артикул:</span>
-                  <span className="font-mono font-bold text-accent text-[11px] bg-slate-100/90 px-2 py-0.5 rounded-lg neu-inset border border-white/60">
-                    {currentSKU?.skuCode || `MS-${product.id.slice(0, 4).toUpperCase()}-${selectedSize}`}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-2 py-1.5 border-b border-[#BAC5D5]/40">
-                  <span className="text-[#4E5C70] shrink-0">Штрихкод (EAN):</span>
-                  <span className="font-mono text-[11px] text-[#2D3A4E] text-right">
-                    {currentSKU?.barcode || '460700010099'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-2 py-1.5">
-                  <span className="text-[#4E5C70] shrink-0">Страна производства:</span>
-                  <span className="font-bold text-[#2D3A4E] text-right">Португалия</span>
-                </div>
-              </div>
+              )}
             </div>
           )}
 
-          {detailTab === 'care' && (
-            <div className="space-y-2.5">
-              <div className="text-[11px] text-[#4E5C70] font-medium pb-1">
-                Следуйте рекомендациям для сохранения первозданного вида, мягкости волокон и цвета изделия:
-              </div>
+          {activeDetailTab === 'specs' && (
+            <div className="space-y-3">
+              {(cardComposition.length > 0 || cardCertifications.length > 0) && (
+                <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-accent shrink-0" />
+                      Состав ткани
+                    </span>
+                    {product.fabricDensity?.trim() && (
+                      <span className="text-[11px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-lg whitespace-nowrap">
+                        {product.fabricDensity.trim()}
+                      </span>
+                    )}
+                  </div>
 
-              {getProductCareInstructions(product).map((care, idx) => (
+                  {cardComposition.length > 0 && (
+                    <div className="space-y-2 pt-1">
+                      {cardComposition.map((item, idx) => (
+                        <div key={idx} className="space-y-1">
+                          <div className="flex justify-between gap-2 text-xs font-bold text-[#2D3A4E]">
+                            <span className="min-w-0">{item.fiber}</span>
+                            <span className="text-accent font-black shrink-0">{item.percentage}%</span>
+                          </div>
+                          <div className="w-full h-2 rounded-full overflow-hidden neu-inset bg-[#BAC5D5]/40">
+                            <div
+                              className="h-full neu-fill-accent rounded-full transition-all duration-500"
+                              style={{ width: `${Math.min(100, item.percentage)}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {cardCertifications.length > 0 && (
+                    <div className="pt-2 flex items-start gap-1.5 text-[11px] text-success font-semibold border-t border-[#BAC5D5]/40">
+                      <ShieldCheck className="w-4 h-4 text-success shrink-0" />
+                      <span>{cardCertifications.join(' • ')}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <dl className="space-y-0 text-xs">
+                {cardSpecRows.map((row, idx) => (
+                  <div key={idx} className="flex items-start justify-between gap-3 py-2 border-b border-[#BAC5D5]/40 last:border-b-0">
+                    <dt className="text-[#4E5C70] shrink-0">{row.label}</dt>
+                    <dd className="font-bold text-[#2D3A4E] text-right min-w-0">{row.value}</dd>
+                  </div>
+                ))}
+                {currentSKU?.skuCode && (
+                  <div className="flex items-center justify-between gap-3 py-2 border-b border-[#BAC5D5]/40 last:border-b-0">
+                    <dt className="text-[#4E5C70] shrink-0">Артикул</dt>
+                    <dd className="font-mono font-bold text-accent text-[11px] px-2 py-0.5 rounded-lg neu-inset bg-[#E3E8EF]">
+                      {currentSKU.skuCode}
+                    </dd>
+                  </div>
+                )}
+                {currentSKU?.barcode && (
+                  <div className="flex items-center justify-between gap-3 py-2">
+                    <dt className="text-[#4E5C70] shrink-0">Штрихкод (EAN)</dt>
+                    <dd className="font-mono text-[11px] text-[#2D3A4E] text-right">{currentSKU.barcode}</dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          )}
+
+          {activeDetailTab === 'care' && (
+            <div className="space-y-2.5">
+              {cardCare.map((care, idx) => (
                 <div
                   key={idx}
-                  className="neu-flat rounded-xl p-2.5 bg-[#E3E8EF] flex items-start gap-2.5 border border-white/60"
+                  className="neu-inset rounded-xl p-2.5 bg-[#E3E8EF] flex items-start gap-2.5"
                 >
-                  <div className="w-6 h-6 rounded-lg neu-inset flex items-center justify-center shrink-0 mt-0.5 text-accent">
+                  <div className="w-6 h-6 rounded-lg neu-button flex items-center justify-center shrink-0 mt-0.5 text-accent">
                     <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-xs text-[#2D3A4E]">{care.label}</p>
-                    <p className="text-[11px] text-[#4E5C70] leading-snug mt-0.5">{care.desc}</p>
+                    {care.desc && <p className="text-[11px] text-[#4E5C70] leading-snug mt-0.5">{care.desc}</p>}
                   </div>
                 </div>
               ))}
@@ -745,6 +741,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           )}
         </div>
       </div>
+      )}
 
       {/* Accordion Info Cards (Shipping, Returns, Size Guides) */}
       <div className="space-y-3">
