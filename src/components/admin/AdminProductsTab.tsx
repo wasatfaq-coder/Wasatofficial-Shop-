@@ -1224,7 +1224,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       {/* ================= MODAL: CREATE / EDIT PRODUCT ================= */}
       {isProductFormOpen && (
         <ModalPortal><div className="admin-no-glow fixed inset-0 z-[70] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div className="neu-modal rounded-3xl p-4 sm:p-6 max-w-4xl w-full space-y-4 text-[#2D3A4E] border border-white/80 max-h-[92vh] overflow-y-auto my-auto">
+          <div className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-4 sm:p-6 max-w-4xl w-full space-y-4 text-[#2D3A4E] border border-white/80 max-h-[92vh] overflow-y-auto my-auto">
             {/* Header: title on the left, status and close on the right (status wraps under the title on phones) */}
             <div className="flex flex-wrap items-start justify-between pb-3 border-b border-[#BAC5D5]/50 gap-x-3 gap-y-2.5">
               <div className="flex items-start gap-2.5 min-w-0 flex-1">
@@ -1245,19 +1245,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   <p className="text-[11px] text-[#4E5C70] font-medium mt-0.5 leading-snug">
                     Параметры, цены, себестоимость и остатки SKU
                   </p>
-                  <div className="text-[11px] mt-0.5">
-                    <span
-                      className={`font-black ${
-                        totalFormStock === 0
-                          ? 'text-danger'
-                          : totalFormStock < 5
-                          ? 'text-warning'
-                          : 'text-success'
-                      }`}
-                    >
-                      Остаток: {totalFormStock} шт.
-                    </span>
-                  </div>
                 </div>
               </div>
 
@@ -1448,26 +1435,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                           value={formMaterial}
                           onChange={(e) => setFormMaterial(e.target.value)}
                           placeholder="100% лен"
-                          className="w-full h-10 pl-3 pr-8 neu-inset rounded-xl text-xs font-semibold text-[#2D3A4E] bg-[#E3E8EF] truncate"
+                          className="w-full h-10 px-3 neu-inset rounded-xl text-xs font-semibold text-[#2D3A4E] bg-[#E3E8EF] truncate"
                         />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setTextEditModal({
-                              isOpen: true,
-                              type: 'material',
-                              category: formCategory,
-                              title: 'Материал ткани',
-                              subtitle: 'Укажите точный состав ткани и особенности полотна',
-                              value: formMaterial,
-                            })
-                          }
-                          className="absolute right-2 p-1 text-[#4E5C70] hover:text-accent cursor-pointer"
-                          title="Открыть окно редактирования материала"
-                          aria-label="Открыть окно редактирования материала"
-                        >
-                          <Maximize2 className="w-3.5 h-3.5" />
-                        </button>
                       </div>
                     </div>
                   </div>
@@ -1503,26 +1472,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         value={formDescription}
                         onChange={(e) => setFormDescription(e.target.value)}
                         placeholder="Краткое описание преимуществ ткани и кроя..."
-                        className="w-full px-3 py-2 pr-8 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] resize-none leading-relaxed"
+                        className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] resize-none leading-relaxed"
                       />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setTextEditModal({
-                            isOpen: true,
-                            type: 'description',
-                            category: formCategory,
-                            title: 'Описание товара',
-                            subtitle: 'Подробное описание фасона, преимуществ, кроя и ухода',
-                            value: formDescription,
-                          })
-                        }
-                        className="absolute top-2 right-2 p-1 text-[#4E5C70] hover:text-accent cursor-pointer"
-                        title="Редактировать в модальном окне"
-                        aria-label="Редактировать в модальном окне"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
                     </div>
                   </div>
 
@@ -2172,7 +2123,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               {/* Form Action Buttons & Summaries */}
               <div className="pt-3 border-t border-[#BAC5D5]/50 space-y-3">
                 {/* Neumorphic Recessed Summary Columns */}
-                <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   <div className="p-2 sm:p-2.5 neu-inset rounded-xl bg-[#E3E8EF] flex flex-col justify-center text-center">
                     <span className="text-[11px] font-bold text-[#4E5C70] leading-tight mb-0.5">Остаток</span>
                     <span className="text-xs sm:text-sm font-black text-accent whitespace-nowrap">
@@ -2187,19 +2138,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                     </span>
                   </div>
 
-                  <div className="p-2 sm:p-2.5 neu-inset rounded-xl bg-[#E3E8EF] flex flex-col justify-center text-center">
-                    <span className="text-[11px] font-bold text-[#4E5C70] leading-tight mb-0.5">Статус</span>
-                    <div className="flex items-center justify-center gap-1.5">
-                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${formInStock ? 'bg-success' : 'bg-danger'}`} />
-                      <span
-                        className={`text-xs sm:text-sm font-black whitespace-nowrap ${
-                          formInStock ? 'text-success' : 'text-danger'
-                        }`}
-                      >
-                        {formInStock ? 'В продаже' : 'Снят'}
-                      </span>
-                    </div>
-                  </div>
                 </div>
 
                 {/* «В продаже» with zero stock is saved as out of stock: say so before saving */}
@@ -2234,7 +2172,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       {/* ================= MODAL: CSV IMPORT ================= */}
       {isCSVImportModalOpen && (
         <ModalPortal><div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div className="neu-modal rounded-3xl p-5 sm:p-6 max-w-xl w-full space-y-4 text-[#2D3A4E] border border-white/80 max-h-[90vh] overflow-y-auto my-auto">
+          <div className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-5 sm:p-6 max-w-xl w-full space-y-4 text-[#2D3A4E] border border-white/80 max-h-[90vh] overflow-y-auto my-auto">
             <div className="flex items-start sm:items-center justify-between pb-2 border-b border-[#BAC5D5]/50 gap-2">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-accent shrink-0">
@@ -2309,7 +2247,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       {/* ================= MODAL: QUICK PRODUCT INSPECT ================= */}
       {productToInspect && (
         <ModalPortal><div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div className="neu-modal rounded-3xl p-5 sm:p-6 max-w-lg w-full space-y-4 text-[#2D3A4E] border border-white/80 max-h-[90vh] overflow-y-auto my-auto">
+          <div className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-5 sm:p-6 max-w-lg w-full space-y-4 text-[#2D3A4E] border border-white/80 max-h-[90vh] overflow-y-auto my-auto">
             {/* Header */}
             <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
               <div className="flex items-center gap-2">
@@ -2443,7 +2381,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       {/* ================= MODAL: DELETE PRODUCT CONFIRMATION ================= */}
       {productToDelete && (
         <ModalPortal><div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div className="neu-modal rounded-3xl p-5 sm:p-6 max-w-sm w-full space-y-3.5 text-[#2D3A4E] border border-white/80 my-auto text-center">
+          <div className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-5 sm:p-6 max-w-sm w-full space-y-3.5 text-[#2D3A4E] border border-white/80 my-auto text-center">
             <div className="w-12 h-12 rounded-2xl neu-inset mx-auto flex items-center justify-center text-danger bg-[#E3E8EF]">
               <Trash2 className="w-6 h-6" />
             </div>
@@ -2485,7 +2423,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       {/* Bulk Discount Modal */}
       {isBulkDiscountModalOpen && (
         <ModalPortal><div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="neu-modal rounded-3xl p-6 max-w-sm w-full space-y-4 text-[#2D3A4E] border border-white/80 my-auto">
+          <div className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-6 max-w-sm w-full space-y-4 text-[#2D3A4E] border border-white/80 my-auto">
             <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
               <h3 className="text-sm font-black uppercase text-[#2D3A4E]">Скидка на товары</h3>
               <button
@@ -2541,11 +2479,11 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       {/* Photo Zoom Modal */}
       {previewZoomImage && (
         <ModalPortal><div
-          className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={() => setPreviewZoomImage(null)}
         >
           <div
-            className="relative max-w-2xl max-h-[85vh] neu-flat rounded-3xl overflow-hidden bg-[#E3E8EF] p-2 border border-white/60"
+            className="relative max-w-2xl max-h-[85vh] neu-flat rounded-3xl overflow-hidden bg-[#E3E8EF] p-2 border border-white/60 animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             <button
