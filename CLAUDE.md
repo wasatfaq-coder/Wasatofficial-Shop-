@@ -48,6 +48,8 @@ Wasat Shop — SPA интернет-магазина мужской одежды
 - `.neu-modal` имеет `transform` и `contain: paint`: полноэкранное окно (`fixed inset-0`) внутри него обрезается.
   Окна поверх панели администратора и формы товара выводить через `ModalPortal` (как `ConfirmDialog`).
   Вместо нативного `<select>` — `NeumorphicSelect`.
+- Анимации появления: классы `animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-*` определены в `index.css`
+  (пакета tw-animate-css нет); анимация без `fill-mode: forwards`, чтобы у окна не оставался `transform`.
 - Отзывы — коллекция `reviews/{productId}_{uid}` (меняет только автор), «Полезно» — `review_votes/{reviewId}_{uid}`.
   В `App.tsx` они подмешиваются в `product.reviews` (`mergeProductReviews`) и вырезаются при записи товара
   (`withoutCollectionReviews`); писать отзывы внутрь товара нельзя.

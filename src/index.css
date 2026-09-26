@@ -454,3 +454,33 @@ svg.recharts-surface:focus,
   outline: none !important;
   background-color: transparent !important;
 }
+
+/* Enter animations used as `animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200`
+   (the tw-animate-css names; the package is not installed, so they were no-ops).
+   Only the start state is applied (fill-mode: backwards): after the animation the element keeps
+   no transform, so fixed overlays inside it are not re-anchored to it. */
+@keyframes wasat-enter {
+  from {
+    opacity: var(--wasat-enter-opacity, 1);
+    transform: translate3d(0, var(--wasat-enter-y, 0), 0) scale(var(--wasat-enter-scale, 1));
+  }
+}
+
+.animate-in {
+  /* Own start values: custom properties inherit, so a nested .animate-in would take its parent's */
+  --wasat-enter-opacity: 1;
+  --wasat-enter-scale: 1;
+  --wasat-enter-y: 0;
+  animation: wasat-enter var(--tw-duration, 150ms) cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+.fade-in { --wasat-enter-opacity: 0; }
+.fade-in-50 { --wasat-enter-opacity: 0.5; }
+.zoom-in { --wasat-enter-scale: 0; }
+.zoom-in-50 { --wasat-enter-scale: 0.5; }
+.zoom-in-95 { --wasat-enter-scale: 0.95; }
+.slide-in-from-top-2 { --wasat-enter-y: -0.5rem; }
+.slide-in-from-top-4 { --wasat-enter-y: -1rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-in { animation: none; }
+}
