@@ -17,6 +17,7 @@ import {
   deleteQuickPhrase,
 } from '../../utils/phrasesSync';
 import type { StoreCategory } from '../../types';
+import { ModalPortal } from '../ModalPortal';
 import { categoryIcon } from '../../utils/categories';
 
 interface TextEditModalProps {
@@ -257,6 +258,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
   const ActiveIcon = activeSet.icon;
 
   return (
+    <ModalPortal>
     <div
       className="fixed inset-0 z-[130] bg-[#2D3A4E]/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
       onClick={onClose}
@@ -601,5 +603,6 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 };

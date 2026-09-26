@@ -41,7 +41,7 @@ interface ToastProps {
 
 export const ToastContainer: React.FC<ToastProps> = ({ toasts, onDismiss }) => {
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2.5 w-11/12 max-w-sm pointer-events-none">
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[300] flex flex-col gap-2.5 w-11/12 max-w-sm pointer-events-none">
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
       ))}
@@ -188,14 +188,14 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
   // Standard Compact Toast Item
   return (
     <div
-      className="pointer-events-auto neu-dropdown rounded-2xl p-3 px-4 flex items-center justify-between gap-3 border border-white/80 animate-in fade-in slide-in-from-top-4 duration-300 bg-[#E3E8EF]"
+      className="pointer-events-auto neu-dropdown rounded-2xl p-3 px-4 flex items-start justify-between gap-3 border border-white/80 animate-in fade-in slide-in-from-top-4 duration-300 bg-[#E3E8EF]"
       role="status"
     >
-      <div className="flex items-center gap-2.5 min-w-0">
+      <div className="flex items-start gap-2.5 min-w-0">
         {toast.type === 'success' && <CheckCircle className="w-5 h-5 text-success shrink-0" />}
         {toast.type === 'info' && <Info className="w-5 h-5 text-accent shrink-0" />}
         {toast.type === 'error' && <AlertCircle className="w-5 h-5 text-danger shrink-0" />}
-        <span className="text-xs sm:text-sm font-bold text-[#2D3A4E] truncate">{toast.text}</span>
+        <span className="text-xs sm:text-sm font-bold text-[#2D3A4E] leading-snug line-clamp-4 pt-0.5">{toast.text}</span>
       </div>
       <button
         type="button"

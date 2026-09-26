@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ModalPortal } from '../ModalPortal';
 import {
   X,
   Tag,
@@ -170,6 +171,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
   };
 
   return (
+    <ModalPortal>
     <AnimatePresence>
       {isOpen && selectedProducts.length > 0 && (
         <motion.div
@@ -593,5 +595,6 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
     </motion.div>
   )}
 </AnimatePresence>
+</ModalPortal>
 );
 };

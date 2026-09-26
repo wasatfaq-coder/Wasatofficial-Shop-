@@ -19,6 +19,7 @@ import type {
 } from '../../types';
 import { CARE_ICON_LABELS, FIT_LABELS } from '../../utils/productAttributes';
 import { ConfirmDialog } from '../ConfirmDialog';
+import { NeumorphicSelect } from '../NeumorphicSelect';
 
 /** Product card sections edited in the product form; empty ones are hidden from customers */
 export interface ProductCardStructure {
@@ -148,6 +149,13 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
     name: string,
     detail?: string
   ) => {
+    const remove = () =>
+      set(key, (value[key] as unknown[]).filter((_, i) => i !== index) as ProductCardStructure[K]);
+    // A blank row holds nothing to lose: removed at once, without a question
+    if (!name.trim() && !(detail ?? '').replace(/^0%$/, '').trim()) {
+      remove();
+      return;
+    }
     setPendingDelete({
       title,
       preview: (
@@ -157,7 +165,7 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
         </div>
       ),
       run: () => {
-        set(key, (value[key] as unknown[]).filter((_, i) => i !== index) as ProductCardStructure[K]);
+        remove();
         onShowToast('Элемент удален из карточки', 'info');
       },
     });
@@ -291,7 +299,7 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
                         section.shown ? 'bg-success-soft text-success' : 'bg-[#BAC5D5]/30 text-[#4E5C70]'
                       }`}
                     >
-                      {section.shown ? `Показан · ${section.count}` : 'Скрыт'}
+                      {section.shown ? (section.count > 0 ? `Показан · ${section.count}` : 'Показан') : 'Скрыт'}
                     </span>
                     <ChevronDown
                       className={`w-4 h-4 text-[#4E5C70] transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
@@ -374,7 +382,14 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
                                 </span>
                               </div>
                               {deleteButton(
-                                () => askDelete('composition', idx, 'Удалить волокно?', item.fiber, `${item.percentage || 0}%`),
+                                () =>
+                                  askDelete(
+                                    'composition',
+                                    idx,
+                                    'Удалить волокно?',
+                                    item.fiber,
+                                    item.percentage ? `${item.percentage}%` : undefined
+                                  ),
                                 'Удалить волокно'
                               )}
                             </div>
@@ -499,43 +514,35 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
                       <>
                         {value.care.length === 0 && emptyNote('Правил ухода нет — вкладка «Уход и стирка» скрыта.')}
                         {value.care.map((care, idx) => (
-                          <div key={idx} className="flex items-start gap-2">
-                            <div className="flex-1 min-w-0 space-y-2">
-                              <div className="grid grid-cols-[7.5rem_1fr] gap-2">
-                                <select
-                                  value={care.icon}
-                                  onChange={(e) =>
-                                    updateAt('care', idx, { icon: e.target.value as CareInstructionItem['icon'] })
-                                  }
-                                  aria-label="Тип правила"
-                                  className={`${inputClass} px-2`}
-                                >
-                                  {Object.entries(CARE_ICON_LABELS).map(([icon, label]) => (
-                                    <option key={icon} value={icon}>
-                                      {label}
-                                    </option>
-                                  ))}
-                                </select>
-                                <input
-                                  value={care.label}
-                                  onChange={(e) => updateAt('care', idx, { label: e.target.value })}
-                                  placeholder="Правило, напр. Стирка до 30°C"
-                                  aria-label="Правило ухода"
-                                  className={inputClass}
-                                />
-                              </div>
-                              <input
-                                value={care.desc}
-                                onChange={(e) => updateAt('care', idx, { desc: e.target.value })}
-                                placeholder="Пояснение (необязательно)"
-                                aria-label="Пояснение правила"
-                                className={inputClass}
+                          <div key={idx} className="neu-flat-sm rounded-2xl p-2.5 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <NeumorphicSelect
+                                className="flex-1 min-w-0"
+                                value={care.icon}
+                                onChange={(icon) => updateAt('care', idx, { icon: icon as CareInstructionItem['icon'] })}
+                                options={Object.entries(CARE_ICON_LABELS).map(([icon, label]) => ({ value: icon, label }))}
+                                triggerClassName="h-9 px-3 rounded-xl"
+                                prefix="Тип:"
                               />
+                              {deleteButton(
+                                () => askDelete('care', idx, 'Удалить правило ухода?', care.label, care.desc),
+                                'Удалить правило ухода'
+                              )}
                             </div>
-                            {deleteButton(
-                              () => askDelete('care', idx, 'Удалить правило ухода?', care.label, care.desc),
-                              'Удалить правило ухода'
-                            )}
+                            <input
+                              value={care.label}
+                              onChange={(e) => updateAt('care', idx, { label: e.target.value })}
+                              placeholder="Правило, напр. Стирка до 30°C"
+                              aria-label="Правило ухода"
+                              className={inputClass}
+                            />
+                            <input
+                              value={care.desc}
+                              onChange={(e) => updateAt('care', idx, { desc: e.target.value })}
+                              placeholder="Пояснение (необязательно)"
+                              aria-label="Пояснение правила"
+                              className={inputClass}
+                            />
                           </div>
                         ))}
                         {addButton(() => set('care', [...value.care, { icon: 'wash', label: '', desc: '' }]), 'Правило ухода')}
