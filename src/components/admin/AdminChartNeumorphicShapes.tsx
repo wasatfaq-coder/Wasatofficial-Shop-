@@ -23,31 +23,14 @@ export const triggerChartHapticFeedback = (intensity: 'light' | 'medium' | 'doub
 /**
  * SVG Filters and Gradients definition block for authentic Neumorphic dual-light physics.
  */
-export const NeumorphicSVGDefs: React.FC<{ activeColor?: string }> = ({ activeColor = '#2C4A6B' }) => {
+export const NeumorphicSVGDefs: React.FC = () => {
   return (
     <defs>
-      {/* 1. Neumorphic Dual-Light Convex Shadow Filter for Bars */}
-      <filter id="neu-bar-elevation" x="-25%" y="-20%" width="150%" height="140%">
-        {/* Soft shadow to bottom-right (135°) */}
-        <feDropShadow dx="3" dy="4" stdDeviation="4" floodColor="#90A2BC" floodOpacity="0.45" />
-        {/* Crisp light rim to top-left (-45°) */}
-        <feDropShadow dx="-2" dy="-2" stdDeviation="2" floodColor="#FFFFFF" floodOpacity="0.85" />
-      </filter>
-
-      {/* 2. Floating Tactile Marble Shadow for Active Dots */}
-      <filter id="neu-dot-float" x="-60%" y="-60%" width="220%" height="220%">
-        <feDropShadow dx="2" dy="4" stdDeviation="4.5" floodColor="#7D91AF" floodOpacity="0.55" />
-        <feDropShadow dx="-2" dy="-2" stdDeviation="3" floodColor="#FFFFFF" floodOpacity="0.95" />
-      </filter>
-
-      {/* 3. Intense Glow for Selected / Peak Items */}
-      <filter id="neu-active-glow" x="-30%" y="-30%" width="160%" height="160%">
-        <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor={activeColor} floodOpacity="0.65" />
-      </filter>
-
-      {/* 3b. Soft Curve Ambient Glow for Area & Line charts */}
-      <filter id="neu-area-glow" x="-20%" y="-20%" width="140%" height="140%">
-        <feDropShadow dx="0" dy="5" stdDeviation="4" floodColor={activeColor} floodOpacity="0.32" />
+      {/* Raised bar: the same dual light as --neu-raised-sm in index.css (dark rgb(163 177 198 / .65) to the
+          bottom-right, white rgb(255 255 255 / .95) to the top-left) */}
+      <filter id="neu-bar-elevation" x="-40%" y="-20%" width="180%" height="140%">
+        <feDropShadow dx="3" dy="3" stdDeviation="3.5" floodColor="rgb(163, 177, 198)" floodOpacity="0.65" />
+        <feDropShadow dx="-3" dy="-3" stdDeviation="3.5" floodColor="#FFFFFF" floodOpacity="0.95" />
       </filter>
 
       {/* 4. Inset Vertical Track Gradient (Recessed slot effect) */}
@@ -83,11 +66,6 @@ export const NeumorphicSVGDefs: React.FC<{ activeColor?: string }> = ({ activeCo
         <stop offset="100%" stopColor="#584826" />
       </linearGradient>
 
-      <linearGradient id="neu-bar-peak-convex" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="#D9C9A3" />
-        <stop offset="30%" stopColor="#8C733E" />
-        <stop offset="100%" stopColor="#6F5B31" />
-      </linearGradient>
 
       <linearGradient id="neu-bar-prev-convex" x1="0" y1="0" x2="1" y2="1">
         <stop offset="0%" stopColor="#E2E8F0" />
@@ -212,7 +190,7 @@ export const NeumorphicBarShape: React.FC<NeumorphicBarShapeProps> = (props) => 
         rx={radius}
         ry={radius}
         fill={barGradient}
-        filter={isSelected || isPeak ? 'url(#neu-active-glow)' : 'url(#neu-bar-elevation)'}
+        filter="url(#neu-bar-elevation)"
         stroke={isSelected ? '#FFFFFF' : 'rgba(255, 255, 255, 0.45)'}
         strokeWidth={isSelected ? 1.8 : 0.8}
         className="transition-transform duration-150 active:scale-95"
@@ -261,35 +239,6 @@ export const NeumorphicActiveDot: React.FC<NeumorphicActiveDotProps> = (props) =
     <g pointerEvents="none">
       <circle cx={cx} cy={cy} r={8} fill={stroke} fillOpacity={0.14} />
       <circle cx={cx} cy={cy} r={5} fill="#FFFFFF" stroke={stroke} strokeWidth={2.5} />
-    </g>
-  );
-};
-
-interface NeumorphicLineDotProps {
-  cx?: number;
-  cy?: number;
-  stroke?: string;
-}
-
-/**
- * Custom Neumorphic Dot for standard line nodes:
- * Clean, subtle convex embossed bead.
- */
-export const NeumorphicLineDot: React.FC<NeumorphicLineDotProps> = (props) => {
-  const { cx = 0, cy = 0, stroke = '#3B6652' } = props;
-
-  return (
-    <g>
-      <circle
-        cx={cx}
-        cy={cy}
-        r={4}
-        fill="#E3E8EF"
-        stroke={stroke}
-        strokeWidth={2}
-        filter="url(#neu-bar-elevation)"
-      />
-      <circle cx={cx} cy={cy} r={1.5} fill={stroke} />
     </g>
   );
 };
@@ -450,136 +399,6 @@ export const NeumorphicAxisTick: React.FC<NeumorphicAxisTickProps> = (props) => 
         </text>
       )}
     </g>
-  );
-};
-
-interface NeumorphicRechartsLegendProps {
-  payload?: Array<{
-    value: string;
-    id?: string;
-    type?: string;
-    color?: string;
-    dataKey?: string;
-    inactive?: boolean;
-    payload?: any;
-  }>;
-  activeMetric?: 'revenue' | 'orders' | 'returns' | 'avgCheck';
-  compareWithPrevious?: boolean;
-  chartType?: 'area' | 'bar' | 'composed';
-}
-
-/**
- * Recharts Legend Component styled in authentic Neumorphism aesthetic.
- * Visually distinguishes lines and bars with tactile pill badges, customized icons, and soft shadows.
- */
-export const NeumorphicRechartsLegend: React.FC<NeumorphicRechartsLegendProps> = ({
-  payload = [],
-  activeMetric = 'revenue',
-  compareWithPrevious = true,
-  chartType = 'area',
-}) => {
-  // If payload is empty or not yet mounted by Recharts, provide graceful fallback items
-  const items =
-    payload && payload.length > 0
-      ? payload
-      : [
-          ...(compareWithPrevious && activeMetric !== 'avgCheck'
-            ? [{ value: 'Предшествующий период', color: '#94A3B8', dataKey: 'prev' }]
-            : []),
-          {
-            value:
-              activeMetric === 'orders'
-                ? 'Заказы'
-                : activeMetric === 'returns'
-                ? 'Отмены'
-                : activeMetric === 'avgCheck'
-                ? 'Средний чек'
-                : 'Выручка',
-            color:
-              activeMetric === 'orders'
-                ? '#3B6652'
-                : activeMetric === 'returns'
-                ? '#8C733E'
-                : activeMetric === 'avgCheck'
-                ? '#5A6F8C'
-                : '#2C4A6B',
-            dataKey: activeMetric,
-          },
-        ];
-
-  return (
-    <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap px-1 pt-0.5 pb-2.5 select-none">
-      {items.map((entry, index) => {
-        const valStr = String(entry.value || '');
-        const isPrev =
-          valStr.toLowerCase().includes('прошл') ||
-          valStr.toLowerCase().includes('предшеств') ||
-          String(entry.dataKey || '').toLowerCase().includes('prev');
-
-        const isAreaTrend =
-          valStr.toLowerCase().includes('область') ||
-          valStr.toLowerCase().includes('тренд') ||
-          valStr.toLowerCase().includes('волна') ||
-          entry.type === 'line' ||
-          entry.type === 'area';
-
-        const color = entry.color || (isPrev ? '#94A3B8' : '#2C4A6B');
-
-        return (
-          <div
-            key={`neu-leg-${index}-${entry.dataKey || entry.value}`}
-            className="neu-inset rounded-xl px-2.5 py-1 bg-[#E3E8EF] flex items-center gap-2 border border-white/70 transition-transform hover:scale-[1.02] cursor-default"
-          >
-            {/* Visual Icon differentiator */}
-            {isPrev ? (
-              <span className="flex items-center justify-center w-4 h-3" title="Предшествующий период">
-                <span className="w-3.5 h-0.5 border-b-2 border-dashed border-[#94A3B8]" />
-              </span>
-            ) : isAreaTrend ? (
-              <span className="flex items-center justify-center w-4 h-3" title="Линия тренда">
-                <svg className="w-4 h-2.5" viewBox="0 0 16 10" fill="none">
-                  <path
-                    d="M1 8 C 5 1, 10 9, 15 2"
-                    stroke={color}
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </span>
-            ) : chartType === 'bar' || (!isAreaTrend && chartType === 'composed') ? (
-              <span className="flex items-center justify-center w-3.5 h-3" title="Столбец объема">
-                <span
-                  className="w-2 h-3 rounded-xs shadow-xs"
-                  style={{
-                    backgroundColor: color,
-                    boxShadow: `0 1px 3px ${color}66`,
-                  }}
-                />
-              </span>
-            ) : (
-              <span className="flex items-center justify-center w-3 h-3" title="Точка метрики">
-                <span
-                  className="w-2 h-2 rounded-full shadow-xs"
-                  style={{
-                    backgroundColor: color,
-                    boxShadow: `0 2px 4px ${color}66`,
-                  }}
-                />
-              </span>
-            )}
-
-            {/* Metric Label */}
-            <span
-              className={`text-[11px] sm:text-[11px] tracking-tight ${
-                isPrev ? 'font-bold text-[#64748B]' : 'font-extrabold text-[#2D3A4E]'
-              }`}
-            >
-              {entry.value}
-            </span>
-          </div>
-        );
-      })}
-    </div>
   );
 };
 

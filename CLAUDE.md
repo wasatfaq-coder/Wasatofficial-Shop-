@@ -78,6 +78,9 @@ Wasat Shop — SPA интернет-магазина мужской одежды
 - Аналитика (`AdminAnalyticsTab`) считается по заказам после `settings/analytics.resetAt`; «Сбросить статистику»
   заказы не удаляет, «Вернуть всю историю» снимает сброс. Числа экрана и PDF — `computeFirestoreDailySales`
   и `computePeriodBreakdown` (`src/utils/analyticsEngine.ts`), по цене и названию из заказа.
+  Показатель графика выбирают карточки KPI (`role="radio"`: `neu-flat neu-pressable` → выбранная `neu-pill-active`),
+  отдельного переключателя нет; «Пик» — чип в шапке графика. Тени модуля — только `neu-*`; SVG-тень столбцов
+  (`neu-bar-elevation`) повторяет `--neu-raised-sm`.
   Период выбирается в модальном окне (`PeriodDialog`); график не пересоздается при переключении (без `key`),
   библиотеки PDF (`html2canvas`, `jspdf`) грузятся по требованию (`preloadPdfLibraries` при наведении).
 - Предзаказ (`isPreorderMode`): распроданный вариант можно заказать (`getOrderableStock`), позиция получает

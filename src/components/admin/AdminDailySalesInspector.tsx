@@ -58,11 +58,11 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
   };
 
   return (
-    <div className="neu-inset rounded-2xl p-4 sm:p-5 bg-[#E3E8EF] border border-accent/40 space-y-4 transition-all animate-in fade-in-50 duration-200">
+    <div className="neu-flat rounded-3xl p-4 sm:p-5 space-y-4 animate-in fade-in duration-200">
       {/* Header with Day Navigator & Close */}
       <div className="flex items-center justify-between gap-3 flex-wrap border-b border-[#BAC5D5]/50 pb-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-accent bg-[#E3E8EF] shrink-0">
+          <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-accent shrink-0">
             <Calendar className="w-5 h-5" />
           </div>
 
@@ -72,7 +72,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
                 Срез дня
               </span>
               {dayIndex !== undefined && totalDays !== undefined && (
-                <span className="text-[11px] font-bold text-[#4E5C70] neu-inset px-2 py-0.2 rounded-md bg-[#E3E8EF]">
+                <span className="text-[11px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-full">
                   День {dayIndex + 1} из {totalDays}
                 </span>
               )}
@@ -106,7 +106,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
               }}
               disabled={!hasPrev}
               type="button"
-              className="p-2 rounded-xl neu-button text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 text-[11px] font-bold active:scale-95"
+              className="p-2 rounded-xl neu-button text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 text-[11px] font-bold"
               title="Предыдущий день"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -122,7 +122,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
               }}
               disabled={!hasNext}
               type="button"
-              className="p-2 rounded-xl neu-button text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 text-[11px] font-bold active:scale-95"
+              className="p-2 rounded-xl neu-button text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 text-[11px] font-bold"
               title="Следующий день"
             >
               <span className="hidden sm:inline">След.</span>
@@ -136,7 +136,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
               triggerChartHapticFeedback('light');
             }}
             type="button"
-            className="p-2 rounded-xl neu-button text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer ml-1 active:scale-95"
+            className="p-2 rounded-xl neu-button text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer ml-1"
             title="Свернуть детализацию дня"
             aria-label="Свернуть детализацию дня"
           >
@@ -148,10 +148,10 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
       {/* 4 Mini Cards for Selected Day with Typographic Hierarchy */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         {/* Card 1: Revenue */}
-        <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-1">
+        <div className="neu-inset rounded-2xl p-3 space-y-1">
           <div className="flex items-center justify-between text-[#4E5C70]">
             <span className="text-[11px] font-bold uppercase tracking-wider">Выручка за сутки</span>
-            <div className="w-5 h-5 rounded-lg neu-inset flex items-center justify-center text-accent bg-[#E3E8EF]">
+            <div className="w-5 h-5 flex items-center justify-center text-accent">
               <DollarSign className="w-3 h-3" />
             </div>
           </div>
@@ -165,10 +165,10 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
         </div>
 
         {/* Card 2: Orders Count */}
-        <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-1">
+        <div className="neu-inset rounded-2xl p-3 space-y-1">
           <div className="flex items-center justify-between text-[#4E5C70]">
             <span className="text-[11px] font-bold uppercase tracking-wider">Число заказов</span>
-            <div className="w-5 h-5 rounded-lg neu-inset flex items-center justify-center text-[#2D3A4E] bg-[#E3E8EF]">
+            <div className="w-5 h-5 flex items-center justify-center text-[#2D3A4E]">
               <ShoppingBag className="w-3 h-3" />
             </div>
           </div>
@@ -182,10 +182,10 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
         </div>
 
         {/* Card 3: Average Check */}
-        <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-1">
+        <div className="neu-inset rounded-2xl p-3 space-y-1">
           <div className="flex items-center justify-between text-[#4E5C70]">
             <span className="text-[11px] font-bold uppercase tracking-wider">Средний чек дня</span>
-            <div className="w-5 h-5 rounded-lg neu-inset flex items-center justify-center text-success bg-[#E3E8EF]">
+            <div className="w-5 h-5 flex items-center justify-center text-success">
               <TrendingUp className="w-3 h-3" />
             </div>
           </div>
@@ -198,10 +198,10 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
         </div>
 
         {/* Card 4: Returns */}
-        <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-1">
+        <div className="neu-inset rounded-2xl p-3 space-y-1">
           <div className="flex items-center justify-between text-[#4E5C70]">
             <span className="text-[11px] font-bold uppercase tracking-wider">Отмены</span>
-            <div className="w-5 h-5 rounded-lg neu-inset flex items-center justify-center text-warning bg-[#E3E8EF]">
+            <div className="w-5 h-5 flex items-center justify-center text-warning">
               <RotateCcw className="w-3 h-3" />
             </div>
           </div>
@@ -225,7 +225,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
             <Package className="w-4 h-4 text-accent" />
             Реестр заказов за {dayData.date}:
           </span>
-          <span className="text-[11px] neu-inset px-2.5 py-1 rounded-lg bg-[#E3E8EF] text-[#2D3A4E] font-extrabold">
+          <span className="text-[11px] bg-accent/10 text-accent px-2.5 py-1 rounded-lg font-extrabold">
             {dayData.realOrdersList.length > 0
               ? `Заказов: ${dayData.realOrdersList.length}`
               : 'Заказов за день нет'}
@@ -248,7 +248,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
                     triggerChartHapticFeedback('medium');
                   }}
                   disabled={!onSelectOrder}
-                  className="w-full text-left neu-inset rounded-2xl p-3 bg-[#E3E8EF] flex items-center justify-between gap-3 text-xs hover:border-accent/50 border border-transparent transition-all cursor-pointer group active:scale-[0.99] disabled:cursor-default"
+                  className="w-full text-left neu-button rounded-2xl p-3 flex items-center justify-between gap-3 text-xs cursor-pointer group disabled:cursor-default"
                 >
                   <div className="space-y-1.5 min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -311,7 +311,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
             })}
           </div>
         ) : (
-          <div className="neu-inset rounded-2xl p-3.5 text-center text-xs text-[#4E5C70] bg-[#E3E8EF] space-y-1">
+          <div className="neu-inset rounded-2xl p-3.5 text-center text-xs text-[#4E5C70] space-y-1">
             <p className="font-semibold text-[#2D3A4E]">Заказов за этот период нет</p>
           </div>
         )}
