@@ -125,7 +125,7 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
       {/* Neumorphic Dropdown Menu */}
       {isOpen && (
         <div
-          className={`absolute z-50 left-0 right-0 p-1.5 neu-dropdown rounded-2xl bg-[#E3E8EF] border border-white/80 space-y-1 max-h-60 overflow-y-auto no-scrollbar animate-in fade-in zoom-in-95 duration-150 ${
+          className={`absolute z-50 left-0 right-0 p-1.5 neu-dropdown rounded-2xl border border-white/80 space-y-1 max-h-60 overflow-y-auto no-scrollbar animate-in fade-in zoom-in-95 duration-150 ${
             placement === 'top' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
           } ${menuClassName}`}
         >

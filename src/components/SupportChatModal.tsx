@@ -326,7 +326,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                     href={telHref(storePhone)}
                     title={`Позвонить: ${storePhone}`}
                     aria-label={`Позвонить в магазин: ${storePhone}`}
-                    className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-accent active:scale-95 transition-all cursor-pointer"
+                    className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-accent transition-all cursor-pointer"
                   >
                     <Phone className="w-4 h-4" />
                   </a>
@@ -336,7 +336,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                   onClick={onClose}
                   title="Закрыть чат (Esc)"
                   aria-label="Закрыть чат"
-                  className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer"
+                  className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -462,7 +462,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                                     msg.productCard &&
                                     onAddToCart(msg.productCard.productId, msg.productCard.color, msg.productCard.size)
                                   }
-                                  className="flex-1 h-9 px-2.5 neu-button rounded-xl text-accent font-black text-[11px] flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+                                  className="flex-1 h-9 px-2.5 neu-button rounded-xl text-accent font-black text-[11px] flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                                 >
                                   <ShoppingBag className="w-3.5 h-3.5" />
                                   В корзину
@@ -476,7 +476,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                                     onClose();
                                     onSelectProductById(msg.productCard.productId);
                                   }}
-                                  className="h-9 px-3 neu-button rounded-xl text-[#2D3A4E] font-bold text-[11px] flex items-center justify-center gap-1 active:scale-95 transition-all cursor-pointer"
+                                  className="h-9 px-3 neu-button rounded-xl text-[#2D3A4E] font-bold text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer"
                                 >
                                   Смотреть
                                   <ArrowRight className="w-3.5 h-3.5" />
@@ -528,7 +528,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                                   copyToClipboard(msg.promoCard.code);
                                   if (onApplyPromo?.(msg.promoCard.code)) setAppliedPromoCode(msg.promoCard.code);
                                 }}
-                                className="h-8 px-2.5 neu-button rounded-lg text-[11px] font-black text-accent active:scale-95 transition-all flex items-center gap-1 cursor-pointer shrink-0"
+                                className="h-8 px-2.5 neu-button rounded-lg text-[11px] font-black text-accent transition-all flex items-center gap-1 cursor-pointer shrink-0"
                                 title="Скопировать и применить к корзине"
                               >
                                 {appliedPromoCode === msg.promoCard.code ? (
@@ -636,7 +636,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                     key={q.label}
                     type="button"
                     onClick={() => applyQuickQuestion(q.text)}
-                    className="h-8 px-3 neu-button rounded-xl text-[11px] font-bold text-[#2D3A4E] hover:text-accent active:scale-95 transition-all cursor-pointer"
+                    className="h-8 px-3 neu-button rounded-xl text-[11px] font-bold text-[#2D3A4E] hover:text-accent transition-all cursor-pointer"
                   >
                     {q.label}
                   </button>
@@ -664,7 +664,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setAttachedImage(null)}
-                    className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-danger active:scale-90 transition-all cursor-pointer shrink-0"
+                    className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-danger transition-all cursor-pointer shrink-0"
                     title="Убрать фото"
                     aria-label="Убрать фото"
                   >
@@ -688,7 +688,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isProcessingImage || Boolean(editing)}
-                className="w-11 h-11 rounded-2xl neu-button flex items-center justify-center text-accent active:scale-95 transition-all shrink-0 cursor-pointer disabled:opacity-50"
+                className="w-11 h-11 rounded-2xl neu-button flex items-center justify-center text-accent transition-all shrink-0 cursor-pointer disabled:opacity-50"
                 title="Прикрепить фото"
                 aria-label="Прикрепить фото"
               >
@@ -714,7 +714,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
               <button
                 type="submit"
                 disabled={!canSend}
-                className="w-11 h-11 rounded-2xl neu-button-accent flex items-center justify-center text-white active:scale-95 transition-all shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-11 h-11 rounded-2xl neu-button-accent flex items-center justify-center text-white transition-all shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 title={editing ? 'Сохранить (Enter)' : 'Отправить (Enter)'}
                 aria-label={editing ? 'Сохранить изменения' : 'Отправить сообщение'}
               >
@@ -791,7 +791,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setPreviewImage(null)}
-                    className="absolute top-2.5 right-2.5 z-10 w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#2D3A4E] active:scale-90 transition-all cursor-pointer"
+                    className="absolute top-2.5 right-2.5 z-10 w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#2D3A4E] transition-all cursor-pointer"
                     title="Закрыть просмотр (Esc)"
                     aria-label="Закрыть просмотр"
                   >

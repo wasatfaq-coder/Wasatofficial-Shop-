@@ -92,13 +92,13 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
   return (
     <div
       id={id}
-      className="neu-inset rounded-2xl p-3.5 bg-[#E3E8EF] space-y-3 select-none transition-all duration-200 border border-white/40"
+      className="neu-inset rounded-2xl p-3.5 space-y-3 select-none transition-all duration-200 border border-white/40"
     >
       {/* Header: Label, Icon, and Stepper Controls */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {icon && (
-            <div className="w-7 h-7 rounded-xl neu-button flex items-center justify-center text-accent shrink-0 bg-[#E3E8EF]">
+            <div className="w-7 h-7 rounded-xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
               {icon}
             </div>
           )}
@@ -121,7 +121,7 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
             onClick={() => onChange(Math.max(min, value - step))}
             disabled={value <= min}
             aria-label={`Уменьшить ${label}`}
-            className="w-6 h-6 rounded-lg neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            className="w-6 h-6 rounded-lg neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             <Minus className="w-3 h-3 stroke-[2.5]" />
           </button>
@@ -129,8 +129,8 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
           <div
             className={`px-2.5 py-1 rounded-xl font-extrabold text-xs tracking-tight transition-transform duration-100 ${
               isDragging
-                ? 'neu-inset-deep text-accent scale-105 bg-[#E3E8EF]'
-                : 'neu-inset text-accent bg-[#E3E8EF]'
+                ? 'neu-inset-deep text-accent scale-105'
+                : 'neu-inset text-accent'
             }`}
           >
             {value} <span className="text-[11px] font-bold text-[#4E5C70]">{unit}</span>
@@ -141,7 +141,7 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
             onClick={() => onChange(Math.min(max, value + step))}
             disabled={value >= max}
             aria-label={`Увеличить ${label}`}
-            className="w-6 h-6 rounded-lg neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            className="w-6 h-6 rounded-lg neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             <Plus className="w-3 h-3 stroke-[2.5]" />
           </button>
@@ -163,7 +163,7 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
           aria-valuemax={max}
           aria-valuenow={value}
           aria-label={label}
-          className="relative w-full h-3 rounded-full neu-inset bg-[#D8DFEB] cursor-pointer touch-none select-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="relative w-full h-3 rounded-full neu-inset cursor-pointer touch-none select-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           {/* Active Gradient Rail */}
           <div

@@ -78,7 +78,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-            className="relative w-4/5 max-w-xs h-full neu-modal p-5 sm:p-6 flex flex-col justify-between z-10 border-r border-white/60 overflow-hidden bg-[#E3E8EF]"
+            className="relative w-4/5 max-w-xs h-full neu-modal p-5 sm:p-6 flex flex-col justify-between z-10 border-r border-white/60 overflow-hidden"
           >
             <div className="flex flex-col min-h-0 flex-1">
               {/* Drawer Header */}
@@ -105,7 +105,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
           <nav className="my-4 flex flex-col gap-2.5 overflow-y-auto pr-1 custom-scrollbar flex-1">
             <button
               onClick={() => navigateTo('home')}
-              className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer active:scale-[0.98] group ${
+              className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer group ${
                 activeTab === 'home'
                   ? 'neu-pill-active font-bold'
                   : 'neu-button text-[#2D3A4E] hover:text-accent'
@@ -126,7 +126,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
 
             <button
               onClick={() => navigateTo('catalog')}
-              className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer active:scale-[0.98] group ${
+              className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer group ${
                 activeTab === 'catalog'
                   ? 'neu-pill-active font-bold'
                   : 'neu-button text-[#2D3A4E] hover:text-accent'
@@ -150,17 +150,13 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                 onClose();
                 if (onOpenFilters) onOpenFilters();
               }}
-              className="neu-inset bg-[#E3E8EF] rounded-2xl p-3 px-4 flex items-center justify-between text-[#2D3A4E] font-medium hover:text-accent transition-all cursor-pointer active:scale-[0.98] group"
+              className="neu-button rounded-2xl p-3 px-4 flex items-center justify-between gap-3 text-left text-[#2D3A4E] font-medium hover:text-accent transition-all cursor-pointer group"
             >
-              <div className="flex items-center gap-3">
-                <SlidersHorizontal className="w-5 h-5 text-accent stroke-[2] group-hover:scale-105 transition-transform" />
-                <span className="font-bold text-[#2D3A4E] group-hover:text-accent transition-colors">
-                  Фильтры товаров
-                </span>
+              <div className="flex items-center gap-3 min-w-0">
+                <SlidersHorizontal className="w-5 h-5 text-accent stroke-[2] shrink-0 group-hover:scale-105 transition-transform" />
+                <span className="group-hover:text-accent transition-colors">Фильтры товаров</span>
               </div>
-              <span className="neu-inset-deep text-accent text-[11px] px-2.5 py-0.5 rounded-full font-extrabold uppercase tracking-wide border border-accent/30">
-                Поиск
-              </span>
+              <ChevronRight className="w-4 h-4 shrink-0 text-[#4E5C70] group-hover:text-accent transition-colors" />
             </button>
 
             <button
@@ -168,22 +164,18 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                 onClose();
                 if (onOpenMySizes) onOpenMySizes();
               }}
-              className="neu-inset bg-[#E3E8EF] rounded-2xl p-3 px-4 flex items-center justify-between text-[#2D3A4E] font-medium hover:text-accent transition-all cursor-pointer active:scale-[0.98] group"
+              className="neu-button rounded-2xl p-3 px-4 flex items-center justify-between gap-3 text-left text-[#2D3A4E] font-medium hover:text-accent transition-all cursor-pointer group"
             >
-              <div className="flex items-center gap-3">
-                <Ruler className="w-5 h-5 text-accent stroke-[2] group-hover:scale-105 transition-transform" />
-                <span className="font-bold text-[#2D3A4E] group-hover:text-accent transition-colors">
-                  Мои размеры
-                </span>
+              <div className="flex items-center gap-3 min-w-0">
+                <Ruler className="w-5 h-5 text-accent stroke-[2] shrink-0 group-hover:scale-105 transition-transform" />
+                <span className="group-hover:text-accent transition-colors">Мои размеры</span>
               </div>
-              <span className="neu-fill-accent text-white text-[11px] px-2.5 py-0.5 rounded-full font-extrabold uppercase tracking-wide">
-                Подбор
-              </span>
+              <ChevronRight className="w-4 h-4 shrink-0 text-[#4E5C70] group-hover:text-accent transition-colors" />
             </button>
 
             <button
               onClick={() => navigateTo('cart')}
-              className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer active:scale-[0.98] group ${
+              className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer group ${
                 activeTab === 'cart'
                   ? 'neu-pill-active font-bold'
                   : 'neu-button text-[#2D3A4E] hover:text-accent'
@@ -210,7 +202,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
 
             <button
               onClick={() => navigateTo('favorites')}
-              className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer active:scale-[0.98] group ${
+              className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer group ${
                 activeTab === 'favorites'
                   ? 'neu-pill-active font-bold'
                   : 'neu-button text-[#2D3A4E] hover:text-accent'
@@ -221,7 +213,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                 <span className="group-hover:text-accent transition-colors">Избранное</span>
               </div>
               {favoritesCount > 0 ? (
-                <span className="bg-danger text-white text-xs px-2 py-0.5 rounded-full font-bold shadow-xs">
+                <span className="bg-danger text-white text-xs px-2 py-0.5 rounded-full font-bold">
                   {favoritesCount}
                 </span>
               ) : (
@@ -237,7 +229,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
 
             <button
               onClick={() => navigateTo('profile')}
-              className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer active:scale-[0.98] group ${
+              className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer group ${
                 activeTab === 'profile'
                   ? 'neu-pill-active font-bold'
                   : 'neu-button text-[#2D3A4E] hover:text-accent'
@@ -265,17 +257,15 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                 onClose();
                 if (onOpenBrandDetails) onOpenBrandDetails();
               }}
-              className="neu-inset bg-[#E3E8EF] rounded-2xl p-3 px-4 flex items-center justify-between text-[#2D3A4E] font-medium hover:text-accent transition-all cursor-pointer active:scale-[0.98] group"
+              className="neu-button rounded-2xl p-3 px-4 flex items-center justify-between gap-3 text-[#2D3A4E] font-medium hover:text-accent transition-all cursor-pointer group"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <Building2 className="w-5 h-5 text-accent stroke-[2] shrink-0 group-hover:scale-105 transition-transform" />
                 <div className="text-left min-w-0">
-                  <span className="font-bold text-[#2D3A4E] block text-sm leading-tight truncate group-hover:text-accent transition-colors">
+                  <span className="block leading-tight truncate group-hover:text-accent transition-colors">
                     Бренд и реквизиты
                   </span>
-                  <span className="text-[11px] text-[#4E5C70] block font-semibold truncate">
-                    Контакты консьерж-сервиса
-                  </span>
+                  <span className="text-xs text-[#4E5C70] block truncate">Контакты и реквизиты</span>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-[#4E5C70] group-hover:text-accent transition-colors shrink-0" />
@@ -290,7 +280,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
               onClose();
               if (onOpenSupportChat) onOpenSupportChat();
             }}
-            className="w-full neu-button rounded-2xl p-3 px-3.5 flex items-center justify-between text-left transition-all group cursor-pointer active:scale-[0.98]"
+            className="w-full neu-button rounded-2xl p-3 px-3.5 flex items-center justify-between text-left transition-all group cursor-pointer"
           >
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center shrink-0 text-accent">
@@ -318,7 +308,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
             <p className="text-[11px] text-[#4E5C70] font-bold hover:text-accent transition-colors">
               {phone ? `${storeName} • ${phone}` : storeName}
             </p>
-            <p className="text-[11px] text-[#4E5C70]/80">Реквизиты • О бренде • Контакты</p>
+            <p className="text-[11px] text-[#4E5C70]">Реквизиты • О бренде • Контакты</p>
           </button>
         </div>
       </motion.div>

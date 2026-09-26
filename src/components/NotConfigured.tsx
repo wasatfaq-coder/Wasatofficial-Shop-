@@ -16,7 +16,7 @@ interface NotConfiguredProps {
 export const NotConfigured: React.FC<NotConfiguredProps> = ({ title, hint, className = '' }) => (
   <div
     role="status"
-    className={`neu-inset rounded-2xl p-3 flex items-start gap-2.5 bg-[#E3E8EF] text-left ${className}`}
+    className={`neu-inset rounded-2xl p-3 flex items-start gap-2.5 text-left ${className}`}
   >
     <CircleSlash className="w-4 h-4 text-[#4E5C70] shrink-0 mt-0.5" aria-hidden="true" />
     <div className="min-w-0">

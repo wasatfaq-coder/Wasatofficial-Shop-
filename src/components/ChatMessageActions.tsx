@@ -125,7 +125,7 @@ export const ChatMessageDeleteDialog: React.FC<ChatMessageDeleteDialogProps> = (
               </button>
             </div>
 
-            <div className="neu-inset rounded-2xl p-2.5 bg-[#E3E8EF] flex items-center gap-3 min-w-0">
+            <div className="neu-inset rounded-2xl p-2.5 flex items-center gap-3 min-w-0">
               {message.imageUrl ? (
                 <img src={message.imageUrl} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
               ) : null}

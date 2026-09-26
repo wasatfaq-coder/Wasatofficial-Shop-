@@ -64,42 +64,42 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
   const renderIcon = () => {
     if (toast.icon === 'truck') {
       return (
-        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-sky-600 bg-sky-50/80 shrink-0">
+        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0">
           <Truck className="w-4 h-4 stroke-[2.5]" />
         </div>
       );
     }
     if (toast.icon === 'package') {
       return (
-        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-warning bg-warning-soft shrink-0">
+        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-warning shrink-0">
           <Package className="w-4 h-4 stroke-[2.5]" />
         </div>
       );
     }
     if (toast.icon === 'store') {
       return (
-        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-success bg-success-soft shrink-0">
+        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-success shrink-0">
           <Store className="w-4 h-4 stroke-[2.5]" />
         </div>
       );
     }
     if (toast.icon === 'check' || toast.type === 'success') {
       return (
-        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-success bg-success-soft shrink-0">
+        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-success shrink-0">
           <CheckCircle className="w-4 h-4 stroke-[2.5]" />
         </div>
       );
     }
     if (toast.icon === 'alert' || toast.type === 'error') {
       return (
-        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-danger bg-danger-soft shrink-0">
+        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-danger shrink-0">
           <AlertCircle className="w-4 h-4 stroke-[2.5]" />
         </div>
       );
     }
     if (toast.icon === 'sparkles') {
       return (
-        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-warning bg-warning-soft shrink-0">
+        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-warning shrink-0">
           <Sparkles className="w-4 h-4 stroke-[2.5]" />
         </div>
       );
@@ -107,7 +107,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
 
     // Default icon
     return (
-      <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-accent bg-[#E3E8EF] shrink-0">
+      <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0">
         <Bell className="w-4 h-4 stroke-[2.5]" />
       </div>
     );
@@ -118,7 +118,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
   if (isRichNotification) {
     return (
       <div
-        className="pointer-events-auto neu-modal rounded-2xl p-3.5 border border-white/90 space-y-2.5 animate-in fade-in slide-in-from-top-4 duration-300 relative bg-[#E3E8EF]"
+        className="pointer-events-auto neu-modal rounded-2xl p-3.5 border border-white/90 space-y-2.5 animate-in fade-in slide-in-from-top-4 duration-300 relative"
         role="alert"
       >
         {/* Top Header */}
@@ -172,7 +172,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
                 toast.action?.onClick();
                 onDismiss(toast.id);
               }}
-              className="py-1.5 px-3 neu-button-accent rounded-xl text-[11px] font-black text-white flex items-center gap-1 cursor-pointer active:scale-95 transition-transform"
+              className="py-1.5 px-3 neu-button-accent rounded-xl text-[11px] font-black text-white flex items-center gap-1 cursor-pointer transition-transform"
             >
               <span>{toast.action.label}</span>
               <ArrowRight className="w-3 h-3" />
@@ -186,7 +186,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
   // Standard Compact Toast Item
   return (
     <div
-      className="pointer-events-auto neu-dropdown rounded-2xl p-3 px-4 flex items-start justify-between gap-3 border border-white/80 animate-in fade-in slide-in-from-top-4 duration-300 bg-[#E3E8EF]"
+      className="pointer-events-auto neu-dropdown rounded-2xl p-3 px-4 flex items-start justify-between gap-3 border border-white/80 animate-in fade-in slide-in-from-top-4 duration-300"
       role="status"
     >
       <div className="flex items-start gap-2.5 min-w-0">

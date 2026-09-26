@@ -140,12 +140,12 @@ export const PromoModal: React.FC<PromoModalProps> = ({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.94, opacity: 0, y: 12 }}
             transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-            className="relative w-full max-w-md neu-modal rounded-3xl p-4 sm:p-5 border border-white/80 space-y-4 max-h-[92vh] overflow-y-auto no-scrollbar bg-[#E3E8EF] z-10"
+            className="relative w-full max-w-md neu-modal rounded-3xl p-4 sm:p-5 border border-white/80 space-y-4 max-h-[92vh] overflow-y-auto no-scrollbar z-10"
           >
           {/* Header */}
           <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#BAC5D5]/50">
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <div className="w-9 h-9 rounded-2xl neu-button flex items-center justify-center text-accent shrink-0">
+              <div className="w-9 h-9 rounded-2xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
                 <Ticket className="w-5 h-5 stroke-[2.2]" />
               </div>
               <div className="min-w-0 flex-1">
@@ -165,7 +165,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
 
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all active:scale-90 shrink-0 cursor-pointer"
+              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all shrink-0 cursor-pointer"
               aria-label="Закрыть"
             >
               <X className="w-4 h-4 stroke-[2.5]" />
@@ -174,7 +174,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
 
           {/* Error Banner if any */}
           {errorMessage && (
-            <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] border border-danger/40 text-danger text-xs flex items-center gap-2 animate-in fade-in duration-200">
+            <div className="neu-inset rounded-2xl p-3 border border-danger/40 text-danger text-xs flex items-center gap-2 animate-in fade-in duration-200">
               <AlertCircle className="w-4 h-4 text-danger shrink-0" />
               <span className="font-semibold">{errorMessage}</span>
             </div>
@@ -182,7 +182,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
 
           {/* Active Applied Promo Status (If any applied) */}
           {appliedPromo && (
-            <div className="neu-inset-deep rounded-2xl p-3.5 border border-accent/40 flex items-center justify-between bg-[#E3E8EF]">
+            <div className="neu-inset-deep rounded-2xl p-3.5 border border-accent/40 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl neu-fill-accent text-white font-black text-xs flex items-center justify-center shrink-0">
                   {appliedPromo.discountType === 'fixed'
@@ -346,7 +346,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                         className={`py-1.5 px-4 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
                           isCurrentActive
                             ? 'neu-inset text-success opacity-80 cursor-default'
-                            : 'neu-button text-accent hover:text-[#2D3A4E] hover:scale-105 active:scale-95'
+                            : 'neu-button text-accent hover:text-[#2D3A4E] hover:scale-105'
                         }`}
                       >
                         {isCurrentActive ? (
@@ -379,12 +379,12 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                 value={customInput}
                 onChange={(e) => setCustomInput(e.target.value.toUpperCase())}
                 placeholder="ВВЕДИТЕ КОД (НАПРИМЕР, WASAT20)"
-                className="flex-1 px-3.5 py-2.5 neu-inset rounded-2xl text-xs uppercase font-bold text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
+                className="flex-1 px-3.5 py-2.5 neu-inset rounded-2xl text-xs uppercase font-bold text-[#2D3A4E] placeholder:text-[#56647A]"
               />
               <button
                 type="submit"
                 disabled={!customInput.trim()}
-                className="py-2.5 px-4 rounded-2xl neu-button-accent text-white font-black text-xs transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
+                className="py-2.5 px-4 rounded-2xl neu-button-accent text-white font-black text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
               >
                 Применить
               </button>

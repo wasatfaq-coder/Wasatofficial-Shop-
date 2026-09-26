@@ -119,7 +119,7 @@ interface AdminProductCardStructureProps {
 }
 
 const inputClass =
-  'w-full min-w-0 h-9 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF] placeholder:text-[#56647A]';
+  'w-full min-w-0 h-9 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]';
 
 /**
  * «Структура карточки»: every section of the customer's product card with its elements.
@@ -230,7 +230,7 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
     <button
       type="button"
       onClick={onClick}
-      className="w-9 h-9 rounded-xl neu-button-danger flex items-center justify-center shrink-0 cursor-pointer active:scale-95 transition-all"
+      className="w-9 h-9 rounded-xl neu-button-danger flex items-center justify-center shrink-0 cursor-pointer transition-all"
       aria-label={label}
       title={label}
     >
@@ -242,7 +242,7 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
     <button
       type="button"
       onClick={onClick}
-      className="h-8 px-3 rounded-xl neu-button text-[11px] font-bold text-accent flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+      className="h-8 px-3 rounded-xl neu-button text-[11px] font-bold text-accent flex items-center gap-1.5 cursor-pointer transition-all"
     >
       <Plus className="w-3.5 h-3.5" />
       <span>{label}</span>
@@ -284,7 +284,7 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
             const SectionIcon = section.icon;
             const expanded = openSection === section.id;
             return (
-              <div key={section.id} className="neu-inset rounded-2xl bg-[#E3E8EF]">
+              <div key={section.id} className="neu-inset rounded-2xl">
                 <button
                   type="button"
                   onClick={() => setOpenSection(expanded ? null : section.id)}

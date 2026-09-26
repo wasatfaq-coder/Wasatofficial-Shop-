@@ -121,10 +121,10 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                       key={`quickview-img-${product.id}-${idx}`}
                       onClick={() => setSelectedImageIndex(idx)}
                       className={`w-12 h-12 rounded-xl overflow-hidden p-0.5 transition-all shrink-0 ${
-                        selectedImageIndex === idx
-                          ? 'neu-inset ring-2 ring-accent scale-105'
-                          : 'neu-button opacity-75 hover:opacity-100'
+                        selectedImageIndex === idx ? 'neu-pill-active ring-2 ring-accent' : 'neu-button opacity-75 hover:opacity-100'
                       }`}
+                      aria-label={`Фото ${idx + 1}`}
+                      aria-current={selectedImageIndex === idx}
                     >
                       <img
                         src={img}

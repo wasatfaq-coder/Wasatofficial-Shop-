@@ -17,6 +17,7 @@ import {
 import { DailyDataPoint } from '../../utils/analyticsEngine';
 import { Order } from '../../types';
 import { triggerChartHapticFeedback } from './AdminChartNeumorphicShapes';
+import { orderStatusChip } from '../../utils/orderStatusStyle';
 
 interface AdminDailySalesInspectorProps {
   dayData: DailyDataPoint | null;
@@ -43,14 +44,6 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
 }) => {
   if (!dayData) return null;
 
-  const statusLabelMap: Record<string, { label: string; color: string }> = {
-    accepted: { label: 'Принят', color: 'text-accent bg-accent/10' },
-    assembling: { label: 'Собирается', color: 'text-warning bg-warning-soft' },
-    in_transit: { label: 'В доставке', color: 'text-purple-700 bg-purple-100' },
-    ready: { label: 'Готов к выдаче', color: 'text-success bg-success-soft' },
-    delivered: { label: 'Вручен', color: 'text-success bg-success-soft font-black' },
-    cancelled: { label: 'Отменен', color: 'text-danger bg-danger-soft' },
-  };
 
   return (
     <div className="neu-flat rounded-3xl p-4 sm:p-5 space-y-4 animate-in fade-in duration-200">
@@ -230,9 +223,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
         {dayData.realOrdersList.length > 0 ? (
           <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
             {dayData.realOrdersList.map((ord) => {
-              const statusCfg = ord.isCancelled
-                ? statusLabelMap.cancelled
-                : statusLabelMap[ord.status] || { label: ord.status, color: 'text-gray-700 bg-gray-100' };
+              const statusCfg = orderStatusChip(ord);
 
               return (
                 <button
@@ -251,7 +242,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
                         <Hash className="w-3 h-3 text-[#4E5C70]" />
                         {ord.id}
                       </span>
-                      <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full ${statusCfg.color}`}>
+                      <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full border ${statusCfg.className}`}>
                         {statusCfg.label}
                       </span>
                       {ord.isAdjusted && (

@@ -73,7 +73,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.93, opacity: 0, y: 12 }}
             transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-            className="neu-modal text-[#2D3A4E] rounded-3xl max-w-2xl w-full p-4 sm:p-8 space-y-6 border border-slate-200 max-h-[92vh] overflow-y-auto my-auto print:m-0 print:p-0 print:border-none print:shadow-none bg-white relative z-10"
+            className="neu-modal text-[#2D3A4E] rounded-3xl max-w-2xl w-full p-4 sm:p-8 space-y-6 border border-slate-200 max-h-[92vh] overflow-y-auto my-auto print:m-0 print:p-0 print:border-none print:shadow-none relative z-10"
           >
             {/* Modal Controls Bar (Hidden during print) */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-100 print:hidden">

@@ -23,7 +23,7 @@ import { SizeCalculatorModal } from '../components/SizeCalculatorModal';
 import { RecentlyViewed } from '../components/RecentlyViewed';
 import { RatingBadge } from '../components/RatingBadge';
 import { NeumorphicImage } from '../components/NeumorphicImage';
-import { ProductImageZoomModal, ANGLE_LABELS } from '../components/ProductImageZoomModal';
+import { ProductImageZoomModal } from '../components/ProductImageZoomModal';
 import { QuickOrderModal } from '../components/QuickOrderModal';
 import { AnimatedFavoriteButton } from '../components/AnimatedFavoriteButton';
 import { ProductReviewsSection } from '../components/ProductReviewsSection';
@@ -241,11 +241,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             </div>
           )}
 
-          {/* Angle Tag Indicator & Counter in top-right */}
+          {/* Photo counter in top-right */}
           <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
-            <span className="neu-photo-badge text-[#2D3A4E] text-[11px] font-extrabold px-2.5 py-1 rounded-full leading-none hidden sm:inline-block">
-              {ANGLE_LABELS[selectedImageIndex % ANGLE_LABELS.length]}
-            </span>
             <div className="neu-photo-badge text-[#2D3A4E] text-[11px] font-bold px-3 py-1 rounded-full leading-none">
               {selectedImageIndex + 1} / {product.images.length}
             </div>
@@ -257,7 +254,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               e.stopPropagation();
               setIsZoomModalOpen(true);
             }}
-            className="absolute bottom-3 right-3 neu-photo-btn px-3 py-1.5 rounded-full z-10 flex items-center gap-1.5 text-xs font-bold text-[#2D3A4E] hover:scale-105 active:scale-95 transition-transform"
+            className="absolute bottom-3 right-3 neu-photo-btn px-3 py-1.5 rounded-full z-10 flex items-center gap-1.5 text-xs font-bold text-[#2D3A4E] hover:scale-105 transition-transform"
             title="Открыть зум в высоком разрешении"
           >
             <ZoomIn className="w-3.5 h-3.5 text-accent" />
@@ -272,7 +269,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                   e.stopPropagation();
                   handlePrevImage();
                 }}
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full neu-photo-btn flex items-center justify-center text-[#2D3A4E] z-10 opacity-80 hover:opacity-100 transition-all active:scale-90"
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full neu-photo-btn flex items-center justify-center text-[#2D3A4E] z-10 opacity-80 hover:opacity-100 transition-all"
                 aria-label="Предыдущее фото"
               >
                 <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
@@ -282,7 +279,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                   e.stopPropagation();
                   handleNextImage();
                 }}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full neu-photo-btn flex items-center justify-center text-[#2D3A4E] z-10 opacity-80 hover:opacity-100 transition-all active:scale-90"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full neu-photo-btn flex items-center justify-center text-[#2D3A4E] z-10 opacity-80 hover:opacity-100 transition-all"
                 aria-label="Следующее фото"
               >
                 <ChevronRight className="w-4 h-4 stroke-[2.5]" />
@@ -312,37 +309,25 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           )}
         </div>
 
-        {/* Horizontal Thumbnails Row with Angle Labels */}
+        {/* Thumbnails: photos have no captions in the admin, so none are invented here */}
         {product.images.length > 1 && (
           <div className="space-y-1">
-            <div className="flex items-center justify-between px-1">
-              <span className="text-[11px] font-bold text-[#4E5C70]">
-                Ракурсы и детали:
-              </span>
-              <span className="text-[11px] font-semibold text-accent">
-                {ANGLE_LABELS[selectedImageIndex % ANGLE_LABELS.length]}
-              </span>
-            </div>
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 px-0.5">
               {product.images.map((imgUrl, idx) => (
                 <button
                   key={idx}
                   onClick={() => setSelectedImageIndex(idx)}
-                  className={`relative p-0.5 rounded-2xl transition-all duration-200 shrink-0 flex flex-col items-center cursor-pointer ${
-                    selectedImageIndex === idx
-                      ? 'neu-inset ring-2 ring-accent scale-105 bg-[#E3E8EF]'
-                      : 'neu-button opacity-80 hover:opacity-100 hover:scale-102 bg-[#E3E8EF]'
+                  className={`relative p-1 rounded-2xl transition-all duration-200 shrink-0 cursor-pointer ${
+                    selectedImageIndex === idx ? 'neu-pill-active ring-2 ring-accent' : 'neu-button opacity-80 hover:opacity-100'
                   }`}
-                  aria-label={`Миниатюра ${idx + 1}`}
+                  aria-label={`Фото ${idx + 1} из ${product.images.length}`}
+                  aria-current={selectedImageIndex === idx}
                 >
                   <img
                     src={imgUrl}
-                    alt={`Thumbnail ${idx + 1}`}
+                    alt=""
                     className="w-14 h-14 sm:w-16 sm:h-16 object-cover object-top rounded-xl"
                   />
-                  <span className="text-[11px] font-bold text-[#4E5C70] pt-0.5 pb-0.5 px-1 truncate max-w-[64px]">
-                    {ANGLE_LABELS[idx % ANGLE_LABELS.length].split(' ')[0]}
-                  </span>
                 </button>
               ))}
             </div>
@@ -372,14 +357,13 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               isFavorite={isFavorite}
               onToggle={(e) => onToggleFavorite(product, e)}
               size="md"
-              className="neu-button ml-auto bg-[#E3E8EF]"
+              className="neu-button ml-auto"
             />
           </div>
 
           <h1 className="text-xl font-bold text-[#2D3A4E] tracking-tight leading-snug">
             {product.title}
           </h1>
-          <p className="text-xs text-[#4E5C70] leading-relaxed">{product.description}</p>
         </div>
 
         {/* Interactive Selectors: Color & Size */}
@@ -404,6 +388,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                         : 'neu-button hover:scale-105'
                     }`}
                     title={c.name}
+                    aria-label={`Цвет: ${c.name}`}
+                    aria-pressed={isSelected}
                   >
                     <span
                       className="w-full h-full rounded-full flex items-center justify-center border border-black/15"
@@ -441,7 +427,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                     className={`min-h-[46px] min-w-[54px] px-3 py-1.5 rounded-2xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 relative cursor-pointer active:scale-95 ${
                       isOutOfStock
                         ? isSelected
-                          ? 'neu-inset text-[#4E5C70]/70 bg-[#E3E8EF] border border-[#BAC5D5]/60'
+                          ? 'neu-inset text-[#4E5C70]/70 border border-[#BAC5D5]/60'
                           : 'neu-flat text-[#4E5C70]/40 opacity-70 hover:opacity-100 line-through'
                         : isSelected
                         ? 'neu-pill-active'
@@ -483,22 +469,22 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
 
             {/* Dynamic SKU Stock Badge */}
             {currentStock > 2 ? (
-              <div className="neu-flat text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-[#4E5C70] border border-white/60 bg-[#E3E8EF]">
+              <div className="neu-flat text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-[#4E5C70] border border-white/60">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
                 <span>В наличии: {currentStock} шт.</span>
               </div>
             ) : currentStock > 0 ? (
-              <div className="neu-flat text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-[#2D3A4E] border border-white/60 bg-[#E3E8EF]">
+              <div className="neu-flat text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-[#2D3A4E] border border-white/60">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
                 <span>Осталось {currentStock} шт.</span>
               </div>
             ) : isPreorder ? (
-              <div className="neu-flat text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-accent border border-white/60 bg-[#E3E8EF]">
+              <div className="neu-flat text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-accent border border-white/60">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
                 <span>Предзаказ</span>
               </div>
             ) : (
-              <div className="neu-flat text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-[#4E5C70] border border-white/60 bg-[#E3E8EF]">
+              <div className="neu-flat text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-[#4E5C70] border border-white/60">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#BAC5D5]" />
                 <span>Нет в наличии</span>
               </div>
@@ -507,7 +493,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
 
           {/* Granular SKU Info helper message if variant is out of stock */}
           {currentStock === 0 && (
-            <div className="p-2.5 rounded-xl neu-inset bg-[#E3E8EF] border border-white/60 text-[11px] text-[#4E5C70] flex items-center gap-2">
+            <div className="p-2.5 rounded-xl neu-inset border border-white/60 text-[11px] text-[#4E5C70] flex items-center gap-2">
               <Info className="w-4 h-4 text-accent shrink-0" />
               {isPreorder ? (
                 <span>
@@ -556,11 +542,11 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             <button
               onClick={handleAddToCart}
               disabled={isAdded || orderableStock === 0}
-              className={`flex-1 py-3.5 px-6 rounded-2xl font-bold text-sm flex items-center justify-center gap-2.5 transition-all duration-300 active:scale-95 cursor-pointer ${
+              className={`flex-1 py-3.5 px-6 rounded-2xl font-bold text-sm flex items-center justify-center gap-2.5 transition-all duration-300 cursor-pointer ${
                 orderableStock === 0
-                  ? 'neu-inset bg-slate-200/80 text-slate-400 cursor-not-allowed'
+                  ? 'neu-inset text-[#56647A] cursor-not-allowed'
                   : isAdded
-                  ? 'bg-success text-white neu-inset'
+                  ? 'neu-button-success'
                   : 'neu-button-accent'
               }`}
             >
@@ -587,7 +573,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           {orderableStock > 0 && (
             <button
               onClick={() => setIsQuickOrderOpen(true)}
-              className="w-full py-2.5 px-4 rounded-2xl neu-button text-xs font-bold text-accent hover:scale-101 active:scale-99 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-2.5 px-4 rounded-2xl neu-button text-xs font-bold text-accent hover:scale-101 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <ShoppingBag className="w-3.5 h-3.5 text-accent" />
               <span>Купить в 1 клик без регистрации</span>
@@ -629,7 +615,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               {cardFeatures.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                   {cardFeatures.map((feature, idx) => (
-                    <div key={idx} className="neu-inset rounded-xl p-2.5 bg-[#E3E8EF] flex items-start gap-2">
+                    <div key={idx} className="neu-inset rounded-xl p-2.5 flex items-start gap-2">
                       <ShieldCheck className="w-4 h-4 text-accent shrink-0 mt-0.5" />
                       <div className="min-w-0">
                         <p className="font-black text-[11px] text-[#2D3A4E]">{feature.title}</p>
@@ -645,7 +631,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           {activeDetailTab === 'specs' && (
             <div className="space-y-3">
               {(cardComposition.length > 0 || cardCertifications.length > 0) && (
-                <div className="neu-inset rounded-2xl p-3 bg-[#E3E8EF] space-y-2.5">
+                <div className="neu-inset rounded-2xl p-3 space-y-2.5">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[11px] font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
                       <Layers className="w-3.5 h-3.5 text-accent shrink-0" />
@@ -661,7 +647,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                             <span className="min-w-0">{item.fiber}</span>
                             <span className="text-accent font-black shrink-0">{item.percentage}%</span>
                           </div>
-                          <div className="w-full h-2 rounded-full overflow-hidden neu-inset bg-[#BAC5D5]/40">
+                          <div className="w-full h-2 rounded-full overflow-hidden neu-inset">
                             <div
                               className="h-full neu-fill-accent rounded-full transition-all duration-500"
                               style={{ width: `${Math.min(100, item.percentage)}%` }}
@@ -691,7 +677,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 {currentSKU?.skuCode && (
                   <div className="flex items-center justify-between gap-3 py-2 border-b border-[#BAC5D5]/40 last:border-b-0">
                     <dt className="text-[#4E5C70] shrink-0">Артикул</dt>
-                    <dd className="font-mono font-bold text-accent text-[11px] px-2 py-0.5 rounded-lg neu-inset bg-[#E3E8EF]">
+                    <dd className="font-mono font-bold text-accent text-[11px] px-2 py-0.5 rounded-lg neu-inset">
                       {currentSKU.skuCode}
                     </dd>
                   </div>
@@ -711,9 +697,9 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               {cardCare.map((care, idx) => (
                 <div
                   key={idx}
-                  className="neu-inset rounded-xl p-2.5 bg-[#E3E8EF] flex items-start gap-2.5"
+                  className="neu-inset rounded-xl p-2.5 flex items-start gap-2.5"
                 >
-                  <div className="w-6 h-6 rounded-lg neu-button flex items-center justify-center shrink-0 mt-0.5 text-accent">
+                  <div className="w-6 h-6 rounded-lg neu-flat-sm flex items-center justify-center shrink-0 mt-0.5 text-accent">
                     <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                   </div>
                   <div className="min-w-0 flex-1">

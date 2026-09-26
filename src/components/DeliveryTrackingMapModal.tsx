@@ -123,12 +123,12 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.94, opacity: 0, y: 12 }}
             transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-            className="neu-modal rounded-3xl max-w-2xl w-full text-[#2D3A4E] my-auto relative border border-white/80 max-h-[92vh] flex flex-col z-10 bg-[#E3E8EF] overflow-hidden"
+            className="neu-modal rounded-3xl max-w-2xl w-full text-[#2D3A4E] my-auto relative border border-white/80 max-h-[92vh] flex flex-col z-10 overflow-hidden"
           >
             {/* Top Header - Sticky */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 p-4 sm:p-5 gap-2 shrink-0 bg-[#E3E8EF]">
               <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="w-10 h-10 rounded-2xl neu-button flex items-center justify-center text-accent shrink-0">
+                <div className="w-10 h-10 rounded-2xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
                   <Navigation className="w-5 h-5 text-accent" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -136,7 +136,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                     <h3 className="text-sm sm:text-base font-black text-[#2D3A4E] leading-tight whitespace-nowrap">
                       Онлайн-трекинг доставки
                     </h3>
-                    <span className="text-[11px] font-mono font-black neu-inset px-2.5 py-0.5 rounded-lg text-accent bg-[#E3E8EF] whitespace-nowrap shrink-0">
+                    <span className="text-[11px] font-mono font-black neu-inset px-2.5 py-0.5 rounded-lg text-accent whitespace-nowrap shrink-0">
                       № {order.id}
                     </span>
                   </div>
@@ -149,7 +149,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
               <button
                 type="button"
                 onClick={onClose}
-                className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer shrink-0 active:scale-95 transition-transform"
+                className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer shrink-0 transition-transform"
                 title="Закрыть окно"
                 aria-label="Закрыть окно"
               >
@@ -170,7 +170,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
           if (isTK) {
             if (order.trackingNumber) {
               return (
-                <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-[#E3E8EF] space-y-2 border border-white/60">
+                <div className="neu-inset rounded-2xl p-3 sm:p-3.5 space-y-2 border border-white/60">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[11px] font-black text-[#4E5C70] uppercase tracking-wider">
                       Трек-номер отправления (ТК)
@@ -188,7 +188,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                     <button
                       type="button"
                       onClick={handleCopyTrack}
-                      className="neu-button px-3 py-1.5 rounded-xl text-xs font-bold text-accent flex items-center gap-1.5 hover:scale-105 active:scale-95 transition-transform cursor-pointer whitespace-nowrap shrink-0"
+                      className="neu-button px-3 py-1.5 rounded-xl text-xs font-bold text-accent flex items-center gap-1.5 hover:scale-105 transition-transform cursor-pointer whitespace-nowrap shrink-0"
                       title="Скопировать трек-номер"
                     >
                       <Copy className="w-3.5 h-3.5" />
@@ -200,7 +200,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
             }
 
             return (
-              <div className="neu-inset rounded-2xl p-3.5 bg-warning-soft border border-warning/80 text-warning space-y-1.5">
+              <div className="neu-inset rounded-2xl p-3.5 border border-warning/80 text-warning space-y-1.5">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-warning shrink-0" />
                   <h4 className="text-xs font-extrabold text-warning">
@@ -216,7 +216,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
 
           // Non-TK: Direct Courier / Pickup / Express
           return (
-            <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-[#E3E8EF] space-y-2 border border-white/60">
+            <div className="neu-inset rounded-2xl p-3 sm:p-3.5 space-y-2 border border-white/60">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[11px] font-black text-[#4E5C70] uppercase tracking-wider flex items-center gap-1.5">
                   <Truck className="w-3.5 h-3.5 text-accent" />
@@ -235,7 +235,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
         })()}
 
         {/* Interactive Map Visual Stage (neu-inset углубление) */}
-        <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-[#E3E8EF] border border-white/60 space-y-2.5 relative overflow-hidden">
+        <div className="neu-inset rounded-2xl p-3 sm:p-3.5 border border-white/60 space-y-2.5 relative overflow-hidden">
           {/* Map Controls Floating Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between z-20 relative px-1 gap-2">
             <div className="flex items-center justify-between sm:justify-start gap-2">
@@ -255,7 +255,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
               <button
                 type="button"
                 onClick={() => setZoomLevel((prev) => Math.min(prev + 0.15, 1.4))}
-                className="w-7 h-7 rounded-lg neu-button flex items-center justify-center text-[#2D3A4E] cursor-pointer hover:scale-105 active:scale-95 transition-transform"
+                className="w-7 h-7 rounded-lg neu-button flex items-center justify-center text-[#2D3A4E] cursor-pointer hover:scale-105 transition-transform"
                 title="Приблизить"
                 aria-label="Приблизить"
               >
@@ -264,7 +264,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
               <button
                 type="button"
                 onClick={() => setZoomLevel((prev) => Math.max(prev - 0.15, 0.85))}
-                className="w-7 h-7 rounded-lg neu-button flex items-center justify-center text-[#2D3A4E] cursor-pointer hover:scale-105 active:scale-95 transition-transform"
+                className="w-7 h-7 rounded-lg neu-button flex items-center justify-center text-[#2D3A4E] cursor-pointer hover:scale-105 transition-transform"
                 title="Отдалить"
                 aria-label="Отдалить"
               >
@@ -274,7 +274,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
           </div>
 
           {/* SVG Map Canvas Container */}
-          <div className="relative w-full h-64 sm:h-72 rounded-2xl overflow-hidden neu-inset bg-[#DDE3EC] border border-white/50">
+          <div className="relative w-full h-64 sm:h-72 rounded-2xl overflow-hidden neu-inset border border-white/50">
             {/* Map Canvas Background Grid & Elements */}
             <div
               className="w-full h-full relative transition-transform duration-300 origin-center"
@@ -388,7 +388,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
               </svg>
 
               {/* Floating Live Courier Status Badge on Map */}
-              <div className="absolute bottom-2 left-2 right-2 bg-[#E3E8EF]/95 rounded-2xl p-2.5 sm:p-3 neu-flat-sm flex items-center justify-between text-xs border border-white/90">
+              <div className="absolute bottom-2 left-2 right-2 rounded-2xl p-2.5 sm:p-3 neu-flat-sm flex items-center justify-between text-xs border border-white/90">
                 <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
                   <div className="w-8 h-8 rounded-xl bg-accent text-white flex items-center justify-center shrink-0">
                     <Truck className="w-4 h-4" />
@@ -428,15 +428,15 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
 
           if (isPost) {
             return (
-              <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-accent/2 border border-accent/14 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="neu-inset rounded-2xl p-3 sm:p-3.5 border border-accent/14 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-11 h-11 rounded-2xl neu-flat flex items-center justify-center bg-white text-accent shrink-0 font-black text-sm border border-accent/18">
+                  <div className="w-11 h-11 rounded-2xl neu-flat flex items-center justify-center text-accent shrink-0 font-black text-sm border border-accent/18">
                     ПР
                   </div>
                   <div className="min-w-0 flex-1 space-y-0.5">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-black text-[#2D3A4E] truncate">Почта России</span>
-                      <span className="text-[11px] font-bold text-accent neu-flat px-1.5 py-0.5 rounded-lg bg-accent/5 whitespace-nowrap shrink-0">
+                      <span className="text-[11px] font-bold text-accent neu-flat px-1.5 py-0.5 rounded-lg whitespace-nowrap shrink-0">
                         1-й класс
                       </span>
                     </div>
@@ -457,7 +457,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                         onShowToast(`Открыт чат поддержки по заказу #${order?.id || ''}`, 'info');
                       }
                     }}
-                    className="flex-1 sm:flex-initial py-2 px-4 rounded-xl neu-button text-accent hover:text-accent-strong hover:scale-105 active:scale-95 transition-transform cursor-pointer flex items-center justify-center gap-1.5 text-xs font-bold whitespace-nowrap"
+                    className="flex-1 sm:flex-initial py-2 px-4 rounded-xl neu-button text-accent hover:text-accent-strong hover:scale-105 transition-transform cursor-pointer flex items-center justify-center gap-1.5 text-xs font-bold whitespace-nowrap"
                     title="Написать в чат поддержки"
                   >
                     <MessageSquare className="w-3.5 h-3.5 text-accent shrink-0" />
@@ -470,9 +470,9 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
 
           if (isPickup) {
             return (
-              <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-[#E3E8EF] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border border-white/70">
+              <div className="neu-inset rounded-2xl p-3 sm:p-3.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border border-white/70">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-11 h-11 rounded-2xl neu-flat flex items-center justify-center bg-white text-accent shrink-0 font-black text-sm border border-white/90">
+                  <div className="w-11 h-11 rounded-2xl neu-flat flex items-center justify-center text-accent shrink-0 font-black text-sm border border-white/90">
                     {storeInitials(currentStoreName())}
                   </div>
                   <div className="min-w-0 flex-1 space-y-0.5">
@@ -494,7 +494,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                         onShowToast(`Открыт чат поддержки по заказу #${order?.id || ''}`, 'info');
                       }
                     }}
-                    className="flex-1 sm:flex-initial py-2 px-4 rounded-xl neu-button text-[#2D3A4E] hover:text-accent hover:scale-105 active:scale-95 transition-transform cursor-pointer flex items-center justify-center gap-1.5 text-xs font-bold whitespace-nowrap"
+                    className="flex-1 sm:flex-initial py-2 px-4 rounded-xl neu-button text-[#2D3A4E] hover:text-accent hover:scale-105 transition-transform cursor-pointer flex items-center justify-center gap-1.5 text-xs font-bold whitespace-nowrap"
                     title="Написать консультанту бутика"
                   >
                     <MessageSquare className="w-3.5 h-3.5 text-accent shrink-0" />
@@ -506,9 +506,9 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
           }
 
           return (
-            <div className="neu-inset rounded-2xl p-3 sm:p-3.5 bg-[#E3E8EF] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border border-white/70">
+            <div className="neu-inset rounded-2xl p-3 sm:p-3.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border border-white/70">
               <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="w-11 h-11 rounded-2xl neu-flat flex items-center justify-center bg-white text-accent shrink-0 font-black text-sm border border-white/90">
+                <div className="w-11 h-11 rounded-2xl neu-flat flex items-center justify-center text-accent shrink-0 font-black text-sm border border-white/90">
                   АС
                 </div>
                 <div className="min-w-0 flex-1 space-y-0.5">
@@ -516,7 +516,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                     <span className="text-xs font-black text-[#2D3A4E] truncate">
                       {isExpress ? 'Иван (Экспресс)' : 'Алексей Смирнов'}
                     </span>
-                    <span className="text-[11px] font-bold text-warning neu-flat px-1.5 py-0.5 rounded-lg bg-warning-soft whitespace-nowrap shrink-0">
+                    <span className="text-[11px] font-bold text-warning neu-flat px-1.5 py-0.5 rounded-lg whitespace-nowrap shrink-0">
                       ★ 4.96
                     </span>
                   </div>
@@ -530,7 +530,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                 {storePhone && !order.isCancelled && order.status !== 'delivered' && (
                   <a
                     href={telHref(storePhone)}
-                    className="flex-1 sm:flex-initial py-2 px-3 rounded-xl neu-button text-accent hover:scale-105 active:scale-95 transition-transform cursor-pointer flex items-center justify-center gap-1.5 text-xs font-bold whitespace-nowrap"
+                    className="flex-1 sm:flex-initial py-2 px-3 rounded-xl neu-button text-accent hover:scale-105 transition-transform cursor-pointer flex items-center justify-center gap-1.5 text-xs font-bold whitespace-nowrap"
                     title={`Позвонить в магазин (${storePhone})`}
                   >
                     <Phone className="w-3.5 h-3.5 shrink-0" />
@@ -547,7 +547,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                       onShowToast(`Открыт чат поддержки по заказу #${order?.id || ''}`, 'info');
                     }
                   }}
-                  className="flex-1 sm:flex-initial py-2 px-3 rounded-xl neu-button text-[#2D3A4E] hover:text-accent hover:scale-105 active:scale-95 transition-transform cursor-pointer flex items-center justify-center gap-1.5 text-xs font-bold whitespace-nowrap"
+                  className="flex-1 sm:flex-initial py-2 px-3 rounded-xl neu-button text-[#2D3A4E] hover:text-accent hover:scale-105 transition-transform cursor-pointer flex items-center justify-center gap-1.5 text-xs font-bold whitespace-nowrap"
                   title="Написать в чат поддержки по заказу"
                 >
                   <MessageSquare className="w-3.5 h-3.5 text-accent shrink-0" />
@@ -559,7 +559,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
         })()}
 
         {/* Delivery Stages Timeline (Этапы выполнения: neu-inset углубление & только реальные данные) */}
-        <div className="neu-inset rounded-2xl p-4 bg-[#E3E8EF] space-y-3 border border-white/60">
+        <div className="neu-inset rounded-2xl p-4 space-y-3 border border-white/60">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-accent" />
@@ -580,10 +580,10 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                   key={step.id || `track-step-${idx}`}
                   className={`p-3 rounded-2xl flex items-start gap-3 transition-all ${
                     isCompleted
-                      ? 'neu-flat bg-[#E3E8EF] border border-success/40'
+                      ? 'neu-flat border border-success/40'
                       : isActive
-                      ? 'neu-inset-deep bg-[#E3E8EF] border border-accent/70 ring-1 ring-accent/30'
-                      : 'neu-flat bg-[#E3E8EF]/60 opacity-65 border border-white/50'
+                      ? 'neu-inset-deep border border-accent/70 ring-1 ring-accent/30'
+                      : 'neu-flat opacity-65 border border-white/50'
                   }`}
                 >
                   <div
@@ -591,7 +591,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                       isCompleted
                         ? 'bg-success text-white'
                         : isActive
-                        ? 'neu-inset-deep text-accent bg-[#E3E8EF] border border-accent'
+                        ? 'neu-inset-deep text-accent border border-accent'
                         : 'neu-button text-[#4E5C70]'
                     }`}
                   >
@@ -608,7 +608,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                           isCompleted
                             ? 'text-success bg-success-soft border border-success/25'
                             : isActive
-                            ? 'neu-inset-deep text-accent bg-[#E3E8EF] border border-accent/50'
+                            ? 'neu-inset-deep text-accent border border-accent/50'
                             : 'text-[#4E5C70] bg-[#DDE3EC] border border-[#BAC5D5]/50'
                         }`}
                       >
@@ -633,7 +633,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
           <button
             type="button"
             onClick={onClose}
-            className="neu-button-accent py-2.5 px-6 rounded-xl text-xs font-black text-white cursor-pointer hover:scale-105 active:scale-95 transition-transform whitespace-nowrap"
+            className="neu-button-accent py-2.5 px-6 rounded-xl text-xs font-black text-white cursor-pointer hover:scale-105 transition-transform whitespace-nowrap"
           >
             Закрыть
           </button>

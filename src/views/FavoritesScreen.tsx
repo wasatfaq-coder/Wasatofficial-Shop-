@@ -31,8 +31,8 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({
           <Heart className="w-10 h-10 stroke-[1.5]" />
         </div>
         <div className="space-y-1">
-          <h2 className="text-xl font-bold text-slate-900">Избранных товаров пока нет</h2>
-          <p className="text-xs text-slate-500 max-w-xs mx-auto">
+          <h2 className="text-xl font-bold text-[#2D3A4E]">Избранных товаров пока нет</h2>
+          <p className="text-xs text-[#4E5C70] max-w-xs mx-auto">
             Нажимайте сердечко на понравившихся моделях, чтобы легко найти их позже
           </p>
         </div>
@@ -50,7 +50,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({
   return (
     <div className="space-y-4 pb-28 animate-in fade-in duration-300">
       <div className="flex items-center justify-between px-1">
-        <h2 className="text-base font-bold text-slate-900">
+        <h2 className="text-base font-bold text-[#2D3A4E]">
           Сохраненные модели ({favoriteProducts.length})
         </h2>
       </div>

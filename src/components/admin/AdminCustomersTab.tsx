@@ -32,7 +32,7 @@ import { downloadCSV } from '../../utils/csvHelpers';
 import { copyToClipboard } from '../../utils/clipboard';
 import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
 import { NeumorphicSelect, NeumorphicSelectOption } from '../NeumorphicSelect';
-import { ORDER_STATUS_LABELS } from '../../utils/deliveryStages';
+import { orderStatusChip } from '../../utils/orderStatusStyle';
 import { formatAddress } from '../../utils/addressFormat';
 
 interface AdminCustomersTabProps {
@@ -408,21 +408,10 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
     })),
   ];
 
-  const getOrderStatusBadge = (status: Order['status'] | string) => {
-    switch (status) {
-      case 'delivered':
-        return { label: ORDER_STATUS_LABELS.delivered, bg: 'bg-success-soft text-success border-success/25' };
-      case 'in_transit':
-        return { label: ORDER_STATUS_LABELS.in_transit, bg: 'bg-accent/10 text-accent border-accent/20' };
-      case 'ready':
-        return { label: ORDER_STATUS_LABELS.ready, bg: 'bg-purple-100 text-purple-700 border-purple-200' };
-      case 'assembling':
-        return { label: ORDER_STATUS_LABELS.assembling, bg: 'bg-warning-soft text-warning border-warning/25' };
-      case 'accepted':
-        return { label: ORDER_STATUS_LABELS.accepted, bg: 'bg-accent/10 text-accent border-accent/20' };
-      default:
-        return { label: String(status), bg: 'bg-gray-100 text-gray-700 border-gray-200' };
-    }
+  // Same colours and words as «Заказы» (a cancelled order shows as cancelled)
+  const getOrderStatusBadge = (ord: Pick<Order, 'status' | 'isCancelled'>) => {
+    const chip = orderStatusChip(ord);
+    return { label: chip.label, bg: chip.className };
   };
 
   return (
@@ -445,7 +434,8 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
           <button
             type="button"
             onClick={handleExportCSV}
-            className="neu-inset px-3.5 py-2 rounded-xl text-xs font-bold text-[#4E5C70] hover:text-accent flex items-center justify-center gap-2 active:scale-95 transition-all bg-[#E3E8EF] cursor-pointer"
+            disabled={filteredCustomers.length === 0}
+            className="neu-button px-3.5 py-2 rounded-xl text-xs font-bold text-[#2D3A4E] hover:text-accent flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className="w-3.5 h-3.5 text-accent" />
             <span>Экспорт в CSV</span>
@@ -455,49 +445,49 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
 
       {/* 2. Neumorphic KPI Cards (Inset) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="neu-inset rounded-2xl p-3.5 flex items-center gap-3 bg-[#E3E8EF]">
+        <div className="neu-inset rounded-2xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
           <div className="w-11 h-11 rounded-xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
             <Users className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <span className="text-[11px] font-semibold text-[#4E5C70] block truncate">Всего клиентов</span>
+            <span className="text-[11px] font-semibold text-[#4E5C70] block leading-tight">Всего клиентов</span>
             <div className="flex items-baseline gap-1.5">
               <span className="text-lg font-black text-[#2D3A4E]">{stats.totalClients}</span>
-              <span className="text-[11px] text-accent font-bold">({stats.registeredCount} Auth)</span>
+              <span className="text-[11px] text-accent font-bold">{stats.registeredCount} с аккаунтом</span>
             </div>
           </div>
         </div>
 
-        <div className="neu-inset rounded-2xl p-3.5 flex items-center gap-3 bg-[#E3E8EF]">
+        <div className="neu-inset rounded-2xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
           <div className="w-11 h-11 rounded-xl neu-flat-sm flex items-center justify-center text-success shrink-0">
             <DollarSign className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <span className="text-[11px] font-semibold text-[#4E5C70] block truncate">Суммарный LTV</span>
+            <span className="text-[11px] font-semibold text-[#4E5C70] block leading-tight">Сумма покупок</span>
             <span className="text-lg font-black text-[#2D3A4E] block truncate">
               {stats.totalLTV.toLocaleString('ru-RU')} ₽
             </span>
           </div>
         </div>
 
-        <div className="neu-inset rounded-2xl p-3.5 flex items-center gap-3 bg-[#E3E8EF]">
+        <div className="neu-inset rounded-2xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
           <div className="w-11 h-11 rounded-xl neu-flat-sm flex items-center justify-center text-warning shrink-0">
             <ShoppingBag className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <span className="text-[11px] font-semibold text-[#4E5C70] block truncate">Средний чек (AOV)</span>
+            <span className="text-[11px] font-semibold text-[#4E5C70] block leading-tight">Средний чек</span>
             <span className="text-lg font-black text-[#2D3A4E] block truncate">
               {stats.avgOrderValue.toLocaleString('ru-RU')} ₽
             </span>
           </div>
         </div>
 
-        <div className="neu-inset rounded-2xl p-3.5 flex items-center gap-3 bg-[#E3E8EF]">
+        <div className="neu-inset rounded-2xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
           <div className="w-11 h-11 rounded-xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
             <UserCheck className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <span className="text-[11px] font-semibold text-[#4E5C70] block truncate">Постоянные клиенты</span>
+            <span className="text-[11px] font-semibold text-[#4E5C70] block leading-tight">Постоянные</span>
             <div className="flex items-baseline gap-1.5">
               <span className="text-lg font-black text-[#2D3A4E]">{stats.repeatClients}</span>
               <span className="text-[11px] text-success font-bold">2+ заказа</span>
@@ -507,7 +497,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       </div>
 
       {/* 3. Search & Filters Bar (Neumorphic Inset) */}
-      <div className="neu-inset rounded-2xl p-3 space-y-2.5 relative z-20 bg-[#E3E8EF]">
+      <div className="neu-inset rounded-2xl p-3 space-y-2.5 relative z-20">
         {/* Search Input */}
         <div className="relative">
           <Search className="w-4 h-4 text-[#4E5C70] absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -515,8 +505,8 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Поиск по имени, email, телефону, городу или № заказа..."
-            className="w-full pl-9.5 pr-8 py-2.5 text-xs rounded-xl neu-inset text-[#2D3A4E] placeholder:text-[#56647A] font-medium bg-[#E3E8EF]"
+            placeholder="Имя, телефон, email или № заказа"
+            className="w-full pl-9.5 pr-8 py-2.5 text-xs rounded-xl neu-inset text-[#2D3A4E] placeholder:text-[#56647A] font-medium"
           />
           {searchQuery && (
             <button
@@ -577,7 +567,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
 
       {/* 4. Customer Cards Grid */}
       {filteredCustomers.length === 0 ? (
-        <div className="neu-inset rounded-3xl p-8 text-center space-y-3 bg-[#E3E8EF]">
+        <div className="neu-inset rounded-3xl p-8 text-center space-y-3">
           <div className="w-14 h-14 rounded-2xl neu-inset flex items-center justify-center mx-auto text-[#4E5C70]">
             <Users className="w-7 h-7" />
           </div>
@@ -602,7 +592,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
             return (
               <div
                 key={`admin-cust-${customer.id}-${cIdx}`}
-                className="neu-inset rounded-2xl p-4 flex flex-col justify-between space-y-3.5 bg-[#E3E8EF] transition-all"
+                className="neu-inset rounded-2xl p-4 flex flex-col justify-between space-y-3.5 transition-all"
               >
                 {/* Top: Customer Identity */}
                 <div className="flex items-start justify-between gap-3">
@@ -621,7 +611,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     )}
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <h4 className="text-sm font-black text-[#2D3A4E] truncate">{customer.name}</h4>
+                        <h4 className="text-sm font-black text-[#2D3A4E] leading-snug break-words">{customer.name}</h4>
                         {customer.isRegisteredUser ? (
                           <span
                             className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-bold bg-accent/5 text-accent border border-accent/20"
@@ -632,22 +622,21 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                           </span>
                         ) : (
                           <span
-                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-gray-100 text-gray-600"
+                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-[#D8DFE8] text-[#4E5C70]"
                             title="Заказ оформлен без регистрации учетной записи"
                           >
                             <span>Гость</span>
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-[11px] text-[#4E5C70] mt-0.5 truncate">
+                      {/* email and phone on their own lines: side by side the email shrank to one letter */}
+                      <div className="text-[11px] text-[#4E5C70] mt-0.5 min-w-0">
                         {customer.email && (
-                          <span className="truncate" title={customer.email}>
+                          <p className="truncate" title={customer.email}>
                             {customer.email}
-                          </span>
+                          </p>
                         )}
-                        {customer.phone && (
-                          <span className="shrink-0">{customer.phone}</span>
-                        )}
+                        {customer.phone && <p className="whitespace-nowrap">{customer.phone}</p>}
                       </div>
                     </div>
                   </div>
@@ -661,7 +650,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                       1 заказ
                     </span>
                   ) : (
-                    <span className="px-2.5 py-1 rounded-xl text-[11px] font-medium bg-gray-100 text-gray-500 shrink-0">
+                    <span className="px-2.5 py-1 rounded-xl text-[11px] font-medium bg-[#D8DFE8] text-[#4E5C70] shrink-0">
                       Без заказов
                     </span>
                   )}
@@ -707,7 +696,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     </span>
                     <div className="flex flex-wrap gap-1.5 max-h-16 overflow-y-auto pr-1">
                       {customer.orders.slice(0, 4).map((ord, oIdx) => {
-                        const statusBadge = getOrderStatusBadge(ord.status);
+                        const statusBadge = getOrderStatusBadge(ord);
                         return (
                           <div
                             key={`cust-${customer.id}-ord-${ord.id}-${oIdx}`}
@@ -818,7 +807,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                         1 покупка
                       </span>
                     ) : (
-                      <span className="px-2.5 py-0.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-600">
+                      <span className="px-2.5 py-0.5 rounded-lg text-xs font-medium bg-[#D8DFE8] text-[#4E5C70]">
                         Новый профиль
                       </span>
                     )}
@@ -861,7 +850,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
                   {selectedCustomer.email && (
-                    <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-[#E3E8EF]/80 neu-flat-sm">
+                    <div className="flex items-center justify-between gap-2 p-2 rounded-xl neu-flat-sm">
                       <div className="flex items-center gap-2 min-w-0">
                         <Mail className="w-3.5 h-3.5 text-accent shrink-0" />
                         <span className="truncate font-medium">{selectedCustomer.email}</span>
@@ -879,7 +868,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                   )}
 
                   {selectedCustomer.phone && (
-                    <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-[#E3E8EF]/80 neu-flat-sm">
+                    <div className="flex items-center justify-between gap-2 p-2 rounded-xl neu-flat-sm">
                       <div className="flex items-center gap-2 min-w-0">
                         <Phone className="w-3.5 h-3.5 text-success shrink-0" />
                         <span className="truncate font-medium">{selectedCustomer.phone}</span>
@@ -897,7 +886,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                   )}
 
                   {selectedCustomer.uid && (
-                    <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-[#E3E8EF]/80 neu-flat-sm sm:col-span-2">
+                    <div className="flex items-center justify-between gap-2 p-2 rounded-xl neu-flat-sm sm:col-span-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <ShieldCheck className="w-3.5 h-3.5 text-accent shrink-0" />
                         <span className="text-[#4E5C70] shrink-0">UID:</span>
@@ -928,7 +917,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                   </div>
 
                   {selectedCustomer.primaryAddress && (
-                    <div className="p-2.5 rounded-xl bg-[#E3E8EF]/80 neu-flat-sm space-y-1">
+                    <div className="p-2.5 rounded-xl neu-flat-sm space-y-1">
                       <div className="flex items-center justify-between text-[11px] font-bold text-[#4E5C70]">
                         <span>Адрес для курьера:</span>
                         <button
@@ -954,7 +943,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                       </span>
                       <div className="grid grid-cols-1 gap-2">
                         {selectedCustomer.savedAddresses.map((sa) => (
-                          <div key={sa.id} className="p-2.5 rounded-xl bg-white/40 neu-flat-sm text-xs space-y-1">
+                          <div key={sa.id} className="p-2.5 rounded-xl neu-flat-sm text-xs space-y-1">
                             <div className="flex items-center justify-between">
                               <span className="font-bold text-[#2D3A4E]">{sa.title}</span>
                               {sa.isDefault && (
@@ -1002,30 +991,30 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
               )}
 
               {/* Financial Metrics & Loyalty Card */}
-              <div className="neu-inset rounded-2xl p-4 bg-[#E3E8EF] space-y-3">
+              <div className="neu-inset rounded-2xl p-4 space-y-3">
                 <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider block">
                   Финансовые показатели и лояльность
                 </span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-                  <div className="neu-flat-sm p-2.5 rounded-xl bg-[#E3E8EF]/80">
+                  <div className="neu-flat-sm p-2.5 rounded-xl">
                     <span className="text-[11px] text-[#4E5C70] block">Общий LTV</span>
                     <span className="text-sm font-black text-success">
                       {selectedCustomer.totalSpent.toLocaleString('ru-RU')} ₽
                     </span>
                   </div>
-                  <div className="neu-flat-sm p-2.5 rounded-xl bg-[#E3E8EF]/80">
+                  <div className="neu-flat-sm p-2.5 rounded-xl">
                     <span className="text-[11px] text-[#4E5C70] block">Всего заказов</span>
                     <span className="text-sm font-black text-[#2D3A4E]">
                       {selectedCustomer.ordersCount} шт.
                     </span>
                   </div>
-                  <div className="neu-flat-sm p-2.5 rounded-xl bg-[#E3E8EF]/80">
+                  <div className="neu-flat-sm p-2.5 rounded-xl">
                     <span className="text-[11px] text-[#4E5C70] block">Средний чек</span>
                     <span className="text-sm font-black text-[#2D3A4E]">
                       {selectedCustomer.averageOrderValue.toLocaleString('ru-RU')} ₽
                     </span>
                   </div>
-                  <div className="neu-flat-sm p-2.5 rounded-xl bg-[#E3E8EF]/80">
+                  <div className="neu-flat-sm p-2.5 rounded-xl">
                     <span className="text-[11px] text-[#4E5C70] block">Бонусные баллы</span>
                     <span className="text-sm font-black text-accent">
                       {selectedCustomer.bonusPoints} Б
@@ -1036,36 +1025,36 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
 
               {/* Sizing & Body Measurements Card (if available) */}
               {selectedCustomer.bodyMeasurements && (
-                <div className="neu-inset rounded-2xl p-4 bg-[#E3E8EF] space-y-3">
+                <div className="neu-inset rounded-2xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Ruler className="w-4 h-4 text-accent" />
                       <span className="text-xs font-black text-[#2D3A4E]">Параметры фигуры (Размеры)</span>
                     </div>
                     {selectedCustomer.bodyMeasurements.preferredSize && (
-                      <span className="px-2.5 py-1 rounded-lg text-xs font-black bg-accent/15 text-accent neu-flat-sm">
+                      <span className="px-2.5 py-1 rounded-lg text-xs font-black text-accent neu-flat-sm">
                         Размер: {selectedCustomer.bodyMeasurements.preferredSize}
                       </span>
                     )}
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 text-center text-xs">
-                    <div className="neu-flat-sm p-2 rounded-xl bg-[#E3E8EF]/80">
+                    <div className="neu-flat-sm p-2 rounded-xl">
                       <span className="text-[11px] text-[#4E5C70] block">Рост</span>
                       <span className="font-bold">{selectedCustomer.bodyMeasurements.height || '—'} см</span>
                     </div>
-                    <div className="neu-flat-sm p-2 rounded-xl bg-[#E3E8EF]/80">
+                    <div className="neu-flat-sm p-2 rounded-xl">
                       <span className="text-[11px] text-[#4E5C70] block">Вес</span>
                       <span className="font-bold">{selectedCustomer.bodyMeasurements.weight || '—'} кг</span>
                     </div>
-                    <div className="neu-flat-sm p-2 rounded-xl bg-[#E3E8EF]/80">
+                    <div className="neu-flat-sm p-2 rounded-xl">
                       <span className="text-[11px] text-[#4E5C70] block">Грудь</span>
                       <span className="font-bold">{selectedCustomer.bodyMeasurements.chest || '—'} см</span>
                     </div>
-                    <div className="neu-flat-sm p-2 rounded-xl bg-[#E3E8EF]/80">
+                    <div className="neu-flat-sm p-2 rounded-xl">
                       <span className="text-[11px] text-[#4E5C70] block">Талия</span>
                       <span className="font-bold">{selectedCustomer.bodyMeasurements.waist || '—'} см</span>
                     </div>
-                    <div className="neu-flat-sm p-2 rounded-xl bg-[#E3E8EF]/80">
+                    <div className="neu-flat-sm p-2 rounded-xl">
                       <span className="text-[11px] text-[#4E5C70] block">Бедра</span>
                       <span className="font-bold">{selectedCustomer.bodyMeasurements.hips || '—'} см</span>
                     </div>
@@ -1074,7 +1063,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
               )}
 
               {/* CRM Manager Notes & Tags */}
-              <div className="neu-inset rounded-2xl p-4 bg-[#E3E8EF] space-y-3">
+              <div className="neu-inset rounded-2xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Edit3 className="w-4 h-4 text-accent" />
@@ -1096,7 +1085,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                   onChange={(e) => setEditingNotes(e.target.value)}
                   placeholder="Внутренняя заметка о клиенте (предпочтения, особенности доставки, договоренности)..."
                   rows={3}
-                  className="w-full p-2.5 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A] resize-none font-medium bg-[#E3E8EF]"
+                  className="w-full p-2.5 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A] resize-none font-medium"
                 />
 
                 {/* Tags management */}
@@ -1105,7 +1094,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     {selectedCustomer.tags.map((tag, tIdx) => (
                       <span
                         key={`cust-edit-tag-${tag}-${tIdx}`}
-                        className="group px-2.5 py-1 rounded-xl text-xs font-bold neu-flat-sm text-[#2D3A4E] bg-[#E3E8EF]/90 flex items-center gap-1.5 border border-white/50"
+                        className="group px-2.5 py-1 rounded-xl text-xs font-bold neu-flat-sm text-[#2D3A4E] flex items-center gap-1.5 border border-white/50"
                       >
                         <span>#{tag}</span>
                         <button
@@ -1131,7 +1120,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                       value={newTagInput}
                       onChange={(e) => setNewTagInput(e.target.value)}
                       placeholder="Новый тег (напр. Стилист, Оптовик)..."
-                      className="flex-1 py-1.5 px-3 rounded-lg neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
+                      className="flex-1 py-1.5 px-3 rounded-lg neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
@@ -1154,7 +1143,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-2.5 flex-wrap">
                   <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-7 h-7 rounded-lg neu-flat-sm flex items-center justify-center text-accent shrink-0 bg-[#E3E8EF]">
+                    <div className="w-7 h-7 rounded-lg neu-flat-sm flex items-center justify-center text-accent shrink-0">
                       <Package className="w-3.5 h-3.5" />
                     </div>
                     <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] truncate">
@@ -1168,7 +1157,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                         onOpenSupportChat(selectedCustomer.orders[0]?.id, selectedCustomer.name);
                         setSelectedCustomer(null);
                       }}
-                      className="neu-button px-3 py-1.5 rounded-xl text-xs font-bold text-accent hover:text-accent-strong flex items-center gap-1.5 shrink-0 whitespace-nowrap active:scale-95 transition-all"
+                      className="neu-button px-3 py-1.5 rounded-xl text-xs font-bold text-accent hover:text-accent-strong flex items-center gap-1.5 shrink-0 whitespace-nowrap transition-all"
                     >
                       <MessageSquare className="w-3.5 h-3.5 text-accent" />
                       <span>Открыть диалог</span>
@@ -1177,15 +1166,15 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 </div>
 
                 {selectedCustomer.orders.length === 0 ? (
-                  <div className="neu-inset p-4 rounded-2xl text-center text-xs text-[#4E5C70] bg-[#E3E8EF]">
+                  <div className="neu-inset p-4 rounded-2xl text-center text-xs text-[#4E5C70]">
                     У данного пользователя пока нет зарегистрированных заказов.
                   </div>
                 ) : (
                   <div className="space-y-2.5">
                     {selectedCustomer.orders.map((ord, oIdx) => {
-                      const statusBadge = getOrderStatusBadge(ord.status);
+                      const statusBadge = getOrderStatusBadge(ord);
                       return (
-                        <div key={`cust-detail-ord-${ord.id}-${oIdx}`} className="neu-inset rounded-2xl p-3.5 space-y-2.5 bg-[#E3E8EF]">
+                        <div key={`cust-detail-ord-${ord.id}-${oIdx}`} className="neu-inset rounded-2xl p-3.5 space-y-2.5">
                           <div className="flex items-center justify-between gap-2 flex-wrap">
                             <div className="flex items-center gap-2">
                               <span className="font-black text-sm text-[#2D3A4E]">№ {ord.id}</span>
@@ -1253,7 +1242,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
               <button
                 type="button"
                 onClick={() => setSelectedCustomer(null)}
-                className="neu-inset px-6 py-2.5 rounded-xl text-xs font-black text-[#2D3A4E] hover:text-accent bg-[#E3E8EF] active:scale-95 transition-all"
+                className="neu-button px-6 py-2.5 rounded-xl text-xs font-black text-[#2D3A4E] hover:text-accent transition-all"
               >
                 Закрыть
               </button>
@@ -1285,7 +1274,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 type="button"
                 onClick={() => setCustomerToDelete(null)}
                 disabled={isDeletingCustomer}
-                className="neu-inset px-4 py-2 rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] bg-[#E3E8EF] active:scale-95 transition-all cursor-pointer"
+                className="neu-button px-4 py-2 rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer"
               >
                 Отмена
               </button>
@@ -1293,7 +1282,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 type="button"
                 onClick={handleDeleteCustomer}
                 disabled={isDeletingCustomer}
-                className="neu-button-danger px-4 py-2 rounded-xl text-xs font-black active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="neu-button-danger px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 {isDeletingCustomer ? (
                   <>

@@ -182,7 +182,8 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
   return (
     <div className="space-y-4 pt-4 border-t border-[#BAC5D5]/40 text-[#2D3A4E]">
       {/* Header with Title & Write Review Button */}
-      <div className="flex items-center justify-between">
+      {/* the button moves under the title on a narrow screen instead of squeezing it to two lines */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <div>
           <h3 className="text-base font-extrabold text-[#2D3A4E] flex items-center gap-2">
             <span>Отзывы покупателей</span>
@@ -196,7 +197,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
         <button
           type="button"
           onClick={openReviewForm}
-          className="neu-button px-3.5 py-2 rounded-xl text-xs font-bold text-accent flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer hover:opacity-90"
+          className="neu-button px-3.5 py-2 rounded-xl text-xs font-bold text-accent flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-all cursor-pointer hover:opacity-90"
         >
           <Plus className="w-4 h-4" />
           <span>{myReview ? 'Изменить мой отзыв' : 'Написать отзыв'}</span>
@@ -281,7 +282,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
               {/* Author & Rating info */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full neu-button flex items-center justify-center font-black text-xs text-accent uppercase shrink-0">
+                  <div className="w-8 h-8 rounded-full neu-flat-sm flex items-center justify-center font-black text-xs text-accent uppercase shrink-0">
                     {rev.authorName ? rev.authorName[0] : 'U'}
                   </div>
                   <div>
@@ -459,7 +460,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                   </button>
 
                   {isSizeDropdownOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-1.5 bg-[#E3E8EF] rounded-2xl p-1.5 z-50 neu-dropdown border border-white/80 space-y-1 max-h-48 overflow-y-auto no-scrollbar">
+                    <div className="absolute top-full left-0 right-0 mt-1.5 rounded-2xl p-1.5 z-50 neu-dropdown border border-white/80 space-y-1 max-h-48 overflow-y-auto no-scrollbar">
                       {product.sizes.map((s) => {
                         const isSelected = selectedSize === s;
                         return (
@@ -515,7 +516,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                   </button>
 
                   {isColorDropdownOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-1.5 bg-[#E3E8EF] rounded-2xl p-1.5 z-50 neu-dropdown border border-white/80 space-y-1 max-h-48 overflow-y-auto no-scrollbar">
+                    <div className="absolute top-full left-0 right-0 mt-1.5 rounded-2xl p-1.5 z-50 neu-dropdown border border-white/80 space-y-1 max-h-48 overflow-y-auto no-scrollbar">
                       {product.colors.map((c) => {
                         const isSelected = selectedColor === c.name;
                         return (

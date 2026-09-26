@@ -152,7 +152,7 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all cursor-pointer shrink-0"
+            className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer shrink-0"
             aria-label="Закрыть"
           >
             <X className="w-4 h-4" />
@@ -643,7 +643,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
           <button
             type="button"
             onClick={() => setIsClearConfirmOpen(true)}
-            className="h-9 px-3 rounded-xl neu-button-danger text-[11px] font-bold flex items-center gap-1.5 shrink-0 active:scale-95 transition-all cursor-pointer"
+            className="h-9 px-3 rounded-xl neu-button-danger text-[11px] font-bold flex items-center gap-1.5 shrink-0 transition-all cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" />
             Очистить
@@ -744,7 +744,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               type="button"
               onClick={openStatusModal}
               disabled={!onUpdateOrders}
-              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-accent flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-accent flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
             >
               <Truck className="w-3.5 h-3.5" />
               Изменить статус
@@ -753,7 +753,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               type="button"
               onClick={() => setIsReturnModalOpen(true)}
               disabled={!onUpdateOrders || isLegacy}
-              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               Возврат или обмен
@@ -957,7 +957,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isProcessingPhoto}
-              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
             >
               {isProcessingPhoto ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5 text-accent" />}
               Фото
@@ -967,7 +967,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               onClick={openProductPicker}
               disabled={products.length === 0 || isInternalNote}
               title={products.length === 0 ? 'В каталоге нет товаров' : undefined}
-              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ShoppingBag className="w-3.5 h-3.5 text-accent" />
               Товар
@@ -976,7 +976,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               type="button"
               onClick={openPromoModal}
               disabled={isInternalNote}
-              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Gift className="w-3.5 h-3.5 text-accent" />
               Промокод
@@ -984,7 +984,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             <button
               type="button"
               onClick={() => setIsTemplatesOpen(true)}
-              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <FileText className="w-3.5 h-3.5 text-accent" />
               Шаблоны{templates.length > 0 ? ` · ${templates.length}` : ''}
@@ -1035,7 +1035,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               type="button"
               onClick={handleSendReply}
               disabled={!canSend}
-              className="h-11 px-5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+              className="h-11 px-5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
             >
               {editing ? <Check className="w-4 h-4" /> : isInternalNote ? <Lock className="w-4 h-4" /> : <Send className="w-4 h-4" />}
               {editing ? 'Сохранить' : isInternalNote ? 'Сохранить заметку' : 'Отправить'}

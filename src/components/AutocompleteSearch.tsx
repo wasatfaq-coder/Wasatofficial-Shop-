@@ -166,8 +166,8 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
           <button
             type="button"
             onClick={handleClear}
-            className="absolute inset-y-0 right-3 flex items-center text-[#4E5C70] hover:text-[#2D3A4E] transition-colors cursor-pointer"
-            aria-label="Закрыть"
+            className="absolute inset-y-0 right-1 w-9 flex items-center justify-center rounded-full text-[#4E5C70] hover:text-[#2D3A4E] transition-colors cursor-pointer"
+            aria-label="Очистить поиск"
           >
             <X className="w-4 h-4" />
           </button>
@@ -190,7 +190,7 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
                     key={`search-cat-${cat.id}-${catIdx}`}
                     type="button"
                     onClick={() => handleCategoryClick(cat.id)}
-                    className="neu-button px-3.5 py-1.5 rounded-full text-xs font-extrabold text-[#2D3A4E] hover:text-accent flex items-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
+                    className="neu-button px-3.5 py-1.5 rounded-full text-xs font-extrabold text-[#2D3A4E] hover:text-accent flex items-center gap-1.5 transition-transform cursor-pointer"
                   >
                     <span>{cat.name}</span>
                     <ArrowRight className="w-3 h-3 text-[#4E5C70]" />
@@ -213,7 +213,7 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
                     key={`search-color-${color.name}-${idx}`}
                     type="button"
                     onClick={() => handleColorClick(color.name)}
-                    className="neu-flat-sm px-3 py-1 rounded-full text-xs font-bold text-[#2D3A4E] hover:text-accent flex items-center gap-2 border border-white/80 active:scale-95 transition-transform cursor-pointer"
+                    className="neu-button px-3 py-1.5 rounded-full text-xs font-bold text-[#2D3A4E] hover:text-accent flex items-center gap-2 border border-white/80 transition-transform cursor-pointer"
                   >
                     <span
                       className="w-3.5 h-3.5 rounded-full border border-black/15"
@@ -228,23 +228,16 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
 
           {/* 3. Products List with Instant Preview */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs font-bold text-[#4E5C70] uppercase tracking-wider px-1">
-              <span className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-accent" />
-                <span>Товары ({searchResults.matchedProducts.length})</span>
-              </span>
-              {searchResults.matchedProducts.length > 0 && (
-                <span className="text-[11px] text-[#4E5C70] font-normal">
-                  Артикул / Модель
-                </span>
-              )}
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#4E5C70] uppercase tracking-wider px-1">
+              <Sparkles className="w-3.5 h-3.5 text-accent" />
+              <span>Товары ({searchResults.matchedProducts.length})</span>
             </div>
 
             {searchResults.matchedProducts.length === 0 ? (
               <div className="neu-inset rounded-2xl p-4 text-center space-y-1">
                 <p className="text-xs font-bold text-[#2D3A4E]">Ничего не найдено</p>
                 <p className="text-[11px] text-[#4E5C70]">
-                  Попробуйте поискать по категории (рубашки, куртки) или артикулу.
+                  Проверьте написание или поищите по артикулу и цвету.
                 </p>
               </div>
             ) : (
@@ -253,7 +246,7 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
                   <div
                     key={`search-prod-${product.id}-${pIdx}`}
                     onClick={() => handleProductClick(product)}
-                    className="neu-flat-sm rounded-2xl p-2.5 flex items-center justify-between gap-3 border border-white/80 hover:border-accent/60 cursor-pointer active:scale-[0.99] transition-all group"
+                    className="neu-flat-sm rounded-2xl p-2.5 flex items-center gap-3 border border-white/80 hover:border-accent/60 cursor-pointer transition-all group"
                   >
                     {/* Thumbnail */}
                     <div className="w-12 h-12 rounded-xl overflow-hidden neu-inset p-0.5 shrink-0">
@@ -266,48 +259,27 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
                       />
                     </div>
 
-                    {/* Product Details */}
-                    <div className="flex-1 min-w-0 space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-extrabold text-[#2D3A4E] truncate group-hover:text-accent transition-colors">
-                          {product.title}
-                        </span>
+                    {/* Title on its own line (a badge next to it squeezed the title to nothing in a narrow field) */}
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <p className="text-xs font-extrabold text-[#2D3A4E] leading-snug line-clamp-2 group-hover:text-accent transition-colors">
+                        {product.title}
+                      </p>
+                      <div className="flex items-center gap-1.5 min-w-0 text-[11px] text-[#4E5C70] font-medium">
+                        <span className="truncate">{product.categoryLabel}</span>
                         {product.badge && (
                           <span className={`text-[11px] font-black ${photoBadgeClass(product.badge)} px-1.5 py-0.5 rounded-md shrink-0`}>
                             {product.badge}
                           </span>
                         )}
                       </div>
-
-                      <div className="flex items-center gap-2 text-[11px] text-[#4E5C70] font-medium">
-                        <span className="truncate">{product.categoryLabel}</span>
-                      </div>
-
-                      {/* Color dots preview */}
-                      <div className="flex items-center gap-1 pt-0.5">
-                        {product.colors.map((c, i) => (
-                          <span
-                            key={`search-prod-col-${product.id}-${c.name}-${i}`}
-                            className="w-2.5 h-2.5 rounded-full border border-[#BAC5D5]"
-                            style={{ backgroundColor: c.hex }}
-                            title={c.name}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Price & Rating Action */}
-                    <div className="text-right shrink-0 space-y-1">
-                      <RatingBadge rating={getProductRating(product)?.rating} className="ml-auto" />
-                      <div>
-                        <span className="text-xs font-black text-[#2D3A4E] block">
-                          {product.price.toLocaleString('ru-RU')} ₽
-                        </span>
+                      <div className="flex items-baseline gap-1.5 flex-wrap">
+                        <span className="text-xs font-black text-[#2D3A4E]">{product.price.toLocaleString('ru-RU')} ₽</span>
                         {product.originalPrice && (
-                          <span className="text-[11px] text-[#4E5C70] line-through block">
+                          <span className="text-[11px] text-[#4E5C70] line-through">
                             {product.originalPrice.toLocaleString('ru-RU')} ₽
                           </span>
                         )}
+                        <RatingBadge rating={getProductRating(product)?.rating} className="ml-auto" />
                       </div>
                     </div>
                   </div>
@@ -324,9 +296,9 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
                 setIsOpen(false);
                 if (onSearchSubmit) onSearchSubmit(searchQuery);
               }}
-              className="w-full py-2.5 neu-button rounded-2xl text-xs font-extrabold text-[#2D3A4E] hover:text-accent flex items-center justify-center gap-2 active:scale-[0.98] transition-all border border-white cursor-pointer"
+              className="w-full py-2.5 px-3 neu-button rounded-2xl text-xs font-extrabold text-[#2D3A4E] hover:text-accent flex items-center justify-center gap-2 transition-all border border-white cursor-pointer"
             >
-              <span>Смотреть все результаты ({searchResults.matchedProducts.length})</span>
+              <span>Все результаты ({searchResults.matchedProducts.length})</span>
               <ArrowRight className="w-4 h-4 stroke-[2.5]" />
             </button>
           )}

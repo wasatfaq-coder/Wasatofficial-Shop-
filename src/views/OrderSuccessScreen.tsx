@@ -56,7 +56,7 @@ export const OrderSuccessScreen: React.FC<OrderSuccessScreenProps> = ({
 
       {/* Order Info Card with active status tracking box */}
       <div className="neu-flat rounded-3xl p-5 text-left space-y-3 border border-white/80">
-        <div className="flex items-center gap-3 p-3 rounded-2xl neu-inset-deep neu-inset-deep-animated border border-accent/40 bg-[#E3E8EF]">
+        <div className="flex items-center gap-3 p-3 rounded-2xl neu-inset-deep neu-inset-deep-animated border border-accent/40">
           <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-accent shrink-0">
             <Package className="w-5 h-5 stroke-[2.2]" />
           </div>

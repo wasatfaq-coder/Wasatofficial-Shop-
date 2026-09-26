@@ -160,7 +160,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
             </div>
 
             {/* Items Summary Preview */}
-            <div className="neu-inset rounded-2xl p-2.5 bg-[#E3E8EF] space-y-2 max-h-36 overflow-y-auto no-scrollbar">
+            <div className="neu-inset rounded-2xl p-2.5 space-y-2 max-h-36 overflow-y-auto no-scrollbar">
               {displayItems.map((item, idx) => (
                 <div key={`quick-order-item-${item.title}-${item.variant}-${idx}`} className="flex items-center gap-2.5 text-xs">
                   <img
@@ -183,7 +183,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
             </div>
 
             {/* Price Preview */}
-            <div className="neu-flat rounded-2xl p-3 bg-[#E3E8EF] flex items-center justify-between">
+            <div className="neu-flat rounded-2xl p-3 flex items-center justify-between">
               <span className="text-xs font-bold text-[#4E5C70]">Итого к оплате:</span>
               <span className="text-base font-extrabold text-[#2D3A4E]">
                 {totalPrice.toLocaleString('ru-RU')} ₽
@@ -216,7 +216,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   placeholder="Иван"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
+                  className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
                 />
               </div>
 
@@ -231,7 +231,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   placeholder="+7 (999) 000-00-00"
                   value={phone}
                   onChange={handlePhoneChange}
-                  className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
+                  className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
                 />
               </div>
 
@@ -245,7 +245,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   placeholder="Москва, ул. Тверская"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
+                  className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
                 />
               </div>
 
@@ -265,7 +265,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                         setErrors(prev => ({ ...prev, house: undefined, general: undefined }));
                       }
                     }}
-                    className={`w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF] transition-all ${
+                    className={`w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A] transition-all ${
                       errors.house ? 'ring-2 ring-danger/50 bg-danger-soft' : ''
                     }`}
                   />
@@ -284,7 +284,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                         setErrors(prev => ({ ...prev, entrance: undefined, general: undefined }));
                       }
                     }}
-                    className={`w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF] transition-all ${
+                    className={`w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A] transition-all ${
                       errors.entrance ? 'ring-2 ring-danger/50 bg-danger-soft' : ''
                     }`}
                   />
@@ -298,7 +298,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                     placeholder="25"
                     value={apartment}
                     onChange={(e) => setApartment(e.target.value)}
-                    className="w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF]"
+                    className="w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
                   />
                 </div>
                 <div>
@@ -315,7 +315,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                         setErrors(prev => ({ ...prev, intercom: undefined, general: undefined }));
                       }
                     }}
-                    className={`w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A] bg-[#E3E8EF] transition-all ${
+                    className={`w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A] transition-all ${
                       errors.intercom ? 'ring-2 ring-danger/50 bg-danger-soft' : ''
                     }`}
                   />
@@ -323,7 +323,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
               </div>
 
               {/* Guarantee Badge */}
-              <div className="p-2 rounded-xl neu-flat bg-[#E3E8EF] flex items-center gap-2 text-[11px] text-success font-semibold">
+              <div className="p-2 rounded-xl neu-flat flex items-center gap-2 text-[11px] text-success font-semibold">
                 <ShieldCheck className="w-4 h-4 text-success shrink-0" />
                 <span>Оплата при получении после примерки. Бесплатный возврат.</span>
               </div>
@@ -342,8 +342,8 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   disabled={isSubmitting || !name.trim() || phone.length < 11}
                   className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black cursor-pointer transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 btn-confirm-order ${
                     isSubmitting
-                      ? 'neu-inset-deep neu-inset-deep-animated text-accent bg-[#E3E8EF] ring-2 ring-accent/40'
-                      : 'neu-button-accent text-white hover:scale-102 active:neu-inset-deep active:scale-98'
+                      ? 'neu-inset-deep neu-inset-deep-animated text-accent ring-2 ring-accent/40'
+                      : 'neu-button-accent text-white hover:scale-102 active:neu-inset-deep'
                   }`}
                 >
                   {isSubmitting ? (

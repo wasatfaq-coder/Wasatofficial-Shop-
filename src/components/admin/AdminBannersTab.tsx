@@ -43,6 +43,18 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
   onUpdateBanners,
   onShowToast,
 }) => {
+  // Where the banner button leads, by name (not the internal category id)
+  const bannerTargetLabel = (slide: BannerSlide): string => {
+    if (slide.actionType === 'product') {
+      return products.find((p) => p.id === slide.targetProductId)?.title || 'товар не найден';
+    }
+    if (slide.actionType === 'promo') return slide.targetPromoCode ? `промокод ${slide.targetPromoCode}` : 'промокод';
+    if (slide.targetCategory && slide.targetCategory !== 'all') {
+      return categories.find((c) => c.id === slide.targetCategory)?.name || slide.targetCategory;
+    }
+    return 'весь каталог';
+  };
+
   const [isCreating, setIsCreating] = useState(false);
   const [bannerToDelete, setBannerToDelete] = useState<BannerSlide | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -381,7 +393,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
       {isCreating && (
         <form
           onSubmit={handleSaveBanner}
-          className="neu-inset rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 space-y-4 bg-[#E3E8EF] border border-accent/30 animate-in fade-in slide-in-from-top-2 duration-200"
+          className="neu-inset rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 space-y-4 border border-accent/30 animate-in fade-in slide-in-from-top-2 duration-200"
         >
           <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-2.5">
             <span className="text-xs font-black text-accent uppercase tracking-wider flex items-center gap-1.5">
@@ -390,7 +402,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
             </span>
 
             {/* Live Device Preview Switcher in Form */}
-            <div className="flex items-center gap-1 neu-flat-sm p-0.5 rounded-xl bg-[#E3E8EF]">
+            <div className="flex items-center gap-1 neu-flat-sm p-0.5 rounded-xl">
               <button
                 type="button"
                 onClick={() => setPreviewDevice('mobile')}
@@ -426,7 +438,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Премиум льняные рубашки"
-                className="w-full px-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E] font-extrabold bg-[#E3E8EF]"
+                className="w-full px-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E] font-extrabold"
               />
             </div>
 
@@ -439,7 +451,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                 value={subtitle}
                 onChange={(e) => setSubtitle(e.target.value)}
                 placeholder="Натуральный 100% лен и дышащие ткани"
-                className="w-full px-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF]"
+                className="w-full px-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E]"
               />
             </div>
           </div>
@@ -454,7 +466,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                 value={btnText}
                 onChange={(e) => setBtnText(e.target.value)}
                 placeholder="Смотреть"
-                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-bold bg-[#E3E8EF]"
+                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-bold"
               />
             </div>
 
@@ -467,13 +479,13 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                 value={badge}
                 onChange={(e) => setBadge(e.target.value)}
                 placeholder="NEW, ХИТ, 100% ЛЕН"
-                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] bg-[#E3E8EF]"
+                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E]"
               />
             </div>
           </div>
 
           {/* Section: Deeplink Action Type */}
-          <div className="p-3.5 neu-inset rounded-2xl space-y-3 bg-[#E3E8EF]">
+          <div className="p-3.5 neu-inset rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-black text-[#2D3A4E] uppercase tracking-wider flex items-center gap-1.5">
                 <ArrowUpRight className="w-3.5 h-3.5 text-accent" />
@@ -572,7 +584,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
           </div>
 
           {/* Section: Adaptive Images (Mobile vs Desktop) with Neumorphic Inset Gallery Upload & Delete */}
-          <div className="p-3.5 neu-inset rounded-2xl space-y-3.5 bg-[#E3E8EF] border border-white/60">
+          <div className="p-3.5 neu-inset rounded-2xl space-y-3.5 border border-white/60">
             {/* Hidden File Inputs for Device/Gallery Upload */}
             <input
               type="file"
@@ -601,7 +613,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               {/* Mobile Image Card */}
-              <div className="neu-flat rounded-2xl p-3 bg-[#E3E8EF] border border-white/60 space-y-2.5">
+              <div className="neu-flat rounded-2xl p-3 border border-white/60 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
                     <Smartphone className="w-3.5 h-3.5 text-accent" />
@@ -611,7 +623,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md ${
                       mobileImage || image
                         ? 'bg-success-soft text-success font-extrabold'
-                        : 'bg-slate-200 text-[#4E5C70]'
+                        : 'bg-[#D8DFE8] text-[#4E5C70]'
                     }`}
                   >
                     {mobileImage || image ? 'Загружено' : 'Не задано'}
@@ -620,7 +632,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
 
                 {/* Recessed Inset Preview or Upload Zone */}
                 {mobileImage || image ? (
-                  <div className="neu-inset rounded-xl p-2 bg-[#E3E8EF] relative group">
+                  <div className="neu-inset rounded-xl p-2 relative group">
                     <div className="relative w-full h-36 rounded-lg overflow-hidden flex items-center justify-center bg-black/5">
                       <img
                         src={mobileImage || image}
@@ -659,7 +671,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                 ) : (
                   <div
                     onClick={() => mobileFileInputRef.current?.click()}
-                    className="neu-inset rounded-xl p-4 sm:p-5 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white/40 active:scale-[0.99] transition-all border border-dashed border-accent/40 group"
+                    className="neu-inset rounded-xl p-4 sm:p-5 flex flex-col items-center justify-center text-center cursor-pointer active:scale-[0.99] transition-all border border-dashed border-accent/40 group"
                   >
                     {isUploadingMobile ? (
                       <div className="flex flex-col items-center py-2">
@@ -668,7 +680,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                       </div>
                     ) : (
                       <>
-                        <div className="w-9 h-9 rounded-xl neu-flat bg-[#E3E8EF] flex items-center justify-center text-accent mb-1.5 group-hover:scale-105 transition-transform">
+                        <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center text-accent mb-1.5 group-hover:scale-105 transition-transform">
                           <ImagePlus className="w-5 h-5" />
                         </div>
                         <span className="text-xs font-black text-accent">
@@ -688,7 +700,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     type="button"
                     onClick={() => mobileFileInputRef.current?.click()}
                     disabled={isUploadingMobile}
-                    className="flex-1 h-7 px-2.5 rounded-lg neu-button text-[11px] font-bold text-accent hover:text-accent-strong active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
+                    className="flex-1 h-7 px-2.5 rounded-lg neu-button text-[11px] font-bold text-accent hover:text-accent-strong transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
                   >
                     <Upload className="w-3 h-3" />
                     <span>{mobileImage || image ? 'Заменить' : 'Выбрать файл'}</span>
@@ -698,7 +710,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     <button
                       type="button"
                       onClick={handleClearMobileImage}
-                      className="h-7 px-2.5 rounded-lg neu-button-danger text-[11px] font-bold active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
+                      className="h-7 px-2.5 rounded-lg neu-button-danger text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
                       title="Удалить фото"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -718,13 +730,13 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                       setImage(e.target.value);
                     }}
                     placeholder="https://images.unsplash.com/..."
-                    className="w-full h-7 px-2.5 neu-inset rounded-lg text-[11px] text-[#2D3A4E] bg-[#E3E8EF] placeholder:text-[#56647A]"
+                    className="w-full h-7 px-2.5 neu-inset rounded-lg text-[11px] text-[#2D3A4E] placeholder:text-[#56647A]"
                   />
                 </div>
               </div>
 
               {/* Desktop Image Card */}
-              <div className="neu-flat rounded-2xl p-3 bg-[#E3E8EF] border border-white/60 space-y-2.5">
+              <div className="neu-flat rounded-2xl p-3 border border-white/60 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
                     <Monitor className="w-3.5 h-3.5 text-accent" />
@@ -734,7 +746,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md ${
                       desktopImage
                         ? 'bg-success-soft text-success font-extrabold'
-                        : 'bg-slate-200 text-[#4E5C70]'
+                        : 'bg-[#D8DFE8] text-[#4E5C70]'
                     }`}
                   >
                     {desktopImage ? 'Загружено' : 'Не задано'}
@@ -743,7 +755,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
 
                 {/* Recessed Inset Preview or Upload Zone */}
                 {desktopImage ? (
-                  <div className="neu-inset rounded-xl p-2 bg-[#E3E8EF] relative group">
+                  <div className="neu-inset rounded-xl p-2 relative group">
                     <div className="relative w-full h-36 rounded-lg overflow-hidden flex items-center justify-center bg-black/5">
                       <img
                         src={desktopImage}
@@ -782,7 +794,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                 ) : (
                   <div
                     onClick={() => desktopFileInputRef.current?.click()}
-                    className="neu-inset rounded-xl p-4 sm:p-5 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white/40 active:scale-[0.99] transition-all border border-dashed border-accent/40 group"
+                    className="neu-inset rounded-xl p-4 sm:p-5 flex flex-col items-center justify-center text-center cursor-pointer active:scale-[0.99] transition-all border border-dashed border-accent/40 group"
                   >
                     {isUploadingDesktop ? (
                       <div className="flex flex-col items-center py-2">
@@ -791,7 +803,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                       </div>
                     ) : (
                       <>
-                        <div className="w-9 h-9 rounded-xl neu-flat bg-[#E3E8EF] flex items-center justify-center text-accent mb-1.5 group-hover:scale-105 transition-transform">
+                        <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center text-accent mb-1.5 group-hover:scale-105 transition-transform">
                           <ImagePlus className="w-5 h-5" />
                         </div>
                         <span className="text-xs font-black text-accent">
@@ -811,7 +823,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     type="button"
                     onClick={() => desktopFileInputRef.current?.click()}
                     disabled={isUploadingDesktop}
-                    className="flex-1 h-7 px-2.5 rounded-lg neu-button text-[11px] font-bold text-accent hover:text-accent-strong active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
+                    className="flex-1 h-7 px-2.5 rounded-lg neu-button text-[11px] font-bold text-accent hover:text-accent-strong transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
                   >
                     <Upload className="w-3 h-3" />
                     <span>{desktopImage ? 'Заменить' : 'Выбрать файл'}</span>
@@ -821,7 +833,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     <button
                       type="button"
                       onClick={handleClearDesktopImage}
-                      className="h-7 px-2.5 rounded-lg neu-button-danger text-[11px] font-bold active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
+                      className="h-7 px-2.5 rounded-lg neu-button-danger text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
                       title="Удалить фото"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -838,7 +850,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     value={desktopImage}
                     onChange={(e) => setDesktopImage(e.target.value)}
                     placeholder="https://images.unsplash.com/..."
-                    className="w-full h-7 px-2.5 neu-inset rounded-lg text-[11px] text-[#2D3A4E] bg-[#E3E8EF] placeholder:text-[#56647A]"
+                    className="w-full h-7 px-2.5 neu-inset rounded-lg text-[11px] text-[#2D3A4E] placeholder:text-[#56647A]"
                   />
                 </div>
               </div>
@@ -857,7 +869,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                       setImage(p.mobile);
                       setDesktopImage(p.desktop);
                     }}
-                    className="neu-button px-2.5 py-1 rounded-xl text-[11px] font-bold text-[#4E5C70] hover:text-accent cursor-pointer active:scale-95 transition-all"
+                    className="neu-button px-2.5 py-1 rounded-xl text-[11px] font-bold text-[#4E5C70] hover:text-accent cursor-pointer transition-all"
                   >
                     {p.label}
                   </button>
@@ -867,7 +879,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
           </div>
 
           {/* Section: Publication Scheduler */}
-          <div className="p-3.5 neu-inset rounded-2xl space-y-3 bg-[#E3E8EF]">
+          <div className="p-3.5 neu-inset rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-accent" />
@@ -883,8 +895,11 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
 
               <button
                 type="button"
+                role="switch"
+                aria-checked={scheduleEnabled}
+                aria-label="Планировщик публикаций"
                 onClick={() => setScheduleEnabled(!scheduleEnabled)}
-                className="w-11 h-6 rounded-full neu-inset p-0.5 transition-colors cursor-pointer bg-[#E3E8EF] shrink-0"
+                className="w-11 h-6 rounded-full neu-inset p-0.5 transition-colors cursor-pointer shrink-0"
               >
                 <div
                   className={`w-5 h-5 rounded-full transition-transform neu-flat ${
@@ -938,7 +953,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                       type="datetime-local"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-2.5 py-1.5 neu-flat rounded-xl text-xs text-[#2D3A4E] font-bold bg-[#E3E8EF]"
+                      className="w-full px-2.5 py-1.5 neu-flat rounded-xl text-xs text-[#2D3A4E] font-bold"
                     />
                   </div>
 
@@ -950,7 +965,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                       type="datetime-local"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full px-2.5 py-1.5 neu-flat rounded-xl text-xs text-[#2D3A4E] font-bold bg-[#E3E8EF]"
+                      className="w-full px-2.5 py-1.5 neu-flat rounded-xl text-xs text-[#2D3A4E] font-bold"
                     />
                   </div>
                 </div>
@@ -963,13 +978,13 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
             <button
               type="button"
               onClick={resetForm}
-              className="h-9 px-4 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer transition-all active:scale-95"
+              className="h-9 px-4 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer transition-all"
             >
               Отмена
             </button>
             <button
               type="submit"
-              className="h-9 px-4 neu-button-accent rounded-xl text-xs font-black text-white flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+              className="h-9 px-4 neu-button-accent rounded-xl text-xs font-black text-white flex items-center gap-1.5 cursor-pointer transition-all"
             >
               <Check className="w-3.5 h-3.5 text-white" />
               <span>{editingId ? 'Сохранить изменения' : 'Опубликовать баннер'}</span>
@@ -997,14 +1012,14 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
             return (
               <div
                 key={slide.id}
-                className={`neu-inset rounded-2xl p-3.5 sm:p-4 space-y-3 transition-all bg-[#E3E8EF] border ${
-                  slide.active ? 'border-transparent' : 'border-slate-300/80 opacity-75'
+                className={`neu-inset rounded-2xl p-3.5 sm:p-4 space-y-3 transition-all border ${
+                  slide.active ? 'border-transparent' : 'border-[#BAC5D5] opacity-75'
                 }`}
               >
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2 flex-wrap">
                     {/* Order & Reordering Controls */}
-                    <div className="flex items-center gap-1 neu-button px-1.5 py-0.5 rounded-xl bg-[#E3E8EF]">
+                    <div className="flex items-center gap-1 neu-flat-sm px-1.5 py-0.5 rounded-xl">
                       <span className="text-[11px] font-black text-accent px-1 font-mono">
                         #{index + 1}
                       </span>
@@ -1016,7 +1031,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                           className={`w-5 h-5 rounded-lg flex items-center justify-center transition-all ${
                             index === 0
                               ? 'text-[#4E5C70]/30 cursor-not-allowed'
-                              : 'neu-button text-[#2D3A4E] hover:text-accent active:scale-90 cursor-pointer'
+                              : 'neu-button text-[#2D3A4E] hover:text-accent cursor-pointer'
                           }`}
                           title="Переместить выше"
                           aria-label="Переместить выше"
@@ -1030,7 +1045,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                           className={`w-5 h-5 rounded-lg flex items-center justify-center transition-all ${
                             index === banners.length - 1
                               ? 'text-[#4E5C70]/30 cursor-not-allowed'
-                              : 'neu-button text-[#2D3A4E] hover:text-accent active:scale-90 cursor-pointer'
+                              : 'neu-button text-[#2D3A4E] hover:text-accent cursor-pointer'
                           }`}
                           title="Переместить ниже"
                           aria-label="Переместить ниже"
@@ -1040,7 +1055,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                       </div>
                     </div>
 
-                    <span className="text-xs font-black text-[#2D3A4E] neu-button px-2.5 py-1 rounded-xl bg-[#E3E8EF]">
+                    <span className="text-xs font-black text-[#2D3A4E] neu-flat-sm px-2.5 py-1 rounded-xl">
                       {slide.title}
                     </span>
 
@@ -1052,7 +1067,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
 
                     {/* Schedule status badge */}
                     <span
-                      className={`text-[11px] font-bold neu-button px-2 py-0.5 rounded-full flex items-center gap-1 bg-[#E3E8EF] ${scheduleInfo.color}`}
+                      className={`text-[11px] font-bold neu-button px-2 py-0.5 rounded-full flex items-center gap-1 ${scheduleInfo.color}`}
                     >
                       <Clock className="w-3 h-3" />
                       {scheduleInfo.label}
@@ -1065,8 +1080,8 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                       onClick={() => handleToggleActive(slide.id)}
                       className={`px-2.5 py-1 rounded-xl text-[11px] font-black transition-all cursor-pointer ${
                         slide.active
-                          ? 'neu-button text-success bg-[#E3E8EF]'
-                          : 'neu-inset text-[#4E5C70] bg-[#E3E8EF]'
+                          ? 'neu-button text-success'
+                          : 'neu-inset text-[#4E5C70]'
                       }`}
                     >
                       {slide.active ? 'Активен' : 'Скрыт'}
@@ -1074,7 +1089,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     <button
                       type="button"
                       onClick={() => handleOpenEdit(slide)}
-                      className="w-7 h-7 rounded-xl neu-button flex items-center justify-center text-accent hover:scale-105 active:scale-95 cursor-pointer"
+                      className="w-7 h-7 rounded-xl neu-button flex items-center justify-center text-accent hover:scale-105 cursor-pointer"
                       title="Редактировать"
                       aria-label="Редактировать"
                     >
@@ -1083,7 +1098,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     <button
                       type="button"
                       onClick={() => setBannerToDelete(slide)}
-                      className="w-7 h-7 rounded-xl neu-button-danger flex items-center justify-center active:scale-95 cursor-pointer"
+                      className="w-7 h-7 rounded-xl neu-button-danger flex items-center justify-center cursor-pointer"
                       title="Удалить"
                       aria-label="Удалить"
                     >
@@ -1093,23 +1108,23 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                 </div>
 
                 {/* Banner Visual Preview Card */}
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-center neu-button p-2.5 rounded-xl bg-[#E3E8EF]">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-center neu-flat-sm p-2.5 rounded-xl">
                   <div className="relative w-full h-24 rounded-lg overflow-hidden shrink-0">
                     <img
                       src={slide.desktopImage || slide.image}
                       alt={slide.title}
                       className="w-full h-full object-cover object-center"
                     />
-                    <div className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-xs text-white text-[11px] px-1.5 py-0.5 rounded font-mono">
-                      {slide.desktopImage ? 'HD + Mobile' : 'Standard'}
+                    <div className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-xs text-white text-[11px] font-bold px-1.5 py-0.5 rounded">
+                      {slide.desktopImage ? 'Телефон и ПК' : 'Одно фото'}
                     </div>
                   </div>
 
                   <div className="sm:col-span-3 space-y-1">
                     <p className="text-xs text-[#4E5C70]">{slide.subtitle}</p>
-                    <div className="flex items-center gap-3 text-[11px] text-[#4E5C70] pt-1">
+                    <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-[11px] text-[#4E5C70] pt-1">
                       <span>Кнопка: <strong className="text-[#2D3A4E]">{slide.btnText}</strong></span>
-                      <span>Категория: <strong className="text-accent">{slide.targetCategory || 'all'}</strong></span>
+                      <span>Ведет: <strong className="text-accent">{bannerTargetLabel(slide)}</strong></span>
                       {slide.startDate && (
                         <span>Старт: <strong className="text-[#2D3A4E]">{slide.startDate.replace('T', ' ')}</strong></span>
                       )}
@@ -1132,7 +1147,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
           onClick={() => setPreviewZoomImage(null)}
         >
           <div
-            className="neu-flat rounded-2xl bg-[#E3E8EF] max-w-4xl w-full p-4 relative space-y-3"
+            className="neu-flat rounded-2xl max-w-4xl w-full p-4 relative space-y-3"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-2.5">
@@ -1150,7 +1165,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
               </button>
             </div>
 
-            <div className="neu-inset rounded-xl p-2 bg-[#E3E8EF] flex items-center justify-center max-h-[70vh] overflow-hidden">
+            <div className="neu-inset rounded-xl p-2 flex items-center justify-center max-h-[70vh] overflow-hidden">
               <img
                 src={previewZoomImage}
                 alt="Banner Preview Full"

@@ -83,7 +83,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 e.stopPropagation();
                 onQuickView(product, e);
               }}
-              className="w-7 h-7 rounded-full neu-photo-btn flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-transform active:scale-90"
+              className="w-7 h-7 rounded-full neu-photo-btn flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-transform"
               title="Быстрый просмотр"
               aria-label="Быстрый просмотр"
             >
