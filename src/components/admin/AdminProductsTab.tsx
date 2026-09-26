@@ -52,6 +52,7 @@ import {
 } from '../../utils/inventory';
 import { AdminBulkOperationsModal } from './AdminBulkOperationsModal';
 import { NeumorphicSelect } from '../NeumorphicSelect';
+import { ModalPortal } from '../ModalPortal';
 import { TextEditModal } from './TextEditModal';
 import { NotConfigured } from '../NotConfigured';
 import {
@@ -440,6 +441,18 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
     if (formImages.length === 0) {
       onShowToast('Добавьте хотя бы одно фото товара', 'error');
+      return;
+    }
+
+    if (formOldPrice && Number(formOldPrice) <= numPrice) {
+      onShowToast('Старая цена должна быть больше текущей — иначе скидки нет. Очистите поле или исправьте цену', 'error');
+      return;
+    }
+
+    const fibers = formCard.composition.filter((c) => c.fiber.trim() && Number(c.percentage) > 0);
+    const fiberTotal = fibers.reduce((sum, c) => sum + Number(c.percentage), 0);
+    if (fibers.length > 0 && fiberTotal !== 100) {
+      onShowToast(`Сумма состава ткани — ${fiberTotal}%, а должна быть 100%. Исправьте в «Структуре карточки»`, 'error');
       return;
     }
 
@@ -1210,7 +1223,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
       {/* ================= MODAL: CREATE / EDIT PRODUCT ================= */}
       {isProductFormOpen && (
-        <div className="admin-no-glow fixed inset-0 z-[70] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+        <ModalPortal><div className="admin-no-glow fixed inset-0 z-[70] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
           <div className="neu-modal rounded-3xl p-4 sm:p-6 max-w-4xl w-full space-y-4 text-[#2D3A4E] border border-white/80 max-h-[92vh] overflow-y-auto my-auto">
             {/* Header: title on the left, status and close on the right (status wraps under the title on phones) */}
             <div className="flex flex-wrap items-start justify-between pb-3 border-b border-[#BAC5D5]/50 gap-x-3 gap-y-2.5">
@@ -1229,9 +1242,10 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 text-[11px] text-[#4E5C70] font-medium mt-0.5 flex-wrap">
-                    <span>Параметры, цены, себестоимость и остатки SKU</span>
-                    <span>•</span>
+                  <p className="text-[11px] text-[#4E5C70] font-medium mt-0.5 leading-snug">
+                    Параметры, цены, себестоимость и остатки SKU
+                  </p>
+                  <div className="text-[11px] mt-0.5">
                     <span
                       className={`font-black ${
                         totalFormStock === 0
@@ -2188,6 +2202,13 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   </div>
                 </div>
 
+                {/* «В продаже» with zero stock is saved as out of stock: say so before saving */}
+                {formInStock && totalFormStock === 0 && formSkus.length > 0 && (
+                  <p className="neu-inset rounded-2xl p-3 text-[11px] font-bold text-warning bg-warning-soft leading-snug">
+                    Остаток 0 шт.: покупатели увидят «Нет в наличии» (если в «Витрине» не включен предзаказ).
+                  </p>
+                )}
+
                 <div className="flex items-center gap-2.5 w-full justify-end">
                   <button
                     type="button"
@@ -2207,12 +2228,12 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               </div>
             </form>
           </div>
-        </div>
+        </div></ModalPortal>
       )}
 
       {/* ================= MODAL: CSV IMPORT ================= */}
       {isCSVImportModalOpen && (
-        <div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+        <ModalPortal><div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
           <div className="neu-modal rounded-3xl p-5 sm:p-6 max-w-xl w-full space-y-4 text-[#2D3A4E] border border-white/80 max-h-[90vh] overflow-y-auto my-auto">
             <div className="flex items-start sm:items-center justify-between pb-2 border-b border-[#BAC5D5]/50 gap-2">
               <div className="flex items-center gap-2 min-w-0">
@@ -2282,12 +2303,12 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div></ModalPortal>
       )}
 
       {/* ================= MODAL: QUICK PRODUCT INSPECT ================= */}
       {productToInspect && (
-        <div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+        <ModalPortal><div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
           <div className="neu-modal rounded-3xl p-5 sm:p-6 max-w-lg w-full space-y-4 text-[#2D3A4E] border border-white/80 max-h-[90vh] overflow-y-auto my-auto">
             {/* Header */}
             <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
@@ -2416,12 +2437,12 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div></ModalPortal>
       )}
 
       {/* ================= MODAL: DELETE PRODUCT CONFIRMATION ================= */}
       {productToDelete && (
-        <div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+        <ModalPortal><div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
           <div className="neu-modal rounded-3xl p-5 sm:p-6 max-w-sm w-full space-y-3.5 text-[#2D3A4E] border border-white/80 my-auto text-center">
             <div className="w-12 h-12 rounded-2xl neu-inset mx-auto flex items-center justify-center text-danger bg-[#E3E8EF]">
               <Trash2 className="w-6 h-6" />
@@ -2458,12 +2479,12 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div></ModalPortal>
       )}
 
       {/* Bulk Discount Modal */}
       {isBulkDiscountModalOpen && (
-        <div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <ModalPortal><div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="neu-modal rounded-3xl p-6 max-w-sm w-full space-y-4 text-[#2D3A4E] border border-white/80 my-auto">
             <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
               <h3 className="text-sm font-black uppercase text-[#2D3A4E]">Скидка на товары</h3>
@@ -2514,12 +2535,12 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div></ModalPortal>
       )}
 
       {/* Photo Zoom Modal */}
       {previewZoomImage && (
-        <div
+        <ModalPortal><div
           className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setPreviewZoomImage(null)}
         >
@@ -2542,7 +2563,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               referrerPolicy="no-referrer"
             />
           </div>
-        </div>
+        </div></ModalPortal>
       )}
 
       {/* Advanced Bulk Operations Modal */}

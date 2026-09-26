@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, Trash2, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { ModalPortal } from './ModalPortal';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -35,6 +36,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   preview,
   cancelLabel = 'Отмена',
 }) => (
+  <ModalPortal>
   <AnimatePresence>
     {isOpen && (
       <motion.div
@@ -109,4 +111,5 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       </motion.div>
     )}
   </AnimatePresence>
+  </ModalPortal>
 );
