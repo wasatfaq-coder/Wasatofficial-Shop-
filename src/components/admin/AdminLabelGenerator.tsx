@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Barcode, ChevronLeft, ChevronRight, FileDown, Plus, RefreshCw, Trash2, X } from 'lucide-react';
 import type { LabelFormat, Product, ProductSKU, StorefrontSettings } from '../../types';
 import { ModalPortal } from '../ModalPortal';
+import { compositionToMaterial, getProductFabricComposition } from '../../utils/productAttributes';
 import { ConfirmDialog } from '../ConfirmDialog';
-import { currentStoreName } from '../../utils/storeContacts';
 import {
   canvasMeasure,
   downloadLabelsPdf,
@@ -13,15 +13,19 @@ import {
   LABEL_FORMAT_PRESETS,
   LABEL_SIZE_LIMITS,
   LABEL_TEMPLATES,
+  LABEL_TEMPLATE_GROUPS,
+  hasSaleOldPrice,
+  templateInfo,
   type LabelData,
   type LabelOptions,
   type LabelTemplate,
 } from '../../utils/labels';
 import {
-  collectBarcodes,
+  articleCode,
+  articleGroupKey,
   findBarcodeProblems,
-  generateInternalEan13,
   skuKey,
+  unifyArticleBarcodes,
   type BarcodeProblem,
 } from '../../shared/barcode';
 
@@ -44,6 +48,7 @@ const PROBLEM_TEXT: Record<BarcodeProblem, string> = {
   missing: 'нет штрихкода',
   duplicate: 'штрихкод повторяется',
   invalid: 'штрихкод с ошибкой',
+  mismatch: 'у размеров разные штрихкоды',
 };
 
 const pluralLabels = (n: number) => {
@@ -56,16 +61,20 @@ const pluralLabels = (n: number) => {
 
 const sizeText = (f: Pick<LabelFormat, 'widthMm' | 'heightMm'>) => `${f.widthMm}×${f.heightMm} мм`;
 
+/** Label data straight from the catalog: the product card and its variation */
 const labelData = (product: Product, sku: ProductSKU): LabelData => ({
-  storeName: currentStoreName(),
   title: product.title,
   color: sku.color,
   size: sku.size,
-  skuCode: sku.skuCode,
+  article: articleCode(product, sku.color) || sku.skuCode || '',
+  // the card's fibres first; product.material is the same text saved from them
+  composition: compositionToMaterial(getProductFabricComposition(product)) || (product.material ?? '').trim(),
   barcode: sku.barcode ?? '',
   price: product.price,
   oldPrice: product.originalPrice,
 });
+
+type PrintItem = { target: LabelTarget; product: Product; sku: ProductSKU };
 
 /** Canvas preview drawn by the same layout as the PDF */
 const LabelCanvas: React.FC<{
@@ -128,8 +137,8 @@ const Switch: React.FC<{ checked: boolean; onChange: (v: boolean) => void; label
 );
 
 /**
- * Admin → «Склад» → labels: the store's label formats, three templates, a PDF with one page per
- * selected variation. Barcodes must be unique and readable before the PDF is made.
+ * Admin → «Склад» → labels: the store's label formats, seven templates, a PDF with one page per label
+ * (per variation, or per article when the template has no size). One readable barcode per article.
  */
 export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
   targets,
@@ -179,10 +188,21 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
       }),
     [targets, products]
   );
-  const printable = resolved.filter((r): r is { target: LabelTarget; product: Product; sku: ProductSKU } =>
-    Boolean(r.product && r.sku)
-  );
+  const printable = resolved.filter((r): r is PrintItem => Boolean(r.product && r.sku));
   const unsaved = resolved.filter((r) => r.product && !r.sku);
+  const info = templateInfo(template);
+
+  // Without a size on the label, all sizes of an article print the same: one label per article
+  const labels = useMemo(() => {
+    if (info.showsSize) return printable;
+    const seen = new Set<string>();
+    return printable.filter((r) => {
+      const key = articleGroupKey(r.product.id, r.sku.color);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [printable, info.showsSize]);
 
   const problems = useMemo(() => findBarcodeProblems(products), [products]);
   const barcodeIssues = options.showBarcode
@@ -190,14 +210,19 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
         .map((r) => ({ ...r, problem: problems.get(skuKey(r.product.id, r.sku.id)) }))
         .filter((r): r is typeof r & { problem: BarcodeProblem } => Boolean(r.problem))
     : [];
+  // «Скидка» needs an old price above the current one in the product card
+  const noOldPrice = info.needsOldPrice
+    ? labels.filter((r) => !hasSaleOldPrice({ price: r.product.price, oldPrice: r.product.originalPrice }))
+    : [];
 
-  const current = printable[Math.min(previewIndex, Math.max(0, printable.length - 1))];
+  const current = labels[Math.min(previewIndex, Math.max(0, labels.length - 1))];
   // A code that is about to be replaced is not drawn in the preview
   const previewOptions: LabelOptions =
     current && options.showBarcode && problems.has(skuKey(current.product.id, current.sku.id))
       ? { ...options, showBarcode: false }
       : options;
-  const canDownload = Boolean(format) && printable.length > 0 && barcodeIssues.length === 0 && !isGenerating;
+  const canDownload =
+    Boolean(format) && labels.length > 0 && barcodeIssues.length === 0 && noOldPrice.length === 0 && !isGenerating;
 
   const saveFormats = (next: LabelFormat[]) => {
     if (!onUpdateSettings) return;
@@ -238,17 +263,9 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
   };
 
   const reissueBarcodes = () => {
-    const keys = new Set(barcodeIssues.map((r) => skuKey(r.product.id, r.sku.id)));
-    const taken = collectBarcodes(products);
-    const updated = products.map((p) => {
-      if (!p.skus?.some((s) => keys.has(skuKey(p.id, s.id)))) return p;
-      return {
-        ...p,
-        skus: p.skus.map((s) => (keys.has(skuKey(p.id, s.id)) ? { ...s, barcode: generateInternalEan13(taken) } : s)),
-      };
-    });
-    onUpdateProducts(updated);
-    onShowToast(`Новые штрихкоды выданы: ${keys.size}`, 'success');
+    const groups = new Set<string>(barcodeIssues.map((r) => articleGroupKey(r.product.id, r.sku.color)));
+    onUpdateProducts(unifyArticleBarcodes(products, groups));
+    onShowToast(`Штрихкоды обновлены: артикулов ${groups.size}, у всех размеров артикула один код`, 'success');
   };
 
   const handleDownload = async () => {
@@ -258,10 +275,10 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
       await downloadLabelsPdf(
         format,
         template,
-        printable.map((r) => labelData(r.product, r.sku)),
+        labels.map((r) => labelData(r.product, r.sku)),
         options
       );
-      onShowToast(`PDF: ${printable.length} ${pluralLabels(printable.length)} ${sizeText(format)}`, 'success');
+      onShowToast(`PDF: ${labels.length} ${pluralLabels(labels.length)} ${sizeText(format)}`, 'success');
     } catch (err) {
       console.error('Label PDF failed:', err);
       onShowToast('Не удалось сформировать PDF', 'error');
@@ -298,7 +315,9 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                 <p className="text-[11px] font-semibold text-[#4E5C70] leading-snug">
                   {printable.length === 1
                     ? `${printable[0].product.title} · ${printable[0].sku.color} / ${printable[0].sku.size}`
-                    : `Выбрано вариантов: ${printable.length}. В PDF — по одной этикетке на вариант`}
+                    : labels.length === printable.length
+                    ? `Выбрано вариантов: ${printable.length}. В PDF — по одной этикетке на вариант`
+                    : `Вариантов: ${printable.length} → этикеток: ${labels.length} (одна на артикул, шаблон без размера)`}
                 </p>
               </div>
             </div>
@@ -457,38 +476,50 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
             {/* Templates */}
             <section className="space-y-2">
               <h4 className={sectionTitle}>Шаблон</h4>
-              <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Шаблон этикетки">
-                {LABEL_TEMPLATES.map((t) => {
-                  const selected = template === t.id;
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      title={t.hint}
-                      onClick={() => setTemplate(t.id)}
-                      className={`rounded-2xl p-2 flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
-                        selected ? 'neu-pill-active' : 'neu-button text-[#2D3A4E]'
-                      }`}
-                    >
-                      {format && current ? (
-                        <LabelCanvas
-                          format={format}
-                          template={t.id}
-                          data={labelData(current.product, current.sku)}
-                          options={previewOptions}
-                          displayWidth={84}
-                          fontsReady={fontsReady}
-                          className="rounded-md border border-[#BAC5D5]"
-                        />
-                      ) : (
-                        <span className="block w-[84px] h-[58px] rounded-md bg-white border border-[#BAC5D5]" />
-                      )}
-                      <span className="text-[11px] font-bold">{t.name}</span>
-                    </button>
-                  );
-                })}
+              <div className="space-y-3" role="radiogroup" aria-label="Шаблон этикетки">
+                {LABEL_TEMPLATE_GROUPS.map((group) => (
+                  <div key={group.id} className="space-y-1.5">
+                    <p className="text-[11px] font-bold text-[#4E5C70]">{group.title}</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {LABEL_TEMPLATES.filter((t) => t.group === group.id).map((t) => {
+                        const selected = template === t.id;
+                        const blocked =
+                          t.needsOldPrice &&
+                          current &&
+                          !hasSaleOldPrice({ price: current.product.price, oldPrice: current.product.originalPrice });
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            title={t.hint}
+                            onClick={() => setTemplate(t.id)}
+                            className={`rounded-2xl p-2 flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                              selected ? 'neu-pill-active' : 'neu-button text-[#2D3A4E]'
+                            }`}
+                          >
+                            {format && current ? (
+                              <LabelCanvas
+                                format={format}
+                                template={t.id}
+                                data={labelData(current.product, current.sku)}
+                                options={previewOptions}
+                                displayWidth={84}
+                                fontsReady={fontsReady}
+                                className={`rounded-md border border-[#BAC5D5] ${blocked ? 'opacity-40' : ''}`}
+                              />
+                            ) : (
+                              <span className="block w-[84px] h-[58px] rounded-md bg-white border border-[#BAC5D5]" />
+                            )}
+                            <span className="text-[11px] font-bold leading-tight text-center">{t.name}</span>
+                            {blocked && <span className="text-[11px] font-bold text-warning leading-tight">нет старой цены</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </section>
 
@@ -506,6 +537,27 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
               />
             </section>
 
+            {/* «Скидка» without an old price */}
+            {noOldPrice.length > 0 && (
+              <section className="neu-inset rounded-2xl p-3.5 bg-warning-soft border border-warning/25 space-y-2">
+                <p className="text-xs font-black text-warning flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  Шаблон «Скидка» нельзя применить
+                </p>
+                <p className="text-[11px] text-[#2D3A4E] leading-snug">
+                  У товара нет старой цены выше текущей. Задайте «Старую цену» в карточке товара (Каталог) или выберите
+                  другой шаблон.
+                </p>
+                <ul className="text-[11px] text-[#2D3A4E] space-y-1 max-h-24 overflow-y-auto">
+                  {noOldPrice.map((r) => (
+                    <li key={skuKey(r.product.id, r.sku.id)} className="leading-snug break-words">
+                      {r.product.title} — цена {r.product.price.toLocaleString('ru-RU')} ₽, старой цены нет
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
             {/* Barcodes that can't be printed */}
             {barcodeIssues.length > 0 && (
               <section className="neu-inset rounded-2xl p-3.5 bg-warning-soft border border-warning/25 space-y-2.5">
@@ -522,7 +574,8 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                   ))}
                 </ul>
                 <p className="text-[11px] text-[#4E5C70] leading-snug">
-                  Каждый вариант получит свой внутренний штрихкод EAN-13 (начинается с 2), он сохранится в товаре.
+                  У всех размеров одного артикула будет один штрихкод: сохранится верный код артикула или будет выдан
+                  новый внутренний EAN-13 (начинается с 2). Коды сохранятся в товаре.
                 </p>
                 <button
                   type="button"
@@ -530,7 +583,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                   className="h-9 px-3 rounded-xl neu-button text-[11px] font-bold text-accent flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  Выдать новые штрихкоды
+                  Один штрихкод на артикул
                 </button>
               </section>
             )}
@@ -546,7 +599,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
             <section className="space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <h4 className={sectionTitle}>Предпросмотр</h4>
-                {printable.length > 1 && (
+                {labels.length > 1 && (
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
@@ -558,12 +611,12 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                       <ChevronLeft className="w-4 h-4" />
                     </button>
                     <span className="text-[11px] font-bold text-[#4E5C70] min-w-12 text-center">
-                      {Math.min(previewIndex, printable.length - 1) + 1} из {printable.length}
+                      {Math.min(previewIndex, labels.length - 1) + 1} из {labels.length}
                     </span>
                     <button
                       type="button"
-                      onClick={() => setPreviewIndex((i) => Math.min(printable.length - 1, i + 1))}
-                      disabled={previewIndex >= printable.length - 1}
+                      onClick={() => setPreviewIndex((i) => Math.min(labels.length - 1, i + 1))}
+                      disabled={previewIndex >= labels.length - 1}
                       className="w-8 h-8 rounded-lg neu-button flex items-center justify-center text-[#4E5C70] cursor-pointer disabled:opacity-40"
                       aria-label="Следующая этикетка"
                     >
@@ -585,7 +638,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                       className="rounded-lg border border-[#BAC5D5]"
                     />
                     <span className="text-[11px] font-bold text-[#4E5C70]">
-                      {sizeText(format)} · {LABEL_TEMPLATES.find((t) => t.id === template)?.name}
+                      {sizeText(format)} · {info.name}
                     </span>
                   </>
                 ) : (
@@ -613,7 +666,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
               className="h-11 flex-1 min-w-0 px-4 neu-button-accent rounded-xl text-xs font-black text-white whitespace-nowrap active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FileDown className="w-4 h-4 shrink-0" />
-              <span>{isGenerating ? 'Готовим PDF…' : `Скачать PDF (${printable.length})`}</span>
+              <span>{isGenerating ? 'Готовим PDF…' : `Скачать PDF (${labels.length})`}</span>
             </button>
           </div>
         </div>
