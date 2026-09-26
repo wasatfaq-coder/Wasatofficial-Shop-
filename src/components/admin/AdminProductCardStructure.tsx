@@ -17,7 +17,14 @@ import type {
   ProductFeature,
   ProductSpec,
 } from '../../types';
-import { CARE_ICON_LABELS, FIT_LABELS } from '../../utils/productAttributes';
+import {
+  CARE_ICON_LABELS,
+  DENSITY_UNIT,
+  FIT_LABELS,
+  compositionToMaterial,
+  fabricDensityNumber,
+  formatFabricDensity,
+} from '../../utils/productAttributes';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 
@@ -25,6 +32,7 @@ import { NeumorphicSelect } from '../NeumorphicSelect';
 export interface ProductCardStructure {
   features: ProductFeature[];
   composition: FabricCompositionItem[];
+  /** Density number; «г/м²» is added on save */
   density: string;
   certifications: string[];
   weave: string;
@@ -50,7 +58,7 @@ export function cardStructureFromProduct(product: Product): ProductCardStructure
   return {
     features: (product.features ?? []).map((f) => ({ ...f })),
     composition: (product.fabricComposition ?? []).map((c) => ({ ...c })),
-    density: product.fabricDensity ?? '',
+    density: fabricDensityNumber(product.fabricDensity),
     certifications: [...(product.certifications ?? [])],
     weave: product.weave ?? '',
     fit: product.fit ?? '',
@@ -61,21 +69,22 @@ export function cardStructureFromProduct(product: Product): ProductCardStructure
 }
 
 /** Product fields for saving: blank rows dropped, empty sections removed (the card then hides them) */
-export function cardStructureToProduct(card: ProductCardStructure): Partial<Product> {
+export function cardStructureToProduct(card: ProductCardStructure): Partial<Product> & Pick<Product, 'material'> {
   const text = (value: string) => value.trim() || undefined;
   const list = <T,>(items: T[]) => (items.length > 0 ? items : undefined);
+  const fabricComposition = card.composition
+    .map((c) => ({ fiber: c.fiber.trim(), percentage: Math.max(0, Math.min(100, Number(c.percentage) || 0)) }))
+    .filter((c) => c.fiber && c.percentage > 0);
   return {
     features: list(
       card.features
         .map((f) => ({ title: f.title.trim(), ...(f.text?.trim() ? { text: f.text.trim() } : {}) }))
         .filter((f) => f.title)
     ),
-    fabricComposition: list(
-      card.composition
-        .map((c) => ({ fiber: c.fiber.trim(), percentage: Math.max(0, Math.min(100, Number(c.percentage) || 0)) }))
-        .filter((c) => c.fiber && c.percentage > 0)
-    ),
-    fabricDensity: text(card.density),
+    fabricComposition: list(fabricComposition),
+    // The catalog's material filter, search and invoices read the composition as text
+    material: compositionToMaterial(fabricComposition),
+    fabricDensity: formatFabricDensity(card.density) || undefined,
     certifications: list(card.certifications.map((c) => c.trim()).filter(Boolean)),
     weave: text(card.weave),
     fit: card.fit || undefined,
@@ -106,8 +115,6 @@ interface AdminProductCardStructureProps {
   onChange: (next: ProductCardStructure) => void;
   /** The description text is edited in its own field below; used to tell whether «Описание» is shown */
   hasDescription: boolean;
-  /** Material from the field below, shown in «Характеристики» */
-  material: string;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
@@ -122,7 +129,6 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
   value,
   onChange,
   hasDescription,
-  material,
   onShowToast,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -178,7 +184,6 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
     value.certifications.filter((c) => c.trim()).length +
     (value.density.trim() ? 1 : 0);
   const specCount =
-    (material.trim() ? 1 : 0) +
     (value.weave.trim() ? 1 : 0) +
     (value.fit ? 1 : 0) +
     (value.country.trim() ? 1 : 0) +
@@ -205,7 +210,7 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
     {
       id: 'specs',
       title: 'Характеристики',
-      hint: 'Материал, переплетение, посадка, страна, свои строки',
+      hint: 'Переплетение, посадка, страна, свои строки',
       icon: ListChecks,
       count: specCount,
       shown: specCount > 0,
@@ -399,12 +404,19 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
 
                         <label className="block space-y-1">
                           <span className="text-[11px] font-black text-[#2D3A4E]">Плотность ткани</span>
-                          <input
-                            value={value.density}
-                            onChange={(e) => set('density', e.target.value)}
-                            placeholder="Например: 185 г/м²"
-                            className={inputClass}
-                          />
+                          <span className="relative block">
+                            <input
+                              value={value.density}
+                              onChange={(e) => set('density', e.target.value.replace(/[^\d.,]/g, ''))}
+                              inputMode="decimal"
+                              placeholder="Например: 185"
+                              aria-label={`Плотность ткани, ${DENSITY_UNIT}`}
+                              className={`${inputClass} pr-12`}
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4E5C70] pointer-events-none">
+                              {DENSITY_UNIT}
+                            </span>
+                          </span>
                         </label>
 
                         <div className="space-y-2">
@@ -436,8 +448,7 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
                     {section.id === 'specs' && (
                       <>
                         <p className="text-[11px] text-[#4E5C70] leading-snug">
-                          Материал: <strong className="text-[#2D3A4E]">{material.trim() || 'не указан'}</strong> — меняется в
-                          поле «Материал ткани» ниже. Артикул и штрихкод берутся из вариаций SKU.
+                          Артикул и штрихкод берутся из вариаций SKU.
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <label className="block space-y-1">

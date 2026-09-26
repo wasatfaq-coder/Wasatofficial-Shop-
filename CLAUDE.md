@@ -45,6 +45,8 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   характеристики, уход) — поля товара из блока «Структура карточки» (`AdminProductCardStructure`); пустой раздел
   покупателю не показывается (`src/utils/productAttributes.ts`, без шаблонов по категории). Удаление элементов
   в форме товара — через `ConfirmDialog` с `preview` удаляемого, как в корзине.
+  Отдельного поля «Материал» нет: `product.material` (фильтр материалов, поиск, накладные) заполняется из состава
+  (`compositionToMaterial`). Плотность вводится числом, «г/м²» добавляет `formatFabricDensity`.
 - `.neu-modal` имеет `transform` и `contain: paint`: полноэкранное окно (`fixed inset-0`) внутри него обрезается.
   Окна поверх панели администратора и формы товара выводить через `ModalPortal` (как `ConfirmDialog`).
   Вместо нативного `<select>` — `NeumorphicSelect`.

@@ -21,6 +21,31 @@ export const CARE_ICON_LABELS: Record<CareInstructionItem['icon'], string> = {
 
 const filled = (value?: string | null) => Boolean(value && value.trim());
 
+export const DENSITY_UNIT = 'г/м²';
+
+/** Number part of a stored density ("185 г/м²" → "185"); the admin types only the number */
+export function fabricDensityNumber(value?: string | null): string {
+  const match = (value ?? '').replace(',', '.').match(/\d+(?:\.\d+)?/);
+  return match ? match[0] : '';
+}
+
+/** Density as shown and stored: the number with «г/м²» */
+export function formatFabricDensity(value?: string | null): string {
+  const number = fabricDensityNumber(value);
+  return number ? `${number} ${DENSITY_UNIT}` : '';
+}
+
+/**
+ * Text form of the fiber composition ("75% хлопок, 25% шерсть"). Saved as product.material,
+ * which the catalog's material filter, search and invoices read.
+ */
+export function compositionToMaterial(items: FabricCompositionItem[]): string {
+  return items
+    .filter((item) => filled(item.fiber) && item.percentage > 0)
+    .map((item) => `${item.percentage}% ${item.fiber.trim().toLowerCase()}`)
+    .join(', ');
+}
+
 export function getProductFabricComposition(product: Product): FabricCompositionItem[] {
   return (product.fabricComposition ?? []).filter((item) => filled(item.fiber) && item.percentage > 0);
 }
@@ -40,8 +65,8 @@ export function getProductCertifications(product: Product): string[] {
 /** Characteristic rows of «Состав и ткань» that have a value (SKU codes are added by the screen) */
 export function getProductSpecRows(product: Product): ProductSpec[] {
   const rows: ProductSpec[] = [];
-  if (filled(product.material)) rows.push({ label: 'Материал', value: product.material.trim() });
-  if (filled(product.fabricDensity)) rows.push({ label: 'Плотность ткани', value: product.fabricDensity!.trim() });
+  const density = formatFabricDensity(product.fabricDensity);
+  if (density) rows.push({ label: 'Плотность ткани', value: density });
   if (filled(product.weave)) rows.push({ label: 'Тип переплетения', value: product.weave!.trim() });
   if (product.fit && FIT_LABELS[product.fit]) rows.push({ label: 'Покрой / посадка', value: FIT_LABELS[product.fit] });
   if (filled(product.countryOfOrigin)) rows.push({ label: 'Страна производства', value: product.countryOfOrigin!.trim() });
