@@ -178,13 +178,14 @@ export function subscribeToQuickPhrases(
       }
 
       const remote = snapshot.data() as Partial<QuickPhrasesData>;
+      // A list the admin emptied stays empty: the built-in phrases fill only missing fields
       const merged: QuickPhrasesData = {
-        global: Array.isArray(remote.global) && remote.global.length > 0 ? remote.global : DEFAULT_QUICK_PHRASES.global,
+        global: Array.isArray(remote.global) ? remote.global : DEFAULT_QUICK_PHRASES.global,
         byCategory: {
           ...DEFAULT_QUICK_PHRASES.byCategory,
           ...(remote.byCategory || {}),
         },
-        materials: Array.isArray(remote.materials) && remote.materials.length > 0 ? remote.materials : DEFAULT_QUICK_PHRASES.materials,
+        materials: Array.isArray(remote.materials) ? remote.materials : DEFAULT_QUICK_PHRASES.materials,
       };
 
       notifyListeners(merged);

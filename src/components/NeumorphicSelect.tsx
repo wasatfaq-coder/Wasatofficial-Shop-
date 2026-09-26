@@ -22,6 +22,8 @@ interface NeumorphicSelectProps {
   placement?: 'bottom' | 'top';
   prefix?: string;
   triggerLabel?: string;
+  /** Shown in the open menu when there are no options */
+  emptyText?: string;
 }
 
 export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
@@ -37,6 +39,7 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
   placement = 'bottom',
   prefix,
   triggerLabel,
+  emptyText = 'Список пуст',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -126,6 +129,9 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
             placement === 'top' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
           } ${menuClassName}`}
         >
+          {normalizedOptions.length === 0 && (
+            <p className="px-3 py-2.5 text-[11px] font-bold text-[#4E5C70] leading-snug">{emptyText}</p>
+          )}
           {normalizedOptions.map((opt) => {
             const isSelected = opt.value === value;
             return (
