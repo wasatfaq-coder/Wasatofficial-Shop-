@@ -7,13 +7,38 @@ import { encodeBarcode, type EncodedBarcode } from '../shared/barcode';
  * so the file matches what the admin sees. Bars go into the PDF as vector rectangles.
  */
 
-export type LabelTemplate = 'classic' | 'minimal' | 'price';
+export type LabelTemplate = 'classic' | 'minimal' | 'price' | 'size-price' | 'card' | 'tag' | 'sale';
 
-export const LABEL_TEMPLATES: { id: LabelTemplate; name: string; hint: string }[] = [
-  { id: 'classic', name: 'Классический', hint: 'Магазин, товар, артикул, штрихкод и цена' },
-  { id: 'minimal', name: 'Минимал', hint: 'Крупный размер и штрихкод на всю ширину' },
-  { id: 'price', name: 'Ценник', hint: 'Крупная цена, старая цена зачеркнута' },
+export type LabelTemplateGroup = 'basic' | 'extended' | 'sale';
+
+export interface LabelTemplateInfo {
+  id: LabelTemplate;
+  name: string;
+  hint: string;
+  group: LabelTemplateGroup;
+  /** Shows the size: one label per variation; otherwise one per article (all sizes share it) */
+  showsSize: boolean;
+  /** Needs an old price above the current one in the product card */
+  needsOldPrice?: boolean;
+}
+
+export const LABEL_TEMPLATES: LabelTemplateInfo[] = [
+  { id: 'classic', name: 'Классический', hint: 'Товар, цвет, артикул, штрихкод и цена', group: 'basic', showsSize: false },
+  { id: 'minimal', name: 'Минимал', hint: 'Штрихкод на всю ширину, артикул и цена внизу', group: 'basic', showsSize: false },
+  { id: 'price', name: 'Ценник', hint: 'Крупная цена, товар, артикул и штрихкод', group: 'basic', showsSize: false },
+  { id: 'size-price', name: 'Размер и цена', hint: 'Крупные размер и цена, состав, артикул', group: 'extended', showsSize: true },
+  { id: 'card', name: 'Карточка', hint: 'Полоса с размером и ценой, название, состав', group: 'extended', showsSize: true },
+  { id: 'tag', name: 'Бирка', hint: 'Все по центру: размер, цена, товар, состав', group: 'extended', showsSize: true },
+  { id: 'sale', name: 'Скидка', hint: 'Новая и зачеркнутая старая цена, процент скидки', group: 'sale', showsSize: false, needsOldPrice: true },
 ];
+
+export const LABEL_TEMPLATE_GROUPS: { id: LabelTemplateGroup; title: string }[] = [
+  { id: 'basic', title: 'Без размера' },
+  { id: 'extended', title: 'С размером и составом' },
+  { id: 'sale', title: 'Скидка' },
+];
+
+export const templateInfo = (id: LabelTemplate) => LABEL_TEMPLATES.find((t) => t.id === id) ?? LABEL_TEMPLATES[0];
 
 /** Offered when the store has no formats yet; saved only when the admin adds one */
 export const LABEL_FORMAT_PRESETS: Omit<LabelFormat, 'id'>[] = [
@@ -24,16 +49,22 @@ export const LABEL_FORMAT_PRESETS: Omit<LabelFormat, 'id'>[] = [
 
 export const LABEL_SIZE_LIMITS = { min: 20, max: 120 };
 
+/** Everything on a label comes from the catalog (product and its variation) */
 export interface LabelData {
-  storeName: string;
   title: string;
   color: string;
   size: string;
-  skuCode?: string;
+  /** Article without the size (MS-JK03-BLU) */
+  article: string;
+  /** Fabric composition text («75% хлопок, 25% шерсть») */
+  composition: string;
   barcode: string;
   price: number;
   oldPrice?: number;
 }
+
+export const hasSaleOldPrice = (data: Pick<LabelData, 'price' | 'oldPrice'>) =>
+  data.oldPrice !== undefined && data.oldPrice > data.price;
 
 export interface LabelOptions {
   showPrice: boolean;
@@ -54,6 +85,20 @@ interface TextItem {
   mono?: boolean;
   strike?: boolean;
   muted?: boolean;
+  /** White text on a filled box */
+  inverse?: boolean;
+}
+
+interface RectItem {
+  kind: 'rect';
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  radius: number;
+  /** Filled black box; otherwise an outline of `lineWidth` */
+  fill?: boolean;
+  lineWidth?: number;
 }
 
 interface LineItem {
@@ -74,7 +119,7 @@ interface BarsItem {
   modules: boolean[];
 }
 
-type LabelItem = TextItem | LineItem | BarsItem;
+type LabelItem = TextItem | LineItem | BarsItem | RectItem;
 
 export interface LabelLayout {
   widthMm: number;
@@ -150,7 +195,7 @@ function barsBlock(
 
 /**
  * Items of a label in mm. Sizes follow the label: a 58×40 label is the reference, bigger labels get
- * bigger text.
+ * bigger text. Short labels (h < 32 mm) drop secondary lines so the barcode stays readable.
  */
 export function layoutLabel(
   template: LabelTemplate,
@@ -165,95 +210,175 @@ export function layoutLabel(
   const m = Math.max(1.8, 2.4 * k);
   const cw = w - m * 2;
   const right = w - m;
+  const cx = w / 2;
   const items: LabelItem[] = [];
   const text = (t: Omit<TextItem, 'kind'>) => items.push({ kind: 'text', ...t });
   const line = (y: number) => items.push({ kind: 'line', x1: m, y1: y, x2: right, y2: y, width: 0.25 });
+  const rect = (r: Omit<RectItem, 'kind'>) => items.push({ kind: 'rect', ...r });
 
   const small = 2.3 * k;
   const titleSize = 3.1 * k;
   const digits = 2.2 * k;
-  const code = options.showBarcode ? encodeBarcode(data.barcode) : null;
-  const variant = [data.color && `Цвет: ${data.color}`, data.size && `Размер: ${data.size}`].filter(Boolean).join(' · ');
-  const hasOldPrice = data.oldPrice !== undefined && data.oldPrice > data.price;
-  // Short labels (43×25): one title line, no article line, so the barcode keeps a readable height
   const compact = h < 32;
+  const code = options.showBarcode ? encodeBarcode(data.barcode) : null;
+  const price = formatLabelPrice(data.price);
+  const article = data.article ? `Арт. ${data.article}` : '';
+  const composition = data.composition ? `Состав: ${data.composition}` : '';
+
+  /** Title lines from `y` (baseline of the first line); returns the next baseline */
+  const title = (y: number, lines: number, align: TextItem['align'] = 'left', size = titleSize) => {
+    const x = align === 'center' ? cx : m;
+    for (const l of wrap(data.title, cw, size, 700, measure, lines)) {
+      text({ text: l, x, y, size, weight: 700, align });
+      y += size * 1.15;
+    }
+    return y;
+  };
+  /** A small line of text; returns the next baseline */
+  const note = (y: number, value: string, opts: Partial<TextItem> = {}) => {
+    if (!value) return y;
+    const align = opts.align ?? 'left';
+    text({
+      text: fit(value, cw, small, opts.weight ?? 600, measure, opts.mono),
+      x: align === 'center' ? cx : align === 'right' ? right : m,
+      y,
+      size: small,
+      weight: opts.weight ?? 600,
+      align,
+      ...opts,
+    });
+    return y + small * 1.35;
+  };
+  /** Barcode from `top` to `bottom` */
+  const bars = (top: number, bottom: number) => {
+    if (code && bottom - top > 3) items.push(...barsBlock(code, m, top, cw, bottom - top, digits));
+  };
 
   if (template === 'classic') {
-    let y = m + small;
-    text({ text: fit(data.storeName.toUpperCase(), cw, small, 800, measure), x: m, y, size: small, weight: 800, align: 'left' });
-    y += small * 0.7;
-    line(y);
-    y += titleSize * 1.15;
-    for (const l of wrap(data.title, cw, titleSize, 700, measure, compact ? 1 : 2)) {
-      text({ text: l, x: m, y, size: titleSize, weight: 700, align: 'left' });
-      y += titleSize * 1.15;
-    }
-    y += small * 0.1;
-    if (variant) {
-      text({ text: fit(variant, cw, small, 600, measure), x: m, y, size: small, weight: 600, align: 'left' });
-      y += small * 1.35;
-    }
-    if (data.skuCode && !compact) {
-      text({ text: fit(`Арт. ${data.skuCode}`, cw, small, 500, measure, true), x: m, y, size: small, weight: 500, align: 'left', mono: true, muted: true });
-      y += small * 0.9;
-    }
+    let y = title(m + titleSize, compact ? 1 : 2);
+    const details = compact ? [data.color, data.article].filter(Boolean).join(' · ') : data.color ? `Цвет: ${data.color}` : '';
+    y = note(y - titleSize * 0.1, details);
+    if (!compact) y = note(y - small * 0.15, article, { mono: true, weight: 500, muted: true });
     const priceSize = 4.4 * k;
     const bottom = options.showPrice ? h - m - priceSize * 1.45 : h - m;
-    if (code) items.push(...barsBlock(code, m, y + 0.8 * k, cw, bottom - y - 1.6 * k, digits));
+    bars(y - small * 0.5, bottom - 1.2 * k);
     if (options.showPrice) {
       line(bottom + priceSize * 0.2);
       const py = h - m - 0.3;
       text({ text: 'Цена', x: m, y: py, size: small, weight: 600, align: 'left', muted: true });
-      text({ text: formatLabelPrice(data.price), x: right, y: py, size: priceSize, weight: 800, align: 'right' });
+      text({ text: price, x: right, y: py, size: priceSize, weight: 800, align: 'right' });
     }
   }
 
   if (template === 'minimal') {
-    const sizeBig = 5.2 * k;
-    const sizeWidth = data.size ? measure(data.size, sizeBig, 800) : 0;
-    let y = m + titleSize;
-    const titleWidth = cw - (sizeWidth ? sizeWidth + 2 * k : 0);
-    text({ text: fit(data.title, titleWidth, titleSize, 700, measure), x: m, y, size: titleSize, weight: 700, align: 'left' });
-    if (data.size) text({ text: data.size, x: right, y: m + sizeBig * 0.8, size: sizeBig, weight: 800, align: 'right' });
-    y += small * 1.4;
-    if (data.color) text({ text: fit(data.color, titleWidth, small, 600, measure), x: m, y, size: small, weight: 600, align: 'left', muted: true });
-    y += small * 0.8;
-    const footer = small * 1.6;
-    if (code) items.push(...barsBlock(code, m, y + 1 * k, cw, h - m - footer - y - 1.6 * k, digits));
+    let y = title(m + titleSize, 1);
+    y = note(y - titleSize * 0.1, data.color, { muted: true });
+    const footer = small * 1.7;
+    bars(y - small * 0.4, h - m - footer - 0.6 * k);
     const fy = h - m - 0.2;
-    if (data.skuCode) {
-      const skuWidth = options.showPrice ? cw * 0.55 : cw;
-      text({ text: fit(data.skuCode, skuWidth, small, 500, measure, true), x: m, y: fy, size: small, weight: 500, align: 'left', mono: true, muted: true });
+    const articleWidth = options.showPrice ? cw * 0.58 : cw;
+    if (data.article) {
+      text({ text: fit(data.article, articleWidth, small, 500, measure, true), x: m, y: fy, size: small, weight: 500, align: 'left', mono: true });
     }
-    if (options.showPrice) text({ text: formatLabelPrice(data.price), x: right, y: fy, size: small * 1.35, weight: 800, align: 'right' });
+    if (options.showPrice) text({ text: price, x: right, y: fy, size: small * 1.35, weight: 800, align: 'right' });
   }
 
   if (template === 'price') {
-    let y = m + small;
-    text({ text: fit(data.storeName.toUpperCase(), cw, small, 800, measure), x: m, y, size: small, weight: 800, align: 'left', muted: true });
-    y += titleSize * 1.3;
-    for (const l of wrap(data.title, cw, titleSize, 700, measure, compact ? 1 : 2)) {
-      text({ text: l, x: m, y, size: titleSize, weight: 700, align: 'left' });
-      y += titleSize * 1.15;
-    }
-    if (variant) {
-      text({ text: fit(variant, cw, small, 600, measure), x: m, y: y - titleSize * 0.15, size: small, weight: 600, align: 'left', muted: true });
-      y += small * 1.2;
-    }
+    let y = title(m + titleSize, 1);
+    y = note(y - titleSize * 0.1, [data.color, data.article].filter(Boolean).join(' · '), { muted: true });
     const barsHeight = code ? Math.min(h * 0.3, 12 * k) : 0;
     const barsTop = h - m - barsHeight;
     if (options.showPrice) {
-      // the price stays above the line over the barcode
-      const priceSize = Math.min(9 * k, (barsTop - 1.2 * k - y) * 0.85);
-      const py = y + priceSize * 0.78;
-      text({ text: formatLabelPrice(data.price), x: m, y: py, size: priceSize, weight: 800, align: 'left' });
-      if (hasOldPrice) {
-        text({ text: formatLabelPrice(data.oldPrice!), x: right, y: py, size: small * 1.3, weight: 600, align: 'right', strike: true, muted: true });
-      }
+      const priceSize = Math.min(9 * k, (barsTop - 1.2 * k - y + small) * 0.8);
+      text({ text: price, x: m, y: y - small + priceSize * 0.9, size: priceSize, weight: 800, align: 'left' });
     }
     if (code) {
       line(barsTop - 1.2 * k);
-      items.push(...barsBlock(code, m, barsTop, cw, barsHeight, digits));
+      bars(barsTop, h - m);
+    }
+  }
+
+  if (template === 'size-price') {
+    // Size in a box on the left, the price big on the right
+    const rowH = (compact ? 8.5 : 11) * k;
+    const sizeText = data.size || '—';
+    const sizeFont = rowH * 0.55;
+    const boxW = Math.max(rowH, measure(sizeText, sizeFont, 800) + 3 * k);
+    rect({ x: m, y: m, w: boxW, h: rowH, radius: 1.2 * k, lineWidth: 0.45 });
+    text({ text: sizeText, x: m + boxW / 2, y: m + rowH * 0.72, size: sizeFont, weight: 800, align: 'center' });
+    if (options.showPrice) {
+      const priceSize = Math.min(rowH * 0.62, ((cw - boxW - 2 * k) / Math.max(1, measure(price, 1, 800))) * 0.95);
+      text({ text: price, x: right, y: m + rowH * 0.72, size: priceSize, weight: 800, align: 'right' });
+    }
+    let y = m + rowH + titleSize * 1.05;
+    y = title(y, 1);
+    if (!compact) y = note(y - titleSize * 0.1, composition);
+    y = note(y - (compact ? titleSize * 0.1 : small * 0.15), article, { mono: true, weight: 500, muted: true });
+    bars(y - small * 0.5, h - m);
+  }
+
+  if (template === 'card') {
+    // Filled band: size on the left, price on the right
+    const bandH = (compact ? 7 : 9) * k;
+    rect({ x: 0, y: 0, w, h: bandH + m * 0.4, radius: 0, fill: true });
+    const by = (bandH + m * 0.4) * 0.7;
+    text({ text: data.size ? `Размер ${data.size}` : '', x: m, y: by, size: bandH * 0.42, weight: 800, align: 'left', inverse: true });
+    if (options.showPrice) text({ text: price, x: right, y: by, size: bandH * 0.56, weight: 800, align: 'right', inverse: true });
+    let y = bandH + m * 0.4 + titleSize * 1.25;
+    y = title(y, compact ? 1 : 2);
+    if (!compact) y = note(y - titleSize * 0.1, composition);
+    y = note(y - (compact ? titleSize * 0.1 : small * 0.15), article, { mono: true, weight: 500, muted: true });
+    bars(y - small * 0.5, h - m);
+  }
+
+  if (template === 'tag') {
+    // Centred column: size, price, name, composition, article, barcode
+    const barsHeight = code ? Math.min(h * (compact ? 0.36 : 0.3), 12 * k) : 0;
+    const sizeFont = (compact ? 5 : 7) * k;
+    let y = m + sizeFont * 0.8;
+    const sizePart = data.size || '';
+    if (options.showPrice && compact) {
+      // one row on a short label: «48 (M) · 7 990 ₽»
+      text({ text: fit([sizePart, price].filter(Boolean).join('  ·  '), cw, sizeFont, 800, measure), x: cx, y, size: sizeFont, weight: 800, align: 'center' });
+    } else {
+      if (sizePart) text({ text: fit(sizePart, cw, sizeFont, 800, measure), x: cx, y, size: sizeFont, weight: 800, align: 'center' });
+      if (options.showPrice) {
+        y += sizeFont * 0.95;
+        text({ text: price, x: cx, y, size: sizeFont * 0.8, weight: 800, align: 'center' });
+      }
+    }
+    y += titleSize * 1.4;
+    y = title(y, 1, 'center');
+    if (!compact) y = note(y - titleSize * 0.1, composition, { align: 'center' });
+    note(y - (compact ? titleSize * 0.1 : small * 0.15), article, { mono: true, weight: 500, muted: true, align: 'center' });
+    bars(h - m - barsHeight, h - m);
+  }
+
+  if (template === 'sale') {
+    let y = title(m + titleSize, 1);
+    y = note(y - titleSize * 0.1, [data.color, data.article].filter(Boolean).join(' · '), { muted: true });
+    const barsHeight = code ? Math.min(h * 0.3, 12 * k) : 0;
+    const barsTop = h - m - barsHeight;
+    const oldPrice = hasSaleOldPrice(data) ? data.oldPrice! : undefined;
+    const avail = barsTop - 1.2 * k - (y - small);
+    const priceSize = Math.min(8 * k, avail * 0.62);
+    const py = y - small + priceSize * 0.9;
+    text({ text: price, x: m, y: py, size: priceSize, weight: 800, align: 'left' });
+    if (oldPrice) {
+      const pct = `−${Math.round((1 - data.price / oldPrice) * 100)}%`;
+      const badgeSize = small * 1.25;
+      const badgeW = measure(pct, badgeSize, 800) + 2 * k;
+      const badgeH = badgeSize * 1.45;
+      // the badge sits above the struck-out old price, both right-aligned with the new price's baseline
+      const oldSize = small * 1.3;
+      const badgeTop = py - oldSize * 1.05 - badgeH - 0.6 * k;
+      rect({ x: right - badgeW, y: badgeTop, w: badgeW, h: badgeH, radius: 0.8 * k, fill: true });
+      text({ text: pct, x: right - badgeW / 2, y: badgeTop + badgeH * 0.74, size: badgeSize, weight: 800, align: 'center', inverse: true });
+      text({ text: formatLabelPrice(oldPrice), x: right, y: py, size: oldSize, weight: 600, align: 'right', strike: true, muted: true });
+    }
+    if (code) {
+      line(barsTop - 1.2 * k);
+      bars(barsTop, h - m);
     }
   }
 
@@ -290,9 +415,21 @@ export function drawLabel(
       ctx.moveTo(item.x1 * pxPerMm, item.y1 * pxPerMm);
       ctx.lineTo(item.x2 * pxPerMm, item.y2 * pxPerMm);
       ctx.stroke();
+    } else if (item.kind === 'rect') {
+      ctx.beginPath();
+      ctx.roundRect(item.x * pxPerMm, item.y * pxPerMm, item.w * pxPerMm, item.h * pxPerMm, item.radius * pxPerMm);
+      if (item.fill) {
+        ctx.fillStyle = '#000000';
+        ctx.fill();
+      } else {
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = Math.max(1, (item.lineWidth ?? 0.3) * pxPerMm);
+        ctx.stroke();
+      }
     } else if (item.kind === 'text') {
+      if (!item.text) continue;
       ctx.font = fontCss(item.size * pxPerMm, item.weight, item.mono);
-      ctx.fillStyle = item.muted ? '#3A3A3A' : '#000000';
+      ctx.fillStyle = item.inverse ? '#FFFFFF' : item.muted ? '#3A3A3A' : '#000000';
       ctx.textAlign = item.align;
       ctx.textBaseline = 'alphabetic';
       ctx.fillText(item.text, item.x * pxPerMm, item.y * pxPerMm);

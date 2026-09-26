@@ -49,7 +49,7 @@ import {
   getProductTotalStock,
   updateProductSkuStock,
 } from '../../utils/inventory';
-import { collectBarcodes } from '../../shared/barcode';
+import { articleGroupKey, collectBarcodes, unifyArticleBarcodes } from '../../shared/barcode';
 import { AdminBulkOperationsModal } from './AdminBulkOperationsModal';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { ModalPortal } from '../ModalPortal';
@@ -239,7 +239,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     });
 
     const duplicates: { code: string; conflictingProduct: string; kind: 'sku' | 'barcode' }[] = [];
-    const formBarcodes = new Set<string>();
+    // sizes of one colour share a barcode; another colour or product must not have it
+    const formBarcodes = new Map<string, string>(); // barcode -> colour
+    const reported = new Set<string>();
     formSkus.forEach((s) => {
       if (s.skuCode && otherSkusMap.has(s.skuCode.toUpperCase())) {
         duplicates.push({
@@ -250,14 +252,17 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       }
       const barcode = s.barcode?.trim();
       if (!barcode) return;
-      if (otherBarcodes.has(barcode) || formBarcodes.has(barcode)) {
+      const color = s.color.trim().toLowerCase();
+      const otherColor = formBarcodes.has(barcode) && formBarcodes.get(barcode) !== color;
+      if ((otherBarcodes.has(barcode) || otherColor) && !reported.has(barcode)) {
+        reported.add(barcode);
         duplicates.push({
           code: barcode,
-          conflictingProduct: otherBarcodes.get(barcode) || 'другой вариацией этого товара',
+          conflictingProduct: otherBarcodes.get(barcode) || 'другим цветом этого товара',
           kind: 'barcode',
         });
       }
-      formBarcodes.add(barcode);
+      if (!formBarcodes.has(barcode)) formBarcodes.set(barcode, color);
     });
 
     return {
@@ -268,6 +273,10 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
   // Every barcode in the catalog and in the form: new variations get codes that are not among them
   const takenBarcodes = () => collectBarcodes([...products, { id: 'form', skus: formSkus }]);
+  /** One barcode per article (product + colour): an existing colour keeps its code, a new colour gets a new one */
+  const barcodeForColor = (color: string, taken: Set<string>, skus: ProductSKU[] = formSkus) =>
+    skus.find((s) => s.color.trim().toLowerCase() === color.trim().toLowerCase() && s.barcode?.trim())?.barcode ??
+    generateBarcode(taken);
 
   // Selection Handlers
   const handleToggleSelectAll = () => {
@@ -367,13 +376,18 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     const newId = `prod-${Date.now()}`;
     const baseSkus = prod.skus && prod.skus.length > 0 ? prod.skus : generateDefaultSKUs(prod);
     const taken = collectBarcodes(products);
-    const clonedSkus: ProductSKU[] = baseSkus.map((s, idx) => ({
-      ...s,
-      id: `${newId}-${s.color}-${s.size}-${idx}`,
-      skuCode: s.skuCode ? `${s.skuCode}-CPY` : `WS-CPY-${newId.slice(-4)}-${s.size}`,
-      // A copy is a different product: it gets its own barcodes
-      barcode: generateBarcode(taken),
-    }));
+    const colorCodes = new Map<string, string>();
+    const clonedSkus: ProductSKU[] = baseSkus.map((s, idx) => {
+      // A copy is a different product: its own barcode per colour
+      const color = s.color.trim().toLowerCase();
+      if (!colorCodes.has(color)) colorCodes.set(color, generateBarcode(taken));
+      return {
+        ...s,
+        id: `${newId}-${s.color}-${s.size}-${idx}`,
+        skuCode: s.skuCode ? `${s.skuCode}-CPY` : `WS-CPY-${newId.slice(-4)}-${s.size}`,
+        barcode: colorCodes.get(color),
+      };
+    });
 
     const cloned: Product = {
       ...prod,
@@ -480,8 +494,13 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     const finalImages = formImages;
     const cardFields = cardStructureToProduct(formCard);
     // Variations without a barcode get a unique one on save
-    const taken = takenBarcodes();
-    const savedSkus = formSkus.map((s) => (s.barcode?.trim() ? s : { ...s, barcode: generateBarcode(taken) }));
+    // One barcode per colour for the whole size range; missing ones are issued
+    const savedId = editingProduct?.id ?? 'form';
+    const [savedDraft] = unifyArticleBarcodes(
+      [{ id: savedId, skus: formSkus }, ...products.filter((p) => p.id !== savedId)],
+      new Set(formSkus.map((s) => articleGroupKey(savedId, s.color)))
+    );
+    const savedSkus = savedDraft.skus ?? formSkus;
 
     if (editingProduct) {
       const updated: Product = {
@@ -648,14 +667,14 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     setCustomColorName('');
 
     const prodId = editingProduct ? editingProduct.id : `prod-${Date.now()}`;
-    const taken = takenBarcodes();
+    const colorBarcode = generateBarcode(takenBarcodes());
     const newSkus: ProductSKU[] = formSizes.map((size) => ({
       id: `${prodId}-${cleanName}-${size}`,
       color: cleanName,
       size,
       stock: 0,
       skuCode: generateSkuCode({ id: prodId, category: formCategory }, cleanName, size, 'WS'),
-      barcode: generateBarcode(taken),
+      barcode: colorBarcode,
     }));
 
     setFormSkus((prev) => [...prev, ...newSkus]);
@@ -710,7 +729,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       size,
       stock: 0,
       skuCode: generateSkuCode({ id: prodId, category: formCategory }, c.name, size, 'WS'),
-      barcode: generateBarcode(taken),
+      barcode: barcodeForColor(c.name, taken),
     }));
 
     setFormSkus((prev) => [...prev, ...newSkus]);
@@ -732,7 +751,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         size,
         stock: 0,
         skuCode: generateSkuCode({ id: prodId, category: formCategory }, c.name, size, 'WS'),
-        barcode: generateBarcode(taken),
+        barcode: barcodeForColor(c.name, taken),
       }));
 
       setFormSkus((prev) => [...prev, ...newSkus]);
@@ -795,13 +814,17 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   const handleRegenerateMissingCodes = () => {
     const prodId = editingProduct ? editingProduct.id : `prod-${Date.now()}`;
     const taken = takenBarcodes();
-    setFormSkus((prev) =>
-      prev.map((s) => ({
-        ...s,
-        skuCode: s.skuCode || generateSkuCode({ id: prodId, category: formCategory }, s.color, s.size, 'WS'),
-        barcode: s.barcode?.trim() ? s.barcode : generateBarcode(taken),
-      }))
-    );
+    setFormSkus((prev) => {
+      const next: ProductSKU[] = [];
+      for (const s of prev) {
+        next.push({
+          ...s,
+          skuCode: s.skuCode || generateSkuCode({ id: prodId, category: formCategory }, s.color, s.size, 'WS'),
+          barcode: s.barcode?.trim() ? s.barcode : barcodeForColor(s.color, taken, [...prev, ...next]),
+        });
+      }
+      return next;
+    });
     onShowToast('Артикулы и штрихкоды SKU синхронизированы', 'success');
   };
 

@@ -14,7 +14,7 @@ export interface EncodedBarcode {
   text: string;
 }
 
-export type BarcodeProblem = 'missing' | 'duplicate' | 'invalid';
+export type BarcodeProblem = 'missing' | 'duplicate' | 'invalid' | 'mismatch';
 
 const isDigits = (value: string) => /^\d+$/.test(value);
 
@@ -101,7 +101,7 @@ export function encodeCode128(text: string): boolean[] {
  * Why a code can't go on a label: missing, a 12/13-digit number with a wrong check digit, or characters a
  * scanner can't read. Other codes are printed as Code128.
  */
-export function barcodeFormatProblem(code: string | undefined | null): Exclude<BarcodeProblem, 'duplicate'> | null {
+export function barcodeFormatProblem(code: string | undefined | null): 'missing' | 'invalid' | null {
   const value = (code ?? '').trim();
   if (!value) return 'missing';
   if (isDigits(value) && (value.length === 12 || value.length === 13)) return asEan13(value) ? null : 'invalid';
@@ -134,10 +134,47 @@ export function generateInternalEan13(taken: Set<string>, random: () => number =
 
 interface BarcodeOwner {
   id: string;
-  skus?: { id: string; barcode?: string }[];
+  skus?: { id: string; barcode?: string; color?: string; size?: string; skuCode?: string }[];
 }
 
 export const skuKey = (productId: string, skuId: string) => `${productId}::${skuId}`;
+
+/**
+ * An article is a product in one colour: all its sizes share the article code (MS-JK03-BLU) and one barcode.
+ */
+export const articleGroupKey = (productId: string, color: string | undefined) =>
+  `${productId}::${(color ?? '').trim().toLowerCase()}`;
+
+const normSize = (value: string) => value.toUpperCase().replace(/[\s()]/g, '');
+
+/**
+ * Article code without the size: the common «-»-separated prefix of the colour's SKU codes
+ * (MS-JK03-BLU-M / -L → MS-JK03-BLU). A single size drops its last segment when it is the size.
+ */
+export function articleCode(product: BarcodeOwner, color: string | undefined): string {
+  const group = (product.skus ?? []).filter(
+    (s) => articleGroupKey(product.id, s.color) === articleGroupKey(product.id, color) && s.skuCode?.trim()
+  );
+  if (group.length === 0) return '';
+  const codes = group.map((s) => s.skuCode!.trim());
+  if (codes.length > 1) {
+    const parts = codes.map((c) => c.split('-'));
+    const common: string[] = [];
+    for (let i = 0; i < parts[0].length; i++) {
+      if (parts.every((p) => p[i] === parts[0][i])) common.push(parts[0][i]);
+      else break;
+    }
+    // at least «prefix-model», otherwise the codes are not one family
+    if (common.length >= 2 && common.length < parts[0].length) return common.join('-');
+  }
+  const segments = codes[0].split('-');
+  const size = group[0].size ?? '';
+  const last = normSize(segments[segments.length - 1]);
+  const sizeFull = normSize(size);
+  const sizeFirst = normSize(size.trim().split(/[\s(]/)[0] ?? '');
+  if (segments.length > 2 && last && (last === sizeFull || last === sizeFirst)) return segments.slice(0, -1).join('-');
+  return codes[0];
+}
 
 /** Every barcode in the catalog (to keep new ones unique) */
 export function collectBarcodes(products: BarcodeOwner[]): Set<string> {
@@ -147,24 +184,73 @@ export function collectBarcodes(products: BarcodeOwner[]): Set<string> {
 }
 
 /**
- * Problems per SKU (key: skuKey). For a repeated code the first SKU in catalog order keeps it and the
- * later ones are «duplicate».
+ * Problems per SKU (key: skuKey). Sizes of one article must share one code («mismatch» otherwise); a code
+ * of another article is «duplicate» — the first article in catalog order keeps it.
  */
 export function findBarcodeProblems(products: BarcodeOwner[]): Map<string, BarcodeProblem> {
   const problems = new Map<string, BarcodeProblem>();
-  const seen = new Set<string>();
+  const owner = new Map<string, string>(); // code → article group that keeps it
   for (const p of products) {
+    const groups = new Map<string, { id: string; barcode?: string }[]>();
     for (const s of p.skus ?? []) {
-      const key = skuKey(p.id, s.id);
-      const formatProblem = barcodeFormatProblem(s.barcode);
-      if (formatProblem) {
-        problems.set(key, formatProblem);
-        continue;
+      const key = articleGroupKey(p.id, s.color);
+      groups.set(key, [...(groups.get(key) ?? []), s]);
+    }
+    for (const [groupKey, skus] of groups) {
+      const codes = new Set(skus.map((s) => s.barcode?.trim()).filter(Boolean));
+      for (const s of skus) {
+        const key = skuKey(p.id, s.id);
+        const formatProblem = barcodeFormatProblem(s.barcode);
+        if (formatProblem) {
+          problems.set(key, formatProblem);
+          continue;
+        }
+        const code = s.barcode!.trim();
+        if (codes.size > 1) problems.set(key, 'mismatch');
+        else if (owner.has(code) && owner.get(code) !== groupKey) problems.set(key, 'duplicate');
+        else owner.set(code, groupKey);
       }
-      const code = s.barcode!.trim();
-      if (seen.has(code)) problems.set(key, 'duplicate');
-      else seen.add(code);
     }
   }
   return problems;
+}
+
+/**
+ * One barcode per article for the given groups (all when omitted): the group's first valid code that no
+ * other article uses, otherwise a new internal EAN-13.
+ */
+export function unifyArticleBarcodes<T extends BarcodeOwner>(products: T[], groupKeys?: Set<string>): T[] {
+  // codes of the articles that are not being changed stay theirs
+  const usedByOthers = new Map<string, string>();
+  for (const p of products)
+    for (const s of p.skus ?? []) {
+      const group = articleGroupKey(p.id, s.color);
+      const code = s.barcode?.trim();
+      if (code && groupKeys && !groupKeys.has(group) && !usedByOthers.has(code)) usedByOthers.set(code, group);
+    }
+  const taken = collectBarcodes(products);
+  const chosen = new Map<string, string>();
+  for (const p of products)
+    for (const s of p.skus ?? []) {
+      const group = articleGroupKey(p.id, s.color);
+      if ((groupKeys && !groupKeys.has(group)) || chosen.has(group)) continue;
+      const candidates = (p.skus ?? [])
+        .filter((x) => articleGroupKey(p.id, x.color) === group)
+        .map((x) => x.barcode?.trim() ?? '')
+        .filter((code) => code && !barcodeFormatProblem(code));
+      const reusable = candidates.find(
+        (code) => !usedByOthers.has(code) && ![...chosen.values()].includes(code)
+      );
+      chosen.set(group, reusable ?? generateInternalEan13(taken));
+    }
+  return products.map((p) => {
+    if (!p.skus?.some((s) => chosen.has(articleGroupKey(p.id, s.color)))) return p;
+    return {
+      ...p,
+      skus: p.skus.map((s) => {
+        const code = chosen.get(articleGroupKey(p.id, s.color));
+        return code ? { ...s, barcode: code } : s;
+      }),
+    };
+  });
 }
