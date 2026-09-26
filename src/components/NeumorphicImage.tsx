@@ -29,12 +29,15 @@ export const NeumorphicImage: React.FC<NeumorphicImageProps> = ({
     setIsLoaded(false);
   }, [src]);
 
+  // No photo at all: the placeholder right away instead of an endless loading shimmer
+  const showFallback = hasError || !src;
+
   return (
     <div
       className={`relative overflow-hidden bg-[#D8DFE8] flex items-center justify-center ${containerClassName}`}
     >
       {/* Neumorphic Static/Lightweight Shimmer Placeholder while image loads */}
-      {!isLoaded && !hasError && (
+      {!isLoaded && !showFallback && (
         <div
           className="absolute inset-0 bg-[#D8DFE8] overflow-hidden flex items-center justify-center pointer-events-none z-0"
           aria-hidden="true"
@@ -44,7 +47,7 @@ export const NeumorphicImage: React.FC<NeumorphicImageProps> = ({
       )}
 
       {/* Render Image with native browser lazy loading and asynchronous decoding */}
-      {!hasError && src && (
+      {!showFallback && (
         <img
           src={src}
           alt={alt}
@@ -62,7 +65,7 @@ export const NeumorphicImage: React.FC<NeumorphicImageProps> = ({
       )}
 
       {/* Fallback Single Neutral Gray Placeholder */}
-      {hasError && (
+      {showFallback && (
         <div className="flex flex-col items-center justify-center p-3 text-[#4E5C70] select-none w-full h-full bg-[#D8DFE8]">
           <span className="text-[11px] font-semibold text-[#4E5C70] text-center line-clamp-1 px-1">
             {alt || currentStoreName()}

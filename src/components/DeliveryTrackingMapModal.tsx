@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   X,
   MapPin,
@@ -10,26 +10,15 @@ import {
   CheckCircle,
   Copy,
   AlertCircle,
-  ShieldCheck,
-  Package,
-  Layers,
   ZoomIn,
   ZoomOut,
-  Compass,
-  Sparkles,
-  Play,
-  Pause,
-  Mail,
-  Store,
 } from 'lucide-react';
 import { Order, DeliveryStage } from '../types';
 import { copyToClipboard } from '../utils/clipboard';
 import {
-  getDefaultDeliveryStages,
   getSynchronizedDeliveryStages,
   isTransportCompanyDelivery,
   isRussianPostDelivery,
-  isCourierDelivery,
   isPickupDelivery,
 } from '../utils/deliveryStages';
 import { motion, AnimatePresence } from 'motion/react';
@@ -105,13 +94,6 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
   const deliveryStages: DeliveryStage[] = React.useMemo(() => {
     return order ? getSynchronizedDeliveryStages(order) : [];
   }, [order]);
-
-  const deliveredStage = deliveryStages.find(
-    (s) => s.id === 'stage-delivered' || s.title.toLowerCase().includes('вручен') || s.title.toLowerCase().includes('доставлен')
-  );
-  const transitStage = deliveryStages.find(
-    (s) => s.id === 'stage-transit' || s.title.toLowerCase().includes('курьер') || s.title.toLowerCase().includes('пути')
-  );
 
   const isDelivered = order?.status === 'delivered';
   const isInTransit =
@@ -442,7 +424,6 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
         {(() => {
           const isPost = isRussianPostDelivery(order.deliveryMethod, order.trackingCompany);
           const isPickup = isPickupDelivery(order.deliveryMethod);
-          const isCourier = isCourierDelivery(order.deliveryMethod, order.trackingCompany);
           const isExpress = (order.deliveryMethod || '').toLowerCase().includes('экспресс') || (order.deliveryMethod || '').toLowerCase().includes('express');
 
           if (isPost) {
@@ -593,7 +574,6 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
             {deliveryStages.map((step, idx) => {
               const isCompleted = step.status === 'completed';
               const isActive = step.status === 'active';
-              const isPending = step.status === 'pending';
 
               return (
                 <div

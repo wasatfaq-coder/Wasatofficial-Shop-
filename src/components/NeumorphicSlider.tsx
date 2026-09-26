@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import { Minus, Plus } from 'lucide-react';
 
 interface NeumorphicSliderProps {

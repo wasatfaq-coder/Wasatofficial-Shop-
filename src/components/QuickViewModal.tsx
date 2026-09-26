@@ -6,6 +6,7 @@ import { SizeCalculatorModal } from './SizeCalculatorModal';
 import { RatingBadge } from './RatingBadge';
 import { AnimatedFavoriteButton } from './AnimatedFavoriteButton';
 import { getProductRating } from '../utils/productRating';
+import { productImage } from '../utils/productImage';
 
 interface QuickViewModalProps {
   product: Product | null;
@@ -98,7 +99,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
               {/* Main Image Box */}
               <div className="relative w-full aspect-[4/5] rounded-2xl overflow-hidden flex items-center justify-center">
                 <img
-                  src={product.images?.[selectedImageIndex] || product.images?.[0] || 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80'}
+                  src={productImage(product, selectedImageIndex)}
                   alt={product.title}
                   loading="lazy"
                   decoding="async"

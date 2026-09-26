@@ -8,15 +8,10 @@ import {
   Mail,
   MapPin,
   ShoppingBag,
-  Sparkles,
   ChevronRight,
   X,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
   Truck,
   Package,
-  Calendar,
   MessageSquare,
   Edit3,
   Save,
@@ -24,16 +19,14 @@ import {
   UserCheck,
   CreditCard,
   Ruler,
-  ExternalLink,
   Copy,
   Check,
   DollarSign,
-  Layers,
   ArrowUpDown,
   Trash2,
   RefreshCw,
 } from 'lucide-react';
-import { UserProfile, Order, CustomerRecord, BodyMeasurements } from '../../types';
+import { UserProfile, Order, CustomerRecord } from '../../types';
 import { updateCustomerNotesInFirestore, deleteUserFromFirestore } from '../../utils/firebaseSync';
 import { downloadCSV } from '../../utils/csvHelpers';
 import { copyToClipboard } from '../../utils/clipboard';
@@ -41,7 +34,6 @@ import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
 import { NeumorphicSelect, NeumorphicSelectOption } from '../NeumorphicSelect';
 import { ORDER_STATUS_LABELS } from '../../utils/deliveryStages';
 import { formatAddress } from '../../utils/addressFormat';
-import { currentStoreName } from '../../utils/storeContacts';
 
 interface AdminCustomersTabProps {
   users: UserProfile[];

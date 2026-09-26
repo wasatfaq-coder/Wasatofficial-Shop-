@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Heart,
   Minus,
   Plus,
   ShoppingBag,
@@ -13,18 +12,10 @@ import {
   ListFilter,
   Sparkles,
   ShieldCheck,
-  Shirt,
-  Ruler,
   X,
   Info,
-  Package,
-  AlertTriangle,
-  QrCode,
   ZoomIn,
-  CheckCircle2,
   Layers,
-  Leaf,
-  Maximize2,
 } from 'lucide-react';
 import { formatDays } from '../utils/pluralize';
 import { Product, ActiveTab, UserProfile, BodyMeasurements, CartItem } from '../types';
@@ -36,7 +27,7 @@ import { ProductImageZoomModal, ANGLE_LABELS } from '../components/ProductImageZ
 import { QuickOrderModal } from '../components/QuickOrderModal';
 import { AnimatedFavoriteButton } from '../components/AnimatedFavoriteButton';
 import { ProductReviewsSection } from '../components/ProductReviewsSection';
-import { getVariantStock, getProductSKU, getProductTotalStock, getOrderableStock } from '../utils/inventory';
+import { getVariantStock, getProductSKU, getOrderableStock } from '../utils/inventory';
 import {
   getProductFabricComposition,
   getProductCareInstructions,
@@ -46,6 +37,7 @@ import {
 } from '../utils/productAttributes';
 import { photoBadgeClass } from '../utils/productBadge';
 import { getProductRating } from '../utils/productRating';
+import { productImage } from '../utils/productImage';
 
 interface ProductDetailScreenProps {
   product: Product;
@@ -144,7 +136,6 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     { id: 'care' as const, label: 'Уход и стирка', icon: Sparkles, show: cardCare.length > 0 },
   ].filter((tab) => tab.show);
   const activeDetailTab = detailTabs.some((tab) => tab.id === detailTab) ? detailTab : detailTabs[0]?.id;
-  const totalStockAcrossAll = getProductTotalStock(product);
   // Units that can be ordered: the stock, or a preorder limit for a sold-out variant
   const orderableStock = getOrderableStock(product, selectedColor, selectedSize, preorderMode);
   const isPreorder = currentStock === 0 && orderableStock > 0;
@@ -158,7 +149,6 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     }
   }, [selectedColor, selectedSize, orderableStock]);
 
-  const selectedColorObj = product?.colors?.find((c) => c.name === selectedColor) || product?.colors?.[0] || { name: 'Основной', hex: '#2D3A4E' };
 
   const handleNextImage = () => {
     if (!product?.images?.length) return;
@@ -236,7 +226,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           className="relative w-full aspect-[3/4] sm:aspect-[4/5] rounded-2xl overflow-hidden select-none group/detailimg cursor-zoom-in"
         >
           <NeumorphicImage
-            src={product?.images?.[selectedImageIndex] || product?.images?.[0] || 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80'}
+            src={productImage(product, selectedImageIndex)}
             alt={product?.title || ''}
             containerClassName="w-full h-full rounded-2xl"
             className="w-full h-full object-cover object-top transition-transform duration-500 group-hover/detailimg:scale-[1.03]"

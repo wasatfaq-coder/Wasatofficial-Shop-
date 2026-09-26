@@ -6,7 +6,6 @@ import {
   Award,
   BarChart3,
   LineChart as LineChartIcon,
-  Download,
   Loader2,
   Tag,
   Flame,

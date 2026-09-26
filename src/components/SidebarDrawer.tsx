@@ -7,12 +7,9 @@ import {
   Heart,
   User,
   Headphones,
-  Info,
   ChevronRight,
-  PhoneCall,
   Ruler,
   MessageSquare,
-  Sparkles,
   Building2,
   SlidersHorizontal,
 } from 'lucide-react';

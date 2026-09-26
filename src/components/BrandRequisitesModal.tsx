@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   X,
   Building2,
-  Phone,
   Mail,
   Send,
   MessageSquare,

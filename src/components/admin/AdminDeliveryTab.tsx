@@ -15,13 +15,10 @@ import {
   Clock,
   Phone,
   Info,
-  ShieldCheck,
   CheckCircle2,
   AlertCircle,
   Search,
   Sparkles,
-  Layers,
-  ArrowRight,
 } from 'lucide-react';
 import { DeliveryMethod, PickupPoint, StorefrontSettings } from '../../types';
 
@@ -352,7 +349,6 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
   };
 
   const activeMethodsCount = deliveryMethods.filter((m) => m.isActive !== false).length;
-  const activePointsCount = pickupPoints.filter((p) => p.isActive !== false).length;
 
   return (
     <div className="space-y-4">

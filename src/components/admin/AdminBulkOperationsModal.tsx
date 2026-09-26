@@ -1,23 +1,10 @@
 import React, { useState } from 'react';
 import { ModalPortal } from '../ModalPortal';
-import {
-  X,
-  Tag,
-  DollarSign,
-  Layers,
-  Sparkles,
-  Check,
-  Percent,
-  ArrowRight,
-  TrendingDown,
-  TrendingUp,
-  RotateCcw,
-  CheckCheck,
-  AlertCircle,
-} from 'lucide-react';
+import { X, Tag, DollarSign, Layers, Sparkles, Check, ArrowRight, RotateCcw, CheckCheck } from 'lucide-react';
 import { Product, StoreCategory } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { NotConfigured } from '../NotConfigured';
+import { productImage } from '../../utils/productImage';
 
 interface AdminBulkOperationsModalProps {
   isOpen: boolean;
@@ -506,7 +493,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <img
-                      src={p.images?.[0] || 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=100'}
+                      src={productImage(p)}
                       alt={p.title}
                       className="w-8 h-8 rounded-lg object-cover shrink-0 neu-flat"
                     />

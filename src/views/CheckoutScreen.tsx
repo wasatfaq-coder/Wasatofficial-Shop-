@@ -18,7 +18,6 @@ import {
   ShoppingBag,
   AlertCircle,
   Clock,
-  Info,
   Sparkles,
   Check,
   Zap,
@@ -31,11 +30,13 @@ import {
   DEFAULT_FREE_DELIVERY_THRESHOLD,
   calcOrderTotals,
   calcPromoDiscount,
+  toPricingLine,
   calcSubtotal,
   getAvailableDeliveryMethods,
 } from '../shared/orderPricing';
 import { currentStoreName } from '../utils/storeContacts';
 import { NotConfigured } from '../components/NotConfigured';
+import { productImage } from '../utils/productImage';
 
 interface CheckoutScreenProps {
   cartItems: CartItem[];
@@ -73,11 +74,6 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<{
-    house?: boolean;
-    entrance?: boolean;
-    intercom?: boolean;
-  }>({});
   // Never prefill made-up contact or address data: a guest could submit it unnoticed
   const [name, setName] = useState(userProfile?.name || '');
   const [phone, setPhone] = useState(userProfile?.phone || '');
@@ -121,7 +117,6 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
     setAddrIntercom(saved.intercom || '');
     if (saved.house?.trim() && saved.entrance?.trim() && saved.intercom?.trim()) {
       setValidationError(null);
-      setFieldErrors({});
     }
   };
 
@@ -199,12 +194,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   const noPaymentMethods = activePaymentMethods.length === 0;
 
   // Calculations (shared with the server-side order validation)
-  const pricingLines = cartItems.map((item) => ({
-    productId: item.product.id,
-    category: item.product.category,
-    price: item.product.price,
-    quantity: item.quantity,
-  }));
+  const pricingLines = cartItems.map(toPricingLine);
   const rawSubtotal = calcSubtotal(pricingLines);
   const discountAmount = calcPromoDiscount(pricingLines, appliedPromo);
 
@@ -288,28 +278,23 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
     // Validate courier delivery required fields (street, house, entrance, intercom)
     if (isCourierSelected) {
       const missing: string[] = [];
-      const errorsObj: { house?: boolean; entrance?: boolean; intercom?: boolean } = {};
 
       if (!addrStreet.trim()) {
         missing.push('улица');
       }
       if (!addrHouse || !addrHouse.trim()) {
         missing.push('номер дома');
-        errorsObj.house = true;
       }
       if (!addrEntrance || !addrEntrance.trim()) {
         missing.push('подъезд');
-        errorsObj.entrance = true;
       }
       if (!addrIntercom || !addrIntercom.trim()) {
         missing.push('код домофона');
-        errorsObj.intercom = true;
       }
 
       if (missing.length > 0) {
         const errorText = `Для курьерской доставки не заполнены обязательные поля: ${missing.join(', ')}. Пожалуйста, укажите их для курьера.`;
         setValidationError(errorText);
-        setFieldErrors(errorsObj);
         if (onShowToast) {
           onShowToast(`Заполните данные для курьера: ${missing.join(', ')}`, 'error');
         }
@@ -319,7 +304,6 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
       if (!addrStreet.trim() || !addrHouse || !addrHouse.trim()) {
         const errorText = 'Для отправки Почтой России укажите улицу и номер дома получателя.';
         setValidationError(errorText);
-        setFieldErrors({ house: true });
         if (onShowToast) {
           onShowToast('Укажите улицу и номер дома для Почты России', 'error');
         }
@@ -328,7 +312,6 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
     }
 
     setValidationError(null);
-    setFieldErrors({});
     setIsSubmitting(true);
     // The order keeps the method's name; «при получении» in it sets the «оплата при получении» status
     const paymentTitle = selectedPayment?.title.trim() ?? '';
@@ -436,7 +419,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
             <div key={item.id} className="flex items-center gap-3">
               <div className="w-12 h-12 aspect-square rounded-2xl overflow-hidden neu-inset p-1 shrink-0 flex items-center justify-center">
                 <img
-                  src={item.product?.images?.[0] || 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80'}
+                  src={productImage(item.product)}
                   alt={item.product?.title || ''}
                   className="w-full h-full object-cover rounded-xl"
                 />
@@ -1233,7 +1216,6 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           setAddrApartment(updated.apartment || '');
           setAddrIntercom(updated.intercom || '');
           setValidationError(null);
-          setFieldErrors({});
         }}
       />
     </div>

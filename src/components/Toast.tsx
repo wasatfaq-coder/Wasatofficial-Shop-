@@ -7,11 +7,9 @@ import {
   Truck,
   Package,
   Store,
-  Check,
   Bell,
   Sparkles,
   ArrowRight,
-  ExternalLink,
 } from 'lucide-react';
 import { Order } from '../types';
 

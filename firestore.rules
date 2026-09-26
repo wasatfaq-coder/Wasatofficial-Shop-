@@ -201,6 +201,16 @@ service cloud.firestore {
         && request.resource.data.get('isInternalNote', false) == false
         && request.resource.data.text is string
         && request.resource.data.text.size() <= 5000
+        && request.resource.data.id == messageId
+        // фото — только загруженное файлом (data:image), не ссылка на чужой сервер:
+        // внешний адрес открылся бы у сотрудника и выдал бы его IP
+        && (!('imageUrl' in request.resource.data)
+          || (request.resource.data.imageUrl is string
+            && request.resource.data.imageUrl.size() <= 900000
+            && request.resource.data.imageUrl.matches('^data:image/(png|jpe?g|webp|gif);base64,.*')))
+        && isOptionalText(request.resource.data, 'threadName', 200)
+        && isOptionalText(request.resource.data, 'timestamp', 20)
+        && isOptionalText(request.resource.data, 'fileName', 200)
         // без sentAt (старая версия сайта) сообщение уходит, но править его потом нельзя
         && request.resource.data.get('sentAt', request.time) == request.time
       );

@@ -10,25 +10,15 @@ import {
   Trash2,
   Check,
   X,
-  ExternalLink,
   Pencil,
   Sparkles,
-  Layers,
   ArrowUpRight,
-  Eye,
   Calendar,
   Clock,
   Smartphone,
   Monitor,
-  CheckCircle2,
-  AlertTriangle,
-  Play,
-  ArrowUp,
-  ArrowDown,
-  ArrowUpDown,
   ChevronUp,
   ChevronDown,
-  GripVertical,
 } from 'lucide-react';
 import { BannerSlide, Product, PromoCode, StoreCategory } from '../../types';
 import { NeumorphicSelect } from '../NeumorphicSelect';
@@ -247,10 +237,12 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
       return;
     }
 
-    const finalImage =
-      mobileImage.trim() ||
-      image.trim() ||
-      'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&q=80&w=800';
+    // no invented picture: a banner without an image is not saved
+    const finalImage = mobileImage.trim() || image.trim();
+    if (!finalImage) {
+      onShowToast('Добавьте изображение баннера или выберите готовое', 'error');
+      return;
+    }
 
     const finalDesktop =
       desktopImage.trim() ||

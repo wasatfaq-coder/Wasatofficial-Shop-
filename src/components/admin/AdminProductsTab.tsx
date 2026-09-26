@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { pluralRu } from '../../utils/pluralize';
 import {
@@ -19,17 +19,11 @@ import {
   Eye,
   Copy,
   ChevronDown,
-  RotateCcw,
   Boxes,
-  Barcode,
-  HelpCircle,
   FileSpreadsheet,
-  FileText,
   Image as ImageIcon,
   ImagePlus,
   DollarSign,
-  Percent,
-  Award,
   Minus,
   RefreshCw,
   ArrowLeft,
@@ -47,7 +41,6 @@ import {
   generateSkuCode,
   generateBarcode,
   getProductTotalStock,
-  updateProductSkuStock,
 } from '../../utils/inventory';
 import { articleGroupKey, collectBarcodes, unifyArticleBarcodes } from '../../shared/barcode';
 import { AdminBulkOperationsModal } from './AdminBulkOperationsModal';
@@ -64,6 +57,7 @@ import {
 } from './AdminProductCardStructure';
 import { categoryIcon } from '../../utils/categories';
 import type { StoreCategory } from '../../types';
+import { productImage } from '../../utils/productImage';
 
 interface AdminProductsTabProps {
   /** Admin → «Категории»: the only category list for products */
@@ -164,7 +158,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   const [customSizeInput, setCustomSizeInput] = useState('');
   const [customColorName, setCustomColorName] = useState('');
   const [customColorHex, setCustomColorHex] = useState('#2D3A4E');
-  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
 
   // Filtered Products
   const filteredProducts = useMemo(() => {
@@ -1178,7 +1171,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   {/* Product Thumbnail */}
                   <div className="relative w-12 h-14 sm:w-14 sm:h-14 rounded-xl overflow-hidden neu-inset shrink-0 bg-slate-200">
                     <img
-                      src={prod.images?.[0] || 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80'}
+                      src={productImage(prod)}
                       alt={prod.title}
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"

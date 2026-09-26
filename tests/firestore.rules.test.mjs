@@ -323,6 +323,11 @@ describe('chat', () => {
     );
     await assertFails(setDoc(doc(db, 'chat_messages/m7'), msg('m7', { threadId: 'alice', hiddenForStaff: true })));
     await assertSucceeds(setDoc(doc(db, 'chat_messages/m8'), msg('m8', { threadId: 'alice', imageUrl: 'data:image/png;base64,AA', threadName: 'Алиса', timestamp: '12:00' })));
+    // photo only as an uploaded data:image, not a link to someone else's server
+    await assertFails(setDoc(doc(db, 'chat_messages/m9'), msg('m9', { threadId: 'alice', imageUrl: 'https://evil.example/pixel.png' })));
+    await assertFails(setDoc(doc(db, 'chat_messages/m10'), msg('m10', { threadId: 'alice', imageUrl: 'data:text/html;base64,AA' })));
+    await assertFails(setDoc(doc(db, 'chat_messages/m11'), msg('m11', { threadId: 'alice', threadName: 'x'.repeat(201) })));
+    await assertFails(setDoc(doc(db, 'chat_messages/m12'), msg('other-id', { threadId: 'alice' })));
   });
 
   test('customer message takes the server send time; without it the message cannot be changed', async () => {

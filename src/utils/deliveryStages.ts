@@ -184,7 +184,6 @@ export function getSynchronizedDeliveryStages(
   const isPost = isRussianPostDelivery(order.deliveryMethod, order.trackingCompany);
   const isTK = isTransportCompanyDelivery(order.deliveryMethod, order.trackingCompany);
   const isPickup = isPickupDelivery(order.deliveryMethod);
-  const isCourier = isCourierDelivery(order.deliveryMethod, order.trackingCompany);
   const isExpress = (order.deliveryMethod || '').toLowerCase().includes('экспресс') || (order.deliveryMethod || '').toLowerCase().includes('express');
   const hasTrack = isTK && !!order.trackingNumber;
 
@@ -602,7 +601,6 @@ export function getDefaultHistorySteps(order: {
   const isPost = isRussianPostDelivery(order.deliveryMethod, order.trackingCompany);
   const isTK = isTransportCompanyDelivery(order.deliveryMethod, order.trackingCompany);
   const isPickup = isPickupDelivery(order.deliveryMethod);
-  const isCourier = isCourierDelivery(order.deliveryMethod, order.trackingCompany);
   const isExpress = (order.deliveryMethod || '').toLowerCase().includes('экспресс') || (order.deliveryMethod || '').toLowerCase().includes('express');
 
   const transitTitle = isPost

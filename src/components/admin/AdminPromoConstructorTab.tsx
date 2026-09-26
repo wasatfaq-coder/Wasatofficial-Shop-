@@ -5,32 +5,26 @@ import {
   Plus,
   Trash2,
   Calendar,
-  Clock,
   Users,
   Layers,
   Sparkles,
   Check,
   X,
   Copy,
-  AlertCircle,
   Pencil,
-  Filter,
   DollarSign,
   Percent,
   Share2,
   Wand2,
-  Download,
   CheckCircle2,
   TrendingUp,
-  FileSpreadsheet,
-  Package,
   Search,
   Shirt,
-  ShoppingBag,
 } from 'lucide-react';
 import { PromoCode, Product, StoreCategory } from '../../types';
 import { copyToClipboard } from '../../utils/clipboard';
 import { NotConfigured } from '../NotConfigured';
+import { productImage } from '../../utils/productImage';
 
 interface AdminPromoConstructorTabProps {
   promos: PromoCode[];
@@ -1045,7 +1039,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 neu-inset bg-slate-200">
                               <img
-                                src={prod.images?.[0] || 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80'}
+                                src={productImage(prod)}
                                 alt={prod.title}
                                 className="w-full h-full object-cover"
                                 referrerPolicy="no-referrer"

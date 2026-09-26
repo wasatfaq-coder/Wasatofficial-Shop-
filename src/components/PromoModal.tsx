@@ -1,18 +1,5 @@
 import React, { useState } from 'react';
-import {
-  X,
-  Tag,
-  Ticket,
-  Clock,
-  Check,
-  Sparkles,
-  ArrowRight,
-  AlertCircle,
-  Copy,
-  Layers,
-  Users,
-  Share2,
-} from 'lucide-react';
+import { X, Tag, Ticket, Clock, Check, Sparkles, ArrowRight, AlertCircle, Copy, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PromoCode, CartItem, AppliedPromoInfo } from '../types';
 import { copyToClipboard } from '../utils/clipboard';
