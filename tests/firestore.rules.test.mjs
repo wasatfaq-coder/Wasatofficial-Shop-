@@ -280,13 +280,23 @@ describe('chat', () => {
   test('customer cannot post into another thread, as admin, or as an internal note', async () => {
     const db = customer('alice');
     await assertSucceeds(setDoc(doc(db, 'chat_messages/m1'), msg('m1', { threadId: 'alice' })));
-    await assertSucceeds(setDoc(doc(db, 'chat_messages/m1b'), msg('m1b', { threadId: 'alice', sender: 'bot' })));
+    // no bot: a customer cannot post automatic «bot» replies into the thread
+    await assertFails(setDoc(doc(db, 'chat_messages/m1b'), msg('m1b', { threadId: 'alice', sender: 'bot' })));
     await assertFails(setDoc(doc(db, 'chat_messages/m2'), msg('m2', { threadId: 'bob' })));
     await assertFails(setDoc(doc(db, 'chat_messages/m3'), msg('m3', { threadId: 'alice', sender: 'admin' })));
     await assertFails(
       setDoc(doc(db, 'chat_messages/m4'), msg('m4', { threadId: 'alice', isInternalNote: true }))
     );
     await assertFails(setDoc(doc(db, 'chat_messages/a1'), msg('a1', { threadId: 'alice', text: 'edited' })));
+  });
+
+  test('dialog status and priority are admin-only', async () => {
+    const meta = { threadId: 'alice', status: 'resolved', priority: 'vip', updatedAt: 1 };
+    await assertSucceeds(setDoc(doc(owner(), 'support_threads/alice'), meta));
+    await assertSucceeds(getDocs(collection(owner(), 'support_threads')));
+    await assertFails(getDoc(doc(customer('alice'), 'support_threads/alice')));
+    await assertFails(setDoc(doc(customer('alice'), 'support_threads/alice'), { ...meta, status: 'open' }));
+    await assertFails(getDocs(collection(guest(), 'support_threads')));
   });
 
   test('admin reads all threads and manages messages', async () => {

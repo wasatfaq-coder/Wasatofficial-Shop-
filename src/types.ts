@@ -407,26 +407,12 @@ export interface ChatMessage {
   };
 }
 
-export interface CustomerThread {
-  id: string;
-  customerName: string;
-  customerAvatar?: string;
-  customerPhone?: string;
-  customerEmail?: string;
-  orderNumber?: string;
-  status: 'waiting' | 'in_progress' | 'resolved' | 'closed';
-  priority: 'standard' | 'urgent' | 'vip';
-  lastActivity: string;
-  unreadCount: number;
-  followUpReminder?: {
-    dueDate: string;
-    note: string;
-    completed?: boolean;
-  };
-  csatRating?: number; // 1-5 stars
-  activeOrderId?: string;
-  tags?: string[];
-  messages: ChatMessage[];
+/** Admin's handling state of a customer's support dialog: `support_threads/{threadId}` (admin only) */
+export interface SupportThreadMeta {
+  threadId: string;
+  status: 'open' | 'resolved' | 'closed';
+  priority: 'normal' | 'urgent' | 'vip';
+  updatedAt: number;
 }
 
 export interface AppliedPromoInfo {

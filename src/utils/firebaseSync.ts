@@ -12,8 +12,7 @@ import {
   Firestore,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { Product, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, UserProfile, BannerSlide, DeliveryMethod, PickupPoint } from '../types';
-import { INITIAL_CHAT_MESSAGES } from '../data/marketingAndSupport';
+import { Product, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, UserProfile, BannerSlide, DeliveryMethod, PickupPoint } from '../types';
 import { DEFAULT_STOREFRONT_SETTINGS } from './inventory';
 import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
 import { compressBase64Image } from './imageUpload';
@@ -642,7 +641,7 @@ export async function setReviewVoteInFirestore(vote: ReviewVote, voted: boolean)
  * 5. REAL-TIME SUPPORT CHAT MESSAGES
  */
 /** Numeric timestamp prefix of ids like `msg-1727000000000` or `msg-1727000000000-ab12`. */
-function chatMessageOrder(msg: ChatMessage): number {
+export function chatMessageOrder(msg: ChatMessage): number {
   const match = msg.id.match(/\d+/);
   return match ? Number(match[0]) : 0;
 }
@@ -667,8 +666,8 @@ export function subscribeToChatMessages(
       (snapshot) => {
         const loaded = snapshot.docs.map((snap) => snap.data() as ChatMessage);
         loaded.sort((a, b) => chatMessageOrder(a) - chatMessageOrder(b));
-        // Local welcome messages always open the dialog (they are not stored)
-        onUpdate([...INITIAL_CHAT_MESSAGES, ...loaded]);
+        // The greeting is drawn by the chat window itself; only real messages come from here
+        onUpdate(loaded);
       },
       (error) => {
         console.warn('Chat thread subscription warning:', error);
@@ -729,6 +728,32 @@ export async function saveChatMessageToFirestore(msg: ChatMessage, targetDb: Fir
     await setDoc(doc(targetDb, 'chat_messages', msg.id), sanitizeForFirestore(sanitizedMsg));
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `chat_messages/${msg.id}`);
+  }
+}
+
+/** Admin: status and priority of every support dialog, keyed by threadId */
+export function subscribeToSupportThreads(onUpdate: (meta: Record<string, SupportThreadMeta>) => void) {
+  return onSnapshot(
+    collection(db, 'support_threads'),
+    (snapshot) => {
+      const byThread: Record<string, SupportThreadMeta> = {};
+      snapshot.forEach((snap) => {
+        byThread[snap.id] = { ...(snap.data() as SupportThreadMeta), threadId: snap.id };
+      });
+      onUpdate(byThread);
+    },
+    (error) => console.warn('Support threads subscription warning:', error)
+  );
+}
+
+export async function saveSupportThreadMeta(
+  threadId: string,
+  meta: Partial<Pick<SupportThreadMeta, 'status' | 'priority'>>
+) {
+  try {
+    await setDoc(doc(db, 'support_threads', threadId), { ...meta, threadId, updatedAt: Date.now() }, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `support_threads/${threadId}`);
   }
 }
 
