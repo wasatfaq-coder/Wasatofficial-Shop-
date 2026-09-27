@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Minus,
   Plus,
@@ -28,6 +28,7 @@ import { QuickOrderModal } from '../components/QuickOrderModal';
 import { AnimatedFavoriteButton } from '../components/AnimatedFavoriteButton';
 import { ProductReviewsSection } from '../components/ProductReviewsSection';
 import { getVariantStock, getProductSKU, getOrderableStock } from '../utils/inventory';
+import { colorStock, initialSize, maxOrderableForColor } from '../utils/variantSelection';
 import {
   getProductFabricComposition,
   getProductCareInstructions,
@@ -57,7 +58,7 @@ interface ProductDetailScreenProps {
     color: string,
     size: string,
     quantity: number
-  ) => void;
+  ) => boolean | void;
   onSelectProduct?: (product: Product) => void;
   setActiveTab: (tab: ActiveTab) => void;
   onCompleteOrder?: (orderData: {
@@ -95,7 +96,10 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [selectedColor, setSelectedColor] = useState(product?.colors?.[0]?.name || '');
-  const [selectedSize, setSelectedSize] = useState(product?.sizes?.[0] || 'M');
+  // No size is preselected (unless there is only one): a default size put wrong items in the cart
+  const [selectedSize, setSelectedSize] = useState(() => initialSize(product));
+  const [sizeError, setSizeError] = useState(false);
+  const sizesRef = useRef<HTMLDivElement>(null);
   const [quantity, setQuantity] = useState(1);
   const [openAccordion, setOpenAccordion] = useState<'shipping' | 'returns' | 'fabric' | null>('fabric');
   const [detailTab, setDetailTab] = useState<'description' | 'specs' | 'care'>('description');
@@ -108,12 +112,16 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   useEffect(() => {
     setSelectedImageIndex(0);
     setSelectedColor(product?.colors?.[0]?.name || '');
-    setSelectedSize(product?.sizes?.[0] || 'M');
+    setSelectedSize(initialSize(product));
+    setSizeError(false);
     setQuantity(1);
   }, [product?.id]);
 
-  // Calculate current SKU variant stock
-  const currentStock = getVariantStock(product, selectedColor, selectedSize);
+  // Stock of the chosen size; before a size is chosen — of the whole colour
+  const sizeChosen = !product.sizes?.length || Boolean(selectedSize);
+  const currentStock = sizeChosen
+    ? getVariantStock(product, selectedColor, selectedSize)
+    : colorStock(product, selectedColor);
   const currentSKU = getProductSKU(product, selectedColor, selectedSize);
 
   // Card sections from Admin → product → «Структура карточки»; a section without data is hidden
@@ -138,7 +146,9 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   ].filter((tab) => tab.show);
   const activeDetailTab = detailTabs.some((tab) => tab.id === detailTab) ? detailTab : detailTabs[0]?.id;
   // Units that can be ordered: the stock, or a preorder limit for a sold-out variant
-  const orderableStock = getOrderableStock(product, selectedColor, selectedSize, preorderMode);
+  const orderableStock = sizeChosen
+    ? getOrderableStock(product, selectedColor, selectedSize, preorderMode)
+    : maxOrderableForColor(product, selectedColor, preorderMode);
   const isPreorder = currentStock === 0 && orderableStock > 0;
 
   // Ensure quantity does not exceed available variant stock
@@ -182,8 +192,20 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     setTouchStart(null);
   };
 
+  // «В корзину» / «Заказать в 1 клик» without a size: point at the sizes instead of guessing one
+  const askForSize = () => {
+    setSizeError(true);
+    sizesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    sizesRef.current?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
+  };
+
   const handleAddToCart = () => {
-    onAddToCartWithOptions(product, selectedColor, selectedSize, quantity);
+    if (!sizeChosen) {
+      askForSize();
+      return;
+    }
+    // Stays on the page: the toast has a «В корзину» link
+    if (onAddToCartWithOptions(product, selectedColor, selectedSize, quantity) === false) return;
     setIsAdded(true);
     setTimeout(() => {
       setIsAdded(false);
@@ -409,12 +431,18 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           <div className="space-y-2 pt-1">
             <div className="flex items-center justify-between gap-1.5 pb-0.5">
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-[#2D3A4E]">Выберите размер:</span>
-                <span className="text-[11px] font-extrabold text-accent">{selectedSize}</span>
+                <span className="text-xs font-semibold text-[#2D3A4E]">{selectedSize ? 'Размер:' : 'Выберите размер'}</span>
+                {selectedSize && <span className="text-[11px] font-extrabold text-accent">{selectedSize}</span>}
               </div>
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
+            <div
+              ref={sizesRef}
+              className="flex items-center gap-2 flex-wrap scroll-mt-24"
+              role="radiogroup"
+              aria-label="Размер"
+              aria-describedby={sizeError ? 'product-size-error' : undefined}
+            >
               {product.sizes.map((sz) => {
                 const isSelected = selectedSize === sz;
                 const szStock = getVariantStock(product, selectedColor, sz);
@@ -423,8 +451,14 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 return (
                   <button
                     key={sz}
-                    onClick={() => setSelectedSize(sz)}
-                    className={`min-h-[46px] min-w-[54px] px-3 py-1.5 rounded-2xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 relative cursor-pointer active:scale-95 ${
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    onClick={() => {
+                      setSelectedSize(sz);
+                      setSizeError(false);
+                    }}
+                    className={`min-h-[46px] min-w-[54px] px-3 py-1.5 rounded-2xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 relative cursor-pointer ${
                       isOutOfStock
                         ? isSelected
                           ? 'neu-inset text-[#4E5C70]/70 border border-[#BAC5D5]/60'
@@ -450,6 +484,11 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 );
               })}
             </div>
+            {sizeError && (
+              <p id="product-size-error" role="alert" className="text-[11px] font-bold text-danger">
+                Выберите размер, чтобы добавить товар в корзину
+              </p>
+            )}
           </div>
         </div>
 
@@ -492,7 +531,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           </div>
 
           {/* Granular SKU Info helper message if variant is out of stock */}
-          {currentStock === 0 && (
+          {sizeChosen && currentStock === 0 && (
             <div className="p-2.5 rounded-xl neu-inset border border-white/60 text-[11px] text-[#4E5C70] flex items-center gap-2">
               <Info className="w-4 h-4 text-accent shrink-0" />
               {isPreorder ? (
@@ -563,7 +602,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               ) : (
                 <>
                   <ShoppingBag className="w-4 h-4 stroke-[2]" />
-                  <span>{isPreorder ? 'Предзаказ' : 'В корзину'}</span>
+                  <span>{!sizeChosen ? 'Выберите размер' : isPreorder ? 'Предзаказ' : 'В корзину'}</span>
                 </>
               )}
             </button>
@@ -572,7 +611,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           {/* Fast 1-Click Order Button */}
           {orderableStock > 0 && (
             <button
-              onClick={() => setIsQuickOrderOpen(true)}
+              type="button"
+              onClick={() => (sizeChosen ? setIsQuickOrderOpen(true) : askForSize())}
               className="w-full py-2.5 px-4 rounded-2xl neu-button text-xs font-bold text-accent hover:scale-101 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <ShoppingBag className="w-3.5 h-3.5 text-accent" />
@@ -837,7 +877,10 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
         isOpen={isSizeCalcOpen}
         onClose={() => setIsSizeCalcOpen(false)}
         availableSizes={product.sizes}
-        onSelectSize={(sz) => setSelectedSize(sz)}
+        onSelectSize={(sz) => {
+          setSelectedSize(sz);
+          setSizeError(false);
+        }}
         productFit={product.fit}
         productCategory={product.category}
         userProfile={userProfile}

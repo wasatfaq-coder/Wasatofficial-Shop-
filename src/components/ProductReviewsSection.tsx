@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Star, ThumbsUp, MessageSquarePlus, CheckCircle2, Plus, X, ChevronDown, Check } from 'lucide-react';
 import { Product, ProductReview, StoredReview, UserProfile } from '../types';
 import { getProductRating } from '../utils/productRating';
+import { initialSize } from '../utils/variantSelection';
 import { helpfulCount, reviewDocId } from '../utils/reviews';
 import {
   deleteReviewFromFirestore,
@@ -39,7 +40,8 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
   const [commentText, setCommentText] = useState('');
   const [prosText, setProsText] = useState('');
   const [consText, setConsText] = useState('');
-  const [selectedSize, setSelectedSize] = useState(product.sizes[0] || 'M');
+  // The size the customer bought: not guessed (a default «M» went into reviews unnoticed)
+  const [selectedSize, setSelectedSize] = useState(() => initialSize(product));
   const [selectedColor, setSelectedColor] = useState(product.colors[0]?.name || '');
   const [sortBy, setSortBy] = useState<'newest' | 'helpful'>('newest');
 
@@ -130,7 +132,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
       comment: commentText.trim().slice(0, 2000),
       ...(prosText.trim() ? { pros: prosText.trim().slice(0, 500) } : {}),
       ...(consText.trim() ? { cons: consText.trim().slice(0, 500) } : {}),
-      sizePurchased: selectedSize,
+      ...(selectedSize ? { sizePurchased: selectedSize } : {}),
       colorPurchased: selectedColor,
       date: myReview?.date ?? new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }),
       createdAt: myReview?.createdAt ?? new Date().toISOString(),

@@ -9,7 +9,8 @@ interface FavoritesScreenProps {
   cartItemIds: string[];
   onSelectProduct: (product: Product) => void;
   onToggleFavorite: (product: Product, e: React.MouseEvent) => void;
-  onAddToCart: (product: Product, e: React.MouseEvent) => void;
+  /** false — nothing added yet (the customer is asked for a size) */
+  onAddToCart: (product: Product, e: React.MouseEvent) => boolean | void;
   setActiveTab: (tab: ActiveTab) => void;
 }
 

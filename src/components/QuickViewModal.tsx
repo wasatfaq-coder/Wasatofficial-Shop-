@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { X, ShoppingBag, Check, Ruler, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product, UserProfile, BodyMeasurements } from '../types';
@@ -7,6 +7,8 @@ import { RatingBadge } from './RatingBadge';
 import { AnimatedFavoriteButton } from './AnimatedFavoriteButton';
 import { getProductRating } from '../utils/productRating';
 import { productImage } from '../utils/productImage';
+import { getOrderableStock, getVariantStock } from '../utils/inventory';
+import { colorStock, initialColor, initialSize, maxOrderableForColor } from '../utils/variantSelection';
 
 interface QuickViewModalProps {
   product: Product | null;
@@ -18,7 +20,9 @@ interface QuickViewModalProps {
   onClose: () => void;
   onSelectFullProduct: (product: Product) => void;
   onToggleFavorite: (product: Product, e: React.MouseEvent) => void;
-  onAddToCartWithOptions: (product: Product, color: string, size: string, quantity: number) => void;
+  onAddToCartWithOptions: (product: Product, color: string, size: string, quantity: number) => boolean | void;
+  /** Admin → «Витрина» → «Предзаказ»: sold-out sizes can be ordered */
+  preorderMode?: boolean;
 }
 
 export const QuickViewModal: React.FC<QuickViewModalProps> = ({
@@ -32,24 +36,44 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
   onSelectFullProduct,
   onToggleFavorite,
   onAddToCartWithOptions,
+  preorderMode = false,
 }) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [selectedColor, setSelectedColor] = useState(product?.colors?.[0]?.name || '');
-  const [selectedSize, setSelectedSize] = useState(product?.sizes?.[0] || 'M');
+  // No size is preselected unless there is only one (same as the product page)
+  const [selectedSize, setSelectedSize] = useState(() => initialSize(product));
+  const [sizeError, setSizeError] = useState(false);
+  const sizesRef = useRef<HTMLDivElement>(null);
   const [isSizeCalcOpen, setIsSizeCalcOpen] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
 
   React.useEffect(() => {
     if (product) {
-      setSelectedColor(product.colors?.[0]?.name || '');
-      setSelectedSize(product.sizes?.[0] || 'M');
+      setSelectedColor(initialColor(product, preorderMode));
+      setSelectedSize(initialSize(product));
+      setSizeError(false);
       setSelectedImageIndex(0);
     }
   }, [product]);
 
+  const sizeChosen = !product?.sizes?.length || Boolean(selectedSize);
+  // Stock of the chosen size; before a size is chosen — of the whole colour
+  const stock = !product ? 0 : sizeChosen ? getVariantStock(product, selectedColor, selectedSize) : colorStock(product, selectedColor);
+  const orderable = !product
+    ? 0
+    : sizeChosen
+    ? getOrderableStock(product, selectedColor, selectedSize, preorderMode)
+    : maxOrderableForColor(product, selectedColor, preorderMode);
+
   const handleAdd = () => {
     if (!product) return;
-    onAddToCartWithOptions(product, selectedColor, selectedSize, 1);
+    if (!sizeChosen) {
+      setSizeError(true);
+      sizesRef.current?.querySelector<HTMLButtonElement>('button:not([disabled])')?.focus();
+      return;
+    }
+    // Stays open: the toast has a «В корзину» link
+    if (onAddToCartWithOptions(product, selectedColor, selectedSize, 1) === false) return;
     setIsAdded(true);
     setTimeout(() => {
       setIsAdded(false);
@@ -169,8 +193,12 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                   </span>
                 )}
               </div>
-              <span className="text-xs font-bold text-success neu-inset px-2.5 py-0.5 rounded-full">
-                В наличии
+              <span
+                className={`text-xs font-bold neu-flat-sm px-2.5 py-0.5 rounded-full ${
+                  stock > 0 ? 'text-success' : orderable > 0 ? 'text-accent' : 'text-[#4E5C70]'
+                }`}
+              >
+                {stock > 0 ? 'В наличии' : orderable > 0 ? 'Предзаказ' : 'Нет в наличии'}
               </span>
             </div>
 
@@ -179,15 +207,22 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
               <div className="flex justify-between text-xs font-bold text-[#2D3A4E]">
                 <span>Цвет: {selectedColor}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2" role="radiogroup" aria-label="Цвет">
                 {product.colors.map((c, cIdx) => {
                   const isSelected = selectedColor === c.name;
                   return (
                     <button
                       key={`quickview-col-${product.id}-${c.name}-${cIdx}`}
-                      onClick={() => setSelectedColor(c.name)}
-                      className={`w-7 h-7 rounded-full p-0.5 transition-all ${
-                        isSelected ? 'neu-inset scale-110' : 'neu-button opacity-80 hover:opacity-100'
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      aria-label={c.name}
+                      onClick={() => {
+                        setSelectedColor(c.name);
+                        if (selectedSize && getOrderableStock(product, c.name, selectedSize, preorderMode) === 0) setSelectedSize(initialSize(product));
+                      }}
+                      className={`w-8 h-8 rounded-full p-1 transition-all cursor-pointer ${
+                        isSelected ? 'neu-pill-active' : 'neu-button'
                       }`}
                       title={c.name}
                     >
@@ -204,7 +239,9 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
             {/* Size options + Size calculator trigger */}
             <div className="space-y-1.5 pt-1">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#2D3A4E]">Размер: {selectedSize}</span>
+                <span className="text-xs font-bold text-[#2D3A4E]">
+                  {selectedSize ? <>Размер: <span className="text-accent">{selectedSize}</span></> : 'Выберите размер'}
+                </span>
                 <button
                   onClick={() => setIsSizeCalcOpen(true)}
                   className="text-[11px] font-bold text-accent hover:underline flex items-center gap-1 cursor-pointer"
@@ -214,17 +251,33 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                 </button>
               </div>
 
-              <div className="flex items-center gap-2 flex-wrap">
+              <div
+                ref={sizesRef}
+                className="flex items-center gap-2 flex-wrap"
+                role="radiogroup"
+                aria-label="Размер"
+                aria-describedby={sizeError ? 'quickview-size-error' : undefined}
+              >
                 {product.sizes.map((sz, szIdx) => {
                   const isSelected = selectedSize === sz;
+                  const canOrder = getOrderableStock(product, selectedColor, sz, preorderMode) > 0;
                   return (
                     <button
                       key={`quickview-sz-${product.id}-${sz}-${szIdx}`}
-                      onClick={() => setSelectedSize(sz)}
-                      className={`min-w-[38px] h-9 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
-                        isSelected
-                          ? 'neu-pill-active font-black'
-                          : 'neu-button text-[#2D3A4E] hover:text-[#1E293B]'
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      disabled={!canOrder}
+                      onClick={() => {
+                        setSelectedSize(sz);
+                        setSizeError(false);
+                      }}
+                      className={`min-w-[40px] h-10 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center ${
+                        !canOrder
+                          ? 'neu-flat text-[#4E5C70] opacity-60 line-through cursor-not-allowed'
+                          : isSelected
+                          ? 'neu-pill-active font-black cursor-pointer'
+                          : 'neu-button text-[#2D3A4E] hover:text-accent cursor-pointer'
                       }`}
                     >
                       {sz}
@@ -232,15 +285,21 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                   );
                 })}
               </div>
+              {sizeError && (
+                <p id="quickview-size-error" role="alert" className="text-[11px] font-bold text-danger">
+                  Выберите размер
+                </p>
+              )}
             </div>
 
             {/* Actions */}
             <div className="flex items-center gap-2 pt-2">
               <button
+                type="button"
                 onClick={handleAdd}
-                disabled={isAdded}
-                className={`flex-1 py-3.5 px-4 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer ${
-                  isAdded ? 'neu-button-success' : 'neu-button-accent'
+                disabled={isAdded || orderable === 0}
+                className={`flex-1 py-3.5 px-4 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:cursor-not-allowed ${
+                  orderable === 0 ? 'neu-inset text-[#56647A]' : isAdded ? 'neu-button-success' : 'neu-button-accent'
                 }`}
               >
                 {isAdded ? (
@@ -248,10 +307,12 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                     <Check className="w-4 h-4 stroke-[3]" />
                     <span>Добавлено в корзину</span>
                   </>
+                ) : orderable === 0 ? (
+                  <span>Нет в наличии</span>
                 ) : (
                   <>
                     <ShoppingBag className="w-4 h-4" />
-                    <span>В корзину ({product.price.toLocaleString('ru-RU')} ₽)</span>
+                    <span>{sizeChosen ? `В корзину (${product.price.toLocaleString('ru-RU')} ₽)` : 'Выберите размер'}</span>
                   </>
                 )}
               </button>
@@ -279,7 +340,10 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
         isOpen={isSizeCalcOpen}
         onClose={() => setIsSizeCalcOpen(false)}
         availableSizes={product.sizes}
-        onSelectSize={(sz) => setSelectedSize(sz)}
+        onSelectSize={(sz) => {
+          setSelectedSize(sz);
+          setSizeError(false);
+        }}
         productFit={product.fit}
         productCategory={product.category}
         userProfile={userProfile}
