@@ -146,7 +146,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   <ShoppingBag className="w-4 h-4 text-accent" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-extrabold text-[#2D3A4E]">Быстрый заказ в 1 клик</h3>
+                  <h3 className="text-sm font-extrabold text-[#2D3A4E]">Заказ в 1 клик</h3>
                   <p className="text-[11px] text-[#4E5C70]">Менеджер перезвонит для подтверждения</p>
                 </div>
               </div>
@@ -206,12 +206,14 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
             {/* Fast Form */}
             <form onSubmit={handleSubmit} className="space-y-3">
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-accent" />
+                <label htmlFor="quick-order-name" className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
                   <span>Ваше имя *</span>
                 </label>
                 <input
+                  id="quick-order-name"
                   type="text"
+                  autoComplete="name"
                   required
                   placeholder="Иван"
                   value={name}
@@ -221,12 +223,15 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5 text-accent" />
+                <label htmlFor="quick-order-phone" className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
                   <span>Номер телефона *</span>
                 </label>
                 <input
+                  id="quick-order-phone"
                   type="tel"
+                  autoComplete="tel"
+                  inputMode="tel"
                   required
                   placeholder="+7 (999) 000-00-00"
                   value={phone}
@@ -236,12 +241,14 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-accent" />
+                <label htmlFor="quick-order-address" className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
                   <span>Город и улица доставки</span>
                 </label>
                 <input
+                  id="quick-order-address"
                   type="text"
+                  autoComplete="street-address"
                   placeholder="Москва, ул. Тверская"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
@@ -252,10 +259,11 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
               {/* Дополнительные поля: Номер дома, Подъезд, Квартира/Офис, Домофон */}
               <div className="grid grid-cols-4 gap-2 text-[11px]">
                 <div>
-                  <label className="text-[11px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
+                  <label htmlFor="quick-order-house" className="text-[11px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
                     Дом <span className="text-danger">*</span>
                   </label>
                   <input
+                    id="quick-order-house"
                     type="text"
                     placeholder="10"
                     value={house}
@@ -271,10 +279,11 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
+                  <label htmlFor="quick-order-entrance" className="text-[11px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
                     Подъезд <span className="text-danger">*</span>
                   </label>
                   <input
+                    id="quick-order-entrance"
                     type="text"
                     placeholder="2"
                     value={entrance}
@@ -290,10 +299,11 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
+                  <label htmlFor="quick-order-apartment" className="text-[11px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
                     Кв./Офис
                   </label>
                   <input
+                    id="quick-order-apartment"
                     type="text"
                     placeholder="25"
                     value={apartment}
@@ -302,10 +312,11 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
+                  <label htmlFor="quick-order-intercom" className="text-[11px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
                     Домофон <span className="text-danger">*</span>
                   </label>
                   <input
+                    id="quick-order-intercom"
                     type="text"
                     placeholder="25K"
                     value={intercom}

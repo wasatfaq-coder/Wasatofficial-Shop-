@@ -87,6 +87,7 @@ import { formatOrderDate } from './shared/orderDate';
 import { extractColorName, extractSizeName } from './utils/inventory';
 import { getStoreContacts, getStoreName, publicSetting, withStoreName, withStoreNameFields } from './utils/storeContacts';
 import { getCategories } from './utils/categories';
+import { promoDiscountText } from './utils/promoLabel';
 
 // Unique across customers: messages are create-only for customers (see firestore.rules)
 function newChatMessageId(): string {
@@ -185,12 +186,12 @@ export default function App() {
   });
 
   const handleUpdateBannerSlides = (newBanners: BannerSlide[]) => {
-    deleteRemovedDocs('banners', bannerSlides, newBanners);
+    const removed = deleteRemovedDocs('banners', bannerSlides, newBanners);
     setBannerSlides(newBanners);
     try {
       localStorage.setItem('manstyle_banners', JSON.stringify(newBanners));
     } catch {}
-    syncAllBannersToFirestore(newBanners);
+    return persist('баннеры', removed, syncAllBannersToFirestore(newBanners));
   };
 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
@@ -343,17 +344,17 @@ export default function App() {
   );
 
   const handleUpdateDeliveryMethods = (updated: DeliveryMethod[]) => {
-    deleteRemovedDocs('delivery_methods', deliveryMethods, updated);
+    const removed = deleteRemovedDocs('delivery_methods', deliveryMethods, updated);
     setDeliveryMethods(updated);
     saveLocalDeliveryMethods(updated);
-    syncAllDeliveryMethodsToFirestore(updated);
+    return persist('способы доставки', removed, syncAllDeliveryMethodsToFirestore(updated));
   };
 
   const handleUpdatePickupPoints = (updated: PickupPoint[]) => {
-    deleteRemovedDocs('pickup_points', pickupPoints, updated);
+    const removed = deleteRemovedDocs('pickup_points', pickupPoints, updated);
     setPickupPoints(updated);
     saveLocalPickupPoints(updated);
-    syncAllPickupPointsToFirestore(updated);
+    return persist('пункты выдачи', removed, syncAllPickupPointsToFirestore(updated));
   };
 
   // Global Filter Match Counter for modal
@@ -685,8 +686,23 @@ export default function App() {
   // Helper Toast launcher
   const addToast = (text: string, type: 'success' | 'info' | 'error' = 'success') => {
     const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, text, type }]);
+    // The same message is not stacked twice (errors stay until closed)
+    setToasts((prev) => (prev.some((t) => t.text === text && t.type === type) ? prev : [...prev, { id, text, type }]));
   };
+
+  /**
+   * Admin writes to Firestore: a rejected write (rules, network) shows an error toast instead of
+   * failing silently. Resolves to false so the caller does not report «Сохранено».
+   */
+  const persist = (label: string, ...writes: Promise<unknown>[]): Promise<boolean> =>
+    Promise.all(writes).then(
+      () => true,
+      (error) => {
+        console.error(`Не сохранено: ${label}`, error);
+        addToast(`Не сохранено: ${label}. Проверьте соединение и повторите`, 'error');
+        return false;
+      }
+    );
 
   const removeToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -950,11 +966,13 @@ export default function App() {
       applicableProductIds: foundPromo.applicableProductIds,
     });
 
-    const discountText = isFixed
-      ? `Скидка ${(discValue || 0).toLocaleString('ru-RU')} ₽`
-      : `Скидка ${discValue || foundPromo.discountPercent}%`;
+    const discountText = promoDiscountText({
+      discountType: isFixed ? 'fixed' : 'percent',
+      discountValue: discValue,
+      discountPercent: foundPromo.discountPercent,
+    });
 
-    addToast(`Промокод ${foundPromo.code} успешно применен! ${discountText}`, 'success');
+    addToast(`Промокод ${foundPromo.code} применен: скидка ${discountText}`, 'success');
     return true;
   };
 
@@ -1083,7 +1101,7 @@ export default function App() {
       timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
     };
     setChatMessages((prev) => [...prev, adminMsg]);
-    saveChatMessageToFirestore(adminMsg);
+    void persist('сообщение в чате', saveChatMessageToFirestore(adminMsg));
 
     // If a promo code was generated from the chat, automatically register it into the promos pool so the client can use it!
     if (promoCard) {
@@ -1106,7 +1124,7 @@ export default function App() {
         };
         const updated = [newPromo, ...promos];
         setPromos(updated);
-        syncAllPromosToFirestore(updated);
+        void persist('промокод из чата', syncAllPromosToFirestore([newPromo]));
       }
     }
   };
@@ -1127,6 +1145,8 @@ export default function App() {
     ...ownThread.filter((m) => !failedChatMessages.some((f) => f.id === m.id)),
     ...failedChatMessages,
   ].sort((a, b) => chatMessageOrder(a) - chatMessageOrder(b));
+
+  const hasActivePromos = promos.some((p) => p.active);
 
   // Complete Order
   type CompleteOrderData = {
@@ -1568,6 +1588,7 @@ export default function App() {
 
           {activeTab === 'cart' && (
             <CartScreen
+              hasActivePromos={hasActivePromos}
               preorderMode={preorderMode}
               cartItems={cartItems}
               favorites={favorites}
@@ -1597,6 +1618,7 @@ export default function App() {
 
           {activeTab === 'checkout' && (
             <CheckoutScreen
+              hasActivePromos={hasActivePromos}
               cartItems={cartItems}
               userProfile={userProfile}
               onCompleteOrder={handleCompleteOrder}
@@ -1639,9 +1661,12 @@ export default function App() {
               onShowToast={addToast}
               onOpenSupportChat={() => setIsSupportChatOpen(true)}
               onUpdateProducts={(updatedProds) => {
-                deleteRemovedDocs('products', products, updatedProds);
+                void persist(
+                  'товары',
+                  deleteRemovedDocs('products', products, updatedProds),
+                  syncAllProductsToFirestore(changedItems(products, updatedProds))
+                );
                 setProducts(updatedProds);
-                syncAllProductsToFirestore(changedItems(products, updatedProds));
                 // Synchronize cart with updated products & remove deleted items
                 setCartItems((prevCart) =>
                   prevCart
@@ -1665,13 +1690,16 @@ export default function App() {
               }}
               onUpdateOrders={(updatedOrders) => {
                 setOrders(updatedOrders);
-                syncAllOrdersToFirestore(changedItems(orders, updatedOrders));
+                void persist('заказы', syncAllOrdersToFirestore(changedItems(orders, updatedOrders)));
               }}
               promos={promos}
               onUpdatePromos={(updatedPromos) => {
-                deleteRemovedDocs('promos', promos, updatedPromos);
+                void persist(
+                  'промокоды',
+                  deleteRemovedDocs('promos', promos, updatedPromos),
+                  syncAllPromosToFirestore(changedItems(promos, updatedPromos))
+                );
                 setPromos(updatedPromos);
-                syncAllPromosToFirestore(changedItems(promos, updatedPromos));
               }}
               bannerSlides={bannerSlides}
               onUpdateBannerSlides={handleUpdateBannerSlides}
@@ -1683,7 +1711,7 @@ export default function App() {
               onUpdateStorefrontSettings={(upd) => {
                 setStorefrontSettings(upd);
                 saveStorefrontSettings(upd);
-                saveStorefrontSettingsToFirestore(upd);
+                return persist('настройки витрины', saveStorefrontSettingsToFirestore(upd));
               }}
               deliveryMethods={deliveryMethods}
               onUpdateDeliveryMethods={handleUpdateDeliveryMethods}
@@ -1712,13 +1740,15 @@ export default function App() {
           </AnimatePresence>
         </main>
 
-        {/* Floating Bottom Navigation Bar */}
-        <BottomNav
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          favoritesCount={favorites.length}
-          cartCount={totalCartCount}
-        />
+        {/* Floating Bottom Navigation Bar: hidden on checkout so it does not cover the form and the pay button */}
+        {activeTab !== 'checkout' && (
+          <BottomNav
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            favoritesCount={favorites.length}
+            cartCount={totalCartCount}
+          />
+        )}
       </div>
     </DeviceFrameWrapper>
   );

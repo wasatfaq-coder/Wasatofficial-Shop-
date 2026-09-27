@@ -14,6 +14,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Product } from '../types';
 import { isProductInStock } from '../utils/inventory';
 import { productRatingValue } from '../utils/productRating';
+import { pluralRu } from '../utils/pluralize';
+import { NeumorphicSwitch } from './NeumorphicSwitch';
 
 export interface FilterState {
   minPrice: number;
@@ -125,6 +127,10 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
   isInlineExpanded,
   onToggleInline,
 }) => {
+  const showLabel =
+    filteredCount === 0
+      ? 'Ничего не найдено'
+      : `Показать ${filteredCount} ${pluralRu(filteredCount, ['товар', 'товара', 'товаров'])}`;
   // Extract all available sizes dynamically from products
   const allAvailableSizes = useMemo(() => {
     const sizeSet = new Set<string>();
@@ -196,56 +202,29 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
     { label: 'От 15 000 ₽', min: 15000, max: NO_MAX_PRICE },
   ];
 
-  const renderFilterContent = () => (
+  // Filter content is rendered inline and in the modal: ids get a prefix so they stay unique
+  const renderFilterContent = (idPrefix: string) => (
     <div className="space-y-4">
-      {/* 1. Real-time In-Stock Availability Switch with Inset Effect & Crisp Tactile Feedback */}
-      <div
-        onClick={() =>
-          onChangeFilterState((prev) => ({
-            ...prev,
-            onlyInStock: !prev.onlyInStock,
-          }))
-        }
-        className="neu-inset rounded-2xl p-3.5 border border-white/60 flex items-center justify-between gap-3 cursor-pointer select-none transition-all"
-      >
-        <div className="flex items-center gap-2.5">
+      {/* 1. In-stock switch: the whole row is its label */}
+      <div className="neu-inset rounded-2xl p-3.5 border border-white/60 flex items-center justify-between gap-3">
+        <label htmlFor={`${idPrefix}-in-stock`} className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer select-none">
           <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0 border border-white/40">
-            <PackageCheck className="w-4 h-4 stroke-[2.2]" />
+            <PackageCheck className="w-4 h-4 stroke-[2.2]" aria-hidden="true" />
           </div>
           <div>
-            <div className="text-xs font-bold text-[#2D3A4E] flex items-center gap-1.5">
-              <span>Только товары в наличии</span>
-            </div>
+            <div className="text-xs font-bold text-[#2D3A4E]">Только товары в наличии</div>
             <p className="text-[11px] text-[#4E5C70]">
               Скрывать распроданные размеры и товары
             </p>
           </div>
-        </div>
+        </label>
 
-        {/* Custom Neumorphic Toggle Switch */}
-        <div
-          role="switch"
-          aria-checked={filterState.onlyInStock}
-          className={`w-13 h-7 rounded-full p-1 transition-all duration-200 ease-in-out cursor-pointer neu-inset flex items-center relative shrink-0 ${
-            filterState.onlyInStock
-              ? 'bg-accent border border-accent'
-              : 'bg-[#C9D3E2] border border-white/60'
-          }`}
-        >
-          <div
-            className={`w-5 h-5 rounded-full transition-transform duration-200 ease-in-out flex items-center justify-center ${
-              filterState.onlyInStock
-                ? 'translate-x-6 bg-white text-accent shadow-[var(--neu-raised-sm)]'
-                : 'translate-x-0 bg-[#E3E8EF] text-[#4E5C70] shadow-sm'
-            }`}
-          >
-            {filterState.onlyInStock ? (
-              <Check className="w-3.5 h-3.5 stroke-[3]" />
-            ) : (
-              <div className="w-1.5 h-1.5 rounded-full bg-[#8E9DB2]" />
-            )}
-          </div>
-        </div>
+        <NeumorphicSwitch
+          id={`${idPrefix}-in-stock`}
+          checked={filterState.onlyInStock}
+          onChange={(checked) => onChangeFilterState((prev) => ({ ...prev, onlyInStock: checked }))}
+          label="Только товары в наличии"
+        />
       </div>
 
       {/* 2. Price Range Filter with Deepened Inset Buttons */}
@@ -483,7 +462,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 </button>
               </div>
 
-              {renderFilterContent()}
+              {renderFilterContent('catalog-filter-inline')}
 
               <div className="flex items-center gap-2.5 pt-2 border-t border-[#BAC5D5]/50">
                 <button
@@ -497,9 +476,10 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 <button
                   type="button"
                   onClick={onToggleInline}
-                  className="flex-1 py-2.5 px-4 rounded-xl neu-button-accent text-xs font-bold text-center transition-all cursor-pointer"
+                  disabled={filteredCount === 0}
+                  className="flex-1 py-2.5 px-4 rounded-xl neu-button-accent text-xs font-bold text-center transition-all cursor-pointer disabled:opacity-55 disabled:cursor-not-allowed"
                 >
-                  Показать {filteredCount} товаров
+                  {showLabel}
                 </button>
               </div>
             </div>
@@ -550,10 +530,10 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 </button>
               </div>
 
-              {renderFilterContent()}
+              {renderFilterContent('catalog-filter-modal')}
 
-              {/* Actions */}
-              <div className="flex items-center gap-3 pt-2">
+              {/* Actions stay at the bottom of the window: in a long list the button used to be off-screen */}
+              <div className="sticky -bottom-5 -mx-5 px-5 pt-3 pb-5 -mb-5 bg-[#E3E8EF] border-t border-[#BAC5D5]/50 flex items-center gap-3">
                 <button
                   type="button"
                   onClick={onResetFilters}
@@ -571,9 +551,10 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                       onCloseModal();
                     }
                   }}
-                  className="flex-1 py-3.5 px-5 rounded-2xl neu-button-accent font-bold text-xs text-center transition-all cursor-pointer flex items-center justify-center gap-2"
+                  disabled={filteredCount === 0}
+                  className="flex-1 py-3.5 px-5 rounded-2xl neu-button-accent font-bold text-xs text-center transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-55 disabled:cursor-not-allowed"
                 >
-                  <span>Показать {filteredCount} товаров</span>
+                  <span>{showLabel}</span>
                 </button>
               </div>
             </motion.div>

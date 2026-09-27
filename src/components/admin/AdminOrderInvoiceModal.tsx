@@ -218,9 +218,9 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
                           </span>
                         </td>
                         <td className="py-2.5 px-3 text-center font-bold">{it.quantity || 1} шт.</td>
-                        <td className="py-2.5 px-3 text-right">{price.toLocaleString()} ₽</td>
+                        <td className="py-2.5 px-3 text-right">{price.toLocaleString('ru-RU')} ₽</td>
                         <td className="py-2.5 px-3 text-right font-black text-slate-900">
-                          {sum.toLocaleString()} ₽
+                          {sum.toLocaleString('ru-RU')} ₽
                         </td>
                       </tr>
                     );
@@ -236,13 +236,13 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
               <div className="flex justify-between">
                 <span>Сумма без скидки:</span>
                 <span className="font-semibold">
-                  {(order.originalTotalPrice || order.totalPrice + discountAmount).toLocaleString()} ₽
+                  {(order.originalTotalPrice || order.totalPrice + discountAmount).toLocaleString('ru-RU')} ₽
                 </span>
               </div>
               {discountAmount > 0 && (
                 <div className="flex justify-between text-success font-semibold">
                   <span>Скидка по акции:</span>
-                  <span>-{discountAmount.toLocaleString()} ₽</span>
+                  <span>-{discountAmount.toLocaleString('ru-RU')} ₽</span>
                 </div>
               )}
               <div className="flex justify-between">
@@ -252,7 +252,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
               <div className="border-t border-slate-200 pt-2 flex justify-between items-baseline font-black text-slate-900 text-sm">
                 <span>ИТОГО К ОПЛАТЕ:</span>
                 <span className="text-base text-accent font-black">
-                  {order.totalPrice.toLocaleString()} ₽
+                  {order.totalPrice.toLocaleString('ru-RU')} ₽
                 </span>
               </div>
             </div>

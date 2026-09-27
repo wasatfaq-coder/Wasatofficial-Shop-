@@ -28,7 +28,8 @@ interface AdminListEditorProps<T extends { id: string }> {
   /** Line shown for an item in the list */
   renderSummary: (item: T) => React.ReactNode;
   /** Saves the whole list (the parent writes it to Firestore) */
-  onSave: (items: T[]) => void;
+  /** Returns false when the write failed (App has already shown the error toast) */
+  onSave: (items: T[]) => Promise<boolean> | void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   addLabel?: string;
   /** Optional one-click fill, e.g. «Взять категории из товаров» */
@@ -56,6 +57,17 @@ export function AdminListEditor<T extends { id: string }>({
   const [draft, setDraft] = useState<T | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [toDelete, setToDelete] = useState<T | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  /** «Сохранено» only after the database accepted the write */
+  const commit = async (next: T[], successText: string, type: 'success' | 'info' = 'success') => {
+    setIsSaving(true);
+    const ok = await onSave(next);
+    setIsSaving(false);
+    if (ok === false) return false;
+    onShowToast(successText, type);
+    return true;
+  };
 
   const startAdd = () => {
     setDraft(createItem(items));
@@ -71,16 +83,15 @@ export function AdminListEditor<T extends { id: string }>({
     ? fields.filter((f) => f.required && !String((draft as Record<string, unknown>)[f.key] ?? '').trim())
     : [];
 
-  const saveDraft = () => {
-    if (!draft) return;
+  const saveDraft = async () => {
+    if (!draft || isSaving) return;
     if (missing.length > 0) {
       onShowToast(`Заполните: ${missing.map((f) => f.label.toLowerCase()).join(', ')}`, 'error');
       return;
     }
     const next = isNew ? [...items, draft] : items.map((it) => (it.id === draft.id ? draft : it));
-    onSave(next);
-    onShowToast(isNew ? 'Добавлено' : 'Изменения сохранены', 'success');
-    setDraft(null);
+    // On a failed write the form stays open so nothing typed is lost
+    if (await commit(next, isNew ? 'Добавлено' : 'Изменения сохранены')) setDraft(null);
   };
 
   const move = (index: number, delta: number) => {
@@ -88,7 +99,7 @@ export function AdminListEditor<T extends { id: string }>({
     if (target < 0 || target >= items.length) return;
     const next = [...items];
     [next[index], next[target]] = [next[target], next[index]];
-    onSave(next);
+    void onSave(next);
   };
 
   const setField = (key: string, value: unknown) =>
@@ -112,8 +123,7 @@ export function AdminListEditor<T extends { id: string }>({
                     onShowToast(quickAction.disabledReason || 'Нечего добавить', 'info');
                     return;
                   }
-                  onSave(next);
-                  onShowToast(`Добавлено: ${next.length - items.length}`, 'success');
+                  void commit(next, `Добавлено: ${next.length - items.length}`);
                 }}
                 className="py-2 px-3 neu-button rounded-xl text-xs font-bold text-accent cursor-pointer"
               >
@@ -207,11 +217,11 @@ export function AdminListEditor<T extends { id: string }>({
               <button
                 type="button"
                 onClick={saveDraft}
-                disabled={missing.length > 0}
+                disabled={missing.length > 0 || isSaving}
                 className="py-2 px-3 neu-button rounded-xl text-xs font-black text-accent flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Check className="w-3.5 h-3.5" />
-                Сохранить
+                {isSaving ? 'Сохранение…' : 'Сохранить'}
               </button>
             </div>
           </div>
@@ -277,8 +287,7 @@ export function AdminListEditor<T extends { id: string }>({
         message="Запись будет удалена из базы, покупатели перестанут её видеть."
         onConfirm={() => {
           if (!toDelete) return;
-          onSave(items.filter((it) => it.id !== toDelete.id));
-          onShowToast('Удалено', 'info');
+          void commit(items.filter((it) => it.id !== toDelete.id), 'Удалено', 'info');
           setToDelete(null);
         }}
         onClose={() => setToDelete(null)}

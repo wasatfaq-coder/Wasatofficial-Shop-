@@ -21,6 +21,8 @@ interface AddressEditModalProps {
     postalCode?: string;
     isDefault?: boolean;
   }) => void;
+  /** Курьеру нужны подъезд и код домофона; для Почты и адресов профиля они необязательны */
+  requireCourierDetails?: boolean;
 }
 
 export const AddressEditModal: React.FC<AddressEditModalProps> = ({
@@ -28,6 +30,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
   onClose,
   editingAddress,
   onSave,
+  requireCourierDetails = false,
 }) => {
   const [title, setTitle] = useState('Дом');
   const [city, setCity] = useState('Москва');
@@ -70,7 +73,8 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
       setIsDefault(true);
     }
     setErrors({});
-  }, [editingAddress, isOpen]);
+    // Сбрасываем форму только при открытии: editingAddress — новый объект на каждом рендере родителя
+  }, [isOpen, editingAddress?.id]);
 
   // Real-time formatted address preview for courier dispatch
   const previewString = formatAddress({
@@ -91,10 +95,10 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
     if (!house.trim()) {
       newErrors.house = 'Укажите номер дома';
     }
-    if (!entrance.trim()) {
+    if (requireCourierDetails && !entrance.trim()) {
       newErrors.entrance = 'Укажите подъезд';
     }
-    if (!intercom.trim()) {
+    if (requireCourierDetails && !intercom.trim()) {
       newErrors.intercom = 'Укажите код домофона';
     }
 
@@ -165,7 +169,9 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
               <div className="p-3 rounded-2xl bg-danger-soft border border-danger/35 text-danger text-xs flex items-center gap-2 animate-in fade-in duration-200">
                 <AlertCircle className="w-4 h-4 text-danger shrink-0" />
                 <span className="font-semibold">
-                  Пожалуйста, заполните обязательные данные для курьера: номер дома, подъезд и код домофона.
+                  {requireCourierDetails
+                    ? 'Заполните данные для курьера: номер дома, подъезд и код домофона.'
+                    : 'Укажите номер дома.'}
                 </span>
               </div>
             )}
@@ -174,10 +180,11 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
             <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
               {/* Title / Label */}
               <div>
-                <label className="block text-xs font-bold text-[#2D3A4E] mb-1">
+                <label htmlFor="address-title" className="block text-xs font-bold text-[#2D3A4E] mb-1">
                   Название адреса
                 </label>
                 <input
+                  id="address-title"
                   type="text"
                   required
                   value={title}
@@ -190,11 +197,13 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
               {/* City & Postal Code (2 Columns) */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="address-city" className="block text-xs font-bold text-[#2D3A4E] mb-1">
                     Город
                   </label>
                   <input
+                    id="address-city"
                     type="text"
+                    autoComplete="address-level2"
                     required
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
@@ -203,11 +212,14 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="address-postal" className="block text-xs font-bold text-[#2D3A4E] mb-1">
                     Индекс
                   </label>
                   <input
+                    id="address-postal"
                     type="text"
+                    autoComplete="postal-code"
+                    inputMode="numeric"
                     value={postalCode}
                     onChange={(e) => setPostalCode(e.target.value)}
                     placeholder="101000"
@@ -218,11 +230,13 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
 
               {/* Street */}
               <div>
-                <label className="block text-xs font-bold text-[#2D3A4E] mb-1">
+                <label htmlFor="address-street" className="block text-xs font-bold text-[#2D3A4E] mb-1">
                   Улица
                 </label>
                 <input
+                  id="address-street"
                   type="text"
+                  autoComplete="address-line1"
                   required
                   value={street}
                   onChange={(e) => setStreet(e.target.value)}
@@ -234,11 +248,14 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
               {/* Precise building & delivery coordinates: Дом, Подъезд, Этаж */}
               <div className="grid grid-cols-3 gap-2.5">
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
-                    Номер дома <span className="text-danger font-bold">*</span>
+                  <label htmlFor="address-house" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                    Номер дома <span className="text-danger font-bold" aria-hidden="true">*</span>
                   </label>
                   <input
+                    id="address-house"
                     type="text"
+                    aria-required="true"
+                    aria-invalid={Boolean(errors.house)}
                     value={house}
                     onChange={(e) => {
                       setHouse(e.target.value);
@@ -258,11 +275,19 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                   )}
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
-                    Подъезд <span className="text-danger font-bold">*</span>
+                  <label htmlFor="address-entrance" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                    Подъезд{' '}
+                    {requireCourierDetails ? (
+                      <span className="text-danger font-bold" aria-hidden="true">*</span>
+                    ) : (
+                      <span className="font-medium text-[#4E5C70]">(необяз.)</span>
+                    )}
                   </label>
                   <input
+                    id="address-entrance"
                     type="text"
+                    aria-required={requireCourierDetails}
+                    aria-invalid={Boolean(errors.entrance)}
                     value={entrance}
                     onChange={(e) => {
                       setEntrance(e.target.value);
@@ -282,10 +307,11 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                   )}
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="address-floor" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     Этаж
                   </label>
                   <input
+                    id="address-floor"
                     type="text"
                     value={floor}
                     onChange={(e) => setFloor(e.target.value)}
@@ -298,11 +324,13 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
               {/* Apartment & Intercom (Код домофона) */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="address-apartment" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     Квартира / Офис
                   </label>
                   <input
+                    id="address-apartment"
                     type="text"
+                    autoComplete="address-line2"
                     value={apartment}
                     onChange={(e) => setApartment(e.target.value)}
                     placeholder="кв. 25 / офис 14"
@@ -310,11 +338,19 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
-                    Код домофона <span className="text-danger font-bold">*</span>
+                  <label htmlFor="address-intercom" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                    Код домофона{' '}
+                    {requireCourierDetails ? (
+                      <span className="text-danger font-bold" aria-hidden="true">*</span>
+                    ) : (
+                      <span className="font-medium text-[#4E5C70]">(необяз.)</span>
+                    )}
                   </label>
                   <input
+                    id="address-intercom"
                     type="text"
+                    aria-required={requireCourierDetails}
+                    aria-invalid={Boolean(errors.intercom)}
                     value={intercom}
                     onChange={(e) => {
                       setIntercom(e.target.value);
@@ -338,7 +374,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
               {/* Live Preview Box for Delivery */}
               <div className="neu-inset rounded-2xl p-3 space-y-1">
                 <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider block">
-                  Адрес в накладной для курьера:
+                  {requireCourierDetails ? 'Адрес в накладной для курьера:' : 'Адрес в накладной:'}
                 </span>
                 <p className="text-xs font-bold text-[#2D3A4E] leading-relaxed break-words">
                   {previewString || 'Укажите улицу и номер дома'}
@@ -346,23 +382,27 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
               </div>
 
               {/* Checkbox: Make Default */}
-              <div
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={isDefault}
                 onClick={() => setIsDefault(!isDefault)}
-                className="flex items-center gap-3 pt-1 cursor-pointer select-none group"
+                className="flex items-center gap-3 pt-1 cursor-pointer select-none group text-left"
               >
-                <div
+                <span
                   className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
                     isDefault
                       ? 'neu-fill-accent text-white'
                       : 'neu-inset text-transparent'
                   }`}
+                  aria-hidden="true"
                 >
                   <Check className="w-3.5 h-3.5 stroke-[3]" />
-                </div>
+                </span>
                 <span className="font-bold text-xs text-[#2D3A4E] group-hover:text-accent transition-colors">
                   Сделать основным адресом
                 </span>
-              </div>
+              </button>
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-2">

@@ -38,6 +38,7 @@ import { AdminLabelGenerator, type LabelTarget } from './AdminLabelGenerator';
 import { skuKey } from '../../shared/barcode';
 import { downloadCSV } from '../../utils/csvHelpers';
 import { productImage } from '../../utils/productImage';
+import { pluralRu } from '../../utils/pluralize';
 
 interface AdminInventoryTabProps {
   products: Product[];
@@ -72,6 +73,52 @@ const SelectBox: React.FC<{ checked: boolean; onChange: () => void; label: strin
     <SelectBoxMark checked={checked} />
   </button>
 );
+
+/**
+ * Остаток варианта: пишется в базу при уходе с поля или Enter, а не на каждую цифру
+ * (каждая запись — движение в журнале). Пустое или неверное значение возвращает прежний остаток.
+ */
+const StockInput: React.FC<{ value: number; label: string; onCommit: (next: number) => void }> = ({
+  value,
+  label,
+  onCommit,
+}) => {
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => setDraft(String(value)), [value]);
+
+  const commit = () => {
+    const parsed = parseInt(draft.trim(), 10);
+    if (!draft.trim() || !Number.isFinite(parsed) || parsed < 0) {
+      setDraft(String(value));
+      return;
+    }
+    const next = Math.min(999, parsed);
+    if (next === value) setDraft(String(value));
+    else onCommit(next);
+  };
+
+  return (
+    <input
+      type="number"
+      inputMode="numeric"
+      min={0}
+      max={999}
+      value={draft}
+      aria-label={label}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.currentTarget.blur();
+        } else if (e.key === 'Escape') {
+          setDraft(String(value));
+        }
+      }}
+      className="w-10 h-8 text-center text-xs font-black text-[#2D3A4E] bg-transparent"
+    />
+  );
+};
 
 export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
   products,
@@ -300,7 +347,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
     onUpdateProducts(updatedProducts);
     setMovementLogs((prev) => [...newLogs, ...prev]);
     setAuditCounts({});
-    onShowToast(`Инвентаризация утверждена: скорректировано ${discrepantItems.length} позиций SKU`, 'success');
+    onShowToast(`Инвентаризация утверждена: скорректировано ${discrepantItems.length} ${pluralRu(discrepantItems.length, ['вариант', 'варианта', 'вариантов'])}`, 'success');
   };
 
   // Export Audit Sheet to CSV
@@ -548,7 +595,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
     if (newLogs.length > 0) {
       setMovementLogs((prev) => [...newLogs, ...prev]);
     }
-    onShowToast(`Автоматически пополнено ${restockedCount} дефицитных SKU (+6 шт)`, 'success');
+    onShowToast(`Пополнено ${restockedCount} ${pluralRu(restockedCount, ['вариант', 'варианта', 'вариантов'])} с дефицитом (+6 шт)`, 'success');
   };
 
   const handleCopySku = (skuCode: string) => {
@@ -648,7 +695,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
           <span className="text-[11px] uppercase font-bold text-[#4E5C70] block">Всего единиц</span>
           <span className="text-base font-black text-[#2D3A4E]">{stats.totalUnits} шт.</span>
           <span className="text-[11px] text-[#4E5C70] block font-semibold">
-            по {stats.totalSkus} артикулам SKU
+            в {stats.totalSkus} {pluralRu(stats.totalSkus, ['варианте', 'вариантах', 'вариантах'])}
           </span>
         </div>
 
@@ -660,8 +707,11 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
               {[2, 3, 5].map((th) => (
                 <button
                   key={th}
+                  type="button"
                   onClick={() => setLowStockThreshold(th)}
-                  className={`text-[11px] font-bold px-1.5 py-0.5 rounded cursor-pointer transition-all ${
+                  aria-pressed={lowStockThreshold === th}
+                  aria-label={`Порог дефицита ${th} шт.`}
+                  className={`min-w-7 h-7 text-[11px] font-bold px-1.5 rounded-lg cursor-pointer transition-all ${
                     lowStockThreshold === th ? 'neu-pill-active' : 'neu-button text-[#2D3A4E]'
                   }`}
                 >
@@ -675,7 +725,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
 
         <div className="neu-inset rounded-2xl p-3 space-y-0.5">
           <span className="text-[11px] uppercase font-bold text-warning block">Мало на складе</span>
-          <span className="text-base font-black text-warning">{stats.lowStockCount} SKU</span>
+          <span className="text-base font-black text-warning">{stats.lowStockCount} {pluralRu(stats.lowStockCount, ['вариант', 'варианта', 'вариантов'])}</span>
           {stats.lowStockCount > 0 && (
             <button
               onClick={handleBulkRestockDeficit}
@@ -688,7 +738,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
 
         <div className="neu-inset rounded-2xl p-3 space-y-0.5">
           <span className="text-[11px] uppercase font-bold text-danger block">Нет в наличии</span>
-          <span className="text-base font-black text-danger">{stats.outOfStockCount} SKU</span>
+          <span className="text-base font-black text-danger">{stats.outOfStockCount} {pluralRu(stats.outOfStockCount, ['вариант', 'варианта', 'вариантов'])}</span>
           <span className="text-[11px] text-[#4E5C70] block font-semibold">нулевой остаток</span>
         </div>
       </div>
@@ -876,20 +926,10 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                             <Minus className="w-3 h-3 stroke-[2.5]" />
                           </button>
 
-                          <input
-                            type="number"
-                            min="0"
-                            max="999"
+                          <StockInput
                             value={sku.stock}
-                            onChange={(e) =>
-                              handleUpdateStock(
-                                product.id,
-                                sku.color,
-                                sku.size,
-                                parseInt(e.target.value, 10) || 0
-                              )
-                            }
-                            className="w-8 sm:w-10 text-center text-xs font-black text-[#2D3A4E] bg-transparent"
+                            label={`Остаток ${sku.skuCode || `${product.title}, ${sku.color}, ${sku.size}`}`}
+                            onCommit={(next) => handleUpdateStock(product.id, sku.color, sku.size, next)}
                           />
 
                           <button
@@ -973,7 +1013,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
             {/* Audit KPI Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <div className="neu-flat-sm rounded-xl p-2.5">
-                <span className="text-[11px] uppercase font-bold text-[#4E5C70] block">Всего позиций SKU</span>
+                <span className="text-[11px] uppercase font-bold text-[#4E5C70] block">Вариантов</span>
                 <span className="text-sm font-black text-[#2D3A4E]">{auditStats.totalItems} шт.</span>
                 <span className="text-[11px] text-[#4E5C70] block">в каталоге</span>
               </div>
@@ -981,7 +1021,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
               <div className="neu-flat-sm rounded-xl p-2.5">
                 <span className="text-[11px] uppercase font-bold text-warning block">Расхождений</span>
                 <span className={`text-sm font-black ${auditStats.discrepancyCount > 0 ? 'text-danger' : 'text-success'}`}>
-                  {auditStats.discrepancyCount} SKU
+                  {auditStats.discrepancyCount} {pluralRu(auditStats.discrepancyCount, ['вариант', 'варианта', 'вариантов'])}
                 </span>
                 <span className="text-[11px] text-[#4E5C70] block">
                   {auditStats.discrepancyCount === 0 ? 'Полное совпадение' : 'Требуют списания/оприходования'}
@@ -1183,7 +1223,8 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                             max="999"
                             value={actual}
                             onChange={(e) => handleSetAuditCount(key, parseInt(e.target.value, 10) || 0)}
-                            className="w-8 sm:w-10 text-center text-xs font-black text-accent bg-transparent"
+                            aria-label={`Фактическое количество ${sku.skuCode || `${product.title}, ${sku.color}, ${sku.size}`}`}
+                            className="w-8 sm:w-10 h-8 text-center text-xs font-black text-accent bg-transparent"
                           />
 
                           <button

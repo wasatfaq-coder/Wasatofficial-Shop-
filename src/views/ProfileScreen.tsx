@@ -54,7 +54,7 @@ import {
 import { NeumorphicSlider } from '../components/NeumorphicSlider';
 import { calculateRussianPattern, RUSSIAN_SIZE_TABLE_ROWS } from '../utils/russianSizing';
 import { useAuth } from '../context/AuthContext';
-import { UserProfile, Order, CartItem, OrderStatusHistoryStep, ActiveTab, SavedAddress, Product, PromoCode, BannerSlide, ChatMessage, StorefrontSettings, DeliveryMethod, PickupPoint } from '../types';
+import { UserProfile, Order, CartItem, OrderStatusHistoryStep, ActiveTab, SavedAddress, Product, PromoCode, BannerSlide, ChatMessage, StorefrontSettings, SaveStorefrontSettings, DeliveryMethod, PickupPoint } from '../types';
 import { formatAddress } from '../utils/addressFormat';
 import { AdminAnalyticsTab } from '../components/admin/AdminAnalyticsTab';
 import { AdminPromoConstructorTab } from '../components/admin/AdminPromoConstructorTab';
@@ -93,6 +93,7 @@ import { AdminPaymentTab } from '../components/admin/AdminPaymentTab';
 import { AdminCategoriesTab } from '../components/admin/AdminCategoriesTab';
 import { getCategories } from '../utils/categories';
 import { productImage } from '../utils/productImage';
+import { NeumorphicSwitch } from '../components/NeumorphicSwitch';
 
 interface ProfileScreenProps {
   profile: UserProfile;
@@ -131,7 +132,7 @@ interface ProfileScreenProps {
   /** Staff: edit, «удалить у себя» / «у всех» — any message, any time */
   onChangeChatMessage?: (change: ChatMessageChange) => Promise<boolean>;
   storefrontSettings?: StorefrontSettings;
-  onUpdateStorefrontSettings?: (settings: StorefrontSettings) => void;
+  onUpdateStorefrontSettings?: SaveStorefrontSettings;
   onSyncFirebase?: () => Promise<void>;
   deliveryMethods?: DeliveryMethod[];
   onUpdateDeliveryMethods?: (methods: DeliveryMethod[]) => void;
@@ -1311,22 +1312,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </div>
             </div>
 
-            <button
-              type="button"
-              role="switch"
-              aria-checked={notifications}
-              aria-label="Уведомления о статусе заказов"
-              onClick={toggleNotifications}
-              className={`w-12 h-6 rounded-full p-0.5 transition-colors duration-200 cursor-pointer ${
-                notifications ? 'neu-fill-accent text-white' : 'neu-inset'
-              }`}
-            >
-              <div
-                className={`w-5 h-5 rounded-full neu-flat-sm border border-white/90 transform transition-transform duration-200 ${
-                  notifications ? 'translate-x-6' : 'translate-x-0'
-                }`}
-              />
-            </button>
+            <NeumorphicSwitch
+              checked={notifications}
+              onChange={() => toggleNotifications()}
+              label="Уведомления о статусе заказов"
+            />
           </div>
 
           <button

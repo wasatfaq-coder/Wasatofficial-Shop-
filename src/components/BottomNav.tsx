@@ -68,7 +68,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
   return (
     <div className="fixed bottom-3 left-1/2 -translate-x-1/2 w-full max-w-md md:max-w-lg z-40 px-3 pointer-events-none">
-      <nav className="pointer-events-auto max-w-sm mx-auto neu-flat rounded-[26px] p-1.5 flex items-center justify-between gap-1 border border-white/70">
+      <nav aria-label="Основная навигация" className="pointer-events-auto max-w-sm mx-auto neu-flat rounded-[26px] p-1.5 flex items-center justify-between gap-1 border border-white/70">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive =

@@ -402,7 +402,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               Бесплатно от
             </span>
             <span className="text-lg font-black text-[#2D3A4E] block mt-0.5">
-              {storefrontSettings?.freeDeliveryThreshold ? `${storefrontSettings.freeDeliveryThreshold.toLocaleString()} ₽` : '5 000 ₽'}
+              {storefrontSettings?.freeDeliveryThreshold ? `${storefrontSettings.freeDeliveryThreshold.toLocaleString('ru-RU')} ₽` : '5 000 ₽'}
             </span>
           </div>
           <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-warning">
@@ -635,13 +635,13 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                             method.price === 0 ? 'text-success font-extrabold' : 'text-[#2D3A4E]'
                           }`}
                         >
-                          {method.price === 0 ? 'Бесплатно' : `${method.price.toLocaleString()} ₽`}
+                          {method.price === 0 ? 'Бесплатно' : `${method.price.toLocaleString('ru-RU')} ₽`}
                         </span>
                       </div>
 
                       {method.freeThreshold !== undefined && method.freeThreshold > 0 && (
                         <span className="text-[11px] font-bold text-success neu-inset px-2 py-0.5 rounded-lg">
-                          Бесплатно от {method.freeThreshold.toLocaleString()} ₽
+                          Бесплатно от {method.freeThreshold.toLocaleString('ru-RU')} ₽
                         </span>
                       )}
                     </div>

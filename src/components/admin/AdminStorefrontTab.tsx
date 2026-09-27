@@ -23,20 +23,37 @@ import {
   Pencil,
 } from 'lucide-react';
 import { AdminServerOrdersCard } from './AdminServerOrdersCard';
-import { StorefrontSettings } from '../../types';
+import { SaveStorefrontSettings, StorefrontSettings } from '../../types';
 import {
   loadStorefrontSettings,
   saveStorefrontSettings,
   DEFAULT_STOREFRONT_SETTINGS,
 } from '../../utils/inventory';
 import { BrandRequisitesModal } from '../BrandRequisitesModal';
+import { NeumorphicSwitch } from '../NeumorphicSwitch';
 import { QuickTextEditModal, QuickEditFieldConfig } from './QuickTextEditModal';
 
 
 interface AdminStorefrontTabProps {
   settings?: StorefrontSettings;
-  onUpdateSettings?: (newSettings: StorefrontSettings) => void;
+  onUpdateSettings?: SaveStorefrontSettings;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
+}
+
+/** Примеры — только подсказки в пустых полях, в настройки не записываются */
+const GUARANTEE_EXAMPLES = [
+  '100% оригинальность и сертификация каждого изделия.',
+  'Расширенная гарантия качества на швы и фурнитуру.',
+  'Примерка перед оплатой и легкий возврат без лишних вопросов.',
+];
+
+/** Меняет пункт гарантии по номеру; пустые пункты в конце списка не хранятся */
+function withGuaranteeItem(list: string[] | undefined, index: number, value: string): string[] {
+  const next = [...(list ?? [])];
+  while (next.length <= index) next.push('');
+  next[index] = value;
+  while (next.length > 0 && !next[next.length - 1].trim()) next.pop();
+  return next;
 }
 
 export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
@@ -56,6 +73,17 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
   }, [propSettings]);
 
   const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  /** Resolves to false when the database rejected the write: App shows the error, no «Сохранено» here */
+  const persistSettings = async (next: StorefrontSettings): Promise<boolean> => {
+    saveStorefrontSettings(next);
+    if (!onUpdateSettings) return true;
+    setIsSaving(true);
+    const ok = await onUpdateSettings(next);
+    setIsSaving(false);
+    return ok !== false;
+  };
   const [showLivePreview, setShowLivePreview] = useState(true);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
 
@@ -73,18 +101,15 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
     setIsEditModalOpen(true);
   };
 
-  const handleQuickEditSave = (key: string, newValue: string) => {
+  const handleQuickEditSave = async (key: string, newValue: string) => {
     let newSettings: StorefrontSettings;
 
     if (key.startsWith('guarantee_')) {
       const idx = parseInt(key.replace('guarantee_', ''), 10);
-      const list = [...(localSettings.brandGuaranteesList || [
-        '100% оригинальность и сертификация каждого изделия.',
-        'Расширенная гарантия качества на швы и фурнитуру.',
-        'Примерка перед оплатой и легкий возврат без лишних вопросов.',
-      ])];
-      list[idx] = newValue;
-      newSettings = { ...localSettings, brandGuaranteesList: list };
+      newSettings = {
+        ...localSettings,
+        brandGuaranteesList: withGuaranteeItem(localSettings.brandGuaranteesList, idx, newValue),
+      };
     } else if (
       key === 'freeDeliveryThreshold' ||
       key === 'courierDeliveryPrice' ||
@@ -97,46 +122,36 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
       newSettings = { ...localSettings, [key]: newValue };
     }
 
-    setLocalSettings(newSettings);
-    saveStorefrontSettings(newSettings);
-    if (onUpdateSettings) {
-      onUpdateSettings(newSettings);
-    }
-
     const fieldTitle = editModalConfig?.fieldLabel || editModalConfig?.title || 'Поле';
-    onShowToast(`«${fieldTitle}» обновлено`, 'success');
+    setLocalSettings(newSettings);
+    if (await persistSettings(newSettings)) {
+      onShowToast(`«${fieldTitle}» обновлено`, 'success');
+    }
   };
 
-  const handleSave = (e?: React.FormEvent) => {
+  const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    saveStorefrontSettings(localSettings);
-    if (onUpdateSettings) {
-      onUpdateSettings(localSettings);
-    }
+    if (isSaving) return;
+    if (!(await persistSettings(localSettings))) return;
 
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2500);
     onShowToast('Настройки витрины, реквизиты и данные бренда сохранены', 'success');
   };
 
-  const handleResetToDefaults = () => {
+  const handleResetToDefaults = async () => {
     setLocalSettings(DEFAULT_STOREFRONT_SETTINGS);
-    saveStorefrontSettings(DEFAULT_STOREFRONT_SETTINGS);
-    if (onUpdateSettings) {
-      onUpdateSettings(DEFAULT_STOREFRONT_SETTINGS);
+    if (await persistSettings(DEFAULT_STOREFRONT_SETTINGS)) {
+      onShowToast('Тексты и контакты витрины очищены', 'info');
     }
-    onShowToast('Тексты и контакты витрины очищены', 'info');
   };
 
   // Helper to safely update an item in brandGuaranteesList
   const updateGuaranteeItem = (index: number, val: string) => {
-    const list = [...(localSettings.brandGuaranteesList || [
-      '100% оригинальность и сертификация каждого изделия.',
-      'Расширенная гарантия качества на швы и фурнитуру.',
-      'Примерка перед оплатой и легкий возврат без лишних вопросов.',
-    ])];
-    list[index] = val;
-    setLocalSettings({ ...localSettings, brandGuaranteesList: list });
+    setLocalSettings({
+      ...localSettings,
+      brandGuaranteesList: withGuaranteeItem(localSettings.brandGuaranteesList, index, val),
+    });
   };
 
   return (
@@ -195,11 +210,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             <button
               type="button"
               onClick={() => handleSave()}
-              className="py-2 px-4.5 neu-button rounded-xl text-xs font-black text-accent hover:text-accent-strong flex items-center gap-2 cursor-pointer transition-all"
+              disabled={isSaving}
+              className="py-2 px-4.5 neu-button rounded-xl text-xs font-black text-accent hover:text-accent-strong flex items-center gap-2 cursor-pointer transition-all disabled:opacity-60 disabled:cursor-wait"
               title="Применить все изменения к витрине"
             >
               {isSaved ? <Check className="w-4 h-4 text-success" /> : <Save className="w-4 h-4 text-accent" />}
-              <span>{isSaved ? 'Сохранено!' : 'Применить'}</span>
+              <span>{isSaving ? 'Сохранение…' : isSaved ? 'Сохранено' : 'Применить'}</span>
             </button>
           </div>
         </div>
@@ -451,11 +467,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div>
-              <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+              <label htmlFor="storefront-storeName" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                 Название бутика / бренда
               </label>
               <div className="flex items-center gap-2">
                 <input
+                  id="storefront-storeName"
                   type="text"
                   value={localSettings.storeName}
                   onChange={(e) => setLocalSettings({ ...localSettings, storeName: e.target.value })}
@@ -483,11 +500,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+              <label htmlFor="storefront-storeSlogan" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                 Слоган / Описание витрины
               </label>
               <div className="flex items-center gap-2">
                 <input
+                  id="storefront-storeSlogan"
                   type="text"
                   value={localSettings.storeSlogan || ''}
                   onChange={(e) =>
@@ -518,11 +536,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+              <label htmlFor="storefront-phone" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                 Телефон горячей линии
               </label>
               <div className="flex items-center gap-2">
                 <input
+                  id="storefront-phone"
                   type="text"
                   value={localSettings.phone}
                   onChange={(e) => setLocalSettings({ ...localSettings, phone: e.target.value })}
@@ -551,11 +570,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+              <label htmlFor="storefront-email" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                 Email клиентской службы
               </label>
               <div className="flex items-center gap-2">
                 <input
+                  id="storefront-email"
                   type="email"
                   value={localSettings.email}
                   onChange={(e) => setLocalSettings({ ...localSettings, email: e.target.value })}
@@ -584,11 +604,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+              <label htmlFor="storefront-telegram" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                 Telegram канал / бот
               </label>
               <div className="flex items-center gap-2">
                 <input
+                  id="storefront-telegram"
                   type="text"
                   value={localSettings.telegram}
                   onChange={(e) => setLocalSettings({ ...localSettings, telegram: e.target.value })}
@@ -617,11 +638,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+              <label htmlFor="storefront-whatsapp" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                 WhatsApp для консультаций
               </label>
               <div className="flex items-center gap-2">
                 <input
+                  id="storefront-whatsapp"
                   type="text"
                   value={localSettings.whatsapp}
                   onChange={(e) => setLocalSettings({ ...localSettings, whatsapp: e.target.value })}
@@ -650,11 +672,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+              <label htmlFor="storefront-pickupAddress" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                 Адрес бутика / шоурума
               </label>
               <div className="flex items-center gap-2">
                 <input
+                  id="storefront-pickupAddress"
                   type="text"
                   value={localSettings.pickupAddress}
                   onChange={(e) =>
@@ -684,11 +707,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+              <label htmlFor="storefront-workingHours" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                 Режим работы
               </label>
               <div className="flex items-center gap-2">
                 <input
+                  id="storefront-workingHours"
                   type="text"
                   value={localSettings.workingHours}
                   onChange={(e) =>
@@ -725,39 +749,27 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 <Tag className="w-3.5 h-3.5 text-accent shrink-0" />
                 Промо-сообщение в шапке сайта
               </span>
-              <label className="flex items-center gap-2 cursor-pointer select-none shrink-0 self-start sm:self-auto neu-button px-2.5 py-1 rounded-xl border border-white/80 transition-all">
-                <span className="text-[11px] font-bold text-[#4E5C70] whitespace-nowrap">
+              <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                <label htmlFor="storefront-isStoreBannerVisible" className="text-[11px] font-bold text-[#4E5C70] whitespace-nowrap cursor-pointer select-none">
                   {localSettings.isStoreBannerVisible ? 'Баннер включен' : 'Баннер скрыт'}
-                </span>
-                <input
-                  type="checkbox"
+                </label>
+                <NeumorphicSwitch
+                  id="storefront-isStoreBannerVisible"
                   checked={localSettings.isStoreBannerVisible ?? false}
-                  onChange={(e) =>
-                    setLocalSettings({ ...localSettings, isStoreBannerVisible: e.target.checked })
-                  }
-                  className="sr-only"
+                  onChange={(checked) => setLocalSettings({ ...localSettings, isStoreBannerVisible: checked })}
+                  label="Показывать промо-сообщение в шапке"
                 />
-                <div
-                  className={`w-9 h-5 rounded-full transition-colors relative p-0.5 neu-inset ${
-                    localSettings.isStoreBannerVisible ? 'bg-accent' : 'bg-[#BAC5D5]'
-                  }`}
-                >
-                  <div
-                    className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
-                      localSettings.isStoreBannerVisible ? 'translate-x-4' : 'translate-x-0'
-                    }`}
-                  />
-                </div>
-              </label>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
               <div className="sm:col-span-1">
-                <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                <label htmlFor="storefront-bannerBadgeText" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                   Текст бейджа
                 </label>
                 <div className="flex items-center gap-1.5">
                   <input
+                    id="storefront-bannerBadgeText"
                     type="text"
                     value={localSettings.bannerBadgeText ?? ''}
                     onChange={(e) =>
@@ -788,11 +800,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               </div>
 
               <div className="sm:col-span-3">
-                <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                <label htmlFor="storefront-storeBannerText" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                   Текст промо-сообщения
                 </label>
                 <div className="flex items-center gap-1.5">
                   <input
+                    id="storefront-storeBannerText"
                     type="text"
                     value={
                       localSettings.storeBannerText ?? ''
@@ -841,11 +854,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
           <div className="space-y-3 text-xs">
             <div>
-              <label className="block text-[11px] font-bold text-[#4E5C70] mb-1.5">
+              <label htmlFor="storefront-conciergeDescription" className="block text-[11px] font-bold text-[#4E5C70] mb-1.5">
                 Приветственное описание консьерж-сервиса
               </label>
               <div className="flex items-start gap-2">
                 <textarea
+                  id="storefront-conciergeDescription"
                   rows={3}
                   value={
                     localSettings.conciergeDescription ??
@@ -898,11 +912,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  <label htmlFor="storefront-conciergeService1Title" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Заголовок
                   </label>
                   <div className="flex items-center gap-1.5">
                     <input
+                      id="storefront-conciergeService1Title"
                       type="text"
                       value={localSettings.conciergeService1Title ?? 'Персональный подбор капсулы'}
                       onChange={(e) =>
@@ -936,11 +951,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  <label htmlFor="storefront-conciergeService1Desc" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Описание
                   </label>
                   <div className="flex items-start gap-1.5">
                     <textarea
+                      id="storefront-conciergeService1Desc"
                       rows={3}
                       value={
                         localSettings.conciergeService1Desc ??
@@ -989,11 +1005,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  <label htmlFor="storefront-conciergeService2Title" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Заголовок
                   </label>
                   <div className="flex items-center gap-1.5">
                     <input
+                      id="storefront-conciergeService2Title"
                       type="text"
                       value={
                         localSettings.conciergeService2Title ?? 'Выездная примерка на дом и в офис'
@@ -1030,11 +1047,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  <label htmlFor="storefront-conciergeService2Desc" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Описание
                   </label>
                   <div className="flex items-start gap-1.5">
                     <textarea
+                      id="storefront-conciergeService2Desc"
                       rows={3}
                       value={
                         localSettings.conciergeService2Desc ??
@@ -1083,11 +1101,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  <label htmlFor="storefront-conciergeService3Title" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Заголовок
                   </label>
                   <div className="flex items-center gap-1.5">
                     <input
+                      id="storefront-conciergeService3Title"
                       type="text"
                       value={localSettings.conciergeService3Title ?? 'Подгонка в ателье бутика'}
                       onChange={(e) =>
@@ -1121,11 +1140,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  <label htmlFor="storefront-conciergeService3Desc" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Описание
                   </label>
                   <div className="flex items-start gap-1.5">
                     <textarea
+                      id="storefront-conciergeService3Desc"
                       rows={3}
                       value={
                         localSettings.conciergeService3Desc ??
@@ -1191,11 +1211,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  <label htmlFor="storefront-legalEntityName" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Юридическое лицо / Организация
                   </label>
                   <div className="flex items-center gap-1.5">
                     <input
+                      id="storefront-legalEntityName"
                       type="text"
                       value={localSettings.legalEntityName || ''}
                       onChange={(e) =>
@@ -1226,11 +1247,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  <label htmlFor="storefront-ceo" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Руководитель / Генеральный директор
                   </label>
                   <div className="flex items-center gap-1.5">
                     <input
+                      id="storefront-ceo"
                       type="text"
                       value={localSettings.ceo || ''}
                       onChange={(e) => setLocalSettings({ ...localSettings, ceo: e.target.value })}
@@ -1259,11 +1281,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  <label htmlFor="storefront-legalAddress" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Юридический адрес компании
                   </label>
                   <div className="flex items-center gap-1.5">
                     <input
+                      id="storefront-legalAddress"
                       type="text"
                       value={localSettings.legalAddress || ''}
                       onChange={(e) =>
@@ -1294,11 +1317,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  <label htmlFor="storefront-edo" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Система электронного документооборота (ЭДО)
                   </label>
                   <div className="flex items-center gap-1.5">
                     <input
+                      id="storefront-edo"
                       type="text"
                       value={localSettings.edo || ''}
                       onChange={(e) => setLocalSettings({ ...localSettings, edo: e.target.value })}
@@ -1337,11 +1361,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  <label htmlFor="storefront-inn" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     ИНН
                   </label>
                   <div className="flex items-center gap-1.5">
                     <input
+                      id="storefront-inn"
                       type="text"
                       value={localSettings.inn || ''}
                       onChange={(e) => setLocalSettings({ ...localSettings, inn: e.target.value })}
@@ -1370,11 +1395,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  <label htmlFor="storefront-kpp" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     КПП
                   </label>
                   <div className="flex items-center gap-1.5">
                     <input
+                      id="storefront-kpp"
                       type="text"
                       value={localSettings.kpp || ''}
                       onChange={(e) => setLocalSettings({ ...localSettings, kpp: e.target.value })}
@@ -1403,11 +1429,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  <label htmlFor="storefront-ogrn" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     ОГРН / ОГРНИП
                   </label>
                   <div className="flex items-center gap-1.5">
                     <input
+                      id="storefront-ogrn"
                       type="text"
                       value={localSettings.ogrn || ''}
                       onChange={(e) => setLocalSettings({ ...localSettings, ogrn: e.target.value })}
@@ -1446,11 +1473,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  <label htmlFor="storefront-bankName" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Банк обслуживания
                   </label>
                   <div className="flex items-center gap-1.5">
                     <input
+                      id="storefront-bankName"
                       type="text"
                       value={localSettings.bankName || ''}
                       onChange={(e) => setLocalSettings({ ...localSettings, bankName: e.target.value })}
@@ -1479,11 +1507,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  <label htmlFor="storefront-bik" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     БИК банка
                   </label>
                   <div className="flex items-center gap-1.5">
                     <input
+                      id="storefront-bik"
                       type="text"
                       value={localSettings.bik || ''}
                       onChange={(e) => setLocalSettings({ ...localSettings, bik: e.target.value })}
@@ -1512,11 +1541,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  <label htmlFor="storefront-checkingAccount" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Расчетный счет (Р/С)
                   </label>
                   <div className="flex items-center gap-1.5">
                     <input
+                      id="storefront-checkingAccount"
                       type="text"
                       value={localSettings.checkingAccount || ''}
                       onChange={(e) =>
@@ -1547,11 +1577,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  <label htmlFor="storefront-corrAccount" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Корреспондентский счет (К/С)
                   </label>
                   <div className="flex items-center gap-1.5">
                     <input
+                      id="storefront-corrAccount"
                       type="text"
                       value={localSettings.corrAccount || ''}
                       onChange={(e) =>
@@ -1605,11 +1636,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 <span className="text-[11px] font-black text-[#2D3A4E]">Философия бренда</span>
               </div>
               <div>
-                <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                <label htmlFor="storefront-brandPhilosophyTitle" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                   Заголовок блока
                 </label>
                 <div className="flex items-center gap-1.5">
                   <input
+                    id="storefront-brandPhilosophyTitle"
                     type="text"
                     value={localSettings.brandPhilosophyTitle ?? `Философия бренда ${localSettings.storeName}`}
                     onChange={(e) =>
@@ -1640,11 +1672,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </div>
               </div>
               <div>
-                <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                <label htmlFor="storefront-brandPhilosophyText" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                   Текст манифеста бренда
                 </label>
                 <div className="flex items-start gap-1.5">
                   <textarea
+                    id="storefront-brandPhilosophyText"
                     rows={3}
                     value={
                       localSettings.brandPhilosophyText ??
@@ -1690,11 +1723,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   <span className="text-[11px] font-black text-[#2D3A4E]">Материалы и ткани</span>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  <label htmlFor="storefront-brandMaterialsTitle" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Заголовок
                   </label>
                   <div className="flex items-center gap-1.5">
                     <input
+                      id="storefront-brandMaterialsTitle"
                       type="text"
                       value={localSettings.brandMaterialsTitle ?? 'Итальянские ткани'}
                       onChange={(e) =>
@@ -1723,11 +1757,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  <label htmlFor="storefront-brandMaterialsText" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Описание
                   </label>
                   <div className="flex items-start gap-1.5">
                     <textarea
+                      id="storefront-brandMaterialsText"
                       rows={3}
                       value={
                         localSettings.brandMaterialsText ??
@@ -1771,11 +1806,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   <span className="text-[11px] font-black text-[#2D3A4E]">Крой и пошив</span>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  <label htmlFor="storefront-brandCraftsmanshipTitle" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Заголовок
                   </label>
                   <div className="flex items-center gap-1.5">
                     <input
+                      id="storefront-brandCraftsmanshipTitle"
                       type="text"
                       value={localSettings.brandCraftsmanshipTitle ?? 'Эталонный крой'}
                       onChange={(e) =>
@@ -1807,11 +1843,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  <label htmlFor="storefront-brandCraftsmanshipText" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                     Описание
                   </label>
                   <div className="flex items-start gap-1.5">
                     <textarea
+                      id="storefront-brandCraftsmanshipText"
                       rows={3}
                       value={
                         localSettings.brandCraftsmanshipText ??
@@ -1864,16 +1901,18 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                <label htmlFor="storefront-guarantees-title" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                   Заголовок блока гарантий
                 </label>
                 <div className="flex items-center gap-1.5">
                   <input
+                    id="storefront-guarantees-title"
                     type="text"
-                    value={localSettings.brandGuaranteesTitle ?? 'Стандарты подлинности и гарантии'}
+                    value={localSettings.brandGuaranteesTitle ?? ''}
                     onChange={(e) =>
                       setLocalSettings({ ...localSettings, brandGuaranteesTitle: e.target.value })
                     }
+                    placeholder="Например: Стандарты подлинности и гарантии"
                     className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-bold text-[#2D3A4E]"
                   />
                   <button
@@ -1883,16 +1922,14 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         key: 'brandGuaranteesTitle',
                         title: 'О бренде: Гарантии',
                         fieldLabel: 'Заголовок блока гарантий',
-                        value:
-                          localSettings.brandGuaranteesTitle ??
-                          'Стандарты подлинности и гарантии',
+                        value: localSettings.brandGuaranteesTitle ?? '',
                         badge: 'Гарантии',
                         description: 'Заголовок секции гарантий подлинности и сервисных стандартов.',
                       })
                     }
                     className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
                     title="Редактировать в модальном окне"
-                    aria-label="Редактировать в модальном окне"
+                    aria-label="Редактировать заголовок блока гарантий"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
@@ -1901,116 +1938,42 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
               <div className="space-y-2 pt-1">
                 <span className="text-[11px] uppercase font-bold text-[#4E5C70] block">
-                  Пункты гарантийных обязательств (3 пункта)
+                  Пункты гарантий (до 3, пустые не показываются)
                 </span>
 
-                <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-md neu-flat-sm flex items-center justify-center text-success font-bold text-[11px] shrink-0">
-                    ✓
-                  </span>
-                  <input
-                    type="text"
-                    value={
-                      localSettings.brandGuaranteesList?.[0] ??
-                      '100% оригинальность и сертификация каждого изделия.'
-                    }
-                    onChange={(e) => updateGuaranteeItem(0, e.target.value)}
-                    placeholder="Пункт гарантии 1"
-                    className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      openQuickEdit({
-                        key: 'guarantee_0',
-                        title: 'О бренде: Гарантии',
-                        fieldLabel: 'Пункт гарантии №1',
-                        value:
-                          localSettings.brandGuaranteesList?.[0] ??
-                          '100% оригинальность и сертификация каждого изделия.',
-                        badge: 'Гарантия 1',
-                        description: 'Первое гарантийное обязательство перед клиентом.',
-                      })
-                    }
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                    title="Редактировать в модальном окне"
-                    aria-label="Редактировать в модальном окне"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-md neu-flat-sm flex items-center justify-center text-success font-bold text-[11px] shrink-0">
-                    ✓
-                  </span>
-                  <input
-                    type="text"
-                    value={
-                      localSettings.brandGuaranteesList?.[1] ??
-                      'Расширенная гарантия качества на швы и фурнитуру.'
-                    }
-                    onChange={(e) => updateGuaranteeItem(1, e.target.value)}
-                    placeholder="Пункт гарантии 2"
-                    className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      openQuickEdit({
-                        key: 'guarantee_1',
-                        title: 'О бренде: Гарантии',
-                        fieldLabel: 'Пункт гарантии №2',
-                        value:
-                          localSettings.brandGuaranteesList?.[1] ??
-                          'Расширенная гарантия качества на швы и фурнитуру.',
-                        badge: 'Гарантия 2',
-                        description: 'Второе гарантийное обязательство перед клиентом.',
-                      })
-                    }
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                    title="Редактировать в модальном окне"
-                    aria-label="Редактировать в модальном окне"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-md neu-flat-sm flex items-center justify-center text-success font-bold text-[11px] shrink-0">
-                    ✓
-                  </span>
-                  <input
-                    type="text"
-                    value={
-                      localSettings.brandGuaranteesList?.[2] ??
-                      'Примерка перед оплатой и легкий возврат без лишних вопросов.'
-                    }
-                    onChange={(e) => updateGuaranteeItem(2, e.target.value)}
-                    placeholder="Пункт гарантии 3"
-                    className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      openQuickEdit({
-                        key: 'guarantee_2',
-                        title: 'О бренде: Гарантии',
-                        fieldLabel: 'Пункт гарантии №3',
-                        value:
-                          localSettings.brandGuaranteesList?.[2] ??
-                          'Примерка перед оплатой и легкий возврат без лишних вопросов.',
-                        badge: 'Гарантия 3',
-                        description: 'Третье гарантийное обязательство перед клиентом.',
-                      })
-                    }
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                    title="Редактировать в модальном окне"
-                    aria-label="Редактировать в модальном окне"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                {GUARANTEE_EXAMPLES.map((example, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-md neu-flat-sm flex items-center justify-center text-success font-bold text-[11px] shrink-0">
+                      ✓
+                    </span>
+                    <input
+                      type="text"
+                      value={localSettings.brandGuaranteesList?.[i] ?? ''}
+                      onChange={(e) => updateGuaranteeItem(i, e.target.value)}
+                      placeholder={`Например: ${example}`}
+                      aria-label={`Пункт гарантии ${i + 1}`}
+                      className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        openQuickEdit({
+                          key: `guarantee_${i}`,
+                          title: 'О бренде: Гарантии',
+                          fieldLabel: `Пункт гарантии №${i + 1}`,
+                          value: localSettings.brandGuaranteesList?.[i] ?? '',
+                          badge: `Гарантия ${i + 1}`,
+                          description: 'Гарантийное обязательство перед клиентом. Пустой пункт покупателю не показывается.',
+                        })
+                      }
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
+                      title="Редактировать в модальном окне"
+                      aria-label={`Редактировать пункт гарантии ${i + 1}`}
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -2035,12 +1998,13 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
             {/* Free Delivery Threshold */}
             <div className="neu-inset p-3 rounded-2xl space-y-1.5">
-              <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1 truncate">
+              <label htmlFor="storefront-freeDeliveryThreshold" className="block text-[11px] font-bold text-[#2D3A4E] mb-1 truncate">
                 Порог бесплатной доставки
               </label>
               <div className="flex items-center gap-1.5">
                 <div className="relative flex-1 min-w-0">
                   <input
+                    id="storefront-freeDeliveryThreshold"
                     type="number"
                     min="0"
                     step="500"
@@ -2088,12 +2052,13 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
             {/* Courier Delivery Cost */}
             <div className="neu-inset p-3 rounded-2xl space-y-1.5">
-              <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1 truncate">
+              <label htmlFor="storefront-courierDeliveryPrice" className="block text-[11px] font-bold text-[#2D3A4E] mb-1 truncate">
                 Курьер (базовый тариф)
               </label>
               <div className="flex items-center gap-1.5">
                 <div className="relative flex-1 min-w-0">
                   <input
+                    id="storefront-courierDeliveryPrice"
                     type="number"
                     min="0"
                     step="50"
@@ -2141,12 +2106,13 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
             {/* Pickup Point Cost */}
             <div className="neu-inset p-3 rounded-2xl space-y-1.5">
-              <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1 truncate">
+              <label htmlFor="storefront-pickupDeliveryPrice" className="block text-[11px] font-bold text-[#2D3A4E] mb-1 truncate">
                 Самовывоз из бутика
               </label>
               <div className="flex items-center gap-1.5">
                 <div className="relative flex-1 min-w-0">
                   <input
+                    id="storefront-pickupDeliveryPrice"
                     type="number"
                     min="0"
                     step="50"
@@ -2196,12 +2162,13 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
             {/* Return Period */}
             <div className="neu-inset p-3 rounded-2xl space-y-1.5">
-              <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1 truncate">
+              <label htmlFor="storefront-returnPeriodDays" className="block text-[11px] font-bold text-[#2D3A4E] mb-1 truncate">
                 Срок возврата и примерки
               </label>
               <div className="flex items-center gap-1.5">
                 <div className="relative flex-1 min-w-0">
                   <input
+                    id="storefront-returnPeriodDays"
                     type="number"
                     min="1"
                     max="90"
@@ -2268,17 +2235,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             {/* Online Storefront */}
-            <div
-              onClick={() =>
-                setLocalSettings({ ...localSettings, isStoreOnline: !localSettings.isStoreOnline })
-              }
-              className="neu-inset p-3 rounded-2xl flex items-center justify-between cursor-pointer select-none hover:brightness-[1.01] active:scale-[0.98] transition-all border border-black/5"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
+            <div className="neu-inset p-3 rounded-2xl flex items-center justify-between gap-2 border border-black/5">
+              <label htmlFor="storefront-isStoreOnline" className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer select-none">
                 <div className={`w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center shrink-0 transition-colors ${
                   localSettings.isStoreOnline ? 'text-accent' : 'text-[#4E5C70]'
                 }`}>
-                  <Store className="w-4 h-4" />
+                  <Store className="w-4 h-4" aria-hidden="true" />
                 </div>
                 <div className="space-y-0.5 truncate">
                   <span className="text-xs font-black text-[#2D3A4E] block truncate">Онлайн-витрина</span>
@@ -2288,35 +2250,22 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     {localSettings.isStoreOnline ? 'Прием заказов активен' : 'Технические работы'}
                   </span>
                 </div>
-              </div>
-              <div
-                className={`w-9 h-5 rounded-full transition-colors relative p-0.5 shrink-0 ml-2 shadow-inner ${
-                  localSettings.isStoreOnline ? 'bg-accent' : 'bg-[#BAC5D5]/60'
-                }`}
-              >
-                <div
-                  className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
-                    localSettings.isStoreOnline ? 'translate-x-4' : 'translate-x-0'
-                  }`}
-                />
-              </div>
+              </label>
+              <NeumorphicSwitch
+                id="storefront-isStoreOnline"
+                checked={Boolean(localSettings.isStoreOnline)}
+                onChange={(checked) => setLocalSettings({ ...localSettings, isStoreOnline: checked })}
+                label="Онлайн-витрина"
+              />
             </div>
 
             {/* Express Delivery */}
-            <div
-              onClick={() =>
-                setLocalSettings({
-                  ...localSettings,
-                  isExpressEnabled: !localSettings.isExpressEnabled,
-                })
-              }
-              className="neu-inset p-3 rounded-2xl flex items-center justify-between cursor-pointer select-none hover:brightness-[1.01] active:scale-[0.98] transition-all border border-black/5"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
+            <div className="neu-inset p-3 rounded-2xl flex items-center justify-between gap-2 border border-black/5">
+              <label htmlFor="storefront-isExpressEnabled" className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer select-none">
                 <div className={`w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center shrink-0 transition-colors ${
                   localSettings.isExpressEnabled ? 'text-accent' : 'text-[#4E5C70]'
                 }`}>
-                  <Clock className="w-4 h-4" />
+                  <Clock className="w-4 h-4" aria-hidden="true" />
                 </div>
                 <div className="space-y-0.5 truncate">
                   <span className="text-xs font-black text-[#2D3A4E] block truncate">Экспресс 2 часа</span>
@@ -2326,35 +2275,22 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     {localSettings.isExpressEnabled ? 'Доступна клиентам' : 'Временно отключена'}
                   </span>
                 </div>
-              </div>
-              <div
-                className={`w-9 h-5 rounded-full transition-colors relative p-0.5 shrink-0 ml-2 shadow-inner ${
-                  localSettings.isExpressEnabled ? 'bg-accent' : 'bg-[#BAC5D5]/60'
-                }`}
-              >
-                <div
-                  className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
-                    localSettings.isExpressEnabled ? 'translate-x-4' : 'translate-x-0'
-                  }`}
-                />
-              </div>
+              </label>
+              <NeumorphicSwitch
+                id="storefront-isExpressEnabled"
+                checked={Boolean(localSettings.isExpressEnabled)}
+                onChange={(checked) => setLocalSettings({ ...localSettings, isExpressEnabled: checked })}
+                label="Экспресс 2 часа"
+              />
             </div>
 
             {/* Preorder Mode */}
-            <div
-              onClick={() =>
-                setLocalSettings({
-                  ...localSettings,
-                  isPreorderMode: !localSettings.isPreorderMode,
-                })
-              }
-              className="neu-inset p-3 rounded-2xl flex items-center justify-between cursor-pointer select-none hover:brightness-[1.01] active:scale-[0.98] transition-all border border-black/5"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
+            <div className="neu-inset p-3 rounded-2xl flex items-center justify-between gap-2 border border-black/5">
+              <label htmlFor="storefront-isPreorderMode" className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer select-none">
                 <div className={`w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center shrink-0 transition-colors ${
                   localSettings.isPreorderMode ? 'text-accent' : 'text-[#4E5C70]'
                 }`}>
-                  <Sparkles className="w-4 h-4" />
+                  <Sparkles className="w-4 h-4" aria-hidden="true" />
                 </div>
                 <div className="space-y-0.5 truncate">
                   <span className="text-xs font-black text-[#2D3A4E] block truncate">Предзаказ</span>
@@ -2364,18 +2300,13 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     {localSettings.isPreorderMode ? 'Можно заказать без остатка' : 'Только в наличии'}
                   </span>
                 </div>
-              </div>
-              <div
-                className={`w-9 h-5 rounded-full transition-colors relative p-0.5 shrink-0 ml-2 shadow-inner ${
-                  localSettings.isPreorderMode ? 'bg-accent' : 'bg-[#BAC5D5]/60'
-                }`}
-              >
-                <div
-                  className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
-                    localSettings.isPreorderMode ? 'translate-x-4' : 'translate-x-0'
-                  }`}
-                />
-              </div>
+              </label>
+              <NeumorphicSwitch
+                id="storefront-isPreorderMode"
+                checked={Boolean(localSettings.isPreorderMode)}
+                onChange={(checked) => setLocalSettings({ ...localSettings, isPreorderMode: checked })}
+                label="Предзаказ"
+              />
             </div>
           </div>
         </div>
@@ -2396,10 +2327,11 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
           <button
             type="submit"
-            className="py-3 px-6 neu-button rounded-2xl text-xs font-black text-accent hover:text-accent-strong flex items-center gap-2 cursor-pointer transition-transform"
+            disabled={isSaving}
+            className="py-3 px-6 neu-button rounded-2xl text-xs font-black text-accent hover:text-accent-strong flex items-center gap-2 cursor-pointer transition-transform disabled:opacity-60 disabled:cursor-wait"
           >
             {isSaved ? <Check className="w-4 h-4 text-success" /> : <Save className="w-4 h-4 text-accent" />}
-            <span>{isSaved ? 'Сохранено!' : 'Применить настройки к витрине'}</span>
+            <span>{isSaving ? 'Сохранение…' : isSaved ? 'Сохранено' : 'Применить настройки к витрине'}</span>
           </button>
         </div>
       </form>

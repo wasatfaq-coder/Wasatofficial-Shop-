@@ -28,6 +28,7 @@ import {
   unifyArticleBarcodes,
   type BarcodeProblem,
 } from '../../shared/barcode';
+import { pluralRu } from '../../utils/pluralize';
 
 export interface LabelTarget {
   productId: string;
@@ -49,14 +50,6 @@ const PROBLEM_TEXT: Record<BarcodeProblem, string> = {
   duplicate: 'штрихкод повторяется',
   invalid: 'штрихкод с ошибкой',
   mismatch: 'у размеров разные штрихкоды',
-};
-
-const pluralLabels = (n: number) => {
-  const m10 = n % 10;
-  const m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return 'этикетка';
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'этикетки';
-  return 'этикеток';
 };
 
 const sizeText = (f: Pick<LabelFormat, 'widthMm' | 'heightMm'>) => `${f.widthMm}×${f.heightMm} мм`;
@@ -278,7 +271,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
         labels.map((r) => labelData(r.product, r.sku)),
         options
       );
-      onShowToast(`PDF: ${labels.length} ${pluralLabels(labels.length)} ${sizeText(format)}`, 'success');
+      onShowToast(`PDF: ${labels.length} ${pluralRu(labels.length, ['этикетка', 'этикетки', 'этикеток'])} ${sizeText(format)}`, 'success');
     } catch (err) {
       console.error('Label PDF failed:', err);
       onShowToast('Не удалось сформировать PDF', 'error');

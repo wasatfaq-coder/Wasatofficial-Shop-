@@ -158,7 +158,6 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
   }, [effectiveSilhouette, chest, waist, height, weight, fitPreference, productFit, russianPattern]);
 
   // Confidence calculation
-  const confidence = Math.min(99, 93 + (chest % 3) + (waist % 2) + (hips % 2));
 
   const handleApply = () => {
     const measurements: BodyMeasurements = {
@@ -368,9 +367,8 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
               </div>
 
               {/* Dynamic Status Strip */}
-              <div className="flex items-center justify-between text-[11px] font-medium text-[#4E5C70] pt-1 border-t border-[#BAC5D5]/40 flex-wrap gap-1">
+              <div className="text-[11px] font-medium text-[#4E5C70] pt-1 border-t border-[#BAC5D5]/40">
                 <span>{russianPattern.recommendedFit}</span>
-                <span className="text-accent font-bold">Точность {confidence}%</span>
               </div>
 
               {/* Collapsible Russian Size Grid Table */}

@@ -1,10 +1,10 @@
 import React from 'react';
-import type { StoreFaqItem, StorefrontSettings } from '../../types';
+import type { SaveStorefrontSettings, StoreFaqItem, StorefrontSettings } from '../../types';
 import { AdminListEditor } from './AdminListEditor';
 
 interface AdminFaqTabProps {
   settings: StorefrontSettings;
-  onUpdateSettings?: (settings: StorefrontSettings) => void;
+  onUpdateSettings?: SaveStorefrontSettings;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
