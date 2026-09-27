@@ -34,6 +34,7 @@ import {
   Ruler,
 } from 'lucide-react';
 import { Product, ProductSKU } from '../../types';
+import { SelectCheckbox } from './SelectCheckbox';
 import { exportProductsToCSV, parseProductsFromCSV } from '../../utils/csvHelpers';
 import { processImageFiles } from '../../utils/imageUpload';
 import {
@@ -1026,23 +1027,27 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       {products.length > 0 && (
       <div className="neu-inset rounded-2xl p-3 space-y-2">
         <div className="flex items-center justify-between">
-          <div
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={isAllFilteredSelected}
             onClick={handleToggleSelectAll}
-            className="flex items-center gap-2.5 cursor-pointer select-none group"
+            className="flex items-center gap-2.5 py-1.5 cursor-pointer select-none group rounded-xl"
           >
-            <div
+            <span
+              aria-hidden="true"
               className={`w-5 h-5 rounded-lg flex items-center justify-center transition-all ${
                 isAllFilteredSelected
-                  ? 'neu-button text-accent scale-105'
-                  : 'neu-button text-transparent group-hover:text-accent/30'
+                  ? 'neu-pill-active text-accent'
+                  : 'neu-button text-transparent group-hover:text-accent/40'
               }`}
             >
               <Check className="w-3 h-3 stroke-[3]" />
-            </div>
+            </span>
             <span className="text-xs font-extrabold text-[#2D3A4E] group-hover:text-accent transition-colors">
               {isAllFilteredSelected ? 'Снять выделение со всех' : 'Выбрать все отфильтрованные'}
             </span>
-          </div>
+          </button>
 
           <span className="text-xs font-bold text-[#4E5C70]">
             Выбрано: <strong className="text-accent">{selectedProductIds.length}</strong>
@@ -1161,21 +1166,12 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                 {/* Product Main Content */}
                 <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
                   {/* Selection Checkbox */}
-                  <div
-                    onClick={() => handleToggleSelectOne(prod.id)}
-                    className="cursor-pointer p-0.5 shrink-0 mt-1 sm:mt-0 group"
-                    title={isSelected ? 'Снять выделение' : 'Выбрать товар'}
-                  >
-                    <div
-                      className={`w-5 h-5 rounded-lg flex items-center justify-center transition-all ${
-                        isSelected
-                          ? 'neu-button text-accent scale-105'
-                          : 'neu-button text-transparent group-hover:text-accent/30'
-                      }`}
-                    >
-                      <Check className="w-3 h-3 stroke-[3]" />
-                    </div>
-                  </div>
+                  <SelectCheckbox
+                    checked={isSelected}
+                    onToggle={() => handleToggleSelectOne(prod.id)}
+                    label={`Выбрать товар «${prod.title}»`}
+                    className="mt-1 sm:mt-0"
+                  />
 
                   {/* Product Thumbnail */}
                   <div className="relative w-12 h-14 sm:w-14 sm:h-14 rounded-xl overflow-hidden neu-inset shrink-0">

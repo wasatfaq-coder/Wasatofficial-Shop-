@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { isPreorderVariant } from '../utils/inventory';
 import {
   User,
@@ -37,6 +37,7 @@ import {
 import { currentStoreName } from '../utils/storeContacts';
 import { NotConfigured } from '../components/NotConfigured';
 import { productImage } from '../utils/productImage';
+import { promoDiscountText } from '../utils/promoLabel';
 
 interface CheckoutScreenProps {
   cartItems: CartItem[];
@@ -53,11 +54,34 @@ interface CheckoutScreenProps {
   }) => void | Promise<boolean>;
   setActiveTab: (tab: ActiveTab) => void;
   appliedPromo: AppliedPromoInfo | null;
+  hasActivePromos?: boolean;
   onOpenPromoModal: () => void;
   storefrontSettings?: StorefrontSettings;
   onShowToast?: (text: string, type?: 'success' | 'info' | 'error') => void;
   deliveryMethods?: DeliveryMethod[];
   pickupPoints?: PickupPoint[];
+}
+
+// Contacts typed on checkout survive «Назад» within the tab session (sessionStorage, per account)
+const CHECKOUT_CONTACTS_KEY = 'manstyle_checkout_contacts';
+type ContactsDraft = { owner: string; name: string; phone: string; email: string };
+
+function readContactsDraft(owner: string): ContactsDraft | null {
+  try {
+    const raw = sessionStorage.getItem(CHECKOUT_CONTACTS_KEY);
+    const draft = raw ? (JSON.parse(raw) as ContactsDraft) : null;
+    return draft && draft.owner === owner ? draft : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearContactsDraft() {
+  try {
+    sessionStorage.removeItem(CHECKOUT_CONTACTS_KEY);
+  } catch {
+    // storage unavailable: nothing to clear
+  }
 }
 
 export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
@@ -71,13 +95,25 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   onShowToast,
   deliveryMethods,
   pickupPoints,
+  hasActivePromos = false,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   // Never prefill made-up contact or address data: a guest could submit it unnoticed
-  const [name, setName] = useState(userProfile?.name || '');
-  const [phone, setPhone] = useState(userProfile?.phone || '');
-  const [email, setEmail] = useState(userProfile?.email || '');
+  const draftOwner = userProfile?.email || 'guest';
+  const [contactsDraft] = useState(() => readContactsDraft(draftOwner));
+  const [name, setName] = useState(contactsDraft?.name ?? (userProfile?.name || ''));
+  const [phone, setPhone] = useState(contactsDraft?.phone ?? (userProfile?.phone || ''));
+  const [email, setEmail] = useState(contactsDraft?.email ?? (userProfile?.email || ''));
+
+  useEffect(() => {
+    try {
+      const draft: ContactsDraft = { owner: draftOwner, name, phone, email };
+      sessionStorage.setItem(CHECKOUT_CONTACTS_KEY, JSON.stringify(draft));
+    } catch {
+      // storage unavailable (private mode): the form still works, only the draft is lost
+    }
+  }, [draftOwner, name, phone, email]);
   const defaultSaved = userProfile?.savedAddresses?.find((a) => a.isDefault) || userProfile?.savedAddresses?.[0];
 
   const [addrTitle, setAddrTitle] = useState(defaultSaved?.title || 'Дом');
@@ -340,6 +376,8 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
       // The server may reject the order (e.g. out of stock) — let the user retry
       if (placed === false) {
         setIsSubmitting(false);
+      } else {
+        clearContactsDraft();
       }
     }, 450);
   };
@@ -368,7 +406,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   }
 
   return (
-    <div className="space-y-5 pb-28 animate-in fade-in duration-300">
+    <div className="space-y-5 pb-10 animate-in fade-in duration-300">
       {/* 4-Step Progress Indicator */}
       <div className="neu-flat rounded-3xl p-4">
         <div className="flex items-center justify-between relative px-2">
@@ -461,14 +499,14 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
             </div>
             <div className="text-left">
               <span className="font-bold text-[#2D3A4E] block">
-                {appliedPromo ? `Промокод: ${appliedPromo.code}` : 'Добавить промокод / купон'}
+                {appliedPromo ? `Промокод: ${appliedPromo.code}` : 'Промокод'}
               </span>
               <span className="text-[11px] text-[#4E5C70] font-medium block">
                 {appliedPromo
-                  ? appliedPromo.discountType === 'fixed'
-                    ? `Скидка ${(appliedPromo.discountValue || 0).toLocaleString('ru-RU')} ₽ применена`
-                    : `Скидка ${appliedPromo.discountValue || appliedPromo.discountPercent}% применена`
-                  : 'Доступны активные купоны'}
+                  ? `Скидка ${promoDiscountText(appliedPromo)} применена`
+                  : hasActivePromos
+                    ? 'Есть доступные промокоды'
+                    : 'Введите код, если он у вас есть'}
               </span>
             </div>
           </div>
@@ -487,40 +525,63 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           </h3>
 
           <div className="space-y-2.5">
-            <div className="relative">
-              <User className="w-4 h-4 text-[#56647A] absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="ФИО"
-                className="w-full neu-inset rounded-2xl py-3 pl-10 pr-3 text-xs font-medium text-[#2D3A4E]"
-              />
+            <div>
+              <label htmlFor="checkout-name" className="block text-[11px] font-bold text-[#4E5C70] mb-1 ml-1">
+                Имя и фамилия
+              </label>
+              <div className="relative">
+                <User className="w-4 h-4 text-[#56647A] absolute left-3.5 top-1/2 -translate-y-1/2" aria-hidden="true" />
+                <input
+                  id="checkout-name"
+                  type="text"
+                  required
+                  autoComplete="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Иван Петров"
+                  className="w-full neu-inset rounded-2xl py-3 pl-10 pr-3 text-xs font-medium text-[#2D3A4E]"
+                />
+              </div>
             </div>
 
-            <div className="relative">
-              <Phone className="w-4 h-4 text-[#56647A] absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="tel"
-                required
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+7 (999) 000-00-00"
-                className="w-full neu-inset rounded-2xl py-3 pl-10 pr-3 text-xs font-medium text-[#2D3A4E]"
-              />
+            <div>
+              <label htmlFor="checkout-phone" className="block text-[11px] font-bold text-[#4E5C70] mb-1 ml-1">
+                Телефон
+              </label>
+              <div className="relative">
+                <Phone className="w-4 h-4 text-[#56647A] absolute left-3.5 top-1/2 -translate-y-1/2" aria-hidden="true" />
+                <input
+                  id="checkout-phone"
+                  type="tel"
+                  required
+                  autoComplete="tel"
+                  inputMode="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+7 (999) 000-00-00"
+                  className="w-full neu-inset rounded-2xl py-3 pl-10 pr-3 text-xs font-medium text-[#2D3A4E]"
+                />
+              </div>
             </div>
 
-            <div className="relative">
-              <Mail className="w-4 h-4 text-[#56647A] absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="E-mail"
-                className="w-full neu-inset rounded-2xl py-3 pl-10 pr-3 text-xs font-medium text-[#2D3A4E]"
-              />
+            <div>
+              <label htmlFor="checkout-email" className="block text-[11px] font-bold text-[#4E5C70] mb-1 ml-1">
+                E-mail
+              </label>
+              <div className="relative">
+                <Mail className="w-4 h-4 text-[#56647A] absolute left-3.5 top-1/2 -translate-y-1/2" aria-hidden="true" />
+                <input
+                  id="checkout-email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  inputMode="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@example.ru"
+                  className="w-full neu-inset rounded-2xl py-3 pl-10 pr-3 text-xs font-medium text-[#2D3A4E]"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -829,7 +890,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
             )}
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3" role="radiogroup" aria-label="Способ доставки">
             {noDeliveryMethods && (
               <p className="neu-inset rounded-2xl p-3 text-xs font-bold text-warning">
                 Способы доставки пока не настроены. Оформить заказ можно будет, когда магазин их добавит —
@@ -859,12 +920,15 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                   }`}
                 >
                   {/* Method Header Row */}
-                  <div
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
                     onClick={() => setSelectedDelivery(method.id)}
-                    className="flex items-center justify-between gap-3 cursor-pointer"
+                    className="w-full text-left flex items-center justify-between gap-3 cursor-pointer rounded-xl"
                   >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div
+                    <span className="flex items-center gap-3 flex-1 min-w-0">
+                      <span
                         className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${
                           isSelected
                             ? 'neu-pill-active'
@@ -872,11 +936,11 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                         }`}
                       >
                         {isSelected && (
-                          <div className="w-2.5 h-2.5 rounded-full bg-accent animate-in zoom-in-50 duration-200" />
+                          <span className="block w-2.5 h-2.5 rounded-full bg-accent animate-in zoom-in-50 duration-200" />
                         )}
-                      </div>
+                      </span>
 
-                      <div
+                      <span
                         className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 transition-all ${
                           isSelected
                             ? 'neu-pill-active'
@@ -884,31 +948,31 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                         }`}
                       >
                         <DeliveryIcon className="w-4 h-4" />
-                      </div>
+                      </span>
 
-                      <div className="min-w-0 flex-1 pr-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <p
-                            className={`text-xs leading-snug transition-colors line-clamp-2 ${
+                      <span className="block min-w-0 flex-1 pr-1">
+                        <span className="flex items-center gap-1.5 flex-wrap">
+                          <span
+                            className={`block text-xs leading-snug transition-colors line-clamp-2 ${
                               isSelected ? 'font-black text-accent' : 'font-bold text-[#2D3A4E]'
                             }`}
                           >
                             {method.title}
-                          </p>
+                          </span>
                           {method.highlightBadge && (
                             <span className="neu-fill-accent text-white text-[11px] font-black px-1.5 py-0.2 rounded-full uppercase">
                               {method.highlightBadge}
                             </span>
                           )}
-                        </div>
+                        </span>
 
-                        <p className="text-[11px] text-[#4E5C70] mt-0.5">
+                        <span className="block text-[11px] text-[#4E5C70] mt-0.5">
                           {isPickupMethod && selectedPickupPoint
                             ? `${selectedPickupPoint.name} (${selectedPickupPoint.city})`
                             : method.duration}
-                        </p>
-                      </div>
-                    </div>
+                        </span>
+                      </span>
+                    </span>
 
                     <span
                       className={`text-xs font-bold shrink-0 whitespace-nowrap pl-1 ${
@@ -921,7 +985,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                     >
                       {method.price === 0 ? 'Бесплатно' : `${method.price} ₽`}
                     </span>
-                  </div>
+                  </button>
 
                   {/* Expanded Pickup Point Selection (when Pickup method is selected) */}
                   {isSelected && isPickupMethod && (
@@ -936,7 +1000,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                         </span>
                       </div>
 
-                      <div className="space-y-2">
+                      <div className="space-y-2" role="radiogroup" aria-label="Пункт выдачи">
                         {activePickupPoints.length === 0 && (
                           <p className="text-xs font-bold text-warning">
                             Пункты выдачи пока не добавлены. Выберите другой способ доставки.
@@ -958,35 +1022,44 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                               }`}
                             >
                               {/* Point Header */}
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <div
-                                    className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
+                              <button
+                                type="button"
+                                role="radio"
+                                aria-checked={isPointSelected}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedPickupPointId(point.id);
+                                }}
+                                className="w-full text-left flex items-start justify-between gap-2 cursor-pointer rounded-xl"
+                              >
+                                <span className="flex items-center gap-2 min-w-0">
+                                  <span
+                                    className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${
                                       isPointSelected
-                                        ? 'neu-button text-accent'
-                                        : 'neu-inset'
+                                        ? 'neu-pill-active'
+                                        : 'neu-button text-[#4E5C70]'
                                     }`}
                                   >
                                     {isPointSelected && (
-                                      <div className="w-2 h-2 rounded-full bg-accent" />
+                                      <span className="block w-2.5 h-2.5 rounded-full bg-accent animate-in zoom-in-50 duration-200" />
                                     )}
-                                  </div>
-                                  <div className="min-w-0">
+                                  </span>
+                                  <span className="block min-w-0">
                                     <span className="text-xs font-black text-[#2D3A4E] block leading-snug line-clamp-2">
                                       {point.name}
                                     </span>
                                     <span className="text-[11px] font-bold text-accent">
                                       г. {point.city}
                                     </span>
-                                  </div>
-                                </div>
+                                  </span>
+                                </span>
 
                                 {point.isDefault && (
                                   <span className="text-[11px] font-black text-accent neu-inset px-1.5 py-0.5 rounded-md uppercase shrink-0">
                                     Основной
                                   </span>
                                 )}
-                              </div>
+                              </button>
 
                               {/* Full Unclipped Address with Neumorphic Copy Button */}
                               <div className="neu-flat-sm rounded-xl p-3 space-y-2 border border-white/60">
@@ -1083,7 +1156,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
             />
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-1.5 neu-flat-sm rounded-2xl">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-1.5 neu-flat-sm rounded-2xl" role="radiogroup" aria-label="Способ оплаты">
                 {activePaymentMethods.map((item) => {
                   const isSelected = selectedPayment?.id === item.id;
                   return (
@@ -1091,7 +1164,8 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                       key={item.id}
                       type="button"
                       onClick={() => setPaymentMethod(item.id)}
-                      aria-pressed={isSelected}
+                      role="radio"
+                      aria-checked={isSelected}
                       className={`py-3 px-3 rounded-xl text-left flex items-center gap-2 text-xs transition-all duration-200 cursor-pointer ${
                         isSelected ? 'neu-pill-active font-bold' : 'text-[#4E5C70] hover:text-[#2D3A4E] font-medium'
                       }`}
@@ -1192,6 +1266,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
       <AddressEditModal
         isOpen={isAddressModalOpen}
         onClose={() => setIsAddressModalOpen(false)}
+        requireCourierDetails={isCourierSelected}
         editingAddress={{
           id: selectedSavedId,
           title: addrTitle,

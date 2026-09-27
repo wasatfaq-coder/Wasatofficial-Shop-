@@ -24,6 +24,7 @@ import { productRatingValue } from '../utils/productRating';
 import { NotConfigured } from '../components/NotConfigured';
 import type { StoreCategory } from '../types';
 import { categoryIcon } from '../utils/categories';
+import { pluralRu } from '../utils/pluralize';
 
 interface CatalogScreenProps {
   /** From Admin → «Категории» */
@@ -236,15 +237,15 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
       {activeFiltersCount > 0 && (
         <div className="flex items-center gap-2 flex-wrap py-1">
           {filterState.onlyInStock && (
-            <span className="neu-inset text-[11px] font-bold text-accent px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-accent/30">
+            <span className="neu-inset text-[11px] font-bold text-accent pl-3 pr-1 py-1 rounded-full flex items-center gap-1 border border-accent/30">
               <span className="w-1.5 h-1.5 rounded-full bg-success inline-block" />
               Только в наличии
               <button
                 onClick={() =>
                   setFilterState((prev) => ({ ...prev, onlyInStock: false }))
                 }
-                className="text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
-                aria-label="Закрыть"
+                className="w-6 h-6 rounded-full flex items-center justify-center text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
+                aria-label="Убрать фильтр «Только в наличии»"
               >
                 <X className="w-3 h-3 stroke-[2.5]" />
               </button>
@@ -252,7 +253,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           )}
 
           {hasPriceFilter(filterState) && (
-            <span className="neu-inset text-[11px] font-bold text-[#2D3A4E] px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-accent/30">
+            <span className="neu-inset text-[11px] font-bold text-[#2D3A4E] pl-3 pr-1 py-1 rounded-full flex items-center gap-1 border border-accent/30">
               Цена: {filterState.minPrice > 0 ? `от ${filterState.minPrice.toLocaleString('ru-RU')} ₽ ` : ''}
               {Number.isFinite(filterState.maxPrice) ? `до ${filterState.maxPrice.toLocaleString('ru-RU')} ₽` : ''}
               <button
@@ -263,8 +264,8 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                     maxPrice: NO_MAX_PRICE,
                   }))
                 }
-                className="text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
-                aria-label="Закрыть"
+                className="w-6 h-6 rounded-full flex items-center justify-center text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
+                aria-label="Убрать фильтр по цене"
               >
                 <X className="w-3 h-3 stroke-[2.5]" />
               </button>
@@ -276,7 +277,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
             return (
               <span
                 key={matId}
-                className="neu-inset text-[11px] font-bold text-[#2D3A4E] px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-accent/30"
+                className="neu-inset text-[11px] font-bold text-[#2D3A4E] pl-3 pr-1 py-1 rounded-full flex items-center gap-1 border border-accent/30"
               >
                 Ткань: {matObj ? matObj.name : matId}
                 <button
@@ -286,8 +287,8 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                       selectedMaterials: prev.selectedMaterials.filter((m) => m !== matId),
                     }))
                   }
-                  className="text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
-                  aria-label="Закрыть"
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
+                  aria-label={`Убрать фильтр «Ткань: ${matObj ? matObj.name : matId}»`}
                 >
                   <X className="w-3 h-3 stroke-[2.5]" />
                 </button>
@@ -298,7 +299,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           {filterState.selectedSizes.map((sz) => (
             <span
               key={sz}
-              className="neu-inset text-[11px] font-bold text-[#2D3A4E] px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-accent/30"
+              className="neu-inset text-[11px] font-bold text-[#2D3A4E] pl-3 pr-1 py-1 rounded-full flex items-center gap-1 border border-accent/30"
             >
               Размер: {sz}
               <button
@@ -308,8 +309,8 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                     selectedSizes: prev.selectedSizes.filter((s) => s !== sz),
                   }))
                 }
-                className="text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
-                aria-label="Закрыть"
+                className="w-6 h-6 rounded-full flex items-center justify-center text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
+                aria-label={`Убрать фильтр «Размер: ${sz}»`}
               >
                 <X className="w-3 h-3 stroke-[2.5]" />
               </button>
@@ -317,14 +318,14 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           ))}
 
           {filterState.onlyNew && (
-            <span className="neu-inset text-[11px] font-bold text-[#2D3A4E] px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-accent/30">
+            <span className="neu-inset text-[11px] font-bold text-[#2D3A4E] pl-3 pr-1 py-1 rounded-full flex items-center gap-1 border border-accent/30">
               Только новинки
               <button
                 onClick={() =>
                   setFilterState((prev) => ({ ...prev, onlyNew: false }))
                 }
-                className="text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
-                aria-label="Закрыть"
+                className="w-6 h-6 rounded-full flex items-center justify-center text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
+                aria-label="Убрать фильтр «Только новинки»"
               >
                 <X className="w-3 h-3 stroke-[2.5]" />
               </button>
@@ -332,14 +333,14 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           )}
 
           {filterState.onlyDiscount && (
-            <span className="neu-inset text-[11px] font-bold text-[#2D3A4E] px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-accent/30">
+            <span className="neu-inset text-[11px] font-bold text-[#2D3A4E] pl-3 pr-1 py-1 rounded-full flex items-center gap-1 border border-accent/30">
               Со скидкой
               <button
                 onClick={() =>
                   setFilterState((prev) => ({ ...prev, onlyDiscount: false }))
                 }
-                className="text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
-                aria-label="Закрыть"
+                className="w-6 h-6 rounded-full flex items-center justify-center text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
+                aria-label="Убрать фильтр «Со скидкой»"
               >
                 <X className="w-3 h-3 stroke-[2.5]" />
               </button>
@@ -362,12 +363,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
         <span className="text-xs font-semibold text-[#4E5C70]">
           Найдено:{' '}
           <span className="text-[#2D3A4E] font-black text-sm">{filteredProducts.length}</span>{' '}
-          {filteredProducts.length % 10 === 1 && filteredProducts.length % 100 !== 11
-            ? 'товар'
-            : [2, 3, 4].includes(filteredProducts.length % 10) &&
-              ![12, 13, 14].includes(filteredProducts.length % 100)
-            ? 'товара'
-            : 'товаров'}
+          {pluralRu(filteredProducts.length, ['товар', 'товара', 'товаров'])}
         </span>
 
         <div className="relative">

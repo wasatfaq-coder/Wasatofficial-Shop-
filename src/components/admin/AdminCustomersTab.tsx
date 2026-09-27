@@ -73,7 +73,7 @@ const CUSTOMER_CATEGORY_OPTIONS: NeumorphicSelectOption[] = [
 const CUSTOMER_SORT_OPTIONS: NeumorphicSelectOption[] = [
   {
     value: 'ltv_desc',
-    label: 'LTV (по убыванию)',
+    label: 'Сумма покупок (по убыванию)',
     icon: <DollarSign className="w-3.5 h-3.5 text-accent" />,
   },
   {
@@ -373,7 +373,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       onShowToast('Список клиентов пуст для экспорта', 'error');
       return;
     }
-    const headers = ['Имя', 'Email', 'Телефон', 'Тип', 'LTV (₽)', 'Заказов', 'Средний чек (₽)', 'Бонусы', 'Адрес'];
+    const headers = ['Имя', 'Email', 'Телефон', 'Тип', 'Сумма покупок (₽)', 'Заказов', 'Средний чек (₽)', 'Бонусы', 'Адрес'];
     const rows = filteredCustomers.map((c) => [
       c.name,
       c.email,
@@ -420,7 +420,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-xl font-black text-[#2D3A4E]">Клиенты и CRM</h2>
+            <h2 className="text-xl font-black text-[#2D3A4E]">Клиенты</h2>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-accent/15 text-accent">
               {customerRecords.length} чел.
             </span>
@@ -667,7 +667,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 {/* KPI Matrix Strip */}
                 <div className="grid grid-cols-4 gap-1.5 py-1 text-center border-y border-[#BAC5D5]/30">
                   <div className="px-1">
-                    <span className="text-[11px] text-[#4E5C70] block">LTV</span>
+                    <span className="text-[11px] text-[#4E5C70] block">Покупки</span>
                     <span className="text-xs font-black text-[#2D3A4E]">
                       {customer.totalSpent > 0 ? `${(customer.totalSpent / 1000).toFixed(1)}k ₽` : '0 ₽'}
                     </span>
@@ -694,7 +694,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider block">
                       История заказов ({customer.orders.length}):
                     </span>
-                    <div className="flex flex-wrap gap-1.5 max-h-16 overflow-y-auto pr-1">
+                    <div className="flex flex-wrap gap-1.5">
                       {customer.orders.slice(0, 4).map((ord, oIdx) => {
                         const statusBadge = getOrderStatusBadge(ord);
                         return (
@@ -889,15 +889,15 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     <div className="flex items-center justify-between gap-2 p-2 rounded-xl neu-flat-sm sm:col-span-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <ShieldCheck className="w-3.5 h-3.5 text-accent shrink-0" />
-                        <span className="text-[#4E5C70] shrink-0">UID:</span>
+                        <span className="text-[#4E5C70] shrink-0">ID:</span>
                         <code className="text-[11px] truncate font-mono text-[#2D3A4E]">{selectedCustomer.uid}</code>
                       </div>
                       <button
                         type="button"
                         onClick={() => handleCopy(selectedCustomer.uid!, 'uid')}
                         className="text-[#4E5C70] hover:text-[#2D3A4E] shrink-0"
-                        title="Скопировать UID"
-                        aria-label="Скопировать UID"
+                        title="Скопировать ID"
+                        aria-label="Скопировать ID"
                       >
                         {copiedField === 'uid' ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
                       </button>
@@ -997,7 +997,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 </span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                   <div className="neu-flat-sm p-2.5 rounded-xl">
-                    <span className="text-[11px] text-[#4E5C70] block">Общий LTV</span>
+                    <span className="text-[11px] text-[#4E5C70] block">Сумма покупок</span>
                     <span className="text-sm font-black text-success">
                       {selectedCustomer.totalSpent.toLocaleString('ru-RU')} ₽
                     </span>
@@ -1067,7 +1067,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Edit3 className="w-4 h-4 text-accent" />
-                    <span className="text-xs font-black text-[#2D3A4E]">CRM Заметки и теги менеджера</span>
+                    <span className="text-xs font-black text-[#2D3A4E]">Заметки и теги менеджера</span>
                   </div>
                   <button
                     type="button"
@@ -1266,7 +1266,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
             </div>
 
             <p className="text-xs text-[#4E5C70]">
-              Вы действительно хотите удалить профиль <strong className="text-[#2D3A4E]">{customerToDelete.name}</strong> ({customerToDelete.email || customerToDelete.phone || 'Гость'}) из базы данных Firestore?
+              Вы действительно хотите удалить профиль <strong className="text-[#2D3A4E]">{customerToDelete.name}</strong> ({customerToDelete.email || customerToDelete.phone || 'Гость'})? Это действие нельзя отменить.
             </p>
 
             <div className="flex items-center justify-end gap-2 pt-2">

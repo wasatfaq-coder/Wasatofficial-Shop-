@@ -38,6 +38,7 @@ import {
 import { photoBadgeClass } from '../utils/productBadge';
 import { getProductRating } from '../utils/productRating';
 import { productImage } from '../utils/productImage';
+import { QUICK_ORDER_DELIVERY_TITLE } from '../shared/orderPricing';
 
 interface ProductDetailScreenProps {
   product: Product;
@@ -202,7 +203,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
         items: [quickItem],
         contact: { name: details.name, phone: details.phone },
         address: details.address || 'Уточняется оператором',
-        deliveryMethod: 'Экспресс курьер (1 клик)',
+        deliveryMethod: QUICK_ORDER_DELIVERY_TITLE,
         totalPrice: product.price * quantity,
       });
       if (placed === false) return;
@@ -289,20 +290,19 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
 
           {/* Neumorphic Pagination Indicators */}
           {product.images.length > 1 && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center justify-center gap-1.5 z-10">
+            <div
+              className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center justify-center gap-1.5 z-10 pointer-events-none"
+              aria-hidden="true"
+            >
+              {/* Only a position indicator: photos are switched by the arrows, swipe and thumbnails */}
               {product.images.map((_, idx) => (
-                <button
+                <span
                   key={idx}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedImageIndex(idx);
-                  }}
                   className={`transition-all duration-300 ${
                     selectedImageIndex === idx
                       ? 'w-5 h-2 bg-accent rounded-full'
                       : 'w-2 h-2 bg-[#BAC5D5] rounded-full'
                   }`}
-                  aria-label={`Перейти к фото ${idx + 1}`}
                 />
               ))}
             </div>
@@ -576,7 +576,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               className="w-full py-2.5 px-4 rounded-2xl neu-button text-xs font-bold text-accent hover:scale-101 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <ShoppingBag className="w-3.5 h-3.5 text-accent" />
-              <span>Купить в 1 клик без регистрации</span>
+              <span>Заказать в 1 клик</span>
             </button>
           )}
         </div>

@@ -1,10 +1,10 @@
 import React from 'react';
-import type { StorefrontSettings, StorePaymentMethod } from '../../types';
+import type { SaveStorefrontSettings, StorefrontSettings, StorePaymentMethod } from '../../types';
 import { AdminListEditor } from './AdminListEditor';
 
 interface AdminPaymentTabProps {
   settings: StorefrontSettings;
-  onUpdateSettings?: (settings: StorefrontSettings) => void;
+  onUpdateSettings?: SaveStorefrontSettings;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 

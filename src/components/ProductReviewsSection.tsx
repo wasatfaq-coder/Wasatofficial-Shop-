@@ -10,6 +10,7 @@ import {
 } from '../utils/firebaseSync';
 import { useAuth } from '../context/AuthContext';
 import { ConfirmDialog } from './ConfirmDialog';
+import { pluralRu } from '../utils/pluralize';
 
 interface ProductReviewsSectionProps {
   product: Product;
@@ -74,13 +75,6 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
   const recommendShare = reviews.length > 0
     ? Math.round((reviews.filter((r) => r.rating >= 4).length / reviews.length) * 100)
     : 0;
-
-  const pluralReviews = (n: number) => {
-    const m10 = n % 10, m100 = n % 100;
-    if (m10 === 1 && m100 !== 11) return 'отзыв';
-    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'отзыва';
-    return 'отзывов';
-  };
 
   const handleToggleHelpful = async (review: ProductReview) => {
     if (!uid) {
@@ -235,7 +229,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
               ))}
             </div>
             <p className="text-xs font-bold text-[#2D3A4E] mt-1">
-              {ratingInfo.count} {pluralReviews(ratingInfo.count)}
+              {ratingInfo.count} {pluralRu(ratingInfo.count, ['отзыв', 'отзыва', 'отзывов'])}
             </p>
             <p className="text-[11px] text-success font-semibold flex items-center gap-1 mt-0.5">
               <CheckCircle2 className="w-3.5 h-3.5" />

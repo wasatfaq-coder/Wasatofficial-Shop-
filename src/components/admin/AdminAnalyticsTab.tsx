@@ -515,7 +515,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       </section>
 
       {/* 2. KPIs: a card shows its number and puts the metric on the chart (raised → pressed in when chosen) */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3" role="radiogroup" aria-label="Показатель на графике">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3" role="radiogroup" aria-label="Показатель на графике">
         {kpis.map((k) => {
           const selected = activeMetric === k.metric;
           return (
@@ -552,7 +552,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
             </button>
           );
         })}
-      </section>
+      </div>
 
       {/* 3. Chart */}
       <section className="neu-flat rounded-3xl p-4 sm:p-5 space-y-3.5">

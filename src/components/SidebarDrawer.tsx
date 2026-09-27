@@ -102,7 +102,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
           </div>
 
           {/* Navigation: the current section is pressed in */}
-          <nav className="my-4 flex flex-col gap-2.5 overflow-y-auto pr-1 custom-scrollbar flex-1">
+          <nav aria-label="Меню" className="my-4 flex flex-col gap-2.5 overflow-y-auto pr-1 custom-scrollbar flex-1">
             <button
               onClick={() => navigateTo('home')}
               className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer group ${

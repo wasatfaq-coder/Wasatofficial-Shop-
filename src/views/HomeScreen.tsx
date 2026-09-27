@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronRight, SlidersHorizontal, Menu, Truck, RotateCcw, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product, ActiveTab, BannerSlide, StorefrontSettings, UserProfile, BodyMeasurements } from '../types';
-import { getStoreContacts } from '../utils/storeContacts';
+import { getStoreContacts, getStoreName } from '../utils/storeContacts';
 import { ProductCard } from '../components/ProductCard';
 import { AutocompleteSearch } from '../components/AutocompleteSearch';
 import { RecentlyViewed } from '../components/RecentlyViewed';
@@ -174,6 +174,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   return (
     <div className="space-y-5 pb-36 animate-in fade-in duration-300">
+      {/* The home screen has no title bar: the page heading is for screen readers only */}
+      <h1 className="sr-only">{getStoreName(storefrontSettings)}</h1>
       {/* 1. Maintenance / Concierge Banner (if store is offline) */}
       {!isOnline && (
         <div className="neu-flat rounded-2xl p-3.5 border border-warning/30 flex items-center gap-3 text-warning animate-in fade-in">
@@ -328,15 +330,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             return (
               <button
                 key={cat.id}
+                type="button"
                 onClick={() => {
                   onSelectCategory(cat.id);
                   setActiveTab('catalog');
                 }}
                 className="flex flex-col items-center gap-2 group cursor-pointer bg-transparent border-0 p-0 select-none"
               >
-                <div className="w-14 h-14 rounded-2xl neu-inset flex items-center justify-center text-[#2D3A4E] group-hover:text-accent group-hover:scale-105 group-active:scale-95 transition-all duration-150 cursor-pointer">
-                  <IconComp className="w-6 h-6 stroke-[1.8]" />
-                </div>
+                <span className="w-14 h-14 rounded-2xl neu-button flex items-center justify-center text-[#2D3A4E] group-hover:text-accent transition-colors duration-150">
+                  <IconComp className="w-6 h-6 stroke-[1.8]" aria-hidden="true" />
+                </span>
                 <span className="text-[13px] font-medium text-[#2D3A4E] group-hover:text-accent truncate max-w-full">
                   {cat.name}
                 </span>

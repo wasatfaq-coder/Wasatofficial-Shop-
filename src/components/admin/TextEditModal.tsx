@@ -18,6 +18,7 @@ import {
 import type { StoreCategory } from '../../types';
 import { ModalPortal } from '../ModalPortal';
 import { categoryIcon } from '../../utils/categories';
+import { pluralRu } from '../../utils/pluralize';
 
 interface TextEditModalProps {
   isOpen: boolean;
@@ -59,14 +60,6 @@ const GROUP_TITLES: Record<PhraseSetGroup, string> = {
   global: 'Для всех товаров',
   store: 'Категории магазина',
   other: 'Другие наборы фраз',
-};
-
-const pluralAccents = (n: number) => {
-  const m10 = n % 10;
-  const m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return 'акцент';
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'акцента';
-  return 'акцентов';
 };
 
 /** Last phrases snapshot: a reopened window shows them at once instead of growing after load */
@@ -319,7 +312,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                   </div>
                   <span className="text-xs font-black text-[#2D3A4E] truncate">{activeSet.label}</span>
                   <span className="text-[11px] px-2 py-0.5 rounded-lg font-black bg-accent/10 text-accent whitespace-nowrap shrink-0">
-                    {phraseCount(activeSet.id)} {pluralAccents(phraseCount(activeSet.id))}
+                    {phraseCount(activeSet.id)} {pluralRu(phraseCount(activeSet.id), ['акцент', 'акцента', 'акцентов'])}
                   </span>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">

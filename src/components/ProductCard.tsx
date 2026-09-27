@@ -51,9 +51,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       : null;
 
   return (
+    // The title button is stretched over the card (after:inset-0): one Tab stop and Enter opens the product;
+    // quick view, favorite and «+» sit above it (z-10) and stay separate buttons
     <div
-      onClick={() => onSelect(product)}
-      className={`group neu-flat-sm neu-product-card rounded-3xl overflow-hidden flex flex-col justify-between cursor-pointer select-none h-full ${className}`}
+      className={`group relative neu-flat-sm neu-product-card rounded-3xl overflow-hidden flex flex-col justify-between cursor-pointer select-none h-full ${className}`}
     >
       {/* Product Image Box: Strictly 3:4 aspect ratio */}
       <div className="relative w-full aspect-[3/4] overflow-hidden mb-2.5 group/img shrink-0">
@@ -79,6 +80,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1.5 z-10">
           {onQuickView && (
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onQuickView(product, e);
@@ -117,7 +119,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* Title - fixed 2 lines baseline */}
           <h3 className="text-[14px] font-bold text-[#2D3A4E] line-clamp-2 leading-snug break-words min-h-[38px]">
-            {product.title}
+            <button
+              type="button"
+              onClick={() => onSelect(product)}
+              className="text-left rounded-md cursor-pointer after:absolute after:inset-0 after:content-['']"
+            >
+              {product.title}
+            </button>
           </h3>
         </div>
 
@@ -147,8 +155,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* Add to cart: secondary action repeated on every card, so not filled */}
           <button
+            type="button"
             onClick={handleAddToCart}
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0 mb-0.5 cursor-pointer ${
+            className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0 mb-0.5 cursor-pointer ${
               justAdded
                 ? 'neu-inset text-success'
                 : 'neu-button text-accent'

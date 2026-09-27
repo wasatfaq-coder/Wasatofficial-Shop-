@@ -55,7 +55,9 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   в Firestore и не подставляется покупателю; функциональная кнопка неактивна, пока нужные данные не заданы в админке.
   Списки админки сохраняются через `syncAll*` (только запись, частями по 450 — лимит батча 500), в них передаются
   только изменённые элементы (`changedItems(prev, next)`: админка заменяет объект, а не мутирует его), удалённое
-  убирает `deleteRemovedDocs`. Фото товара — `productImage(product, i)` (без фото — нейтральная заглушка, не сток); подписей ракурсов
+  убирает `deleteRemovedDocs`. Записи из админки в `App.tsx` — через `persist(label, ...writes)`: при ошибке тост
+  «Не сохранено: …» и `false`; «Сохранено» показывать только после ответа базы (`AdminListEditor`, «Витрина» ждут
+  `Promise<boolean>` от `onSave`/`onUpdateSettings`). Тосты-ошибки не исчезают сами. Фото товара — `productImage(product, i)` (без фото — нейтральная заглушка, не сток); подписей ракурсов
   у фото нет (магазин их не задает) — только «Фото N из M».
   Рейтинг товара — только по реальным отзывам (`getProductRating`).
 - Разделы карточки товара (преимущества, состав, плотность, сертификаты, переплетение, посадка, страна, свои
@@ -109,7 +111,9 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   без `neu-*` (`bg-danger-soft border ...`). Одна `neu-button-accent` на экран, удаление — `neu-button-danger` +
   `ConfirmDialog`. Выпуклое `neu-button` — только то, что нажимается; статичные плитки и чипы — `neu-flat`/`neu-flat-sm`.
   Невыбранный вариант выпуклый, выбранный вдавлен (`neu-pill-active`); `neu-inset` — лунки и поля, не варианты выбора.
-  Переключатель — `role="switch"` + `aria-checked` + `aria-label`. Цвета статусов — только токены
+  Переключатель — `NeumorphicSwitch` (`role="switch"`, `aria-checked`, `aria-label`); галочка выбора в списках
+  админки — `SelectCheckbox` (`role="checkbox"`); выбор одного варианта (доставка, оплата) — `role="radio"`
+  в `role="radiogroup"`. Цвета статусов — только токены
   `success/warning/danger` (и `*-soft` для подложек), не emerald/rose/amber/sky/slate/gray; статус заказа —
   `orderStatusChip` (`src/utils/orderStatusStyle.ts`), одинаково во всех разделах. Подробно — `docs/ui-audit-plan.md`.
 - Цвета бренда — токены `@theme` в `index.css`: `accent` (тёмно-синий #2C4A6B: ссылки, выбранное, иконки;
@@ -119,6 +123,12 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   Заголовки h1–h3 и `font-display` — Manrope (`@fontsource/manrope`), текст — системный шрифт.
 - Доступность: текст не мельче `text-[11px]`, вторичный текст #4E5C70, акцентный текст — `text-accent`;
   не отключать `outline` (фокус — через `:focus-visible` в `index.css`); кнопке из одной иконки — `aria-label`.
+  У поля — видимая подпись `<label htmlFor>` (или `aria-label`) и `autoComplete` для имени, телефона, почты, адреса.
+  Кликабельное — `button`, не `div` с `onClick`; карточка товара открывается кнопкой-названием, растянутой
+  на карточку (`after:absolute after:inset-0`). Зона нажатия не меньше 24 px, у частых действий покупателя — 32 px.
+  Склонения — только `pluralRu` (`src/utils/pluralize.ts`).
+- Нижнее меню (`BottomNav`) на оформлении скрыто; контакты оформления — черновик в `sessionStorage`
+  (`manstyle_checkout_contacts`). Подъезд и домофон обязательны только для курьера (`requireCourierDetails`).
 
 ## Деплой
 

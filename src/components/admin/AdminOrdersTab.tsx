@@ -46,6 +46,7 @@ import { AdminOrderAdjustmentModal } from './AdminOrderAdjustmentModal';
 import { AdminDeliveryStagesModal } from './AdminDeliveryStagesModal';
 import { DeliveryTrackingMapModal } from '../DeliveryTrackingMapModal';
 import { NeumorphicSelect } from '../NeumorphicSelect';
+import { SelectCheckbox } from './SelectCheckbox';
 
 interface AdminOrdersTabProps {
   orders: Order[];
@@ -733,6 +734,14 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
           {filteredOrders.length > 0 && (
             <button
               onClick={handleToggleSelectAll}
+              role="checkbox"
+              aria-checked={
+                selectedOrderIds.length === 0
+                  ? false
+                  : selectedOrderIds.length === filteredOrders.length
+                  ? true
+                  : 'mixed'
+              }
               className={`h-[42px] text-[11px] font-bold px-3.5 rounded-xl cursor-pointer flex items-center gap-2 transition-all ml-auto sm:ml-0 whitespace-nowrap active:scale-95 neu-inset ${
                 selectedOrderIds.length > 0
                   ? 'text-accent bg-[#E3E8EF] font-black'
@@ -1053,21 +1062,11 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                 <div className="flex items-center border-b border-[#BAC5D5]/50 pb-2.5 flex-wrap gap-2">
                   <div className="flex items-center justify-between sm:justify-start w-full sm:w-auto gap-2 flex-wrap min-w-0">
                     {/* Checkbox */}
-                    <div
-                      onClick={() => handleToggleSelectOrder(ord.id)}
-                      className="cursor-pointer p-0.5"
-                      title="Выбрать заказ для пакетных действий"
-                    >
-                      <div
-                        className={`w-4 h-4 rounded-lg flex items-center justify-center border transition-all ${
-                          isOrderSelected
-                            ? 'bg-accent border-accent text-white'
-                            : 'border-[#BAC5D5] neu-button'
-                        }`}
-                      >
-                        {isOrderSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                      </div>
-                    </div>
+                    <SelectCheckbox
+                      checked={isOrderSelected}
+                      onToggle={() => handleToggleSelectOrder(ord.id)}
+                      label={`Выбрать заказ № ${ord.id}`}
+                    />
 
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs font-black text-[#2D3A4E] font-mono">№ {ord.id}</span>
@@ -1497,7 +1496,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                       <div className="flex items-center justify-between pt-1.5 border-t border-[#BAC5D5]/40 text-xs">
                         <span className="font-bold text-[#2D3A4E]">Сумма к оплате:</span>
                         <span className="text-sm font-black text-accent">
-                          {ord.totalPrice.toLocaleString()} ₽
+                          {ord.totalPrice.toLocaleString('ru-RU')} ₽
                         </span>
                       </div>
                     </div>
@@ -1768,7 +1767,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
             </div>
 
             <p className="text-xs text-[#4E5C70]">
-              Вы действительно хотите удалить заказ № <strong className="text-[#2D3A4E]">{orderToDelete.id}</strong> на сумму <strong className="text-[#2D3A4E]">{orderToDelete.totalPrice.toLocaleString()} ₽</strong> из базы данных Firestore?
+              Вы действительно хотите удалить заказ № <strong className="text-[#2D3A4E]">{orderToDelete.id}</strong> на сумму <strong className="text-[#2D3A4E]">{orderToDelete.totalPrice.toLocaleString('ru-RU')} ₽</strong>? Это действие нельзя отменить.
             </p>
 
             <div className="flex items-center justify-end gap-2 pt-2">

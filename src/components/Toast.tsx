@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   CheckCircle,
   AlertCircle,
@@ -52,13 +52,26 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
   onDismiss,
 }) => {
   const duration = toast.duration || (toast.type === 'order_status' || toast.type === 'push' ? 6000 : 3500);
+  // An error stays until closed: it may say that something was not saved
+  const isSticky = toast.type === 'error' && !toast.duration;
+  // Hover or keyboard focus pauses the timer so the text can be read
+  const [isPaused, setIsPaused] = useState(false);
+  // App passes a new onDismiss on every render: keep it in a ref so the timer is not restarted
+  const onDismissRef = useRef(onDismiss);
+  onDismissRef.current = onDismiss;
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      onDismiss(toast.id);
-    }, duration);
+    if (isSticky || isPaused) return;
+    const timer = setTimeout(() => onDismissRef.current(toast.id), duration);
     return () => clearTimeout(timer);
-  }, [toast.id, onDismiss, duration]);
+  }, [toast.id, duration, isSticky, isPaused]);
+
+  const pauseHandlers = {
+    onMouseEnter: () => setIsPaused(true),
+    onMouseLeave: () => setIsPaused(false),
+    onFocus: () => setIsPaused(true),
+    onBlur: () => setIsPaused(false),
+  };
 
   // Render Icon according to toast type or specified icon
   const renderIcon = () => {
@@ -120,6 +133,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
       <div
         className="pointer-events-auto neu-modal rounded-2xl p-3.5 border border-white/90 space-y-2.5 animate-in fade-in slide-in-from-top-4 duration-300 relative"
         role="alert"
+        {...pauseHandlers}
       >
         {/* Top Header */}
         <div className="flex items-start justify-between gap-2.5">
@@ -151,7 +165,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
           <button
             type="button"
             onClick={() => onDismiss(toast.id)}
-            className="text-[#4E5C70] hover:text-[#2D3A4E] p-1 rounded-full neu-button transition-colors cursor-pointer shrink-0"
+            className="w-7 h-7 flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] rounded-full neu-button transition-colors cursor-pointer shrink-0"
             aria-label="Закрыть уведомление"
           >
             <X className="w-3.5 h-3.5" />
@@ -187,7 +201,8 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
   return (
     <div
       className="pointer-events-auto neu-dropdown rounded-2xl p-3 px-4 flex items-start justify-between gap-3 border border-white/80 animate-in fade-in slide-in-from-top-4 duration-300"
-      role="status"
+      role={toast.type === 'error' ? 'alert' : 'status'}
+      {...pauseHandlers}
     >
       <div className="flex items-start gap-2.5 min-w-0">
         {toast.type === 'success' && <CheckCircle className="w-5 h-5 text-success shrink-0" />}
@@ -198,8 +213,8 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
       <button
         type="button"
         onClick={() => onDismiss(toast.id)}
-        className="text-[#4E5C70] hover:text-[#2D3A4E] p-1 rounded-full neu-button transition-colors cursor-pointer shrink-0"
-        aria-label="Закрыть"
+        className="w-7 h-7 flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] rounded-full neu-button transition-colors cursor-pointer shrink-0"
+        aria-label="Закрыть уведомление"
       >
         <X className="w-3.5 h-3.5" />
       </button>

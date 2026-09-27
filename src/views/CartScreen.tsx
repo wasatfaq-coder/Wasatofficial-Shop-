@@ -16,8 +16,9 @@ import { getVariantStock, getOrderableStock } from '../utils/inventory';
 import { CartRemoveConfirmModal } from '../components/CartRemoveConfirmModal';
 import { QuickOrderModal } from '../components/QuickOrderModal';
 import { NotConfigured } from '../components/NotConfigured';
-import { DEFAULT_FREE_DELIVERY_THRESHOLD, calcPromoDiscount, toPricingLine } from '../shared/orderPricing';
+import { DEFAULT_FREE_DELIVERY_THRESHOLD, QUICK_ORDER_DELIVERY_TITLE, calcPromoDiscount, toPricingLine } from '../shared/orderPricing';
 import { productImage } from '../utils/productImage';
+import { promoDiscountText } from '../utils/promoLabel';
 
 interface CartScreenProps {
   cartItems: CartItem[];
@@ -31,6 +32,8 @@ interface CartScreenProps {
   setActiveTab: (tab: ActiveTab) => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   appliedPromo: AppliedPromoInfo | null;
+  /** at least one active promo exists (otherwise «есть доступные» would be untrue) */
+  hasActivePromos?: boolean;
   onApplyPromo: (code: string) => void;
   onOpenPromoModal: () => void;
   onRemovePromo: () => void;
@@ -61,6 +64,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   storefrontSettings,
   checkoutBlocker = null,
   preorderMode = false,
+  hasActivePromos = false,
 }) => {
   const [promoInput, setPromoInput] = useState('');
   const [itemToRemove, setItemToRemove] = useState<CartItem | null>(null);
@@ -103,7 +107,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         items: cartItems,
         contact: { name: details.name, phone: details.phone, email: '' },
         address: details.address || 'Уточняется оператором',
-        deliveryMethod: 'Быстрый заказ (1 клик)',
+        deliveryMethod: QUICK_ORDER_DELIVERY_TITLE,
         // as placeOrder counts a 1-click order: goods only, no promo, delivery agreed by the manager
         totalPrice: rawSubtotal,
         paymentMethod: 'При получении (наличные / картой)',
@@ -176,9 +180,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         <button
           type="button"
           onClick={() => setIsClearCartConfirmOpen(true)}
-          className="text-xs font-bold text-[#4E5C70] hover:text-danger transition-colors flex items-center gap-1 cursor-pointer"
+          className="min-h-8 px-2 -mr-2 rounded-xl text-xs font-bold text-[#4E5C70] hover:text-danger transition-colors flex items-center gap-1 cursor-pointer"
         >
-          <Trash2 className="w-3.5 h-3.5" />
+          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
           <span>Очистить все</span>
         </button>
       </div>
@@ -276,13 +280,14 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                             onUpdateQuantity(item.id, item.quantity - 1);
                           }
                         }}
-                        className="w-6 h-6 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent cursor-pointer"
+                        type="button"
+                        className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent cursor-pointer"
                         title={item.quantity === 1 ? 'Удалить товар' : 'Уменьшить количество'}
                         aria-label={item.quantity === 1 ? 'Удалить товар' : 'Уменьшить количество'}
                       >
                         <Minus className="w-3 h-3 stroke-[2.5]" />
                       </button>
-                      <span className="text-xs font-bold text-[#2D3A4E] w-4 text-center">
+                      <span className="text-xs font-bold text-[#2D3A4E] w-5 text-center" aria-live="polite">
                         {item.quantity}
                       </span>
                       <button
@@ -293,8 +298,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                             onShowToast(`Достигнут максимум (${availableStock} шт.)`, 'info');
                           }
                         }}
+                        type="button"
                         disabled={isAtMaxStock}
-                        className={`w-6 h-6 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] transition-opacity cursor-pointer ${
+                        className={`w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] transition-opacity cursor-pointer ${
                           isAtMaxStock ? 'opacity-30 cursor-not-allowed' : 'hover:text-accent'
                         }`}
                         title={
@@ -313,7 +319,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     {/* Trigger removal modal */}
                     <button
                       onClick={() => setItemToRemove(item)}
-                      className="w-7 h-7 rounded-full neu-button-danger flex items-center justify-center transition-colors cursor-pointer"
+                      className="w-8 h-8 rounded-full neu-button-danger flex items-center justify-center transition-colors cursor-pointer"
                       title="Удалить товар"
                       aria-label="Удалить товар"
                     >
@@ -487,10 +493,14 @@ export const CartScreen: React.FC<CartScreenProps> = ({
               </div>
               <div className="text-left">
                 <p className="text-xs font-bold text-[#2D3A4E]">
-                  {appliedPromo ? `Промокод: ${appliedPromo.code}` : 'Добавить купоны и промокоды'}
+                  {appliedPromo ? `Промокод: ${appliedPromo.code}` : 'Промокод'}
                 </p>
                 <p className="text-[11px] text-[#4E5C70] font-normal">
-                  {appliedPromo ? `Скидка ${appliedPromo.discountPercent}% применена` : 'Есть доступные купоны'}
+                  {appliedPromo
+                    ? `Скидка ${promoDiscountText(appliedPromo)} применена`
+                    : hasActivePromos
+                      ? 'Есть доступные промокоды'
+                      : 'Введите код, если он у вас есть'}
                 </p>
               </div>
             </div>
@@ -613,7 +623,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
             disabled={unavailableCount > 0}
             className="w-full py-2.5 rounded-2xl neu-button font-bold text-xs text-accent flex items-center justify-center transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span>Быстрый заказ в 1 клик</span>
+            <span>Заказать в 1 клик</span>
           </button>
         </div>
       </div>

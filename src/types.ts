@@ -448,6 +448,9 @@ export interface StockMovementLog {
   operator: string;
 }
 
+/** Saves storefront settings; resolves to false when the write failed (the error toast is already shown) */
+export type SaveStorefrontSettings = (settings: StorefrontSettings) => Promise<boolean> | void;
+
 export interface StorefrontSettings {
   storeName: string;
   storeSlogan?: string;

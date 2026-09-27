@@ -2,6 +2,7 @@ import React from 'react';
 import { Menu, ArrowLeft, Settings } from 'lucide-react';
 import { STORE_NAME_DEFAULT } from '../utils/storeContacts';
 import { ActiveTab } from '../types';
+import { pluralRu } from '../utils/pluralize';
 
 interface HeaderProps {
   activeTab: ActiveTab;
@@ -29,7 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
       case 'catalog':
         return { main: 'Каталог', sub: 'Поиск и фильтры' };
       case 'cart':
-        return { main: 'Корзина', sub: `${cartCount} ${getDeclinedItems(cartCount)}` };
+        return { main: 'Корзина', sub: `${cartCount} ${pluralRu(cartCount, ['товар', 'товара', 'товаров'])}` };
       case 'favorites':
         return { main: 'Избранное', sub: 'Ваши сохраненные товары' };
       case 'profile':
@@ -37,7 +38,7 @@ export const Header: React.FC<HeaderProps> = ({
       case 'product-detail':
         return { main: selectedProductTitle || 'Товар', sub: 'Детали товара' };
       case 'checkout':
-        return { main: 'Оформление заказа', sub: `${cartCount} ${getDeclinedItems(cartCount)}` };
+        return { main: 'Оформление заказа', sub: `${cartCount} ${pluralRu(cartCount, ['товар', 'товара', 'товаров'])}` };
       case 'order-success':
         return { main: 'Заказ оформлен', sub: 'Успешно' };
       default:
@@ -107,12 +108,3 @@ export const Header: React.FC<HeaderProps> = ({
   );
 };
 
-function getDeclinedItems(count: number): string {
-  const abs = Math.abs(count);
-  const rem100 = abs % 100;
-  const rem10 = abs % 10;
-  if (rem100 >= 11 && rem100 <= 19) return 'товаров';
-  if (rem10 === 1) return 'товар';
-  if (rem10 >= 2 && rem10 <= 4) return 'товара';
-  return 'товаров';
-}

@@ -1,12 +1,12 @@
 import React from 'react';
-import type { Product, StoreCategory, StorefrontSettings } from '../../types';
+import type { Product, SaveStorefrontSettings, StoreCategory, StorefrontSettings } from '../../types';
 import { CATEGORY_ICONS, categoriesFromProducts, categoryIcon, categoryIdFromName } from '../../utils/categories';
 import { AdminListEditor } from './AdminListEditor';
 
 interface AdminCategoriesTabProps {
   settings: StorefrontSettings;
   products: Product[];
-  onUpdateSettings?: (settings: StorefrontSettings) => void;
+  onUpdateSettings?: SaveStorefrontSettings;
   /** Renaming a category also updates the name stored on its products (categoryLabel) */
   onUpdateProducts?: (products: Product[]) => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
@@ -58,7 +58,7 @@ export const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({
               <p className="text-xs font-black text-[#2D3A4E] truncate">{c.name}</p>
               <p className="text-[11px] text-[#4E5C70]">
                 Товаров: {count}
-                <span className="font-mono ml-2 opacity-80">{c.id}</span>
+                <span className="font-mono ml-2">{c.id}</span>
               </p>
             </div>
           </div>
@@ -72,7 +72,7 @@ export const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({
           taken.push(id);
           return { ...c, id, name: c.name.trim() };
         });
-        onUpdateSettings?.({ ...settings, categories: withIds });
+        const saved = onUpdateSettings?.({ ...settings, categories: withIds });
         const nameById = new Map(withIds.map((c) => [c.id, c.name]));
         const renamed = products.filter((p) => nameById.has(p.category) && p.categoryLabel !== nameById.get(p.category));
         if (renamed.length > 0 && onUpdateProducts) {
@@ -80,6 +80,7 @@ export const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({
             products.map((p) => (nameById.has(p.category) ? { ...p, categoryLabel: nameById.get(p.category)! } : p))
           );
         }
+        return saved;
       }}
       onShowToast={onShowToast}
     />
