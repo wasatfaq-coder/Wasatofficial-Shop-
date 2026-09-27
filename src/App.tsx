@@ -401,9 +401,12 @@ export default function App() {
           })
       );
       // Refresh selected product if currently open
+      // Read the pending id outside the updater: React may call updaters twice (StrictMode),
+      // and a ref cleared inside it would lose the product from the address on the second call
+      const pendingId = pendingSelectedProductId.current;
+      pendingSelectedProductId.current = null;
       setSelectedProduct((prev) => {
-        const wantedId = prev?.id ?? pendingSelectedProductId.current;
-        pendingSelectedProductId.current = null;
+        const wantedId = prev?.id ?? pendingId;
         if (!wantedId) return null;
         return loadedProds.find((p) => p.id === wantedId) || null;
       });
