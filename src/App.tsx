@@ -89,6 +89,7 @@ import { getCategories } from './utils/categories';
 import { promoDiscountText } from './utils/promoLabel';
 import { hasOrderableVariant, needsVariantChoice } from './utils/variantSelection';
 import { VariantPickerSheet } from './components/VariantPickerSheet';
+import { parseRouteHash, readHistoryState, routeHash, type HistoryEntryState } from './utils/navigation';
 
 // Unique across customers: messages are create-only for customers (see firestore.rules)
 function newChatMessageId(): string {
@@ -126,25 +127,24 @@ function saveGuestOrder(order: Order) {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
-    try {
-      const saved = sessionStorage.getItem('manstyle_active_tab') as ActiveTab;
-      const validTabs: ActiveTab[] = ['home', 'catalog', 'cart', 'favorites', 'profile', 'product-detail', 'checkout', 'order-success'];
-      if (saved && validTabs.includes(saved)) return saved;
-    } catch {
-      // Fallback if sessionStorage unavailable
-    }
-    return 'home';
-  });
+  // The screen comes from the address (#/catalog, #/product/{id}): reload, a shared link and «Назад» work
+  const [initialRoute] = useState(() => parseRouteHash(window.location.hash));
+  const [activeTab, setActiveTabState] = useState<ActiveTab>(() =>
+    // The confirmation needs the order just placed: after a reload there is none
+    !initialRoute || initialRoute.tab === 'order-success' ? 'home' : initialRoute.tab
+  );
 
-  // Preserve activeTab in sessionStorage across any reloads
-  React.useEffect(() => {
-    try {
-      sessionStorage.setItem('manstyle_active_tab', activeTab);
-    } catch {
-      // Ignore
-    }
-  }, [activeTab]);
+  // Browser history for the screens (see the sync effect below the product state)
+  const historyIdx = React.useRef(0);
+  const leavingScroll = React.useRef(0);
+  const pendingScroll = React.useRef<number | null>(null);
+  const replaceNextRoute = React.useRef(false);
+  const isFirstRouteSync = React.useRef(true);
+  /** Every screen change goes through here: remembers the scroll of the screen being left */
+  const setActiveTab = React.useCallback((tab: ActiveTab) => {
+    leavingScroll.current = window.scrollY;
+    setActiveTabState(tab);
+  }, []);
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   // Catalog, promos and banners come only from Firestore (Admin panel); no demo data meanwhile
@@ -260,26 +260,42 @@ export default function App() {
     } catch {}
   }, [cartItems]);
 
-  const pendingSelectedProductId = React.useRef<string | null>(null);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(() => {
-    try {
-      // Restored from the catalog once it loads (see the products subscription)
-      pendingSelectedProductId.current = sessionStorage.getItem('manstyle_selected_product_id');
-    } catch {
-      // Ignore
-    }
-    return null;
-  });
+  // A product from the address is restored once the catalog loads (see the products subscription)
+  const pendingSelectedProductId = React.useRef<string | null>(initialRoute?.productId ?? null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [productsLoaded, setProductsLoaded] = useState(false);
 
+  // Screen → address. A new screen is a new history entry (so «Назад» returns to it) and opens
+  // at the top; the confirmation replaces the checkout entry, «Назад» does not return to paying
+  const routeProductId =
+    activeTab === 'product-detail' ? selectedProduct?.id ?? pendingSelectedProductId.current ?? undefined : undefined;
   React.useEffect(() => {
-    if (selectedProduct) {
-      try {
-        sessionStorage.setItem('manstyle_selected_product_id', selectedProduct.id);
-      } catch {
-        // Ignore
-      }
+    // A product that is not resolved yet (catalog loading) or is gone: wait, see the not-found effect
+    if (activeTab === 'product-detail' && !routeProductId) return;
+    const hash = routeHash({ tab: activeTab, productId: routeProductId });
+    if (isFirstRouteSync.current) {
+      isFirstRouteSync.current = false;
+      replaceNextRoute.current = false;
+      window.history.scrollRestoration = 'manual';
+      window.history.replaceState({ wasat: true, idx: 0 } satisfies HistoryEntryState, '', hash);
+      return;
     }
-  }, [selectedProduct]);
+    // Already there: a Back/Forward the popstate handler applied
+    if (window.location.hash === hash) return;
+    const replace = replaceNextRoute.current || activeTab === 'order-success';
+    replaceNextRoute.current = false;
+    window.history.replaceState(
+      { ...readHistoryState(window.history.state), wasat: true, idx: historyIdx.current, scrollY: leavingScroll.current } satisfies HistoryEntryState,
+      ''
+    );
+    if (replace) {
+      window.history.replaceState({ wasat: true, idx: historyIdx.current } satisfies HistoryEntryState, '', hash);
+    } else {
+      historyIdx.current += 1;
+      window.history.pushState({ wasat: true, idx: historyIdx.current } satisfies HistoryEntryState, '', hash);
+    }
+    pendingScroll.current = 0;
+  }, [activeTab, routeProductId]);
   // Filled as the visitor opens products; no made-up history
   const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
@@ -374,6 +390,7 @@ export default function App() {
   React.useEffect(() => {
     const unsubProds = subscribeToProducts((loadedProds) => {
       setProducts(loadedProds);
+      setProductsLoaded(true);
       // Synchronize cart with latest stock & prices from cloud
       setCartItems((prevCart) =>
         prevCart
@@ -384,9 +401,12 @@ export default function App() {
           })
       );
       // Refresh selected product if currently open
+      // Read the pending id outside the updater: React may call updaters twice (StrictMode),
+      // and a ref cleared inside it would lose the product from the address on the second call
+      const pendingId = pendingSelectedProductId.current;
+      pendingSelectedProductId.current = null;
       setSelectedProduct((prev) => {
-        const wantedId = prev?.id ?? pendingSelectedProductId.current;
-        pendingSelectedProductId.current = null;
+        const wantedId = prev?.id ?? pendingId;
         if (!wantedId) return null;
         return loadedProds.find((p) => p.id === wantedId) || null;
       });
@@ -572,6 +592,60 @@ export default function App() {
     deliveryAddress: string;
     paymentMethod?: string;
   } | null>(null);
+
+  // Browser «Назад» / «Вперед»: show the screen from the address and restore its scroll
+  const productsRef = React.useRef(products);
+  productsRef.current = products;
+  const productsLoadedRef = React.useRef(productsLoaded);
+  productsLoadedRef.current = productsLoaded;
+  const latestOrderRef = React.useRef(latestOrder);
+  latestOrderRef.current = latestOrder;
+  React.useEffect(() => {
+    const onPopState = (e: PopStateEvent) => {
+      const route = parseRouteHash(window.location.hash) ?? { tab: 'home' as ActiveTab };
+      const entry = readHistoryState(e.state);
+      if (entry) {
+        historyIdx.current = entry.idx;
+      } else {
+        // A link or an edited address: a new entry of the shop's history
+        historyIdx.current += 1;
+        window.history.replaceState({ wasat: true, idx: historyIdx.current } satisfies HistoryEntryState, '');
+      }
+      pendingScroll.current = entry?.scrollY ?? 0;
+      if (route.tab === 'product-detail' && route.productId) {
+        const product = productsRef.current.find((p) => p.id === route.productId);
+        // Not in the loaded catalog: gone (the not-found effect leads to the catalog); else wait for it
+        pendingSelectedProductId.current = product || productsLoadedRef.current ? null : route.productId;
+        setSelectedProduct(product ?? null);
+      }
+      if (route.tab === 'order-success' && !latestOrderRef.current) {
+        replaceNextRoute.current = true;
+        setActiveTabState('home');
+      } else {
+        setActiveTabState(route.tab);
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  // A product link to a product that no longer exists: back to the catalog instead of an empty page
+  React.useEffect(() => {
+    if (productsLoaded && activeTab === 'product-detail' && !selectedProduct && !pendingSelectedProductId.current) {
+      replaceNextRoute.current = true;
+      setActiveTab('catalog');
+      addToast('Товар не найден: возможно, его сняли с продажи', 'info');
+    }
+  }, [productsLoaded, activeTab, selectedProduct]);
+
+  /** «Назад» in the header: the previous screen of this visit, else the parent screen */
+  const handleHeaderBack = () => {
+    if ((readHistoryState(window.history.state)?.idx ?? 0) > 0) {
+      window.history.back();
+      return;
+    }
+    setActiveTab(activeTab === 'checkout' ? 'cart' : activeTab === 'product-detail' ? 'catalog' : 'home');
+  };
 
   // Global tactile feedback on button click/tap
   React.useEffect(() => {
@@ -1482,6 +1556,7 @@ export default function App() {
           <Header
             activeTab={activeTab}
             setActiveTab={setActiveTab}
+            onBack={handleHeaderBack}
             cartCount={totalCartCount}
             onOpenDrawer={() => setIsDrawerOpen(true)}
             selectedProductTitle={selectedProduct?.title}
@@ -1491,7 +1566,16 @@ export default function App() {
 
         {/* View Router Body */}
         <main className="px-4 flex-1 pt-1 overflow-x-hidden">
-          <AnimatePresence mode="wait" initial={false}>
+          <AnimatePresence
+            mode="wait"
+            initial={false}
+            onExitComplete={() => {
+              // New screen from the top; «Назад» — where the customer left it
+              const y = pendingScroll.current;
+              pendingScroll.current = null;
+              if (y !== null) requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, y)));
+            }}
+          >
             <motion.div
               key={activeTab === 'product-detail' && selectedProduct ? `tab-product-${selectedProduct.id}` : `tab-${activeTab}`}
               initial={{ opacity: 0, y: 8, scale: 0.992 }}

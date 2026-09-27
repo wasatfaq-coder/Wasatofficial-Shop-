@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Eye, Check, Star } from 'lucide-react';
 import { Product } from '../types';
 import { needsVariantChoice } from '../utils/variantSelection';
+import { productHref } from '../utils/navigation';
 import { NeumorphicImage } from './NeumorphicImage';
 import { AnimatedFavoriteButton } from './AnimatedFavoriteButton';
 import { photoBadgeClass } from '../utils/productBadge';
@@ -55,7 +56,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       : null;
 
   return (
-    // The title button is stretched over the card (after:inset-0): one Tab stop and Enter opens the product;
+    // The title link is stretched over the card (after:inset-0): one Tab stop and Enter opens the product;
     // quick view, favorite and «+» sit above it (z-10) and stay separate buttons
     <div
       className={`group relative neu-flat-sm neu-product-card rounded-3xl overflow-hidden flex flex-col justify-between cursor-pointer select-none h-full ${className}`}
@@ -123,13 +124,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* Title - fixed 2 lines baseline */}
           <h3 className="text-[14px] font-bold text-[#2D3A4E] line-clamp-2 leading-snug break-words min-h-[38px]">
-            <button
-              type="button"
-              onClick={() => onSelect(product)}
-              className="text-left rounded-md cursor-pointer after:absolute after:inset-0 after:content-['']"
+            <a
+              href={productHref(product.id)}
+              onClick={(e) => {
+                // Ctrl/⌘/Shift-click opens the product in a new tab or window, as any link
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                e.preventDefault();
+                onSelect(product);
+              }}
+              className="rounded-md cursor-pointer after:absolute after:inset-0 after:content-['']"
             >
               {product.title}
-            </button>
+            </a>
           </h3>
         </div>
 

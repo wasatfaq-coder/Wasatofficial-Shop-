@@ -7,6 +7,8 @@ import { pluralRu } from '../utils/pluralize';
 interface HeaderProps {
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
+  /** «Назад»: the previous screen of this visit (browser history) */
+  onBack?: () => void;
   cartCount: number;
   onOpenDrawer: () => void;
   selectedProductTitle?: string;
@@ -16,6 +18,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   activeTab,
   setActiveTab,
+  onBack,
   cartCount,
   onOpenDrawer,
   selectedProductTitle,
@@ -63,9 +66,8 @@ export const Header: React.FC<HeaderProps> = ({
         ) : (
           <button
             onClick={() => {
-              if (activeTab === 'checkout') setActiveTab('cart');
-              else if (activeTab === 'product-detail') setActiveTab('home');
-              else setActiveTab('home');
+              if (onBack) onBack();
+              else setActiveTab(activeTab === 'checkout' ? 'cart' : 'home');
             }}
             className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent transition-colors shrink-0"
             aria-label="Назад"
