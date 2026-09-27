@@ -41,8 +41,11 @@ interface CatalogScreenProps {
   onSelectCategory: (category: string) => void;
   onSelectProduct: (product: Product) => void;
   onToggleFavorite: (product: Product, e: React.MouseEvent) => void;
-  onAddToCart: (product: Product, e: React.MouseEvent) => void;
-  onAddToCartWithOptions?: (product: Product, color: string, size: string, quantity: number) => void;
+  /** false — nothing added yet (the customer is asked for a size) */
+  onAddToCart: (product: Product, e: React.MouseEvent) => boolean | void;
+  onAddToCartWithOptions?: (product: Product, color: string, size: string, quantity: number) => boolean | void;
+  /** Admin → «Витрина» → «Предзаказ» (quick view shows sold-out sizes as orderable) */
+  preorderMode?: boolean;
   filterState?: FilterState;
   onChangeFilterState?: (updater: (prev: FilterState) => FilterState) => void;
   onResetFilters?: () => void;
@@ -64,6 +67,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
   onToggleFavorite,
   onAddToCart,
   onAddToCartWithOptions,
+  preorderMode = false,
   filterState: externalFilterState,
   onChangeFilterState: externalOnChangeFilterState,
   onResetFilters: externalOnResetFilters,
@@ -507,13 +511,10 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           onSelectProduct(prod);
         }}
         onToggleFavorite={onToggleFavorite}
-        onAddToCartWithOptions={(prod, color, size, qty) => {
-          if (onAddToCartWithOptions) {
-            onAddToCartWithOptions(prod, color, size, qty);
-          } else {
-            onAddToCart(prod, null as any);
-          }
-        }}
+        onAddToCartWithOptions={(prod, color, size, qty) =>
+          onAddToCartWithOptions ? onAddToCartWithOptions(prod, color, size, qty) : onAddToCart(prod, null as any)
+        }
+        preorderMode={preorderMode}
       />
     </div>
   );

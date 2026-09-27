@@ -20,7 +20,8 @@ interface HomeScreenProps {
   onRemoveFromRecentlyViewed?: (productId: string) => void;
   onSelectProduct: (product: Product) => void;
   onToggleFavorite: (product: Product, e: React.MouseEvent) => void;
-  onAddToCart: (product: Product, e: React.MouseEvent) => void;
+  /** false — nothing added yet (the customer is asked for a size) */
+  onAddToCart: (product: Product, e: React.MouseEvent) => boolean | void;
   setActiveTab: (tab: ActiveTab) => void;
   onSelectCategory: (category: string) => void;
   onOpenDrawer?: () => void;
@@ -33,7 +34,9 @@ interface HomeScreenProps {
   onOpenMySizes?: () => void;
   onOpenFilters?: () => void;
   onSaveMeasurements?: (measurements: BodyMeasurements) => void;
-  onAddToCartWithOptions?: (product: Product, color: string, size: string, quantity: number) => void;
+  onAddToCartWithOptions?: (product: Product, color: string, size: string, quantity: number) => boolean | void;
+  /** Admin → «Витрина» → «Предзаказ» (quick view shows sold-out sizes as orderable) */
+  preorderMode?: boolean;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -59,6 +62,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenFilters,
   onSaveMeasurements,
   onAddToCartWithOptions,
+  preorderMode = false,
 }) => {
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -437,13 +441,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           onSelectProduct(prod);
         }}
         onToggleFavorite={onToggleFavorite}
-        onAddToCartWithOptions={(prod, color, size, qty) => {
-          if (onAddToCartWithOptions) {
-            onAddToCartWithOptions(prod, color, size, qty);
-          } else {
-            onAddToCart(prod, null as any);
-          }
-        }}
+        onAddToCartWithOptions={(prod, color, size, qty) =>
+          onAddToCartWithOptions ? onAddToCartWithOptions(prod, color, size, qty) : onAddToCart(prod, null as any)
+        }
+        preorderMode={preorderMode}
       />
     </div>
   );

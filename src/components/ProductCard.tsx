@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Eye, Check, Star } from 'lucide-react';
 import { Product } from '../types';
+import { needsVariantChoice } from '../utils/variantSelection';
 import { NeumorphicImage } from './NeumorphicImage';
 import { AnimatedFavoriteButton } from './AnimatedFavoriteButton';
 import { photoBadgeClass } from '../utils/productBadge';
@@ -12,7 +13,8 @@ interface ProductCardProps {
   isInCart: boolean;
   onSelect: (product: Product) => void;
   onToggleFavorite: (product: Product, e: React.MouseEvent) => void;
-  onAddToCart: (product: Product, e: React.MouseEvent) => void;
+  /** false — nothing added yet (the customer is asked for a size) */
+  onAddToCart: (product: Product, e: React.MouseEvent) => boolean | void;
   onQuickView?: (product: Product, e: React.MouseEvent) => void;
   className?: string;
   priority?: boolean;
@@ -33,13 +35,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onAddToCart(product, e);
+    // A product with several sizes opens the size picker: no «Добавлено» tick for that
+    if (onAddToCart(product, e) === false) return;
     setJustAdded(true);
     setTimeout(() => {
       setJustAdded(false);
     }, 1000);
   };
 
+  const needsChoice = needsVariantChoice(product);
   const mainImage = product.images && product.images.length > 0 ? product.images[0] : '';
   // From real reviews only; hidden until the product has any
   const ratingInfo = getProductRating(product);
@@ -162,8 +166,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 ? 'neu-inset text-success'
                 : 'neu-button text-accent'
             }`}
-            aria-label={justAdded ? 'Добавлено в корзину' : 'Добавить в корзину'}
-            title={justAdded ? 'Добавлено в корзину' : 'Добавить в корзину'}
+            aria-label={justAdded ? 'Добавлено в корзину' : needsChoice ? `Выбрать размер: ${product.title}` : 'Добавить в корзину'}
+            aria-haspopup={needsChoice ? 'dialog' : undefined}
+            title={justAdded ? 'Добавлено в корзину' : needsChoice ? 'Выбрать размер и добавить в корзину' : 'Добавить в корзину'}
           >
             {justAdded ? (
               <Check className="w-4 h-4 stroke-[3] animate-in zoom-in-50 duration-200" />

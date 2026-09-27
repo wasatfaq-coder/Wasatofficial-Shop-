@@ -200,16 +200,28 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
   // Standard Compact Toast Item
   return (
     <div
-      className="pointer-events-auto neu-dropdown rounded-2xl p-3 px-4 flex items-start justify-between gap-3 border border-white/80 animate-in fade-in slide-in-from-top-4 duration-300"
+      className="pointer-events-auto neu-dropdown rounded-2xl p-3 px-4 flex items-center justify-between gap-2.5 border border-white/80 animate-in fade-in slide-in-from-top-4 duration-300"
       role={toast.type === 'error' ? 'alert' : 'status'}
       {...pauseHandlers}
     >
-      <div className="flex items-start gap-2.5 min-w-0">
+      <div className="flex items-start gap-2.5 min-w-0 flex-1">
         {toast.type === 'success' && <CheckCircle className="w-5 h-5 text-success shrink-0" />}
         {toast.type === 'info' && <Info className="w-5 h-5 text-accent shrink-0" />}
         {toast.type === 'error' && <AlertCircle className="w-5 h-5 text-danger shrink-0" />}
         <span className="text-xs sm:text-sm font-bold text-[#2D3A4E] leading-snug line-clamp-4 pt-0.5">{toast.text}</span>
       </div>
+      {toast.action && (
+        <button
+          type="button"
+          onClick={() => {
+            toast.action?.onClick();
+            onDismiss(toast.id);
+          }}
+          className="h-8 px-3 rounded-xl neu-button text-xs font-bold text-accent hover:text-accent-strong shrink-0 whitespace-nowrap cursor-pointer"
+        >
+          {toast.action.label}
+        </button>
+      )}
       <button
         type="button"
         onClick={() => onDismiss(toast.id)}

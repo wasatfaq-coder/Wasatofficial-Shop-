@@ -25,7 +25,6 @@ import {
   saveStorefrontSettings,
   getOrderableStock,
   isPreorderVariant,
-  isProductInStock,
 } from './utils/inventory';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages } from './utils/deliveryStages';
 import { formatAddress } from './utils/addressFormat';
@@ -88,6 +87,8 @@ import { extractColorName, extractSizeName } from './utils/inventory';
 import { getStoreContacts, getStoreName, publicSetting, withStoreName, withStoreNameFields } from './utils/storeContacts';
 import { getCategories } from './utils/categories';
 import { promoDiscountText } from './utils/promoLabel';
+import { hasOrderableVariant, needsVariantChoice } from './utils/variantSelection';
+import { VariantPickerSheet } from './components/VariantPickerSheet';
 
 // Unique across customers: messages are create-only for customers (see firestore.rules)
 function newChatMessageId(): string {
@@ -684,10 +685,16 @@ export default function App() {
   }, [orders]);
 
   // Helper Toast launcher
-  const addToast = (text: string, type: 'success' | 'info' | 'error' = 'success') => {
+  const addToast = (
+    text: string,
+    type: 'success' | 'info' | 'error' = 'success',
+    action?: ToastMessage['action']
+  ) => {
     const id = Math.random().toString(36).substring(2, 9);
     // The same message is not stacked twice (errors stay until closed)
-    setToasts((prev) => (prev.some((t) => t.text === text && t.type === type) ? prev : [...prev, { id, text, type }]));
+    setToasts((prev) =>
+      prev.some((t) => t.text === text && t.type === type) ? prev : [...prev, { id, text, type, ...(action ? { action } : {}) }]
+    );
   };
 
   /**
@@ -720,73 +727,41 @@ export default function App() {
     }
   };
 
-  // Add to Cart from Product Card quick plus button
-  const handleAddToCartQuick = (product: Product, e: React.MouseEvent) => {
-    e.stopPropagation();
-    // no invented colour or size: without them the customer picks a variant in the product card
-    const defaultColor = product.colors?.[0]?.name || '';
-    const defaultSize = product.sizes?.[0] || '';
-    const maxAllowed = getOrderableStock(product, defaultColor, defaultSize, preorderMode);
+  // «+» on a product card: one variant is added at once, several — the customer picks one first
+  const [variantPickerProduct, setVariantPickerProduct] = useState<Product | null>(null);
+  const openCartAction = { label: 'В корзину', onClick: () => setActiveTab('cart') };
 
-    if (maxAllowed <= 0) {
-      if (isProductInStock(product)) {
-        // The default variant is sold out, others are not: let the customer pick one
-        addToast(`Выберите доступный размер или цвет: ${product.title}`, 'info');
-        handleSelectProduct(product);
-      } else {
-        addToast(`Товар "${product.title}" временно закончился`, 'error');
-      }
-      return;
+  const handleAddToCartQuick = (product: Product, e?: React.MouseEvent): boolean => {
+    e?.stopPropagation();
+    if (!hasOrderableVariant(product, preorderMode)) {
+      addToast(`Товар "${product.title}" временно закончился`, 'error');
+      return false;
     }
-
-    const existingIndex = cartItems.findIndex(
-      (item) =>
-        item.product.id === product.id &&
-        item.selectedColor === defaultColor &&
-        item.selectedSize === defaultSize
-    );
-
-    if (existingIndex > -1) {
-      const currentItem = cartItems[existingIndex];
-      if (currentItem.quantity >= maxAllowed) {
-        addToast(`Достигнут максимум в наличии (${maxAllowed} шт.) для ${product.title}`, 'info');
-        return;
-      }
-      setCartItems((prev) =>
-        prev.map((item, idx) =>
-          idx === existingIndex ? { ...item, quantity: item.quantity + 1 } : item
-        )
-      );
-      addToast(`Увеличено количество: ${product.title}`, 'info');
-    } else {
-      const newItem: CartItem = {
-        id: `cart-${Date.now()}`,
-        product,
-        selectedColor: defaultColor,
-        selectedSize: defaultSize,
-        quantity: 1,
-      };
-      setCartItems((prev) => [...prev, newItem]);
-      addToast(
-        isPreorderVariant(product, defaultColor, defaultSize, preorderMode)
-          ? `Предзаказ добавлен в корзину: ${product.title}`
-          : `Добавлено в корзину: ${product.title}`,
-        'success'
-      );
+    if (needsVariantChoice(product)) {
+      setVariantPickerProduct(product);
+      return false;
     }
+    const color = product.colors?.[0]?.name || '';
+    const size = product.sizes?.[0] || '';
+    // No invented colour or size: without them the customer picks a variant in the product card
+    if (!color || !size) {
+      handleSelectProduct(product);
+      return false;
+    }
+    return handleAddToCartWithOptions(product, color, size, 1);
   };
 
-  // Add to Cart with Options from Detail screen
+  // Add a chosen variant to the cart. The customer stays on the page: the toast links to the cart
   const handleAddToCartWithOptions = (
     product: Product,
     color: string,
     size: string,
     quantity: number
-  ) => {
+  ): boolean => {
     const availableStock = getOrderableStock(product, color, size, preorderMode);
     if (availableStock <= 0) {
       addToast(`К сожалению, ${product.title} (${color}, ${size}) нет в наличии`, 'error');
-      return;
+      return false;
     }
 
     const clampedQuantity = Math.min(quantity, availableStock);
@@ -799,13 +774,17 @@ export default function App() {
 
     if (existingIndex > -1) {
       const currentQty = cartItems[existingIndex].quantity;
+      if (currentQty >= availableStock) {
+        addToast(`В корзине уже максимум: ${product.title} (${availableStock} шт.)`, 'info', openCartAction);
+        return false;
+      }
       const newTotalQty = Math.min(currentQty + clampedQuantity, availableStock);
       setCartItems((prev) =>
         prev.map((item, idx) =>
           idx === existingIndex ? { ...item, quantity: newTotalQty } : item
         )
       );
-      addToast(`Обновлено количество в корзине: ${product.title} (${newTotalQty} шт.)`, 'info');
+      addToast(`В корзине ${newTotalQty} шт.: ${product.title} (${color}, ${size})`, 'success', openCartAction);
     } else {
       const newItem: CartItem = {
         id: `cart-${Date.now()}`,
@@ -815,9 +794,13 @@ export default function App() {
         quantity: clampedQuantity,
       };
       setCartItems((prev) => [...prev, newItem]);
-      addToast(`${product.title} (${color}, ${size}) добавлено в корзину!`, 'success');
+      addToast(
+        `${isPreorderVariant(product, color, size, preorderMode) ? 'Предзаказ добавлен' : 'Добавлено'} в корзину: ${product.title} (${color}, ${size})`,
+        'success',
+        openCartAction
+      );
     }
-    setActiveTab('cart');
+    return true;
   };
 
   // Repeat a past order: current product data and stock, unavailable items are skipped
@@ -1384,6 +1367,15 @@ export default function App() {
       <div className="relative min-h-full flex flex-col justify-between">
         <ToastContainer toasts={toasts} onDismiss={removeToast} />
 
+        {/* «+» on a card with several sizes or colours: the customer picks the variant */}
+        <VariantPickerSheet
+          product={variantPickerProduct}
+          preorderMode={preorderMode}
+          onClose={() => setVariantPickerProduct(null)}
+          onAdd={(product, color, size) => handleAddToCartWithOptions(product, color, size, 1)}
+          onOpenProduct={handleSelectProduct}
+        />
+
         <SidebarDrawer
           isOpen={isDrawerOpen}
           onClose={() => setIsDrawerOpen(false)}
@@ -1438,14 +1430,9 @@ export default function App() {
           onAddToCart={(productId, color, size) => {
             const prod = products.find((p) => p.id === productId);
             if (!prod) return;
-            const pickColor = color || prod.colors?.[0]?.name;
-            const pickSize = size || prod.sizes?.[0];
-            // Without a colour and size the customer chooses them in the product card
-            if (pickColor && pickSize) handleAddToCartWithOptions(prod, pickColor, pickSize, 1);
-            else {
-              setIsSupportChatOpen(false);
-              handleSelectProduct(prod);
-            }
+            // The staff member named the variant: add it; otherwise the customer picks one (no default size)
+            if (color && size) handleAddToCartWithOptions(prod, color, size, 1);
+            else handleAddToCartQuick(prod);
           }}
           onSelectProductById={(productId) => {
             const prod = products.find((p) => p.id === productId);
@@ -1537,6 +1524,7 @@ export default function App() {
               onOpenFilters={() => setIsAdvancedFilterOpen(true)}
               onSaveMeasurements={handleSaveMeasurements}
               onAddToCartWithOptions={handleAddToCartWithOptions}
+              preorderMode={preorderMode}
             />
           )}
 
@@ -1557,6 +1545,7 @@ export default function App() {
               onToggleFavorite={handleToggleFavorite}
               onAddToCart={handleAddToCartQuick}
               onAddToCartWithOptions={handleAddToCartWithOptions}
+              preorderMode={preorderMode}
               filterState={catalogFilterState}
               onChangeFilterState={setCatalogFilterState}
               onResetFilters={handleResetCatalogFilters}
