@@ -6,9 +6,19 @@ import { encodeBarcode, type EncodedBarcode } from '../shared/barcode';
  * so the file matches what the admin sees. Bars go into the PDF as vector rectangles.
  */
 
-export type LabelTemplate = 'classic' | 'minimal' | 'price' | 'size-price' | 'card' | 'tag' | 'sale';
+export type LabelTemplate =
+  | 'classic'
+  | 'minimal'
+  | 'price'
+  | 'size-price'
+  | 'card'
+  | 'tag'
+  | 'showcase'
+  | 'price-info'
+  | 'premium'
+  | 'sale';
 
-export type LabelTemplateGroup = 'basic' | 'extended' | 'sale';
+export type LabelTemplateGroup = 'basic' | 'extended' | 'accent' | 'sale';
 
 export interface LabelTemplateInfo {
   id: LabelTemplate;
@@ -28,22 +38,27 @@ export const LABEL_TEMPLATES: LabelTemplateInfo[] = [
   { id: 'size-price', name: 'Размер и цена', hint: 'Крупные размер и цена, состав, артикул', group: 'extended', showsSize: true },
   { id: 'card', name: 'Карточка', hint: 'Полоса с размером и ценой, название, состав', group: 'extended', showsSize: true },
   { id: 'tag', name: 'Бирка', hint: 'Все по центру: размер, цена, товар, состав', group: 'extended', showsSize: true },
-  { id: 'sale', name: 'Скидка', hint: 'Новая и зачеркнутая старая цена, процент скидки', group: 'sale', showsSize: false, needsOldPrice: true },
+  { id: 'showcase', name: 'Витрина', hint: 'Крупное название, цвет, размер, состав, цена на темной полосе', group: 'accent', showsSize: true },
+  { id: 'price-info', name: 'Цена и детали', hint: 'Цена во всю ширину, название и таблица: цвет, размер, состав, артикул', group: 'accent', showsSize: true },
+  { id: 'premium', name: 'Премиум', hint: 'В рамке по центру: название, детали, крупная цена', group: 'accent', showsSize: true },
+  { id: 'sale', name: 'Скидка', hint: 'Крупные новая цена и процент скидки, зачеркнутая старая цена', group: 'sale', showsSize: false, needsOldPrice: true },
 ];
 
 export const LABEL_TEMPLATE_GROUPS: { id: LabelTemplateGroup; title: string }[] = [
   { id: 'basic', title: 'Без размера' },
   { id: 'extended', title: 'С размером и составом' },
+  { id: 'accent', title: 'Акцент на цене и названии' },
   { id: 'sale', title: 'Скидка' },
 ];
 
 export const templateInfo = (id: LabelTemplate) => LABEL_TEMPLATES.find((t) => t.id === id) ?? LABEL_TEMPLATES[0];
 
-/** Offered when the store has no formats yet; saved only when the admin adds one */
+/** Offered when adding a format; saved only when the admin adds one */
 export const LABEL_FORMAT_PRESETS: Omit<LabelFormat, 'id'>[] = [
   { name: 'Термоэтикетка', widthMm: 58, heightMm: 40 },
   { name: 'Ценник', widthMm: 70, heightMm: 50 },
   { name: 'Малая этикетка', widthMm: 43, heightMm: 25 },
+  { name: 'Бирка', widthMm: 40, heightMm: 60 },
 ];
 
 export const LABEL_SIZE_LIMITS = { min: 20, max: 120 };
@@ -83,7 +98,6 @@ interface TextItem {
   align: 'left' | 'right' | 'center';
   mono?: boolean;
   strike?: boolean;
-  muted?: boolean;
   /** White text on a filled box */
   inverse?: boolean;
 }
@@ -124,6 +138,10 @@ export interface LabelLayout {
   widthMm: number;
   heightMm: number;
   items: LabelItem[];
+  /** Text scale the content was fitted at (1 = the 58×40 reference) */
+  scale: number;
+  /** Optional lines left out because the label is too small */
+  dropped: string[];
 }
 
 /** Width of a text in mm at the given size (mm) */
@@ -164,37 +182,234 @@ function wrap(text: string, maxWidth: number, size: number, weight: Weight, meas
   return lines.map((line) => fit(line, maxWidth, size, weight, measure));
 }
 
-/** Bars centred in the box with quiet zones; returns the height used including the digits */
-function barsBlock(
-  code: EncodedBarcode,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  digitsSize: number
-): LabelItem[] {
-  const quiet = code.kind === 'ean13' ? 11 + 7 : 20;
-  const moduleWidth = Math.min(0.5, width / (code.modules.length + quiet));
-  const barsWidth = moduleWidth * code.modules.length;
-  const barsHeight = Math.max(4, height - digitsSize * 1.35);
-  return [
-    { kind: 'bars', x: x + (width - barsWidth) / 2, y, moduleWidth, height: barsHeight, modules: code.modules },
-    {
-      kind: 'text',
-      text: code.text,
-      x: x + width / 2,
-      y: y + barsHeight + digitsSize * 1.1,
-      size: digitsSize,
-      weight: 600,
-      align: 'center',
-      mono: true,
+/* ------------------------------------------------------------------------------------------------
+ * Auto-fit. A template is a column of blocks. For a text scale `s` every block knows its height;
+ * the largest `s` whose column fits the label wins (optional lines are dropped first when even the
+ * smallest readable scale does not fit). What is left goes to the barcode (up to a readable
+ * maximum), then to the template's spacers, else evenly between the blocks: no empty zones.
+ * ---------------------------------------------------------------------------------------------- */
+
+/** Heights of a text line from its box top: to the baseline and the full line */
+const ASCENT = 0.8;
+const LINE = 1.02;
+const LEADING = 1.12;
+
+interface Block {
+  /** Height at scale s */
+  height: (s: number) => number;
+  /** Draws from `top`; `extra` is the height the block got above `height(s)` (bars only) */
+  draw: (top: number, s: number, extra: number) => void;
+  /** Gap before the block, mm at s = 1 */
+  gap?: number;
+  /** How much taller the block may grow (bars) */
+  grow?: (s: number) => number;
+  /** Takes a share of the leftover height */
+  spacer?: number;
+  /** Dropped when the label is too small; lower drops first */
+  optional?: number;
+  /** Name for the «не поместилось» hint */
+  name?: string;
+  /** Sticks to the label edge: no margin and no gap on that side */
+  bleed?: 'top' | 'bottom';
+}
+
+interface Ctx {
+  w: number;
+  h: number;
+  m: number;
+  cw: number;
+  cx: number;
+  right: number;
+  measure: MeasureText;
+  items: LabelItem[];
+}
+
+type TextStyle = { size: number; weight?: Weight; mono?: boolean; align?: TextItem['align']; maxLines?: number };
+
+/** A wrapped text; sizes are mm at s = 1 */
+function textBlock(c: Ctx, value: string, style: TextStyle, extra: Partial<Block> = {}): Block | null {
+  if (!value.trim()) return null;
+  const weight = style.weight ?? 700;
+  const align = style.align ?? 'left';
+  // A word is never cut in the middle when the text wraps: the size shrinks until the longest word fits
+  const longest = (style.maxLines ?? 1) > 1 ? Math.max(...value.split(/\s+/).map((wd) => c.measure(wd, 1, weight, style.mono))) : 0;
+  const sizeAt = (s: number) => Math.min(style.size * s, longest ? (c.cw / longest) * 0.98 : Infinity);
+  const lines = (s: number) => wrap(value, c.cw, sizeAt(s), weight, c.measure, style.maxLines ?? 1);
+  return {
+    height: (s) => {
+      const size = sizeAt(s);
+      return size * (LINE + LEADING * (lines(s).length - 1));
     },
-  ];
+    draw: (top, s) => {
+      const size = sizeAt(s);
+      const x = align === 'center' ? c.cx : align === 'right' ? c.right : c.m;
+      lines(s).forEach((l, i) =>
+        c.items.push({ kind: 'text', text: l, x, y: top + size * (ASCENT + LEADING * i), size, weight, align, mono: style.mono })
+      );
+    },
+    ...extra,
+  };
+}
+
+/** One line that shrinks to the width instead of being cut (prices) */
+function shrinkBlock(c: Ctx, value: string, style: TextStyle & { max?: number }, extra: Partial<Block> = {}): Block {
+  const weight = style.weight ?? 800;
+  const align = style.align ?? 'left';
+  const size = (s: number) =>
+    Math.min(style.size * s, style.max ?? Infinity, (c.cw / Math.max(0.1, c.measure(value, 1, weight, style.mono))) * 0.98);
+  return {
+    height: (s) => size(s) * LINE,
+    draw: (top, s) => {
+      const f = size(s);
+      const x = align === 'center' ? c.cx : align === 'right' ? c.right : c.m;
+      c.items.push({ kind: 'text', text: value, x, y: top + f * ASCENT, size: f, weight, align, mono: style.mono });
+    },
+    ...extra,
+  };
+}
+
+/** Barcode with its digits; grows from a readable minimum to a maximum, never taller than wide */
+function barcodeBlock(c: Ctx, code: EncodedBarcode): Block {
+  const quiet = code.kind === 'ean13' ? 11 + 7 : 20;
+  const moduleWidth = Math.min(0.5, c.cw / (code.modules.length + quiet));
+  const barsWidth = moduleWidth * code.modules.length;
+  const digits = (s: number) => Math.max(1.8, Math.min(2.2 * s, 3.2));
+  const minBars = Math.max(4, Math.min(c.h * 0.2, 9));
+  const maxBars = Math.max(minBars, Math.min(c.h * 0.4, 22, barsWidth * 0.55));
+  return {
+    height: (s) => minBars + digits(s) * 1.3,
+    grow: () => maxBars - minBars,
+    draw: (top, s, extra) => {
+      const barsHeight = minBars + extra;
+      const d = digits(s);
+      c.items.push({ kind: 'bars', x: c.m + (c.cw - barsWidth) / 2, y: top, moduleWidth, height: barsHeight, modules: code.modules });
+      c.items.push({ kind: 'text', text: code.text, x: c.cx, y: top + barsHeight + d * 1.08, size: d, weight: 700, align: 'center', mono: true });
+    },
+    gap: 1.4,
+    name: 'штрихкод',
+  };
+}
+
+const ruleBlock = (c: Ctx, gap = 1): Block => ({
+  height: () => 0.3,
+  draw: (top) => c.items.push({ kind: 'line', x1: c.m, y1: top + 0.15, x2: c.right, y2: top + 0.15, width: 0.3 }),
+  gap,
+});
+
+const spacer = (weight = 1): Block => ({ height: () => 0, draw: () => {}, spacer: weight, gap: 0 });
+
+/** Two texts on one baseline: a label on the left, a value (price) shrinking into the rest on the right */
+function pairBlock(c: Ctx, left: string, right: string, l: TextStyle, r: TextStyle, extra: Partial<Block> = {}): Block {
+  const lw = l.weight ?? 700;
+  const rw = r.weight ?? 800;
+  const sizes = (s: number) => {
+    const ls = l.size * s;
+    const leftWidth = left ? c.measure(left, ls, lw, l.mono) + 1.5 * s : 0;
+    const room = c.cw - Math.min(leftWidth, c.cw * 0.6);
+    const rs = Math.min(r.size * s, (room / Math.max(0.1, c.measure(right, 1, rw, r.mono))) * 0.98);
+    return { ls, rs, room };
+  };
+  return {
+    height: (s) => Math.max(sizes(s).ls, sizes(s).rs) * LINE,
+    draw: (top, s) => {
+      const { ls, rs } = sizes(s);
+      const base = top + Math.max(ls, rs) * ASCENT;
+      if (left) {
+        c.items.push({ kind: 'text', text: fit(left, c.cw * 0.6 - 1.5 * s, ls, lw, c.measure, l.mono), x: c.m, y: base, size: ls, weight: lw, align: 'left', mono: l.mono });
+      }
+      if (right) c.items.push({ kind: 'text', text: right, x: c.right, y: base, size: rs, weight: rw, align: 'right', mono: r.mono });
+    },
+    ...extra,
+  };
+}
+
+/** Key–value rows («Цвет  Небесно-голубой»): keys in one column */
+function tableBlock(c: Ctx, rows: [string, string][], size: number, extra: Partial<Block> = {}): Block | null {
+  const filled = rows.filter(([, v]) => v.trim());
+  if (filled.length === 0) return null;
+  return {
+    height: (s) => size * s * (LINE + LEADING * (filled.length - 1)) + (filled.length - 1) * 0.35 * s,
+    draw: (top, s) => {
+      const f = size * s;
+      const keyWidth = Math.max(...filled.map(([k]) => c.measure(k, f, 600))) + 1.6 * s;
+      filled.forEach(([k, v], i) => {
+        const y = top + f * ASCENT + i * (f * LEADING + 0.35 * s);
+        c.items.push({ kind: 'text', text: k, x: c.m, y, size: f, weight: 600, align: 'left' });
+        c.items.push({ kind: 'text', text: fit(v, c.cw - keyWidth, f, 800, c.measure), x: c.m + keyWidth, y, size: f, weight: 800, align: 'left' });
+      });
+    },
+    ...extra,
+  };
+}
+
+/** Finds the scale and places the blocks between `top` and `bottom` */
+function solve(c: Ctx, all: (Block | null)[], sMax: number): { scale: number; dropped: string[] } {
+  let blocks = all.filter((b): b is Block => Boolean(b));
+  const sFloor = Math.max(0.55, Math.min(0.8, sMax * 0.6));
+  const dropped: string[] = [];
+  const edgeTop = (list: Block[]) => (list[0]?.bleed === 'top' ? 0 : c.m);
+  const edgeBottom = (list: Block[]) => (list[list.length - 1]?.bleed === 'bottom' ? 0 : c.m);
+  const gapOf = (list: Block[], i: number, s: number) =>
+    i === 0 || list[i].spacer || list[i - 1].spacer ? 0 : (list[i].gap ?? 1) * s;
+  const total = (list: Block[], s: number) => list.reduce((sum, b, i) => sum + b.height(s) + gapOf(list, i, s), 0);
+  const best = (list: Block[]) => {
+    const avail = c.h - edgeTop(list) - edgeBottom(list);
+    if (total(list, sFloor) > avail) return sFloor * 0.999;
+    let lo = sFloor;
+    let hi = sMax;
+    if (total(list, hi) <= avail) return hi;
+    for (let n = 0; n < 24; n++) {
+      const mid = (lo + hi) / 2;
+      if (total(list, mid) <= avail) lo = mid;
+      else hi = mid;
+    }
+    return lo;
+  };
+
+  let s = best(blocks);
+  while (s < sFloor) {
+    const optional = blocks.filter((b) => b.optional !== undefined);
+    if (optional.length === 0) break;
+    const drop = optional.reduce((a, b) => (b.optional! < a.optional! ? b : a));
+    if (drop.name) dropped.push(drop.name);
+    blocks = blocks.filter((b) => b !== drop);
+    s = best(blocks);
+  }
+  s = Math.max(s, Math.min(sFloor, sMax));
+
+  const top = edgeTop(blocks);
+  const avail = c.h - top - edgeBottom(blocks);
+  let left = Math.max(0, avail - total(blocks, s));
+  const extra = blocks.map((b) => {
+    const g = Math.min(left, b.grow?.(s) ?? 0);
+    left -= g;
+    return g;
+  });
+  const spacerWeight = blocks.reduce((sum, b) => sum + (b.spacer ?? 0), 0);
+  const gaps = blocks.map((_, i) => gapOf(blocks, i, s));
+  // Without spacers the gaps grow a little (up to 2.5 mm × s each); the rest goes before the last block,
+  // so the content stays grouped at the top and the barcode or price sits on the bottom edge
+  const slots = blocks.map((b, i) => i > 0 && !b.spacer && !blocks[i - 1].spacer);
+  const slotCount = slots.filter(Boolean).length;
+  const perGap = spacerWeight || slotCount === 0 ? 0 : Math.min(left / slotCount, 2.5 * s);
+  const beforeLast = spacerWeight ? 0 : left - perGap * slotCount;
+  let y = top;
+  blocks.forEach((b, i) => {
+    y += gaps[i];
+    if (slots[i]) y += perGap;
+    if (i === blocks.length - 1 && i > 0) y += beforeLast;
+    if (b.spacer) y += (left * b.spacer) / spacerWeight;
+    // a band at the bottom edge always ends at the edge
+    if (b.bleed === 'bottom') y = c.h - b.height(s) - extra[i];
+    b.draw(y, s, extra[i]);
+    y += b.height(s) + extra[i];
+  });
+  return { scale: s, dropped };
 }
 
 /**
- * Items of a label in mm. Sizes follow the label: a 58×40 label is the reference, bigger labels get
- * bigger text. Short labels (h < 32 mm) drop secondary lines so the barcode stays readable.
+ * Items of a label in mm. Sizes follow the label: 58×40 is the reference; the text scale is then fitted
+ * so the content fills the label. Price and product name are the largest texts on every template.
  */
 export function layoutLabel(
   template: LabelTemplate,
@@ -205,183 +420,248 @@ export function layoutLabel(
 ): LabelLayout {
   const w = format.widthMm;
   const h = format.heightMm;
-  const k = Math.max(0.6, Math.min(w / 58, h / 40, 1.8));
-  const m = Math.max(1.8, 2.4 * k);
-  const cw = w - m * 2;
-  const right = w - m;
-  const cx = w / 2;
-  const items: LabelItem[] = [];
-  const text = (t: Omit<TextItem, 'kind'>) => items.push({ kind: 'text', ...t });
-  const line = (y: number) => items.push({ kind: 'line', x1: m, y1: y, x2: right, y2: y, width: 0.25 });
-  const rect = (r: Omit<RectItem, 'kind'>) => items.push({ kind: 'rect', ...r });
+  const k = Math.max(0.55, Math.min(w / 58, h / 40, 2));
+  const m = Math.max(1.6, Math.min(2.4 * k, 4));
+  const c: Ctx = { w, h, m, cw: w - m * 2, cx: w / 2, right: w - m, measure, items: [] };
+  // Text grows until the column fills the label (more room without a barcode or on a tall label);
+  // the width alone bounds it, the height is checked by the fitting, and never above 2.4× the reference
+  const sMax = Math.min(Math.max(k, w / 58) * 2.2, 2.4);
 
-  const small = 2.3 * k;
-  const titleSize = 3.1 * k;
-  const digits = 2.2 * k;
-  const compact = h < 32;
-  const code = options.showBarcode ? encodeBarcode(data.barcode) : null;
+  const code = options.showBarcode && data.barcode ? encodeBarcode(data.barcode) : null;
+  const bars = code ? barcodeBlock(c, code) : null;
   const price = formatLabelPrice(data.price);
-  const article = data.article ? `Арт. ${data.article}` : '';
-  const composition = data.composition ? `Состав: ${data.composition}` : '';
+  const showPrice = options.showPrice;
+  const tall = h / w > 1.1;
+  const titleLines = tall ? 4 : 2;
+  const colorArticle = [data.color, data.article].filter(Boolean).join(' · ');
+  const opt = (name: string, rank: number): Partial<Block> => ({ optional: rank, name });
 
-  /** Title lines from `y` (baseline of the first line); returns the next baseline */
-  const title = (y: number, lines: number, align: TextItem['align'] = 'left', size = titleSize) => {
-    const x = align === 'center' ? cx : m;
-    for (const l of wrap(data.title, cw, size, 700, measure, lines)) {
-      text({ text: l, x, y, size, weight: 700, align });
-      y += size * 1.15;
-    }
-    return y;
-  };
-  /** A small line of text; returns the next baseline */
-  const note = (y: number, value: string, opts: Partial<TextItem> = {}) => {
-    if (!value) return y;
-    const align = opts.align ?? 'left';
-    text({
-      text: fit(value, cw, small, opts.weight ?? 600, measure, opts.mono),
-      x: align === 'center' ? cx : align === 'right' ? right : m,
-      y,
-      size: small,
-      weight: opts.weight ?? 600,
-      align,
-      ...opts,
-    });
-    return y + small * 1.35;
-  };
-  /** Barcode from `top` to `bottom` */
-  const bars = (top: number, bottom: number) => {
-    if (code && bottom - top > 3) items.push(...barsBlock(code, m, top, cw, bottom - top, digits));
-  };
+  let blocks: (Block | null)[] = [];
 
   if (template === 'classic') {
-    let y = title(m + titleSize, compact ? 1 : 2);
-    const details = compact ? [data.color, data.article].filter(Boolean).join(' · ') : data.color ? `Цвет: ${data.color}` : '';
-    y = note(y - titleSize * 0.1, details);
-    if (!compact) y = note(y - small * 0.15, article, { mono: true, weight: 500, muted: true });
-    const priceSize = 4.4 * k;
-    const bottom = options.showPrice ? h - m - priceSize * 1.45 : h - m;
-    bars(y - small * 0.5, bottom - 1.2 * k);
-    if (options.showPrice) {
-      line(bottom + priceSize * 0.2);
-      const py = h - m - 0.3;
-      text({ text: 'Цена', x: m, y: py, size: small, weight: 600, align: 'left', muted: true });
-      text({ text: price, x: right, y: py, size: priceSize, weight: 800, align: 'right' });
-    }
+    blocks = [
+      textBlock(c, data.title, { size: 3.6, weight: 800, maxLines: titleLines }),
+      textBlock(c, data.color ? `Цвет: ${data.color}` : '', { size: 2.5, weight: 700 }, { gap: 0.7, ...opt('цвет', 2) }),
+      textBlock(c, data.article ? `Арт. ${data.article}` : '', { size: 2.3, weight: 700, mono: true }, { gap: 0.4, ...opt('артикул', 1) }),
+      bars ?? spacer(),
+      ...(showPrice
+        ? [ruleBlock(c, bars ? 1.2 : 0), pairBlock(c, 'Цена', price, { size: 2.6, weight: 700 }, { size: 6.2 }, { gap: 0.9 })]
+        : []),
+    ];
   }
 
   if (template === 'minimal') {
-    let y = title(m + titleSize, 1);
-    y = note(y - titleSize * 0.1, data.color, { muted: true });
-    const footer = small * 1.7;
-    bars(y - small * 0.4, h - m - footer - 0.6 * k);
-    const fy = h - m - 0.2;
-    const articleWidth = options.showPrice ? cw * 0.58 : cw;
-    if (data.article) {
-      text({ text: fit(data.article, articleWidth, small, 500, measure, true), x: m, y: fy, size: small, weight: 500, align: 'left', mono: true });
-    }
-    if (options.showPrice) text({ text: price, x: right, y: fy, size: small * 1.35, weight: 800, align: 'right' });
+    blocks = [
+      textBlock(c, data.title, { size: 3.3, weight: 800, maxLines: bars ? 1 : titleLines }),
+      textBlock(c, data.color, { size: 2.4, weight: 700 }, { gap: 0.5, ...opt('цвет', 1) }),
+      bars ?? spacer(),
+      pairBlock(c, data.article, showPrice ? price : '', { size: 2.2, weight: 700, mono: true }, { size: 4.6 }, { gap: 1 }),
+    ];
   }
 
   if (template === 'price') {
-    let y = title(m + titleSize, 1);
-    y = note(y - titleSize * 0.1, [data.color, data.article].filter(Boolean).join(' · '), { muted: true });
-    const barsHeight = code ? Math.min(h * 0.3, 12 * k) : 0;
-    const barsTop = h - m - barsHeight;
-    if (options.showPrice) {
-      const priceSize = Math.min(9 * k, (barsTop - 1.2 * k - y + small) * 0.8);
-      text({ text: price, x: m, y: y - small + priceSize * 0.9, size: priceSize, weight: 800, align: 'left' });
-    }
-    if (code) {
-      line(barsTop - 1.2 * k);
-      bars(barsTop, h - m);
-    }
+    blocks = [
+      textBlock(c, data.title, { size: 3.4, weight: 800, maxLines: titleLines }),
+      textBlock(c, colorArticle, { size: 2.4, weight: 700 }, { gap: 0.6, ...opt('цвет и артикул', 1) }),
+      bars ? null : spacer(),
+      showPrice ? shrinkBlock(c, price, { size: 10 }, { gap: 1.2 }) : null,
+      ...(bars ? [spacer(), ruleBlock(c, 0), bars] : []),
+    ];
   }
 
   if (template === 'size-price') {
-    // Size in a box on the left, the price big on the right
-    const rowH = (compact ? 8.5 : 11) * k;
     const sizeText = data.size || '—';
-    const sizeFont = rowH * 0.55;
-    const boxW = Math.max(rowH, measure(sizeText, sizeFont, 800) + 3 * k);
-    rect({ x: m, y: m, w: boxW, h: rowH, radius: 1.2 * k, lineWidth: 0.45 });
-    text({ text: sizeText, x: m + boxW / 2, y: m + rowH * 0.72, size: sizeFont, weight: 800, align: 'center' });
-    if (options.showPrice) {
-      const priceSize = Math.min(rowH * 0.62, ((cw - boxW - 2 * k) / Math.max(1, measure(price, 1, 800))) * 0.95);
-      text({ text: price, x: right, y: m + rowH * 0.72, size: priceSize, weight: 800, align: 'right' });
-    }
-    let y = m + rowH + titleSize * 1.05;
-    y = title(y, 1);
-    if (!compact) y = note(y - titleSize * 0.1, composition);
-    y = note(y - (compact ? titleSize * 0.1 : small * 0.15), article, { mono: true, weight: 500, muted: true });
-    bars(y - small * 0.5, h - m);
+    blocks = [
+      sizePriceRow(c, sizeText, showPrice ? price : ''),
+      textBlock(c, data.title, { size: 3.4, weight: 800, maxLines: titleLines }, { gap: 1.4 }),
+      textBlock(c, data.composition ? `Состав: ${data.composition}` : '', { size: 2.4, weight: 700 }, { gap: 0.6, ...opt('состав', 2) }),
+      textBlock(c, data.article ? `Арт. ${data.article}` : '', { size: 2.3, weight: 700, mono: true }, { gap: 0.4, ...opt('артикул', 1) }),
+      bars ?? spacer(),
+    ];
   }
 
   if (template === 'card') {
-    // Filled band: size on the left, price on the right
-    const bandH = (compact ? 7 : 9) * k;
-    rect({ x: 0, y: 0, w, h: bandH + m * 0.4, radius: 0, fill: true });
-    const by = (bandH + m * 0.4) * 0.7;
-    text({ text: data.size ? `Размер ${data.size}` : '', x: m, y: by, size: bandH * 0.42, weight: 800, align: 'left', inverse: true });
-    if (options.showPrice) text({ text: price, x: right, y: by, size: bandH * 0.56, weight: 800, align: 'right', inverse: true });
-    let y = bandH + m * 0.4 + titleSize * 1.25;
-    y = title(y, compact ? 1 : 2);
-    if (!compact) y = note(y - titleSize * 0.1, composition);
-    y = note(y - (compact ? titleSize * 0.1 : small * 0.15), article, { mono: true, weight: 500, muted: true });
-    bars(y - small * 0.5, h - m);
+    blocks = [
+      bandBlock(c, data.size ? [`Размер ${data.size}`, data.size] : [], showPrice ? price : '', 'top'),
+      textBlock(c, data.title, { size: 3.5, weight: 800, maxLines: titleLines }, { gap: 1.4 }),
+      textBlock(c, data.composition ? `Состав: ${data.composition}` : '', { size: 2.4, weight: 700 }, { gap: 0.6, ...opt('состав', 2) }),
+      textBlock(c, data.article ? `Арт. ${data.article}` : '', { size: 2.3, weight: 700, mono: true }, { gap: 0.4, ...opt('артикул', 1) }),
+      bars ?? spacer(),
+    ];
   }
 
   if (template === 'tag') {
-    // Centred column: size, price, name, composition, article, barcode
-    const barsHeight = code ? Math.min(h * (compact ? 0.36 : 0.3), 12 * k) : 0;
-    const sizeFont = (compact ? 5 : 7) * k;
-    let y = m + sizeFont * 0.8;
-    const sizePart = data.size || '';
-    if (options.showPrice && compact) {
-      // one row on a short label: «48 (M) · 7 990 ₽»
-      text({ text: fit([sizePart, price].filter(Boolean).join('  ·  '), cw, sizeFont, 800, measure), x: cx, y, size: sizeFont, weight: 800, align: 'center' });
-    } else {
-      if (sizePart) text({ text: fit(sizePart, cw, sizeFont, 800, measure), x: cx, y, size: sizeFont, weight: 800, align: 'center' });
-      if (options.showPrice) {
-        y += sizeFont * 0.95;
-        text({ text: price, x: cx, y, size: sizeFont * 0.8, weight: 800, align: 'center' });
-      }
-    }
-    y += titleSize * 1.4;
-    y = title(y, 1, 'center');
-    if (!compact) y = note(y - titleSize * 0.1, composition, { align: 'center' });
-    note(y - (compact ? titleSize * 0.1 : small * 0.15), article, { mono: true, weight: 500, muted: true, align: 'center' });
-    bars(h - m - barsHeight, h - m);
+    const center = { align: 'center' as const };
+    blocks = [
+      bars ? null : spacer(),
+      data.size ? shrinkBlock(c, data.size, { size: 7, align: 'center' }) : null,
+      showPrice ? shrinkBlock(c, price, { size: 6, align: 'center' }, { gap: 0.6 }) : null,
+      textBlock(c, data.title, { size: 3.3, weight: 800, maxLines: titleLines, ...center }, { gap: 1.2 }),
+      textBlock(c, data.composition ? `Состав: ${data.composition}` : '', { size: 2.4, weight: 700, ...center }, { gap: 0.6, ...opt('состав', 2) }),
+      textBlock(c, data.article ? `Арт. ${data.article}` : '', { size: 2.3, weight: 700, mono: true, ...center }, { gap: 0.4, ...opt('артикул', 1) }),
+      bars ?? spacer(),
+    ];
+  }
+
+  if (template === 'showcase') {
+    // Big name on top, details, the price on a filled band at the bottom edge
+    blocks = [
+      textBlock(c, data.title, { size: 4.4, weight: 800, maxLines: titleLines + 1 }),
+      textBlock(c, [data.color, data.size ? `размер ${data.size}` : ''].filter(Boolean).join(' · '), { size: 2.7, weight: 700 }, { gap: 0.8, ...opt('цвет и размер', 2) }),
+      textBlock(c, data.composition, { size: 2.4, weight: 600 }, { gap: 0.4, ...opt('состав', 1) }),
+      bars ? null : spacer(),
+      bars,
+      showPrice ? bandBlock(c, ['Цена', ''], price, 'bottom') : textBlock(c, data.article ? `Арт. ${data.article}` : '', { size: 2.3, weight: 700, mono: true }),
+    ];
+  }
+
+  if (template === 'price-info') {
+    // The price as wide as the label, the name, then a table of details
+    blocks = [
+      showPrice ? shrinkBlock(c, price, { size: 11 }) : null,
+      textBlock(c, data.title, { size: 3.6, weight: 800, maxLines: titleLines }, { gap: 0.8 }),
+      showPrice ? ruleBlock(c, 1) : null,
+      tableBlock(
+        c,
+        [
+          ['Цвет', data.color],
+          ['Размер', data.size],
+          ['Состав', data.composition],
+          ['Артикул', data.article],
+        ],
+        2.4,
+        { gap: 1, ...opt('таблица', 1) }
+      ),
+      bars ?? spacer(),
+    ];
+  }
+
+  if (template === 'premium') {
+    // A frame, everything centred: name, details, a rule and the price
+    const center = { align: 'center' as const };
+    const inner = 1.2 * k;
+    c.items.push({ kind: 'rect', x: m / 2, y: m / 2, w: w - m, h: h - m, radius: 1.2 * k, lineWidth: 0.35 });
+    c.m = m + inner;
+    c.cw = w - c.m * 2;
+    c.right = w - c.m;
+    blocks = [
+      textBlock(c, data.title, { size: 3.8, weight: 800, maxLines: titleLines, ...center }),
+      textBlock(c, [data.color, data.size].filter(Boolean).join(' · '), { size: 2.5, weight: 700, ...center }, { gap: 0.7, ...opt('цвет и размер', 2) }),
+      textBlock(c, data.composition, { size: 2.3, weight: 600, ...center }, { gap: 0.4, ...opt('состав', 1) }),
+      spacer(),
+      showPrice ? shrinkBlock(c, price, { size: 8.5, align: 'center' }) : null,
+      bars ? spacer(0.4) : null,
+      bars,
+    ];
   }
 
   if (template === 'sale') {
-    let y = title(m + titleSize, 1);
-    y = note(y - titleSize * 0.1, [data.color, data.article].filter(Boolean).join(' · '), { muted: true });
-    const barsHeight = code ? Math.min(h * 0.3, 12 * k) : 0;
-    const barsTop = h - m - barsHeight;
     const oldPrice = hasSaleOldPrice(data) ? data.oldPrice! : undefined;
-    const avail = barsTop - 1.2 * k - (y - small);
-    const priceSize = Math.min(8 * k, avail * 0.62);
-    const py = y - small + priceSize * 0.9;
-    text({ text: price, x: m, y: py, size: priceSize, weight: 800, align: 'left' });
-    if (oldPrice) {
-      const pct = `−${Math.round((1 - data.price / oldPrice) * 100)}%`;
-      const badgeSize = small * 1.25;
-      const badgeW = measure(pct, badgeSize, 800) + 2 * k;
-      const badgeH = badgeSize * 1.45;
-      // the badge sits above the struck-out old price, both right-aligned with the new price's baseline
-      const oldSize = small * 1.3;
-      const badgeTop = py - oldSize * 1.05 - badgeH - 0.6 * k;
-      rect({ x: right - badgeW, y: badgeTop, w: badgeW, h: badgeH, radius: 0.8 * k, fill: true });
-      text({ text: pct, x: right - badgeW / 2, y: badgeTop + badgeH * 0.74, size: badgeSize, weight: 800, align: 'center', inverse: true });
-      text({ text: formatLabelPrice(oldPrice), x: right, y: py, size: oldSize, weight: 600, align: 'right', strike: true, muted: true });
-    }
-    if (code) {
-      line(barsTop - 1.2 * k);
-      bars(barsTop, h - m);
-    }
+    blocks = [
+      textBlock(c, data.title, { size: 3.4, weight: 800, maxLines: titleLines }),
+      textBlock(c, colorArticle, { size: 2.4, weight: 700 }, { gap: 0.6, ...opt('цвет и артикул', 1) }),
+      bars ? null : spacer(),
+      saleRow(c, price, oldPrice, data.price),
+      ...(bars ? [spacer(), ruleBlock(c, 0), bars] : []),
+    ];
   }
 
-  return { widthMm: w, heightMm: h, items };
+  const { scale, dropped } = solve(c, blocks, sMax);
+  return { widthMm: w, heightMm: h, items: c.items, scale, dropped };
+}
+
+/** Size in an outlined box on the left, the price on the right */
+function sizePriceRow(c: Ctx, sizeText: string, price: string): Block {
+  const geom = (s: number) => {
+    const rowH = 10 * s;
+    const sizeFont = rowH * 0.56;
+    const boxW = Math.min(c.cw * 0.5, Math.max(rowH, c.measure(sizeText, sizeFont, 800) + 3 * s));
+    const priceSize = price
+      ? Math.min(rowH * 0.66, ((c.cw - boxW - 2 * s) / Math.max(0.1, c.measure(price, 1, 800))) * 0.98)
+      : 0;
+    return { rowH, sizeFont: Math.min(sizeFont, ((boxW - 2 * s) / Math.max(0.1, c.measure(sizeText, 1, 800))) * 0.98), boxW, priceSize };
+  };
+  return {
+    height: (s) => geom(s).rowH,
+    draw: (top, s) => {
+      const { rowH, sizeFont, boxW, priceSize } = geom(s);
+      c.items.push({ kind: 'rect', x: c.m, y: top, w: boxW, h: rowH, radius: 1.2 * s, lineWidth: 0.5 });
+      c.items.push({ kind: 'text', text: sizeText, x: c.m + boxW / 2, y: top + rowH / 2 + sizeFont * 0.36, size: sizeFont, weight: 800, align: 'center' });
+      if (price) c.items.push({ kind: 'text', text: price, x: c.right, y: top + rowH / 2 + priceSize * 0.36, size: priceSize, weight: 800, align: 'right' });
+    },
+  };
+}
+
+/** Filled band across the label at the top or bottom edge: a label on the left, the value on the right */
+function bandBlock(c: Ctx, leftOptions: string[], right: string, edge: 'top' | 'bottom'): Block {
+  const geom = (s: number) => {
+    const bandH = 8.5 * s + c.m;
+    const ls = 3.4 * s;
+    // the longest wording that leaves the price at least 55% of the band («Размер 50 (L)» → «50 (L)»)
+    const left =
+      leftOptions.find((t) => c.measure(t, ls, 800) + 2 * s <= c.cw * 0.45) ?? leftOptions[leftOptions.length - 1] ?? '';
+    const leftWidth = left ? Math.min(c.measure(left, ls, 800), c.cw * 0.45) + 2 * s : 0;
+    const rs = right ? Math.min(5.2 * s, ((c.cw - leftWidth) / Math.max(0.1, c.measure(right, 1, 800))) * 0.98) : 0;
+    return { bandH, ls, rs, left };
+  };
+  return {
+    height: (s) => geom(s).bandH,
+    draw: (top, s) => {
+      const { bandH, ls, rs, left } = geom(s);
+      c.items.push({ kind: 'rect', x: 0, y: top, w: c.w, h: bandH, radius: 0, fill: true });
+      // the text sits in the band's part away from the label edge
+      const inner = edge === 'top' ? top + c.m * 0.5 : top;
+      const mid = inner + (bandH - c.m * 0.5) / 2;
+      const f = Math.max(ls, rs);
+      const y = mid + f * 0.36;
+      if (left) c.items.push({ kind: 'text', text: fit(left, c.cw * 0.45, ls, 800, c.measure), x: c.m, y, size: ls, weight: 800, align: 'left', inverse: true });
+      if (right) c.items.push({ kind: 'text', text: right, x: c.right, y, size: rs, weight: 800, align: 'right', inverse: true });
+    },
+    bleed: edge,
+    gap: 1.4,
+  };
+}
+
+/** New price big on the left; the discount in a filled badge and the struck-out old price on the right */
+function saleRow(c: Ctx, price: string, oldPrice: number | undefined, current: number): Block {
+  const pct = oldPrice ? `−${Math.round((1 - current / oldPrice) * 100)}%` : '';
+  const old = oldPrice ? formatLabelPrice(oldPrice) : '';
+  const geom = (s: number) => {
+    const badgeSize = 4.2 * s;
+    const oldSize = 3.2 * s;
+    const badgeW = c.measure(pct, badgeSize, 800) + 2.4 * s;
+    const badgeH = badgeSize * 1.4;
+    const sideW = oldPrice ? Math.max(badgeW, c.measure(old, oldSize, 700)) : 0;
+    const sideH = oldPrice ? badgeH + 0.8 * s + oldSize * LINE : 0;
+    const fitPrice = (room: number) => Math.min(11 * s, (room / Math.max(0.1, c.measure(price, 1, 800))) * 0.98);
+    const side = fitPrice(c.cw - (sideW ? sideW + 2 * s : 0));
+    const full = fitPrice(c.cw);
+    // A narrow label: the badge and the old price go on a line above the price, which then takes the full width
+    const stacked = Boolean(oldPrice) && side < full * 0.72;
+    const priceSize = stacked ? full : side;
+    const height = stacked ? Math.max(badgeH, oldSize * LINE) + 0.9 * s + priceSize * LINE : Math.max(priceSize * LINE, sideH);
+    return { badgeSize, oldSize, badgeW, badgeH, sideH, priceSize, stacked, height };
+  };
+  return {
+    height: (s) => geom(s).height,
+    draw: (top, s) => {
+      const { badgeSize, oldSize, badgeW, badgeH, sideH, priceSize, stacked, height } = geom(s);
+      c.items.push({ kind: 'text', text: price, x: c.m, y: top + height - priceSize * (LINE - ASCENT), size: priceSize, weight: 800, align: 'left' });
+      if (!oldPrice) return;
+      if (stacked) {
+        const rowH = Math.max(badgeH, oldSize * LINE);
+        c.items.push({ kind: 'rect', x: c.m, y: top, w: badgeW, h: badgeH, radius: 1 * s, fill: true });
+        c.items.push({ kind: 'text', text: pct, x: c.m + badgeW / 2, y: top + badgeH / 2 + badgeSize * 0.36, size: badgeSize, weight: 800, align: 'center', inverse: true });
+        c.items.push({ kind: 'text', text: old, x: c.right, y: top + rowH / 2 + oldSize * 0.36, size: oldSize, weight: 700, align: 'right', strike: true });
+        return;
+      }
+      const bt = top + (height - sideH) / 2;
+      c.items.push({ kind: 'rect', x: c.right - badgeW, y: bt, w: badgeW, h: badgeH, radius: 1 * s, fill: true });
+      c.items.push({ kind: 'text', text: pct, x: c.right - badgeW / 2, y: bt + badgeH / 2 + badgeSize * 0.36, size: badgeSize, weight: 800, align: 'center', inverse: true });
+      c.items.push({ kind: 'text', text: old, x: c.right, y: bt + badgeH + 0.8 * s + oldSize * ASCENT, size: oldSize, weight: 700, align: 'right', strike: true });
+    },
+    gap: 1.2,
+  };
 }
 
 /** Canvas measure for layoutLabel */
@@ -428,7 +708,8 @@ export function drawLabel(
     } else if (item.kind === 'text') {
       if (!item.text) continue;
       ctx.font = fontCss(item.size * pxPerMm, item.weight, item.mono);
-      ctx.fillStyle = item.inverse ? '#FFFFFF' : item.muted ? '#3A3A3A' : '#000000';
+      // Pure black: thermal printers dither grey into a pale, broken line
+      ctx.fillStyle = item.inverse ? '#FFFFFF' : '#000000';
       ctx.textAlign = item.align;
       ctx.textBaseline = 'alphabetic';
       ctx.fillText(item.text, item.x * pxPerMm, item.y * pxPerMm);
@@ -436,7 +717,7 @@ export function drawLabel(
         const width = ctx.measureText(item.text).width;
         const x0 = item.align === 'right' ? item.x * pxPerMm - width : item.align === 'center' ? item.x * pxPerMm - width / 2 : item.x * pxPerMm;
         const sy = (item.y - item.size * 0.32) * pxPerMm;
-        ctx.fillRect(x0, sy, width, Math.max(1, 0.25 * pxPerMm));
+        ctx.fillRect(x0 - 0.3 * pxPerMm, sy, width + 0.6 * pxPerMm, Math.max(1, Math.max(0.3, item.size * 0.08) * pxPerMm));
       }
     } else if (bars) {
       ctx.fillStyle = '#000000';
