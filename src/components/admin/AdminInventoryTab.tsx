@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Boxes,
   Search,
@@ -35,7 +35,9 @@ import {
   saveStockMovementLogs,
 } from '../../utils/inventory';
 import { AdminLabelGenerator, type LabelTarget } from './AdminLabelGenerator';
-import { skuKey } from '../../shared/barcode';
+import { articleCode, skuKey } from '../../shared/barcode';
+import { InventoryGroupedList, type InventoryGrouping, type InventoryRow } from './InventoryGroupedList';
+import { getCategories } from '../../utils/categories';
 import { downloadCSV } from '../../utils/csvHelpers';
 import { productImage } from '../../utils/productImage';
 import { pluralRu } from '../../utils/pluralize';
@@ -134,6 +136,32 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [stockFilter, setStockFilter] = useState<'all' | 'in_stock' | 'low_stock' | 'out_of_stock'>('all');
   const [copiedSku, setCopiedSku] = useState<string | null>(null);
+  // Grouping of the matrix: category → model → article → sizes (remembered in this browser)
+  const [grouping, setGrouping] = useState<InventoryGrouping>(() => {
+    try {
+      const saved = localStorage.getItem('manstyle_inventory_grouping');
+      return saved === 'model' || saved === 'flat' ? saved : 'category';
+    } catch {
+      return 'category';
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('manstyle_inventory_grouping', grouping);
+    } catch {
+      // storage blocked: the choice is just not remembered
+    }
+  }, [grouping]);
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  /** Groups opened or closed against the default (categories open, models closed) */
+  const [toggledGroups, setToggledGroups] = useState<Set<string>>(() => new Set());
+  const toggleGroup = (id: string) =>
+    setToggledGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   // Critical Low Stock Threshold
   const [lowStockThreshold, setLowStockThreshold] = useState<number>(() => {
@@ -484,15 +512,47 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
     ];
   }, [allProductSKUs.length, stats, lowStockThreshold]);
 
+  // Categories of the store (Admin → «Категории»); products may still carry an old id
+  const storeCategories = useMemo(() => getCategories(settings), [settings]);
+  const categoryName = useCallback(
+    (product: Product) =>
+      product.category
+        ? storeCategories.find((c) => c.id === product.category)?.name || product.categoryLabel || product.category
+        : 'Без категории',
+    [storeCategories]
+  );
+  const categoryOptions = useMemo(() => {
+    const counts = new Map<string, { name: string; models: Set<string> }>();
+    for (const { product } of allProductSKUs) {
+      const id = product.category || '__none';
+      const entry = counts.get(id) ?? { name: categoryName(product), models: new Set<string>() };
+      entry.models.add(product.id);
+      counts.set(id, entry);
+    }
+    const order = (id: string) => {
+      const i = storeCategories.findIndex((c) => c.id === id);
+      return id === '__none' ? Infinity : i === -1 ? storeCategories.length : i;
+    };
+    return [
+      { value: 'all', label: 'Все категории', badge: String(new Set(allProductSKUs.map((r) => r.product.id)).size) },
+      ...[...counts.entries()]
+        .sort(([a], [b]) => order(a) - order(b))
+        .map(([id, { name, models }]) => ({ value: id, label: name, badge: String(models.size) })),
+    ];
+  }, [allProductSKUs, storeCategories, categoryName]);
+
   // Filtered SKUs
   const filteredSkus = useMemo(() => {
     return allProductSKUs.filter(({ product, sku }) => {
       const q = searchQuery.toLowerCase().trim();
+      if (categoryFilter !== 'all' && (product.category || '__none') !== categoryFilter) return false;
       const matchesSearch =
         !q ||
         product.title.toLowerCase().includes(q) ||
         (sku.skuCode ?? '').toLowerCase().includes(q) ||
         (sku.barcode ?? '').toLowerCase().includes(q) ||
+        articleCode(product, sku.color).toLowerCase().includes(q) ||
+        (categoryName(product) ?? '').toLowerCase().includes(q) ||
         sku.color.toLowerCase().includes(q) ||
         sku.size.toLowerCase().includes(q);
 
@@ -508,7 +568,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
 
       return matchesSearch && matchesStock;
     });
-  }, [allProductSKUs, searchQuery, stockFilter, lowStockThreshold]);
+  }, [allProductSKUs, searchQuery, stockFilter, lowStockThreshold, categoryFilter, categoryName]);
 
   const toggleSkuSelection = (key: string) =>
     setSelectedSkuKeys((prev) => {
@@ -529,6 +589,23 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
       }
       return next;
     });
+
+  const selectSkuKeys = (keys: string[], selected: boolean) =>
+    setSelectedSkuKeys((prev) => {
+      const next = new Set(prev);
+      for (const key of keys) {
+        if (selected) next.add(key);
+        else next.delete(key);
+      }
+      return next;
+    });
+  // A search or a status filter opens the models so the matching sizes are visible
+  const expandMatches = searchQuery.trim() !== '' || stockFilter !== 'all';
+  const filteredModelIds = useMemo(() => [...new Set(filteredSkus.map((r) => r.product.id))], [filteredSkus]);
+  const filteredCategoryIds = useMemo(
+    () => [...new Set(filteredSkus.map((r) => r.product.category || '__none'))],
+    [filteredSkus]
+  );
 
   // Update Stock for a SKU with automatic log recording
   const handleUpdateStock = (
@@ -644,6 +721,135 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
       'success'
     );
     setIsOperationModalOpen(false);
+  };
+
+  /** Stock status, stepper, +5 and the label button of one variation (flat list and grouped view) */
+  const renderStockControls = (product: Product, sku: ProductSKU, inGroup = false) => {
+    const isOutOfStock = sku.stock === 0;
+    const isLowStock = sku.stock > 0 && sku.stock <= lowStockThreshold;
+    return (
+      <div
+        className={`flex items-center flex-wrap justify-between sm:justify-end gap-2 sm:gap-3 min-w-0 ${
+          inGroup ? 'pl-8 sm:pl-0' : 'pt-2 sm:pt-0 border-t sm:border-t-0 border-[#BAC5D5]/40'
+        }`}
+      >
+        {/* Status Pill */}
+        <div className="shrink-0">
+          {isOutOfStock ? (
+            <span className="neu-flat-sm px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-black text-danger inline-flex items-center gap-1 whitespace-nowrap">
+              <XCircle className="w-3 h-3 text-danger shrink-0" />
+              <span className="sm:hidden">0 шт. (Нет)</span>
+              <span className="hidden sm:inline">0 шт. (Закончился)</span>
+            </span>
+          ) : isLowStock ? (
+            <span className="neu-flat-sm px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-black text-warning inline-flex items-center gap-1 whitespace-nowrap">
+              <AlertTriangle className="w-3 h-3 shrink-0" />
+              <span>{sku.stock} шт. (Мало)</span>
+            </span>
+          ) : (
+            <span className="neu-flat-sm px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-black text-success inline-flex items-center gap-1 whitespace-nowrap">
+              <CheckCircle2 className="w-3 h-3 shrink-0" />
+              <span>{sku.stock} шт.</span>
+            </span>
+          )}
+        </div>
+
+        {/* Stepper Buttons */}
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          <div className="neu-inset rounded-full p-0.5 flex items-center gap-0.5 sm:gap-1">
+            <button
+              type="button"
+              onClick={() =>
+                handleUpdateStock(product.id, sku.color, sku.size, sku.stock - 1)
+              }
+              disabled={sku.stock <= 0}
+              className="w-6 h-6 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shrink-0"
+              title="Уменьшить остаток на 1"
+              aria-label="Уменьшить остаток на 1"
+            >
+              <Minus className="w-3 h-3 stroke-[2.5]" />
+            </button>
+
+            <StockInput
+              value={sku.stock}
+              label={`Остаток ${sku.skuCode || `${product.title}, ${sku.color}, ${sku.size}`}`}
+              onCommit={(next) => handleUpdateStock(product.id, sku.color, sku.size, next)}
+            />
+
+            <button
+              type="button"
+              onClick={() =>
+                handleUpdateStock(product.id, sku.color, sku.size, sku.stock + 1)
+              }
+              className="w-6 h-6 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent cursor-pointer shrink-0"
+              title="Увеличить остаток на 1"
+              aria-label="Увеличить остаток на 1"
+            >
+              <Plus className="w-3 h-3 stroke-[2.5]" />
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              handleUpdateStock(product.id, sku.color, sku.size, sku.stock + 5)
+            }
+            className="h-7 px-2 sm:px-2.5 neu-button rounded-xl text-[11px] font-black text-accent hover:scale-105 transition-all cursor-pointer shrink-0"
+            title="Пополнить на +5 шт."
+          >
+            +5
+          </button>
+
+          {/* Print Thermal Label Button */}
+          <button
+            type="button"
+            onClick={() => setLabelTargets([{ productId: product.id, skuId: sku.id }])}
+            className="h-7 px-2 sm:px-2.5 neu-button rounded-xl text-[11px] font-bold text-[#4E5C70] hover:text-accent flex items-center gap-1 cursor-pointer transition-all shrink-0"
+            title="Этикетка этого варианта в PDF"
+          >
+            <Printer className="w-3 h-3 text-accent shrink-0" />
+            <span>Этикетка</span>
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  /** One size inside an article of the grouped view */
+  const renderVariantRow = ({ product, sku }: InventoryRow) => {
+    const key = skuKey(product.id, sku.id);
+    const isCopied = copiedSku === sku.skuCode;
+    return (
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl px-1 py-1.5 border-t border-[#BAC5D5]/40 first:border-t-0">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <SelectBox
+            checked={selectedSkuKeys.has(key)}
+            onChange={() => toggleSkuSelection(key)}
+            label={`Выбрать для этикеток: ${product.title}, ${sku.color} / ${sku.size}`}
+          />
+          <span className="min-w-9 h-7 px-2 rounded-lg neu-flat-sm text-[11px] font-black text-accent flex items-center justify-center shrink-0">
+            {sku.size}
+          </span>
+          <span className="min-w-0 flex flex-col text-[11px] text-[#4E5C70] font-mono leading-tight">
+            <button
+              type="button"
+              onClick={() => handleCopySku(sku.skuCode)}
+              className="inline-flex items-center gap-1 hover:text-accent transition-colors cursor-pointer truncate text-left"
+              title="Скопировать артикул"
+              aria-label={`Скопировать артикул ${sku.skuCode}`}
+            >
+              <span className="truncate">{sku.skuCode}</span>
+              {isCopied ? <Check className="w-3 h-3 text-success shrink-0" /> : <Copy className="w-3 h-3 opacity-60 shrink-0" />}
+            </button>
+            <span className="inline-flex items-center gap-1 truncate">
+              <Barcode className="w-3 h-3 shrink-0" aria-hidden="true" />
+              {sku.barcode || 'нет штрихкода'}
+            </span>
+          </span>
+        </div>
+        {renderStockControls(product, sku, true)}
+      </div>
+    );
   };
 
   const selectedProductForModal = products?.find((p) => p.id === opSelectedProductId) || products?.[0];
@@ -776,17 +982,75 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
               />
             </div>
 
-            {/* Neumorphic Stock Status Filter Dropdown */}
-            <div className="relative">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <NeumorphicSelect
+                value={categoryFilter}
+                onChange={setCategoryFilter}
+                variant="inset"
+                triggerClassName="rounded-2xl"
+                prefix="Категория:"
+                options={categoryOptions}
+              />
               <NeumorphicSelect
                 value={stockFilter}
-                onChange={(val) => setStockFilter(val as any)}
+                onChange={(val) => setStockFilter(val as typeof stockFilter)}
                 variant="inset"
                 triggerClassName="rounded-2xl"
                 prefix="Статус остатка:"
                 options={stockFilterOptions}
                 placeholder="Фильтр остатка..."
               />
+            </div>
+
+            {/* Grouping: category → model → article → sizes, models only, or the flat list */}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div role="radiogroup" aria-label="Группировка" className="neu-flat-sm rounded-xl p-1 flex gap-1">
+                {(
+                  [
+                    { id: 'category', label: 'По категориям' },
+                    { id: 'model', label: 'По моделям' },
+                    { id: 'flat', label: 'Списком' },
+                  ] as const
+                ).map((g) => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={grouping === g.id}
+                    onClick={() => setGrouping(g.id)}
+                    className={`h-8 px-3 rounded-lg text-[11px] font-black cursor-pointer transition-all whitespace-nowrap ${
+                      grouping === g.id ? 'neu-pill-active' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
+                    }`}
+                  >
+                    {g.label}
+                  </button>
+                ))}
+              </div>
+              {grouping !== 'flat' && filteredSkus.length > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setToggledGroups(new Set(expandMatches ? [] : filteredModelIds.map((id) => `model:${id}`)))}
+                    className="h-8 px-3 rounded-xl neu-button text-[11px] font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                  >
+                    Развернуть все
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setToggledGroups(
+                        new Set([
+                          ...(expandMatches ? filteredModelIds.map((id) => `model:${id}`) : []),
+                          ...(grouping === 'category' ? filteredCategoryIds.map((id) => `cat:${id}`) : []),
+                        ])
+                      )
+                    }
+                    className="h-8 px-3 rounded-xl neu-button text-[11px] font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                  >
+                    Свернуть все
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -839,10 +1103,22 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                 <p className="text-xs font-bold text-[#2D3A4E]">Позиции не найдены</p>
                 <p className="text-[11px]">Попробуйте изменить параметры поиска или фильтров</p>
               </div>
+            ) : grouping !== 'flat' ? (
+              <InventoryGroupedList
+                rows={filteredSkus}
+                grouping={grouping}
+                categories={storeCategories}
+                lowStockThreshold={lowStockThreshold}
+                toggled={toggledGroups}
+                onToggle={toggleGroup}
+                expandMatches={expandMatches}
+                selectedKeys={selectedSkuKeys}
+                onSelect={selectSkuKeys}
+                onLabels={setLabelTargets}
+                renderVariant={renderVariantRow}
+              />
             ) : (
               filteredSkus.map(({ product, sku }) => {
-                const isOutOfStock = sku.stock === 0;
-                const isLowStock = sku.stock > 0 && sku.stock <= lowStockThreshold;
                 const isCopied = copiedSku === sku.skuCode;
 
                 return (
@@ -904,87 +1180,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                       </div>
                     </div>
 
-                    {/* Right: Stock Badge & Quick Stepper Controls */}
-                    <div className="flex items-center flex-wrap justify-between sm:justify-end gap-2 sm:gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#BAC5D5]/40 min-w-0">
-                      {/* Status Pill */}
-                      <div className="shrink-0">
-                        {isOutOfStock ? (
-                          <span className="neu-flat-sm px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-black text-danger inline-flex items-center gap-1 whitespace-nowrap">
-                            <XCircle className="w-3 h-3 text-danger shrink-0" />
-                            <span className="sm:hidden">0 шт. (Нет)</span>
-                            <span className="hidden sm:inline">0 шт. (Закончился)</span>
-                          </span>
-                        ) : isLowStock ? (
-                          <span className="neu-flat-sm px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-black text-warning inline-flex items-center gap-1 whitespace-nowrap">
-                            <AlertTriangle className="w-3 h-3 shrink-0" />
-                            <span>{sku.stock} шт. (Мало)</span>
-                          </span>
-                        ) : (
-                          <span className="neu-flat-sm px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-black text-success inline-flex items-center gap-1 whitespace-nowrap">
-                            <CheckCircle2 className="w-3 h-3 shrink-0" />
-                            <span>{sku.stock} шт.</span>
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Stepper Buttons */}
-                      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-                        <div className="neu-inset rounded-full p-0.5 flex items-center gap-0.5 sm:gap-1">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleUpdateStock(product.id, sku.color, sku.size, sku.stock - 1)
-                            }
-                            disabled={sku.stock <= 0}
-                            className="w-6 h-6 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shrink-0"
-                            title="Уменьшить остаток на 1"
-                            aria-label="Уменьшить остаток на 1"
-                          >
-                            <Minus className="w-3 h-3 stroke-[2.5]" />
-                          </button>
-
-                          <StockInput
-                            value={sku.stock}
-                            label={`Остаток ${sku.skuCode || `${product.title}, ${sku.color}, ${sku.size}`}`}
-                            onCommit={(next) => handleUpdateStock(product.id, sku.color, sku.size, next)}
-                          />
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleUpdateStock(product.id, sku.color, sku.size, sku.stock + 1)
-                            }
-                            className="w-6 h-6 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent cursor-pointer shrink-0"
-                            title="Увеличить остаток на 1"
-                            aria-label="Увеличить остаток на 1"
-                          >
-                            <Plus className="w-3 h-3 stroke-[2.5]" />
-                          </button>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleUpdateStock(product.id, sku.color, sku.size, sku.stock + 5)
-                          }
-                          className="h-7 px-2 sm:px-2.5 neu-button rounded-xl text-[11px] font-black text-accent hover:scale-105 transition-all cursor-pointer shrink-0"
-                          title="Пополнить на +5 шт."
-                        >
-                          +5
-                        </button>
-
-                        {/* Print Thermal Label Button */}
-                        <button
-                          type="button"
-                          onClick={() => setLabelTargets([{ productId: product.id, skuId: sku.id }])}
-                          className="h-7 px-2 sm:px-2.5 neu-button rounded-xl text-[11px] font-bold text-[#4E5C70] hover:text-accent flex items-center gap-1 cursor-pointer transition-all shrink-0"
-                          title="Этикетка этого варианта в PDF"
-                        >
-                          <Printer className="w-3 h-3 text-accent shrink-0" />
-                          <span>Этикетка</span>
-                        </button>
-                      </div>
-                    </div>
+                    {renderStockControls(product, sku)}
                   </div>
                 );
               })
