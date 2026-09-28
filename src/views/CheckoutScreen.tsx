@@ -517,7 +517,9 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Computer (lg): the form on the left; the total and «Подтвердить» on the right, always in view */}
+      <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start">
+        <div className="space-y-4 lg:col-span-7">
         {/* Contact Info matching Image 5 */}
         <div id="checkout-contacts" className="neu-flat rounded-3xl p-4 space-y-3 border border-white/60">
           <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase">
@@ -1185,6 +1187,9 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           )}
         </div>
 
+        </div>
+
+        <div className="space-y-4 lg:col-span-5 lg:sticky lg:top-24">
         {/* Receipt / Order Breakdown Card */}
         <div className="neu-flat rounded-3xl p-4 space-y-2.5 text-xs text-[#2D3A4E]">
           <h3 className="font-bold uppercase tracking-wider text-[11px] text-[#4E5C70] border-b border-[#BAC5D5]/40 pb-2">
@@ -1260,6 +1265,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
             </>
           )}
         </button>
+        </div>
       </form>
 
       {/* Address Edit Modal matching attached image */}

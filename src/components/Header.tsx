@@ -15,6 +15,54 @@ interface HeaderProps {
   storeName?: string;
 }
 
+/** Title and subtitle of a screen: the phone's top bar and the computer's title row */
+export function screenTitle(
+  activeTab: ActiveTab,
+  cartCount: number,
+  storeName: string,
+  selectedProductTitle?: string
+): { main: string; sub: string } {
+  switch (activeTab) {
+    case 'catalog':
+      return { main: 'Каталог', sub: 'Поиск и фильтры' };
+    case 'cart':
+      return { main: 'Корзина', sub: `${cartCount} ${pluralRu(cartCount, ['товар', 'товара', 'товаров'])}` };
+    case 'favorites':
+      return { main: 'Избранное', sub: 'Ваши сохраненные товары' };
+    case 'profile':
+      return { main: 'Профиль', sub: 'Личный кабинет' };
+    case 'product-detail':
+      return { main: selectedProductTitle || 'Товар', sub: 'Детали товара' };
+    case 'checkout':
+      return { main: 'Оформление заказа', sub: `${cartCount} ${pluralRu(cartCount, ['товар', 'товара', 'товаров'])}` };
+    case 'order-success':
+      return { main: 'Заказ оформлен', sub: 'Успешно' };
+    default:
+      return { main: storeName, sub: 'Мужская одежда' };
+  }
+}
+
+/**
+ * Computer (lg): «Назад» and the screen's title at the top of <main> (the top bar is DesktopHeader).
+ * Inside <main>, so the page has one banner landmark.
+ */
+export const DesktopTitleRow: React.FC<{ title: { main: string; sub: string }; onBack: () => void }> = ({ title, onBack }) => (
+  <div className="hidden lg:flex items-center gap-4 pb-4">
+    <button
+      type="button"
+      onClick={onBack}
+      className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent shrink-0 cursor-pointer"
+      aria-label="Назад"
+    >
+      <ArrowLeft className="w-5 h-5" />
+    </button>
+    <div className="min-w-0">
+      <h1 className="text-2xl font-extrabold text-[#2D3A4E] leading-tight truncate tracking-tight">{title.main}</h1>
+      {title.sub && <p className="text-xs font-semibold text-[#4E5C70] truncate">{title.sub}</p>}
+    </div>
+  </div>
+);
+
 export const Header: React.FC<HeaderProps> = ({
   activeTab,
   setActiveTab,
@@ -26,33 +74,10 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const isHome = activeTab === 'home';
 
-  const getTitle = () => {
-    switch (activeTab) {
-      case 'home':
-        return { main: storeName, sub: 'Мужская одежда' };
-      case 'catalog':
-        return { main: 'Каталог', sub: 'Поиск и фильтры' };
-      case 'cart':
-        return { main: 'Корзина', sub: `${cartCount} ${pluralRu(cartCount, ['товар', 'товара', 'товаров'])}` };
-      case 'favorites':
-        return { main: 'Избранное', sub: 'Ваши сохраненные товары' };
-      case 'profile':
-        return { main: 'Профиль', sub: 'Личный кабинет' };
-      case 'product-detail':
-        return { main: selectedProductTitle || 'Товар', sub: 'Детали товара' };
-      case 'checkout':
-        return { main: 'Оформление заказа', sub: `${cartCount} ${pluralRu(cartCount, ['товар', 'товара', 'товаров'])}` };
-      case 'order-success':
-        return { main: 'Заказ оформлен', sub: 'Успешно' };
-      default:
-        return { main: storeName, sub: 'Мужская одежда' };
-    }
-  };
-
-  const titleInfo = getTitle();
+  const titleInfo = screenTitle(activeTab, cartCount, storeName, selectedProductTitle);
 
   return (
-    <header className="sticky top-0 z-30 pt-3 pb-3 px-4 bg-[#E3E8EF] transition-all duration-200">
+    <header className="sticky top-0 z-30 pt-3 pb-3 px-4 bg-[#E3E8EF] transition-all duration-200 lg:hidden">
       <div className="flex items-center justify-between gap-2 max-w-lg mx-auto">
         {/* Left Action Button */}
         {isHome ? (

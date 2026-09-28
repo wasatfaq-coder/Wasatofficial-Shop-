@@ -24,7 +24,7 @@ export const OrderSuccessScreen: React.FC<OrderSuccessScreenProps> = ({
   setActiveTab,
 }) => {
   return (
-    <div className="py-8 space-y-6 text-center animate-in zoom-in-95 duration-300 max-w-sm mx-auto pb-28">
+    <div className="py-8 space-y-6 text-center animate-in zoom-in-95 duration-300 max-w-sm mx-auto pb-28 lg:pb-10">
       {/* Celebration Icon */}
       <div className="relative w-28 h-28 rounded-full neu-flat p-2 flex items-center justify-center mx-auto border border-white/80">
         <div className="w-20 h-20 rounded-full neu-inset flex items-center justify-center text-success">
