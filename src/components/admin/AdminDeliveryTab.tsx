@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { DeliveryMethod, PickupPoint, StorefrontSettings } from '../../types';
 import { NeumorphicSelect } from '../NeumorphicSelect';
+import { NeumorphicSwitch } from '../NeumorphicSwitch';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
 import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
@@ -35,6 +36,23 @@ interface AdminDeliveryTabProps {
   storefrontSettings?: StorefrontSettings;
   onUpdateStorefrontSettings?: (settings: StorefrontSettings) => void;
 }
+
+/** Icons a delivery method can have (the checkout knows these five) */
+const METHOD_ICONS = [
+  { id: 'Bike', icon: Bike, label: 'Курьер' },
+  { id: 'Store', icon: Store, label: 'Магазин' },
+  { id: 'Truck', icon: Truck, label: 'Грузовик' },
+  { id: 'Zap', icon: Zap, label: 'Молния' },
+  { id: 'Mail', icon: Mail, label: 'Письмо' },
+];
+
+const METHOD_TYPES: { value: DeliveryMethod['type']; label: string; hint: string; icon: string }[] = [
+  { value: 'courier', label: 'Курьерская доставка', hint: 'До двери: адрес с подъездом и домофоном', icon: 'Bike' },
+  { value: 'pickup', label: 'Самовывоз', hint: 'ПВЗ или бутик: покупатель выбирает точку', icon: 'Store' },
+  { value: 'express', label: 'Экспресс-доставка', hint: 'Срочная доставка по адресу', icon: 'Zap' },
+  { value: 'post', label: 'Почта России', hint: 'Адрес и индекс', icon: 'Mail' },
+  { value: 'custom', label: 'Транспортная компания', hint: 'СДЭК, Boxberry и другие', icon: 'Truck' },
+];
 
 export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
   deliveryMethods,
@@ -898,56 +916,58 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="delivery-method-type" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
-                    Тип модуля
-                  </label>
-                  <NeumorphicSelect
-                    id="delivery-method-type"
-                    value={formMethodType}
-                    onChange={(v) => setFormMethodType(v as typeof formMethodType)}
-                    triggerClassName="rounded-xl py-2 px-3"
-                    options={[
-                      { value: 'courier', label: 'Курьерская доставка' },
-                      { value: 'pickup', label: 'Самовывоз (ПВЗ / Бутик)' },
-                      { value: 'express', label: 'Экспресс-доставка' },
-                      { value: 'post', label: 'Почта России' },
-                      { value: 'custom', label: 'Транспортная компания (СДЭК и др.)' },
-                    ]}
-                  />
-                </div>
+              <div>
+                <label htmlFor="delivery-method-type" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  Тип модуля
+                </label>
+                <NeumorphicSelect
+                  id="delivery-method-type"
+                  value={formMethodType}
+                  onChange={(v) => {
+                    const next = v as DeliveryMethod['type'];
+                    // The icon follows the type until the admin picks another one
+                    if (formMethodIcon === METHOD_TYPES.find((t) => t.value === formMethodType)?.icon) {
+                      setFormMethodIcon(METHOD_TYPES.find((t) => t.value === next)?.icon ?? formMethodIcon);
+                    }
+                    setFormMethodType(next);
+                  }}
+                  triggerClassName="rounded-xl py-2 px-3"
+                  options={METHOD_TYPES.map((t) => {
+                    const Icon = METHOD_ICONS.find((i) => i.id === t.icon)?.icon ?? Truck;
+                    return { value: t.value, label: t.label, sublabel: t.hint, icon: <Icon className="w-4 h-4" /> };
+                  })}
+                />
+              </div>
 
-                <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
-                    Иконка модуля
-                  </label>
-                  <div className="grid grid-cols-5 gap-1.5 p-1 neu-flat-sm rounded-xl">
-                    {[
-                      { id: 'Bike', icon: Bike },
-                      { id: 'Store', icon: Store },
-                      { id: 'Truck', icon: Truck },
-                      { id: 'Zap', icon: Zap },
-                      { id: 'Mail', icon: Mail },
-                    ].map((ic) => {
-                      const IconComp = ic.icon;
-                      const isSel = formMethodIcon === ic.id;
-                      return (
-                        <button
-                          key={ic.id}
-                          type="button"
-                          onClick={() => setFormMethodIcon(ic.id)}
-                          aria-label={`Иконка: ${ic.id}`}
-                          aria-pressed={isSel}
-                          className={`py-1.5 flex items-center justify-center rounded-lg transition-all cursor-pointer ${
-                            isSel ? 'neu-pill-active' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
-                          }`}
-                        >
-                          <IconComp className="w-4 h-4" />
-                        </button>
-                      );
-                    })}
-                  </div>
+              <div>
+                <p id="delivery-method-icon-label" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  Иконка модуля
+                </p>
+                <div
+                  role="radiogroup"
+                  aria-labelledby="delivery-method-icon-label"
+                  className="grid grid-cols-5 gap-2"
+                >
+                  {METHOD_ICONS.map((ic) => {
+                    const IconComp = ic.icon;
+                    const isSel = formMethodIcon === ic.id;
+                    return (
+                      <button
+                        key={ic.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSel}
+                        onClick={() => setFormMethodIcon(ic.id)}
+                        aria-label={ic.label}
+                        title={ic.label}
+                        className={`h-10 flex items-center justify-center rounded-xl transition-all cursor-pointer ${
+                          isSel ? 'neu-pill-active' : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
+                        }`}
+                      >
+                        <IconComp className="w-4 h-4" />
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -999,17 +1019,16 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 />
               </div>
 
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
+              <div className="neu-flat-sm rounded-xl px-3 py-2.5 flex items-center justify-between gap-3">
+                <span id="formMethodIsActive-label" className="text-xs font-bold text-[#2D3A4E] leading-snug">
+                  Модуль активен и отображается при оформлении заказа
+                </span>
+                <NeumorphicSwitch
                   id="formMethodIsActive"
                   checked={formMethodIsActive}
-                  onChange={(e) => setFormMethodIsActive(e.target.checked)}
-                  className="rounded text-accent focus:ring-0 w-4 h-4 cursor-pointer"
+                  onChange={setFormMethodIsActive}
+                  label="Модуль активен"
                 />
-                <label htmlFor="formMethodIsActive" className="text-xs font-bold text-[#2D3A4E] cursor-pointer">
-                  Модуль активен и отображается при оформлении заказа
-                </label>
               </div>
 
               <div className="flex gap-2 pt-2 border-t border-[#BAC5D5]/50">

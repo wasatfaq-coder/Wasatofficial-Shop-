@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ArrowDown, ArrowUp, Check, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { NotConfigured } from '../NotConfigured';
-import { NeumorphicSelect } from '../NeumorphicSelect';
+import { NeumorphicSelect, type NeumorphicSelectOption } from '../NeumorphicSelect';
 import { shallowChanged, useUnsavedChanges } from '../../utils/unsavedChanges';
 
 export type ListField<T> = {
@@ -12,7 +12,10 @@ export type ListField<T> = {
   placeholder?: string;
   required?: boolean;
   /** For type 'select' */
-  options?: { value: string; label: string }[];
+  options?: NeumorphicSelectOption[];
+  /** For type 'select': option groups and a tile grid (icon pickers) */
+  groups?: { id: string; label: string }[];
+  layout?: 'list' | 'grid';
   /** Shown under a checkbox */
   hint?: string;
 };
@@ -194,6 +197,8 @@ export function AdminListEditor<T extends { id: string }>({
                       onChange={(v) => setField(field.key, v)}
                       triggerClassName="rounded-xl px-3 py-2"
                       options={field.options ?? []}
+                      groups={field.groups}
+                      layout={field.layout}
                     />
                   ) : (
                     <input

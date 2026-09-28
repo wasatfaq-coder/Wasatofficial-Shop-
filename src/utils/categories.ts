@@ -1,20 +1,93 @@
 import type React from 'react';
-import { Sparkles, Watch, Footprints } from 'lucide-react';
-import { JacketIcon, PantsIcon, ShirtIcon, SweatshirtIcon, TShirtIcon } from '../components/CategoryIcons';
+import {
+  Backpack,
+  Briefcase,
+  Crown,
+  Dumbbell,
+  Footprints,
+  Gem,
+  Gift,
+  Glasses,
+  Leaf,
+  Moon,
+  Percent,
+  ShoppingBag,
+  Snowflake,
+  Sparkles,
+  Sun,
+  Umbrella,
+  Wallet,
+  Watch,
+} from 'lucide-react';
+import {
+  BeltIcon,
+  BlazerIcon,
+  CapIcon,
+  CoatIcon,
+  HoodieIcon,
+  JacketIcon,
+  PantsIcon,
+  PoloIcon,
+  ShirtIcon,
+  ShortsIcon,
+  SocksIcon,
+  SweaterIcon,
+  SweatshirtIcon,
+  TieIcon,
+  TShirtIcon,
+  UnderwearIcon,
+  VestIcon,
+} from '../components/CategoryIcons';
 import type { Product, StoreCategory, StorefrontSettings } from '../types';
 
 type IconComponent = React.FC<{ className?: string }>;
 
-/** Icons the admin can pick for a category */
-export const CATEGORY_ICONS: { key: string; label: string; Icon: IconComponent }[] = [
-  { key: 'shirt', label: 'Рубашка', Icon: ShirtIcon },
-  { key: 'tshirt', label: 'Футболка', Icon: TShirtIcon },
-  { key: 'jacket', label: 'Куртка', Icon: JacketIcon },
-  { key: 'pants', label: 'Брюки', Icon: PantsIcon },
-  { key: 'sweatshirt', label: 'Свитшот', Icon: SweatshirtIcon },
-  { key: 'shoes', label: 'Обувь', Icon: Footprints as IconComponent },
-  { key: 'accessory', label: 'Аксессуар', Icon: Watch as IconComponent },
-  { key: 'other', label: 'Другое', Icon: Sparkles as IconComponent },
+export type CategoryIconGroup = 'clothes' | 'accessories' | 'collections';
+
+/** Groups of the icon picker (Admin → «Категории») */
+export const CATEGORY_ICON_GROUPS: { id: CategoryIconGroup; label: string }[] = [
+  { id: 'clothes', label: 'Одежда' },
+  { id: 'accessories', label: 'Обувь и аксессуары' },
+  { id: 'collections', label: 'Подборки' },
+];
+
+/** Icons the admin can pick for a category. Keys are stored in categories: never rename or remove one */
+export const CATEGORY_ICONS: { key: string; label: string; group: CategoryIconGroup; Icon: IconComponent }[] = [
+  { key: 'shirt', label: 'Рубашка', group: 'clothes', Icon: ShirtIcon },
+  { key: 'tshirt', label: 'Футболка', group: 'clothes', Icon: TShirtIcon },
+  { key: 'polo', label: 'Поло', group: 'clothes', Icon: PoloIcon },
+  { key: 'sweatshirt', label: 'Свитшот', group: 'clothes', Icon: SweatshirtIcon },
+  { key: 'hoodie', label: 'Худи', group: 'clothes', Icon: HoodieIcon },
+  { key: 'sweater', label: 'Свитер', group: 'clothes', Icon: SweaterIcon },
+  { key: 'blazer', label: 'Пиджак', group: 'clothes', Icon: BlazerIcon },
+  { key: 'vest', label: 'Жилет', group: 'clothes', Icon: VestIcon },
+  { key: 'jacket', label: 'Куртка', group: 'clothes', Icon: JacketIcon },
+  { key: 'coat', label: 'Пальто', group: 'clothes', Icon: CoatIcon },
+  { key: 'pants', label: 'Брюки', group: 'clothes', Icon: PantsIcon },
+  { key: 'shorts', label: 'Шорты', group: 'clothes', Icon: ShortsIcon },
+  { key: 'underwear', label: 'Белье', group: 'clothes', Icon: UnderwearIcon },
+  { key: 'socks', label: 'Носки', group: 'clothes', Icon: SocksIcon },
+  { key: 'homewear', label: 'Для дома', group: 'clothes', Icon: Moon as IconComponent },
+  { key: 'shoes', label: 'Обувь', group: 'accessories', Icon: Footprints as IconComponent },
+  { key: 'accessory', label: 'Часы', group: 'accessories', Icon: Watch as IconComponent },
+  { key: 'cap', label: 'Головной убор', group: 'accessories', Icon: CapIcon },
+  { key: 'tie', label: 'Галстук', group: 'accessories', Icon: TieIcon },
+  { key: 'belt', label: 'Ремень', group: 'accessories', Icon: BeltIcon },
+  { key: 'bag', label: 'Сумка', group: 'accessories', Icon: ShoppingBag as IconComponent },
+  { key: 'backpack', label: 'Рюкзак', group: 'accessories', Icon: Backpack as IconComponent },
+  { key: 'briefcase', label: 'Портфель', group: 'accessories', Icon: Briefcase as IconComponent },
+  { key: 'wallet', label: 'Кошелек', group: 'accessories', Icon: Wallet as IconComponent },
+  { key: 'glasses', label: 'Очки', group: 'accessories', Icon: Glasses as IconComponent },
+  { key: 'jewelry', label: 'Украшения', group: 'accessories', Icon: Gem as IconComponent },
+  { key: 'umbrella', label: 'Зонт', group: 'accessories', Icon: Umbrella as IconComponent },
+  { key: 'sport', label: 'Спорт', group: 'collections', Icon: Dumbbell as IconComponent },
+  { key: 'summer', label: 'Лето', group: 'collections', Icon: Sun as IconComponent },
+  { key: 'winter', label: 'Зима', group: 'collections', Icon: Snowflake as IconComponent },
+  { key: 'eco', label: 'Эко', group: 'collections', Icon: Leaf as IconComponent },
+  { key: 'premium', label: 'Премиум', group: 'collections', Icon: Crown as IconComponent },
+  { key: 'sale', label: 'Скидки', group: 'collections', Icon: Percent as IconComponent },
+  { key: 'gift', label: 'Подарки', group: 'collections', Icon: Gift as IconComponent },
+  { key: 'other', label: 'Другое', group: 'collections', Icon: Sparkles as IconComponent },
 ];
 
 /** Icons of the categories products were created with before the «Категории» section existed */
@@ -29,7 +102,7 @@ const LEGACY_ICON_BY_ID: Record<string, string> = {
 
 export function categoryIcon(category: Pick<StoreCategory, 'id' | 'icon'>): IconComponent {
   const key = category.icon || LEGACY_ICON_BY_ID[category.id] || 'other';
-  return (CATEGORY_ICONS.find((i) => i.key === key) ?? CATEGORY_ICONS[CATEGORY_ICONS.length - 1]).Icon;
+  return (CATEGORY_ICONS.find((i) => i.key === key) ?? CATEGORY_ICONS.find((i) => i.key === 'other')!).Icon;
 }
 
 /** Categories set in Admin → «Категории». Empty until the owner adds them: nothing is made up. */
