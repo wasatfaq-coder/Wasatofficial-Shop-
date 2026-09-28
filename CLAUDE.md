@@ -88,6 +88,10 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   Base UI `Tabs` (`@base-ui/react`, только headless-логика, стили `neu-*`).
 - Анимации появления: классы `animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-*` определены в `index.css`
   (пакета tw-animate-css нет); анимация без `fill-mode: forwards`, чтобы у окна не оставался `transform`.
+  «Уменьшить движение» в системе: `MotionConfig reducedMotion="user"` в `main.tsx` и `@media (prefers-reduced-motion)`
+  в `index.css` (без появления, пульсаций и «лучей»; спиннеры крутятся). Бесконечную декоративную анимацию добавлять
+  в этот список. Баннер на главной листается сам только без «уменьшить движение» и останавливается при наведении,
+  фокусе, касании и кнопкой паузы; слайд открывается кнопкой-заголовком.
 - Отзывы — коллекция `reviews/{productId}_{uid}` (меняет только автор), «Полезно» — `review_votes/{reviewId}_{uid}`.
   В `App.tsx` они подмешиваются в `product.reviews` (`mergeProductReviews`) и вырезаются при записи товара
   (`withoutCollectionReviews`); писать отзывы внутрь товара нельзя.
@@ -146,7 +150,9 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   в `src/utils/productBadge.ts`). Хексы акцента в классах не писать. Графики, карта и PDF — свои цвета.
   Заголовки h1–h3 и `font-display` — Manrope (`@fontsource/manrope`), текст — системный шрифт.
 - Доступность: текст не мельче `text-[11px]`, вторичный текст #4E5C70, акцентный текст — `text-accent`;
-  не отключать `outline` (фокус — через `:focus-visible` в `index.css`); кнопке из одной иконки — `aria-label`.
+  не отключать `outline` (фокус — через `:focus-visible` в `index.css`, и у графиков Recharts тоже; на фото
+  `neu-photo-btn` — темное кольцо внутри белого); кнопке из одной иконки — `aria-label`. Распроданный, но доступный
+  для выбора вариант — без прозрачности (зачеркнут, «нет»); прозрачность только у `disabled`.
   У поля — видимая подпись `<label htmlFor>` (или `aria-label`) и `autoComplete` для имени, телефона, почты, адреса.
   Кликабельное — `button`, не `div` с `onClick`; карточка товара открывается ссылкой-названием
   (`productHref`), растянутой на карточку (`after:absolute after:inset-0`). Зона нажатия не меньше 24 px, у частых действий покупателя — 32 px.
