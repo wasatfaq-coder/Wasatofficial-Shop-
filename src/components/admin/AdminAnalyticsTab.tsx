@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   TrendingUp,
   ShoppingBag,
@@ -20,17 +20,6 @@ import {
   FileDown,
   X,
 } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-} from 'recharts';
 import { Order, PromoCode } from '../../types';
 import { generateAnalyticsPDF, preloadPdfLibraries } from '../../utils/pdfExport';
 import {
@@ -45,18 +34,21 @@ import { orderTimestamp } from '../../shared/orderDate';
 import { ORDER_STATUS_LABELS } from '../../utils/deliveryStages';
 import { subscribeToAnalyticsResetAt, saveAnalyticsResetAt } from '../../utils/firebaseSync';
 import { AdminDailySalesInspector } from './AdminDailySalesInspector';
-import { AdminChartNeumorphicTooltip } from './AdminChartNeumorphicTooltip';
-import {
-  NeumorphicSVGDefs,
-  NeumorphicBarShape,
-  NeumorphicActiveDot,
-  NeumorphicCursor,
-  NeumorphicAxisTick,
-  triggerChartHapticFeedback,
-} from './AdminChartNeumorphicShapes';
+import { triggerChartHapticFeedback } from './AdminChartNeumorphicShapes';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { ModalPortal } from '../ModalPortal';
 import { useDialogA11y } from '../../utils/useDialogA11y';
+
+// The chart library (recharts, most of this section's code) loads apart: the cards and lists show first
+const AdminAnalyticsChart = lazy(() => import('./AdminAnalyticsChart'));
+
+/** Keeps the chart's place while its code loads */
+const ChartLoading: React.FC = () => (
+  <div role="status" className="h-full w-full flex items-center justify-center gap-2 text-[11px] font-bold text-[#4E5C70]">
+    <Loader2 className="w-4 h-4 animate-spin text-accent" aria-hidden="true" />
+    Загрузка графика…
+  </div>
+);
 
 interface AdminAnalyticsTabProps {
   orders: Order[];
@@ -65,8 +57,8 @@ interface AdminAnalyticsTabProps {
   onSelectOrder?: (order: Order) => void;
 }
 
-type ChartType = 'area' | 'bar';
-type ActiveMetric = 'revenue' | 'orders' | 'returns' | 'avgCheck';
+export type ChartType = 'area' | 'bar';
+export type ActiveMetric = 'revenue' | 'orders' | 'returns' | 'avgCheck';
 
 const PERIODS: { id: AnalyticsPeriod; label: string; title: string }[] = [
   { id: '7d', label: '7 дн', title: 'Последние 7 дней' },
@@ -371,45 +363,6 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
     return `${val}`;
   };
 
-  const xAxisInterval = period === '30d' ? 3 : period === '14d' ? 1 : 0;
-  // The chart is not re-created on every switch: Recharts animates from the old values to the new ones
-  const tooltip = (
-    <Tooltip
-      content={<AdminChartNeumorphicTooltip activeMetric={activeMetric} color={metric.color} />}
-      cursor={<NeumorphicCursor />}
-      isAnimationActive={false}
-      allowEscapeViewBox={{ x: false, y: false }}
-      offset={14}
-      wrapperStyle={{ outline: 'none', zIndex: 20, pointerEvents: 'none' }}
-    />
-  );
-  const axes = (
-    <>
-      <NeumorphicSVGDefs />
-      <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#BAC5D5" strokeOpacity={0.35} />
-      <XAxis
-        dataKey="label"
-        stroke="#4E5C70"
-        tickLine={false}
-        axisLine={{ stroke: '#BAC5D5', strokeOpacity: 0.6 }}
-        dy={4}
-        interval={xAxisInterval}
-        tick={<NeumorphicAxisTick selectedDate={openDay?.date} period={period} dailyData={dailyData} />}
-      />
-      <YAxis
-        stroke="#4E5C70"
-        fontSize={11}
-        fontWeight={700}
-        tickLine={false}
-        axisLine={false}
-        tickFormatter={formatYAxis}
-        width={44}
-        allowDecimals={metric.unit === '₽'}
-      />
-      {tooltip}
-    </>
-  );
-
   // The KPI cards are also the chart's metric switch
   const kpis: {
     metric: ActiveMetric;
@@ -586,41 +539,18 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
 
         <div className="neu-inset rounded-2xl p-3 sm:p-4 select-none">
           <div className="h-72 sm:h-80 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              {chartType === 'area' ? (
-                <AreaChart data={dailyData} margin={{ top: 12, right: 12, left: 0, bottom: 20 }} onClick={handleChartClick} style={{ cursor: 'pointer' }}>
-                  {axes}
-                  <Area
-                    // monotoneX keeps the curve smooth without overshooting below zero between days
-                    type="monotoneX"
-                    dataKey={activeMetric}
-                    name={metric.label}
-                    stroke={metric.color}
-                    strokeWidth={2.5}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    fillOpacity={1}
-                    fill={metric.fill}
-                    dot={dailyData.length <= 14 ? { r: 3, fill: '#E3E8EF', stroke: metric.color, strokeWidth: 2 } : false}
-                    activeDot={<NeumorphicActiveDot stroke={metric.color} activeMetric={activeMetric} />}
-                    animationDuration={450}
-                    animationEasing="ease-out"
-                  />
-                </AreaChart>
-              ) : (
-                <BarChart data={dailyData} margin={{ top: 12, right: 12, left: 0, bottom: 20 }} onClick={handleChartClick} style={{ cursor: 'pointer' }}>
-                  {axes}
-                  <Bar
-                    dataKey={activeMetric}
-                    name={metric.label}
-                    shape={<NeumorphicBarShape selectedDate={openDay?.date} activeMetric={activeMetric} />}
-                    maxBarSize={period === '30d' ? 20 : 36}
-                    animationDuration={450}
-                    animationEasing="ease-out"
-                  />
-                </BarChart>
-              )}
-            </ResponsiveContainer>
+            <Suspense fallback={<ChartLoading />}>
+              <AdminAnalyticsChart
+                chartType={chartType}
+                dailyData={dailyData}
+                activeMetric={activeMetric}
+                metric={metric}
+                period={period}
+                selectedDate={openDay?.date}
+                onChartClick={handleChartClick}
+                formatYAxis={formatYAxis}
+              />
+            </Suspense>
           </div>
         </div>
         <div className="text-[11px] text-[#4E5C70] space-y-1">

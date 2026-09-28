@@ -9,6 +9,7 @@ import {
   Headphones,
   Image as ImageIcon,
   Layers,
+  Loader2,
   Megaphone,
   Package,
   Store,
@@ -74,6 +75,10 @@ interface AdminNavProps {
   /** A tab or group was chosen; the panel switches (or first asks about unsaved edits) */
   onRequestTab: (tab: AdminTab) => void;
   counts?: AdminNavCounts;
+  /** Pointer or focus on a tab: start loading that section's code */
+  onPrefetchTab?: (tab: AdminTab) => void;
+  /** A section whose code is still loading after it was chosen (the current one stays on screen) */
+  pendingTab?: AdminTab | null;
   /** Content of the selected section */
   children: React.ReactNode;
 }
@@ -96,7 +101,7 @@ function useIsWide(): boolean {
   return isWide;
 }
 
-export const AdminNav: React.FC<AdminNavProps> = ({ tab, onRequestTab, counts = {}, children }) => {
+export const AdminNav: React.FC<AdminNavProps> = ({ tab, onRequestTab, onPrefetchTab, pendingTab, counts = {}, children }) => {
   const group = groupOf(tab);
   const isWide = useIsWide();
   const lastInGroup = useRef<Partial<Record<AdminGroupId, AdminTab>>>({});
@@ -129,6 +134,8 @@ export const AdminNav: React.FC<AdminNavProps> = ({ tab, onRequestTab, counts = 
             <Tabs.Tab
               key={g.id}
               value={g.id}
+              onPointerEnter={() => onPrefetchTab?.(lastInGroup.current[g.id] ?? g.tabs[0])}
+              onFocus={() => onPrefetchTab?.(lastInGroup.current[g.id] ?? g.tabs[0])}
               className={`relative min-w-0 py-2 px-1 sm:px-3 lg:py-3 lg:px-4 rounded-xl font-extrabold text-[11px] sm:text-xs lg:text-sm tracking-tight sm:tracking-normal flex items-center justify-center lg:justify-start cursor-pointer select-none transition-colors ${
                 isActive ? 'text-accent font-black' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
               }`}
@@ -175,13 +182,19 @@ export const AdminNav: React.FC<AdminNavProps> = ({ tab, onRequestTab, counts = 
                 <Tabs.Tab
                   key={t}
                   value={t}
+                  onPointerEnter={() => onPrefetchTab?.(t)}
+                  onFocus={() => onPrefetchTab?.(t)}
                   className={`h-8 px-3 rounded-xl text-[11px] sm:text-xs flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer select-none transition-colors ${
                     isActive
                       ? 'neu-pill-active text-accent font-black'
                       : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E] font-extrabold'
                   }`}
                 >
-                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  {pendingTab === t ? (
+                    <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin text-accent" aria-hidden="true" />
+                  ) : (
+                    <Icon className="w-3.5 h-3.5 shrink-0" />
+                  )}
                   <span>{label}</span>
                   {count && <Badge value={count.value} label={count.label} />}
                 </Tabs.Tab>
@@ -191,6 +204,7 @@ export const AdminNav: React.FC<AdminNavProps> = ({ tab, onRequestTab, counts = 
 
           <Tabs.Panel
             value={tab}
+            aria-busy={pendingTab ? true : undefined}
             className="flex-1 overflow-y-auto overflow-x-hidden space-y-4 pr-1 scrollbar-thin min-w-0 w-full"
           >
             {children}

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useProgressiveList } from '../../utils/useProgressiveList';
 import {
   Users,
   Search,
@@ -295,6 +296,8 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       return b.ordersCount - a.ordersCount;
     });
   }, [customerRecords, searchQuery, filterType, sortBy]);
+  // Heavy cards: the first ones render with the section, the rest after paint
+  const visibleCustomers = useProgressiveList<CustomerRecord>(filteredCustomers);
 
   // 3. Overall CRM KPIs
   const stats = useMemo(() => {
@@ -597,7 +600,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-          {filteredCustomers.map((customer, cIdx) => {
+          {visibleCustomers.map((customer, cIdx) => {
             return (
               <div
                 key={`admin-cust-${customer.id}-${cIdx}`}
