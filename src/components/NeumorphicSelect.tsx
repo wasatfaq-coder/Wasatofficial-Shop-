@@ -8,6 +8,8 @@ export interface NeumorphicSelectOption {
   sublabel?: string;
   badge?: string;
   icon?: React.ReactNode;
+  /** Id from `groups`: options of one group are shown under its title */
+  group?: string;
 }
 
 interface NeumorphicSelectProps {
@@ -29,6 +31,10 @@ interface NeumorphicSelectProps {
   id?: string;
   /** Name for screen readers when there is no visible label */
   ariaLabel?: string;
+  /** Titles of option groups, in display order */
+  groups?: { id: string; label: string }[];
+  /** `grid`: tiles with a large icon over the label (icon pickers); arrows go through the tiles in reading order */
+  layout?: 'list' | 'grid';
 }
 
 /**
@@ -51,6 +57,8 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
   emptyText = 'Список пуст',
   id,
   ariaLabel,
+  groups,
+  layout = 'list',
 }) => {
   // Normalize options to object format
   const normalizedOptions: NeumorphicSelectOption[] = options.map((opt) =>
@@ -58,6 +66,84 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
   );
   const selectedOption = normalizedOptions.find((opt) => opt.value === value);
   const hasPadding = /(^|\s)(p|px|py)-/.test(triggerClassName);
+  const isGrid = layout === 'grid';
+
+  // Options in their groups (in the order of `groups`), ungrouped ones first
+  const sections: { id: string; label?: string; options: NeumorphicSelectOption[] }[] = [];
+  const ungrouped = normalizedOptions.filter((o) => !o.group || !groups?.some((g) => g.id === o.group));
+  if (ungrouped.length > 0) sections.push({ id: '__none', options: ungrouped });
+  for (const g of groups ?? []) {
+    const inGroup = normalizedOptions.filter((o) => o.group === g.id);
+    if (inGroup.length > 0) sections.push({ id: g.id, label: g.label, options: inGroup });
+  }
+
+  /** Unselected: flat; under the pointer or arrows: raised (neu-option); selected: pressed in */
+  const renderItem = (opt: NeumorphicSelectOption) => {
+    const isSelected = opt.value === value;
+    if (isGrid) {
+      return (
+        <Select.Item
+          key={opt.value}
+          value={opt.value}
+          label={opt.label}
+          className={`neu-option min-h-[76px] px-1.5 py-2 rounded-xl flex flex-col items-center justify-center gap-1.5 text-center cursor-pointer select-none outline-none ${
+            isSelected ? 'neu-pill-active font-black' : 'text-[#2D3A4E] font-bold'
+          }`}
+        >
+          <span
+            aria-hidden="true"
+            className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+              isSelected ? 'neu-fill-accent text-white' : 'neu-flat-sm text-[#2D3A4E]'
+            }`}
+          >
+            {opt.icon}
+          </span>
+          <Select.ItemText className="block text-[11px] leading-tight break-words max-w-full">{opt.label}</Select.ItemText>
+        </Select.Item>
+      );
+    }
+    return (
+      <Select.Item
+        key={opt.value}
+        value={opt.value}
+        label={opt.label}
+        className={`neu-option w-full px-3 py-2 rounded-xl text-left text-xs flex items-center justify-between gap-2 cursor-pointer select-none outline-none ${
+          isSelected ? 'neu-pill-active font-black' : 'text-[#2D3A4E] font-bold'
+        }`}
+      >
+        <span className="flex items-center gap-2.5 min-w-0 flex-1">
+          {opt.icon && (
+            <span
+              aria-hidden="true"
+              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-[#2D3A4E] ${
+                isSelected ? 'neu-inset' : 'neu-flat-sm'
+              }`}
+            >
+              {opt.icon}
+            </span>
+          )}
+          <span className="min-w-0 flex-1">
+            <Select.ItemText className="block leading-snug text-left">{opt.label}</Select.ItemText>
+            {opt.sublabel && (
+              <span className="block text-[11px] text-[#4E5C70] font-normal mt-0.5 leading-tight">{opt.sublabel}</span>
+            )}
+          </span>
+          {opt.badge && (
+            <span className="neu-flat text-[11px] px-1.5 py-0.5 rounded text-accent font-black shrink-0 whitespace-nowrap">
+              {opt.badge}
+            </span>
+          )}
+        </span>
+        {isSelected ? (
+          <span className="w-5 h-5 rounded-full neu-fill-accent text-white flex items-center justify-center shrink-0" aria-hidden="true">
+            <Check className="w-3 h-3 stroke-[3]" />
+          </span>
+        ) : (
+          <span className="w-4 h-4 rounded-full neu-inset shrink-0" aria-hidden="true" />
+        )}
+      </Select.Item>
+    );
+  };
 
   return (
     <div className={`relative ${className}`}>
@@ -78,7 +164,11 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
           } text-xs font-bold text-[#2D3A4E] flex items-center justify-between gap-2 transition-all cursor-pointer text-left disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           <span className="flex items-center gap-2 min-w-0 flex-1">
-            {selectedOption?.icon && <span className="shrink-0">{selectedOption.icon}</span>}
+            {selectedOption?.icon && (
+              <span aria-hidden="true" className="w-6 h-6 -my-0.5 -ml-0.5 rounded-lg neu-flat-sm flex items-center justify-center shrink-0 text-[#2D3A4E]">
+                {selectedOption.icon}
+              </span>
+            )}
             <span className="truncate">
               {prefix && <span className="text-[#4E5C70] font-medium mr-1.5">{prefix}</span>}
               <span className={prefix ? 'font-black text-[#2D3A4E]' : selectedOption || triggerLabel ? '' : 'text-[#4E5C70]'}>
@@ -109,51 +199,33 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
             sideOffset={6}
             collisionPadding={8}
             alignItemWithTrigger={false}
+            align="start"
           >
             <Select.Popup
-              className={`min-w-[var(--anchor-width)] max-w-[calc(100vw-16px)] p-1.5 neu-dropdown rounded-2xl border border-white/80 outline-none transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 ${menuClassName}`}
+              className={`${isGrid ? 'w-[min(26rem,calc(100vw-16px))]' : 'min-w-[var(--anchor-width)]'} max-w-[calc(100vw-16px)] p-1.5 neu-dropdown rounded-2xl border border-white/80 outline-none transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 ${menuClassName}`}
             >
-              <Select.List className="space-y-1 max-h-60 overflow-y-auto no-scrollbar outline-none">
+              <Select.List
+                className={`overflow-y-auto no-scrollbar outline-none ${isGrid ? 'max-h-[min(22rem,60dvh)] space-y-2.5 p-0.5' : 'max-h-[min(20rem,55dvh)] space-y-1'}`}
+              >
                 {normalizedOptions.length === 0 && (
                   <p className="px-3 py-2.5 text-[11px] font-bold text-[#4E5C70] leading-snug">{emptyText}</p>
                 )}
-                {normalizedOptions.map((opt) => {
-                  const isSelected = opt.value === value;
-                  return (
-                    <Select.Item
-                      key={opt.value}
-                      value={opt.value}
-                      label={opt.label}
-                      className={`w-full px-3 py-2 rounded-xl text-left text-xs flex items-center justify-between gap-2 cursor-pointer select-none outline-none data-[highlighted]:outline-2 data-[highlighted]:-outline-offset-2 data-[highlighted]:outline-accent/60 ${
-                        isSelected ? 'neu-pill-active font-black' : 'text-[#2D3A4E] font-bold data-[highlighted]:text-accent'
-                      }`}
-                    >
-                      <span className="flex items-center gap-2 min-w-0 flex-1">
-                        {opt.icon && <span className="shrink-0">{opt.icon}</span>}
-                        <span className="min-w-0 flex-1">
-                          <Select.ItemText className="block leading-snug text-left">{opt.label}</Select.ItemText>
-                          {opt.sublabel && (
-                            <span className="block text-[11px] text-[#4E5C70] font-normal mt-0.5 leading-tight">
-                              {opt.sublabel}
-                            </span>
-                          )}
-                        </span>
-                        {opt.badge && (
-                          <span className="neu-flat text-[11px] px-1.5 py-0.5 rounded text-accent font-black shrink-0 whitespace-nowrap">
-                            {opt.badge}
-                          </span>
-                        )}
-                      </span>
-                      {isSelected ? (
-                        <span className="w-5 h-5 rounded-full neu-fill-accent text-white flex items-center justify-center shrink-0" aria-hidden="true">
-                          <Check className="w-3 h-3 stroke-[3]" />
-                        </span>
-                      ) : (
-                        <span className="w-4 h-4 rounded-full neu-inset shrink-0" aria-hidden="true" />
-                      )}
-                    </Select.Item>
-                  );
-                })}
+                {sections.map((section) =>
+                  section.label ? (
+                    <Select.Group key={section.id} className={isGrid ? 'space-y-1.5' : 'space-y-1'}>
+                      <Select.GroupLabel className="px-2 pt-1 text-[11px] font-black uppercase tracking-wider text-[#4E5C70]">
+                        {section.label}
+                      </Select.GroupLabel>
+                      <div className={isGrid ? 'grid grid-cols-3 sm:grid-cols-4 gap-1.5' : 'space-y-1'}>
+                        {section.options.map(renderItem)}
+                      </div>
+                    </Select.Group>
+                  ) : (
+                    <div key={section.id} className={isGrid ? 'grid grid-cols-3 sm:grid-cols-4 gap-1.5' : 'space-y-1'}>
+                      {section.options.map(renderItem)}
+                    </div>
+                  )
+                )}
               </Select.List>
             </Select.Popup>
           </Select.Positioner>

@@ -82,7 +82,9 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   У каждого окна — `useDialogA11y(open, onClose)` (`src/utils/useDialogA11y.ts`): `ref` и `props` на панель окна,
   `titleId` на заголовок (или `label`). Хук дает `role="dialog"`, фокус внутрь (`data-autofocus`), Tab внутри окна,
   Escape только верхнему окну и возврат фокуса. Свои обработчики Escape и `aria-modal` окнам не писать.
-  Вместо нативного `<select>` — `NeumorphicSelect` (Base UI Select, меню в портале поверх окон). Вкладки админки —
+  Вместо нативного `<select>` — `NeumorphicSelect` (Base UI Select, меню в портале поверх окон): пункт плоский,
+  под курсором или стрелками выпуклый (`neu-option`), выбранный вдавлен; `groups` — заголовки групп, `layout="grid"` —
+  плитки с иконкой (выбор иконки категории, ключи `CATEGORY_ICONS` не переименовывать). Вкладки админки —
   Base UI `Tabs` (`@base-ui/react`, только headless-логика, стили `neu-*`).
 - Анимации появления: классы `animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-*` определены в `index.css`
   (пакета tw-animate-css нет); анимация без `fill-mode: forwards`, чтобы у окна не оставался `transform`.

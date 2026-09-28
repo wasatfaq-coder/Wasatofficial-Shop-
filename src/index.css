@@ -329,6 +329,21 @@ button.active\:neu-inset-deep:active {
   box-shadow: var(--neu-raised-dark);
 }
 
+/* Option of a dropdown (NeumorphicSelect): flat; under the pointer or the arrows it rises,
+   the selected one is pressed in (neu-pill-active). A pressed option under the arrows gets an outline */
+.neu-option {
+  transition: box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1), color 0.15s;
+}
+.neu-option[data-highlighted]:not(.neu-pill-active) {
+  background-color: var(--neu-bg);
+  box-shadow: var(--neu-raised-sm);
+  color: var(--accent-text);
+}
+.neu-option.neu-pill-active[data-highlighted] {
+  outline: 2px solid color-mix(in srgb, var(--accent-text) 55%, transparent);
+  outline-offset: -2px;
+}
+
 /* Floating dropdown menus and popovers */
 .neu-dropdown {
   background-color: var(--neu-bg);

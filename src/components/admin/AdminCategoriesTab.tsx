@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Product, SaveStorefrontSettings, StoreCategory, StorefrontSettings } from '../../types';
-import { CATEGORY_ICONS, categoriesFromProducts, categoryIcon, categoryIdFromName } from '../../utils/categories';
+import { CATEGORY_ICON_GROUPS, CATEGORY_ICONS, categoriesFromProducts, categoryIcon, categoryIdFromName } from '../../utils/categories';
 import { AdminListEditor } from './AdminListEditor';
 
 interface AdminCategoriesTabProps {
@@ -38,7 +38,14 @@ export const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({
           key: 'icon',
           label: 'Иконка',
           type: 'select',
-          options: CATEGORY_ICONS.map((i) => ({ value: i.key, label: i.label })),
+          layout: 'grid',
+          groups: CATEGORY_ICON_GROUPS,
+          options: CATEGORY_ICONS.map(({ key, label, group, Icon }) => ({
+            value: key,
+            label,
+            group,
+            icon: <Icon className="w-[18px] h-[18px]" />,
+          })),
         },
       ]}
       quickAction={{
