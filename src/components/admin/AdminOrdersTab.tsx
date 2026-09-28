@@ -1,3 +1,5 @@
+import { orderTimestamp } from '../../shared/orderDate';
+import { useProgressiveList } from '../../utils/useProgressiveList';
 import React, { useState, useMemo } from 'react';
 import {
   Package,
@@ -293,9 +295,12 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   useUnsavedChanges(useChangedSince(editingTrackOrderId, [tempTrackValue, tempCarrierValue]), 'Трек-номер заказа');
   useUnsavedChanges(useChangedSince(editingNoteOrderId, [tempNoteValue]), 'Заметка к заказу');
 
-  // Filtered Orders Calculation
+  // Filtered Orders Calculation (the cards are heavy: the first ones render with the section, the rest after paint)
   const filteredOrders = useMemo(() => {
-    const todayStr = new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }).toLowerCase();
+    // «Сегодня» / «Вчера» by the order's real date (createdAt, or the text date of old orders)
+    const now = new Date();
+    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const DAY = 24 * 60 * 60 * 1000;
 
     return orders.filter((ord) => {
       // 1. Status Filter
@@ -303,16 +308,10 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
       // 2. Date Filter
       if (dateFilter !== 'all') {
-        const ordDateStr = (ord.date || '').toLowerCase();
-        if (dateFilter === 'today') {
-          if (!ordDateStr.includes('сегодня') && !ordDateStr.includes(todayStr) && ord.id !== 'MS-8941' && ord.id !== 'MS-8942') {
-            return false;
-          }
-        } else if (dateFilter === 'yesterday') {
-          if (!ordDateStr.includes('вчера') && ord.id !== 'MS-8939') {
-            return false;
-          }
-        }
+        const t = orderTimestamp(ord, now);
+        if (t === null) return false;
+        if (dateFilter === 'today' && !(t >= dayStart && t < dayStart + DAY)) return false;
+        if (dateFilter === 'yesterday' && !(t >= dayStart - DAY && t < dayStart)) return false;
       }
 
       // 3. Search Query
@@ -358,6 +357,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       return true;
     });
   }, [orders, searchQuery, statusFilter, dateFilter, deliveryFilter, paymentFilter, paymentStatusFilter]);
+  const visibleOrders = useProgressiveList<Order>(filteredOrders);
 
   // Bulk Operations Handlers
   const handleToggleSelectAll = () => {
@@ -1039,7 +1039,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
             </p>
           </div>
         ) : (
-          filteredOrders.map((ord, ordIdx) => {
+          visibleOrders.map((ord, ordIdx) => {
             const statusInfo = STATUS_CONFIG[ord.status] || STATUS_CONFIG.accepted;
             const StatusIcon = statusInfo.icon;
             const payStatus = ord.paymentStatus || (ord.paymentMethod?.toLowerCase().includes('получен') ? 'paid_on_delivery' : 'paid');

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, useRef, lazy, Suspense, useTransition } from 'react';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { motion, AnimatePresence } from 'motion/react';
 import { AccountDataModal } from '../components/AccountDataModal';
@@ -76,6 +76,7 @@ import { productImage } from '../utils/productImage';
 import { NeumorphicSwitch } from '../components/NeumorphicSwitch';
 import { useDialogA11y } from '../utils/useDialogA11y';
 import { isAdminTab, type AdminNavCounts, type AdminTab } from '../components/admin/adminSections';
+import { loadAdminNav, prefetchAdmin, prefetchAllAdminWhenIdle } from '../components/admin/adminLoaders';
 import { UnsavedChangesContext, useUnsavedRegistry } from '../utils/unsavedChanges';
 import { summarizeSupportThreads } from '../utils/supportThreads';
 
@@ -94,7 +95,7 @@ const AdminDeliveryTab = lazy(() => import('../components/admin/AdminDeliveryTab
 const AdminFaqTab = lazy(() => import('../components/admin/AdminFaqTab').then((m) => ({ default: m.AdminFaqTab })));
 const AdminPaymentTab = lazy(() => import('../components/admin/AdminPaymentTab').then((m) => ({ default: m.AdminPaymentTab })));
 const AdminCategoriesTab = lazy(() => import('../components/admin/AdminCategoriesTab').then((m) => ({ default: m.AdminCategoriesTab })));
-const AdminNav = lazy(() => import('../components/admin/AdminNav').then((m) => ({ default: m.AdminNav })));
+const AdminNav = lazy(() => loadAdminNav().then((m) => ({ default: m.AdminNav })));
 
 interface ProfileScreenProps {
   profile: UserProfile;
@@ -333,6 +334,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       return;
     }
     // Access is the Google admin account itself; firestore.rules enforce it on every write
+    prefetchAdmin(adminTab);
     setActiveModal('admin');
   };
 
@@ -406,18 +408,31 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     if (hasUnsaved) setPendingAdminAction({ type: 'close', labels: unsavedLabels() });
     else setActiveModal(null);
   };
+  // A section switch is a transition: the current section stays on screen while the next one's code loads
+  const [isTabPending, startTabTransition] = useTransition();
+  const [requestedTab, setRequestedTab] = useState<AdminTab | null>(null);
+  const switchAdminTab = (tab: AdminTab) => {
+    setRequestedTab(tab);
+    startTabTransition(() => setAdminTab(tab));
+  };
   const requestAdminTab = (tab: AdminTab) => {
     if (tab === adminTab) return;
     if (hasUnsaved) setPendingAdminAction({ type: 'tab', tab, labels: unsavedLabels() });
-    else setAdminTab(tab);
+    else switchAdminTab(tab);
   };
   const confirmPendingAdminAction = () => {
     const action = pendingAdminAction;
     setPendingAdminAction(null);
     if (action?.type === 'close') setActiveModal(null);
-    else if (action?.type === 'tab') setAdminTab(action.tab);
+    else if (action?.type === 'tab') switchAdminTab(action.tab);
   };
   const isAdminOpen = activeModal === 'admin' && isFirebaseAdmin;
+  // Admins get the panel's code while the browser is idle, so opening it and switching sections is instant
+  useEffect(() => {
+    if (!isFirebaseAdmin) return;
+    return prefetchAllAdminWhenIdle(adminTab);
+    // only on becoming admin (adminTab just picks the first section to fetch)
+  }, [isFirebaseAdmin]);
   // Leaving the page (reload, closing the tab) with unsaved edits: the browser asks
   useEffect(() => {
     if (!isAdminOpen || !hasUnsaved) return;
@@ -1339,6 +1354,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             id="admin-panel-trigger-btn"
             type="button"
             onClick={handleOpenAdminPanel}
+            onPointerEnter={() => prefetchAdmin(adminTab)}
+            onPointerDown={() => prefetchAdmin(adminTab)}
+            onFocus={() => prefetchAdmin(adminTab)}
             className="w-full p-3.5 neu-button rounded-2xl flex items-center justify-between text-left hover:opacity-95 transition-all group cursor-pointer"
           >
             <div className="flex items-center gap-3">
@@ -3090,17 +3108,23 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             {/* 4 groups → sections → the section; forms report unsaved edits to the panel */}
             <UnsavedChangesContext.Provider value={unsavedRegistry}>
             <Suspense fallback={<AdminLoading />}>
-            <AdminNav tab={adminTab} onRequestTab={requestAdminTab} counts={adminCounts}>
-              <AnimatePresence mode="wait">
+            <AdminNav
+              tab={adminTab}
+              onRequestTab={requestAdminTab}
+              onPrefetchTab={prefetchAdmin}
+              pendingTab={isTabPending ? requestedTab : null}
+              counts={adminCounts}
+            >
+              {/* One boundary for all sections, above the keyed wrapper: during a switch (a transition) it keeps
+                  the current section instead of showing «Загрузка раздела…» */}
+              <Suspense fallback={<AdminLoading />}>
                 <motion.div
                   key={adminTab}
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.18, ease: 'easeOut' }}
+                  transition={{ duration: 0.15, ease: 'easeOut' }}
                   className="w-full"
                 >
-              <Suspense fallback={<AdminLoading />}>
               {/* --- TAB 1: ANALYTICS & FINANCIAL DASHBOARD --- */}
               {adminTab === 'analytics' && (
                 <AdminAnalyticsTab
@@ -3270,9 +3294,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   />
                 </div>
               )}
-              </Suspense>
                 </motion.div>
-              </AnimatePresence>
+              </Suspense>
             </AdminNav>
             </Suspense>
             </UnsavedChangesContext.Provider>
