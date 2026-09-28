@@ -873,6 +873,32 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         )}
       </div>
 
+      {/* Admin entry at the top of the profile (it was at the very bottom); only for verified admins */}
+      {isFirebaseAdmin && (
+      <button
+        id="admin-panel-trigger-btn"
+        type="button"
+        onClick={handleOpenAdminPanel}
+        onPointerEnter={() => prefetchAdmin(adminTab)}
+        onPointerDown={() => prefetchAdmin(adminTab)}
+        onFocus={() => prefetchAdmin(adminTab)}
+        className="w-full p-3.5 neu-button rounded-2xl flex items-center justify-between text-left hover:opacity-95 transition-all group cursor-pointer"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
+            <ShieldCheck className="w-5 h-5 stroke-[2.2]" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-[#2D3A4E]">Панель администратора</p>
+            <p className="text-xs text-[#4E5C70]">Модули каталога, заказов, акций и настроек витрины</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <ChevronRight className="w-4 h-4 text-[#4E5C70] group-hover:text-accent transition-colors" />
+        </div>
+      </button>
+      )}
+
       {/* Section 1: Мои заказы */}
       <div className="space-y-2">
         <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase px-1">
@@ -915,18 +941,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-sm font-bold text-[#2D3A4E]">{isFirebaseAdmin ? 'Синхронизация данных' : 'Аккаунт'}</h3>
-                  {isFirebaseAdmin && (
-                    <span className="neu-flat-sm px-2 py-0.5 rounded-full text-[11px] font-black text-success flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                      База данных подключена
-                    </span>
-                  )}
-                  {isFirebaseAdmin && (
-                    <span className="neu-fill-accent text-white text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
-                      <ShieldCheck className="w-3 h-3" />
-                      Админ
-                    </span>
-                  )}
                 </div>
                 <p className="text-xs text-[#4E5C70]">
                   {isFirebaseAdmin
@@ -973,14 +987,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleGoogleLogoutClick}
-                className="neu-button-danger px-2.5 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 shrink-0 transition-transform"
-              >
-                <LogOut className="w-3 h-3" />
-                <span>Выйти</span>
-              </button>
             </div>
           ) : (
             <div className="p-2.5 rounded-xl bg-[#BAC5D5]/20 space-y-2 text-xs">
@@ -1352,48 +1358,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           Настройки
         </h3>
         <div className="neu-flat rounded-3xl p-3 space-y-2">
-          {/* Admin Panel Item Trigger */}
-          {/* Admin entry is only shown to verified admins (Google sign-in) */}
-          {isFirebaseAdmin && (
-          <button
-            id="admin-panel-trigger-btn"
-            type="button"
-            onClick={handleOpenAdminPanel}
-            onPointerEnter={() => prefetchAdmin(adminTab)}
-            onPointerDown={() => prefetchAdmin(adminTab)}
-            onFocus={() => prefetchAdmin(adminTab)}
-            className="w-full p-3.5 neu-button rounded-2xl flex items-center justify-between text-left hover:opacity-95 transition-all group cursor-pointer"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-accent shrink-0 group-hover:scale-105 transition-transform">
-                <ShieldCheck className="w-5 h-5 stroke-[2.2]" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-bold text-[#2D3A4E]">Панель администратора</p>
-                  <span className="neu-fill-accent text-white text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                    Управление
-                  </span>
-                  {isFirebaseAdmin ? (
-                    <span className="neu-button px-2 py-0.5 rounded-full text-[11px] font-black text-success flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                      Доступ открыт
-                    </span>
-                  ) : (
-                    <span className="neu-inset px-2 py-0.5 rounded-full text-[11px] font-bold text-[#4E5C70] flex items-center gap-1">
-                      <Lock className="w-2.5 h-2.5" />
-                      Требуется вход Google
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-[#4E5C70]">Модули каталога, заказов, акций и настроек витрины</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <ChevronRight className="w-4 h-4 text-[#4E5C70] group-hover:text-accent transition-colors" />
-            </div>
-          </button>
-          )}
 
           <div className="p-3.5 neu-inset rounded-2xl flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -3061,7 +3025,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="admin-no-glow fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto overflow-x-hidden"
+            className="admin-no-glow fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 overflow-y-auto overflow-x-hidden"
           >
             {/* Backdrop */}
             <div
@@ -3077,7 +3041,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.94, opacity: 0, y: 12 }}
               transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-              className="neu-modal rounded-3xl p-3.5 sm:p-6 max-w-5xl lg:max-w-none w-full my-auto space-y-4 max-h-[92vh] lg:max-h-none lg:h-[calc(100vh-2rem)] flex flex-col border border-white/80 text-[#2D3A4E] min-w-0 overflow-hidden relative z-10"
+              // Phone: the whole screen (no rounded frame and gaps eating ~40 px), from sm a window
+              className="neu-modal rounded-none sm:rounded-3xl p-3 sm:p-6 max-w-5xl lg:max-w-none w-full sm:my-auto space-y-3 sm:space-y-4 h-[100dvh] sm:h-auto max-h-none sm:max-h-[92vh] lg:max-h-none lg:h-[calc(100vh-2rem)] flex flex-col sm:border border-white/80 text-[#2D3A4E] min-w-0 overflow-hidden relative z-10"
             >
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3 shrink-0 gap-2">

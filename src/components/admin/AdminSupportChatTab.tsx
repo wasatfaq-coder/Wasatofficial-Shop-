@@ -230,6 +230,10 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
 
   // --- composer ---
   const [replyText, setReplyText] = useState('');
+  // The customer's order card: open on the computer, collapsed on the phone (the reply box comes first)
+  const [orderOpen, setOrderOpen] = useState(
+    () => typeof window === 'undefined' || !window.matchMedia || window.matchMedia('(min-width: 1024px)').matches
+  );
   const [isInternalNote, setIsInternalNote] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
   // A typed but not sent reply (or photo): the admin panel asks before closing or switching the section
@@ -689,13 +693,30 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
       {/* 2. Customer's order */}
       {order && (
         <section className="neu-flat rounded-3xl p-3.5 sm:p-4 space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
-              <ShoppingBag className="w-3.5 h-3.5 text-accent" />
-              Заказ покупателя
+          {/* Collapsed on the phone so the reply box is closer; open on the computer */}
+          <button
+            type="button"
+            onClick={() => setOrderOpen((v) => !v)}
+            aria-expanded={orderOpen}
+            className="w-full flex items-center justify-between gap-2 cursor-pointer min-h-6"
+          >
+            <span className="flex flex-col items-start gap-0.5 min-w-0 text-left">
+              <span className="text-[11px] font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+                <ShoppingBag className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
+                Заказ покупателя
+              </span>
+              {(!orderOpen || sortedOrders.length > 1) && (
+                <span className="text-[11px] text-[#4E5C70]">
+                  {!orderOpen && <span className="font-bold text-accent">№ {order.id}</span>}
+                  {!orderOpen && sortedOrders.length > 1 && ' · '}
+                  {sortedOrders.length > 1 && `всего заказов: ${sortedOrders.length}`}
+                </span>
+              )}
             </span>
-            {sortedOrders.length > 1 && <span className="text-[11px] text-[#4E5C70]">Всего заказов: {sortedOrders.length}</span>}
-          </div>
+            <ChevronDown aria-hidden="true" className={`w-4 h-4 text-[#4E5C70] shrink-0 transition-transform ${orderOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {orderOpen && (
+          <>
           {sortedOrders.length > 1 && (
             <NeumorphicSelect
               ariaLabel="Заказ покупателя"
@@ -767,6 +788,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               Возврат или обмен
             </button>
           </div>
+          </>
+          )}
         </section>
       )}
 
