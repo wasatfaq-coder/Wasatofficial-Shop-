@@ -20,6 +20,8 @@ import { deductStockWithLogs, returnStockWithLogs, extractColorName, extractSize
 import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
 import { productImage } from '../../utils/productImage';
 import { useDialogA11y } from '../../utils/useDialogA11y';
+import { sameValue, useUnsavedChanges } from '../../utils/unsavedChanges';
+import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
 
 interface AdminOrderAdjustmentModalProps {
   order: Order | null;
@@ -49,7 +51,6 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
   onUpdateProducts,
   onShowToast,
 }) => {
-  const dialog = useDialogA11y(isOpen && Boolean(order), onClose);
   const [items, setItems] = useState<CartItem[]>(() =>
     order?.items
       ? order.items.map((it) => ({
@@ -70,6 +71,15 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
   const [selectedColor, setSelectedColor] = useState<string>(selectedProductToAdd?.colors?.[0]?.name || '');
   const [selectedSize, setSelectedSize] = useState<string>(selectedProductToAdd?.sizes?.[0] || 'M');
   const [addQuantity, setAddQuantity] = useState<number>(1);
+
+  // Changed items, a note or a track number: Escape, «×» and «Отмена» ask before the window closes
+  const isAdjustmentDirty =
+    isOpen &&
+    Boolean(order) &&
+    (!sameValue(items, order?.items ?? []) || customNote.trim() !== '' || trackingNumber !== (order?.trackingNumber || ''));
+  useUnsavedChanges(isAdjustmentDirty, 'Корректировка заказа');
+  const guard = useDiscardGuard(isAdjustmentDirty, onClose);
+  const dialog = useDialogA11y(isOpen && Boolean(order), guard.requestClose);
 
   // Sync items and tracking number when order prop changes
   useEffect(() => {
@@ -298,6 +308,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
   };
 
   return (
+    <>
     <AnimatePresence>
       {isOpen && order && (
         <motion.div
@@ -310,7 +321,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
         >
           {/* Backdrop */}
           <div
-            onClick={onClose}
+            onClick={guard.requestClose}
             className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer"
           />
 
@@ -346,7 +357,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={guard.requestClose}
             className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer shrink-0"
             aria-label="Закрыть"
           >
@@ -750,7 +761,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
         <div className="pt-2 border-t border-[#BAC5D5]/50 flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5">
           <button
             type="button"
-            onClick={onClose}
+            onClick={guard.requestClose}
             className="w-full sm:w-auto h-10 sm:h-11 px-4 sm:px-5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer text-center transition-all"
           >
             Отмена
@@ -772,5 +783,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
     </motion.div>
   )}
 </AnimatePresence>
+<DiscardChangesDialog {...guard.dialogProps} what="Изменения заказа" />
+</>
 );
 };

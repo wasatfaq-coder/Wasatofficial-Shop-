@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Pencil, Check, X, RotateCcw, Sparkles } from 'lucide-react';
 import { useDialogA11y } from '../../utils/useDialogA11y';
+import { useUnsavedChanges } from '../../utils/unsavedChanges';
+import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
 
 export interface QuickEditFieldConfig {
   key: string;
@@ -52,7 +54,11 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
     }
   }, [config, isOpen]);
 
-  const dialog = useDialogA11y(isOpen && Boolean(config), onClose);
+  // A changed value asks before the window closes (Escape, «×», «Отмена», a click outside)
+  const isValueChanged = isOpen && Boolean(config) && currentValue !== (config?.value ?? '');
+  useUnsavedChanges(isValueChanged, config?.title || 'Поле витрины');
+  const guard = useDiscardGuard(isValueChanged, onClose);
+  const dialog = useDialogA11y(isOpen && Boolean(config), guard.requestClose);
 
   if (!isOpen || !config) return null;
 
@@ -68,9 +74,10 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
   const isChanged = currentValue !== (config.value ?? '');
 
   return (
+    <>
     <div
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget) guard.requestClose();
       }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2D3A4E]/50 backdrop-blur-xs animate-in fade-in duration-200"
     >
@@ -105,7 +112,7 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={guard.requestClose}
             className="w-8 h-8 rounded-full neu-flat-sm flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95 transition-all shrink-0 cursor-pointer"
             title="Закрыть (Esc)"
             aria-label="Закрыть (Esc)"
@@ -196,7 +203,7 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
         <div className="flex items-center justify-end gap-2.5 pt-2">
           <button
             type="button"
-            onClick={onClose}
+            onClick={guard.requestClose}
             className="py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer transition-transform"
           >
             Отмена
@@ -212,5 +219,7 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
         </div>
       </div>
     </div>
+    <DiscardChangesDialog {...guard.dialogProps} what="Изменения поля" />
+    </>
   );
 };

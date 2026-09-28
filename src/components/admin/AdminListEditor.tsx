@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, Check, Pencil, Plus, Trash2, X } from 'lucide-react
 import { ConfirmDialog } from '../ConfirmDialog';
 import { NotConfigured } from '../NotConfigured';
 import { NeumorphicSelect } from '../NeumorphicSelect';
+import { shallowChanged, useUnsavedChanges } from '../../utils/unsavedChanges';
 
 export type ListField<T> = {
   key: keyof T & string;
@@ -56,7 +57,10 @@ export function AdminListEditor<T extends { id: string }>({
   quickAction,
 }: AdminListEditorProps<T>) {
   const [draft, setDraft] = useState<T | null>(null);
+  // The item as it was when the form opened: the form has unsaved edits while the draft differs from it
+  const [draftStart, setDraftStart] = useState<T | null>(null);
   const [isNew, setIsNew] = useState(false);
+  useUnsavedChanges(Boolean(draft) && shallowChanged(draft, draftStart), title);
   const [toDelete, setToDelete] = useState<T | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -71,11 +75,14 @@ export function AdminListEditor<T extends { id: string }>({
   };
 
   const startAdd = () => {
-    setDraft(createItem(items));
+    const item = createItem(items);
+    setDraft(item);
+    setDraftStart(item);
     setIsNew(true);
   };
   const startEdit = (item: T) => {
     setDraft({ ...item });
+    setDraftStart(item);
     setIsNew(false);
   };
   const cancel = () => setDraft(null);

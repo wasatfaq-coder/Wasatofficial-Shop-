@@ -40,6 +40,7 @@ import type {
 import { ConfirmDialog } from '../ConfirmDialog';
 import { ModalPortal } from '../ModalPortal';
 import { useDialogA11y } from '../../utils/useDialogA11y';
+import { useUnsavedChanges } from '../../utils/unsavedChanges';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { copyToClipboard } from '../../utils/clipboard';
 import { compressChatImageFile } from '../../utils/imageUpload';
@@ -231,6 +232,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   const [replyText, setReplyText] = useState('');
   const [isInternalNote, setIsInternalNote] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
+  // A typed but not sent reply (or photo): the admin panel asks before closing or switching the section
+  useUnsavedChanges(Boolean(replyText.trim() || photo), 'Ответ в чате');
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
   const [showNotes, setShowNotes] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);

@@ -60,6 +60,8 @@ import { categoryIcon } from '../../utils/categories';
 import type { StoreCategory } from '../../types';
 import { productImage } from '../../utils/productImage';
 import { useDialogA11y } from '../../utils/useDialogA11y';
+import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
+import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
 
 interface AdminProductsTabProps {
   /** Admin → «Категории»: the only category list for products */
@@ -98,7 +100,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
   // Modals
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
-  const productFormDialog = useDialogA11y(isProductFormOpen, () => setIsProductFormOpen(false), { closeOnEscape: false });
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const deleteProductDialog = useDialogA11y(Boolean(productToDelete), () => setProductToDelete(null));
@@ -166,6 +167,29 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   const [customSizeInput, setCustomSizeInput] = useState('');
   const [customColorName, setCustomColorName] = useState('');
   const [customColorHex, setCustomColorHex] = useState('#2D3A4E');
+
+  // Unsaved edits: Escape, «×» and «Отмена» ask before the form closes; the admin panel asks too
+  const isProductFormDirty = useChangedSince(isProductFormOpen ? editingProduct?.id ?? 'new' : null, [
+    formTitle,
+    formCategory,
+    formPrice,
+    formCostPrice,
+    formOldPrice,
+    formBadge,
+    formInStock,
+    formImages,
+    newImageUrlInput,
+    formDescription,
+    formSizes,
+    formColors,
+    formSkus,
+    formCard,
+    customSizeInput,
+    customColorName,
+  ]);
+  useUnsavedChanges(isProductFormDirty, 'Форма товара');
+  const productFormGuard = useDiscardGuard(isProductFormDirty, () => setIsProductFormOpen(false));
+  const productFormDialog = useDialogA11y(isProductFormOpen, productFormGuard.requestClose);
 
   // Filtered Products
   const filteredProducts = useMemo(() => {
@@ -1322,7 +1346,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               {/* Close: always in the top-right corner */}
               <button
                 type="button"
-                onClick={() => setIsProductFormOpen(false)}
+                onClick={productFormGuard.requestClose}
                 className="order-2 sm:order-3 w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer shrink-0"
                 title="Закрыть"
                 aria-label="Закрыть"
@@ -1398,10 +1422,11 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                 <div className="space-y-3">
                   {/* Title */}
                   <div>
-                    <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+                    <label htmlFor="product-form-title" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
                       Название товара *
                     </label>
                     <input
+                      id="product-form-title"
                       type="text"
                       value={formTitle}
                       onChange={(e) => setFormTitle(e.target.value)}
@@ -2186,7 +2211,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                 <div className="flex items-center gap-2.5 w-full justify-end">
                   <button
                     type="button"
-                    onClick={() => setIsProductFormOpen(false)}
+                    onClick={productFormGuard.requestClose}
                     className="h-11 shrink-0 px-5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer text-center"
                   >
                     Отмена
@@ -2558,6 +2583,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         }}
         onShowToast={onShowToast}
       />
+
+      <DiscardChangesDialog {...productFormGuard.dialogProps} what="Изменения товара" />
 
       {/* Removal confirmation for photos, colors, sizes and stock (above the product form) */}
       <ConfirmDialog

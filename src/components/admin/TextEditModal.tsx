@@ -20,6 +20,8 @@ import { ModalPortal } from '../ModalPortal';
 import { categoryIcon } from '../../utils/categories';
 import { pluralRu } from '../../utils/pluralize';
 import { useDialogA11y } from '../../utils/useDialogA11y';
+import { useUnsavedChanges } from '../../utils/unsavedChanges';
+import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
 
 interface TextEditModalProps {
   isOpen: boolean;
@@ -145,7 +147,11 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
   }, [isOpen, initialValue, category]);
 
   // Escape closes the open list of phrase sets first, then the window
-  const dialog = useDialogA11y(isOpen, () => (isCategoryDropdownOpen ? setIsCategoryDropdownOpen(false) : onClose()));
+  // A changed description asks before the window closes (Escape, «×», «Отмена», a click outside)
+  const isDraftChanged = isOpen && draft !== initialValue;
+  useUnsavedChanges(isDraftChanged, 'Описание товара');
+  const guard = useDiscardGuard(isDraftChanged, onClose);
+  const dialog = useDialogA11y(isOpen, () => (isCategoryDropdownOpen ? setIsCategoryDropdownOpen(false) : guard.requestClose()));
 
   // Phrase sets, top to bottom: common phrases → the store's categories (Admin → «Категории»,
   // plus the product's own category) → sets saved earlier for other categories
@@ -238,7 +244,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
     <ModalPortal>
     <div
       className="fixed inset-0 z-[130] bg-[#2D3A4E]/55 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
-      onClick={onClose}
+      onClick={guard.requestClose}
     >
       <div
         className="relative w-full max-w-xl neu-modal rounded-3xl p-4 sm:p-6 border border-white/80 space-y-4 animate-in zoom-in-95 fade-in duration-200 h-[88dvh] sm:h-auto sm:max-h-[92dvh] flex flex-col will-change-transform"
@@ -264,7 +270,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={guard.requestClose}
             className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer shrink-0"
             title="Закрыть окно (Esc)"
             aria-label="Закрыть окно (Esc)"
@@ -555,7 +561,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
         <div className="flex items-center gap-2.5 pt-3 border-t border-[#BAC5D5]/50 shrink-0">
           <button
             type="button"
-            onClick={onClose}
+            onClick={guard.requestClose}
             className="h-11 px-5 shrink-0 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer"
           >
             Отмена
@@ -571,6 +577,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
         </div>
       </div>
     </div>
+    <DiscardChangesDialog {...guard.dialogProps} what="Изменения описания" />
     </ModalPortal>
   );
 };

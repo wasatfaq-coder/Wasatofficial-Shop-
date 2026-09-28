@@ -21,6 +21,17 @@ Wasat Shop — SPA интернет-магазина мужской одежды
 
 - Всё состояние — в `src/App.tsx`, экраны в `src/views/`, панель администратора
   в `src/components/admin/` (открывается из `ProfileScreen`).
+- Разделы админки — `AdminNav`: 4 группы (Продажи, Каталог, Маркетинг, Магазин), в группе 2–4 раздела. Раздел
+  запоминается на сессию (`manstyle_admin_tab`). Счетчики «новых заказов» и «ждут ответа» считаются так же, как в чате:
+  `summarizeSupportThreads`.
+- Несохраненное в админке — `src/utils/unsavedChanges.ts`:
+  - форма сообщает о правках через `useUnsavedChanges(dirty, 'Название')`;
+  - `dirty` форм со снимком при открытии считает `useChangedSince(key, [поля])`;
+  - при закрытии панели (×, клик по фону, Escape) и при смене раздела панель спрашивает «Закрыть/Перейти без
+    сохранения?»; при уходе со страницы спрашивает браузер.
+
+  Окно-форма закрывается через `useDiscardGuard` и `DiscardChangesDialog`, это касается и Escape. «Витрина»
+  применяется кнопкой «Применить» (липкая панель при изменениях). Обновление из базы не затирает неприменённые правки.
 - Работа с Firestore — только через `src/utils/firebaseSync.ts`
   (подписки `subscribeTo*`, запись `save*/sync*`).
 - Клиент пишет в Firestore напрямую, поэтому безопасность = `firestore.rules`.
@@ -70,8 +81,7 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   Окна поверх панели администратора и формы товара выводить через `ModalPortal` (как `ConfirmDialog`).
   У каждого окна — `useDialogA11y(open, onClose)` (`src/utils/useDialogA11y.ts`): `ref` и `props` на панель окна,
   `titleId` на заголовок (или `label`). Хук дает `role="dialog"`, фокус внутрь (`data-autofocus`), Tab внутри окна,
-  Escape только верхнему окну и возврат фокуса. Свои обработчики Escape и `aria-modal` окнам не писать. Панель
-  администратора и форма товара — `closeOnEscape: false`.
+  Escape только верхнему окну и возврат фокуса. Свои обработчики Escape и `aria-modal` окнам не писать.
   Вместо нативного `<select>` — `NeumorphicSelect` (Base UI Select, меню в портале поверх окон). Вкладки админки —
   Base UI `Tabs` (`@base-ui/react`, только headless-логика, стили `neu-*`).
 - Анимации появления: классы `animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-*` определены в `index.css`

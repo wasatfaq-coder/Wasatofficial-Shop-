@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { motion, AnimatePresence } from 'motion/react';
 import { AccountDataModal } from '../components/AccountDataModal';
@@ -30,19 +30,14 @@ import {
   Sparkles,
   Ruler,
   ShieldCheck,
-  BarChart3,
-  Tag,
   Layers,
   Store,
   RefreshCw,
   AlertCircle,
-  Boxes,
-  Image as ImageIcon,
   Navigation,
   MessageCircle,
   Send,
   Database,
-  Users,
   Scale,
   Scissors,
   Shirt,
@@ -87,7 +82,6 @@ import {
   loadLocalPickupPoints,
   saveLocalPickupPoints,
 } from '../data/deliveryData';
-import { FolderTree, Wallet, CircleHelp } from 'lucide-react';
 import { AdminFaqTab } from '../components/admin/AdminFaqTab';
 import { AdminPaymentTab } from '../components/admin/AdminPaymentTab';
 import { AdminCategoriesTab } from '../components/admin/AdminCategoriesTab';
@@ -95,7 +89,9 @@ import { getCategories } from '../utils/categories';
 import { productImage } from '../utils/productImage';
 import { NeumorphicSwitch } from '../components/NeumorphicSwitch';
 import { useDialogA11y } from '../utils/useDialogA11y';
-import { Tabs } from '@base-ui/react/tabs';
+import { AdminNav, isAdminTab, type AdminNavCounts, type AdminTab } from '../components/admin/AdminNav';
+import { UnsavedChangesContext, useUnsavedRegistry } from '../utils/unsavedChanges';
+import { summarizeSupportThreads } from '../utils/supportThreads';
 
 interface ProfileScreenProps {
   profile: UserProfile;
@@ -141,6 +137,9 @@ interface ProfileScreenProps {
   pickupPoints?: PickupPoint[];
   onUpdatePickupPoints?: (points: PickupPoint[]) => void;
 }
+
+/** Admin panel section for this browser session (internal key, not renamed) */
+const ADMIN_TAB_STORAGE_KEY = 'manstyle_admin_tab';
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   profile,
@@ -370,16 +369,65 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
 
-  // Admin Panel Tab & Filter state
-  const [adminTab, setAdminTab] = useState<
-    | 'analytics' | 'products' | 'categories' | 'inventory' | 'orders' | 'delivery' | 'payment' | 'customers'
-    | 'promos' | 'banners' | 'support' | 'faq' | 'storefront'
-  >('analytics');
-  const [supportTargetOrderId, setSupportTargetOrderId] = useState<string | null>(null);
-  // Focus stays in the panel; Escape does not close it (an unsaved list or form inside would be lost)
-  const adminDialog = useDialogA11y(activeModal === 'admin' && isFirebaseAdmin, () => setActiveModal(null), {
-    closeOnEscape: false,
+  // Admin panel section: kept for the session, so reopening the panel returns to it
+  const [adminTab, setAdminTab] = useState<AdminTab>(() => {
+    try {
+      const saved = sessionStorage.getItem(ADMIN_TAB_STORAGE_KEY);
+      return isAdminTab(saved) ? saved : 'analytics';
+    } catch {
+      return 'analytics';
+    }
   });
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(ADMIN_TAB_STORAGE_KEY, adminTab);
+    } catch {}
+  }, [adminTab]);
+  const [supportTargetOrderId, setSupportTargetOrderId] = useState<string | null>(null);
+  // Unsaved edits in the panel's forms: closing or switching the section asks first
+  const { registry: unsavedRegistry, unsavedLabels, hasUnsaved } = useUnsavedRegistry();
+  type PendingAdminAction = ({ type: 'close' } | { type: 'tab'; tab: AdminTab }) & { labels: string[] };
+  const [pendingAdminAction, setPendingAdminAction] = useState<PendingAdminAction | null>(null);
+  // The question keeps its text while it fades out
+  const shownAdminAction = useRef<PendingAdminAction | null>(null);
+  if (pendingAdminAction) shownAdminAction.current = pendingAdminAction;
+  const requestCloseAdmin = () => {
+    if (hasUnsaved) setPendingAdminAction({ type: 'close', labels: unsavedLabels() });
+    else setActiveModal(null);
+  };
+  const requestAdminTab = (tab: AdminTab) => {
+    if (tab === adminTab) return;
+    if (hasUnsaved) setPendingAdminAction({ type: 'tab', tab, labels: unsavedLabels() });
+    else setAdminTab(tab);
+  };
+  const confirmPendingAdminAction = () => {
+    const action = pendingAdminAction;
+    setPendingAdminAction(null);
+    if (action?.type === 'close') setActiveModal(null);
+    else if (action?.type === 'tab') setAdminTab(action.tab);
+  };
+  const isAdminOpen = activeModal === 'admin' && isFirebaseAdmin;
+  // Leaving the page (reload, closing the tab) with unsaved edits: the browser asks
+  useEffect(() => {
+    if (!isAdminOpen || !hasUnsaved) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isAdminOpen, hasUnsaved]);
+  const adminDialog = useDialogA11y(isAdminOpen, requestCloseAdmin);
+  // What waits for the admin: new orders and dialogs where the customer wrote last
+  const adminCounts = useMemo<AdminNavCounts>(() => {
+    if (!isAdminOpen) return {};
+    const newOrders = orders.filter((o) => o.status === 'accepted' && !o.isCancelled).length;
+    const awaiting = summarizeSupportThreads(localChatMessages, orders).filter((t) => t.awaitingReply).length;
+    return {
+      orders: { value: newOrders, label: 'новых заказов' },
+      support: { value: awaiting, label: 'ждут ответа' },
+    };
+  }, [isAdminOpen, orders, localChatMessages]);
 
   // Selected order IDs for detailed tracking & interactive delivery map
   const [selectedOrderIdForTracking, setSelectedOrderIdForTracking] = useState<string | null>(null);
@@ -2981,7 +3029,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           >
             {/* Backdrop */}
             <div
-              onClick={() => setActiveModal(null)}
+              onClick={requestCloseAdmin}
               className="fixed inset-0 bg-[#2D3A4E]/40 backdrop-blur-xs cursor-pointer"
             />
 
@@ -3018,7 +3066,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 <button
                   id="admin-modal-close-btn"
                   type="button"
-                  onClick={() => setActiveModal(null)}
+                  onClick={requestCloseAdmin}
                   className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer shrink-0"
                   title="Закрыть"
                   aria-label="Закрыть"
@@ -3028,64 +3076,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </div>
             </div>
 
-            {/* Sections: tablist (arrows move between tabs, Enter/Space opens one) and its panel */}
-            <Tabs.Root
-              value={adminTab}
-              onValueChange={(next) => setAdminTab(next as typeof adminTab)}
-              className="flex-1 min-h-0 flex flex-col gap-4 min-w-0 w-full"
-            >
-            <Tabs.List
-              aria-label="Разделы панели"
-              className="admin-tab-bar rounded-2xl p-1.5 flex items-center gap-1.5 overflow-x-auto shrink-0 no-scrollbar scroll-smooth bg-[#E3E8EF] w-full max-w-full"
-            >
-              {[
-                { id: 'analytics', label: 'Аналитика', icon: BarChart3 },
-                { id: 'products', label: 'Каталог', icon: Layers },
-                { id: 'categories', label: 'Категории', icon: FolderTree },
-                { id: 'inventory', label: 'Склад и SKU', icon: Boxes },
-                { id: 'orders', label: 'Заказы', icon: Package },
-                { id: 'delivery', label: 'Доставка и ПВЗ', icon: Truck },
-                { id: 'payment', label: 'Оплата', icon: Wallet },
-                { id: 'customers', label: 'Клиенты', icon: Users },
-                { id: 'promos', label: 'Промокоды', icon: Tag },
-                { id: 'banners', label: 'Баннеры', icon: ImageIcon },
-                { id: 'support', label: 'Чат поддержки', icon: Headphones },
-                { id: 'faq', label: 'FAQ', icon: CircleHelp },
-                { id: 'storefront', label: 'Витрина', icon: Store },
-              ].map((tab) => {
-                const Icon = tab.icon;
-                const isActive = adminTab === tab.id;
-                return (
-                  <Tabs.Tab
-                    key={tab.id}
-                    value={tab.id}
-                    className={`relative min-w-[90px] sm:min-w-[105px] py-2 px-3 rounded-xl font-extrabold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 active:scale-95 select-none ${
-                      isActive
-                        ? 'text-accent font-black'
-                        : 'text-[#4E5C70] hover:text-[#2D3A4E]'
-                    }`}
-                  >
-                    {isActive && (
-                      <motion.div
-                        layoutId="adminTabPillIndicator"
-                        className="absolute inset-0 rounded-xl admin-tab-active z-0"
-                        transition={{ type: 'spring', stiffness: 450, damping: 35 }}
-                      />
-                    )}
-                    <span className="relative z-10 flex items-center gap-1.5">
-                      <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-accent' : 'text-[#4E5C70]'}`} />
-                      <span>{tab.label}</span>
-                    </span>
-                  </Tabs.Tab>
-                );
-              })}
-            </Tabs.List>
-
-            {/* One panel: its content follows the selected tab */}
-            <Tabs.Panel
-              value={adminTab}
-              className="flex-1 overflow-y-auto overflow-x-hidden space-y-4 pr-1 scrollbar-thin min-w-0 w-full"
-            >
+            {/* 4 groups → sections → the section; forms report unsaved edits to the panel */}
+            <UnsavedChangesContext.Provider value={unsavedRegistry}>
+            <AdminNav tab={adminTab} onRequestTab={requestAdminTab} counts={adminCounts}>
               <AnimatePresence mode="wait">
                 <motion.div
                   key={adminTab}
@@ -3140,7 +3133,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   onShowToast={onShowToast}
                   onOpenSupportChat={(orderId, customerName) => {
                     setSupportTargetOrderId(orderId);
-                    setAdminTab('support');
+                    requestAdminTab('support');
                     onShowToast(`Переход в чат поддержки по заказу #${orderId}${customerName ? ` (${customerName})` : ''}`, 'info');
                   }}
                 />
@@ -3166,7 +3159,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   orders={orders}
                   onOpenSupportChat={(orderId, customerName) => {
                     if (orderId) setSupportTargetOrderId(orderId);
-                    setAdminTab('support');
+                    requestAdminTab('support');
                     if (customerName) {
                       onShowToast(`Переход в диалог с клиентом ${customerName}`, 'info');
                     }
@@ -3266,12 +3259,25 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               )}
                 </motion.div>
               </AnimatePresence>
-            </Tabs.Panel>
-            </Tabs.Root>
+            </AdminNav>
+            </UnsavedChangesContext.Provider>
           </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
+
+      <ConfirmDialog
+        isOpen={pendingAdminAction !== null}
+        title={shownAdminAction.current?.type === 'close' ? 'Закрыть без сохранения?' : 'Перейти без сохранения?'}
+        message={`Не сохранено: ${shownAdminAction.current?.labels.join(', ')}. Если ${
+          shownAdminAction.current?.type === 'close' ? 'закрыть панель' : 'перейти в другой раздел'
+        }, изменения пропадут.`}
+        confirmLabel="Не сохранять"
+        confirmIcon={<X className="w-4 h-4" />}
+        cancelLabel="Вернуться к правкам"
+        onConfirm={confirmPendingAdminAction}
+        onClose={() => setPendingAdminAction(null)}
+      />
 
       {/* ================= MODAL: FAQ ACCORDION ================= */}
       <FAQModal

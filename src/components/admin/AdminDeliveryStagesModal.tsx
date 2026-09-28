@@ -21,6 +21,8 @@ import {
   isTransportCompanyDelivery,
 } from '../../utils/deliveryStages';
 import { useDialogA11y } from '../../utils/useDialogA11y';
+import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
+import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
 
 interface AdminDeliveryStagesModalProps {
   isOpen: boolean;
@@ -37,7 +39,6 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
   onSave,
   onShowToast,
 }) => {
-  const dialog = useDialogA11y(isOpen && Boolean(order), onClose);
   const [stages, setStages] = useState<DeliveryStage[]>(() => {
     if (!order) return [];
     return getSynchronizedDeliveryStages(order);
@@ -54,6 +55,11 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newStatus, setNewStatus] = useState<DeliveryStage['status']>('completed');
+  // Edited stages: Escape, «×» and «Отмена» ask before the window closes
+  const isStagesDirty = useChangedSince(isOpen && order ? order.id : null, [stages, newTitle, newDesc]);
+  useUnsavedChanges(isStagesDirty, 'Этапы доставки');
+  const guard = useDiscardGuard(isStagesDirty, onClose);
+  const dialog = useDialogA11y(isOpen && Boolean(order), guard.requestClose);
 
   const handleStatusChange = (index: number, nextStatus: DeliveryStage['status']) => {
     if (order?.status === 'accepted' && index > 0 && nextStatus === 'completed') {
@@ -184,6 +190,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
   };
 
   return (
+    <>
     <AnimatePresence>
       {isOpen && order && (
         <motion.div
@@ -195,7 +202,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
           className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/50 backdrop-blur-xs"
         >
           <div
-            onClick={onClose}
+            onClick={guard.requestClose}
             className="fixed inset-0 cursor-pointer"
           />
 
@@ -232,7 +239,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
 
               <button
                 type="button"
-                onClick={onClose}
+                onClick={guard.requestClose}
                 className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer shrink-0"
                 title="Закрыть"
                 aria-label="Закрыть"
@@ -561,7 +568,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
             <div className="pt-2 border-t border-[#BAC5D5]/50 flex items-center justify-between gap-3 shrink-0">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={guard.requestClose}
                 className="neu-button py-2.5 px-4 rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer"
               >
                 Отмена
@@ -580,5 +587,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
         </motion.div>
       )}
     </AnimatePresence>
+    <DiscardChangesDialog {...guard.dialogProps} what="Изменения этапов" />
+    </>
   );
 };

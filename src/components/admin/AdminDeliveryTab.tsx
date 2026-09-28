@@ -23,6 +23,8 @@ import {
 import { DeliveryMethod, PickupPoint, StorefrontSettings } from '../../types';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { useDialogA11y } from '../../utils/useDialogA11y';
+import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
+import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
 
 interface AdminDeliveryTabProps {
   deliveryMethods: DeliveryMethod[];
@@ -50,13 +52,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
   // Modals state
   const [editingMethod, setEditingMethod] = useState<DeliveryMethod | null>(null);
   const [isMethodModalOpen, setIsMethodModalOpen] = useState(false);
-  const methodDialog = useDialogA11y(isMethodModalOpen, () => setIsMethodModalOpen(false));
   const [deletingMethodId, setDeletingMethodId] = useState<string | null>(null);
   const deleteMethodDialog = useDialogA11y(Boolean(deletingMethodId), () => setDeletingMethodId(null));
 
   const [editingPoint, setEditingPoint] = useState<PickupPoint | null>(null);
   const [isPointModalOpen, setIsPointModalOpen] = useState(false);
-  const pointDialog = useDialogA11y(isPointModalOpen, () => setIsPointModalOpen(false));
   const [deletingPointId, setDeletingPointId] = useState<string | null>(null);
   const deletePointDialog = useDialogA11y(Boolean(deletingPointId), () => setDeletingPointId(null));
 
@@ -81,6 +81,37 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
   const [formPointNote, setFormPointNote] = useState('');
   const [formPointIsActive, setFormPointIsActive] = useState(true);
   const [formPointIsDefault, setFormPointIsDefault] = useState(false);
+
+  // Unsaved edits: Escape, «×» and «Отмена» ask before the window closes; the admin panel asks too
+  const isMethodFormDirty = useChangedSince(isMethodModalOpen ? editingMethod?.id ?? 'new' : null, [
+    formMethodTitle,
+    formMethodDuration,
+    formMethodPrice,
+    formMethodIcon,
+    formMethodType,
+    formMethodDesc,
+    formMethodFreeThreshold,
+    formMethodIsActive,
+    formMethodBadge,
+  ]);
+  useUnsavedChanges(isMethodFormDirty, 'Способ доставки');
+  const methodGuard = useDiscardGuard(isMethodFormDirty, () => setIsMethodModalOpen(false));
+  const methodDialog = useDialogA11y(isMethodModalOpen, methodGuard.requestClose);
+
+  const isPointFormDirty = useChangedSince(isPointModalOpen ? editingPoint?.id ?? 'new' : null, [
+    formPointName,
+    formPointCity,
+    formPointAddress,
+    formPointMetro,
+    formPointSchedule,
+    formPointPhone,
+    formPointNote,
+    formPointIsActive,
+    formPointIsDefault,
+  ]);
+  useUnsavedChanges(isPointFormDirty, 'Пункт самовывоза');
+  const pointGuard = useDiscardGuard(isPointFormDirty, () => setIsPointModalOpen(false));
+  const pointDialog = useDialogA11y(isPointModalOpen, pointGuard.requestClose);
 
   // Filtered Methods
   const filteredMethods = deliveryMethods.filter((m) => {
@@ -811,7 +842,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => setIsMethodModalOpen(false)}
+                onClick={methodGuard.requestClose}
                 className="w-7 h-7 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
                 aria-label="Закрыть"
               >
@@ -821,10 +852,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
             <form onSubmit={handleSaveMethod} className="space-y-3.5 text-xs">
               <div>
-                <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                <label htmlFor="delivery-method-title" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                   Название способа доставки *
                 </label>
                 <input
+                  id="delivery-method-title"
                   type="text"
                   value={formMethodTitle}
                   onChange={(e) => setFormMethodTitle(e.target.value)}
@@ -836,10 +868,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="delivery-method-duration" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     Срок доставки
                   </label>
                   <input
+                    id="delivery-method-duration"
                     type="text"
                     value={formMethodDuration}
                     onChange={(e) => setFormMethodDuration(e.target.value)}
@@ -850,10 +883,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="delivery-method-price" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     Базовая стоимость (₽)
                   </label>
                   <input
+                    id="delivery-method-price"
                     type="number"
                     min="0"
                     step="50"
@@ -919,10 +953,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="delivery-method-free" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     Бесплатно при заказе от (₽)
                   </label>
                   <input
+                    id="delivery-method-free"
                     type="number"
                     min="0"
                     step="500"
@@ -936,10 +971,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="delivery-method-badge" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     Бейдж-метка (опционально)
                   </label>
                   <input
+                    id="delivery-method-badge"
                     type="text"
                     value={formMethodBadge}
                     onChange={(e) => setFormMethodBadge(e.target.value)}
@@ -950,10 +986,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                <label htmlFor="delivery-method-desc" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                   Подробное описание и условия для покупателя
                 </label>
                 <textarea
+                  id="delivery-method-desc"
                   rows={2}
                   value={formMethodDesc}
                   onChange={(e) => setFormMethodDesc(e.target.value)}
@@ -978,7 +1015,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               <div className="flex gap-2 pt-2 border-t border-[#BAC5D5]/50">
                 <button
                   type="button"
-                  onClick={() => setIsMethodModalOpen(false)}
+                  onClick={methodGuard.requestClose}
                   className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
                 >
                   Отмена
@@ -1010,7 +1047,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => setIsPointModalOpen(false)}
+                onClick={pointGuard.requestClose}
                 className="w-7 h-7 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
                 aria-label="Закрыть"
               >
@@ -1150,7 +1187,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               <div className="flex gap-2 pt-2 border-t border-[#BAC5D5]/50">
                 <button
                   type="button"
-                  onClick={() => setIsPointModalOpen(false)}
+                  onClick={pointGuard.requestClose}
                   className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
                 >
                   Отмена
@@ -1166,6 +1203,9 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
           </div>
         </div>
       )}
+
+      <DiscardChangesDialog {...methodGuard.dialogProps} what="Изменения способа доставки" />
+      <DiscardChangesDialog {...pointGuard.dialogProps} what="Изменения пункта самовывоза" />
 
       {/* ================= CONFIRM DELETE MODALS ================= */}
       {deletingMethodId && (

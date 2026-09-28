@@ -48,6 +48,7 @@ import { DeliveryTrackingMapModal } from '../DeliveryTrackingMapModal';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { SelectCheckbox } from './SelectCheckbox';
 import { useDialogA11y } from '../../utils/useDialogA11y';
+import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
 
 interface AdminOrdersTabProps {
   orders: Order[];
@@ -288,6 +289,9 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   // Quick Inline Manager Note Editor
   const [editingNoteOrderId, setEditingNoteOrderId] = useState<string | null>(null);
   const [tempNoteValue, setTempNoteValue] = useState<string>('');
+  // An open track number or note with edits: the admin panel asks before closing or switching the section
+  useUnsavedChanges(useChangedSince(editingTrackOrderId, [tempTrackValue, tempCarrierValue]), 'Трек-номер заказа');
+  useUnsavedChanges(useChangedSince(editingNoteOrderId, [tempNoteValue]), 'Заметка к заказу');
 
   // Filtered Orders Calculation
   const filteredOrders = useMemo(() => {

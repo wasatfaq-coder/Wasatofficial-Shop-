@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { MessagesSquare, Search } from 'lucide-react';
 import type { ChatMessage, Order, Product, PromoCode, StoreCategory, SupportThreadMeta } from '../../types';
 import {
-  chatMessageOrder,
   saveSupportThreadMeta,
   subscribeToSupportThreads,
   type ChatMessageChange,
@@ -12,6 +11,7 @@ import {
   LEGACY_THREAD_KEY,
   PRIORITY_LABELS,
   STATUS_LABELS,
+  summarizeSupportThreads,
   type SupportThreadSummary,
 } from '../../utils/supportThreads';
 
@@ -63,36 +63,7 @@ export const AdminSupportInbox: React.FC<AdminSupportInboxProps> = ({
 
   useEffect(() => subscribeToSupportThreads(setThreadMeta), []);
 
-  const threads = useMemo<SupportThreadSummary[]>(() => {
-    const byKey = new Map<string, SupportThreadSummary>();
-    for (const msg of messages) {
-      const key = msg.threadId || LEGACY_THREAD_KEY;
-      const orderNo = chatMessageOrder(msg);
-      const customerOrder = msg.threadId ? orders.find((o) => o.customerUid === msg.threadId) : undefined;
-      const entry = byKey.get(key) ?? {
-        key,
-        threadId: msg.threadId || null,
-        name: msg.threadId ? customerOrder?.customerName || 'Покупатель' : 'Общий чат (до разделения)',
-        count: 0,
-        lastOrder: -1,
-        lastText: '',
-        lastTime: '',
-        awaitingReply: false,
-      };
-      if (msg.threadName) entry.name = msg.threadName;
-      entry.count += 1;
-      // messages the staff deleted for themselves do not count as the dialog's last message
-      if (orderNo >= entry.lastOrder && !msg.hiddenForStaff) {
-        entry.lastOrder = orderNo;
-        entry.lastText = `${msg.isInternalNote ? 'Заметка: ' : ''}${msg.text || (msg.imageUrl ? 'Фото' : 'Вложение')}`;
-        entry.lastTime = msg.timestamp;
-        // notes are not answers: only the customer-visible exchange counts
-        if (!msg.isInternalNote) entry.awaitingReply = msg.sender === 'user';
-      }
-      byKey.set(key, entry);
-    }
-    return [...byKey.values()].sort((a, b) => b.lastOrder - a.lastOrder);
-  }, [messages, orders]);
+  const threads = useMemo(() => summarizeSupportThreads(messages, orders), [messages, orders]);
 
   const statusOf = (t: SupportThreadSummary): SupportThreadMeta['status'] =>
     (t.threadId && threadMeta[t.threadId]?.status) || 'open';
