@@ -2,6 +2,7 @@ import React from 'react';
 import { Download, LogOut, ShieldCheck, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { Order, UserProfile } from '../types';
+import { useDialogA11y } from '../utils/useDialogA11y';
 
 interface AccountDataModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export const AccountDataModal: React.FC<AccountDataModalProps> = ({
   onSignOut,
   onShowToast,
 }) => {
+  const dialog = useDialogA11y(isOpen, onClose);
   const handleExport = () => {
     const data = {
       exportedAt: new Date().toISOString(),
@@ -71,9 +73,8 @@ export const AccountDataModal: React.FC<AccountDataModalProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
           <div onClick={onClose} className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer" />
           <motion.div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="account-data-title"
+            ref={dialog.ref}
+            {...dialog.props}
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
@@ -85,7 +86,7 @@ export const AccountDataModal: React.FC<AccountDataModalProps> = ({
                 <div className="w-10 h-10 rounded-2xl neu-button flex items-center justify-center text-accent">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
-                <h3 id="account-data-title" className="text-base font-extrabold">
+                <h3 id={dialog.titleId} className="text-base font-extrabold">
                   Аккаунт и данные
                 </h3>
               </div>

@@ -3,6 +3,7 @@ import { X, Check, MapPin, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SavedAddress } from '../types';
 import { formatAddress } from '../utils/addressFormat';
+import { useDialogA11y } from '../utils/useDialogA11y';
 
 interface AddressEditModalProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
   onSave,
   requireCourierDetails = false,
 }) => {
+  const dialog = useDialogA11y(isOpen, onClose);
   const [title, setTitle] = useState('Дом');
   const [city, setCity] = useState('Москва');
   const [postalCode, setPostalCode] = useState('');
@@ -139,6 +141,8 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
             className="fixed inset-0 bg-[#2D3A4E]/45 backdrop-blur-xs cursor-pointer"
           />
           <motion.div
+            ref={dialog.ref}
+            {...dialog.props}
             key="address-modal"
             initial={{ scale: 0.93, opacity: 0, y: 12 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -150,7 +154,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
             <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/60">
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-accent" />
-                <h3 className="text-base font-extrabold text-[#2D3A4E]">
+                <h3 id={dialog.titleId} className="text-base font-extrabold text-[#2D3A4E]">
                   {editingAddress ? 'Редактировать адрес' : 'Новый адрес доставки'}
                 </h3>
               </div>

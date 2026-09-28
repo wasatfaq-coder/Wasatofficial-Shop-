@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useDialogA11y } from '../utils/useDialogA11y';
 
 interface ProductImageZoomModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
   productTitle,
   onClose,
 }) => {
+  const dialog = useDialogA11y(isOpen, onClose, { label: 'Просмотр фото' });
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -88,6 +90,8 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
     <AnimatePresence>
       {isOpen && (
         <motion.div
+          ref={dialog.ref}
+          {...dialog.props}
           key="product-image-zoom-modal"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

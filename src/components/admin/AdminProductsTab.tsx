@@ -59,6 +59,7 @@ import {
 import { categoryIcon } from '../../utils/categories';
 import type { StoreCategory } from '../../types';
 import { productImage } from '../../utils/productImage';
+import { useDialogA11y } from '../../utils/useDialogA11y';
 
 interface AdminProductsTabProps {
   /** Admin → «Категории»: the only category list for products */
@@ -91,15 +92,20 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [isBulkOperationsModalOpen, setIsBulkOperationsModalOpen] = useState(false);
   const [isBulkDiscountModalOpen, setIsBulkDiscountModalOpen] = useState(false);
+  const bulkDiscountDialog = useDialogA11y(isBulkDiscountModalOpen, () => setIsBulkDiscountModalOpen(false));
   const [bulkDiscountPercent, setBulkDiscountPercent] = useState<number>(15);
   const [isBulkCategoryDropdownOpen, setIsBulkCategoryDropdownOpen] = useState(false);
 
   // Modals
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
+  const productFormDialog = useDialogA11y(isProductFormOpen, () => setIsProductFormOpen(false), { closeOnEscape: false });
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const deleteProductDialog = useDialogA11y(Boolean(productToDelete), () => setProductToDelete(null));
   const [productToInspect, setProductToInspect] = useState<Product | null>(null);
+  const inspectDialog = useDialogA11y(Boolean(productToInspect), () => setProductToInspect(null));
   const [isCSVImportModalOpen, setIsCSVImportModalOpen] = useState(false);
+  const csvDialog = useDialogA11y(isCSVImportModalOpen, () => setIsCSVImportModalOpen(false));
   const [csvInputText, setCsvInputText] = useState('');
 
   // Product Form Fields State
@@ -135,6 +141,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isDraggingOverGallery, setIsDraggingOverGallery] = useState(false);
   const [previewZoomImage, setPreviewZoomImage] = useState<string | null>(null);
+  const zoomDialog = useDialogA11y(Boolean(previewZoomImage), () => setPreviewZoomImage(null), { label: 'Просмотр фото' });
   const [textEditModal, setTextEditModal] = useState<{
     isOpen: boolean;
     category?: string;
@@ -1288,7 +1295,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       {/* ================= MODAL: CREATE / EDIT PRODUCT ================= */}
       {isProductFormOpen && (
         <ModalPortal><div className="admin-no-glow fixed inset-0 z-[70] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-4 sm:p-6 max-w-4xl w-full space-y-4 text-[#2D3A4E] border border-white/80 max-h-[92vh] overflow-y-auto my-auto">
+          <div ref={productFormDialog.ref} {...productFormDialog.props} className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-4 sm:p-6 max-w-4xl w-full space-y-4 text-[#2D3A4E] border border-white/80 max-h-[92vh] overflow-y-auto my-auto">
             {/* Header: title on the left, status and close on the right (status wraps under the title on phones) */}
             <div className="flex flex-wrap items-start justify-between pb-3 border-b border-[#BAC5D5]/50 gap-x-3 gap-y-2.5">
               <div className="flex items-start gap-2.5 min-w-0 flex-1">
@@ -1297,7 +1304,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-sm sm:text-base font-black uppercase tracking-wider text-[#2D3A4E]">
+                    <h3 id={productFormDialog.titleId} className="text-sm sm:text-base font-black uppercase tracking-wider text-[#2D3A4E]">
                       {editingProduct ? 'Редактирование товара' : 'Новый товар каталога'}
                     </h3>
                     {editingProduct && (
@@ -1459,6 +1466,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         )}
                       </div>
                       <NeumorphicSelect
+                        ariaLabel="Категория"
                         value={formCategory}
                         onChange={(val) => setFormCategory(val)}
                         options={formCategoryOptions}
@@ -2200,14 +2208,14 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       {/* ================= MODAL: CSV IMPORT ================= */}
       {isCSVImportModalOpen && (
         <ModalPortal><div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-5 sm:p-6 max-w-xl w-full space-y-4 text-[#2D3A4E] border border-white/80 max-h-[90vh] overflow-y-auto my-auto">
+          <div ref={csvDialog.ref} {...csvDialog.props} className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-5 sm:p-6 max-w-xl w-full space-y-4 text-[#2D3A4E] border border-white/80 max-h-[90vh] overflow-y-auto my-auto">
             <div className="flex items-start sm:items-center justify-between pb-2 border-b border-[#BAC5D5]/50 gap-2">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
                   <FileSpreadsheet className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-sm sm:text-base font-black uppercase tracking-wider text-[#2D3A4E] truncate">
+                  <h3 id={csvDialog.titleId} className="text-sm sm:text-base font-black uppercase tracking-wider text-[#2D3A4E] truncate">
                     Импорт каталога из CSV
                   </h3>
                   <p className="text-[11px] text-[#4E5C70] font-medium truncate sm:whitespace-normal leading-tight">
@@ -2275,7 +2283,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       {/* ================= MODAL: QUICK PRODUCT INSPECT ================= */}
       {productToInspect && (
         <ModalPortal><div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-5 sm:p-6 max-w-lg w-full space-y-4 text-[#2D3A4E] border border-white/80 max-h-[90vh] overflow-y-auto my-auto">
+          <div ref={inspectDialog.ref} {...inspectDialog.props} className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-5 sm:p-6 max-w-lg w-full space-y-4 text-[#2D3A4E] border border-white/80 max-h-[90vh] overflow-y-auto my-auto">
             {/* Header */}
             <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
               <div className="flex items-center gap-2">
@@ -2283,7 +2291,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   <Eye className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black uppercase text-[#2D3A4E]">
+                  <h3 id={inspectDialog.titleId} className="text-sm font-black uppercase text-[#2D3A4E]">
                     Карточка товара
                   </h3>
                   <span className="text-[11px] font-mono text-[#4E5C70]">{productToInspect.id}</span>
@@ -2409,12 +2417,12 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       {/* ================= MODAL: DELETE PRODUCT CONFIRMATION ================= */}
       {productToDelete && (
         <ModalPortal><div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-5 sm:p-6 max-w-sm w-full space-y-3.5 text-[#2D3A4E] border border-white/80 my-auto text-center">
+          <div ref={deleteProductDialog.ref} {...deleteProductDialog.props} className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-5 sm:p-6 max-w-sm w-full space-y-3.5 text-[#2D3A4E] border border-white/80 my-auto text-center">
             <div className="w-12 h-12 rounded-2xl neu-inset mx-auto flex items-center justify-center text-danger">
               <Trash2 className="w-6 h-6" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-sm sm:text-base font-black text-[#2D3A4E]">Удалить товар?</h3>
+              <h3 id={deleteProductDialog.titleId} className="text-sm sm:text-base font-black text-[#2D3A4E]">Удалить товар?</h3>
               <p className="text-xs text-[#4E5C70] leading-relaxed">
                 Вы действительно хотите безвозвратно удалить{' '}
                 <strong className="text-[#2D3A4E]">«{productToDelete.title}»</strong> из каталога?
@@ -2451,9 +2459,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       {/* Bulk Discount Modal */}
       {isBulkDiscountModalOpen && (
         <ModalPortal><div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-6 max-w-sm w-full space-y-4 text-[#2D3A4E] border border-white/80 my-auto">
+          <div ref={bulkDiscountDialog.ref} {...bulkDiscountDialog.props} className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-6 max-w-sm w-full space-y-4 text-[#2D3A4E] border border-white/80 my-auto">
             <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
-              <h3 className="text-sm font-black uppercase text-[#2D3A4E]">Скидка на товары</h3>
+              <h3 id={bulkDiscountDialog.titleId} className="text-sm font-black uppercase text-[#2D3A4E]">Скидка на товары</h3>
               <button
                 onClick={() => setIsBulkDiscountModalOpen(false)}
                 className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all"
@@ -2511,6 +2519,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
           onClick={() => setPreviewZoomImage(null)}
         >
           <div
+            ref={zoomDialog.ref}
+            {...zoomDialog.props}
             className="relative max-w-2xl max-h-[85vh] neu-flat rounded-3xl overflow-hidden p-2 border border-white/60 animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >

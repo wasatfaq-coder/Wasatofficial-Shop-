@@ -16,6 +16,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { ActiveTab, StorefrontSettings } from '../types';
 import { getStoreName, publicSetting } from '../utils/storeContacts';
+import { useDialogA11y } from '../utils/useDialogA11y';
 
 interface SidebarDrawerProps {
   isOpen: boolean;
@@ -44,6 +45,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
   onOpenBrandDetails,
   storefrontSettings,
 }) => {
+  const dialog = useDialogA11y(isOpen, onClose);
   const navigateTo = (tab: ActiveTab) => {
     setActiveTab(tab);
     onClose();
@@ -73,6 +75,8 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
 
           {/* Drawer Container */}
           <motion.div
+            ref={dialog.ref}
+            {...dialog.props}
             key="drawer-panel"
             initial={{ x: '-100%' }}
             animate={{ x: 0 }}
@@ -84,7 +88,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
               {/* Drawer Header */}
               <div className="flex items-center justify-between pb-4 border-b border-[#BAC5D5]/60 shrink-0">
                 <div>
-                  <h2 className="text-xl font-extrabold text-[#2D3A4E] tracking-tight">
+                  <h2 id={dialog.titleId} className="text-xl font-extrabold text-[#2D3A4E] tracking-tight">
                     {storeName}
                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-gold ml-1 align-baseline" aria-hidden="true" />
                   </h2>

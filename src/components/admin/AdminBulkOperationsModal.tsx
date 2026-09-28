@@ -5,6 +5,7 @@ import { Product, StoreCategory } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { NotConfigured } from '../NotConfigured';
 import { productImage } from '../../utils/productImage';
+import { useDialogA11y } from '../../utils/useDialogA11y';
 
 interface AdminBulkOperationsModalProps {
   isOpen: boolean;
@@ -43,6 +44,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
   onApplyChanges,
   onShowToast,
 }) => {
+  const dialog = useDialogA11y(isOpen && selectedProducts.length > 0, onClose);
   const [activeTab, setActiveTab] = useState<BulkTab>('pricing');
 
   // --- Pricing Tab State ---
@@ -176,6 +178,8 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
           />
 
           <motion.div
+            ref={dialog.ref}
+            {...dialog.props}
             key="bulk-ops-modal"
             initial={{ scale: 0.93, opacity: 0, y: 12 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -191,7 +195,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm sm:text-base font-black text-[#2D3A4E]">
+                    <h3 id={dialog.titleId} className="text-sm sm:text-base font-black text-[#2D3A4E]">
                       Массовые операции каталога
                     </h3>
                     <span className="neu-inset px-2.5 py-0.5 rounded-lg text-xs font-black text-accent">

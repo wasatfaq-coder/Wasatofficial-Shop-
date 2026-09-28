@@ -39,6 +39,7 @@ import { skuKey } from '../../shared/barcode';
 import { downloadCSV } from '../../utils/csvHelpers';
 import { productImage } from '../../utils/productImage';
 import { pluralRu } from '../../utils/pluralize';
+import { useDialogA11y } from '../../utils/useDialogA11y';
 
 interface AdminInventoryTabProps {
   products: Product[];
@@ -397,6 +398,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
 
   // Movement Operation Modal State
   const [isOperationModalOpen, setIsOperationModalOpen] = useState(false);
+  const operationDialog = useDialogA11y(isOperationModalOpen, () => setIsOperationModalOpen(false));
   const [opType, setOpType] = useState<StockMovementLog['type']>('receipt');
   const [opSelectedProductId, setOpSelectedProductId] = useState<string>(products?.[0]?.id || '');
   const [opSelectedSkuIndex, setOpSelectedSkuIndex] = useState<number>(0);
@@ -1427,14 +1429,14 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
       {/* ================= MODAL: EXECUTE WAREHOUSE OPERATION ================= */}
       {isOperationModalOpen && (
         <div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in">
-          <div className="neu-modal rounded-3xl p-5 sm:p-6 max-w-md w-full space-y-4 text-[#2D3A4E] border border-white/80 my-auto">
+          <div ref={operationDialog.ref} {...operationDialog.props} className="neu-modal rounded-3xl p-5 sm:p-6 max-w-md w-full space-y-4 text-[#2D3A4E] border border-white/80 my-auto">
             <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center text-accent">
                   <Boxes className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black uppercase text-[#2D3A4E]">
+                  <h3 id={operationDialog.titleId} className="text-sm font-black uppercase text-[#2D3A4E]">
                     Складская операция
                   </h3>
                   <p className="text-[11px] font-bold text-[#4E5C70]">
@@ -1484,6 +1486,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                   Выберите товар
                 </label>
                 <NeumorphicSelect
+                  ariaLabel="Товар"
                   value={opSelectedProductId}
                   onChange={(val) => {
                     setOpSelectedProductId(val);
@@ -1502,6 +1505,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                   Вариация (Цвет / Размер / SKU)
                 </label>
                 <NeumorphicSelect
+                  ariaLabel="Вариант товара"
                   value={opSelectedSkuIndex.toString()}
                   onChange={(val) => setOpSelectedSkuIndex(Number(val))}
                   options={selectedProductSkus.map((s, idx) => ({

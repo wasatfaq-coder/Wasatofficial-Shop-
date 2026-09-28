@@ -5,6 +5,7 @@ import { currentStoreName, getLegalDetails, getStoreContacts } from '../../utils
 import { copyToClipboard } from '../../utils/clipboard';
 import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
 import { motion, AnimatePresence } from 'motion/react';
+import { useDialogA11y } from '../../utils/useDialogA11y';
 
 interface AdminOrderInvoiceModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
   storefrontSettings,
   onShowToast,
 }) => {
+  const dialog = useDialogA11y(isOpen && Boolean(order), onClose);
   // Seller details come from Admin → «Витрина»; demo template requisites are never printed
   const legal = getLegalDetails(storefrontSettings);
   const contacts = getStoreContacts(storefrontSettings);
@@ -68,6 +70,8 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
           />
 
           <motion.div
+            ref={dialog.ref}
+            {...dialog.props}
             key="invoice-modal"
             initial={{ scale: 0.93, opacity: 0, y: 12 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -82,7 +86,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
               <FileText className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-extrabold text-[#2D3A4E]">Товарная накладная и чек</h3>
+              <h3 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">Товарная накладная и чек</h3>
               <p className="text-[11px] text-slate-500">Печатная форма для комплектации и передачи клиенту</p>
             </div>
           </div>

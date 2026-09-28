@@ -3,6 +3,7 @@ import { Trash2, Heart, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CartItem } from '../types';
 import { productImage } from '../utils/productImage';
+import { useDialogA11y } from '../utils/useDialogA11y';
 
 interface CartRemoveConfirmModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
   onConfirmRemove,
   onMoveToFavorites,
 }) => {
+  const dialog = useDialogA11y(isOpen && Boolean(item), onClose);
   return (
     <AnimatePresence>
       {isOpen && item && (
@@ -35,6 +37,8 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
             className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer"
           />
           <motion.div
+            ref={dialog.ref}
+            {...dialog.props}
             key="cart-remove-modal"
             initial={{ scale: 0.93, opacity: 0, y: 12 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -48,7 +52,7 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
               <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center">
                 <Trash2 className="w-4 h-4 text-danger" />
               </div>
-              <h3 className="text-sm font-extrabold text-[#2D3A4E]">Удаление товара</h3>
+              <h3 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">Удаление товара</h3>
             </div>
             <button
               onClick={onClose}

@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { ConfirmDialog } from './ConfirmDialog';
 import { pluralRu } from '../utils/pluralize';
+import { useDialogA11y } from '../utils/useDialogA11y';
 
 interface ProductReviewsSectionProps {
   product: Product;
@@ -34,6 +35,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
   const [reviewToDelete, setReviewToDelete] = useState<ProductReview | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isWriteReviewOpen, setIsWriteReviewOpen] = useState(false);
+  const reviewDialog = useDialogA11y(isWriteReviewOpen, () => setIsWriteReviewOpen(false));
   const [selectedRating, setSelectedRating] = useState<number>(5);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
   const [authorName, setAuthorName] = useState(userProfile?.name || '');
@@ -363,14 +365,14 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
       {/* Modal: Write Review */}
       {isWriteReviewOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/50 backdrop-blur-sm animate-in fade-in">
-          <div className="neu-modal rounded-3xl p-5 max-w-md w-full space-y-4 max-h-[90vh] overflow-y-auto no-scrollbar border border-white/80 text-[#2D3A4E]">
+          <div ref={reviewDialog.ref} {...reviewDialog.props} className="neu-modal rounded-3xl p-5 max-w-md w-full space-y-4 max-h-[90vh] overflow-y-auto no-scrollbar border border-white/80 text-[#2D3A4E]">
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-2xl neu-inset flex items-center justify-center text-accent">
                   <MessageSquarePlus className="w-5 h-5 stroke-[2.2]" />
                 </div>
                 <div>
-                  <h3 className="text-base font-extrabold text-[#2D3A4E]">Оставить отзыв</h3>
+                  <h3 id={reviewDialog.titleId} className="text-base font-extrabold text-[#2D3A4E]">Оставить отзыв</h3>
                   <p className="text-[11px] text-[#4E5C70] truncate max-w-[220px]">
                     {product.title}
                   </p>

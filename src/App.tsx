@@ -1539,7 +1539,7 @@ export default function App() {
 
         {/* Promo message from Admin → «Витрина»: shown when switched on and filled in */}
         {storefrontSettings?.isStoreBannerVisible && publicSetting(storefrontSettings.storeBannerText) && (
-          <div className="px-4 pt-2">
+          <aside aria-label="Объявление магазина" className="px-4 pt-2">
             <p className="max-w-lg mx-auto neu-flat-sm rounded-2xl px-3 py-2 flex items-center justify-center gap-2 text-center text-xs font-bold text-[#2D3A4E]">
               {storefrontSettings.bannerBadgeText?.trim() && (
                 <span className="px-1.5 py-0.5 rounded-md bg-accent text-white text-[11px] font-black uppercase shrink-0">
@@ -1548,7 +1548,7 @@ export default function App() {
               )}
               <span>{withStoreName(publicSetting(storefrontSettings.storeBannerText), getStoreName(storefrontSettings))}</span>
             </p>
-          </div>
+          </aside>
         )}
 
         {/* Top Header Bar (only shown on non-home screens) */}

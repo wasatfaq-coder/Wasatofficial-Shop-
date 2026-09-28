@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { PromoCode, CartItem, AppliedPromoInfo } from '../types';
 import { copyToClipboard } from '../utils/clipboard';
 import { NotConfigured } from './NotConfigured';
+import { useDialogA11y } from '../utils/useDialogA11y';
 
 interface PromoModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
   cartItems = [],
   promos = [],
 }) => {
+  const dialog = useDialogA11y(isOpen, onClose);
   const [customInput, setCustomInput] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -135,6 +137,8 @@ export const PromoModal: React.FC<PromoModalProps> = ({
           />
 
           <motion.div
+            ref={dialog.ref}
+            {...dialog.props}
             key="promo-modal"
             initial={{ scale: 0.94, opacity: 0, y: 12 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -150,7 +154,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                  <h3 className="text-base font-extrabold text-[#2D3A4E] leading-tight whitespace-nowrap">
+                  <h3 id={dialog.titleId} className="text-base font-extrabold text-[#2D3A4E] leading-tight whitespace-nowrap">
                     Промокоды и купоны
                   </h3>
                   <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full neu-inset text-accent whitespace-nowrap shrink-0">

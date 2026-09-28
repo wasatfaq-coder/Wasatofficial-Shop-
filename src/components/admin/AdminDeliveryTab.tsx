@@ -21,6 +21,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { DeliveryMethod, PickupPoint, StorefrontSettings } from '../../types';
+import { NeumorphicSelect } from '../NeumorphicSelect';
+import { useDialogA11y } from '../../utils/useDialogA11y';
 
 interface AdminDeliveryTabProps {
   deliveryMethods: DeliveryMethod[];
@@ -48,11 +50,15 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
   // Modals state
   const [editingMethod, setEditingMethod] = useState<DeliveryMethod | null>(null);
   const [isMethodModalOpen, setIsMethodModalOpen] = useState(false);
+  const methodDialog = useDialogA11y(isMethodModalOpen, () => setIsMethodModalOpen(false));
   const [deletingMethodId, setDeletingMethodId] = useState<string | null>(null);
+  const deleteMethodDialog = useDialogA11y(Boolean(deletingMethodId), () => setDeletingMethodId(null));
 
   const [editingPoint, setEditingPoint] = useState<PickupPoint | null>(null);
   const [isPointModalOpen, setIsPointModalOpen] = useState(false);
+  const pointDialog = useDialogA11y(isPointModalOpen, () => setIsPointModalOpen(false));
   const [deletingPointId, setDeletingPointId] = useState<string | null>(null);
+  const deletePointDialog = useDialogA11y(Boolean(deletingPointId), () => setDeletingPointId(null));
 
   // Method Form State
   const [formMethodTitle, setFormMethodTitle] = useState('');
@@ -793,13 +799,13 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
       {/* ================= MODAL: ADD / EDIT DELIVERY METHOD ================= */}
       {isMethodModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-xs animate-in fade-in">
-          <div className="neu-modal rounded-3xl p-5 max-w-lg w-full space-y-4 border border-white/80 text-[#2D3A4E] max-h-[90vh] overflow-y-auto">
+          <div ref={methodDialog.ref} {...methodDialog.props} className="neu-modal rounded-3xl p-5 max-w-lg w-full space-y-4 border border-white/80 text-[#2D3A4E] max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-2.5">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center text-accent">
                   <Truck className="w-4 h-4" />
                 </div>
-                <h3 className="text-sm font-black text-[#2D3A4E]">
+                <h3 id={methodDialog.titleId} className="text-sm font-black text-[#2D3A4E]">
                   {editingMethod ? 'Редактировать способ доставки' : 'Новый модуль доставки'}
                 </h3>
               </div>
@@ -860,20 +866,22 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="delivery-method-type" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     Тип модуля
                   </label>
-                  <select
+                  <NeumorphicSelect
+                    id="delivery-method-type"
                     value={formMethodType}
-                    onChange={(e) => setFormMethodType(e.target.value as any)}
-                    className="w-full neu-inset rounded-xl py-2 px-3 text-[#2D3A4E]"
-                  >
-                    <option value="courier">Курьерская доставка</option>
-                    <option value="pickup">Самовывоз (ПВЗ / Бутик)</option>
-                    <option value="express">Экспресс-доставка</option>
-                    <option value="post">Почта России</option>
-                    <option value="custom">Транспортная компания (СДЭК и др.)</option>
-                  </select>
+                    onChange={(v) => setFormMethodType(v as typeof formMethodType)}
+                    triggerClassName="rounded-xl py-2 px-3"
+                    options={[
+                      { value: 'courier', label: 'Курьерская доставка' },
+                      { value: 'pickup', label: 'Самовывоз (ПВЗ / Бутик)' },
+                      { value: 'express', label: 'Экспресс-доставка' },
+                      { value: 'post', label: 'Почта России' },
+                      { value: 'custom', label: 'Транспортная компания (СДЭК и др.)' },
+                    ]}
+                  />
                 </div>
 
                 <div>
@@ -990,13 +998,13 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
       {/* ================= MODAL: ADD / EDIT PICKUP POINT ================= */}
       {isPointModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-xs animate-in fade-in">
-          <div className="neu-modal rounded-3xl p-5 max-w-lg w-full space-y-4 border border-white/80 text-[#2D3A4E] max-h-[90vh] overflow-y-auto">
+          <div ref={pointDialog.ref} {...pointDialog.props} className="neu-modal rounded-3xl p-5 max-w-lg w-full space-y-4 border border-white/80 text-[#2D3A4E] max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-2.5">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center text-accent">
                   <Store className="w-4 h-4" />
                 </div>
-                <h3 className="text-sm font-black text-[#2D3A4E]">
+                <h3 id={pointDialog.titleId} className="text-sm font-black text-[#2D3A4E]">
                   {editingPoint ? 'Редактировать пункт самовывоза' : 'Новый пункт выдачи заказов'}
                 </h3>
               </div>
@@ -1162,10 +1170,10 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
       {/* ================= CONFIRM DELETE MODALS ================= */}
       {deletingMethodId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2D3A4E]/40 backdrop-blur-xs animate-in fade-in">
-          <div className="neu-modal rounded-3xl p-5 max-w-sm w-full space-y-4 border border-white/80 text-[#2D3A4E]">
+          <div ref={deleteMethodDialog.ref} {...deleteMethodDialog.props} className="neu-modal rounded-3xl p-5 max-w-sm w-full space-y-4 border border-white/80 text-[#2D3A4E]">
             <div className="flex items-center gap-2.5 text-danger">
               <AlertCircle className="w-5 h-5 shrink-0" />
-              <h4 className="text-sm font-black">Удалить способ доставки?</h4>
+              <h4 id={deleteMethodDialog.titleId} className="text-sm font-black">Удалить способ доставки?</h4>
             </div>
             <p className="text-xs text-[#4E5C70]">
               Этот способ доставки перестанет отображаться при оформлении заказов на сайте.
@@ -1192,10 +1200,10 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
       {deletingPointId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2D3A4E]/40 backdrop-blur-xs animate-in fade-in">
-          <div className="neu-modal rounded-3xl p-5 max-w-sm w-full space-y-4 border border-white/80 text-[#2D3A4E]">
+          <div ref={deletePointDialog.ref} {...deletePointDialog.props} className="neu-modal rounded-3xl p-5 max-w-sm w-full space-y-4 border border-white/80 text-[#2D3A4E]">
             <div className="flex items-center gap-2.5 text-danger">
               <AlertCircle className="w-5 h-5 shrink-0" />
-              <h4 className="text-sm font-black">Удалить пункт самовывоза?</h4>
+              <h4 id={deletePointDialog.titleId} className="text-sm font-black">Удалить пункт самовывоза?</h4>
             </div>
             <p className="text-xs text-[#4E5C70]">
               Пункт выдачи будет удален из списка доступных адресов для самовывоза клиентами.

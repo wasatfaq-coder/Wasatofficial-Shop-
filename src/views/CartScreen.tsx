@@ -19,6 +19,7 @@ import { NotConfigured } from '../components/NotConfigured';
 import { DEFAULT_FREE_DELIVERY_THRESHOLD, QUICK_ORDER_DELIVERY_TITLE, calcPromoDiscount, toPricingLine } from '../shared/orderPricing';
 import { productImage } from '../utils/productImage';
 import { promoDiscountText } from '../utils/promoLabel';
+import { useDialogA11y } from '../utils/useDialogA11y';
 
 interface CartScreenProps {
   cartItems: CartItem[];
@@ -75,6 +76,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
     (item) => item.quantity > getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode)
   ).length;
   const [isClearCartConfirmOpen, setIsClearCartConfirmOpen] = useState(false);
+  const clearDialog = useDialogA11y(isClearCartConfirmOpen, () => setIsClearCartConfirmOpen(false));
 
   // Calculate totals
   const rawSubtotal = cartItems.reduce(
@@ -651,12 +653,12 @@ export const CartScreen: React.FC<CartScreenProps> = ({
       {/* Clear Cart Confirmation Modal */}
       {isClearCartConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/50 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="relative w-full max-w-sm neu-modal rounded-3xl p-5 space-y-4 border border-white/80">
+          <div ref={clearDialog.ref} {...clearDialog.props} className="relative w-full max-w-sm neu-modal rounded-3xl p-5 space-y-4 border border-white/80">
             <div className="flex items-center gap-2 text-danger pb-2 border-b border-[#BAC5D5]/50">
               <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center">
                 <Trash2 className="w-4 h-4 text-danger" />
               </div>
-              <h3 className="text-sm font-extrabold text-[#2D3A4E]">Очистка всей корзины</h3>
+              <h3 id={clearDialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">Очистка всей корзины</h3>
             </div>
             <p className="text-xs text-[#4E5C70] leading-relaxed">
               Вы уверены, что хотите удалить все <strong>{totalItemsCount}</strong> поз. из корзины?

@@ -21,6 +21,7 @@ import { StorefrontSettings } from '../types';
 import { copyToClipboard as safeCopyToClipboard } from '../utils/clipboard';
 import { getLegalDetails, getStoreContacts, getStoreName } from '../utils/storeContacts';
 import { NotConfigured } from './NotConfigured';
+import { useDialogA11y } from '../utils/useDialogA11y';
 
 interface BrandRequisitesModalProps {
   isOpen: boolean;
@@ -37,6 +38,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
   storefrontSettings,
   onOpenSupportChat,
 }) => {
+  const dialog = useDialogA11y(isOpen, onClose);
   const [activeTab, setActiveTab] = useState<TabType>('concierge');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -127,6 +129,8 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
 
           {/* Modal Container */}
           <motion.div
+            ref={dialog.ref}
+            {...dialog.props}
             key="requisites-modal"
             initial={{ scale: 0.93, opacity: 0, y: 12 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -141,7 +145,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                   <Crown className="w-5 h-5 stroke-[2.2]" />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-base sm:text-lg font-black text-[#2D3A4E] tracking-tight truncate">
+                  <h2 id={dialog.titleId} className="text-base sm:text-lg font-black text-[#2D3A4E] tracking-tight truncate">
                     {storeName} • О бренде и реквизиты
                   </h2>
                   <p className="text-[11px] text-[#4E5C70] font-semibold truncate">

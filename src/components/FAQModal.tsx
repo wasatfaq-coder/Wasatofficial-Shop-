@@ -12,6 +12,7 @@ import { NotConfigured } from './NotConfigured';
 import type { StoreFaqItem } from '../types';
 import { telHref } from '../utils/storeContacts';
 import { formatDays } from '../utils/pluralize';
+import { useDialogA11y } from '../utils/useDialogA11y';
 
 interface FAQModalProps {
   isOpen: boolean;
@@ -40,6 +41,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
   storeEmail = '',
   faqItems = [],
 }) => {
+  const dialog = useDialogA11y(isOpen, onClose);
   // {FREE_DELIVERY} and {RETURN_DAYS} in the admin's texts are replaced with the store settings
   const faqData = useMemo<FAQAccordionItem[]>(() => {
     const fill = (text: string) =>
@@ -80,6 +82,8 @@ export const FAQModal: React.FC<FAQModalProps> = ({
 
         {/* Modal Container */}
         <motion.div
+          ref={dialog.ref}
+          {...dialog.props}
           initial={{ scale: 0.94, opacity: 0, y: 15 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.94, opacity: 0, y: 15 }}
@@ -93,7 +97,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
                 <HelpCircle className="w-5 h-5 stroke-[2.2]" />
               </div>
               <div>
-                <h3 className="text-base font-extrabold text-[#2D3A4E]">
+                <h3 id={dialog.titleId} className="text-base font-extrabold text-[#2D3A4E]">
                   Часто задаваемые вопросы (FAQ)
                 </h3>
                 <p className="text-[11px] text-[#4E5C70]">Ответы магазина на частые вопросы</p>

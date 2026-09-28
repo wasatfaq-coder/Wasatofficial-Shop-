@@ -39,6 +39,7 @@ import type {
 } from '../../types';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { ModalPortal } from '../ModalPortal';
+import { useDialogA11y } from '../../utils/useDialogA11y';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { copyToClipboard } from '../../utils/clipboard';
 import { compressChatImageFile } from '../../utils/imageUpload';
@@ -134,21 +135,22 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
   onClose,
   children,
   wide,
-}) => (
+}) => {
+  const dialog = useDialogA11y(true, onClose);
+  return (
   <ModalPortal>
     <div
       className="fixed inset-0 z-[150] bg-[#2D3A4E]/55 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
+        ref={dialog.ref}
+        {...dialog.props}
         onClick={(e) => e.stopPropagation()}
         className={`w-full ${wide ? 'max-w-lg' : 'max-w-md'} neu-modal rounded-3xl p-4 sm:p-5 flex flex-col gap-3.5 max-h-[90dvh] animate-in zoom-in-95 fade-in duration-200`}
       >
         <div className="flex items-center justify-between gap-3 border-b border-[#BAC5D5]/50 pb-3 shrink-0">
-          <h4 className="text-sm font-black text-[#2D3A4E]">{title}</h4>
+          <h4 id={dialog.titleId} className="text-sm font-black text-[#2D3A4E]">{title}</h4>
           <button
             type="button"
             onClick={onClose}
@@ -162,7 +164,8 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
       </div>
     </div>
   </ModalPortal>
-);
+  );
+};
 
 /** Segmented control: the selected option pressed in */
 function Segments<T extends string>({
@@ -236,6 +239,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   // --- dialogs ---
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const photoDialog = useDialogA11y(Boolean(previewImage), () => setPreviewImage(null), { label: 'Просмотр фото' });
 
   // --- order context ---
   const sortedOrders = useMemo(
@@ -691,6 +695,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
           </div>
           {sortedOrders.length > 1 && (
             <NeumorphicSelect
+              ariaLabel="Заказ покупателя"
               value={order.id}
               onChange={setOrderId}
               variant="inset"
@@ -1067,6 +1072,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             <div>
               <span className={labelClass}>Новый статус</span>
               <NeumorphicSelect
+                ariaLabel="Новый статус"
                 value={newStatus}
                 onChange={(v) => setNewStatus(v as Order['status'])}
                 variant="inset"
@@ -1108,6 +1114,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             <div>
               <span className={labelClass}>Причина</span>
               <NeumorphicSelect
+                ariaLabel="Причина"
                 value={returnReason}
                 onChange={setReturnReason}
                 variant="inset"
@@ -1184,6 +1191,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 <div>
                   <span className={labelClass}>Цвет</span>
                   <NeumorphicSelect
+                    ariaLabel="Цвет"
                     value={recommendColor}
                     onChange={setRecommendColor}
                     variant="inset"
@@ -1196,6 +1204,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 <div>
                   <span className={labelClass}>Размер</span>
                   <NeumorphicSelect
+                    ariaLabel="Размер"
                     value={recommendSize}
                     onChange={setRecommendSize}
                     variant="inset"
@@ -1443,6 +1452,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <input value={tplTitle} onChange={(e) => setTplTitle(e.target.value)} placeholder="Название" aria-label="Название шаблона" className={inputClass} />
               <NeumorphicSelect
+                ariaLabel="Раздел шаблона"
                 value={tplCategory}
                 onChange={(v) => setTplCategory(v as ChatQuickTemplate['category'])}
                 variant="inset"
@@ -1478,13 +1488,13 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
           <div
             className="fixed inset-0 z-[210] flex items-center justify-center p-3 sm:p-4 bg-black/80 animate-in fade-in duration-200"
             onClick={() => setPreviewImage(null)}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Просмотр фото"
+            ref={photoDialog.ref}
+            {...photoDialog.props}
           >
             <div className="relative animate-in zoom-in-95 fade-in duration-200" onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
+                data-autofocus
                 onClick={() => setPreviewImage(null)}
                 className="absolute top-2.5 right-2.5 w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#2D3A4E] cursor-pointer"
                 aria-label="Закрыть просмотр"
