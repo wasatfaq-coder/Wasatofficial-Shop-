@@ -6,6 +6,7 @@ import { ModalPortal } from './ModalPortal';
 import { getOrderableStock, getVariantStock } from '../utils/inventory';
 import { initialColor, initialSize } from '../utils/variantSelection';
 import { productImage } from '../utils/productImage';
+import { useDialogA11y } from '../utils/useDialogA11y';
 
 interface VariantPickerSheetProps {
   /** Product whose «+» was pressed; null — closed */
@@ -19,7 +20,7 @@ interface VariantPickerSheetProps {
 
 /**
  * «+» on a product card with several sizes or colours: asks which one instead of adding the first.
- * Bottom sheet on the phone, a window on the desktop; Escape and the backdrop close it.
+ * Bottom sheet on the phone, a window on the desktop; Escape and the backdrop close it (useDialogA11y).
  */
 export const VariantPickerSheet: React.FC<VariantPickerSheetProps> = ({
   product,
@@ -32,29 +33,18 @@ export const VariantPickerSheet: React.FC<VariantPickerSheetProps> = ({
   const [size, setSize] = useState('');
   const [sizeError, setSizeError] = useState(false);
   const sizesRef = useRef<HTMLDivElement>(null);
-  const openerRef = useRef<HTMLElement | null>(null);
+  // Focus trap, Escape, focus return — the shared window behaviour
+  const dialog = useDialogA11y(Boolean(product), onClose);
 
   useEffect(() => {
     if (!product) return;
     setColor(initialColor(product, preorderMode));
     setSize(initialSize(product));
     setSizeError(false);
-    openerRef.current = document.activeElement as HTMLElement | null;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKey);
-    // Focus the first size that can be ordered once the sheet has appeared
-    const timer = window.setTimeout(() => {
-      sizesRef.current?.querySelector<HTMLButtonElement>('button:not([disabled])')?.focus();
-    }, 80);
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      window.clearTimeout(timer);
-      openerRef.current?.focus?.();
-    };
     // Reset only when another product is opened
   }, [product?.id]);
+
+  const firstOrderableSize = product?.sizes.find((sz) => getOrderableStock(product, color, sz, preorderMode) > 0);
 
   const handleAdd = () => {
     if (!product) return;
@@ -84,9 +74,8 @@ export const VariantPickerSheet: React.FC<VariantPickerSheetProps> = ({
               aria-hidden="true"
             />
             <motion.div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="variant-picker-title"
+              ref={dialog.ref}
+              {...dialog.props}
               initial={{ y: 40, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 40, opacity: 0 }}
@@ -101,7 +90,7 @@ export const VariantPickerSheet: React.FC<VariantPickerSheetProps> = ({
                   className="w-14 h-[72px] rounded-xl object-cover shrink-0"
                 />
                 <div className="min-w-0 flex-1">
-                  <h2 id="variant-picker-title" className="text-sm font-bold text-[#2D3A4E] leading-snug line-clamp-2">
+                  <h2 id={dialog.titleId} className="text-sm font-bold text-[#2D3A4E] leading-snug line-clamp-2">
                     {product.title}
                   </h2>
                   <p className="font-display text-base font-extrabold text-[#2D3A4E] mt-1">
@@ -155,7 +144,7 @@ export const VariantPickerSheet: React.FC<VariantPickerSheetProps> = ({
                 </div>
               )}
 
-              {/* Size */}
+              {/* Size (focus starts on the first one that can be ordered) */}
               <div className="space-y-1.5">
                 <p className="text-xs font-bold text-[#2D3A4E]">
                   Размер{size ? <>: <span className="text-accent">{size}</span></> : null}
@@ -177,6 +166,7 @@ export const VariantPickerSheet: React.FC<VariantPickerSheetProps> = ({
                         type="button"
                         role="radio"
                         aria-checked={isSelected}
+                        data-autofocus={sz === firstOrderableSize ? '' : undefined}
                         disabled={orderable === 0}
                         onClick={() => {
                           setSize(sz);

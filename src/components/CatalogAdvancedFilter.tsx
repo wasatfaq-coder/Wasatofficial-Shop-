@@ -16,6 +16,7 @@ import { isProductInStock } from '../utils/inventory';
 import { productRatingValue } from '../utils/productRating';
 import { pluralRu } from '../utils/pluralize';
 import { NeumorphicSwitch } from './NeumorphicSwitch';
+import { useDialogA11y } from '../utils/useDialogA11y';
 
 export interface FilterState {
   minPrice: number;
@@ -127,6 +128,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
   isInlineExpanded,
   onToggleInline,
 }) => {
+  const dialog = useDialogA11y(isOpenModal, onCloseModal);
   const showLabel =
     filteredCount === 0
       ? 'Ничего не найдено'
@@ -505,6 +507,8 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
             />
 
             <motion.div
+              ref={dialog.ref}
+              {...dialog.props}
               key="catalog-filter-modal-card"
               initial={{ scale: 0.94, opacity: 0, y: 12 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -516,7 +520,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
               <div className="flex items-center justify-between pb-3 border-b border-[#BAC5D5]/60">
                 <div className="flex items-center gap-2">
                   <SlidersHorizontal className="w-5 h-5 text-accent stroke-[2.2]" />
-                  <h3 className="text-base font-bold text-[#2D3A4E]">
+                  <h3 id={dialog.titleId} className="text-base font-bold text-[#2D3A4E]">
                     Расширенная фильтрация
                   </h3>
                 </div>

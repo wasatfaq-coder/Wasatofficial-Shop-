@@ -19,6 +19,7 @@ import type { StoreCategory } from '../../types';
 import { ModalPortal } from '../ModalPortal';
 import { categoryIcon } from '../../utils/categories';
 import { pluralRu } from '../../utils/pluralize';
+import { useDialogA11y } from '../../utils/useDialogA11y';
 
 interface TextEditModalProps {
   isOpen: boolean;
@@ -143,17 +144,8 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
     }
   }, [isOpen, initialValue, category]);
 
-  // Handle escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return;
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  // Escape closes the open list of phrase sets first, then the window
+  const dialog = useDialogA11y(isOpen, () => (isCategoryDropdownOpen ? setIsCategoryDropdownOpen(false) : onClose()));
 
   // Phrase sets, top to bottom: common phrases → the store's categories (Admin → «Категории»,
   // plus the product's own category) → sets saved earlier for other categories
@@ -251,9 +243,8 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
       <div
         className="relative w-full max-w-xl neu-modal rounded-3xl p-4 sm:p-6 border border-white/80 space-y-4 animate-in zoom-in-95 fade-in duration-200 h-[88dvh] sm:h-auto sm:max-h-[92dvh] flex flex-col will-change-transform"
         onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
+        ref={dialog.ref}
+        {...dialog.props}
       >
         {/* Header: icon, title with its tag, subtitle; close button in the corner */}
         <div className="flex items-start justify-between gap-3 border-b border-[#BAC5D5]/50 pb-3 shrink-0">
@@ -263,7 +254,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
             </div>
             <div className="min-w-0 space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-base font-black text-[#2D3A4E] tracking-tight leading-tight">{title}</h3>
+                <h3 id={dialog.titleId} className="text-base font-black text-[#2D3A4E] tracking-tight leading-tight">{title}</h3>
                 <span className="text-[11px] font-black text-accent bg-accent/10 px-2 py-0.5 rounded-md">
                   Каталог акцентов
                 </span>

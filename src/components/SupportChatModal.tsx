@@ -28,6 +28,7 @@ import { copyToClipboard } from '../utils/clipboard';
 import { compressChatImageFile } from '../utils/imageUpload';
 import { currentStoreName, telHref } from '../utils/storeContacts';
 import { ModalPortal } from './ModalPortal';
+import { useDialogA11y } from '../utils/useDialogA11y';
 
 /** Firestore rules accept at most 5000 characters per message */
 const CHAT_MESSAGE_MAX_LENGTH = 5000;
@@ -152,6 +153,12 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
     setStatusNotice(null);
   };
 
+  // Escape leaves editing first, then closes the chat; the photo, the notice and the delete dialog are
+  // windows of their own and close first
+  const dialog = useDialogA11y(isOpen, () => (editing ? cancelEdit() : onClose()));
+  const noticeDialog = useDialogA11y(isOpen && Boolean(statusNotice), dismissStatusNotice);
+  const photoDialog = useDialogA11y(isOpen && Boolean(previewImage), () => setPreviewImage(null), { label: 'Просмотр фото' });
+
   const visibleMessages = messages.filter((m) => !m.isInternalNote && !m.hiddenForCustomer);
   const lastMessage = visibleMessages[visibleMessages.length - 1];
   // After the customer writes, say honestly who answers and where
@@ -160,20 +167,6 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
   useEffect(() => {
     if (isOpen) messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      // the delete dialog and the status notice close themselves first
-      if (deleteTarget || statusNotice) return;
-      if (previewImage) setPreviewImage(null);
-      else if (editing) cancelEdit();
-      else onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  });
 
   const attachImageFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -288,9 +281,8 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
 
           <motion.div
             key="support-chat-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Служба заботы"
+            ref={dialog.ref}
+            {...dialog.props}
             initial={{ scale: 0.94, opacity: 0, y: 12 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.94, opacity: 0, y: 12 }}
@@ -305,7 +297,9 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-sm font-black tracking-tight text-[#2D3A4E] leading-tight">Служба заботы</h3>
+                    <h3 id={dialog.titleId} className="text-sm font-black tracking-tight text-[#2D3A4E] leading-tight">
+                      Служба заботы
+                    </h3>
                     {statusInfo && (
                       <span
                         className={`text-[11px] font-extrabold px-2 py-0.5 rounded-lg ${statusInfo.cls}`}
@@ -742,9 +736,9 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
               <div className="fixed inset-0 z-[215] flex items-center justify-center p-3 sm:p-4">
                 <div onClick={dismissStatusNotice} className="fixed inset-0 bg-[#2D3A4E]/40 cursor-pointer" aria-hidden="true" />
                 <div
+                  ref={noticeDialog.ref}
+                  {...noticeDialog.props}
                   role="alertdialog"
-                  aria-modal="true"
-                  aria-labelledby="support-status-title"
                   className="relative w-full max-w-sm neu-modal rounded-3xl p-5 space-y-4 animate-in fade-in zoom-in-95 duration-200"
                 >
                   <div className="flex items-center gap-2.5">
@@ -752,7 +746,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                       <BellRing className="w-5 h-5" />
                     </div>
                     <div className="min-w-0">
-                      <h3 id="support-status-title" className="text-sm font-extrabold text-[#2D3A4E]">
+                      <h3 id={noticeDialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">
                         Статус обращения обновлен
                       </h3>
                       <span
@@ -767,7 +761,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                   <p className="text-xs text-[#4E5C70] leading-relaxed">{CUSTOMER_STATUS[statusNotice.status].note}</p>
                   <button
                     type="button"
-                    autoFocus
+                    data-autofocus
                     onClick={dismissStatusNotice}
                     className="w-full py-2.5 px-3 neu-button rounded-xl text-xs font-black text-accent cursor-pointer"
                   >
@@ -783,13 +777,13 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
               <div
                 className="fixed inset-0 z-[210] flex items-center justify-center p-3 sm:p-4 bg-black/80 animate-in fade-in duration-200"
                 onClick={() => setPreviewImage(null)}
-                role="dialog"
-                aria-modal="true"
-                aria-label="Просмотр фото"
+                ref={photoDialog.ref}
+                {...photoDialog.props}
               >
                 <div className="relative animate-in zoom-in-95 fade-in duration-200" onClick={(e) => e.stopPropagation()}>
                   <button
                     type="button"
+                    data-autofocus
                     onClick={() => setPreviewImage(null)}
                     className="absolute top-2.5 right-2.5 z-10 w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#2D3A4E] transition-all cursor-pointer"
                     title="Закрыть просмотр (Esc)"

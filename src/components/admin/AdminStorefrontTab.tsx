@@ -32,6 +32,7 @@ import {
 import { BrandRequisitesModal } from '../BrandRequisitesModal';
 import { NeumorphicSwitch } from '../NeumorphicSwitch';
 import { QuickTextEditModal, QuickEditFieldConfig } from './QuickTextEditModal';
+import { useDialogA11y } from '../../utils/useDialogA11y';
 
 
 interface AdminStorefrontTabProps {
@@ -91,6 +92,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
   const [editModalConfig, setEditModalConfig] = useState<QuickEditFieldConfig | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const resetDialog = useDialogA11y(isResetConfirmOpen, () => setIsResetConfirmOpen(false));
 
 
   const openQuickEdit = (config: Omit<QuickEditFieldConfig, 'value'> & { value?: string }) => {
@@ -230,6 +232,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2D3A4E]/50 backdrop-blur-xs animate-in fade-in duration-200"
         >
           <div
+            ref={resetDialog.ref}
+            {...resetDialog.props}
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-sm neu-flat rounded-3xl p-5 sm:p-6 space-y-4 border border-white/80 animate-in zoom-in-95 duration-150"
           >
@@ -238,7 +242,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 <AlertCircle className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E]">
+                <h4 id={resetDialog.titleId} className="text-xs font-black uppercase tracking-wider text-[#2D3A4E]">
                   Сброс настроек витрины
                 </h4>
                 <p className="text-[11px] text-[#4E5C70] mt-1 leading-relaxed">

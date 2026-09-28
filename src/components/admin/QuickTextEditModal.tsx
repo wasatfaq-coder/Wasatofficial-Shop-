@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Pencil, Check, X, RotateCcw, Sparkles } from 'lucide-react';
+import { useDialogA11y } from '../../utils/useDialogA11y';
 
 export interface QuickEditFieldConfig {
   key: string;
@@ -51,17 +52,7 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
     }
   }, [config, isOpen]);
 
-  // Handle escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return;
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const dialog = useDialogA11y(isOpen && Boolean(config), onClose);
 
   if (!isOpen || !config) return null;
 
@@ -86,8 +77,8 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
       <div
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-lg neu-flat rounded-3xl p-5 sm:p-6 space-y-4 border border-white/80 relative animate-in zoom-in-95 duration-150"
-        role="dialog"
-        aria-modal="true"
+        ref={dialog.ref}
+        {...dialog.props}
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-3 pb-2 border-b border-[#BAC5D5]/40">
@@ -97,7 +88,7 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-black uppercase tracking-wider text-[#2D3A4E]">
+                <h3 id={dialog.titleId} className="text-sm font-black uppercase tracking-wider text-[#2D3A4E]">
                   {config.title}
                 </h3>
                 {config.badge && (

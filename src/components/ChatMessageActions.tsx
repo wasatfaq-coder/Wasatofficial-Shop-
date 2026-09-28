@@ -3,6 +3,7 @@ import { EyeOff, Image as ImageIcon, MoreHorizontal, Pencil, Trash2, X } from 'l
 import { motion, AnimatePresence } from 'motion/react';
 import type { ChatMessage } from '../types';
 import { ModalPortal } from './ModalPortal';
+import { useDialogA11y } from '../utils/useDialogA11y';
 
 /** Short text of a message for previews: its text, or what is attached */
 function chatMessagePreview(msg: ChatMessage): string {
@@ -85,7 +86,9 @@ export const ChatMessageDeleteDialog: React.FC<ChatMessageDeleteDialogProps> = (
   onDeleteForMe,
   onDeleteForAll,
   onClose,
-}) => (
+}) => {
+  const dialog = useDialogA11y(Boolean(message), onClose);
+  return (
   <ModalPortal>
     <AnimatePresence>
       {message && (
@@ -99,9 +102,9 @@ export const ChatMessageDeleteDialog: React.FC<ChatMessageDeleteDialogProps> = (
         >
           <div onClick={onClose} className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer" />
           <motion.div
+            ref={dialog.ref}
+            {...dialog.props}
             role="alertdialog"
-            aria-modal="true"
-            aria-label="Удалить сообщение"
             initial={{ scale: 0.93, opacity: 0, y: 12 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.93, opacity: 0, y: 12 }}
@@ -113,7 +116,7 @@ export const ChatMessageDeleteDialog: React.FC<ChatMessageDeleteDialogProps> = (
                 <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center shrink-0 text-danger">
                   <Trash2 className="w-4 h-4" />
                 </div>
-                <h3 className="text-sm font-extrabold text-[#2D3A4E]">Удалить сообщение?</h3>
+                <h3 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">Удалить сообщение?</h3>
               </div>
               <button
                 type="button"
@@ -187,3 +190,4 @@ export const ChatMessageDeleteDialog: React.FC<ChatMessageDeleteDialogProps> = (
     </AnimatePresence>
   </ModalPortal>
 );
+};

@@ -4,6 +4,7 @@ import type { LabelFormat, Product, ProductSKU, StorefrontSettings } from '../..
 import { ModalPortal } from '../ModalPortal';
 import { compositionToMaterial, getProductFabricComposition } from '../../utils/productAttributes';
 import { ConfirmDialog } from '../ConfirmDialog';
+import { useDialogA11y } from '../../utils/useDialogA11y';
 import {
   canvasMeasure,
   downloadLabelsPdf,
@@ -163,13 +164,8 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
     };
   }, []);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !formatToDelete) onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose, formatToDelete]);
+  // Escape closes the window; the delete confirmation is a window of its own and closes first
+  const dialog = useDialogA11y(true, onClose);
 
   // Variations are looked up in the current catalog, so reissued barcodes show at once
   const resolved = useMemo(
@@ -291,9 +287,8 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
         onClick={onClose}
       >
         <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Этикетки и штрихкоды"
+          ref={dialog.ref}
+          {...dialog.props}
           onClick={(e) => e.stopPropagation()}
           className="relative w-full max-w-lg neu-modal rounded-3xl p-4 sm:p-6 border border-white/80 flex flex-col gap-4 max-h-[92dvh] animate-in zoom-in-95 fade-in duration-200"
         >
@@ -304,7 +299,9 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                 <Barcode className="w-5 h-5" />
               </div>
               <div className="min-w-0 space-y-0.5">
-                <h3 className="text-base font-black text-[#2D3A4E] leading-tight">Этикетки и штрихкоды</h3>
+                <h3 id={dialog.titleId} className="text-base font-black text-[#2D3A4E] leading-tight">
+                  Этикетки и штрихкоды
+                </h3>
                 <p className="text-[11px] font-semibold text-[#4E5C70] leading-snug">
                   {printable.length === 1
                     ? `${printable[0].product.title} · ${printable[0].sku.color} / ${printable[0].sku.size}`

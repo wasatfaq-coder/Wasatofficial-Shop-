@@ -56,6 +56,7 @@ import {
 } from './AdminChartNeumorphicShapes';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { ModalPortal } from '../ModalPortal';
+import { useDialogA11y } from '../../utils/useDialogA11y';
 
 interface AdminAnalyticsTabProps {
   orders: Order[];
@@ -109,11 +110,7 @@ const PeriodDialog: React.FC<{
   onChange: (p: AnalyticsPeriod) => void;
   onClose: () => void;
 }> = ({ value, onChange, onClose }) => {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  const dialog = useDialogA11y(true, onClose);
 
   return (
     <ModalPortal>
@@ -122,14 +119,13 @@ const PeriodDialog: React.FC<{
         onClick={onClose}
       >
         <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="analytics-period-title"
+          ref={dialog.ref}
+          {...dialog.props}
           onClick={(e) => e.stopPropagation()}
           className="w-full max-w-sm neu-modal rounded-3xl p-4 sm:p-5 space-y-3 animate-in zoom-in-95 fade-in duration-200"
         >
           <div className="flex items-center justify-between gap-3">
-            <h4 id="analytics-period-title" className="text-sm font-black text-[#2D3A4E] flex items-center gap-2">
+            <h4 id={dialog.titleId} className="text-sm font-black text-[#2D3A4E] flex items-center gap-2">
               <CalendarRange className="w-4 h-4 text-accent" />
               Период аналитики
             </h4>
@@ -151,7 +147,7 @@ const PeriodDialog: React.FC<{
                   type="button"
                   role="radio"
                   aria-checked={selected}
-                  autoFocus={selected}
+                  data-autofocus={selected || undefined}
                   onClick={() => {
                     onChange(p.id);
                     onClose();

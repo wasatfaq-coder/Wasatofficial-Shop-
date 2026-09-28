@@ -3,6 +3,7 @@ import { X, Phone, User, MapPin, ShieldCheck, ShoppingBag, AlertCircle } from 'l
 import { motion, AnimatePresence } from 'motion/react';
 import { CartItem, Product } from '../types';
 import { productImage } from '../utils/productImage';
+import { useDialogA11y } from '../utils/useDialogA11y';
 
 interface QuickOrderModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
   promoNotApplied = false,
   onSuccess,
 }) => {
+  const dialog = useDialogA11y(isOpen, onClose);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('+7 ');
   const [address, setAddress] = useState('');
@@ -132,6 +134,8 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
             className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer"
           />
           <motion.div
+            ref={dialog.ref}
+            {...dialog.props}
             key="quick-order-modal"
             initial={{ scale: 0.93, opacity: 0, y: 12 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -146,7 +150,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   <ShoppingBag className="w-4 h-4 text-accent" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-extrabold text-[#2D3A4E]">Заказ в 1 клик</h3>
+                  <h3 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">Заказ в 1 клик</h3>
                   <p className="text-[11px] text-[#4E5C70]">Менеджер перезвонит для подтверждения</p>
                 </div>
               </div>

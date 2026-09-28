@@ -34,6 +34,7 @@ import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
 import { NeumorphicSelect, NeumorphicSelectOption } from '../NeumorphicSelect';
 import { orderStatusChip } from '../../utils/orderStatusStyle';
 import { formatAddress } from '../../utils/addressFormat';
+import { useDialogA11y } from '../../utils/useDialogA11y';
 
 interface AdminCustomersTabProps {
   users: UserProfile[];
@@ -98,6 +99,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
   const [filterType, setFilterType] = useState<'all' | 'with_orders' | 'repeat' | 'registered' | 'guest'>('all');
   const [sortBy, setSortBy] = useState<'ltv_desc' | 'orders_desc' | 'recent_desc' | 'name_asc'>('ltv_desc');
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerRecord | null>(null);
+  const customerDialog = useDialogA11y(Boolean(selectedCustomer), () => setSelectedCustomer(null));
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Manager Notes editing inside detail modal
@@ -107,6 +109,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
 
   // Customer deletion state
   const [customerToDelete, setCustomerToDelete] = useState<CustomerRecord | null>(null);
+  const deleteCustomerDialog = useDialogA11y(Boolean(customerToDelete), () => setCustomerToDelete(null));
   const [isDeletingCustomer, setIsDeletingCustomer] = useState(false);
 
   // Delete individual customer from Firestore
@@ -777,7 +780,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       {/* ================= 5. CUSTOMER DETAIL & ORDER HISTORY MODAL ================= */}
       {selectedCustomer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in">
-          <div className="neu-modal rounded-3xl p-5 sm:p-6 max-w-2xl w-full max-h-[90vh] flex flex-col space-y-4 text-[#2D3A4E] border border-white/80 overflow-hidden">
+          <div ref={customerDialog.ref} {...customerDialog.props} className="neu-modal rounded-3xl p-5 sm:p-6 max-w-2xl w-full max-h-[90vh] flex flex-col space-y-4 text-[#2D3A4E] border border-white/80 overflow-hidden">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/40 pb-3 shrink-0">
               <div className="flex items-center gap-3 min-w-0">
@@ -795,7 +798,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 )}
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-base sm:text-lg font-black text-[#2D3A4E] truncate">
+                    <h3 id={customerDialog.titleId} className="text-base sm:text-lg font-black text-[#2D3A4E] truncate">
                       {selectedCustomer.name}
                     </h3>
                     {selectedCustomer.ordersCount > 1 ? (
@@ -1254,13 +1257,13 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       {/* ================= 7. DELETE SINGLE CUSTOMER CONFIRMATION MODAL ================= */}
       {customerToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/50 backdrop-blur-sm animate-in fade-in">
-          <div className="neu-modal rounded-3xl p-5 max-w-sm w-full space-y-4 text-[#2D3A4E] border border-white/80">
+          <div ref={deleteCustomerDialog.ref} {...deleteCustomerDialog.props} className="neu-modal rounded-3xl p-5 max-w-sm w-full space-y-4 text-[#2D3A4E] border border-white/80">
             <div className="flex items-center gap-3 border-b border-[#BAC5D5]/40 pb-3">
               <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-danger shrink-0">
                 <Trash2 className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <h3 className="text-sm font-black text-[#2D3A4E] truncate">Удалить клиента?</h3>
+                <h3 id={deleteCustomerDialog.titleId} className="text-sm font-black text-[#2D3A4E] truncate">Удалить клиента?</h3>
                 <p className="text-xs text-[#4E5C70] truncate">{customerToDelete.name}</p>
               </div>
             </div>

@@ -9,6 +9,7 @@ import { getProductRating } from '../utils/productRating';
 import { productImage } from '../utils/productImage';
 import { getOrderableStock, getVariantStock } from '../utils/inventory';
 import { colorStock, initialColor, initialSize, maxOrderableForColor } from '../utils/variantSelection';
+import { useDialogA11y } from '../utils/useDialogA11y';
 
 interface QuickViewModalProps {
   product: Product | null;
@@ -38,6 +39,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
   onAddToCartWithOptions,
   preorderMode = false,
 }) => {
+  const dialog = useDialogA11y(isOpen && Boolean(product), onClose);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [selectedColor, setSelectedColor] = useState(product?.colors?.[0]?.name || '');
   // No size is preselected unless there is only one (same as the product page)
@@ -97,6 +99,8 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
               className="fixed inset-0 bg-[#2D3A4E]/45 backdrop-blur-xs cursor-pointer"
             />
             <motion.div
+              ref={dialog.ref}
+              {...dialog.props}
               key="quickview-modal"
               initial={{ scale: 0.93, opacity: 0, y: 12 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -176,7 +180,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                   size="md"
                 />
               </div>
-              <h3 className="text-base font-bold text-[#2D3A4E] leading-tight">
+              <h3 id={dialog.titleId} className="text-base font-bold text-[#2D3A4E] leading-tight">
                 {product.title}
               </h3>
             </div>

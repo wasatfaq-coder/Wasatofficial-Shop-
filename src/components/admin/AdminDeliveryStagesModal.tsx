@@ -20,6 +20,7 @@ import {
   formatDeliveryTimestamp,
   isTransportCompanyDelivery,
 } from '../../utils/deliveryStages';
+import { useDialogA11y } from '../../utils/useDialogA11y';
 
 interface AdminDeliveryStagesModalProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
   onSave,
   onShowToast,
 }) => {
+  const dialog = useDialogA11y(isOpen && Boolean(order), onClose);
   const [stages, setStages] = useState<DeliveryStage[]>(() => {
     if (!order) return [];
     return getSynchronizedDeliveryStages(order);
@@ -198,6 +200,8 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
           />
 
           <motion.div
+            ref={dialog.ref}
+            {...dialog.props}
             key="admin-delivery-stages-modal"
             initial={{ scale: 0.94, opacity: 0, y: 12 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -213,7 +217,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-sm sm:text-base font-extrabold text-[#2D3A4E] truncate">
+                    <h3 id={dialog.titleId} className="text-sm sm:text-base font-extrabold text-[#2D3A4E] truncate">
                       Управление этапами доставки
                     </h3>
                     <span className="text-[11px] font-black text-accent neu-inset px-2.5 py-0.5 rounded-full whitespace-nowrap">

@@ -19,6 +19,7 @@ import { NeumorphicSelect } from '../NeumorphicSelect';
 import { deductStockWithLogs, returnStockWithLogs, extractColorName, extractSizeName } from '../../utils/inventory';
 import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
 import { productImage } from '../../utils/productImage';
+import { useDialogA11y } from '../../utils/useDialogA11y';
 
 interface AdminOrderAdjustmentModalProps {
   order: Order | null;
@@ -48,6 +49,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
   onUpdateProducts,
   onShowToast,
 }) => {
+  const dialog = useDialogA11y(isOpen && Boolean(order), onClose);
   const [items, setItems] = useState<CartItem[]>(() =>
     order?.items
       ? order.items.map((it) => ({
@@ -313,6 +315,8 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
           />
 
           <motion.div
+            ref={dialog.ref}
+            {...dialog.props}
             key="order-adj-modal"
             initial={{ scale: 0.93, opacity: 0, y: 12 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -328,7 +332,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-base font-black text-[#2D3A4E] leading-tight">
+                <h3 id={dialog.titleId} className="text-base font-black text-[#2D3A4E] leading-tight">
                   Корректировка состава заказа
                 </h3>
                 <span className="text-xs font-mono font-black neu-inset px-2.5 py-0.5 rounded-lg text-accent shrink-0">
@@ -409,6 +413,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                 <div className="sm:col-span-6">
                   <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">Товар</label>
                   <NeumorphicSelect
+                    ariaLabel="Товар"
                     value={selectedProductId}
                     onChange={(val) => setSelectedProductId(val)}
                     options={products.map((p) => ({
@@ -423,6 +428,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                 <div className="sm:col-span-3">
                   <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">Цвет</label>
                   <NeumorphicSelect
+                    ariaLabel="Цвет"
                     value={selectedColor}
                     onChange={(val) => setSelectedColor(val)}
                     options={(selectedProductToAdd?.colors || []).map((c) => ({
@@ -436,6 +442,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                 <div className="sm:col-span-3">
                   <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">Размер</label>
                   <NeumorphicSelect
+                    ariaLabel="Размер"
                     value={selectedSize}
                     onChange={(val) => setSelectedSize(val)}
                     options={(selectedProductToAdd?.sizes || []).map((sz) => ({
@@ -579,6 +586,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
             Причина корректировки / возврата *
           </label>
           <NeumorphicSelect
+            ariaLabel="Причина корректировки"
             value={reason}
             onChange={(val) => setReason(val)}
             options={ADJUSTMENT_REASONS.map((r) => ({

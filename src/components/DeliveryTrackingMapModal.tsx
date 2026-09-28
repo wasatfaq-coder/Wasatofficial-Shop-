@@ -23,6 +23,7 @@ import {
 } from '../utils/deliveryStages';
 import { motion, AnimatePresence } from 'motion/react';
 import { currentStoreName, storeInitials, telHref } from '../utils/storeContacts';
+import { useDialogA11y } from '../utils/useDialogA11y';
 
 interface DeliveryTrackingMapModalProps {
   order: Order | null;
@@ -42,6 +43,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
   onOpenSupportChat,
   onShowToast,
 }) => {
+  const dialog = useDialogA11y(isOpen && Boolean(order), onClose);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   // A schematic map: there is no live courier location. The marker position follows the
   // order status only; no made-up ETA, GPS updates or traffic.
@@ -118,6 +120,8 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
           />
 
           <motion.div
+            ref={dialog.ref}
+            {...dialog.props}
             key="delivery-modal"
             initial={{ scale: 0.94, opacity: 0, y: 12 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -133,7 +137,7 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-sm sm:text-base font-black text-[#2D3A4E] leading-tight whitespace-nowrap">
+                    <h3 id={dialog.titleId} className="text-sm sm:text-base font-black text-[#2D3A4E] leading-tight whitespace-nowrap">
                       Онлайн-трекинг доставки
                     </h3>
                     <span className="text-[11px] font-mono font-black neu-inset px-2.5 py-0.5 rounded-lg text-accent whitespace-nowrap shrink-0">

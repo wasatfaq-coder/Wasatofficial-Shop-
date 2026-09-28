@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowDown, ArrowUp, Check, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { NotConfigured } from '../NotConfigured';
+import { NeumorphicSelect } from '../NeumorphicSelect';
 
 export type ListField<T> = {
   key: keyof T & string;
@@ -180,18 +181,13 @@ export function AdminListEditor<T extends { id: string }>({
                       className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] resize-y leading-relaxed"
                     />
                   ) : field.type === 'select' ? (
-                    <select
+                    <NeumorphicSelect
                       id={id}
                       value={String(value ?? '')}
-                      onChange={(e) => setField(field.key, e.target.value)}
-                      className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E]"
-                    >
-                      {field.options?.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(v) => setField(field.key, v)}
+                      triggerClassName="rounded-xl px-3 py-2"
+                      options={field.options ?? []}
+                    />
                   ) : (
                     <input
                       id={id}

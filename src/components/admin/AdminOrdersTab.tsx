@@ -47,6 +47,7 @@ import { AdminDeliveryStagesModal } from './AdminDeliveryStagesModal';
 import { DeliveryTrackingMapModal } from '../DeliveryTrackingMapModal';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { SelectCheckbox } from './SelectCheckbox';
+import { useDialogA11y } from '../../utils/useDialogA11y';
 
 interface AdminOrdersTabProps {
   orders: Order[];
@@ -265,6 +266,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   // Bulk Selection State
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [isBulkCancelModalOpen, setIsBulkCancelModalOpen] = useState(false);
+  const bulkCancelDialog = useDialogA11y(isBulkCancelModalOpen, () => setIsBulkCancelModalOpen(false));
 
   // Modals & Active Order
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
@@ -272,6 +274,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   const [selectedOrderForMap, setSelectedOrderForMap] = useState<Order | null>(null);
   const [selectedOrderForDeliveryStages, setSelectedOrderForDeliveryStages] = useState<Order | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const deleteOrderDialog = useDialogA11y(Boolean(orderToDelete), () => setOrderToDelete(null));
   const [isDeletingOrder, setIsDeletingOrder] = useState(false);
   const [expandedOrderAuditLogId, setExpandedOrderAuditLogId] = useState<string | null>(null);
   const [openStatusDropdownId, setOpenStatusDropdownId] = useState<string | null>(null);
@@ -1704,13 +1707,13 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       {/* ================= MODAL: BULK CANCEL CONFIRMATION ================= */}
       {isBulkCancelModalOpen && (
         <div className="admin-no-glow fixed inset-0 z-[100] bg-[#2D3A4E]/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in">
-          <div className="neu-modal rounded-3xl max-w-md w-full p-5 sm:p-6 space-y-4 my-auto border border-white/80">
+          <div ref={bulkCancelDialog.ref} {...bulkCancelDialog.props} className="neu-modal rounded-3xl max-w-md w-full p-5 sm:p-6 space-y-4 my-auto border border-white/80">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-danger shrink-0 font-black">
                 <ShieldAlert className="w-5 h-5 text-danger" />
               </div>
               <div>
-                <h3 className="text-sm font-black text-[#2D3A4E]">
+                <h3 id={bulkCancelDialog.titleId} className="text-sm font-black text-[#2D3A4E]">
                   Отменить выбранные заказы?
                 </h3>
                 <p className="text-[11px] text-[#4E5C70] font-medium">
@@ -1755,13 +1758,13 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       {/* ================= MODAL: SINGLE ORDER DELETE CONFIRMATION ================= */}
       {orderToDelete && (
         <div className="admin-no-glow fixed inset-0 z-[100] bg-[#2D3A4E]/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in">
-          <div className="neu-modal rounded-3xl max-w-sm w-full p-5 space-y-4 my-auto border border-white/80">
+          <div ref={deleteOrderDialog.ref} {...deleteOrderDialog.props} className="neu-modal rounded-3xl max-w-sm w-full p-5 space-y-4 my-auto border border-white/80">
             <div className="flex items-center gap-3 border-b border-[#BAC5D5]/40 pb-3">
               <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-danger shrink-0">
                 <Trash2 className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <h3 className="text-sm font-black text-[#2D3A4E] truncate">Удалить заказ № {orderToDelete.id}?</h3>
+                <h3 id={deleteOrderDialog.titleId} className="text-sm font-black text-[#2D3A4E] truncate">Удалить заказ № {orderToDelete.id}?</h3>
                 <p className="text-xs text-[#4E5C70] truncate">{orderToDelete.customerName || 'Клиент'}</p>
               </div>
             </div>

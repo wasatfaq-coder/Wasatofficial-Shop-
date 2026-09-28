@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { UserProfile, BodyMeasurements } from '../types';
 import { NeumorphicSlider } from './NeumorphicSlider';
 import { calculateRussianPattern, RUSSIAN_SIZE_TABLE_ROWS } from '../utils/russianSizing';
+import { useDialogA11y } from '../utils/useDialogA11y';
 
 interface SizeCalculatorModalProps {
   isOpen: boolean;
@@ -39,6 +40,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
   userProfile,
   onSaveMeasurements,
 }) => {
+  const dialog = useDialogA11y(isOpen, onClose);
   const [height, setHeight] = useState<number>(184);
   const [weight, setWeight] = useState<number>(94);
   const [chest, setChest] = useState<number>(104);
@@ -206,6 +208,8 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
             className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer"
           />
           <motion.div
+            ref={dialog.ref}
+            {...dialog.props}
             key="size-calc-modal"
             initial={{ scale: 0.94, opacity: 0, y: 12 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -220,7 +224,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                   <Ruler className="w-5 h-5 stroke-[2.2]" />
                 </div>
                 <div>
-                  <h3 className="text-base font-extrabold text-[#2D3A4E]">
+                  <h3 id={dialog.titleId} className="text-base font-extrabold text-[#2D3A4E]">
                     Мои размеры и лекало
                   </h3>
                   <p className="text-[11px] text-[#4E5C70] font-medium">

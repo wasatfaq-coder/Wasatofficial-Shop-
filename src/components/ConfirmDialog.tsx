@@ -2,6 +2,7 @@ import React from 'react';
 import { AlertTriangle, Trash2, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ModalPortal } from './ModalPortal';
+import { useDialogA11y } from '../utils/useDialogA11y';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -35,7 +36,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onClose,
   preview,
   cancelLabel = 'Отмена',
-}) => (
+}) => {
+  // Focus goes to the safe button («Отмена»): Enter by accident does not delete
+  const dialog = useDialogA11y(isOpen, onClose);
+  return (
   <ModalPortal>
   <AnimatePresence>
     {isOpen && (
@@ -49,9 +53,9 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       >
         <div onClick={onClose} className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer" />
         <motion.div
+          ref={dialog.ref}
+          {...dialog.props}
           role="alertdialog"
-          aria-modal="true"
-          aria-label={title}
           initial={{ scale: 0.93, opacity: 0, y: 12 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.93, opacity: 0, y: 12 }}
@@ -67,7 +71,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               >
                 <AlertTriangle className="w-4 h-4" />
               </div>
-              <h3 className="text-sm font-extrabold text-[#2D3A4E]">{title}</h3>
+              <h3 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">{title}</h3>
             </div>
             <button
               type="button"
@@ -87,6 +91,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
           <div className="flex items-center gap-2 pt-1">
             <button
+              data-autofocus
               type="button"
               onClick={onClose}
               className="flex-1 py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
@@ -113,3 +118,4 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   </AnimatePresence>
   </ModalPortal>
 );
+};

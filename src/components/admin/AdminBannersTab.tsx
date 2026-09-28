@@ -24,6 +24,7 @@ import { BannerSlide, Product, PromoCode, StoreCategory } from '../../types';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { processImageFiles } from '../../utils/imageUpload';
 import { NotConfigured } from '../NotConfigured';
+import { useDialogA11y } from '../../utils/useDialogA11y';
 
 interface AdminBannersTabProps {
   banners: BannerSlide[];
@@ -86,6 +87,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
   const [isUploadingMobile, setIsUploadingMobile] = useState(false);
   const [isUploadingDesktop, setIsUploadingDesktop] = useState(false);
   const [previewZoomImage, setPreviewZoomImage] = useState<string | null>(null);
+  const zoomDialog = useDialogA11y(Boolean(previewZoomImage), () => setPreviewZoomImage(null), { label: 'Просмотр фото' });
   const [actionType, setActionType] = useState<'category' | 'product' | 'promo' | 'catalog'>('category');
   const [targetCategory, setTargetCategory] = useState<string>('all');
   const [targetProductId, setTargetProductId] = useState<string>('');
@@ -525,6 +527,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                   Выберите категорию каталога:
                 </label>
                 <NeumorphicSelect
+                  ariaLabel="Категория каталога"
                   value={targetCategory}
                   onChange={(val) => setTargetCategory(val)}
                   options={[
@@ -544,6 +547,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                   Выберите конкретный товар для перехода в карточку:
                 </label>
                 <NeumorphicSelect
+                  ariaLabel="Товар для перехода"
                   value={targetProductId}
                   onChange={(val) => setTargetProductId(val)}
                   options={[
@@ -563,6 +567,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                   Выберите промокод, который автоматически активируется при клике:
                 </label>
                 <NeumorphicSelect
+                  ariaLabel="Промокод"
                   value={targetPromoCode}
                   onChange={(val) => setTargetPromoCode(val)}
                   options={[
@@ -1147,6 +1152,8 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
           onClick={() => setPreviewZoomImage(null)}
         >
           <div
+            ref={zoomDialog.ref}
+            {...zoomDialog.props}
             className="neu-flat rounded-2xl max-w-4xl w-full p-4 relative space-y-3"
             onClick={(e) => e.stopPropagation()}
           >

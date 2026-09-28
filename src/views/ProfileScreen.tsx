@@ -94,6 +94,8 @@ import { AdminCategoriesTab } from '../components/admin/AdminCategoriesTab';
 import { getCategories } from '../utils/categories';
 import { productImage } from '../utils/productImage';
 import { NeumorphicSwitch } from '../components/NeumorphicSwitch';
+import { useDialogA11y } from '../utils/useDialogA11y';
+import { Tabs } from '@base-ui/react/tabs';
 
 interface ProfileScreenProps {
   profile: UserProfile;
@@ -184,6 +186,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [activeModal, setActiveModal] = useState<
     'orders' | 'addresses' | 'support' | 'faq' | 'admin' | 'security' | null
   >(null);
+  const addressesDialog = useDialogA11y(activeModal === 'addresses', () => setActiveModal(null));
+  const ordersDialog = useDialogA11y(activeModal === 'orders', () => setActiveModal(null));
+  const supportDialog = useDialogA11y(activeModal === 'support', () => setActiveModal(null));
 
   // Local products list state (backed by props)
   const [productsList, setProductsList] = useState<Product[]>(products);
@@ -371,9 +376,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     | 'promos' | 'banners' | 'support' | 'faq' | 'storefront'
   >('analytics');
   const [supportTargetOrderId, setSupportTargetOrderId] = useState<string | null>(null);
+  // Focus stays in the panel; Escape does not close it (an unsaved list or form inside would be lost)
+  const adminDialog = useDialogA11y(activeModal === 'admin' && isFirebaseAdmin, () => setActiveModal(null), {
+    closeOnEscape: false,
+  });
 
   // Selected order IDs for detailed tracking & interactive delivery map
   const [selectedOrderIdForTracking, setSelectedOrderIdForTracking] = useState<string | null>(null);
+  const trackingDialog = useDialogA11y(Boolean(selectedOrderIdForTracking), () => setSelectedOrderIdForTracking(null));
   const [selectedOrderIdForMap, setSelectedOrderIdForMap] = useState<string | null>(null);
 
   // Derive active order reactively from orders prop
@@ -402,6 +412,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   // Address edit modal state
   const [editingAddress, setEditingAddress] = useState<SavedAddress | null>(null);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
+  const addressFormDialog = useDialogA11y(isAddingAddress, () => setIsAddingAddress(false));
   const [addrTitle, setAddrTitle] = useState('Дом');
   const [addrCity, setAddrCity] = useState('Москва');
   const [addrStreet, setAddrStreet] = useState('');
@@ -415,6 +426,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // Body measurements modal state
   const [isEditingMeasurements, setIsEditingMeasurements] = useState(false);
+  const measurementsDialog = useDialogA11y(isEditingMeasurements, () => setIsEditingMeasurements(false));
   const [showGostTable, setShowGostTable] = useState(false);
   const [measHeight, setMeasHeight] = useState(profile.bodyMeasurements?.height ?? 184);
   const [measWeight, setMeasWeight] = useState(profile.bodyMeasurements?.weight ?? 94);
@@ -1351,7 +1363,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       {/* ================= MODAL: ORDER HISTORY & TRACKING ================= */}
       {activeModal === 'orders' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="neu-modal rounded-3xl max-w-lg w-full max-h-[88vh] flex flex-col border border-white/80 text-[#2D3A4E] overflow-hidden transform-gpu">
+          <div
+            ref={ordersDialog.ref}
+            {...ordersDialog.props}
+            className="neu-modal rounded-3xl max-w-lg w-full max-h-[88vh] flex flex-col border border-white/80 text-[#2D3A4E] overflow-hidden transform-gpu">
             {/* Sticky Fixed Header */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 p-4 sm:p-5 shrink-0 bg-[#E3E8EF]">
               <div className="flex items-center gap-2.5">
@@ -1359,7 +1374,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   <Package className="w-5 h-5 stroke-[2.2]" />
                 </div>
                 <div>
-                  <h3 className="text-base font-extrabold text-[#2D3A4E]">История и трекинг заказов</h3>
+                  <h3 id={ordersDialog.titleId} className="text-base font-extrabold text-[#2D3A4E]">История и трекинг заказов</h3>
                   <p className="text-[11px] text-[#4E5C70] font-medium">Все ваши заказы в одном месте</p>
                 </div>
               </div>
@@ -1606,12 +1621,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       {/* ================= DETAILED ORDER TRACKING MODAL ================= */}
       {selectedOrderForTracking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="neu-modal rounded-3xl max-w-md w-full max-h-[90vh] flex flex-col border border-white/80 text-[#2D3A4E] overflow-hidden transform-gpu">
+          <div
+            ref={trackingDialog.ref}
+            {...trackingDialog.props}
+            className="neu-modal rounded-3xl max-w-md w-full max-h-[90vh] flex flex-col border border-white/80 text-[#2D3A4E] overflow-hidden transform-gpu">
             {/* Sticky Fixed Header */}
             <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[#BAC5D5]/50 shrink-0 bg-[#E3E8EF]">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-base font-extrabold text-[#2D3A4E]">
+                  <h3 id={trackingDialog.titleId} className="text-base font-extrabold text-[#2D3A4E]">
                     Заказ № {selectedOrderForTracking.id}
                   </h3>
                   <span className="text-[11px] font-extrabold text-accent neu-inset px-2.5 py-0.5 rounded-full">
@@ -2357,12 +2375,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       {/* ================= MODAL: SAVED ADDRESSES MANAGEMENT ================= */}
       {activeModal === 'addresses' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="neu-modal rounded-3xl max-w-md w-full max-h-[85vh] flex flex-col border border-white/80 text-[#2D3A4E] overflow-hidden transform-gpu">
+          <div
+            ref={addressesDialog.ref}
+            {...addressesDialog.props}
+            className="neu-modal rounded-3xl max-w-md w-full max-h-[85vh] flex flex-col border border-white/80 text-[#2D3A4E] overflow-hidden transform-gpu">
             {/* Sticky Fixed Header */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 p-4 sm:p-5 shrink-0 bg-[#E3E8EF]">
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-accent" />
-                <h3 className="text-base font-extrabold text-[#2D3A4E]">Адреса доставки</h3>
+                <h3 id={addressesDialog.titleId} className="text-base font-extrabold text-[#2D3A4E]">Адреса доставки</h3>
               </div>
               <button
                 onClick={() => setActiveModal(null)}
@@ -2470,9 +2491,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       {/* ================= MODAL: ADD / EDIT ADDRESS FORM ================= */}
       {isAddingAddress && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="neu-modal rounded-[28px] p-6 max-w-md w-full space-y-4 relative text-[#2D3A4E] border border-white/80">
+          <div
+            ref={addressFormDialog.ref}
+            {...addressFormDialog.props}
+            className="neu-modal rounded-[28px] p-6 max-w-md w-full space-y-4 relative text-[#2D3A4E] border border-white/80">
             <div className="flex items-center justify-between pb-1 border-b border-[#BAC5D5]/50">
-              <h3 className="text-base font-extrabold text-[#2D3A4E]">
+              <h3 id={addressFormDialog.titleId} className="text-base font-extrabold text-[#2D3A4E]">
                 {editingAddress ? 'Редактировать адрес' : 'Добавить адрес'}
               </h3>
               <button
@@ -2667,7 +2691,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       {/* ================= MODAL: EDIT BODY MEASUREMENTS & RUSSIAN PATTERN ================= */}
       {isEditingMeasurements && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="neu-modal rounded-3xl max-w-lg w-full max-h-[92vh] flex flex-col border border-white/80 text-[#2D3A4E] overflow-hidden transform-gpu">
+          <div
+            ref={measurementsDialog.ref}
+            {...measurementsDialog.props}
+            className="neu-modal rounded-3xl max-w-lg w-full max-h-[92vh] flex flex-col border border-white/80 text-[#2D3A4E] overflow-hidden transform-gpu">
             {/* Sticky Fixed Header */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 p-4 sm:p-5 shrink-0 bg-[#E3E8EF]">
               <div className="flex items-center gap-2.5">
@@ -2675,7 +2702,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   <Ruler className="w-5 h-5 stroke-[2.2]" />
                 </div>
                 <div>
-                  <h3 className="text-base font-extrabold text-[#2D3A4E]">
+                  <h3 id={measurementsDialog.titleId} className="text-base font-extrabold text-[#2D3A4E]">
                     Мерки профиля и лекало РФ
                   </h3>
                   <p className="text-[11px] text-[#4E5C70] font-medium">
@@ -2960,6 +2987,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
             <motion.div
               key="admin-modal"
+              ref={adminDialog.ref}
+              {...adminDialog.props}
               initial={{ scale: 0.94, opacity: 0, y: 12 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.94, opacity: 0, y: 12 }}
@@ -2974,7 +3003,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm sm:text-base font-extrabold text-[#2D3A4E] leading-tight">Панель администратора</h3>
+                    <h3 id={adminDialog.titleId} className="text-sm sm:text-base font-extrabold text-[#2D3A4E] leading-tight">
+                      Панель администратора
+                    </h3>
                     <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-black text-success bg-success-soft border border-success/25">
                       <span className="w-1.5 h-1.5 rounded-full bg-success" />
                       {currentUser?.email}
@@ -2997,8 +3028,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </div>
             </div>
 
-            {/* Navigation Tabs (Neumorphic Inset Bar with Elevated Active Pill) */}
-            <div className="admin-tab-bar rounded-2xl p-1.5 flex items-center gap-1.5 overflow-x-auto shrink-0 no-scrollbar scroll-smooth bg-[#E3E8EF] w-full max-w-full">
+            {/* Sections: tablist (arrows move between tabs, Enter/Space opens one) and its panel */}
+            <Tabs.Root
+              value={adminTab}
+              onValueChange={(next) => setAdminTab(next as typeof adminTab)}
+              className="flex-1 min-h-0 flex flex-col gap-4 min-w-0 w-full"
+            >
+            <Tabs.List
+              aria-label="Разделы панели"
+              className="admin-tab-bar rounded-2xl p-1.5 flex items-center gap-1.5 overflow-x-auto shrink-0 no-scrollbar scroll-smooth bg-[#E3E8EF] w-full max-w-full"
+            >
               {[
                 { id: 'analytics', label: 'Аналитика', icon: BarChart3 },
                 { id: 'products', label: 'Каталог', icon: Layers },
@@ -3017,11 +3056,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 const Icon = tab.icon;
                 const isActive = adminTab === tab.id;
                 return (
-                  <button
+                  <Tabs.Tab
                     key={tab.id}
-                    onClick={() => {
-                      setAdminTab(tab.id as any);
-                    }}
+                    value={tab.id}
                     className={`relative min-w-[90px] sm:min-w-[105px] py-2 px-3 rounded-xl font-extrabold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 active:scale-95 select-none ${
                       isActive
                         ? 'text-accent font-black'
@@ -3039,13 +3076,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                       <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-accent' : 'text-[#4E5C70]'}`} />
                       <span>{tab.label}</span>
                     </span>
-                  </button>
+                  </Tabs.Tab>
                 );
               })}
-            </div>
+            </Tabs.List>
 
-            {/* Scrollable Content Container with Smooth Tab Appearance */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-4 pr-1 scrollbar-thin min-w-0 w-full">
+            {/* One panel: its content follows the selected tab */}
+            <Tabs.Panel
+              value={adminTab}
+              className="flex-1 overflow-y-auto overflow-x-hidden space-y-4 pr-1 scrollbar-thin min-w-0 w-full"
+            >
               <AnimatePresence mode="wait">
                 <motion.div
                   key={adminTab}
@@ -3226,7 +3266,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               )}
                 </motion.div>
               </AnimatePresence>
-            </div>
+            </Tabs.Panel>
+            </Tabs.Root>
           </motion.div>
         </motion.div>
       )}
@@ -3263,6 +3304,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             />
 
             <motion.div
+              ref={supportDialog.ref}
+              {...supportDialog.props}
               key="support-modal"
               initial={{ scale: 0.93, opacity: 0, y: 12 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -3275,7 +3318,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   <div className="w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center text-accent">
                     <Headphones className="w-4 h-4" />
                   </div>
-                  <h3 className="text-sm font-black uppercase tracking-wider text-[#2D3A4E]">
+                  <h3 id={supportDialog.titleId} className="text-sm font-black uppercase tracking-wider text-[#2D3A4E]">
                     Служба заботы {storeName}
                   </h3>
                 </div>

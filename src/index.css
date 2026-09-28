@@ -208,6 +208,11 @@ input[type="submit"] {
   outline-offset: 2px;
 }
 
+/* A window's panel takes the focus only as a starting point for Tab (useDialogA11y): it is not a control */
+:where([role="dialog"], [role="alertdialog"])[tabindex="-1"]:focus-visible {
+  outline: none;
+}
+
 .neu-button,
 .neu-button-danger {
   background: linear-gradient(145deg, #ebf0f7, #d9dfeb);
