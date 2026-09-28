@@ -25,6 +25,7 @@ import { NeumorphicSelect } from '../NeumorphicSelect';
 import { processImageFiles } from '../../utils/imageUpload';
 import { NotConfigured } from '../NotConfigured';
 import { useDialogA11y } from '../../utils/useDialogA11y';
+import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
 
 interface AdminBannersTabProps {
   banners: BannerSlide[];
@@ -98,6 +99,25 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+
+  // The open form (new or edited banner) with unsaved edits: the admin panel asks before closing
+  const isBannerFormDirty = useChangedSince(isCreating ? editingId ?? 'new' : null, [
+    title,
+    subtitle,
+    btnText,
+    image,
+    mobileImage,
+    desktopImage,
+    actionType,
+    targetCategory,
+    targetProductId,
+    targetPromoCode,
+    badge,
+    scheduleEnabled,
+    startDate,
+    endDate,
+  ]);
+  useUnsavedChanges(isBannerFormDirty, 'Баннер');
 
   const presetImages = [
     {

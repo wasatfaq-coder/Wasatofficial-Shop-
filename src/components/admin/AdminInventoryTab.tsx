@@ -40,6 +40,8 @@ import { downloadCSV } from '../../utils/csvHelpers';
 import { productImage } from '../../utils/productImage';
 import { pluralRu } from '../../utils/pluralize';
 import { useDialogA11y } from '../../utils/useDialogA11y';
+import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
+import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
 
 interface AdminInventoryTabProps {
   products: Product[];
@@ -153,6 +155,8 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
   const [auditOperator, setAuditOperator] = useState('Инспектор склада');
   const [auditFilterDiscrepanciesOnly, setAuditFilterDiscrepanciesOnly] = useState(false);
   const [auditSearchQuery, setAuditSearchQuery] = useState('');
+  // Counted stock not yet approved («Утвердить инвентаризацию»)
+  useUnsavedChanges(Object.keys(auditCounts).length > 0, 'Инвентаризация');
   const [auditSessionDate] = useState(() => new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric' }));
 
   // Listen to external stock movement updates (e.g. from Order placed or status changed)
@@ -398,13 +402,24 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
 
   // Movement Operation Modal State
   const [isOperationModalOpen, setIsOperationModalOpen] = useState(false);
-  const operationDialog = useDialogA11y(isOperationModalOpen, () => setIsOperationModalOpen(false));
   const [opType, setOpType] = useState<StockMovementLog['type']>('receipt');
   const [opSelectedProductId, setOpSelectedProductId] = useState<string>(products?.[0]?.id || '');
   const [opSelectedSkuIndex, setOpSelectedSkuIndex] = useState<number>(0);
   const [opQuantity, setOpQuantity] = useState<number>(5);
   const [opReason, setOpReason] = useState<string>('Плановое пополнение остатков');
   const [opOperator, setOpOperator] = useState<string>('Администратор');
+  // A filled-in operation: Escape, «×» and «Отмена» ask before the window closes
+  const isOperationDirty = useChangedSince(isOperationModalOpen ? 'operation' : null, [
+    opType,
+    opSelectedProductId,
+    opSelectedSkuIndex,
+    opQuantity,
+    opReason,
+    opOperator,
+  ]);
+  useUnsavedChanges(isOperationDirty, 'Складская операция');
+  const operationGuard = useDiscardGuard(isOperationDirty, () => setIsOperationModalOpen(false));
+  const operationDialog = useDialogA11y(isOperationModalOpen, operationGuard.requestClose);
 
   // Labels: variations ticked in the matrix, and the ones the label generator is open for
   const [selectedSkuKeys, setSelectedSkuKeys] = useState<Set<string>>(() => new Set());
@@ -1445,7 +1460,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                 </div>
               </div>
               <button
-                onClick={() => setIsOperationModalOpen(false)}
+                onClick={operationGuard.requestClose}
                 className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E]"
                 aria-label="Закрыть"
               >
@@ -1560,7 +1575,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
               <div className="flex gap-2 pt-2 border-t border-[#BAC5D5]/50">
                 <button
                   type="button"
-                  onClick={() => setIsOperationModalOpen(false)}
+                  onClick={operationGuard.requestClose}
                   className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70]"
                 >
                   Отмена
@@ -1588,6 +1603,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
           onShowToast={onShowToast}
         />
       )}
+      <DiscardChangesDialog {...operationGuard.dialogProps} what="Данные операции" />
     </div>
   );
 };

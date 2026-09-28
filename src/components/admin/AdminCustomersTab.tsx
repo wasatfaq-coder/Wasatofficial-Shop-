@@ -35,6 +35,8 @@ import { NeumorphicSelect, NeumorphicSelectOption } from '../NeumorphicSelect';
 import { orderStatusChip } from '../../utils/orderStatusStyle';
 import { formatAddress } from '../../utils/addressFormat';
 import { useDialogA11y } from '../../utils/useDialogA11y';
+import { useUnsavedChanges } from '../../utils/unsavedChanges';
+import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
 
 interface AdminCustomersTabProps {
   users: UserProfile[];
@@ -99,12 +101,16 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
   const [filterType, setFilterType] = useState<'all' | 'with_orders' | 'repeat' | 'registered' | 'guest'>('all');
   const [sortBy, setSortBy] = useState<'ltv_desc' | 'orders_desc' | 'recent_desc' | 'name_asc'>('ltv_desc');
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerRecord | null>(null);
-  const customerDialog = useDialogA11y(Boolean(selectedCustomer), () => setSelectedCustomer(null));
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Manager Notes editing inside detail modal
   const [editingNotes, setEditingNotes] = useState('');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
+  // An unsaved manager note: closing the customer window asks first; the admin panel asks too
+  const isNoteChanged = Boolean(selectedCustomer) && editingNotes !== (selectedCustomer?.managerNotes || '');
+  useUnsavedChanges(isNoteChanged, 'Заметка о клиенте');
+  const customerGuard = useDiscardGuard(isNoteChanged, () => setSelectedCustomer(null));
+  const customerDialog = useDialogA11y(Boolean(selectedCustomer), customerGuard.requestClose);
   const [newTagInput, setNewTagInput] = useState('');
 
   // Customer deletion state
@@ -835,7 +841,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 )}
                 <button
                   type="button"
-                  onClick={() => setSelectedCustomer(null)}
+                  onClick={customerGuard.requestClose}
                   className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E]"
                   aria-label="Закрыть"
                 >
@@ -1244,7 +1250,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
             <div className="border-t border-[#BAC5D5]/40 pt-3 flex items-center justify-end gap-2 shrink-0">
               <button
                 type="button"
-                onClick={() => setSelectedCustomer(null)}
+                onClick={customerGuard.requestClose}
                 className="neu-button px-6 py-2.5 rounded-xl text-xs font-black text-[#2D3A4E] hover:text-accent transition-all"
               >
                 Закрыть
@@ -1303,6 +1309,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
           </div>
         </div>
       )}
+      <DiscardChangesDialog {...customerGuard.dialogProps} what="Изменения заметки" />
     </div>
   );
 };

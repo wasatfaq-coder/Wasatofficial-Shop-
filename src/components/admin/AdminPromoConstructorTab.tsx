@@ -25,6 +25,7 @@ import { PromoCode, Product, StoreCategory } from '../../types';
 import { copyToClipboard } from '../../utils/clipboard';
 import { NotConfigured } from '../NotConfigured';
 import { productImage } from '../../utils/productImage';
+import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
 
 interface AdminPromoConstructorTabProps {
   promos: PromoCode[];
@@ -69,6 +70,27 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
   const [isReferral, setIsReferral] = useState(false);
   const [partnerName, setPartnerName] = useState('');
   const [partnerCommissionPercent, setPartnerCommissionPercent] = useState<number>(10);
+
+  // The open form (new or edited promo code) with unsaved edits: the admin panel asks before closing
+  const isPromoFormDirty = useChangedSince(isCreating ? editingId ?? 'new' : null, [
+    code,
+    discountType,
+    discountValue,
+    title,
+    description,
+    minOrderAmount,
+    expiresAt,
+    usageLimit,
+    badgeText,
+    scopeType,
+    selectedCategories,
+    selectedProductIds,
+    isPopular,
+    isReferral,
+    partnerName,
+    partnerCommissionPercent,
+  ]);
+  useUnsavedChanges(isPromoFormDirty, 'Промокод');
 
   // Batch Generator Fields
   const [batchPrefix, setBatchPrefix] = useState('SMS-');

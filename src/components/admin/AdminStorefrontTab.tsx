@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Store,
   ShieldCheck,
@@ -33,6 +33,7 @@ import { BrandRequisitesModal } from '../BrandRequisitesModal';
 import { NeumorphicSwitch } from '../NeumorphicSwitch';
 import { QuickTextEditModal, QuickEditFieldConfig } from './QuickTextEditModal';
 import { useDialogA11y } from '../../utils/useDialogA11y';
+import { sameValue, useUnsavedChanges } from '../../utils/unsavedChanges';
 
 
 interface AdminStorefrontTabProps {
@@ -67,11 +68,17 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
     return loadStorefrontSettings();
   });
 
+  // A new version from the database replaces the form only when nothing is being edited:
+  // edits not yet applied are not overwritten
+  const syncedSettings = useRef(propSettings);
   useEffect(() => {
-    if (propSettings) {
-      setLocalSettings(propSettings);
-    }
+    if (!propSettings) return;
+    const previous = syncedSettings.current;
+    syncedSettings.current = propSettings;
+    setLocalSettings((local) => (previous && !sameValue(local, previous) ? local : propSettings));
   }, [propSettings]);
+  const hasUnappliedChanges = Boolean(propSettings) && !sameValue(localSettings, propSettings);
+  useUnsavedChanges(hasUnappliedChanges, 'Витрина');
 
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -2339,6 +2346,37 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
           </button>
         </div>
       </form>
+
+      {/* Edits made in the form are applied by one button that stays in view */}
+      {hasUnappliedChanges && (
+        <div className="sticky bottom-0 z-10 pt-2 pb-1">
+          <div className="neu-flat rounded-2xl px-3.5 py-2.5 flex items-center justify-between gap-3 flex-wrap border border-white/80">
+            <p className="text-xs font-bold text-[#2D3A4E] flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-warning shrink-0" aria-hidden="true" />
+              Есть несохраненные изменения
+            </p>
+            <div className="flex items-center gap-2 ml-auto">
+              <button
+                type="button"
+                onClick={() => propSettings && setLocalSettings(propSettings)}
+                disabled={isSaving}
+                className="h-9 px-3.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer disabled:opacity-60"
+              >
+                Отменить
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSave()}
+                disabled={isSaving}
+                className="h-9 px-4 neu-button-accent rounded-xl text-xs font-black text-white flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+              >
+                <Save className="w-4 h-4" />
+                {isSaving ? 'Сохранение…' : 'Применить'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Interactive Modal Preview for Admin */}
       <BrandRequisitesModal
