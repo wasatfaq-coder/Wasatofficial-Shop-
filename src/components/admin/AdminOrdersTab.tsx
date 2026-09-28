@@ -36,6 +36,7 @@ import { exportOrdersToCSV } from '../../utils/csvHelpers';
 import { copyToClipboard } from '../../utils/clipboard';
 import { deductStockWithLogs, returnStockWithLogs } from '../../utils/inventory';
 import { deleteOrderFromFirestore } from '../../utils/firebaseSync';
+import { AdminActionMenu } from './AdminActionMenu';
 import {
   getDefaultDeliveryStages,
   getSynchronizedDeliveryStages,
@@ -200,6 +201,11 @@ const TRACKING_CARRIERS: TrackingCarrierConfig[] = [
 const historyDateLabel = () =>
   new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
+/** Payment method as chosen by the buyer, without the «(при получении)» mark added to the order */
+function paymentMethodName(value?: string): string {
+  return (value || '').replace(/\s*\(при получении\)\s*$/i, '').trim();
+}
+
 export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   orders,
   storefrontSettings,
@@ -211,10 +217,12 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 }) => {
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | Order['status']>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'cancelled' | Order['status']>('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | '7days' | 'month'>('all');
-  const [deliveryFilter, setDeliveryFilter] = useState<'all' | 'courier' | 'express' | 'pickup' | 'cdek'>('all');
-  const [paymentFilter, setPaymentFilter] = useState<'all' | 'card' | 'sbp' | 'cash'>('all');
+  // Delivery and payment filters: the method names found in the orders themselves ('all' — any)
+  const [deliveryFilter, setDeliveryFilter] = useState<string>('all');
+  const [paymentFilter, setPaymentFilter] = useState<string>('all');
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<'all' | 'pending' | 'paid' | 'paid_on_delivery' | 'refunded'>('all');
 
   // Date filter options for Neumorphic dropdown
@@ -226,45 +234,33 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     { value: 'month', label: 'Этот месяц' },
   ], []);
 
-  // Order status filter options with dynamic counters and visual indicator dots
-  const statusFilterOptions = useMemo(() => [
-    {
-      value: 'all',
-      label: 'Все статусы',
-      badge: `${orders.length}`,
-      icon: <Layers className="w-3.5 h-3.5 text-accent" />,
-    },
-    {
-      value: 'accepted',
-      label: 'Принят',
-      badge: `${orders.filter((o) => o.status === 'accepted' && !o.isCancelled).length}`,
-      icon: <span className="w-2 h-2 rounded-full bg-accent shrink-0" />,
-    },
-    {
-      value: 'assembling',
-      label: 'Сборка',
-      badge: `${orders.filter((o) => o.status === 'assembling' && !o.isCancelled).length}`,
-      icon: <span className="w-2 h-2 rounded-full bg-accent shrink-0" />,
-    },
-    {
-      value: 'in_transit',
-      label: 'В пути',
-      badge: `${orders.filter((o) => o.status === 'in_transit' && !o.isCancelled).length}`,
-      icon: <span className="w-2 h-2 rounded-full bg-accent shrink-0" />,
-    },
-    {
-      value: 'ready',
-      label: 'Готов к выдаче',
-      badge: `${orders.filter((o) => o.status === 'ready' && !o.isCancelled).length}`,
-      icon: <span className="w-2 h-2 rounded-full bg-warning shrink-0" />,
-    },
-    {
-      value: 'delivered',
-      label: 'Доставлен',
-      badge: `${orders.filter((o) => o.status === 'delivered' && !o.isCancelled).length}`,
-      icon: <span className="w-2 h-2 rounded-full bg-success shrink-0" />,
-    },
-  ], [orders]);
+  // Status chips (radio): counts exclude cancelled orders, which have their own chip
+  const statusChips = useMemo(() => {
+    const active = orders.filter((o) => !o.isCancelled);
+    const count = (st: Order['status']) => active.filter((o) => o.status === st).length;
+    return [
+      { value: 'all' as const, label: 'Все', count: orders.length },
+      { value: 'accepted' as const, label: 'Новые', count: count('accepted') },
+      { value: 'assembling' as const, label: 'Сборка', count: count('assembling') },
+      { value: 'in_transit' as const, label: 'В пути', count: count('in_transit') },
+      { value: 'ready' as const, label: 'К выдаче', count: count('ready') },
+      { value: 'delivered' as const, label: 'Доставлены', count: count('delivered') },
+      { value: 'cancelled' as const, label: 'Отменены', count: orders.length - active.length },
+    ];
+  }, [orders]);
+
+  const moreFiltersCount = [dateFilter, paymentStatusFilter, deliveryFilter, paymentFilter].filter((v) => v !== 'all').length;
+
+  // Methods that occur in the orders (the store names its methods itself; old orders keep old names)
+  const deliveryMethodNames = useMemo(
+    () => [...new Set<string>(orders.map((o) => (o.deliveryMethod || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ru')),
+    [orders]
+  );
+  const paymentMethodNames = useMemo(
+    () => [...new Set<string>(orders.map((o) => paymentMethodName(o.paymentMethod)).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ru')),
+    [orders]
+  );
+
 
   // Bulk Selection State
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
@@ -295,7 +291,8 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   useUnsavedChanges(useChangedSince(editingTrackOrderId, [tempTrackValue, tempCarrierValue]), 'Трек-номер заказа');
   useUnsavedChanges(useChangedSince(editingNoteOrderId, [tempNoteValue]), 'Заметка к заказу');
 
-  // Filtered Orders Calculation (the cards are heavy: the first ones render with the section, the rest after paint)
+  // Filtered Orders Calculation (the cards are heavy: the first 3 — about a screen — render with the section, the rest
+  // after paint)
   const filteredOrders = useMemo(() => {
     // «Сегодня» / «Вчера» by the order's real date (createdAt, or the text date of old orders)
     const now = new Date();
@@ -303,8 +300,9 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     const DAY = 24 * 60 * 60 * 1000;
 
     return orders.filter((ord) => {
-      // 1. Status Filter
-      if (statusFilter !== 'all' && ord.status !== statusFilter) return false;
+      // 1. Status Filter (a cancelled order counts only under «Отменены», like the chip counters)
+      if (statusFilter === 'cancelled' && !ord.isCancelled) return false;
+      if (statusFilter !== 'all' && statusFilter !== 'cancelled' && (ord.isCancelled || ord.status !== statusFilter)) return false;
 
       // 2. Date Filter
       if (dateFilter !== 'all') {
@@ -312,6 +310,8 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         if (t === null) return false;
         if (dateFilter === 'today' && !(t >= dayStart && t < dayStart + DAY)) return false;
         if (dateFilter === 'yesterday' && !(t >= dayStart - DAY && t < dayStart)) return false;
+        if (dateFilter === '7days' && !(t >= dayStart - 6 * DAY)) return false;
+        if (dateFilter === 'month' && !(t >= new Date(now.getFullYear(), now.getMonth(), 1).getTime())) return false;
       }
 
       // 3. Search Query
@@ -331,22 +331,9 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         if (!matchesId && !matchesAddress && !matchesTrack && !matchesNote && !matchesItems && !matchesCustomer) return false;
       }
 
-      // 4. Delivery Method Filter
-      if (deliveryFilter !== 'all') {
-        const d = (ord.deliveryMethod || '').toLowerCase();
-        if (deliveryFilter === 'courier' && !d.includes('курьер') && !d.includes('стандарт')) return false;
-        if (deliveryFilter === 'express' && !d.includes('экспресс') && !d.includes('срочн')) return false;
-        if (deliveryFilter === 'pickup' && !d.includes('самовывоз') && !d.includes('пвз')) return false;
-        if (deliveryFilter === 'cdek' && !d.includes('сдэк') && !d.includes('cdek')) return false;
-      }
-
-      // 5. Payment Method Filter
-      if (paymentFilter !== 'all') {
-        const p = (ord.paymentMethod || '').toLowerCase();
-        if (paymentFilter === 'card' && !p.includes('карт')) return false;
-        if (paymentFilter === 'sbp' && !p.includes('сбп') && !p.includes('быстр')) return false;
-        if (paymentFilter === 'cash' && !p.includes('получен') && !p.includes('наличн')) return false;
-      }
+      // 4–5. Delivery and payment method: as named in the order
+      if (deliveryFilter !== 'all' && (ord.deliveryMethod || '').trim() !== deliveryFilter) return false;
+      if (paymentFilter !== 'all' && paymentMethodName(ord.paymentMethod) !== paymentFilter) return false;
 
       // 6. Payment Status Filter
       if (paymentStatusFilter !== 'all') {
@@ -357,7 +344,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       return true;
     });
   }, [orders, searchQuery, statusFilter, dateFilter, deliveryFilter, paymentFilter, paymentStatusFilter]);
-  const visibleOrders = useProgressiveList<Order>(filteredOrders);
+  const visibleOrders = useProgressiveList<Order>(filteredOrders, 3);
 
   // Bulk Operations Handlers
   const handleToggleSelectAll = () => {
@@ -691,11 +678,9 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         <div>
           <h3 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
             <Package className="w-4 h-4 text-accent" />
-            Управление клиентскими заказами и логистика
+            Заказы
           </h3>
-          <p className="text-[11px] text-[#4E5C70]">
-            Синхронизация списания/возврата склада, трек-номера СДЭК/Почта и статусы оплаты
-          </p>
+          <p className="text-[11px] text-[#4E5C70]">Статусы, оплата, доставка и остатки на складе</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -725,17 +710,42 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
           />
         </div>
 
-        {/* Date Filter & Bulk Selection Header Controls */}
+        {/* Status chips: the common filter in one tap (Hick: 7 controls → chips + «Фильтры») */}
+        <div role="radiogroup" aria-label="Статус заказа" className="flex gap-1.5 overflow-x-auto no-scrollbar p-1 -m-1">
+          {statusChips.map((chip) => {
+            const active = statusFilter === chip.value;
+            return (
+              <button
+                key={chip.value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => setStatusFilter(chip.value)}
+                className={`h-8 px-3 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                  active ? 'neu-pill-active' : 'neu-button text-[#2D3A4E] hover:text-accent'
+                }`}
+              >
+                {chip.label}
+                <span className={`text-[11px] ${active ? 'text-accent' : 'text-[#4E5C70]'}`}>{chip.count}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* More filters & Bulk Selection Header Controls */}
         <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
-          <div className="w-full sm:w-auto sm:min-w-[210px] flex-1 sm:flex-initial">
-            <NeumorphicSelect
-              value={dateFilter}
-              onChange={(val) => setDateFilter(val as any)}
-              variant="inset"
-              prefix="Период:"
-              options={dateFilterOptions}
-            />
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowMoreFilters((v) => !v)}
+            aria-expanded={showMoreFilters}
+            aria-controls="orders-more-filters"
+            className={`h-[42px] px-3.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer ${
+              showMoreFilters ? 'neu-pill-active' : 'neu-button text-[#2D3A4E] hover:text-accent'
+            }`}
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
+            Фильтры{moreFiltersCount > 0 ? ` (${moreFiltersCount})` : ''}
+          </button>
 
           {/* Bulk Selection Header Checkbox */}
           {filteredOrders.length > 0 && (
@@ -749,10 +759,8 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                   ? true
                   : 'mixed'
               }
-              className={`h-[42px] text-[11px] font-bold px-3.5 rounded-xl cursor-pointer flex items-center gap-2 transition-all ml-auto sm:ml-0 whitespace-nowrap active:scale-95 neu-inset ${
-                selectedOrderIds.length > 0
-                  ? 'text-accent bg-[#E3E8EF] font-black'
-                  : 'text-[#4E5C70] hover:text-[#2D3A4E]'
+              className={`h-[42px] text-[11px] font-bold px-3.5 rounded-xl cursor-pointer flex items-center gap-2 transition-all ml-auto whitespace-nowrap neu-button ${
+                selectedOrderIds.length > 0 ? 'text-accent font-black' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
               }`}
             >
               <div
@@ -937,71 +945,52 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         </div>
       )}
 
-      {/* Filter Dropdowns Grid: Order Status, Payment Status, Delivery & Payment Method */}
+      {/* Period, payment status, delivery and payment method: behind «Фильтры» */}
       <div className="space-y-2">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
-          {/* Order Status Dropdown */}
-          <div className="relative">
+        {showMoreFilters && (
+          <div id="orders-more-filters" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs animate-in fade-in duration-150">
             <NeumorphicSelect
-              value={statusFilter}
-              onChange={(val) => setStatusFilter(val as any)}
+              value={dateFilter}
+              onChange={(val) => setDateFilter(val as typeof dateFilter)}
               variant="inset"
-              prefix="Статус заказа:"
-              options={statusFilterOptions}
-              placeholder="Все статусы..."
+              prefix="Период:"
+              options={dateFilterOptions}
             />
-          </div>
-
-          {/* Payment Status Filter */}
-          <div className="relative">
             <NeumorphicSelect
               value={paymentStatusFilter}
-              onChange={(val) => setPaymentStatusFilter(val as any)}
+              onChange={(val) => setPaymentStatusFilter(val as typeof paymentStatusFilter)}
               variant="inset"
               prefix="Статус оплаты:"
               options={[
-                { value: 'all', label: 'Все статусы', icon: <DollarSign className="w-3.5 h-3.5 text-success" /> },
+                { value: 'all', label: 'Любой статус', icon: <DollarSign className="w-3.5 h-3.5 text-success" /> },
                 { value: 'paid', label: 'Оплачен онлайн' },
                 { value: 'pending', label: 'Ожидает оплаты' },
                 { value: 'paid_on_delivery', label: 'При получении' },
                 { value: 'refunded', label: 'Оформлен возврат' },
               ]}
             />
-          </div>
-
-          {/* Delivery Method Filter */}
-          <div className="relative">
             <NeumorphicSelect
               value={deliveryFilter}
-              onChange={(val) => setDeliveryFilter(val as any)}
+              onChange={setDeliveryFilter}
               variant="inset"
               prefix="Доставка:"
               options={[
-                { value: 'all', label: 'Все способы', icon: <Truck className="w-3.5 h-3.5 text-accent" /> },
-                { value: 'courier', label: 'Курьерская доставка' },
-                { value: 'express', label: 'Срочная экспресс' },
-                { value: 'pickup', label: 'Самовывоз из бутика' },
-                { value: 'cdek', label: 'Пункт выдачи СДЭК' },
+                { value: 'all', label: 'Любой способ', icon: <Truck className="w-3.5 h-3.5 text-accent" /> },
+                ...deliveryMethodNames.map((name) => ({ value: name, label: name })),
               ]}
             />
-          </div>
-
-          {/* Payment Method Filter */}
-          <div className="relative">
             <NeumorphicSelect
               value={paymentFilter}
-              onChange={(val) => setPaymentFilter(val as any)}
+              onChange={setPaymentFilter}
               variant="inset"
-              prefix="Способ платежа:"
+              prefix="Способ оплаты:"
               options={[
-                { value: 'all', label: 'Все способы', icon: <CreditCard className="w-3.5 h-3.5 text-accent" /> },
-                { value: 'card', label: 'Банковская карта' },
-                { value: 'sbp', label: 'Система СБП' },
-                { value: 'cash', label: 'Оплата при получении' },
+                { value: 'all', label: 'Любой способ', icon: <CreditCard className="w-3.5 h-3.5 text-accent" /> },
+                ...paymentMethodNames.map((name) => ({ value: name, label: name })),
               ]}
             />
           </div>
-        </div>
+        )}
 
         {/* Active Filters Reset Bar */}
         {(statusFilter !== 'all' || deliveryFilter !== 'all' || paymentFilter !== 'all' || paymentStatusFilter !== 'all' || dateFilter !== 'all') && (
@@ -1538,65 +1527,57 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                     <span>Печать чека</span>
                   </button>
 
-                  {/* Order Adjustment Modal Opener */}
-                  <button
-                    onClick={() => setSelectedOrderForAdjustment(ord)}
-                    className="h-8 px-3 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] flex items-center gap-1.5 cursor-pointer transition-all border border-white/60"
-                    title="Изменить состав заказа, списать или вернуть остатки на склад"
-                  >
-                    <SlidersHorizontal className="w-3.5 h-3.5 text-warning" />
-                    <span>Правка состава и склад</span>
-                  </button>
-
-                  {/* Delivery Map Opener */}
-                  <button
-                    onClick={() => setSelectedOrderForMap(ord)}
-                    className="h-8 px-3 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] flex items-center gap-1.5 cursor-pointer transition-all border border-white/60"
-                    title="Интерактивная карта доставки"
-                  >
-                    <Navigation className="w-3.5 h-3.5 text-accent" />
-                    <span>Карта</span>
-                  </button>
-
-                  {/* Delivery Stages Management Opener */}
-                  <button
-                    onClick={() => setSelectedOrderForDeliveryStages(ord)}
-                    className="h-8 px-3 neu-button rounded-xl text-xs font-bold text-accent hover:text-[#2D3A4E] flex items-center gap-1.5 cursor-pointer transition-all border border-white/60"
-                    title="Управление этапами доставки заказа"
-                  >
-                    <Clock className="w-3.5 h-3.5 text-accent" />
-                    <span>Этапы доставки</span>
-                  </button>
-
-                  {/* Delete Order Button */}
-                  <button
-                    onClick={() => setOrderToDelete(ord)}
-                    className="h-8 px-2.5 neu-button-danger rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-all border border-white/60"
-                    title="Удалить заказ"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Удалить</span>
-                  </button>
-
-                  {/* Quick Cancel & Return Stock Button */}
-                  {!ord.isCancelled && (
-                    <button
-                      onClick={() => handleCancelAndReturnStock(ord)}
-                      className="h-8 px-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-danger flex items-center gap-1 cursor-pointer transition-all border border-white/60"
-                      title="Отменить заказ и автоматически вернуть товары на склад"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5 text-danger" />
-                      <span>Отмена</span>
-                    </button>
-                  )}
+                  {/* Rarely used actions: «Ещё» menu; delete is the last item, after a line */}
+                  <AdminActionMenu
+                    actions={[
+                      {
+                        id: 'adjust',
+                        label: 'Правка состава и склад',
+                        icon: <SlidersHorizontal className="w-3.5 h-3.5 text-warning" />,
+                        onSelect: () => setSelectedOrderForAdjustment(ord),
+                      },
+                      {
+                        id: 'stages',
+                        label: 'Этапы доставки',
+                        icon: <Clock className="w-3.5 h-3.5 text-accent" />,
+                        onSelect: () => setSelectedOrderForDeliveryStages(ord),
+                      },
+                      {
+                        id: 'map',
+                        label: 'Карта доставки',
+                        icon: <Navigation className="w-3.5 h-3.5 text-accent" />,
+                        onSelect: () => setSelectedOrderForMap(ord),
+                      },
+                      ...(!ord.isCancelled
+                        ? [
+                            {
+                              id: 'cancel',
+                              label: 'Отменить и вернуть на склад',
+                              icon: <RotateCcw className="w-3.5 h-3.5 text-danger" />,
+                              onSelect: () => handleCancelAndReturnStock(ord),
+                              separatorBefore: true,
+                            },
+                          ]
+                        : []),
+                      {
+                        id: 'delete',
+                        label: 'Удалить заказ',
+                        icon: <Trash2 className="w-3.5 h-3.5" />,
+                        onSelect: () => setOrderToDelete(ord),
+                        danger: true,
+                        separatorBefore: ord.isCancelled,
+                      },
+                    ]}
+                  />
 
                   {/* Toggle Audit History */}
                   <button
                     onClick={() =>
                       setExpandedOrderAuditLogId(isAuditExpanded ? null : ord.id)
                     }
-                    className={`h-8 px-3 rounded-xl text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 sm:ml-auto neu-inset border border-white/60 ${
-                      isAuditExpanded ? 'text-accent font-black border-accent/40 bg-[#DDE4F0]' : 'text-[#4E5C70] hover:text-accent hover:bg-[#DDE4F0]'
+                    aria-expanded={isAuditExpanded}
+                    className={`h-8 px-3 rounded-xl text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-all sm:ml-auto ${
+                      isAuditExpanded ? 'neu-pill-active' : 'neu-button text-[#4E5C70] hover:text-accent'
                     }`}
                   >
                     <History className="w-3.5 h-3.5 text-accent" />

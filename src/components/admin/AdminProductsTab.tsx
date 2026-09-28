@@ -14,7 +14,6 @@ import {
   Upload,
   Layers,
   AlertTriangle,
-  CheckCircle2,
   Sparkles,
   Eye,
   Copy,
@@ -1407,14 +1406,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   ))}
                 </div>
               </div>
-            ) : (
-              <div className="neu-inset rounded-2xl p-2.5 border border-success/25 text-success text-xs flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
-                <span className="font-bold">
-                  Все артикулы SKU и штрихкоды уникальны в каталоге
-                </span>
-              </div>
-            )}
+            ) : null /* no «всё уникально» banner: it showed even for an empty new product */}
 
             <form onSubmit={handleSaveProduct} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1570,7 +1562,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                           type="number"
                           value={formPrice || ''}
                           onChange={(e) => setFormPrice(Number(e.target.value))}
-                          placeholder="0"
+                          placeholder="напр. 2 990"
                           min="1"
                           className="w-full h-9 px-2.5 neu-inset rounded-xl text-xs font-black text-accent"
                           required
@@ -1587,7 +1579,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                           onChange={(e) =>
                             setFormCostPrice(e.target.value ? Number(e.target.value) : undefined)
                           }
-                          placeholder="1400"
+                          placeholder="напр. 1 400"
                           className="w-full h-9 px-2.5 neu-inset rounded-xl text-xs font-bold text-[#2D3A4E] placeholder:text-[#56647A]"
                         />
                       </div>
@@ -1602,7 +1594,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                           onChange={(e) =>
                             setFormOldPrice(e.target.value ? Number(e.target.value) : undefined)
                           }
-                          placeholder="нет"
+                          placeholder="если есть"
                           className={`w-full h-9 px-2.5 neu-inset rounded-xl text-xs font-bold text-[#4E5C70] placeholder:text-[#56647A] ${
                             formOldPrice ? 'line-through' : ''
                           }`}
@@ -2208,22 +2200,23 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   </p>
                 )}
 
-                <div className="flex items-center gap-2.5 w-full justify-end">
-                  <button
-                    type="button"
-                    onClick={productFormGuard.requestClose}
-                    className="h-11 shrink-0 px-5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer text-center"
-                  >
-                    Отмена
-                  </button>
-                  <button
-                    type="submit"
-                    className="h-11 flex-1 sm:flex-initial min-w-0 px-6 neu-button-accent rounded-xl text-xs font-black text-white whitespace-nowrap cursor-pointer transition-all flex items-center justify-center gap-2"
-                  >
-                    <Check className="w-4 h-4 stroke-[2.5]" />
-                    <span>{editingProduct ? 'Сохранить изменения' : 'Создать товар'}</span>
-                  </button>
-                </div>
+              </div>
+              {/* Always in reach (the form is ~2 000 px long): sticks to the bottom of the window */}
+              <div className="sticky bottom-0 z-10 neu-flat rounded-2xl p-2.5 flex items-center gap-2.5 w-full justify-end">
+                <button
+                  type="button"
+                  onClick={productFormGuard.requestClose}
+                  className="h-11 shrink-0 px-5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer text-center"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  className="h-11 flex-1 sm:flex-initial min-w-0 px-6 neu-button-accent rounded-xl text-xs font-black text-white whitespace-nowrap cursor-pointer transition-all flex items-center justify-center gap-2"
+                >
+                  <Check className="w-4 h-4 stroke-[2.5]" />
+                  <span>{editingProduct ? 'Сохранить изменения' : 'Создать товар'}</span>
+                </button>
               </div>
             </form>
           </div>
