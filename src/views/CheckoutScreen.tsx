@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { isPreorderVariant } from '../utils/inventory';
 import { pluralRu } from '../utils/pluralize';
+import { LegalConsentNote } from '../components/LegalConsentNote';
 import {
   User,
   Phone,
@@ -99,6 +100,18 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  // The form's own «Подтвердить» is on screen: the phone's fixed bar hides
+  const confirmRef = React.useRef<HTMLButtonElement>(null);
+  const [confirmInView, setConfirmInView] = useState(false);
+  useEffect(() => {
+    const el = confirmRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([entry]) => setConfirmInView(entry.isIntersecting), { threshold: 0.6 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [cartItems.length]);
+  // Errors next to the contact fields (one check in handleSubmit; the browser's own bubbles are off: noValidate)
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<'name' | 'phone' | 'email', string>>>({});
   // Never prefill made-up contact or address data: a guest could submit it unnoticed
   const draftOwner = userProfile?.email || 'guest';
   const [contactsDraft] = useState(() => readContactsDraft(draftOwner));
@@ -288,17 +301,19 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
     ? Boolean(addrCity.trim() && addrStreet.trim() && addrHouse?.trim())
     : Boolean(addrCity.trim() && addrStreet.trim() && addrHouse?.trim() && addrEntrance?.trim() && addrIntercom?.trim());
   const paymentDone = Boolean(selectedPayment);
+  // A step counts as done only when every step before it is done too (payment is preselected, so «Оплата» alone
+  // must not look finished while the contacts are empty)
   const steps = [
     { num: 1, label: 'Данные', done: contactsDone, target: 'checkout-contacts' },
     { num: 2, label: 'Доставка', done: deliveryDone, target: 'checkout-delivery' },
     { num: 3, label: 'Оплата', done: paymentDone, target: 'checkout-payment' },
     { num: 4, label: 'Подтверждение', done: false, target: 'checkout-confirm' },
-  ];
+  ].map((st, i, all) => ({ ...st, done: all.slice(0, i + 1).every((x) => x.done) }));
   const currentStep = steps.find((st) => !st.done)?.num ?? 4;
   const scrollToSection = (id: string) =>
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cartItems.length === 0 || isSubmitting) return;
 
@@ -313,43 +328,30 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
       return;
     }
 
-    // Validate courier delivery required fields (street, house, entrance, intercom)
-    if (isCourierSelected) {
-      const missing: string[] = [];
-
-      if (!addrCity.trim()) {
-        missing.push('город');
-      }
-      if (!addrStreet.trim()) {
-        missing.push('улица');
-      }
-      if (!addrHouse || !addrHouse.trim()) {
-        missing.push('номер дома');
-      }
-      if (!addrEntrance || !addrEntrance.trim()) {
-        missing.push('подъезд');
-      }
-      if (!addrIntercom || !addrIntercom.trim()) {
-        missing.push('код домофона');
-      }
-
-      if (missing.length > 0) {
-        const errorText = `Для курьерской доставки не заполнены обязательные поля: ${missing.join(', ')}. Пожалуйста, укажите их для курьера.`;
-        setValidationError(errorText);
-        if (onShowToast) {
-          onShowToast(`Заполните данные для курьера: ${missing.join(', ')}`, 'error');
-        }
-        return;
-      }
-    } else if (isPostSelected) {
-      if (!addrCity.trim() || !addrStreet.trim() || !addrHouse || !addrHouse.trim()) {
-        const errorText = `Для доставки «${deliveryTitle}» укажите город, улицу и номер дома получателя.`;
-        setValidationError(errorText);
-        if (onShowToast) {
-          onShowToast(`Укажите город, улицу и номер дома для доставки «${deliveryTitle}»`, 'error');
-        }
-        return;
-      }
+    // One check for the whole form: errors next to the fields, the page scrolls to the first one
+    const contactErrors: typeof fieldErrors = {};
+    if (name.trim().length < 2) contactErrors.name = 'Укажите имя и фамилию';
+    if (phone.replace(/\D/g, '').length < 10) contactErrors.phone = 'Укажите телефон: не меньше 10 цифр';
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) contactErrors.email = 'Укажите email в формате name@example.ru';
+    setFieldErrors(contactErrors);
+    const addressError = isPickupSelected ? null : missingAddressText();
+    setValidationError(addressError);
+    const firstInvalid = contactErrors.name
+      ? 'checkout-name'
+      : contactErrors.phone
+      ? 'checkout-phone'
+      : contactErrors.email
+      ? 'checkout-email'
+      : addressError
+      ? 'checkout-address'
+      : null;
+    if (firstInvalid) {
+      // No toast: error toasts stay until closed and would pile up with every attempt; the message is at the field,
+      // the field gets the focus (announced with its error) and the page scrolls to it
+      const target = document.getElementById(firstInvalid);
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (target instanceof HTMLInputElement) target.focus({ preventScroll: true });
+      return;
     }
 
     setValidationError(null);
@@ -363,29 +365,45 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
 
     const finalOrderAddress =
       isPickupSelected && selectedPickupPoint
-        ? `Самовывоз: ${selectedPickupPoint.name}, г. ${selectedPickupPoint.city}, ${selectedPickupPoint.address}${
-            selectedPickupPoint.metro ? ` (м. ${selectedPickupPoint.metro})` : ''
-          }`
+        ? `Самовывоз: ${selectedPickupPoint.name}, ${selectedPickupPoint.city ? `г. ${selectedPickupPoint.city}, ` : ''}${
+            selectedPickupPoint.address
+          }${selectedPickupPoint.metro ? ` (м. ${selectedPickupPoint.metro})` : ''}`
         : formattedAddress;
 
-    setTimeout(async () => {
-      const placed = await onCompleteOrder({
-        items: cartItems,
-        contact: { name, phone, email },
-        address: finalOrderAddress,
-        deliveryMethod: currentDeliveryObj.title || 'Курьер',
-        deliveryMethodId: currentDeliveryObj.id,
-        totalPrice,
-        paymentMethod: paymentLabel,
-      });
-      // The server may reject the order (e.g. out of stock) — let the user retry
-      if (placed === false) {
-        setIsSubmitting(false);
-      } else {
-        clearContactsDraft();
-      }
-    }, 450);
+    const placed = await onCompleteOrder({
+      items: cartItems,
+      contact: { name, phone, email },
+      address: finalOrderAddress,
+      deliveryMethod: currentDeliveryObj.title || 'Курьер',
+      deliveryMethodId: currentDeliveryObj.id,
+      totalPrice,
+      paymentMethod: paymentLabel,
+    });
+    // The server may reject the order (e.g. out of stock) — let the user retry
+    if (placed === false) {
+      setIsSubmitting(false);
+    } else {
+      clearContactsDraft();
+    }
   };
+
+  /** What the chosen delivery still needs from the address; null — complete */
+  function missingAddressText(): string | null {
+    if (isCourierSelected) {
+      const missing: string[] = [];
+
+      if (!addrCity.trim()) missing.push('город');
+      if (!addrStreet.trim()) missing.push('улица');
+      if (!addrHouse?.trim()) missing.push('номер дома');
+      if (!addrEntrance?.trim()) missing.push('подъезд');
+      if (!addrIntercom?.trim()) missing.push('код домофона');
+      return missing.length > 0 ? `Для курьера не заполнено: ${missing.join(', ')}.` : null;
+    }
+    if (isPostSelected && (!addrCity.trim() || !addrStreet.trim() || !addrHouse?.trim())) {
+      return `Для доставки «${deliveryTitle}» укажите город, улицу и номер дома получателя.`;
+    }
+    return null;
+  }
 
   if (cartItems.length === 0) {
     return (
@@ -411,7 +429,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   }
 
   return (
-    <div className="space-y-5 pb-10 animate-in fade-in duration-300">
+    <div className="space-y-5 pb-28 lg:pb-10 animate-in fade-in duration-300">
       {/* 4-Step Progress Indicator */}
       <div className="neu-flat rounded-3xl p-4">
         <div className="flex items-center justify-between relative px-2">
@@ -523,7 +541,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
       </div>
 
       {/* Computer (lg): the form on the left; the total and «Подтвердить» on the right, always in view */}
-      <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start">
+      <form id="checkout-form" noValidate onSubmit={handleSubmit} className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start">
         <div className="space-y-4 lg:col-span-7">
         {/* Contact Info matching Image 5 */}
         <div id="checkout-contacts" className="neu-flat rounded-3xl p-4 space-y-3 border border-white/60">
@@ -544,11 +562,23 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                   required
                   autoComplete="name"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (fieldErrors.name) setFieldErrors((prev) => ({ ...prev, name: undefined }));
+                  }}
+                  aria-invalid={Boolean(fieldErrors.name)}
+                  aria-describedby={fieldErrors.name ? 'checkout-name-error' : undefined}
                   placeholder="Иван Петров"
-                  className="w-full neu-inset rounded-2xl py-3 pl-10 pr-3 text-xs font-medium text-[#2D3A4E]"
+                  className={`w-full neu-inset rounded-2xl py-3 pl-10 pr-3 text-xs font-medium text-[#2D3A4E] ${
+                    fieldErrors.name ? 'outline-2 outline-danger' : ''
+                  }`}
                 />
               </div>
+              {fieldErrors.name && (
+                <p id="checkout-name-error" className="text-[11px] font-bold text-danger mt-1 ml-1">
+                  {fieldErrors.name}
+                </p>
+              )}
             </div>
 
             <div>
@@ -564,11 +594,23 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                   autoComplete="tel"
                   inputMode="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    if (fieldErrors.phone) setFieldErrors((prev) => ({ ...prev, phone: undefined }));
+                  }}
+                  aria-invalid={Boolean(fieldErrors.phone)}
+                  aria-describedby={fieldErrors.phone ? 'checkout-phone-error' : undefined}
                   placeholder="+7 (999) 000-00-00"
-                  className="w-full neu-inset rounded-2xl py-3 pl-10 pr-3 text-xs font-medium text-[#2D3A4E]"
+                  className={`w-full neu-inset rounded-2xl py-3 pl-10 pr-3 text-xs font-medium text-[#2D3A4E] ${
+                    fieldErrors.phone ? 'outline-2 outline-danger' : ''
+                  }`}
                 />
               </div>
+              {fieldErrors.phone && (
+                <p id="checkout-phone-error" className="text-[11px] font-bold text-danger mt-1 ml-1">
+                  {fieldErrors.phone}
+                </p>
+              )}
             </div>
 
             <div>
@@ -584,310 +626,25 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                   autoComplete="email"
                   inputMode="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                  }}
+                  aria-invalid={Boolean(fieldErrors.email)}
+                  aria-describedby={fieldErrors.email ? 'checkout-email-error' : undefined}
                   placeholder="name@example.ru"
-                  className="w-full neu-inset rounded-2xl py-3 pl-10 pr-3 text-xs font-medium text-[#2D3A4E]"
+                  className={`w-full neu-inset rounded-2xl py-3 pl-10 pr-3 text-xs font-medium text-[#2D3A4E] ${
+                    fieldErrors.email ? 'outline-2 outline-danger' : ''
+                  }`}
                 />
               </div>
+              {fieldErrors.email && (
+                <p id="checkout-email-error" className="text-[11px] font-bold text-danger mt-1 ml-1">
+                  {fieldErrors.email}
+                </p>
+              )}
             </div>
           </div>
-        </div>
-
-        {/* Shipping Address / Pickup Point Section */}
-        <div className="neu-flat rounded-3xl p-4 space-y-3">
-          {isPickupSelected ? (
-            /* Neumorphic Pickup Point Address Card */
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0">
-                    <Store className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-black text-[#2D3A4E] tracking-wider uppercase">
-                      Пункт выдачи заказа
-                    </h3>
-                    <p className="text-[11px] text-[#4E5C70] font-medium">
-                      {deliveryTitle}
-                    </p>
-                  </div>
-                </div>
-                <span
-                  className={`text-[11px] font-black neu-inset px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0 ${
-                    deliveryFee === 0 ? 'text-success' : 'text-[#2D3A4E]'
-                  }`}
-                >
-                  {deliveryFee === 0 ? 'Бесплатно' : `${deliveryFee.toLocaleString('ru-RU')} ₽`}
-                </span>
-              </div>
-
-              {/* Main Neumorphic Address Box with Integrated Copy Action */}
-              <div className="neu-flat rounded-2xl p-3.5 space-y-3 border border-white/70">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1 min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-xs font-black text-[#2D3A4E]">
-                        {selectedPickupPoint?.name || 'Пункт выдачи'}
-                      </span>
-                      {selectedPickupPoint?.city && (
-                        <span className="text-[11px] font-bold text-accent neu-inset px-2 py-0.5 rounded-md">
-                          г. {selectedPickupPoint.city}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="pt-1 text-xs font-bold text-[#2D3A4E] flex items-start gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
-                      <span className="leading-relaxed select-all">
-                        {selectedPickupPoint?.address}
-                      </span>
-                    </div>
-
-                    {selectedPickupPoint?.metro && (
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg neu-inset text-[11px] font-bold text-accent mt-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                        <span>м. {selectedPickupPoint.metro}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Neumorphic Copy Button */}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleCopyAddress(
-                        `${selectedPickupPoint?.city ? `г. ${selectedPickupPoint.city}, ` : ''}${selectedPickupPoint?.address || ''}${
-                          selectedPickupPoint?.metro ? ` (м. ${selectedPickupPoint.metro})` : ''
-                        }`,
-                        'top-pickup'
-                      )
-                    }
-                    className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      copiedAddressId === 'top-pickup'
-                        ? 'neu-inset text-success ring-1.5 ring-success/50 scale-95'
-                        : 'neu-button text-accent hover:text-accent-strong'
-                    }`}
-                    title="Скопировать адрес пункта выдачи в буфер обмена"
-                  >
-                    {copiedAddressId === 'top-pickup' ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-success animate-in zoom-in-50 duration-200" />
-                        <span className="text-[11px] text-success font-extrabold">Скопировано!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5 text-accent" />
-                        <span className="text-[11px]">Скопировать</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* Schedule & Phone in Neumorphic Sub-bar */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2.5 border-t border-[#BAC5D5]/40 text-[11px] text-[#4E5C70]">
-                  {selectedPickupPoint?.schedule && (
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-accent shrink-0" />
-                      <span className="truncate">{selectedPickupPoint.schedule}</span>
-                    </div>
-                  )}
-                  {selectedPickupPoint?.phone && (
-                    <div className="flex items-center gap-1.5">
-                      <Phone className="w-3.5 h-3.5 text-accent shrink-0" />
-                      <span className="font-bold text-[#2D3A4E]">{selectedPickupPoint.phone}</span>
-                    </div>
-                  )}
-                </div>
-
-                {selectedPickupPoint?.note && (
-                  <div className="flex items-start gap-1.5 text-[11px] text-[#4E5C70] neu-inset p-2 rounded-xl">
-                    <Sparkles className="w-3.5 h-3.5 text-warning shrink-0 mt-0.5" />
-                    <span className="leading-snug">{selectedPickupPoint.note}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            /* Courier & Russian Post Address Card */
-            <>
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase">
-                  {isPostSelected ? `Адрес доставки (${deliveryTitle})` : 'Адрес курьерской доставки'}
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setIsAddressModalOpen(true)}
-                  className="text-xs font-bold text-accent hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                  <span>Редактировать адрес</span>
-                </button>
-              </div>
-
-              {/* Quick Selector for Saved Addresses */}
-              {userProfile.savedAddresses && userProfile.savedAddresses.length > 0 && (
-                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                  {userProfile.savedAddresses.map((sa) => {
-                    const isSel = selectedSavedId === sa.id;
-                    return (
-                      <button
-                        key={sa.id}
-                        type="button"
-                        onClick={() => handleSelectSavedAddress(sa)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer ${
-                          isSel
-                            ? 'neu-pill-active'
-                            : 'neu-button text-[#2D3A4E] hover:text-accent'
-                        }`}
-                      >
-                        {sa.title}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Structured Address Summary Display */}
-              <div
-                className={`neu-inset rounded-2xl p-3.5 space-y-2 transition-all ${
-                  validationError ? 'ring-2 ring-danger/80 bg-danger-soft' : ''
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#2D3A4E] flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-accent" />
-                    {addrTitle}
-                  </span>
-                  {addrPostal && (
-                    <span className="text-[11px] font-bold text-[#4E5C70] neu-inset px-2 py-0.5 rounded-md">
-                      Индекс: {addrPostal}
-                    </span>
-                  )}
-                </div>
-
-                {/* Validation Alert inside address card if data incomplete */}
-                {validationError && (
-                  <div className="p-2.5 rounded-xl bg-danger-soft border border-danger/35 text-danger space-y-1.5 animate-in fade-in duration-200">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
-                      <div className="text-xs">
-                        <p className="font-bold text-danger">
-                          {isPostSelected
-                            ? 'Адрес доставки не заполнен'
-                            : 'Данные для курьера не заполнены'}
-                        </p>
-                        <p className="text-[11px] text-danger leading-snug">{validationError}</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setIsAddressModalOpen(true)}
-                      className="w-full py-1.5 px-3 rounded-lg bg-danger hover:bg-danger/90 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-                    >
-                      <Pencil className="w-3 h-3" />
-                      <span>
-                        {isPostSelected
-                          ? 'Указать номер дома и квартиры'
-                          : 'Указать номер дома, подъезд и домофон'}
-                      </span>
-                    </button>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-[11px] text-[#4E5C70] font-medium block">Город</span>
-                    <span className="font-bold text-[#2D3A4E]">{addrCity}</span>
-                  </div>
-                  <div>
-                    <span className="text-[11px] text-[#4E5C70] font-medium block">Индекс</span>
-                    <span className="font-bold text-[#2D3A4E]">{addrPostal}</span>
-                  </div>
-                </div>
-
-                <div className="text-xs">
-                  <span className="text-[11px] text-[#4E5C70] font-medium block">Улица</span>
-                  <span className="font-bold text-[#2D3A4E]">{addrStreet}</span>
-                </div>
-
-                {/* Structured details: Дом, Подъезд, Этаж, Квартира, Домофон */}
-                {isPostSelected ? (
-                  <div className="flex flex-wrap gap-1.5 pt-0.5">
-                    {addrHouse ? (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] border border-white/60">
-                        д. {addrHouse}
-                      </span>
-                    ) : (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-danger border border-danger/35">
-                        нет дома *
-                      </span>
-                    )}
-                    {addrApartment && (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] border border-white/60">
-                        {addrApartment.toLowerCase().includes('кв') ||
-                        addrApartment.toLowerCase().includes('оф')
-                          ? addrApartment
-                          : `кв. ${addrApartment}`}
-                      </span>
-                    )}
-                    <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-accent border border-accent/20">
-                      {deliveryTitle}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5 pt-0.5">
-                    {addrHouse ? (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] border border-white/60">
-                        д. {addrHouse}
-                      </span>
-                    ) : (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-danger border border-danger/35">
-                        нет дома *
-                      </span>
-                    )}
-                    {addrEntrance ? (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] border border-white/60">
-                        подъезд {addrEntrance}
-                      </span>
-                    ) : (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-danger border border-danger/35">
-                        нет подъезда *
-                      </span>
-                    )}
-                    {addrFloor && (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] border border-white/60">
-                        эт. {addrFloor}
-                      </span>
-                    )}
-                    {addrApartment && (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] border border-white/60">
-                        {addrApartment.toLowerCase().includes('кв') ||
-                        addrApartment.toLowerCase().includes('оф')
-                          ? addrApartment
-                          : `кв. ${addrApartment}`}
-                      </span>
-                    )}
-                    {addrIntercom ? (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-accent border border-accent/20">
-                        домофон: {addrIntercom}
-                      </span>
-                    ) : (
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-danger border border-danger/35">
-                        нет домофона *
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                <div className="pt-1 border-t border-[#BAC5D5]/40 text-[11px] text-[#4E5C70]">
-                  <span className="font-bold text-[#2D3A4E]">
-                    {isPostSelected ? `${deliveryTitle}: ` : 'Курьеру: '}
-                  </span>
-                  <span className="text-[#2D3A4E]">{formattedAddress}</span>
-                </div>
-              </div>
-            </>
-          )}
         </div>
 
         {/* Shipping Methods */}
@@ -1157,6 +914,303 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           </div>
         </div>
 
+        {/* Shipping Address / Pickup Point Section: after the method, it depends on it */}
+        <div id="checkout-address" className="neu-flat rounded-3xl p-4 space-y-3 scroll-mt-24">
+          {isPickupSelected ? (
+            /* Neumorphic Pickup Point Address Card */
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0">
+                    <Store className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black text-[#2D3A4E] tracking-wider uppercase">
+                      Пункт выдачи заказа
+                    </h3>
+                    <p className="text-[11px] text-[#4E5C70] font-medium">
+                      {deliveryTitle}
+                    </p>
+                  </div>
+                </div>
+                <span
+                  className={`text-[11px] font-black neu-inset px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0 ${
+                    deliveryFee === 0 ? 'text-success' : 'text-[#2D3A4E]'
+                  }`}
+                >
+                  {deliveryFee === 0 ? 'Бесплатно' : `${deliveryFee.toLocaleString('ru-RU')} ₽`}
+                </span>
+              </div>
+
+              {/* Main Neumorphic Address Box with Integrated Copy Action */}
+              <div className="neu-flat rounded-2xl p-3.5 space-y-3 border border-white/70">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-black text-[#2D3A4E]">
+                        {selectedPickupPoint?.name || 'Пункт выдачи'}
+                      </span>
+                      {selectedPickupPoint?.city && (
+                        <span className="text-[11px] font-bold text-accent neu-inset px-2 py-0.5 rounded-md">
+                          г. {selectedPickupPoint.city}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="pt-1 text-xs font-bold text-[#2D3A4E] flex items-start gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
+                      <span className="leading-relaxed select-all">
+                        {selectedPickupPoint?.address}
+                      </span>
+                    </div>
+
+                    {selectedPickupPoint?.metro && (
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg neu-inset text-[11px] font-bold text-accent mt-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                        <span>м. {selectedPickupPoint.metro}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Neumorphic Copy Button */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleCopyAddress(
+                        `${selectedPickupPoint?.city ? `г. ${selectedPickupPoint.city}, ` : ''}${selectedPickupPoint?.address || ''}${
+                          selectedPickupPoint?.metro ? ` (м. ${selectedPickupPoint.metro})` : ''
+                        }`,
+                        'top-pickup'
+                      )
+                    }
+                    className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      copiedAddressId === 'top-pickup'
+                        ? 'neu-inset text-success ring-1.5 ring-success/50 scale-95'
+                        : 'neu-button text-accent hover:text-accent-strong'
+                    }`}
+                    title="Скопировать адрес пункта выдачи в буфер обмена"
+                  >
+                    {copiedAddressId === 'top-pickup' ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-success animate-in zoom-in-50 duration-200" />
+                        <span className="text-[11px] text-success font-extrabold">Скопировано!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-accent" />
+                        <span className="text-[11px]">Скопировать</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Schedule & Phone in Neumorphic Sub-bar */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2.5 border-t border-[#BAC5D5]/40 text-[11px] text-[#4E5C70]">
+                  {selectedPickupPoint?.schedule && (
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-accent shrink-0" />
+                      <span className="truncate">{selectedPickupPoint.schedule}</span>
+                    </div>
+                  )}
+                  {selectedPickupPoint?.phone && (
+                    <div className="flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-accent shrink-0" />
+                      <span className="font-bold text-[#2D3A4E]">{selectedPickupPoint.phone}</span>
+                    </div>
+                  )}
+                </div>
+
+                {selectedPickupPoint?.note && (
+                  <div className="flex items-start gap-1.5 text-[11px] text-[#4E5C70] neu-inset p-2 rounded-xl">
+                    <Sparkles className="w-3.5 h-3.5 text-warning shrink-0 mt-0.5" />
+                    <span className="leading-snug">{selectedPickupPoint.note}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* Courier & Russian Post Address Card */
+            <>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase">
+                  {isPostSelected ? `Адрес доставки (${deliveryTitle})` : 'Адрес курьерской доставки'}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setIsAddressModalOpen(true)}
+                  className="text-xs font-bold text-accent hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span>Редактировать адрес</span>
+                </button>
+              </div>
+
+              {/* Quick Selector for Saved Addresses */}
+              {userProfile.savedAddresses && userProfile.savedAddresses.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                  {userProfile.savedAddresses.map((sa) => {
+                    const isSel = selectedSavedId === sa.id;
+                    return (
+                      <button
+                        key={sa.id}
+                        type="button"
+                        onClick={() => handleSelectSavedAddress(sa)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer ${
+                          isSel
+                            ? 'neu-pill-active'
+                            : 'neu-button text-[#2D3A4E] hover:text-accent'
+                        }`}
+                      >
+                        {sa.title}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Structured Address Summary Display */}
+              <div
+                className={`neu-inset rounded-2xl p-3.5 space-y-2 transition-all ${
+                  validationError ? 'outline-2 outline-danger' : ''
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#2D3A4E] flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-accent" />
+                    {addrTitle}
+                  </span>
+                  {addrPostal && (
+                    <span className="text-[11px] font-bold text-[#4E5C70] neu-inset px-2 py-0.5 rounded-md">
+                      Индекс: {addrPostal}
+                    </span>
+                  )}
+                </div>
+
+                {/* Validation Alert inside address card if data incomplete */}
+                {validationError && (
+                  <div role="alert" className="p-2.5 rounded-xl bg-danger-soft border border-danger/35 text-danger space-y-1.5 animate-in fade-in duration-200">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
+                      <div className="text-xs">
+                        <p className="font-bold text-danger">
+                          {isPostSelected
+                            ? 'Адрес доставки не заполнен'
+                            : 'Данные для курьера не заполнены'}
+                        </p>
+                        <p className="text-[11px] text-danger leading-snug">{validationError}</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddressModalOpen(true)}
+                      className="w-full py-2 px-3 rounded-lg neu-button text-danger font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Pencil className="w-3 h-3" />
+                      <span>
+                        {isPostSelected
+                          ? 'Указать номер дома и квартиры'
+                          : 'Указать номер дома, подъезд и домофон'}
+                      </span>
+                    </button>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-[11px] text-[#4E5C70] font-medium block">Город</span>
+                    <span className="font-bold text-[#2D3A4E]">{addrCity}</span>
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-[#4E5C70] font-medium block">Индекс</span>
+                    <span className="font-bold text-[#2D3A4E]">{addrPostal}</span>
+                  </div>
+                </div>
+
+                <div className="text-xs">
+                  <span className="text-[11px] text-[#4E5C70] font-medium block">Улица</span>
+                  <span className="font-bold text-[#2D3A4E]">{addrStreet}</span>
+                </div>
+
+                {/* Structured details: Дом, Подъезд, Этаж, Квартира, Домофон */}
+                {isPostSelected ? (
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    {addrHouse ? (
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] border border-white/60">
+                        д. {addrHouse}
+                      </span>
+                    ) : (
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-danger border border-danger/35">
+                        нет дома *
+                      </span>
+                    )}
+                    {addrApartment && (
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] border border-white/60">
+                        {addrApartment.toLowerCase().includes('кв') ||
+                        addrApartment.toLowerCase().includes('оф')
+                          ? addrApartment
+                          : `кв. ${addrApartment}`}
+                      </span>
+                    )}
+                    <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-accent border border-accent/20">
+                      {deliveryTitle}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    {addrHouse ? (
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] border border-white/60">
+                        д. {addrHouse}
+                      </span>
+                    ) : (
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-danger border border-danger/35">
+                        нет дома *
+                      </span>
+                    )}
+                    {addrEntrance ? (
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] border border-white/60">
+                        подъезд {addrEntrance}
+                      </span>
+                    ) : (
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-danger border border-danger/35">
+                        нет подъезда *
+                      </span>
+                    )}
+                    {addrFloor && (
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] border border-white/60">
+                        эт. {addrFloor}
+                      </span>
+                    )}
+                    {addrApartment && (
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E] border border-white/60">
+                        {addrApartment.toLowerCase().includes('кв') ||
+                        addrApartment.toLowerCase().includes('оф')
+                          ? addrApartment
+                          : `кв. ${addrApartment}`}
+                      </span>
+                    )}
+                    {addrIntercom ? (
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-accent border border-accent/20">
+                        домофон: {addrIntercom}
+                      </span>
+                    ) : (
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-danger border border-danger/35">
+                        нет домофона *
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <div className="pt-1 border-t border-[#BAC5D5]/40 text-[11px] text-[#4E5C70]">
+                  <span className="font-bold text-[#2D3A4E]">
+                    {isPostSelected ? `${deliveryTitle}: ` : 'Курьеру: '}
+                  </span>
+                  <span className="text-[#2D3A4E]">{formattedAddress}</span>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
         {/* Payment Methods */}
         <div id="checkout-payment" className="neu-flat rounded-3xl p-4 space-y-3">
           <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase">
@@ -1244,7 +1298,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
             <button
               type="button"
               onClick={() => setIsAddressModalOpen(true)}
-              className="px-3 py-1.5 rounded-xl bg-danger hover:bg-danger/90 text-white font-bold text-xs shrink-0 cursor-pointer shadow-xs transition-colors"
+              className="px-3 py-1.5 rounded-xl neu-button text-danger font-bold text-xs shrink-0 cursor-pointer"
             >
               Заполнить
             </button>
@@ -1254,6 +1308,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
         {/* Final Blue Action Button - Confirm Order with neu-inset-deep animation */}
         <button
           id="checkout-confirm"
+          ref={confirmRef}
           type="submit"
           disabled={isSubmitting || orderBlocked}
           className={`w-full py-4 rounded-2xl btn-confirm-order font-bold text-sm flex items-center justify-center gap-2 cursor-pointer transition-all ${
@@ -1276,7 +1331,29 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
             </>
           )}
         </button>
+        <LegalConsentNote settings={storefrontSettings} action="Подтвердить заказ" className="text-center px-2" />
         </div>
+
+        {/* Phone: the total and «Подтвердить» stay at the bottom of the screen (the bottom menu is hidden here) until
+            the form's own button scrolls into view */}
+        {!confirmInView && !orderBlocked && (
+          <div className="lg:hidden fixed inset-x-0 bottom-0 z-30 px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pointer-events-none">
+            <div className="max-w-md md:max-w-lg mx-auto neu-flat rounded-2xl p-2.5 flex items-center gap-3 pointer-events-auto">
+              <div className="min-w-0 pl-1.5">
+                <p className="text-[11px] text-[#4E5C70] leading-none">Итого</p>
+                <p className="text-base font-extrabold text-[#2D3A4E] leading-tight">{totalPrice.toLocaleString('ru-RU')} ₽</p>
+              </div>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 py-3 rounded-xl neu-button-accent text-white font-bold text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+              >
+                {isSubmitting ? 'Оформление…' : 'Подтвердить'}
+                <ArrowRight className="w-4 h-4" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        )}
       </form>
 
       {/* Address Edit Modal matching attached image */}

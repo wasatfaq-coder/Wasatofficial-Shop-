@@ -300,7 +300,18 @@ export interface Order {
   deliveryFee?: number;
 }
 
-export type ActiveTab = 'home' | 'catalog' | 'cart' | 'favorites' | 'profile' | 'product-detail' | 'checkout' | 'order-success';
+export type ActiveTab =
+  | 'home'
+  | 'catalog'
+  | 'cart'
+  | 'favorites'
+  | 'profile'
+  | 'product-detail'
+  | 'checkout'
+  | 'order-success'
+  /** legal documents (LegalDocumentScreen) */
+  | 'offer'
+  | 'privacy';
 
 export interface PromoCode {
   id: string;

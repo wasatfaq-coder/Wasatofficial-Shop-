@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ActiveTab, Product, CartItem, UserProfile, Order, BodyMeasurements, PromoCode, BannerSlide, ChatMessage, SupportStatus, AppliedPromoInfo, StorefrontSettings, DeliveryMethod, PickupPoint, ReviewVote, StoredReview } from './types';
 import { GUEST_USER_PROFILE } from './data/products';
@@ -54,6 +54,7 @@ import {
   syncAllOrdersToFirestore,
   syncAllPromosToFirestore,
   saveStorefrontSettingsToFirestore,
+  saveLegalText,
   saveChatMessageToFirestore,
   clearChatMessagesInFirestore,
   saveUserProfileToFirestore,
@@ -91,6 +92,9 @@ import { promoDiscountText } from './utils/promoLabel';
 import { hasOrderableVariant, needsVariantChoice } from './utils/variantSelection';
 import { VariantPickerSheet } from './components/VariantPickerSheet';
 import { parseRouteHash, readHistoryState, routeHash, type HistoryEntryState } from './utils/navigation';
+
+// Legal documents: a separate chunk with the templates, loaded when a document is opened
+const LegalDocumentScreen = lazy(() => import('./views/LegalDocumentScreen'));
 
 // Unique across customers: messages are create-only for customers (see firestore.rules)
 function newChatMessageId(): string {
@@ -1822,6 +1826,7 @@ export default function App() {
                 saveStorefrontSettings(upd);
                 return persist('настройки витрины', saveStorefrontSettingsToFirestore(upd));
               }}
+              onSaveLegalText={(id, text) => persist('документ', saveLegalText(id, text))}
               deliveryMethods={deliveryMethods}
               onUpdateDeliveryMethods={handleUpdateDeliveryMethods}
               pickupPoints={pickupPoints}
@@ -1844,6 +1849,18 @@ export default function App() {
               }
               setActiveTab={setActiveTab}
             />
+          )}
+
+          {(activeTab === 'offer' || activeTab === 'privacy') && (
+            <Suspense
+              fallback={
+                <p className="px-4 py-10 text-center text-xs text-[#4E5C70]" role="status">
+                  Загрузка документа…
+                </p>
+              }
+            >
+              <LegalDocumentScreen docId={activeTab} settings={customerStorefront} />
+            </Suspense>
           )}
             </motion.div>
           </AnimatePresence>

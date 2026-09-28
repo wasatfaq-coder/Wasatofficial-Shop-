@@ -5,6 +5,7 @@ import {
   BarChart3,
   Boxes,
   CircleHelp,
+  FileText,
   FolderTree,
   Headphones,
   Image as ImageIcon,
@@ -35,17 +36,18 @@ const TABS: Record<AdminTab, { label: string; icon: LucideIcon }> = {
   delivery: { label: 'Доставка и ПВЗ', icon: Truck },
   payment: { label: 'Оплата', icon: Wallet },
   faq: { label: 'FAQ', icon: CircleHelp },
+  legal: { label: 'Документы', icon: FileText },
   storefront: { label: 'Витрина', icon: Store },
 };
 
 type AdminGroupId = 'sales' | 'catalog' | 'marketing' | 'store';
 
-/** 13 sections in 4 groups (Hick: 4 choices, then 2–4) */
+/** 14 sections in 4 groups (Hick: 4 choices, then 2–5) */
 const GROUPS: { id: AdminGroupId; label: string; icon: LucideIcon; tabs: AdminTab[] }[] = [
   { id: 'sales', label: 'Продажи', icon: TrendingUp, tabs: ['analytics', 'orders', 'customers', 'support'] },
   { id: 'catalog', label: 'Каталог', icon: Layers, tabs: ['products', 'categories', 'inventory'] },
   { id: 'marketing', label: 'Маркетинг', icon: Megaphone, tabs: ['promos', 'banners'] },
-  { id: 'store', label: 'Магазин', icon: Store, tabs: ['delivery', 'payment', 'faq', 'storefront'] },
+  { id: 'store', label: 'Магазин', icon: Store, tabs: ['delivery', 'payment', 'faq', 'legal', 'storefront'] },
 ];
 
 const groupOf = (tab: AdminTab) => GROUPS.find((g) => g.tabs.includes(tab)) ?? GROUPS[0];

@@ -20,6 +20,7 @@ export const ADMIN_SECTION_LOADERS: Record<AdminTab, () => Promise<unknown>> = {
   delivery: () => import('./AdminDeliveryTab'),
   payment: () => import('./AdminPaymentTab'),
   faq: () => import('./AdminFaqTab'),
+  legal: () => import('./AdminLegalTab'),
   storefront: () => Promise.all([import('./AdminStorefrontTab'), import('./BrandRenameCard')]),
 };
 

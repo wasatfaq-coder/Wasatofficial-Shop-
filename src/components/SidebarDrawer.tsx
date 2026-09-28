@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ActiveTab, StorefrontSettings } from '../types';
+import { LEGAL_DOC_IDS, legalDocsReady } from '../utils/legalDocs';
 import { getStoreName, publicSetting } from '../utils/storeContacts';
 import { useDialogA11y } from '../utils/useDialogA11y';
 
@@ -314,6 +315,23 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
             </p>
             <p className="text-[11px] text-[#4E5C70]">Реквизиты • О бренде • Контакты</p>
           </button>
+          {legalDocsReady(storefrontSettings) && (
+            <nav aria-label="Документы" className="flex items-center justify-center gap-3 text-[11px]">
+              {LEGAL_DOC_IDS.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    setActiveTab(id);
+                  }}
+                  className="min-h-6 px-1 font-bold text-accent hover:underline cursor-pointer"
+                >
+                  {id === 'offer' ? 'Оферта' : 'Персональные данные'}
+                </button>
+              ))}
+            </nav>
+          )}
         </div>
       </motion.div>
     </motion.div>
