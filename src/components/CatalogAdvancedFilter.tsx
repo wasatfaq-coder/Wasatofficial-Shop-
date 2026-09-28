@@ -56,6 +56,50 @@ function priceRangeLabel(f: FilterState): string {
   return 'Любая цена';
 }
 
+export interface PricePreset {
+  label: string;
+  min: number;
+  max: number;
+}
+
+/** A round bound for a price chip: 100s below 2 000 ₽, 500s below 10 000 ₽, 1 000s above */
+const roundPrice = (v: number) => {
+  const step = v < 2000 ? 100 : v < 10000 ? 500 : 1000;
+  return Math.max(step, Math.round(v / step) * step);
+};
+
+/**
+ * Quick price chips built from the catalog's own prices (about a third of the products in each), so no chip
+ * promises a range the store does not sell. Ranges without products are dropped; a tiny catalog gets only «Все».
+ */
+export function buildPricePresets(prices: number[]): PricePreset[] {
+  const all: PricePreset = { label: 'Все', min: 0, max: NO_MAX_PRICE };
+  const sorted = prices.filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
+  if (sorted.length < 3 || sorted[0] === sorted[sorted.length - 1]) return [all];
+
+  const at = (q: number) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
+  const bounds = [...new Set([roundPrice(at(1 / 3)), roundPrice(at(2 / 3))])]
+    .filter((b) => b > sorted[0] && b <= sorted[sorted.length - 1])
+    .sort((a, b) => a - b);
+  if (bounds.length === 0) return [all];
+
+  const edges = [0, ...bounds, NO_MAX_PRICE];
+  const ranges: PricePreset[] = [];
+  for (let i = 0; i < edges.length - 1; i++) {
+    const min = edges[i];
+    const max = edges[i + 1];
+    if (!sorted.some((p) => p >= min && p <= max)) continue;
+    const label =
+      min === 0
+        ? `До ${rub(max)}`
+        : !Number.isFinite(max)
+        ? `От ${rub(min)}`
+        : `${min.toLocaleString('ru-RU')} – ${rub(max)}`;
+    ranges.push({ label, min, max });
+  }
+  return ranges.length > 1 ? [all, ...ranges] : [all];
+}
+
 /** Catalog filters (without the search text); the catalog list and the «Показать N товаров» counter use the same check */
 export function matchesCatalogFilters(p: Product, category: string, f: FilterState): boolean {
   return (
@@ -199,13 +243,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
     }));
   };
 
-  const pricePresets = [
-    { label: 'Все', min: 0, max: NO_MAX_PRICE },
-    { label: 'До 3 000 ₽', min: minPossiblePrice, max: 3000 },
-    { label: '3 000 – 7 000 ₽', min: 3000, max: 7000 },
-    { label: '7 000 – 15 000 ₽', min: 7000, max: 15000 },
-    { label: 'От 15 000 ₽', min: 15000, max: NO_MAX_PRICE },
-  ];
+  const pricePresets = useMemo(() => buildPricePresets(products.map((p) => p.price)), [products]);
 
   // Filter content is rendered inline and in the modal: ids get a prefix so they stay unique
   const renderFilterContent = (idPrefix: string) => (
@@ -269,6 +307,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
         </div>
 
         {/* Quick price presets: raised, the selected one pressed in */}
+        {pricePresets.length > 1 && (
         <div className="flex items-center gap-1.5 flex-wrap pt-1">
           {pricePresets.map((preset) => {
             const isPresetActive =
@@ -295,6 +334,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
             );
           })}
         </div>
+        )}
       </div>
 
       {/* 3. Material & Fabric Composition Filter with Deepened Inset Buttons */}
@@ -546,7 +586,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 <div className="flex items-center gap-2">
                   <SlidersHorizontal className="w-5 h-5 text-accent stroke-[2.2]" />
                   <h3 id={dialog.titleId} className="text-base font-bold text-[#2D3A4E]">
-                    Расширенная фильтрация
+                    Фильтры
                   </h3>
                 </div>
                 <button

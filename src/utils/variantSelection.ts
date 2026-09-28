@@ -1,4 +1,4 @@
-import type { Product } from '../types';
+import type { BodyMeasurements, Product } from '../types';
 import { getOrderableStock, getVariantStock } from './inventory';
 
 /**
@@ -10,6 +10,23 @@ import { getOrderableStock, getVariantStock } from './inventory';
 /** Preselected size: only when the product has exactly one */
 export function initialSize(product: Pick<Product, 'sizes'> | null | undefined): string {
   return product?.sizes?.length === 1 ? product.sizes[0] : '';
+}
+
+/**
+ * The product size that matches the size saved by «Подбор размера» («M», or RU «50» for tops, «48» for
+ * trousers; «50-52» or «48 (M)» match by their parts). Only marked as «Ваш размер», never preselected.
+ */
+export function profileSizeFor(sizes: string[] | undefined, m: BodyMeasurements | undefined): string {
+  if (!sizes?.length || !m) return '';
+  const norm = (s: string) => s.trim().toUpperCase();
+  const parts = (s: string) => norm(s).split(/[^0-9A-ZА-ЯЁ]+/).filter(Boolean);
+  for (const wanted of [m.preferredSize, m.russianSizeTop, m.russianSizeBottom]) {
+    if (!wanted) continue;
+    const w = norm(wanted);
+    const found = sizes.find((s) => norm(s) === w) ?? sizes.find((s) => parts(s).includes(w));
+    if (found) return found;
+  }
+  return '';
 }
 
 /** Units of one colour across all its sizes: stock shown before a size is chosen */

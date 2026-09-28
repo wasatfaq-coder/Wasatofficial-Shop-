@@ -253,7 +253,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   id="quick-order-address"
                   type="text"
                   autoComplete="street-address"
-                  placeholder="Москва, ул. Тверская"
+                  placeholder="Город, улица, дом"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"

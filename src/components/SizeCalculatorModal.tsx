@@ -28,6 +28,8 @@ interface SizeCalculatorModalProps {
   productCategory?: string;
   userProfile?: UserProfile;
   onSaveMeasurements?: (measurements: BodyMeasurements) => void;
+  /** 'profile' (menu «Мои размеры»): no product to pick a size for, the button saves to the profile */
+  purpose?: 'product' | 'profile';
 }
 
 export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
@@ -39,7 +41,9 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
   productCategory,
   userProfile,
   onSaveMeasurements,
+  purpose = 'product',
 }) => {
+  const isProfile = purpose === 'profile';
   const dialog = useDialogA11y(isOpen, onClose);
   const [height, setHeight] = useState<number>(184);
   const [weight, setWeight] = useState<number>(94);
@@ -159,9 +163,10 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
     };
   }, [effectiveSilhouette, chest, waist, height, weight, fitPreference, productFit, russianPattern]);
 
-  // Confidence calculation
+  const willSave = (isProfile || saveToProfile) && !!onSaveMeasurements;
 
   const handleApply = () => {
+    // The recommended sizes go to the profile too: the product page marks «Ваш размер» by them
     const measurements: BodyMeasurements = {
       height,
       weight,
@@ -169,13 +174,16 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
       waist,
       hips,
       fitPreference,
+      preferredSize: russianPattern.topInternationalSize,
+      russianSizeTop: String(russianPattern.topRussianSize),
+      russianSizeBottom: String(russianPattern.bottomRussianSize),
     };
 
-    if (saveToProfile && onSaveMeasurements) {
-      onSaveMeasurements(measurements);
+    if (willSave) {
+      onSaveMeasurements?.(measurements);
     }
 
-    onSelectSize(rawSizeValue);
+    if (!isProfile) onSelectSize(rawSizeValue);
     setApplied(true);
     setTimeout(() => {
       setApplied(false);
@@ -526,11 +534,14 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
               </div>
             </div>
 
-            {/* Save to Profile Option */}
+            {/* Save to Profile Option (in the profile mode saving is the whole point) */}
+            {!isProfile && onSaveMeasurements && (
             <button
               type="button"
+              role="checkbox"
+              aria-checked={saveToProfile}
               onClick={() => setSaveToProfile(!saveToProfile)}
-              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl neu-flat hover:opacity-90 transition-all cursor-pointer border border-white/40"
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl neu-button transition-all cursor-pointer border border-white/40"
             >
               <div
                 className={`w-5 h-5 rounded-lg flex items-center justify-center transition-all ${
@@ -543,9 +554,10 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
               </div>
               <span className="text-xs font-bold text-[#2D3A4E] flex items-center gap-1.5">
                 <BookmarkCheck className="w-3.5 h-3.5 text-accent" />
-                <span>Сохранить параметры в моем профиле</span>
+                <span>Сохранить параметры и размер в профиле</span>
               </span>
             </button>
+            )}
 
             {/* Action Buttons */}
             <div className="flex gap-2.5 pt-1">
@@ -559,7 +571,8 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
               <button
                 type="button"
                 onClick={handleApply}
-                className={`flex-1 py-3.5 px-4 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all ${
+                disabled={isProfile && !onSaveMeasurements}
+                className={`flex-1 py-3.5 px-4 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all ${
                   applied
                     ? 'neu-button-success text-white'
                     : 'neu-button-accent text-white'
@@ -568,10 +581,16 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                 {applied ? (
                   <>
                     <Check className="w-4 h-4 stroke-[3]" />
-                    <span>Размер {recommendedSizeLabel} сохранен!</span>
+                    <span>
+                      {isProfile
+                        ? 'Сохранено в профиле'
+                        : willSave
+                          ? `Размер ${recommendedSizeLabel} выбран и сохранен`
+                          : `Размер ${recommendedSizeLabel} выбран`}
+                    </span>
                   </>
                 ) : (
-                  <span>Выбрать {recommendedSizeLabel}</span>
+                  <span>{isProfile ? `Сохранить размер ${recommendedSizeLabel}` : `Выбрать ${recommendedSizeLabel}`}</span>
                 )}
               </button>
             </div>

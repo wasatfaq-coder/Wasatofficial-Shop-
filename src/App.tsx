@@ -1436,7 +1436,12 @@ export default function App() {
       bodyMeasurements: measurements,
     };
     handleUpdateProfile(updated);
-    addToast('Параметры фигуры сохранены в профиле', 'success');
+    addToast(
+      measurements.preferredSize
+        ? `Параметры и размер ${measurements.preferredSize} сохранены в профиле`
+        : 'Параметры фигуры сохранены в профиле',
+      'success'
+    );
   };
 
   return (
@@ -1523,7 +1528,8 @@ export default function App() {
           isOpen={isMySizesModalOpen}
           onClose={() => setIsMySizesModalOpen(false)}
           availableSizes={['S', 'M', 'L', 'XL', 'XXL']}
-          onSelectSize={(sz) => addToast(`Сохранен рекомендуемый размер: ${sz}`, 'success')}
+          onSelectSize={() => {}}
+          purpose="profile"
           productFit="regular"
           userProfile={userProfile}
           onSaveMeasurements={handleSaveMeasurements}
@@ -1708,6 +1714,7 @@ export default function App() {
               onRemovePromo={handleRemovePromo}
               onCompleteOrder={handleCompleteOrder}
               storefrontSettings={customerStorefront}
+              deliveryMethods={customerDeliveryMethods}
               checkoutBlocker={
                 !deliveryMethods.some((m) => m.isActive !== false)
                   ? 'Способы доставки'

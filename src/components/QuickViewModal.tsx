@@ -8,7 +8,7 @@ import { AnimatedFavoriteButton } from './AnimatedFavoriteButton';
 import { getProductRating } from '../utils/productRating';
 import { productImage } from '../utils/productImage';
 import { getOrderableStock, getVariantStock } from '../utils/inventory';
-import { colorStock, initialColor, initialSize, maxOrderableForColor } from '../utils/variantSelection';
+import { colorStock, initialColor, initialSize, maxOrderableForColor, profileSizeFor } from '../utils/variantSelection';
 import { useDialogA11y } from '../utils/useDialogA11y';
 
 interface QuickViewModalProps {
@@ -44,6 +44,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
   const [selectedColor, setSelectedColor] = useState(product?.colors?.[0]?.name || '');
   // No size is preselected unless there is only one (same as the product page)
   const [selectedSize, setSelectedSize] = useState(() => initialSize(product));
+  const mySize = profileSizeFor(product?.sizes, userProfile?.bodyMeasurements);
   const [sizeError, setSizeError] = useState(false);
   const sizesRef = useRef<HTMLDivElement>(null);
   const [isSizeCalcOpen, setIsSizeCalcOpen] = useState(false);
@@ -245,6 +246,11 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-[#2D3A4E]">
                   {selectedSize ? <>Размер: <span className="text-accent">{selectedSize}</span></> : 'Выберите размер'}
+                  {mySize && (
+                    <span className="ml-2 text-[11px] font-semibold text-[#4E5C70]">
+                      Ваш: <span className="font-extrabold text-accent">{mySize}</span>
+                    </span>
+                  )}
                 </span>
                 <button
                   onClick={() => setIsSizeCalcOpen(true)}

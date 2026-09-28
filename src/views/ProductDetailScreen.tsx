@@ -28,7 +28,7 @@ import { QuickOrderModal } from '../components/QuickOrderModal';
 import { AnimatedFavoriteButton } from '../components/AnimatedFavoriteButton';
 import { ProductReviewsSection } from '../components/ProductReviewsSection';
 import { getVariantStock, getProductSKU, getOrderableStock } from '../utils/inventory';
-import { colorStock, initialSize, maxOrderableForColor } from '../utils/variantSelection';
+import { colorStock, initialSize, maxOrderableForColor, profileSizeFor } from '../utils/variantSelection';
 import {
   getProductFabricComposition,
   getProductCareInstructions,
@@ -98,6 +98,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   const [selectedColor, setSelectedColor] = useState(product?.colors?.[0]?.name || '');
   // No size is preselected (unless there is only one): a default size put wrong items in the cart
   const [selectedSize, setSelectedSize] = useState(() => initialSize(product));
+  const mySize = profileSizeFor(product?.sizes, userProfile?.bodyMeasurements);
   const [sizeError, setSizeError] = useState(false);
   const sizesRef = useRef<HTMLDivElement>(null);
   const [quantity, setQuantity] = useState(1);
@@ -280,10 +281,10 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               setIsZoomModalOpen(true);
             }}
             className="absolute bottom-3 right-3 neu-photo-btn px-3 py-1.5 rounded-full z-10 flex items-center gap-1.5 text-xs font-bold text-[#2D3A4E] hover:scale-105 transition-transform"
-            title="Открыть зум в высоком разрешении"
+            title="Увеличить фото"
           >
             <ZoomIn className="w-3.5 h-3.5 text-accent" />
-            <span className="text-[11px]">HD Зум</span>
+            <span className="text-[11px]">Увеличить фото</span>
           </button>
 
           {/* Previous / Next Arrow Buttons (appear when more than 1 image) */}
@@ -436,6 +437,11 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 <span className="text-xs font-semibold text-[#2D3A4E]">{selectedSize ? 'Размер:' : 'Выберите размер'}</span>
                 {selectedSize && <span className="text-[11px] font-extrabold text-accent">{selectedSize}</span>}
               </div>
+              {mySize && (
+                <span className="text-[11px] font-semibold text-[#4E5C70]">
+                  Ваш размер: <span className="font-extrabold text-accent">{mySize}</span>
+                </span>
+              )}
             </div>
 
             <div
@@ -470,6 +476,9 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                         : 'neu-button text-[#2D3A4E] hover:text-accent'
                     }`}
                   >
+                    {sz === mySize && (
+                      <span aria-hidden="true" className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-accent" />
+                    )}
                     <span>{sz}</span>
                     <span
                       className={`text-[11px] tracking-tight ${

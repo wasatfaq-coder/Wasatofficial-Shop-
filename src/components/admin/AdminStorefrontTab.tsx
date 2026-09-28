@@ -1303,7 +1303,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       onChange={(e) =>
                         setLocalSettings({ ...localSettings, legalAddress: e.target.value })
                       }
-                      placeholder="125009, г. Москва, Столешников переулок, д. 14, стр. 1, офис 402"
+                      placeholder="Индекс, город, улица, дом, офис"
                       className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E]"
                     />
                     <button
@@ -1493,7 +1493,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       type="text"
                       value={localSettings.bankName || ''}
                       onChange={(e) => setLocalSettings({ ...localSettings, bankName: e.target.value })}
-                      placeholder="ПАО «Сбербанк России», г. Москва"
+                      placeholder="Название банка"
                       className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs text-[#2D3A4E]"
                     />
                     <button

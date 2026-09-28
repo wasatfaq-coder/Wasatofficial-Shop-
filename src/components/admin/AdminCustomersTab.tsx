@@ -126,7 +126,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
     try {
       const docId = customerToDelete.uid || customerToDelete.id;
       await deleteUserFromFirestore(docId);
-      onShowToast(`Клиент «${customerToDelete.name}» удален из базы данных`, 'info');
+      onShowToast(`Клиент «${customerToDelete.name}» удален`, 'info');
       if (selectedCustomer?.id === customerToDelete.id) {
         setSelectedCustomer(null);
       }
@@ -248,7 +248,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
         averageOrderValue: avgCheck,
         orders: matchedOrders,
         savedAddresses: ord.deliveryAddress
-          ? [{ id: `addr-${ord.id}`, title: 'Адрес из заказа', city: ord.deliveryAddress.split(',')[0] || 'Москва', street: ord.deliveryAddress, isDefault: true }]
+          ? [{ id: `addr-${ord.id}`, title: 'Адрес из заказа', city: ord.deliveryAddress.split(',')[0] || '', street: ord.deliveryAddress, isDefault: true }]
           : [],
         primaryAddress: ord.deliveryAddress,
         tags: totalSpent > 30000 ? ['Гость', 'Крупный чек'] : ['Гость'],
@@ -836,8 +836,8 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     type="button"
                     onClick={() => setCustomerToDelete(selectedCustomer)}
                     className="w-9 h-9 rounded-xl neu-button-danger flex items-center justify-center"
-                    title="Удалить клиента из базы данных"
-                    aria-label="Удалить клиента из базы данных"
+                    title="Удалить клиента"
+                    aria-label="Удалить клиента"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

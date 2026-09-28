@@ -440,9 +440,6 @@ export const DeliveryTrackingMapModal: React.FC<DeliveryTrackingMapModalProps> =
                   <div className="min-w-0 flex-1 space-y-0.5">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-black text-[#2D3A4E] truncate">Почта России</span>
-                      <span className="text-[11px] font-bold text-accent neu-flat px-1.5 py-0.5 rounded-lg whitespace-nowrap shrink-0">
-                        1-й класс
-                      </span>
                     </div>
                     <p className="text-[11px] text-[#4E5C70] truncate">
                       Доставка в почтовое отделение связи РФ

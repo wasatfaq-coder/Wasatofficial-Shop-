@@ -656,7 +656,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       await deleteOrderFromFirestore(orderToDelete.id);
       const updated = orders.filter((o) => o.id !== orderToDelete.id);
       onUpdateOrders(updated);
-      onShowToast(`Заказ № ${orderToDelete.id} успешно удален из базы данных`, 'success');
+      onShowToast(`Заказ № ${orderToDelete.id} удален`, 'success');
       setOrderToDelete(null);
     } catch (err) {
       console.error('Delete order error:', err);
@@ -1302,7 +1302,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                       )}
 
                       <p className="truncate text-[#2D3A4E]" title={ord.deliveryAddress}>
-                        <strong>Адрес:</strong> {ord.deliveryAddress || 'Москва, Пресненская наб. 12'}
+                        <strong>Адрес:</strong> {ord.deliveryAddress || 'не указан'}
                       </p>
 
                       {/* Tracking Carrier & Number Row - Only for Transport Companies */}
@@ -1572,7 +1572,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                   <button
                     onClick={() => setOrderToDelete(ord)}
                     className="h-8 px-2.5 neu-button-danger rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-all border border-white/60"
-                    title="Удалить этот заказ из базы данных"
+                    title="Удалить заказ"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Удалить</span>
