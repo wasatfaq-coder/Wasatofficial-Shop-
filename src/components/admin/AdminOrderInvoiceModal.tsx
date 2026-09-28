@@ -161,10 +161,10 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
               <span className="text-[11px] uppercase font-bold text-slate-400 block">Доставка</span>
               <span className="font-bold text-slate-800 flex items-center gap-1">
                 <Truck className="w-3 h-3 text-accent" />
-                {order.deliveryMethod || 'Курьерская доставка'}
+                {order.deliveryMethod || 'Способ не указан'}
               </span>
               <span className="text-[11px] text-slate-500 block truncate" title={order.deliveryAddress}>
-                {order.deliveryAddress || 'Москва, Пресненская наб. 12'}
+                {order.deliveryAddress || 'Адрес не указан'}
               </span>
             </div>
             <div>

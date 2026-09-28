@@ -35,7 +35,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
 }) => {
   const dialog = useDialogA11y(isOpen, onClose);
   const [title, setTitle] = useState('Дом');
-  const [city, setCity] = useState('Москва');
+  const [city, setCity] = useState('');
   const [postalCode, setPostalCode] = useState('');
   const [street, setStreet] = useState('');
   const [house, setHouse] = useState('');
@@ -53,7 +53,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
   useEffect(() => {
     if (editingAddress) {
       setTitle(editingAddress.title || 'Дом');
-      setCity(editingAddress.city || 'Москва');
+      setCity(editingAddress.city || '');
       setPostalCode(editingAddress.postalCode || '');
       setStreet(editingAddress.street || '');
       setHouse(editingAddress.house || '');
@@ -64,7 +64,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
       setIsDefault(editingAddress.isDefault ?? false);
     } else {
       setTitle('Дом');
-      setCity('Москва');
+      setCity('');
       setPostalCode('');
       setStreet('');
       setHouse('');
@@ -112,7 +112,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
     onSave({
       id: editingAddress?.id,
       title: title.trim() || 'Адрес',
-      city: city.trim() || 'Москва',
+      city: city.trim(),
       postalCode: postalCode.trim(),
       street: street.trim(),
       house: house.trim(),
@@ -211,7 +211,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                     required
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    placeholder="Москва"
+                    placeholder="Город"
                     className="w-full neu-inset rounded-2xl py-2.5 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A]"
                   />
                 </div>

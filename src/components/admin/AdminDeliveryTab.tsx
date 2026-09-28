@@ -257,7 +257,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
   const handleOpenAddPoint = () => {
     setEditingPoint(null);
     setFormPointName('');
-    setFormPointCity('Москва');
+    setFormPointCity('');
     setFormPointAddress('');
     setFormPointMetro('');
     setFormPointSchedule('Ежедневно: 10:00 – 22:00');
@@ -1083,7 +1083,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                   type="text"
                   value={formPointName}
                   onChange={(e) => setFormPointName(e.target.value)}
-                  placeholder="Флагманский бутик (Москва-Сити)"
+                  placeholder="Название пункта выдачи"
                   className="w-full neu-inset rounded-xl py-2 px-3 text-[#2D3A4E]"
                   required
                 />
@@ -1098,7 +1098,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                     type="text"
                     value={formPointCity}
                     onChange={(e) => setFormPointCity(e.target.value)}
-                    placeholder="Москва, Санкт-Петербург..."
+                    placeholder="Город"
                     className="w-full neu-inset rounded-xl py-2 px-3 text-[#2D3A4E]"
                     required
                   />

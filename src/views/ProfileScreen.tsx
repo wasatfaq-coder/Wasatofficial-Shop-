@@ -488,7 +488,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [isAddingAddress, setIsAddingAddress] = useState(false);
   const addressFormDialog = useDialogA11y(isAddingAddress, () => setIsAddingAddress(false));
   const [addrTitle, setAddrTitle] = useState('Дом');
-  const [addrCity, setAddrCity] = useState('Москва');
+  const [addrCity, setAddrCity] = useState('');
   const [addrStreet, setAddrStreet] = useState('');
   const [addrHouse, setAddrHouse] = useState('');
   const [addrEntrance, setAddrEntrance] = useState('');
@@ -642,7 +642,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const handleOpenAddAddress = () => {
     setEditingAddress(null);
     setAddrTitle('Дом');
-    setAddrCity('Москва');
+    setAddrCity('');
     setAddrStreet('');
     setAddrHouse('');
     setAddrEntrance('');
@@ -689,7 +689,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           return {
             ...a,
             title: addrTitle.trim() || 'Адрес',
-            city: addrCity.trim() || 'Москва',
+            city: addrCity.trim(),
             street: addrStreet.trim(),
             house: addrHouse.trim(),
             entrance: addrEntrance.trim(),
@@ -707,7 +707,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       const newAddr: SavedAddress = {
         id: `addr-${Date.now()}`,
         title: addrTitle.trim() || 'Адрес',
-        city: addrCity.trim() || 'Москва',
+        city: addrCity.trim(),
         street: addrStreet.trim(),
         house: addrHouse.trim(),
         entrance: addrEntrance.trim(),
@@ -1620,7 +1620,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                             )}
 
                             <span className="text-[11px] text-[#4E5C70] font-medium">
-                              {isPost ? 'Посылка 1-го класса' : isTK ? (ord.deliveryMethod || 'ТК') : isPickup ? 'Самовывоз' : 'Курьерская доставка'}
+                              {isPost ? 'Почтовое отправление' : isTK ? (ord.deliveryMethod || 'ТК') : isPickup ? 'Самовывоз' : 'Курьерская доставка'}
                             </span>
                           </div>
                         );
@@ -1745,7 +1745,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                       <div className="space-y-0.5">
                         <span className="text-[11px] font-bold text-accent uppercase tracking-wider flex items-center gap-1.5">
                           <Mail className="w-3.5 h-3.5 text-accent" />
-                          Почта России • Отправление 1-го класса
+                          {selectedOrderForTracking.deliveryMethod || 'Почтовое отправление'}
                         </span>
                         <p className="text-xs font-black text-[#2D3A4E]">
                           {selectedOrderForTracking.trackingNumber ? `Трек-номер: ${selectedOrderForTracking.trackingNumber}` : 'Доставка в почтовое отделение связи'}
@@ -2279,7 +2279,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-black text-[#2D3A4E] truncate">Почта России</p>
-                        <p className="text-[11px] text-[#4E5C70] truncate">Отправление 1-го класса &bull; Выдача в отделении</p>
+                        <p className="text-[11px] text-[#4E5C70] truncate">Выдача в почтовом отделении</p>
                       </div>
                     </div>
                     {onOpenSupportChat && (
@@ -2603,13 +2603,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#2D3A4E] mb-1.5">Город</label>
+                  <label htmlFor="profile-addr-city" className="block text-xs font-bold text-[#2D3A4E] mb-1.5">Город</label>
                   <input
+                    id="profile-addr-city"
                     type="text"
+                    autoComplete="address-level2"
                     value={addrCity}
                     onChange={(e) => setAddrCity(e.target.value)}
                     className="w-full neu-inset rounded-2xl py-3 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A]"
-                    placeholder="Москва"
+                    placeholder="Город"
                     required
                   />
                 </div>

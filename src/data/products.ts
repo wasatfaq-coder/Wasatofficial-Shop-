@@ -9,7 +9,7 @@ export const GUEST_USER_PROFILE: UserProfile = {
   email: '',
   phone: '',
   avatar: '',
-  address: { street: '', city: 'Москва', postalCode: '' },
+  address: { street: '', city: '', postalCode: '' },
   savedAddresses: [],
   savedCards: [],
   notificationsEnabled: true,

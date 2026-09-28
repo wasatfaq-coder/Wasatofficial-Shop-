@@ -250,7 +250,7 @@ export function getSynchronizedDeliveryStages(
       if (status === 'accepted' || status === 'assembling') {
         return hasTrack
           ? `Сформирована почтовая накладная ${order.trackingNumber}. Заказ ожидает передачи в отделение Почты России`
-          : 'Продавец готовит отправление 1-го класса для Почты России';
+          : 'Продавец готовит почтовое отправление';
       }
       return hasTrack
         ? `Посылка с трек-номером ${order.trackingNumber} зарегистрирована в сортировочном центре Почты России`
@@ -614,7 +614,7 @@ export function getDefaultHistorySteps(order: {
     : 'В пути курьером';
 
   const transitDesc = isPost
-    ? (order.trackingNumber ? `Отправление 1-го класса Почты России (трек ${order.trackingNumber})` : 'Отправление 1-го класса Почты России в отделение')
+    ? (order.trackingNumber ? `Почтовое отправление (трек ${order.trackingNumber})` : 'Почтовое отправление в отделение')
     : isTK && order.trackingNumber
     ? `Транспортная компания (трек-номер ${order.trackingNumber})`
     : isPickup

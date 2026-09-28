@@ -11,12 +11,18 @@ import {
   Check,
   Sparkles,
 } from 'lucide-react';
-import { CartItem, Product, ActiveTab, AppliedPromoInfo } from '../types';
+import { CartItem, Product, ActiveTab, AppliedPromoInfo, DeliveryMethod } from '../types';
 import { getVariantStock, getOrderableStock } from '../utils/inventory';
 import { CartRemoveConfirmModal } from '../components/CartRemoveConfirmModal';
 import { QuickOrderModal } from '../components/QuickOrderModal';
 import { NotConfigured } from '../components/NotConfigured';
-import { DEFAULT_FREE_DELIVERY_THRESHOLD, QUICK_ORDER_DELIVERY_TITLE, calcPromoDiscount, toPricingLine } from '../shared/orderPricing';
+import {
+  DEFAULT_FREE_DELIVERY_THRESHOLD,
+  QUICK_ORDER_DELIVERY_TITLE,
+  calcPromoDiscount,
+  getAvailableDeliveryMethods,
+  toPricingLine,
+} from '../shared/orderPricing';
 import { productImage } from '../utils/productImage';
 import { promoDiscountText } from '../utils/promoLabel';
 import { useDialogA11y } from '../utils/useDialogA11y';
@@ -44,6 +50,8 @@ interface CartScreenProps {
   checkoutBlocker?: string | null;
   /** Admin → «Витрина» → «Предзаказ»: sold-out variants can be preordered */
   preorderMode?: boolean;
+  /** Delivery methods from «Доставка и ПВЗ»: the cart shows their price range, the method is picked at checkout */
+  deliveryMethods?: DeliveryMethod[];
 }
 
 export const CartScreen: React.FC<CartScreenProps> = ({
@@ -65,6 +73,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   storefrontSettings,
   checkoutBlocker = null,
   preorderMode = false,
+  deliveryMethods = [],
   hasActivePromos = false,
 }) => {
   const [promoInput, setPromoInput] = useState('');
@@ -88,11 +97,14 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   const discountAmount = calcPromoDiscount(cartItems.map(toPricingLine), appliedPromo);
 
   const freeThreshold = storefrontSettings?.freeDeliveryThreshold ?? DEFAULT_FREE_DELIVERY_THRESHOLD;
-  // Courier price from «Витрина»; not set — the fee is shown at checkout (no invented price)
-  const courierPrice = storefrontSettings?.courierDeliveryPrice;
   const totalItemsCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
-  const isFreeDelivery = rawSubtotal >= freeThreshold || rawSubtotal === 0;
-  const deliveryFee = isFreeDelivery ? 0 : courierPrice ?? 0;
+  // The method is chosen at checkout: the cart shows what the store's methods cost for this order
+  // (same prices as checkout) and adds a fee to «Итого» only when every method costs the same
+  const deliveryPrices = getAvailableDeliveryMethods(deliveryMethods, storefrontSettings, rawSubtotal).map((d) => d.price);
+  const minDelivery = deliveryPrices.length ? Math.min(...deliveryPrices) : null;
+  const maxDelivery = deliveryPrices.length ? Math.max(...deliveryPrices) : null;
+  const deliveryKnown = minDelivery !== null && minDelivery === maxDelivery;
+  const deliveryFee = deliveryKnown ? minDelivery : 0;
   const remainingForFreeDelivery = Math.max(0, freeThreshold - rawSubtotal);
   const finalTotal = Math.max(0, rawSubtotal - discountAmount + deliveryFee);
 
@@ -160,7 +172,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
             </span>
           </div>
           <span className="text-[11px] font-black text-accent">
-            {Math.min(100, Math.round((rawSubtotal / freeThreshold) * 100))}%
+            {Math.min(100, Math.floor((rawSubtotal / freeThreshold) * 100))}%
           </span>
         </div>
         <div className="w-full h-2 rounded-full overflow-hidden neu-inset">
@@ -579,20 +591,22 @@ export const CartScreen: React.FC<CartScreenProps> = ({
               </div>
             )}
 
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-3">
               <span>Доставка</span>
-              <span className={isFreeDelivery ? 'text-success font-bold' : 'text-[#2D3A4E]'}>
-                {isFreeDelivery
-                  ? 'Бесплатно'
-                  : courierPrice === undefined
-                    ? 'При оформлении'
-                    : `${courierPrice.toLocaleString('ru-RU')} ₽`}
+              <span className={`text-right ${deliveryKnown && deliveryFee === 0 ? 'text-success font-bold' : 'text-[#2D3A4E]'}`}>
+                {minDelivery === null
+                  ? 'При оформлении'
+                  : deliveryKnown
+                    ? deliveryFee === 0
+                      ? 'Бесплатно'
+                      : `${deliveryFee.toLocaleString('ru-RU')} ₽`
+                    : `${minDelivery.toLocaleString('ru-RU')} – ${maxDelivery!.toLocaleString('ru-RU')} ₽, зависит от способа`}
               </span>
             </div>
           </div>
 
           <div className="border-t border-[#BAC5D5]/60 pt-2.5 flex items-baseline justify-between">
-            <span className="text-base font-bold text-[#2D3A4E]">Итого</span>
+            <span className="text-base font-bold text-[#2D3A4E]">{deliveryKnown ? 'Итого' : 'Итого без доставки'}</span>
             <span className="text-xl font-extrabold text-[#2D3A4E]">
               {finalTotal.toLocaleString('ru-RU')} ₽
             </span>

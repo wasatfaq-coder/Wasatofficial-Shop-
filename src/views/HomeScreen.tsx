@@ -251,8 +251,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             }
           }}
           className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent shrink-0 transition-all cursor-pointer"
-          title="Расширенная фильтрация"
-          aria-label="Расширенная фильтрация"
+          title="Фильтры"
+          aria-label="Фильтры"
         >
           <SlidersHorizontal className="w-5 h-5 stroke-[1.8]" />
         </button>

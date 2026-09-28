@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { isPreorderVariant } from '../utils/inventory';
+import { pluralRu } from '../utils/pluralize';
 import {
   User,
   Phone,
@@ -34,7 +35,6 @@ import {
   calcSubtotal,
   getAvailableDeliveryMethods,
 } from '../shared/orderPricing';
-import { currentStoreName } from '../utils/storeContacts';
 import { NotConfigured } from '../components/NotConfigured';
 import { productImage } from '../utils/productImage';
 import { promoDiscountText } from '../utils/promoLabel';
@@ -117,7 +117,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   const defaultSaved = userProfile?.savedAddresses?.find((a) => a.isDefault) || userProfile?.savedAddresses?.[0];
 
   const [addrTitle, setAddrTitle] = useState(defaultSaved?.title || 'Дом');
-  const [addrCity, setAddrCity] = useState(defaultSaved?.city || userProfile?.address?.city || 'Москва');
+  const [addrCity, setAddrCity] = useState(defaultSaved?.city || userProfile?.address?.city || '');
   const [addrPostal, setAddrPostal] = useState(defaultSaved?.postalCode || userProfile?.address?.postalCode || '');
   const [addrStreet, setAddrStreet] = useState(defaultSaved?.street || userProfile?.address?.street || '');
   const [addrHouse, setAddrHouse] = useState(defaultSaved?.house || userProfile?.address?.house || '');
@@ -143,7 +143,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   const handleSelectSavedAddress = (saved: SavedAddress) => {
     setSelectedSavedId(saved.id);
     setAddrTitle(saved.title || 'Адрес');
-    setAddrCity(saved.city || 'Москва');
+    setAddrCity(saved.city || '');
     setAddrPostal(saved.postalCode || '');
     setAddrStreet(saved.street || '');
     setAddrHouse(saved.house || '');
@@ -268,6 +268,8 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   const isPickupSelected = selectedDelivery === 'pickup' || currentDeliveryObj.type === 'pickup';
   const isPostSelected = selectedDelivery === 'post' || currentDeliveryObj.type === 'post' || (currentDeliveryObj.title || '').toLowerCase().includes('почт');
   const isCourierSelected = !isPickupSelected && !isPostSelected;
+  // The carrier is whatever the store named the method («Почта России», «СДЭК»…), not a fixed name
+  const deliveryTitle = currentDeliveryObj.title?.trim() || 'Доставка';
 
   // Progress over the single-page form: a step is done when its section is filled in
   const contactsDone =
@@ -283,8 +285,8 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
     : isPickupSelected
     ? Boolean(selectedPickupPoint)
     : isPostSelected
-    ? Boolean(addrStreet.trim() && addrHouse?.trim())
-    : Boolean(addrStreet.trim() && addrHouse?.trim() && addrEntrance?.trim() && addrIntercom?.trim());
+    ? Boolean(addrCity.trim() && addrStreet.trim() && addrHouse?.trim())
+    : Boolean(addrCity.trim() && addrStreet.trim() && addrHouse?.trim() && addrEntrance?.trim() && addrIntercom?.trim());
   const paymentDone = Boolean(selectedPayment);
   const steps = [
     { num: 1, label: 'Данные', done: contactsDone, target: 'checkout-contacts' },
@@ -315,6 +317,9 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
     if (isCourierSelected) {
       const missing: string[] = [];
 
+      if (!addrCity.trim()) {
+        missing.push('город');
+      }
       if (!addrStreet.trim()) {
         missing.push('улица');
       }
@@ -337,11 +342,11 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
         return;
       }
     } else if (isPostSelected) {
-      if (!addrStreet.trim() || !addrHouse || !addrHouse.trim()) {
-        const errorText = 'Для отправки Почтой России укажите улицу и номер дома получателя.';
+      if (!addrCity.trim() || !addrStreet.trim() || !addrHouse || !addrHouse.trim()) {
+        const errorText = `Для доставки «${deliveryTitle}» укажите город, улицу и номер дома получателя.`;
         setValidationError(errorText);
         if (onShowToast) {
-          onShowToast('Укажите улицу и номер дома для Почты России', 'error');
+          onShowToast(`Укажите город, улицу и номер дома для доставки «${deliveryTitle}»`, 'error');
         }
         return;
       }
@@ -603,12 +608,16 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                       Пункт выдачи заказа
                     </h3>
                     <p className="text-[11px] text-[#4E5C70] font-medium">
-                      Самовывоз из фирменного бутика {currentStoreName()}
+                      {deliveryTitle}
                     </p>
                   </div>
                 </div>
-                <span className="text-[11px] font-black text-success neu-inset px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0">
-                  Бесплатно
+                <span
+                  className={`text-[11px] font-black neu-inset px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0 ${
+                    deliveryFee === 0 ? 'text-success' : 'text-[#2D3A4E]'
+                  }`}
+                >
+                  {deliveryFee === 0 ? 'Бесплатно' : `${deliveryFee.toLocaleString('ru-RU')} ₽`}
                 </span>
               </div>
 
@@ -618,11 +627,13 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                   <div className="space-y-1 min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-xs font-black text-[#2D3A4E]">
-                        {selectedPickupPoint?.name || `Бутик ${currentStoreName()}`}
+                        {selectedPickupPoint?.name || 'Пункт выдачи'}
                       </span>
-                      <span className="text-[11px] font-bold text-accent neu-inset px-2 py-0.5 rounded-md">
-                        г. {selectedPickupPoint?.city || 'Москва'}
-                      </span>
+                      {selectedPickupPoint?.city && (
+                        <span className="text-[11px] font-bold text-accent neu-inset px-2 py-0.5 rounded-md">
+                          г. {selectedPickupPoint.city}
+                        </span>
+                      )}
                     </div>
 
                     <div className="pt-1 text-xs font-bold text-[#2D3A4E] flex items-start gap-1.5">
@@ -645,7 +656,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                     type="button"
                     onClick={() =>
                       handleCopyAddress(
-                        `г. ${selectedPickupPoint?.city || 'Москва'}, ${selectedPickupPoint?.address || ''}${
+                        `${selectedPickupPoint?.city ? `г. ${selectedPickupPoint.city}, ` : ''}${selectedPickupPoint?.address || ''}${
                           selectedPickupPoint?.metro ? ` (м. ${selectedPickupPoint.metro})` : ''
                         }`,
                         'top-pickup'
@@ -701,7 +712,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
             <>
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase">
-                  {isPostSelected ? 'Адрес доставки (Почта России)' : 'Адрес курьерской доставки'}
+                  {isPostSelected ? `Адрес доставки (${deliveryTitle})` : 'Адрес курьерской доставки'}
                 </h3>
                 <button
                   type="button"
@@ -762,7 +773,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                       <div className="text-xs">
                         <p className="font-bold text-danger">
                           {isPostSelected
-                            ? 'Данные адреса для Почты России не заполнены'
+                            ? 'Адрес доставки не заполнен'
                             : 'Данные для курьера не заполнены'}
                         </p>
                         <p className="text-[11px] text-danger leading-snug">{validationError}</p>
@@ -820,7 +831,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                       </span>
                     )}
                     <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-bold text-accent border border-accent/20">
-                      Почта России (1-й класс)
+                      {deliveryTitle}
                     </span>
                   </div>
                 ) : (
@@ -870,7 +881,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
 
                 <div className="pt-1 border-t border-[#BAC5D5]/40 text-[11px] text-[#4E5C70]">
                   <span className="font-bold text-[#2D3A4E]">
-                    {isPostSelected ? 'Почта России: ' : 'Курьеру: '}
+                    {isPostSelected ? `${deliveryTitle}: ` : 'Курьеру: '}
                   </span>
                   <span className="text-[#2D3A4E]">{formattedAddress}</span>
                 </div>
@@ -998,7 +1009,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                           <span>Выберите пункт выдачи</span>
                         </span>
                         <span className="text-[11px] font-bold text-accent neu-inset px-2 py-0.5 rounded-lg">
-                          {activePickupPoints.length} {activePickupPoints.length === 1 ? 'бутик' : 'адреса'}
+                          {activePickupPoints.length} {pluralRu(activePickupPoints.length, ['адрес', 'адреса', 'адресов'])}
                         </span>
                       </div>
 
