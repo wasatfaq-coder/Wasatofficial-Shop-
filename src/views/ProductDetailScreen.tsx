@@ -467,29 +467,32 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                       setSizeError(false);
                     }}
                     className={`min-h-[46px] min-w-[54px] px-3 py-1.5 rounded-2xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 relative cursor-pointer ${
+                      // Sold out stays readable (4.5:1, no transparency): struck through and marked «нет»,
+                      // it can still be picked to see the preorder or «закончился» note
                       isOutOfStock
                         ? isSelected
-                          ? 'neu-inset text-[#4E5C70]/70 border border-[#BAC5D5]/60'
-                          : 'neu-flat text-[#4E5C70]/40 opacity-70 hover:opacity-100 line-through'
+                          ? 'neu-pill-active text-[#4E5C70]'
+                          : 'neu-flat text-[#4E5C70]'
                         : isSelected
                         ? 'neu-pill-active'
                         : 'neu-button text-[#2D3A4E] hover:text-accent'
                     }`}
+                    aria-label={isOutOfStock ? `${sz}, нет в наличии` : undefined}
                   >
                     {sz === mySize && (
                       <span aria-hidden="true" className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-accent" />
                     )}
-                    <span>{sz}</span>
+                    <span className={isOutOfStock ? 'line-through' : undefined}>{sz}</span>
                     <span
                       className={`text-[11px] tracking-tight ${
                         isOutOfStock
-                          ? 'text-[#4E5C70]/50 font-medium no-underline'
+                          ? 'text-[#4E5C70] font-medium'
                           : isSelected
                           ? 'text-accent font-semibold'
                           : 'text-[#4E5C70] font-medium'
                       }`}
                     >
-                      {isOutOfStock ? '0 шт.' : `${szStock} шт.`}
+                      {isOutOfStock ? 'нет' : `${szStock} шт.`}
                     </span>
                   </button>
                 );

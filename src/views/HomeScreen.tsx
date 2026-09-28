@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, SlidersHorizontal, Menu, Truck, RotateCcw, AlertCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { ChevronRight, SlidersHorizontal, Menu, Truck, RotateCcw, AlertCircle, Pause, Play } from 'lucide-react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Product, ActiveTab, BannerSlide, StorefrontSettings, UserProfile, BodyMeasurements } from '../types';
 import { getStoreContacts, getStoreName } from '../utils/storeContacts';
 import { ProductCard } from '../components/ProductCard';
@@ -100,14 +100,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   // Only banners from Admin → «Баннеры»; without any the hero block is not shown
   const displaySlides = activeSlides;
 
-  // Auto-play slider effect
+  // Auto-play (WCAG 2.2.2): stops while the pointer, focus or a finger is on the banner, with the pause button
+  // and with «reduce motion» in the system; the timer restarts after every slide change, manual ones too
+  const reduceMotion = useReducedMotion();
+  const [isBannerPaused, setIsBannerPaused] = useState(false);
+  const [isBannerHeld, setIsBannerHeld] = useState(false);
+  const autoPlay = displaySlides.length > 1 && !reduceMotion;
   useEffect(() => {
-    if (displaySlides.length <= 1) return;
-    const timer = setInterval(() => {
+    if (!autoPlay || isBannerPaused || isBannerHeld) return;
+    const timer = setTimeout(() => {
       setActiveBannerSlide((prev) => (prev + 1) % displaySlides.length);
     }, 4500);
-    return () => clearInterval(timer);
-  }, [displaySlides.length]);
+    return () => clearTimeout(timer);
+  }, [autoPlay, isBannerPaused, isBannerHeld, activeBannerSlide, displaySlides.length]);
 
   // Keep active index in bounds
   useEffect(() => {
@@ -117,12 +122,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   }, [displaySlides.length, activeBannerSlide]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    setIsBannerHeld(true);
     if (e.touches && e.touches[0]) {
       setTouchStartX(e.touches[0].clientX);
     }
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
+    setIsBannerHeld(false);
     if (touchStartX === null) return;
     if (e.changedTouches && e.changedTouches[0]) {
       const touchEndX = e.changedTouches[0].clientX;
@@ -260,11 +267,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {/* 5. Hero Collection Banner */}
       {currentSlide && (
-      <div
+      <section
+        aria-roledescription="карусель"
+        aria-label="Баннеры"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className="relative neu-inset rounded-3xl p-5 overflow-hidden select-none group/banner cursor-pointer border border-transparent"
-        onClick={() => handleBannerClick(currentSlide)}
+        onMouseEnter={() => setIsBannerHeld(true)}
+        onMouseLeave={() => setIsBannerHeld(false)}
+        onFocus={() => setIsBannerHeld(true)}
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setIsBannerHeld(false);
+        }}
+        className="relative neu-inset rounded-3xl p-5 overflow-hidden select-none group/banner border border-transparent"
       >
         <AnimatePresence mode="wait">
           <motion.div
@@ -278,12 +292,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {/* Left Text content */}
             <div className="flex-1 space-y-2 max-w-[52%] lg:space-y-3">
               {currentSlide.badge && (
-                <span className="text-[11px] font-black neu-button px-2.5 py-0.5 rounded-full text-accent uppercase tracking-wider inline-block">
+                <span className="text-[11px] font-black neu-flat-sm px-2.5 py-0.5 rounded-full text-accent uppercase tracking-wider inline-block">
                   {currentSlide.badge}
                 </span>
               )}
               <h2 className="text-[22px] sm:text-[24px] lg:text-[36px] font-extrabold text-[#2D3A4E] leading-tight">
-                {currentSlide.title}
+                {/* The title is the banner's link: its ::after stretches over the slide (like a product card) */}
+                <button
+                  type="button"
+                  onClick={() => handleBannerClick(currentSlide)}
+                  className="text-left cursor-pointer after:absolute after:inset-0 after:content-['']"
+                >
+                  {currentSlide.title}
+                </button>
               </h2>
               <p className="text-[12px] sm:text-[13px] lg:text-base text-[#4E5C70] font-normal leading-relaxed line-clamp-2">
                 {currentSlide.subtitle}
@@ -306,6 +327,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         {/* Carousel Pagination Dots */}
         {displaySlides.length > 1 && (
           <div className="flex items-center justify-center gap-0.5 mt-2.5 relative z-20">
+            {autoPlay && (
+              <button
+                type="button"
+                onClick={() => setIsBannerPaused((v) => !v)}
+                className="h-6 w-6 mr-1 flex items-center justify-center rounded-full text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                aria-label={isBannerPaused ? 'Запустить прокрутку баннеров' : 'Остановить прокрутку баннеров'}
+              >
+                {isBannerPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+              </button>
+            )}
             {displaySlides.map((_, idx) => (
               <button
                 key={idx}
@@ -328,7 +359,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             ))}
           </div>
         )}
-      </div>
+      </section>
       )}
 
       {/* 6. Quick Category Icons Row */}

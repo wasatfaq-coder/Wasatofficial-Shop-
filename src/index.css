@@ -215,6 +215,11 @@ input[type="submit"] {
   outline-offset: 2px;
 }
 
+/* The dark main button gets a wider gap so the focus ring does not merge with it */
+.neu-button-accent:focus-visible {
+  outline-offset: 3px;
+}
+
 /* A window's panel takes the focus only as a starting point for Tab (useDialogA11y): it is not a control */
 :where([role="dialog"], [role="alertdialog"])[tabindex="-1"]:focus-visible {
   outline: none;
@@ -370,6 +375,14 @@ button.active\:neu-inset-deep:active {
   transform: scale(0.92) !important;
 }
 
+/* Over a photo an accent ring vanishes in dark fabric and a white one in light fabric: a dark ring inside a white
+   one is seen on any photo (after :hover, so hovering does not take the ring away) */
+.neu-photo-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--accent-text);
+}
+
 .neu-photo-badge {
   background-color: var(--neu-bg);
   color: #2D3A4E;
@@ -473,22 +486,22 @@ input[type="range"].neu-range::-moz-range-thumb {
   contain: paint layout;
 }
 
-/* Recharts Neumorphic Overrides & Black Focus Border Removal */
+/* Recharts: no borders and shadows of its own. A mouse click shows no focus box, the keyboard focus on the chart
+   (its surface is focusable, arrows move the tooltip) keeps the accent outline like every other control */
 .recharts-wrapper,
 .recharts-wrapper *,
 .recharts-surface,
-.recharts-surface:focus,
-.recharts-wrapper:focus,
 .recharts-responsive-container,
-.recharts-responsive-container:focus,
-svg.recharts-surface,
-svg.recharts-surface:focus,
-.recharts-tooltip-wrapper,
-.recharts-tooltip-wrapper:focus {
-  outline: none !important;
+.recharts-tooltip-wrapper {
   border: none !important;
   box-shadow: none !important;
   -webkit-tap-highlight-color: transparent !important;
+}
+
+.recharts-wrapper:focus:not(:focus-visible),
+.recharts-wrapper :focus:not(:focus-visible),
+.recharts-responsive-container:focus:not(:focus-visible) {
+  outline: none;
 }
 
 .recharts-default-tooltip {
@@ -523,8 +536,22 @@ svg.recharts-surface:focus,
 .slide-in-from-top-2 { --wasat-enter-y: -0.5rem; }
 .slide-in-from-top-4 { --wasat-enter-y: -1rem; }
 
+/* «Reduce motion» in the system: no entrance animations and no endless decorative ones (pulses, beams);
+   loading spinners (animate-spin) keep turning: they tell that something is happening */
 @media (prefers-reduced-motion: reduce) {
-  .animate-in { animation: none; }
+  .animate-in,
+  .animate-pulse,
+  .animate-ping,
+  .animate-bounce,
+  .neu-inset-deep-animated,
+  .neu-progress-beam,
+  .neu-progress-beam-vertical {
+    animation: none;
+  }
+  .neu-progress-beam,
+  .neu-progress-beam-vertical {
+    display: none;
+  }
 }
 
 /* iOS увеличивает страницу при фокусе на поле мельче 16px: на сенсорных экранах поля — 16px */
