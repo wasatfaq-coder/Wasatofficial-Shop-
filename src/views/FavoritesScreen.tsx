@@ -49,14 +49,14 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({
   }
 
   return (
-    <div className="space-y-4 pb-28 animate-in fade-in duration-300">
+    <div className="space-y-4 pb-28 lg:pb-10 animate-in fade-in duration-300">
       <div className="flex items-center justify-between px-1">
         <h2 className="text-base font-bold text-[#2D3A4E]">
           Сохраненные модели ({favoriteProducts.length})
         </h2>
       </div>
 
-      <div className="grid grid-cols-2 gap-3.5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 lg:gap-5">
         {favoriteProducts.map((product) => (
           <ProductCard
             key={product.id}

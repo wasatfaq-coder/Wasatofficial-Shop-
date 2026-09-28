@@ -5,10 +5,11 @@ import { GUEST_USER_PROFILE } from './data/products';
 import { loadLocalDeliveryMethods, saveLocalDeliveryMethods, loadLocalPickupPoints, saveLocalPickupPoints } from './data/deliveryData';
 import { playNotificationChime, sendBrowserNotification, getOrderStatusNotification } from './utils/pushNotifications';
 import { DeviceFrameWrapper } from './components/DeviceFrameWrapper';
-import { Header } from './components/Header';
+import { DesktopTitleRow, Header, screenTitle } from './components/Header';
 import { BottomNav } from './components/BottomNav';
 import { SidebarDrawer } from './components/SidebarDrawer';
 import { ToastContainer, ToastMessage } from './components/Toast';
+import { DesktopHeader } from './components/DesktopHeader';
 import { PromoModal } from './components/PromoModal';
 import { SupportChatModal } from './components/SupportChatModal';
 import { SizeCalculatorModal } from './components/SizeCalculatorModal';
@@ -147,6 +148,8 @@ export default function App() {
   }, []);
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  // Catalog search: the same text in the computer's top bar, on the home screen and in the catalog
+  const [catalogSearch, setCatalogSearch] = useState('');
   // Catalog, promos and banners come only from Firestore (Admin panel); no demo data meanwhile
   const [catalogProducts, setProducts] = useState<Product[]>([]);
   // Reviews live in their own collections and are merged into the products for display
@@ -1539,8 +1542,8 @@ export default function App() {
 
         {/* Promo message from Admin → «Витрина»: shown when switched on and filled in */}
         {storefrontSettings?.isStoreBannerVisible && publicSetting(storefrontSettings.storeBannerText) && (
-          <aside aria-label="Объявление магазина" className="px-4 pt-2">
-            <p className="max-w-lg mx-auto neu-flat-sm rounded-2xl px-3 py-2 flex items-center justify-center gap-2 text-center text-xs font-bold text-[#2D3A4E]">
+          <aside aria-label="Объявление магазина" className="px-4 pt-2 lg:px-6">
+            <p className="max-w-lg lg:max-w-none mx-auto neu-flat-sm rounded-2xl px-3 py-2 flex items-center justify-center gap-2 text-center text-xs font-bold text-[#2D3A4E]">
               {storefrontSettings.bannerBadgeText?.trim() && (
                 <span className="px-1.5 py-0.5 rounded-md bg-accent text-white text-[11px] font-black uppercase shrink-0">
                   {storefrontSettings.bannerBadgeText.trim()}
@@ -1550,6 +1553,22 @@ export default function App() {
             </p>
           </aside>
         )}
+
+        {/* Computer (lg+): top bar with search and sections instead of the bottom menu */}
+        <DesktopHeader
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          storeName={storeName}
+          cartCount={totalCartCount}
+          favoritesCount={favorites.length}
+          onOpenDrawer={() => setIsDrawerOpen(true)}
+          searchQuery={catalogSearch}
+          onSearchChange={setCatalogSearch}
+          products={products}
+          categories={getCategories(storefrontSettings)}
+          onSelectProduct={handleSelectProduct}
+          onSelectCategory={setSelectedCategory}
+        />
 
         {/* Top Header Bar (only shown on non-home screens) */}
         {activeTab !== 'home' && (
@@ -1565,7 +1584,13 @@ export default function App() {
         )}
 
         {/* View Router Body */}
-        <main className="px-4 flex-1 pt-1 overflow-x-hidden">
+        <main className="px-4 lg:px-6 flex-1 pt-1 lg:pt-5 overflow-x-clip">
+          {activeTab !== 'home' && (
+            <DesktopTitleRow
+              title={screenTitle(activeTab, totalCartCount, storeName, selectedProduct?.title)}
+              onBack={handleHeaderBack}
+            />
+          )}
           <AnimatePresence
             mode="wait"
             initial={false}
@@ -1598,6 +1623,8 @@ export default function App() {
               setActiveTab={setActiveTab}
               onSelectCategory={setSelectedCategory}
               onOpenDrawer={() => setIsDrawerOpen(true)}
+              searchQuery={catalogSearch}
+              onSearchChange={setCatalogSearch}
               bannerSlides={customerBannerSlides}
               storefrontSettings={customerStorefront}
               onOpenSupportChat={() => setIsSupportChatOpen(true)}
@@ -1634,6 +1661,8 @@ export default function App() {
               onChangeFilterState={setCatalogFilterState}
               onResetFilters={handleResetCatalogFilters}
               onOpenFilters={() => setIsAdvancedFilterOpen(true)}
+              searchQuery={catalogSearch}
+              onSearchChange={setCatalogSearch}
             />
           )}
 

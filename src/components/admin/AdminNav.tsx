@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Tabs } from '@base-ui/react/tabs';
 import { motion } from 'motion/react';
 import {
@@ -19,21 +19,7 @@ import {
   Wallet,
   type LucideIcon,
 } from 'lucide-react';
-
-export type AdminTab =
-  | 'analytics'
-  | 'products'
-  | 'categories'
-  | 'inventory'
-  | 'orders'
-  | 'delivery'
-  | 'payment'
-  | 'customers'
-  | 'promos'
-  | 'banners'
-  | 'support'
-  | 'faq'
-  | 'storefront';
+import { isAdminTab, type AdminNavCounts, type AdminTab } from './adminSections';
 
 const TABS: Record<AdminTab, { label: string; icon: LucideIcon }> = {
   analytics: { label: 'Аналитика', icon: BarChart3 },
@@ -63,12 +49,6 @@ const GROUPS: { id: AdminGroupId; label: string; icon: LucideIcon; tabs: AdminTa
 
 const groupOf = (tab: AdminTab) => GROUPS.find((g) => g.tabs.includes(tab)) ?? GROUPS[0];
 
-export function isAdminTab(value: unknown): value is AdminTab {
-  return typeof value === 'string' && value in TABS;
-}
-
-/** What waits for the admin: a number on the section and its group */
-export type AdminNavCounts = Partial<Record<AdminTab, { value: number; label: string }>>;
 
 /** The number; `className` places it. The words for screen readers go once, from the copy with `label` */
 const Badge: React.FC<{ value: number; label?: string; className?: string }> = ({ value, label, className = '' }) =>
@@ -102,8 +82,23 @@ interface AdminNavProps {
  * Admin navigation: 4 groups (tablist), the sections of the selected group (tablist) and the section's panel.
  * Arrows move between tabs, Enter or Space opens one; a group opens the section last used in it.
  */
+/** Computer (lg): the groups are a vertical menu on the left, so the arrows are ↑ ↓ there */
+function useIsWide(): boolean {
+  const query = '(min-width: 64rem)';
+  const [isWide, setIsWide] = useState(() => typeof window !== 'undefined' && Boolean(window.matchMedia?.(query).matches));
+  useEffect(() => {
+    const mq = window.matchMedia?.(query);
+    if (!mq) return;
+    const onChange = () => setIsWide(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return isWide;
+}
+
 export const AdminNav: React.FC<AdminNavProps> = ({ tab, onRequestTab, counts = {}, children }) => {
   const group = groupOf(tab);
+  const isWide = useIsWide();
   const lastInGroup = useRef<Partial<Record<AdminGroupId, AdminTab>>>({});
   useEffect(() => {
     lastInGroup.current[groupOf(tab).id] = tab;
@@ -119,11 +114,12 @@ export const AdminNav: React.FC<AdminNavProps> = ({ tab, onRequestTab, counts = 
         const target = GROUPS.find((g) => g.id === next);
         if (target) onRequestTab(lastInGroup.current[target.id] ?? target.tabs[0]);
       }}
-      className="flex-1 min-h-0 flex flex-col gap-3 min-w-0 w-full"
+      orientation={isWide ? 'vertical' : 'horizontal'}
+      className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 lg:gap-6 min-w-0 w-full"
     >
       <Tabs.List
         aria-label="Разделы панели"
-        className="admin-tab-bar rounded-2xl p-1.5 grid grid-cols-4 gap-1.5 shrink-0 w-full"
+        className="admin-tab-bar rounded-2xl p-1.5 grid grid-cols-4 gap-1.5 shrink-0 w-full lg:flex lg:flex-col lg:w-52 lg:self-start"
       >
         {GROUPS.map((g) => {
           const Icon = g.icon;
@@ -133,7 +129,7 @@ export const AdminNav: React.FC<AdminNavProps> = ({ tab, onRequestTab, counts = 
             <Tabs.Tab
               key={g.id}
               value={g.id}
-              className={`relative min-w-0 py-2 px-1 sm:px-3 rounded-xl font-extrabold text-[11px] sm:text-xs tracking-tight sm:tracking-normal flex items-center justify-center cursor-pointer select-none transition-colors ${
+              className={`relative min-w-0 py-2 px-1 sm:px-3 lg:py-3 lg:px-4 rounded-xl font-extrabold text-[11px] sm:text-xs lg:text-sm tracking-tight sm:tracking-normal flex items-center justify-center lg:justify-start cursor-pointer select-none transition-colors ${
                 isActive ? 'text-accent font-black' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
               }`}
             >
@@ -144,14 +140,14 @@ export const AdminNav: React.FC<AdminNavProps> = ({ tab, onRequestTab, counts = 
                   transition={{ type: 'spring', stiffness: 450, damping: 35 }}
                 />
               )}
-              <span className="relative z-10 flex flex-col sm:flex-row items-center gap-1 sm:gap-1.5 min-w-0">
+              <span className="relative z-10 flex flex-col sm:flex-row items-center gap-1 sm:gap-1.5 lg:gap-2.5 min-w-0 lg:w-full">
                 {/* Phone: the number on the icon's corner; wider: after the label */}
                 <span className="relative shrink-0">
-                  <Icon className={`w-4 h-4 sm:w-3.5 sm:h-3.5 ${isActive ? 'text-accent' : 'text-[#4E5C70]'}`} />
+                  <Icon className={`w-4 h-4 sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4 ${isActive ? 'text-accent' : 'text-[#4E5C70]'}`} />
                   {!isActive && <Badge value={count} className="absolute -top-2.5 -right-3.5 sm:hidden" />}
                 </span>
                 <span className="truncate max-w-full">{g.label}</span>
-                {!isActive && <Badge value={count} label="ждут внимания" className="hidden sm:inline-block" />}
+                {!isActive && <Badge value={count} label="ждут внимания" className="hidden sm:inline-block lg:ml-auto" />}
               </span>
             </Tabs.Tab>
           );

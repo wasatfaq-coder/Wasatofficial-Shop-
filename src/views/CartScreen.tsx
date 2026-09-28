@@ -144,7 +144,10 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   }
 
   return (
-    <div className="space-y-4 pb-28 animate-in fade-in duration-300">
+    <div className="space-y-4 pb-28 lg:pb-10 animate-in fade-in duration-300">
+      {/* Computer (lg): items on the left, promo code and totals on the right, in view while the list scrolls */}
+      <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start">
+      <div className="space-y-4 lg:col-span-7">
       {/* Free Delivery Threshold Dynamic Progress Banner */}
       <div className="neu-flat rounded-2xl p-3.5 border border-white/60 space-y-2">
         <div className="flex items-center justify-between text-xs font-bold">
@@ -481,6 +484,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         })}
       </div>
 
+      </div>
+
+      <div className="space-y-4 lg:col-span-5 lg:sticky lg:top-24">
       {/* Promo Code Card with Modal Trigger */}
       <div className="neu-flat rounded-2xl p-3 border border-white/60 space-y-2.5">
         <div className="flex items-center justify-between">
@@ -628,6 +634,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
             <span>Заказать в 1 клик</span>
           </button>
         </div>
+      </div>
+
+      </div>
       </div>
 
       {/* Cart Removal Confirmation Modal */}

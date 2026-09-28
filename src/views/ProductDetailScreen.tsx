@@ -238,15 +238,17 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   };
 
   return (
-    <div className="space-y-5 pb-28 animate-in fade-in duration-300">
+    <div className="space-y-5 pb-28 lg:pb-10 animate-in fade-in duration-300">
+      {/* Computer (lg): gallery on the left, the buying block on the right stays in view while the photos scroll */}
+      <div className="space-y-5 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start">
       {/* Product Image Gallery with Large Showcase & Neumorphic Multi-angles */}
-      <div className="neu-flat rounded-3xl p-3 sm:p-4 border border-white/60 space-y-3">
+      <div className="neu-flat rounded-3xl p-3 sm:p-4 border border-white/60 space-y-3 lg:col-span-7">
         {/* Main Large Photo Box - Neumorphic Well with 3:4 Aspect Ratio */}
         <div
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
           onClick={() => setIsZoomModalOpen(true)}
-          className="relative w-full aspect-[3/4] sm:aspect-[4/5] rounded-2xl overflow-hidden select-none group/detailimg cursor-zoom-in"
+          className="relative w-full aspect-[3/4] sm:aspect-[4/5] lg:max-h-[calc(100vh-11rem)] rounded-2xl overflow-hidden select-none group/detailimg cursor-zoom-in"
         >
           <NeumorphicImage
             src={productImage(product, selectedImageIndex)}
@@ -358,7 +360,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
       </div>
 
       {/* Main Details Card */}
-      <div className="neu-flat rounded-3xl p-5 space-y-4">
+      <div className="neu-flat rounded-3xl p-5 space-y-4 lg:col-span-5 lg:sticky lg:top-24">
         {/* Title, Badge & Favorite */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
@@ -620,6 +622,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             </button>
           )}
         </div>
+      </div>
       </div>
 
       {/* Product information tabs: only sections that have data are shown */}

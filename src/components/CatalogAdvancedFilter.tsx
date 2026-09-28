@@ -114,6 +114,8 @@ interface CatalogAdvancedFilterProps {
   onApplyModal?: () => void;
   isInlineExpanded: boolean;
   onToggleInline: () => void;
+  /** 'sidebar': the computer's catalog column — always open, applied at once, no «Показать» */
+  variant?: 'default' | 'sidebar';
 }
 
 export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
@@ -127,8 +129,9 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
   onApplyModal,
   isInlineExpanded,
   onToggleInline,
+  variant = 'default',
 }) => {
-  const dialog = useDialogA11y(isOpenModal, onCloseModal);
+  const dialog = useDialogA11y(variant === 'default' && isOpenModal, onCloseModal);
   const showLabel =
     filteredCount === 0
       ? 'Ничего не найдено'
@@ -431,6 +434,28 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
       </div>
     </div>
   );
+
+  if (variant === 'sidebar') {
+    return (
+      <div className="neu-flat rounded-3xl p-4 space-y-4 border border-white/60">
+        <div className="flex items-center justify-between gap-2 pb-3 border-b border-[#BAC5D5]/60">
+          <h2 className="text-sm font-bold text-[#2D3A4E] flex items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4 text-accent" />
+            Фильтры
+          </h2>
+          <button
+            type="button"
+            onClick={onResetFilters}
+            className="h-8 px-3 rounded-xl neu-button text-[11px] font-bold text-[#4E5C70] hover:text-danger flex items-center gap-1.5 cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Сбросить
+          </button>
+        </div>
+        {renderFilterContent('catalog-filter-side')}
+      </div>
+    );
+  }
 
   return (
     <>

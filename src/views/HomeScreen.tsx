@@ -12,6 +12,9 @@ import { QuickViewModal } from '../components/QuickViewModal';
 import { categoryIcon, getCategories } from '../utils/categories';
 
 interface HomeScreenProps {
+  /** Search shared with the catalog (App): the text typed here is the catalog's query */
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
   products: Product[];
   favorites: string[];
   cartItemIds: string[];
@@ -63,9 +66,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onSaveMeasurements,
   onAddToCartWithOptions,
   preorderMode = false,
+  searchQuery: externalSearchQuery,
+  onSearchChange: externalOnSearchChange,
 }) => {
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [localSearchQuery, setLocalSearchQuery] = useState('');
+  const searchQuery = externalSearchQuery ?? localSearchQuery;
+  const setSearchQuery = externalOnSearchChange ?? setLocalSearchQuery;
   const [activeBannerSlide, setActiveBannerSlide] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
@@ -177,7 +184,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const { phone } = getStoreContacts(storefrontSettings);
 
   return (
-    <div className="space-y-5 pb-36 animate-in fade-in duration-300">
+    <div className="space-y-5 pb-36 lg:pb-10 animate-in fade-in duration-300">
       {/* The home screen has no title bar: the page heading is for screen readers only */}
       <h1 className="sr-only">{getStoreName(storefrontSettings)}</h1>
       {/* 1. Maintenance / Concierge Banner (if store is offline) */}
@@ -204,8 +211,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
       )}
 
-      {/* Search Bar Row with Menu Button on Left */}
-      <div className="flex items-center gap-2.5 pt-1 px-0.5">
+      {/* Search Bar Row with Menu Button on Left (on a computer both are in the top bar) */}
+      <div className="flex items-center gap-2.5 pt-1 px-0.5 lg:hidden">
         {onOpenDrawer && (
           <button
             type="button"
@@ -266,30 +273,30 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
-            className="relative z-10 flex items-center justify-between gap-3 min-h-[170px]"
+            className="relative z-10 flex items-center justify-between gap-3 min-h-[170px] lg:min-h-[280px] lg:px-4"
           >
             {/* Left Text content */}
-            <div className="flex-1 space-y-2 max-w-[52%]">
+            <div className="flex-1 space-y-2 max-w-[52%] lg:space-y-3">
               {currentSlide.badge && (
                 <span className="text-[11px] font-black neu-button px-2.5 py-0.5 rounded-full text-accent uppercase tracking-wider inline-block">
                   {currentSlide.badge}
                 </span>
               )}
-              <h2 className="text-[22px] sm:text-[24px] font-extrabold text-[#2D3A4E] leading-tight">
+              <h2 className="text-[22px] sm:text-[24px] lg:text-[36px] font-extrabold text-[#2D3A4E] leading-tight">
                 {currentSlide.title}
               </h2>
-              <p className="text-[12px] sm:text-[13px] text-[#4E5C70] font-normal leading-relaxed line-clamp-2">
+              <p className="text-[12px] sm:text-[13px] lg:text-base text-[#4E5C70] font-normal leading-relaxed line-clamp-2">
                 {currentSlide.subtitle}
               </p>
             </div>
 
             {/* Right Hero Image */}
-            <div className="w-40 h-44 shrink-0">
+            <div className="w-40 h-44 lg:w-[400px] lg:h-[260px] shrink-0">
               <NeumorphicImage
                 src={currentSlide.image}
                 alt={currentSlide.title}
                 priority={true}
-                containerClassName="w-40 h-44 rounded-2xl"
+                containerClassName="w-40 h-44 lg:w-[400px] lg:h-[260px] rounded-2xl"
                 className="w-full h-full object-cover object-top rounded-xl"
               />
             </div>
@@ -326,10 +333,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {/* 6. Quick Category Icons Row */}
       {categories.length === 0 && <NotConfigured title="Категории" />}
-      <div className="grid grid-cols-4 gap-3 py-1">
+      <div className="grid grid-cols-4 lg:grid-cols-8 gap-3 py-1">
         {categories
-          .slice(0, 4)
-          .map((cat) => {
+          .slice(0, 8)
+          .map((cat, index) => {
             const IconComp = categoryIcon(cat);
             return (
               <button
@@ -339,7 +346,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   onSelectCategory(cat.id);
                   setActiveTab('catalog');
                 }}
-                className="flex flex-col items-center gap-2 group cursor-pointer bg-transparent border-0 p-0 select-none"
+                className={`${index >= 4 ? 'hidden lg:flex' : 'flex'} flex-col items-center gap-2 group cursor-pointer bg-transparent border-0 p-0 select-none`}
               >
                 <span className="w-14 h-14 rounded-2xl neu-button flex items-center justify-center text-[#2D3A4E] group-hover:text-accent transition-colors duration-150">
                   <IconComp className="w-6 h-6 stroke-[1.8]" aria-hidden="true" />
@@ -398,7 +405,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         )}
 
         {popularProducts.length > 0 && (
-          <div className="grid grid-cols-2 gap-3.5 sm:gap-4 p-1 -m-1">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 lg:gap-5 p-1 -m-1">
             {popularProducts.map((product, index) => (
               <ProductCard
                 key={product.id}

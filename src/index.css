@@ -72,9 +72,16 @@
     letter-spacing: -0.01em;
   }
 
-  /* Tab never leaves the focused element under the floating bottom navigation (WCAG 2.4.11) */
+  /* Tab never leaves the focused element under the floating bottom navigation (WCAG 2.4.11);
+     on a computer the bottom menu is gone and the top bar is sticky */
   html {
     scroll-padding-bottom: 96px;
+  }
+  @media (min-width: 64rem) {
+    html {
+      scroll-padding-bottom: 16px;
+      scroll-padding-top: 80px;
+    }
   }
 
   body {

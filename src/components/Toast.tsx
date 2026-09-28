@@ -39,7 +39,7 @@ interface ToastProps {
 
 export const ToastContainer: React.FC<ToastProps> = ({ toasts, onDismiss }) => {
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[300] flex flex-col gap-2.5 w-11/12 max-w-sm pointer-events-none">
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 lg:top-36 lg:left-auto lg:right-6 lg:translate-x-0 z-[300] flex flex-col gap-2.5 w-11/12 max-w-sm pointer-events-none">
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
       ))}

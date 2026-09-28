@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { motion, AnimatePresence } from 'motion/react';
 import { AccountDataModal } from '../components/AccountDataModal';
@@ -51,19 +51,8 @@ import { calculateRussianPattern, RUSSIAN_SIZE_TABLE_ROWS } from '../utils/russi
 import { useAuth } from '../context/AuthContext';
 import { UserProfile, Order, CartItem, OrderStatusHistoryStep, ActiveTab, SavedAddress, Product, PromoCode, BannerSlide, ChatMessage, StorefrontSettings, SaveStorefrontSettings, DeliveryMethod, PickupPoint } from '../types';
 import { formatAddress } from '../utils/addressFormat';
-import { AdminAnalyticsTab } from '../components/admin/AdminAnalyticsTab';
-import { AdminPromoConstructorTab } from '../components/admin/AdminPromoConstructorTab';
-import { AdminBannersTab } from '../components/admin/AdminBannersTab';
-import { AdminSupportInbox } from '../components/admin/AdminSupportInbox';
 import type { AdminChatPayload } from '../components/admin/AdminSupportChatTab';
 import type { ChatMessageChange } from '../utils/firebaseSync';
-import { AdminInventoryTab } from '../components/admin/AdminInventoryTab';
-import { AdminProductsTab } from '../components/admin/AdminProductsTab';
-import { AdminOrdersTab } from '../components/admin/AdminOrdersTab';
-import { AdminCustomersTab } from '../components/admin/AdminCustomersTab';
-import { AdminStorefrontTab } from '../components/admin/AdminStorefrontTab';
-import { BrandRenameCard } from '../components/admin/BrandRenameCard';
-import { AdminDeliveryTab } from '../components/admin/AdminDeliveryTab';
 import { DeliveryTrackingMapModal } from '../components/DeliveryTrackingMapModal';
 import { copyToClipboard } from '../utils/clipboard';
 import { isNotificationSupported, requestNotificationPermission } from '../utils/pushNotifications';
@@ -82,16 +71,30 @@ import {
   loadLocalPickupPoints,
   saveLocalPickupPoints,
 } from '../data/deliveryData';
-import { AdminFaqTab } from '../components/admin/AdminFaqTab';
-import { AdminPaymentTab } from '../components/admin/AdminPaymentTab';
-import { AdminCategoriesTab } from '../components/admin/AdminCategoriesTab';
 import { getCategories } from '../utils/categories';
 import { productImage } from '../utils/productImage';
 import { NeumorphicSwitch } from '../components/NeumorphicSwitch';
 import { useDialogA11y } from '../utils/useDialogA11y';
-import { AdminNav, isAdminTab, type AdminNavCounts, type AdminTab } from '../components/admin/AdminNav';
+import { isAdminTab, type AdminNavCounts, type AdminTab } from '../components/admin/adminSections';
 import { UnsavedChangesContext, useUnsavedRegistry } from '../utils/unsavedChanges';
 import { summarizeSupportThreads } from '../utils/supportThreads';
+
+// The admin panel is a separate chunk (its sections, Base UI, charts): customers do not download it
+const AdminAnalyticsTab = lazy(() => import('../components/admin/AdminAnalyticsTab').then((m) => ({ default: m.AdminAnalyticsTab })));
+const AdminPromoConstructorTab = lazy(() => import('../components/admin/AdminPromoConstructorTab').then((m) => ({ default: m.AdminPromoConstructorTab })));
+const AdminBannersTab = lazy(() => import('../components/admin/AdminBannersTab').then((m) => ({ default: m.AdminBannersTab })));
+const AdminSupportInbox = lazy(() => import('../components/admin/AdminSupportInbox').then((m) => ({ default: m.AdminSupportInbox })));
+const AdminInventoryTab = lazy(() => import('../components/admin/AdminInventoryTab').then((m) => ({ default: m.AdminInventoryTab })));
+const AdminProductsTab = lazy(() => import('../components/admin/AdminProductsTab').then((m) => ({ default: m.AdminProductsTab })));
+const AdminOrdersTab = lazy(() => import('../components/admin/AdminOrdersTab').then((m) => ({ default: m.AdminOrdersTab })));
+const AdminCustomersTab = lazy(() => import('../components/admin/AdminCustomersTab').then((m) => ({ default: m.AdminCustomersTab })));
+const AdminStorefrontTab = lazy(() => import('../components/admin/AdminStorefrontTab').then((m) => ({ default: m.AdminStorefrontTab })));
+const BrandRenameCard = lazy(() => import('../components/admin/BrandRenameCard').then((m) => ({ default: m.BrandRenameCard })));
+const AdminDeliveryTab = lazy(() => import('../components/admin/AdminDeliveryTab').then((m) => ({ default: m.AdminDeliveryTab })));
+const AdminFaqTab = lazy(() => import('../components/admin/AdminFaqTab').then((m) => ({ default: m.AdminFaqTab })));
+const AdminPaymentTab = lazy(() => import('../components/admin/AdminPaymentTab').then((m) => ({ default: m.AdminPaymentTab })));
+const AdminCategoriesTab = lazy(() => import('../components/admin/AdminCategoriesTab').then((m) => ({ default: m.AdminCategoriesTab })));
+const AdminNav = lazy(() => import('../components/admin/AdminNav').then((m) => ({ default: m.AdminNav })));
 
 interface ProfileScreenProps {
   profile: UserProfile;
@@ -137,6 +140,14 @@ interface ProfileScreenProps {
   pickupPoints?: PickupPoint[];
   onUpdatePickupPoints?: (points: PickupPoint[]) => void;
 }
+
+/** While a section of the admin panel (a separate chunk) is loading */
+const AdminLoading: React.FC = () => (
+  <div role="status" className="flex items-center justify-center gap-2 py-16 text-xs font-bold text-[#4E5C70]">
+    <RefreshCw className="w-4 h-4 animate-spin text-accent" aria-hidden="true" />
+    Загрузка раздела…
+  </div>
+);
 
 /** Admin panel section for this browser session (internal key, not renamed) */
 const ADMIN_TAB_STORAGE_KEY = 'manstyle_admin_tab';
@@ -757,7 +768,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const workingHours = (storefrontSettings?.workingHours ?? '').trim();
 
   return (
-    <div className="space-y-5 pb-28 animate-in fade-in duration-300">
+    <div className="space-y-5 pb-28 lg:pb-10 animate-in fade-in duration-300">
       {/* Profile Card Header */}
       <div className="neu-flat rounded-3xl p-3.5">
         {!isEditingProfile ? (
@@ -3041,7 +3052,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.94, opacity: 0, y: 12 }}
               transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-              className="neu-modal rounded-3xl p-3.5 sm:p-6 max-w-5xl w-full my-auto space-y-4 max-h-[92vh] flex flex-col border border-white/80 text-[#2D3A4E] min-w-0 overflow-hidden relative z-10"
+              className="neu-modal rounded-3xl p-3.5 sm:p-6 max-w-5xl lg:max-w-none w-full my-auto space-y-4 max-h-[92vh] lg:max-h-none lg:h-[calc(100vh-2rem)] flex flex-col border border-white/80 text-[#2D3A4E] min-w-0 overflow-hidden relative z-10"
             >
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3 shrink-0 gap-2">
@@ -3078,6 +3089,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
             {/* 4 groups → sections → the section; forms report unsaved edits to the panel */}
             <UnsavedChangesContext.Provider value={unsavedRegistry}>
+            <Suspense fallback={<AdminLoading />}>
             <AdminNav tab={adminTab} onRequestTab={requestAdminTab} counts={adminCounts}>
               <AnimatePresence mode="wait">
                 <motion.div
@@ -3088,6 +3100,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   transition={{ duration: 0.18, ease: 'easeOut' }}
                   className="w-full"
                 >
+              <Suspense fallback={<AdminLoading />}>
               {/* --- TAB 1: ANALYTICS & FINANCIAL DASHBOARD --- */}
               {adminTab === 'analytics' && (
                 <AdminAnalyticsTab
@@ -3257,9 +3270,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   />
                 </div>
               )}
+              </Suspense>
                 </motion.div>
               </AnimatePresence>
             </AdminNav>
+            </Suspense>
             </UnsavedChangesContext.Provider>
           </motion.div>
         </motion.div>

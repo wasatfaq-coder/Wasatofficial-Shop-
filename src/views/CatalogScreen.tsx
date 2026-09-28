@@ -52,6 +52,9 @@ interface CatalogScreenProps {
   onOpenFilters?: () => void;
   initialOpenFilters?: boolean;
   onFiltersClosed?: () => void;
+  /** Search shared with the top bar and the home screen (App); local when not given */
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
 }
 
 export const CatalogScreen: React.FC<CatalogScreenProps> = ({
@@ -74,8 +77,12 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
   onOpenFilters,
   initialOpenFilters = false,
   onFiltersClosed,
+  searchQuery: externalSearchQuery,
+  onSearchChange: externalOnSearchChange,
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [localSearchQuery, setLocalSearchQuery] = useState('');
+  const searchQuery = externalSearchQuery ?? localSearchQuery;
+  const setSearchQuery = externalOnSearchChange ?? setLocalSearchQuery;
   const [sortBy, setSortBy] = useState<'popular' | 'price-asc' | 'price-desc' | 'newest'>('popular');
   const [showSortMenu, setShowSortMenu] = useState(false);
   
@@ -150,9 +157,26 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
   ]);
 
   return (
-    <div className="space-y-4 pb-32 animate-in fade-in duration-300">
+    <div className="space-y-4 pb-32 lg:pb-10 animate-in fade-in duration-300">
+      {/* Computer (lg): filters in a column on the left, applied at once; search is in the top bar */}
+      <div className="lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-6 lg:items-start">
+      <aside aria-label="Фильтры каталога" className="hidden lg:block lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto no-scrollbar p-1 -m-1">
+        <CatalogAdvancedFilter
+          variant="sidebar"
+          products={products}
+          filterState={filterState}
+          onChangeFilterState={setFilterState}
+          onResetFilters={handleResetAll}
+          filteredCount={filteredProducts.length}
+          isOpenModal={false}
+          onCloseModal={() => {}}
+          isInlineExpanded={false}
+          onToggleInline={() => {}}
+        />
+      </aside>
+      <div className="space-y-4 min-w-0">
       {/* 1. Search Bar & Master Filter Button with Unified Neumorphic Geometry */}
-      <div className="flex items-center gap-3 pt-1">
+      <div className="flex items-center gap-3 pt-1 lg:hidden">
         <div className="flex-1">
           <AutocompleteSearch
             categories={categories}
@@ -478,7 +502,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3.5 sm:gap-4 p-1 -m-1">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 lg:gap-5 p-1 -m-1">
               {filteredProducts.map((product, index) => (
                 <ProductCard
                   key={product.id}
@@ -496,6 +520,8 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           )}
         </motion.div>
       </AnimatePresence>
+      </div>
+      </div>
 
       {/* 7. Quick View Modal */}
       <QuickViewModal
