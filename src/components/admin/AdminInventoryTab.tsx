@@ -25,7 +25,7 @@ import {
   Printer,
   RotateCcw,
 } from 'lucide-react';
-import { Product, ProductSKU, StockMovementLog, StorefrontSettings } from '../../types';
+import { Product, ProductSKU, StockMovementLog, SaveStorefrontSettings, StorefrontSettings } from '../../types';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { copyToClipboard } from '../../utils/clipboard';
 import {
@@ -49,7 +49,7 @@ interface AdminInventoryTabProps {
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   /** Label formats live in settings/storefront */
   settings?: StorefrontSettings;
-  onUpdateSettings?: (settings: StorefrontSettings) => void;
+  onUpdateSettings?: SaveStorefrontSettings;
 }
 
 

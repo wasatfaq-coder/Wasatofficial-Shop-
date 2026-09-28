@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Barcode, ChevronLeft, ChevronRight, FileDown, Plus, RefreshCw, Trash2, X } from 'lucide-react';
-import type { LabelFormat, Product, ProductSKU, StorefrontSettings } from '../../types';
+import type { LabelFormat, Product, ProductSKU, SaveStorefrontSettings, StorefrontSettings } from '../../types';
 import { ModalPortal } from '../ModalPortal';
 import { compositionToMaterial, getProductFabricComposition } from '../../utils/productAttributes';
 import { ConfirmDialog } from '../ConfirmDialog';
@@ -40,7 +40,7 @@ interface AdminLabelGeneratorProps {
   targets: LabelTarget[];
   products: Product[];
   settings: StorefrontSettings;
-  onUpdateSettings?: (settings: StorefrontSettings) => void;
+  onUpdateSettings?: SaveStorefrontSettings;
   onUpdateProducts: (products: Product[]) => void;
   onClose: () => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
@@ -67,6 +67,27 @@ const labelData = (product: Product, sku: ProductSKU): LabelData => ({
   price: product.price,
   oldPrice: product.originalPrice,
 });
+
+const PREF_KEY = 'manstyle_label_prefs';
+function readPref(key: 'format' | 'template'): string | undefined {
+  try {
+    return (JSON.parse(localStorage.getItem(PREF_KEY) || '{}') as Record<string, string>)[key];
+  } catch {
+    return undefined;
+  }
+}
+function writePref(key: 'format' | 'template', value: string) {
+  try {
+    const prefs = JSON.parse(localStorage.getItem(PREF_KEY) || '{}') as Record<string, string>;
+    localStorage.setItem(PREF_KEY, JSON.stringify({ ...prefs, [key]: value }));
+  } catch {
+    // storage blocked: the choice is just not remembered
+  }
+}
+
+/** Display size of a label inside a box, keeping its proportions */
+const fitBox = (f: Pick<LabelFormat, 'widthMm' | 'heightMm'>, maxW: number, maxH: number) =>
+  Math.min(maxW, (maxH * f.widthMm) / f.heightMm);
 
 type PrintItem = { target: LabelTarget; product: Product; sku: ProductSKU };
 
@@ -101,11 +122,12 @@ const LabelCanvas: React.FC<{
 };
 
 /** Proportional outline of a format, for the delete confirmation */
-const FormatThumb: React.FC<{ format: Pick<LabelFormat, 'widthMm' | 'heightMm'> }> = ({ format }) => {
-  const scale = 44 / Math.max(format.widthMm, format.heightMm);
+const FormatThumb: React.FC<{ format: Pick<LabelFormat, 'widthMm' | 'heightMm'>; size?: number }> = ({ format, size = 44 }) => {
+  const scale = size / Math.max(format.widthMm, format.heightMm);
   return (
     <span
-      className="block rounded-md bg-white border border-[#2D3A4E]/60 shrink-0"
+      aria-hidden="true"
+      className="block rounded-[3px] bg-white border border-[#2D3A4E]/60 shrink-0"
       style={{ width: format.widthMm * scale, height: format.heightMm * scale }}
     />
   );
@@ -131,7 +153,7 @@ const Switch: React.FC<{ checked: boolean; onChange: (v: boolean) => void; label
 );
 
 /**
- * Admin → «Склад» → labels: the store's label formats, seven templates, a PDF with one page per label
+ * Admin → «Склад» → labels: the store's label formats, ten templates, a PDF with one page per label
  * (per variation, or per article when the template has no size). One readable barcode per article.
  */
 export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
@@ -144,8 +166,15 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
   onShowToast,
 }) => {
   const formats = settings.labelFormats ?? [];
-  const [formatId, setFormatId] = useState<string>(formats[0]?.id ?? '');
-  const [template, setTemplate] = useState<LabelTemplate>('classic');
+  // The last format and template are remembered in this browser (a convenience, not store data)
+  const [formatId, setFormatId] = useState<string>(() => readPref('format') ?? formats[0]?.id ?? '');
+  const [template, setTemplate] = useState<LabelTemplate>(() => {
+    const saved = readPref('template');
+    return LABEL_TEMPLATES.some((t) => t.id === saved) ? (saved as LabelTemplate) : 'classic';
+  });
+  useEffect(() => writePref('format', formatId), [formatId]);
+  useEffect(() => writePref('template', template), [template]);
+  const [isSavingFormats, setIsSavingFormats] = useState(false);
   const [options, setOptions] = useState<LabelOptions>({ showPrice: true, showBarcode: true });
   const [previewIndex, setPreviewIndex] = useState(0);
   const [fontsReady, setFontsReady] = useState(false);
@@ -210,15 +239,40 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
     current && options.showBarcode && problems.has(skuKey(current.product.id, current.sku.id))
       ? { ...options, showBarcode: false }
       : options;
+  // What the fitting had to leave out on the current label (too small a format)
+  const measure = useMemo(() => canvasMeasure(), []);
+  const dropped = useMemo(
+    () =>
+      format && current
+        ? layoutLabel(template, format, labelData(current.product, current.sku), previewOptions, measure).dropped
+        : [],
+    // fontsReady: measured again once Manrope has loaded
+    [format, template, current, previewOptions.showBarcode, previewOptions.showPrice, measure, fontsReady]
+  );
   const canDownload =
     Boolean(format) && labels.length > 0 && barcodeIssues.length === 0 && noOldPrice.length === 0 && !isGenerating;
 
-  const saveFormats = (next: LabelFormat[]) => {
-    if (!onUpdateSettings) return;
-    onUpdateSettings({ ...settings, labelFormats: next });
+  /** «Добавлен/удален» only after the database accepted the write (App shows the error otherwise) */
+  const saveFormats = async (next: LabelFormat[]) => {
+    if (!onUpdateSettings || isSavingFormats) return false;
+    setIsSavingFormats(true);
+    const ok = await onUpdateSettings({ ...settings, labelFormats: next });
+    setIsSavingFormats(false);
+    return ok !== false;
   };
 
-  const addFormat = (base: Omit<LabelFormat, 'id'>) => {
+  /** Why the typed size can't be added, or null */
+  const draftProblem = (() => {
+    if (!draft.width || !draft.height) return null;
+    const width = Number(draft.width);
+    const height = Number(draft.height);
+    const { min, max } = LABEL_SIZE_LIMITS;
+    if (!(width >= min && width <= max && height >= min && height <= max)) return `Ширина и высота — от ${min} до ${max} мм`;
+    if (formats.some((f) => f.widthMm === width && f.heightMm === height)) return `Формат ${width}×${height} мм уже есть`;
+    return null;
+  })();
+
+  const addFormat = async (base: Omit<LabelFormat, 'id'>) => {
     const width = Math.round(base.widthMm);
     const height = Math.round(base.heightMm);
     const { min, max } = LABEL_SIZE_LIMITS;
@@ -236,25 +290,33 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
       widthMm: width,
       heightMm: height,
     };
-    saveFormats([...formats, created]);
+    if (!(await saveFormats([...formats, created]))) return;
     setFormatId(created.id);
     setIsAddingFormat(false);
     setDraft({ name: '', width: '', height: '' });
     onShowToast(`Формат «${created.name}» добавлен`, 'success');
   };
 
-  const deleteFormat = (target: LabelFormat) => {
+  const deleteFormat = async (target: LabelFormat) => {
     const next = formats.filter((f) => f.id !== target.id);
-    saveFormats(next);
-    if (formatId === target.id) setFormatId(next[0]?.id ?? '');
     setFormatToDelete(null);
+    if (!(await saveFormats(next))) return;
+    if (format?.id === target.id) setFormatId(next[0]?.id ?? '');
     onShowToast(`Формат «${target.name}» удален`, 'info');
   };
+
+  /** Common sizes that are not in the list yet */
+  const missingPresets = LABEL_FORMAT_PRESETS.filter(
+    (p) => !formats.some((f) => f.widthMm === p.widthMm && f.heightMm === p.heightMm)
+  );
 
   const reissueBarcodes = () => {
     const groups = new Set<string>(barcodeIssues.map((r) => articleGroupKey(r.product.id, r.sku.color)));
     onUpdateProducts(unifyArticleBarcodes(products, groups));
-    onShowToast(`Штрихкоды обновлены: артикулов ${groups.size}, у всех размеров артикула один код`, 'success');
+    onShowToast(
+      `Штрихкоды обновлены у ${groups.size} ${pluralRu(groups.size, ['артикула', 'артикулов', 'артикулов'])}: у всех размеров артикула один код`,
+      'success'
+    );
   };
 
   const handleDownload = async () => {
@@ -350,11 +412,11 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                       <button
                         key={`${preset.widthMm}x${preset.heightMm}`}
                         type="button"
-                        disabled={!onUpdateSettings}
-                        onClick={() => addFormat(preset)}
-                        className="h-9 px-3 rounded-xl neu-button text-[11px] font-bold text-accent flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        disabled={!onUpdateSettings || isSavingFormats}
+                        onClick={() => void addFormat(preset)}
+                        className="h-9 px-3 rounded-xl neu-button text-[11px] font-bold text-accent flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                       >
-                        <Plus className="w-3.5 h-3.5" />
+                        <FormatThumb format={preset} size={16} />
                         {sizeText(preset)}
                       </button>
                     ))}
@@ -385,14 +447,18 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                             selected ? 'neu-pill-active' : 'neu-button text-[#2D3A4E]'
                           }`}
                         >
-                          <span className="truncate">{f.name}</span>
+                          <span className="flex items-center gap-2.5 min-w-0">
+                            <FormatThumb format={f} size={22} />
+                            <span className="truncate">{f.name}</span>
+                          </span>
                           <span className={`shrink-0 text-[11px] ${selected ? '' : 'text-[#4E5C70]'}`}>{sizeText(f)}</span>
                         </button>
                         {onUpdateSettings && (
                           <button
                             type="button"
                             onClick={() => setFormatToDelete(f)}
-                            className="w-11 h-11 rounded-xl neu-button-danger flex items-center justify-center shrink-0 cursor-pointer transition-all"
+                            disabled={isSavingFormats}
+                            className="w-11 h-11 rounded-xl neu-button-danger flex items-center justify-center shrink-0 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             aria-label={`Удалить формат «${f.name}»`}
                             title="Удалить формат"
                           >
@@ -409,54 +475,94 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
-                    addFormat({ name: draft.name, widthMm: Number(draft.width), heightMm: Number(draft.height) });
+                    void addFormat({ name: draft.name, widthMm: Number(draft.width), heightMm: Number(draft.height) });
                   }}
                   className="neu-flat-sm rounded-2xl p-3 space-y-2.5 animate-in fade-in slide-in-from-top-2 duration-150"
                 >
-                  <label className="block space-y-1">
-                    <span className="text-[11px] font-bold text-[#4E5C70]">Название</span>
+                  {formats.length > 0 && missingPresets.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-[11px] font-bold text-[#4E5C70]">Частые размеры</p>
+                      <div className="flex flex-wrap gap-2">
+                        {missingPresets.map((preset) => (
+                          <button
+                            key={`${preset.widthMm}x${preset.heightMm}`}
+                            type="button"
+                            disabled={isSavingFormats}
+                            onClick={() => void addFormat(preset)}
+                            className="h-9 px-3 rounded-xl neu-button text-[11px] font-bold text-accent flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          >
+                            <FormatThumb format={preset} size={16} />
+                            {sizeText(preset)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="space-y-1">
+                    <label htmlFor="label-format-name" className="block text-[11px] font-bold text-[#4E5C70]">
+                      Название
+                    </label>
                     <input
+                      id="label-format-name"
                       value={draft.name}
                       onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                      placeholder="Например: Этикетка для коробки"
+                      placeholder={draft.width && draft.height ? `Этикетка ${draft.width}×${draft.height}` : 'Например: Этикетка для коробки'}
+                      maxLength={40}
+                      autoComplete="off"
                       className={inputClass}
                     />
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(['width', 'height'] as const).map((key) => (
-                      <label key={key} className="block space-y-1">
-                        <span className="text-[11px] font-bold text-[#4E5C70]">{key === 'width' ? 'Ширина' : 'Высота'}</span>
-                        <span className="relative block">
-                          <input
-                            value={draft[key]}
-                            onChange={(e) => setDraft({ ...draft, [key]: e.target.value.replace(/\D/g, '').slice(0, 3) })}
-                            inputMode="numeric"
-                            placeholder={key === 'width' ? '58' : '40'}
-                            aria-label={key === 'width' ? 'Ширина, мм' : 'Высота, мм'}
-                            className={`${inputClass} pr-10`}
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4E5C70] pointer-events-none">
-                            мм
-                          </span>
-                        </span>
-                      </label>
-                    ))}
                   </div>
+                  <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-end">
+                    {(['width', 'height'] as const).map((key) => (
+                      <div key={key} className="space-y-1 min-w-0">
+                        <label htmlFor={`label-format-${key}`} className="block text-[11px] font-bold text-[#4E5C70]">
+                          {key === 'width' ? 'Ширина, мм' : 'Высота, мм'}
+                        </label>
+                        <input
+                          id={`label-format-${key}`}
+                          value={draft[key]}
+                          onChange={(e) => setDraft({ ...draft, [key]: e.target.value.replace(/\D/g, '').slice(0, 3) })}
+                          inputMode="numeric"
+                          autoComplete="off"
+                          placeholder={key === 'width' ? '58' : '40'}
+                          aria-invalid={Boolean(draftProblem)}
+                          aria-describedby="label-format-hint"
+                          className={inputClass}
+                        />
+                      </div>
+                    ))}
+                    {/* The typed size at its proportions */}
+                    <span className="h-10 w-10 rounded-xl neu-inset flex items-center justify-center shrink-0">
+                      {Number(draft.width) > 0 && Number(draft.height) > 0 ? (
+                        <FormatThumb format={{ widthMm: Number(draft.width), heightMm: Number(draft.height) }} size={26} />
+                      ) : null}
+                    </span>
+                  </div>
+                  <p
+                    id="label-format-hint"
+                    className={`text-[11px] leading-snug ${draftProblem ? 'text-danger font-bold' : 'text-[#4E5C70]'}`}
+                    aria-live="polite"
+                  >
+                    {draftProblem ?? `От ${LABEL_SIZE_LIMITS.min} до ${LABEL_SIZE_LIMITS.max} мм. Ширина — сторона, по которой идет штрихкод.`}
+                  </p>
                   <div className="flex items-center justify-end gap-2">
                     <button
                       type="button"
-                      onClick={() => setIsAddingFormat(false)}
+                      onClick={() => {
+                        setIsAddingFormat(false);
+                        setDraft({ name: '', width: '', height: '' });
+                      }}
                       className="h-9 px-3 rounded-xl neu-button text-[11px] font-bold text-[#4E5C70] cursor-pointer"
                     >
                       Отмена
                     </button>
                     <button
                       type="submit"
-                      disabled={!draft.width || !draft.height}
+                      disabled={!draft.width || !draft.height || Boolean(draftProblem) || isSavingFormats}
                       className="h-9 px-3 rounded-xl neu-button text-[11px] font-bold text-accent flex items-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      Добавить
+                      {isSavingFormats ? 'Сохраняем…' : 'Добавить'}
                     </button>
                   </div>
                 </form>
@@ -485,7 +591,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                             aria-checked={selected}
                             title={t.hint}
                             onClick={() => setTemplate(t.id)}
-                            className={`rounded-2xl p-2 flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                            className={`rounded-2xl p-2 flex flex-col items-center justify-between gap-1.5 transition-all cursor-pointer ${
                               selected ? 'neu-pill-active' : 'neu-button text-[#2D3A4E]'
                             }`}
                           >
@@ -495,7 +601,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                                 template={t.id}
                                 data={labelData(current.product, current.sku)}
                                 options={previewOptions}
-                                displayWidth={84}
+                                displayWidth={fitBox(format, 84, 64)}
                                 fontsReady={fontsReady}
                                 className={`rounded-md border border-[#BAC5D5] ${blocked ? 'opacity-40' : ''}`}
                               />
@@ -623,13 +729,18 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                       template={template}
                       data={labelData(current.product, current.sku)}
                       options={previewOptions}
-                      displayWidth={Math.min(280, format.widthMm * 5)}
+                      displayWidth={fitBox(format, Math.min(280, format.widthMm * 5), 260)}
                       fontsReady={fontsReady}
                       className="rounded-lg border border-[#BAC5D5]"
                     />
                     <span className="text-[11px] font-bold text-[#4E5C70]">
                       {sizeText(format)} · {info.name}
                     </span>
+                    {dropped.length > 0 && (
+                      <p className="text-[11px] font-bold text-warning text-center leading-snug">
+                        Не поместилось: {dropped.join(', ')}. Выберите формат крупнее или шаблон проще.
+                      </p>
+                    )}
                   </>
                 ) : (
                   <p className="text-[11px] font-bold text-[#4E5C70] py-6 text-center">
@@ -679,7 +790,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
         }
         confirmLabel="Удалить"
         cancelLabel="Оставить"
-        onConfirm={() => formatToDelete && deleteFormat(formatToDelete)}
+        onConfirm={() => formatToDelete && void deleteFormat(formatToDelete)}
         onClose={() => setFormatToDelete(null)}
       />
     </ModalPortal>
