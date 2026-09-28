@@ -37,6 +37,10 @@ export function screenTitle(
       return { main: 'Оформление заказа', sub: `${cartCount} ${pluralRu(cartCount, ['товар', 'товара', 'товаров'])}` };
     case 'order-success':
       return { main: 'Заказ оформлен', sub: 'Успешно' };
+    case 'offer':
+      return { main: 'Оферта', sub: 'Условия продажи' };
+    case 'privacy':
+      return { main: 'Персональные данные', sub: 'Политика обработки' };
     default:
       return { main: storeName, sub: 'Мужская одежда' };
   }

@@ -50,6 +50,7 @@ import { NeumorphicSlider } from '../components/NeumorphicSlider';
 import { calculateRussianPattern, RUSSIAN_SIZE_TABLE_ROWS } from '../utils/russianSizing';
 import { useAuth } from '../context/AuthContext';
 import { UserProfile, Order, CartItem, OrderStatusHistoryStep, ActiveTab, SavedAddress, Product, PromoCode, BannerSlide, ChatMessage, StorefrontSettings, SaveStorefrontSettings, DeliveryMethod, PickupPoint } from '../types';
+import type { LegalDocId } from '../utils/legalDocs';
 import { formatAddress } from '../utils/addressFormat';
 import type { AdminChatPayload } from '../components/admin/AdminSupportChatTab';
 import type { ChatMessageChange } from '../utils/firebaseSync';
@@ -93,6 +94,7 @@ const AdminStorefrontTab = lazy(() => import('../components/admin/AdminStorefron
 const BrandRenameCard = lazy(() => import('../components/admin/BrandRenameCard').then((m) => ({ default: m.BrandRenameCard })));
 const AdminDeliveryTab = lazy(() => import('../components/admin/AdminDeliveryTab').then((m) => ({ default: m.AdminDeliveryTab })));
 const AdminFaqTab = lazy(() => import('../components/admin/AdminFaqTab').then((m) => ({ default: m.AdminFaqTab })));
+const AdminLegalTab = lazy(() => import('../components/admin/AdminLegalTab').then((m) => ({ default: m.AdminLegalTab })));
 const AdminPaymentTab = lazy(() => import('../components/admin/AdminPaymentTab').then((m) => ({ default: m.AdminPaymentTab })));
 const AdminCategoriesTab = lazy(() => import('../components/admin/AdminCategoriesTab').then((m) => ({ default: m.AdminCategoriesTab })));
 const AdminNav = lazy(() => loadAdminNav().then((m) => ({ default: m.AdminNav })));
@@ -135,6 +137,8 @@ interface ProfileScreenProps {
   onChangeChatMessage?: (change: ChatMessageChange) => Promise<boolean>;
   storefrontSettings?: StorefrontSettings;
   onUpdateStorefrontSettings?: SaveStorefrontSettings;
+  /** Admin → «Документы»: the store's edition of the offer / policy, null — the template */
+  onSaveLegalText?: (id: LegalDocId, text: string | null) => Promise<boolean>;
   onSyncFirebase?: () => Promise<void>;
   deliveryMethods?: DeliveryMethod[];
   onUpdateDeliveryMethods?: (methods: DeliveryMethod[]) => void;
@@ -180,6 +184,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onChangeChatMessage,
   storefrontSettings,
   onUpdateStorefrontSettings,
+  onSaveLegalText,
   onSyncFirebase,
   deliveryMethods,
   onUpdateDeliveryMethods,
@@ -3269,6 +3274,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 <AdminFaqTab
                   settings={storefrontSettings}
                   onUpdateSettings={onUpdateStorefrontSettings}
+                  onShowToast={onShowToast}
+                />
+              )}
+
+              {adminTab === 'legal' && (
+                <AdminLegalTab
+                  settings={storefrontSettings}
+                  onSaveLegalText={onSaveLegalText}
                   onShowToast={onShowToast}
                 />
               )}

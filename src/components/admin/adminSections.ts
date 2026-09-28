@@ -15,6 +15,7 @@ export const ADMIN_TAB_IDS = [
   'delivery',
   'payment',
   'faq',
+  'legal',
   'storefront',
 ] as const;
 

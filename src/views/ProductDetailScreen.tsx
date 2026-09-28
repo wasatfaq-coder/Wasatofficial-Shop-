@@ -101,6 +101,16 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   const mySize = profileSizeFor(product?.sizes, userProfile?.bodyMeasurements);
   const [sizeError, setSizeError] = useState(false);
   const sizesRef = useRef<HTMLDivElement>(null);
+  // Phone: while the page's own «В корзину» is off screen, a bar with the price and the button sits above the menu
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+  const [addButtonInView, setAddButtonInView] = useState(true);
+  useEffect(() => {
+    const el = addButtonRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([entry]) => setAddButtonInView(entry.isIntersecting), { threshold: 0.5 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [product?.id]);
   const [quantity, setQuantity] = useState(1);
   const [openAccordion, setOpenAccordion] = useState<'shipping' | 'returns' | 'fabric' | null>('fabric');
   const [detailTab, setDetailTab] = useState<'description' | 'specs' | 'care'>('description');
@@ -239,7 +249,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   };
 
   return (
-    <div className="space-y-5 pb-28 lg:pb-10 animate-in fade-in duration-300">
+    <div className="space-y-5 pb-44 lg:pb-10 animate-in fade-in duration-300">
       {/* Computer (lg): gallery on the left, the buying block on the right stays in view while the photos scroll */}
       <div className="space-y-5 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start">
       {/* Product Image Gallery with Large Showcase & Neumorphic Multi-angles */}
@@ -593,6 +603,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
 
             {/* Action Button: Add to Cart */}
             <button
+              ref={addButtonRef}
               onClick={handleAddToCart}
               disabled={isAdded || orderableStock === 0}
               className={`flex-1 py-3.5 px-6 rounded-2xl font-bold text-sm flex items-center justify-center gap-2.5 transition-all duration-300 cursor-pointer ${
@@ -874,6 +885,30 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
       />
 
       {/* Quick 1-Click Order Modal */}
+      {!addButtonInView && orderableStock > 0 && (
+        <div className="lg:hidden fixed inset-x-0 bottom-[78px] z-30 px-3 pointer-events-none">
+          <div className="max-w-md md:max-w-lg mx-auto neu-flat rounded-2xl p-2 flex items-center gap-3 pointer-events-auto">
+            <div className="min-w-0 pl-1.5">
+              <p className="text-base font-extrabold text-[#2D3A4E] leading-tight">{product.price.toLocaleString('ru-RU')} ₽</p>
+              <p className="text-[11px] text-[#4E5C70] leading-tight truncate">
+                {selectedSize ? `Размер ${selectedSize}` : 'Размер не выбран'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              disabled={isAdded}
+              className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 cursor-pointer ${
+                isAdded ? 'neu-button-success' : 'neu-button-accent'
+              }`}
+            >
+              {isAdded ? <Check className="w-4 h-4 stroke-[3]" aria-hidden="true" /> : <ShoppingBag className="w-4 h-4" aria-hidden="true" />}
+              <span>{isAdded ? 'Добавлено' : !sizeChosen ? 'Выберите размер' : isPreorder ? 'Предзаказ' : 'В корзину'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       <QuickOrderModal
         isOpen={isQuickOrderOpen}
         onClose={() => setIsQuickOrderOpen(false)}

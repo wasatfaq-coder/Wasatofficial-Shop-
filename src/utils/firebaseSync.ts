@@ -16,11 +16,13 @@ import {
   Timestamp,
   WriteBatch,
   increment,
+  deleteField,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Product, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint } from '../types';
 import { DEFAULT_STOREFRONT_SETTINGS } from './inventory';
 import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
+import type { LegalDocId, LegalTexts } from './legalDocs';
 import { compressBase64Image } from './imageUpload';
 import { SERVER_CONFIG_DOC_ID, ServerConfig } from '../shared/orderApi';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages, isTransportCompanyDelivery } from './deliveryStages';
@@ -409,6 +411,38 @@ export function subscribeToAnalyticsResetAt(onUpdate: (resetAt: number | null) =
     },
     (error) => console.warn('Analytics settings subscription warning:', error)
   );
+}
+
+/** `settings/legal`: the store's own editions of the offer and the privacy policy (none — the template is used) */
+export function subscribeToLegalTexts(onUpdate: (texts: LegalTexts) => void) {
+  return onSnapshot(
+    doc(db, 'settings', 'legal'),
+    (snap) => {
+      const data = (snap.data() ?? {}) as Record<string, unknown>;
+      const texts: LegalTexts = {};
+      for (const id of ['offer', 'privacy'] as LegalDocId[]) {
+        const e = data[id] as { text?: unknown; updatedAt?: unknown } | undefined;
+        if (e && typeof e.text === 'string' && e.text.trim()) {
+          texts[id] = { text: e.text, updatedAt: typeof e.updatedAt === 'string' ? e.updatedAt : '' };
+        }
+      }
+      onUpdate(texts);
+    },
+    (error) => console.warn('Legal texts subscription warning:', error)
+  );
+}
+
+/** Admin → «Документы»: saves the store's edition; null — back to the template */
+export async function saveLegalText(id: LegalDocId, text: string | null) {
+  try {
+    await setDoc(
+      doc(db, 'settings', 'legal'),
+      { [id]: text === null ? deleteField() : { text, updatedAt: new Date().toISOString() } },
+      { merge: true }
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'settings/legal');
+  }
 }
 
 export async function saveAnalyticsResetAt(resetAt: number | null) {

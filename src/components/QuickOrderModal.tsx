@@ -3,6 +3,7 @@ import { X, Phone, User, MapPin, ShieldCheck, ShoppingBag, AlertCircle } from 'l
 import { motion, AnimatePresence } from 'motion/react';
 import { CartItem, Product } from '../types';
 import { productImage } from '../utils/productImage';
+import { LegalConsentNote } from './LegalConsentNote';
 import { useDialogA11y } from '../utils/useDialogA11y';
 
 interface QuickOrderModalProps {
@@ -371,6 +372,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   )}
                 </button>
               </div>
+              <LegalConsentNote action="Подтвердить быстрый заказ" className="text-center" />
             </form>
           </motion.div>
         </motion.div>

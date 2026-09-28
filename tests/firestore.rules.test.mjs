@@ -114,6 +114,14 @@ describe('catalog', () => {
     await assertFails(setDoc(doc(guest(), 'banners/b1'), { id: 'b1' }));
     await assertSucceeds(setDoc(doc(owner(), 'settings/storefront'), { storeName: 'x' }));
   });
+
+  test('legal documents (settings/legal): anyone reads, only admin edits', async () => {
+    const edition = { offer: { text: '## 1. Общие положения', updatedAt: '2026-09-28T00:00:00.000Z' } };
+    await assertFails(setDoc(doc(customer(), 'settings/legal'), edition));
+    await assertFails(setDoc(doc(guest(), 'settings/legal'), edition));
+    await assertSucceeds(setDoc(doc(owner(), 'settings/legal'), edition));
+    await assertSucceeds(getDoc(doc(guest(), 'settings/legal')));
+  });
 });
 
 describe('promos', () => {

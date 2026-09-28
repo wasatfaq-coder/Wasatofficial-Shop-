@@ -18,6 +18,8 @@ const TAB_PATHS: Record<Exclude<ActiveTab, 'product-detail'>, string> = {
   profile: 'profile',
   checkout: 'checkout',
   'order-success': 'order-success',
+  offer: 'offer',
+  privacy: 'privacy',
 };
 
 export function productHref(productId: string): string {
