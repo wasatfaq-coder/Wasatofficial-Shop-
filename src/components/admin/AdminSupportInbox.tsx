@@ -109,8 +109,8 @@ export const AdminSupportInbox: React.FC<AdminSupportInboxProps> = ({
             <MessagesSquare className="w-4.5 h-4.5" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-sm font-black text-[#2D3A4E] leading-tight">Диалоги покупателей · {threads.length}</h3>
-            <p className="text-[11px] text-[#4E5C70] leading-snug">
+            <h3 className="text-sm font-extrabold text-[#2D3A4E] leading-tight">Диалоги покупателей · {threads.length}</h3>
+            <p className="text-xs text-[#4E5C70] leading-snug">
               Сообщения из «Службы заботы». Ответ сразу появится у покупателя
             </p>
           </div>
@@ -152,7 +152,7 @@ export const AdminSupportInbox: React.FC<AdminSupportInboxProps> = ({
 
             <div className="space-y-2 max-h-72 overflow-y-auto p-1 -m-1">
               {visibleThreads.length === 0 && (
-                <p className="text-[11px] text-[#4E5C70] text-center py-3">Нет диалогов по этому фильтру</p>
+                <p className="text-xs text-[#4E5C70] text-center py-3">Нет диалогов по этому фильтру</p>
               )}
               {visibleThreads.map((t) => {
                 const selected = t.key === activeKey;
@@ -169,19 +169,19 @@ export const AdminSupportInbox: React.FC<AdminSupportInboxProps> = ({
                     }`}
                   >
                     <span className="flex items-center gap-2 min-w-0">
-                      <span className="text-xs font-black truncate flex-1 min-w-0">{t.name}</span>
+                      <span className="text-xs font-extrabold truncate flex-1 min-w-0">{t.name}</span>
                       {meta && meta.priority !== 'normal' && (
-                        <span className="text-[11px] font-black px-1.5 py-0.5 rounded-md bg-danger-soft text-danger shrink-0">
+                        <span className="text-[11px] font-extrabold px-1.5 py-0.5 rounded-md bg-danger-soft text-danger shrink-0">
                           {PRIORITY_LABELS[meta.priority]}
                         </span>
                       )}
                       {t.awaitingReply ? (
-                        <span className="text-[11px] font-black px-1.5 py-0.5 rounded-md bg-warning-soft text-warning shrink-0">
+                        <span className="text-[11px] font-extrabold px-1.5 py-0.5 rounded-md bg-warning-soft text-warning shrink-0">
                           Ждет ответа
                         </span>
                       ) : (
                         status !== 'open' && (
-                          <span className="text-[11px] font-black px-1.5 py-0.5 rounded-md bg-success-soft text-success shrink-0">
+                          <span className="text-[11px] font-extrabold px-1.5 py-0.5 rounded-md bg-success-soft text-success shrink-0">
                             {STATUS_LABELS[status]}
                           </span>
                         )

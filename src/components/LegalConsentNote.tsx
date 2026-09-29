@@ -16,7 +16,7 @@ export const LegalConsentNote: React.FC<{
   if (!legalDocsReady(settings === undefined ? loadStorefrontSettings() : settings)) return null;
   const link = 'text-accent font-bold underline underline-offset-2 hover:text-accent-strong';
   return (
-    <p className={`text-[11px] leading-snug text-[#4E5C70] ${className}`}>
+    <p className={`text-xs leading-snug text-[#4E5C70] ${className}`}>
       Нажимая «{action}», вы принимаете условия{' '}
       <a href={LEGAL_DOC_HREF.offer} target="_blank" rel="noopener" className={link}>
         публичной оферты

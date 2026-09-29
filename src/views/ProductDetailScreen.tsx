@@ -353,7 +353,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                   key={idx}
                   onClick={() => setSelectedImageIndex(idx)}
                   className={`relative p-1 rounded-2xl transition-all duration-200 shrink-0 cursor-pointer ${
-                    selectedImageIndex === idx ? 'neu-pill-active ring-2 ring-accent' : 'neu-button opacity-80 hover:opacity-100'
+                    selectedImageIndex === idx ? 'neu-pill-active' : 'neu-button opacity-80 hover:opacity-100'
                   }`}
                   aria-label={`Фото ${idx + 1} из ${product.images.length}`}
                   aria-current={selectedImageIndex === idx}
@@ -509,7 +509,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               })}
             </div>
             {sizeError && (
-              <p id="product-size-error" role="alert" className="text-[11px] font-bold text-danger">
+              <p id="product-size-error" role="alert" className="text-xs font-bold text-danger">
                 Выберите размер, чтобы добавить товар в корзину
               </p>
             )}
@@ -608,7 +608,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               disabled={isAdded || orderableStock === 0}
               className={`flex-1 py-3.5 px-6 rounded-2xl font-bold text-sm flex items-center justify-center gap-2.5 transition-all duration-300 cursor-pointer ${
                 orderableStock === 0
-                  ? 'neu-inset text-[#56647A] cursor-not-allowed'
+                  ? 'neu-button-disabled'
                   : isAdded
                   ? 'neu-button-success'
                   : 'neu-button-accent'
@@ -684,8 +684,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                     <div key={idx} className="neu-inset rounded-xl p-2.5 flex items-start gap-2">
                       <ShieldCheck className="w-4 h-4 text-accent shrink-0 mt-0.5" />
                       <div className="min-w-0">
-                        <p className="font-black text-[11px] text-[#2D3A4E]">{feature.title}</p>
-                        {feature.text && <p className="text-[11px] text-[#4E5C70] leading-snug">{feature.text}</p>}
+                        <p className="font-extrabold text-xs text-[#2D3A4E]">{feature.title}</p>
+                        {feature.text && <p className="text-xs text-[#4E5C70] leading-snug">{feature.text}</p>}
                       </div>
                     </div>
                   ))}
@@ -699,7 +699,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               {(cardComposition.length > 0 || cardCertifications.length > 0) && (
                 <div className="neu-inset rounded-2xl p-3 space-y-2.5">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
                       <Layers className="w-3.5 h-3.5 text-accent shrink-0" />
                       Состав ткани
                     </span>
@@ -711,7 +711,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                         <div key={idx} className="space-y-1">
                           <div className="flex justify-between gap-2 text-xs font-bold text-[#2D3A4E]">
                             <span className="min-w-0">{item.fiber}</span>
-                            <span className="text-accent font-black shrink-0">{item.percentage}%</span>
+                            <span className="text-accent font-extrabold shrink-0">{item.percentage}%</span>
                           </div>
                           <div className="w-full h-2 rounded-full overflow-hidden neu-inset">
                             <div
@@ -770,7 +770,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-xs text-[#2D3A4E]">{care.label}</p>
-                    {care.desc && <p className="text-[11px] text-[#4E5C70] leading-snug mt-0.5">{care.desc}</p>}
+                    {care.desc && <p className="text-xs text-[#4E5C70] leading-snug mt-0.5">{care.desc}</p>}
                   </div>
                 </div>
               ))}
@@ -890,7 +890,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           <div className="max-w-md md:max-w-lg mx-auto neu-flat rounded-2xl p-2 flex items-center gap-3 pointer-events-auto">
             <div className="min-w-0 pl-1.5">
               <p className="text-base font-extrabold text-[#2D3A4E] leading-tight">{product.price.toLocaleString('ru-RU')} ₽</p>
-              <p className="text-[11px] text-[#4E5C70] leading-tight truncate">
+              <p className="text-xs text-[#4E5C70] leading-tight truncate">
                 {selectedSize ? `Размер ${selectedSize}` : 'Размер не выбран'}
               </p>
             </div>

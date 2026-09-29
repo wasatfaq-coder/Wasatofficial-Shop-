@@ -1,17 +1,12 @@
 import React from 'react';
 import {
   X,
-  Home,
-  Grid,
-  ShoppingBag,
-  Heart,
-  User,
   Headphones,
   ChevronRight,
   Ruler,
-  MessageSquare,
   Building2,
   SlidersHorizontal,
+  type LucideIcon,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ActiveTab, StorefrontSettings } from '../types';
@@ -23,9 +18,6 @@ interface SidebarDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   setActiveTab: (tab: ActiveTab) => void;
-  activeTab?: ActiveTab;
-  cartCount: number;
-  favoritesCount: number;
   onOpenMySizes?: () => void;
   onOpenFilters?: () => void;
   onOpenSupportChat?: () => void;
@@ -33,13 +25,32 @@ interface SidebarDrawerProps {
   storefrontSettings?: StorefrontSettings;
 }
 
+const DrawerItem: React.FC<{ icon: LucideIcon; label: string; hint?: string; onClick: () => void }> = ({
+  icon: Icon,
+  label,
+  hint,
+  onClick,
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="neu-button rounded-2xl p-3 px-4 flex items-center justify-between gap-3 text-left text-[#2D3A4E] font-medium hover:text-accent transition-all cursor-pointer group"
+  >
+    <div className="flex items-center gap-3 min-w-0">
+      <Icon className="w-5 h-5 text-accent stroke-[2] shrink-0" aria-hidden="true" />
+      <div className="min-w-0">
+        <span className="block leading-tight truncate">{label}</span>
+        {hint && <span className="text-xs text-[#4E5C70] block truncate">{hint}</span>}
+      </div>
+    </div>
+    <ChevronRight className="w-4 h-4 shrink-0 text-[#4E5C70] group-hover:text-accent transition-colors" aria-hidden="true" />
+  </button>
+);
+
 export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
   isOpen,
   onClose,
   setActiveTab,
-  activeTab,
-  cartCount,
-  favoritesCount,
   onOpenMySizes,
   onOpenFilters,
   onOpenSupportChat,
@@ -47,9 +58,9 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
   storefrontSettings,
 }) => {
   const dialog = useDialogA11y(isOpen, onClose);
-  const navigateTo = (tab: ActiveTab) => {
-    setActiveTab(tab);
+  const run = (action?: () => void) => {
     onClose();
+    action?.();
   };
 
   // Demo template phone is never shown to customers (see storeContacts.ts)
@@ -94,7 +105,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-gold ml-1 align-baseline" aria-hidden="true" />
                   </h2>
                   {storeSlogan && (
-                    <p className="text-[11px] text-[#4E5C70] font-semibold leading-snug line-clamp-2">{storeSlogan}</p>
+                    <p className="text-xs text-[#4E5C70] font-semibold leading-snug line-clamp-2">{storeSlogan}</p>
                   )}
                 </div>
                 <button
@@ -106,233 +117,45 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
             </button>
           </div>
 
-          {/* Navigation: the current section is pressed in */}
+          {/* Only what the bottom menu (and the computer header) does not have: screens are there */}
           <nav aria-label="Меню" className="my-4 flex flex-col gap-2.5 overflow-y-auto pr-1 custom-scrollbar flex-1">
-            <button
-              onClick={() => navigateTo('home')}
-              className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer group ${
-                activeTab === 'home'
-                  ? 'neu-pill-active font-bold'
-                  : 'neu-button text-[#2D3A4E] hover:text-accent'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Home className="w-5 h-5 text-accent group-hover:scale-105 transition-transform" />
-                <span className="group-hover:text-accent transition-colors">Главная</span>
-              </div>
-              <ChevronRight
-                className={`w-4 h-4 transition-colors ${
-                  activeTab === 'home'
-                    ? 'text-accent'
-                    : 'text-[#4E5C70] group-hover:text-accent'
-                }`}
-              />
-            </button>
-
-            <button
-              onClick={() => navigateTo('catalog')}
-              className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer group ${
-                activeTab === 'catalog'
-                  ? 'neu-pill-active font-bold'
-                  : 'neu-button text-[#2D3A4E] hover:text-accent'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Grid className="w-5 h-5 text-accent group-hover:scale-105 transition-transform" />
-                <span className="group-hover:text-accent transition-colors">Каталог товаров</span>
-              </div>
-              <ChevronRight
-                className={`w-4 h-4 transition-colors ${
-                  activeTab === 'catalog'
-                    ? 'text-accent'
-                    : 'text-[#4E5C70] group-hover:text-accent'
-                }`}
-              />
-            </button>
-
-            <button
-              onClick={() => {
-                onClose();
-                if (onOpenFilters) onOpenFilters();
-              }}
-              className="neu-button rounded-2xl p-3 px-4 flex items-center justify-between gap-3 text-left text-[#2D3A4E] font-medium hover:text-accent transition-all cursor-pointer group"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <SlidersHorizontal className="w-5 h-5 text-accent stroke-[2] shrink-0 group-hover:scale-105 transition-transform" />
-                <span className="group-hover:text-accent transition-colors">Фильтры товаров</span>
-              </div>
-              <ChevronRight className="w-4 h-4 shrink-0 text-[#4E5C70] group-hover:text-accent transition-colors" />
-            </button>
-
-            <button
-              onClick={() => {
-                onClose();
-                if (onOpenMySizes) onOpenMySizes();
-              }}
-              className="neu-button rounded-2xl p-3 px-4 flex items-center justify-between gap-3 text-left text-[#2D3A4E] font-medium hover:text-accent transition-all cursor-pointer group"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <Ruler className="w-5 h-5 text-accent stroke-[2] shrink-0 group-hover:scale-105 transition-transform" />
-                <span className="group-hover:text-accent transition-colors">Мои размеры</span>
-              </div>
-              <ChevronRight className="w-4 h-4 shrink-0 text-[#4E5C70] group-hover:text-accent transition-colors" />
-            </button>
-
-            <button
-              onClick={() => navigateTo('cart')}
-              className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer group ${
-                activeTab === 'cart'
-                  ? 'neu-pill-active font-bold'
-                  : 'neu-button text-[#2D3A4E] hover:text-accent'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <ShoppingBag className="w-5 h-5 text-accent group-hover:scale-105 transition-transform" />
-                <span className="group-hover:text-accent transition-colors">Корзина</span>
-              </div>
-              {cartCount > 0 ? (
-                <span className="neu-fill-accent text-white text-xs px-2 py-0.5 rounded-full font-bold">
-                  {cartCount}
-                </span>
-              ) : (
-                <ChevronRight
-                  className={`w-4 h-4 transition-colors ${
-                    activeTab === 'cart'
-                      ? 'text-accent'
-                      : 'text-[#4E5C70] group-hover:text-accent'
-                  }`}
-                />
-              )}
-            </button>
-
-            <button
-              onClick={() => navigateTo('favorites')}
-              className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer group ${
-                activeTab === 'favorites'
-                  ? 'neu-pill-active font-bold'
-                  : 'neu-button text-[#2D3A4E] hover:text-accent'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Heart className="w-5 h-5 text-danger group-hover:scale-105 transition-transform" />
-                <span className="group-hover:text-accent transition-colors">Избранное</span>
-              </div>
-              {favoritesCount > 0 ? (
-                <span className="bg-danger text-white text-xs px-2 py-0.5 rounded-full font-bold">
-                  {favoritesCount}
-                </span>
-              ) : (
-                <ChevronRight
-                  className={`w-4 h-4 transition-colors ${
-                    activeTab === 'favorites'
-                      ? 'text-accent'
-                      : 'text-[#4E5C70] group-hover:text-accent'
-                  }`}
-                />
-              )}
-            </button>
-
-            <button
-              onClick={() => navigateTo('profile')}
-              className={`rounded-2xl p-3 px-4 flex items-center justify-between font-medium transition-all cursor-pointer group ${
-                activeTab === 'profile'
-                  ? 'neu-pill-active font-bold'
-                  : 'neu-button text-[#2D3A4E] hover:text-accent'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <User className="w-5 h-5 text-accent group-hover:scale-105 transition-transform" />
-                <span className="group-hover:text-accent transition-colors">
-                  Профиль
-                </span>
-              </div>
-              <ChevronRight
-                className={`w-4 h-4 transition-colors ${
-                  activeTab === 'profile'
-                    ? 'text-accent'
-                    : 'text-[#4E5C70] group-hover:text-accent'
-                }`}
-              />
-            </button>
-
-            {/* Brand, Requisites & Concierge Button */}
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                if (onOpenBrandDetails) onOpenBrandDetails();
-              }}
-              className="neu-button rounded-2xl p-3 px-4 flex items-center justify-between gap-3 text-[#2D3A4E] font-medium hover:text-accent transition-all cursor-pointer group"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <Building2 className="w-5 h-5 text-accent stroke-[2] shrink-0 group-hover:scale-105 transition-transform" />
-                <div className="text-left min-w-0">
-                  <span className="block leading-tight truncate group-hover:text-accent transition-colors">
-                    Бренд и реквизиты
-                  </span>
-                  <span className="text-xs text-[#4E5C70] block truncate">Контакты и реквизиты</span>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-[#4E5C70] group-hover:text-accent transition-colors shrink-0" />
-            </button>
+            <DrawerItem icon={SlidersHorizontal} label="Фильтры товаров" onClick={() => run(onOpenFilters)} />
+            <DrawerItem icon={Ruler} label="Мои размеры" onClick={() => run(onOpenMySizes)} />
+            <DrawerItem
+              icon={Building2}
+              label="Бренд и реквизиты"
+              hint={phone || 'Контакты и реквизиты'}
+              onClick={() => run(onOpenBrandDetails)}
+            />
+            <DrawerItem
+              icon={Headphones}
+              label="Поддержка"
+              hint="Онлайн-чат с магазином"
+              onClick={() => run(onOpenSupportChat)}
+            />
           </nav>
         </div>
 
-        {/* Footer Support Info */}
-        <div className="pt-4 border-t border-[#BAC5D5]/60 space-y-2.5 shrink-0">
-          <button
-            onClick={() => {
-              onClose();
-              if (onOpenSupportChat) onOpenSupportChat();
-            }}
-            className="w-full neu-button rounded-2xl p-3 px-3.5 flex items-center justify-between text-left transition-all group cursor-pointer"
+        {legalDocsReady(storefrontSettings) && (
+          <nav
+            aria-label="Документы"
+            className="pt-3 border-t border-[#BAC5D5]/60 shrink-0 flex items-center justify-center gap-3 text-xs"
           >
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center shrink-0 text-accent">
-                <Headphones className="w-4.5 h-4.5 stroke-[2.2]" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-[#2D3A4E] flex items-center gap-1.5 group-hover:text-accent transition-colors">
-                  <span>Поддержка</span>
-                </p>
-                <p className="text-[11px] text-[#4E5C70] font-medium">Онлайн-чат с магазином</p>
-              </div>
-            </div>
-            <MessageSquare className="w-4 h-4 text-[#4E5C70] group-hover:text-accent transition-colors shrink-0" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              onClose();
-              if (onOpenBrandDetails) onOpenBrandDetails();
-            }}
-            className="w-full text-center py-1 px-2 rounded-xl hover:bg-[#BAC5D5]/20 transition-all cursor-pointer space-y-0.5 block"
-            title="Открыть реквизиты, информацию о бренде и контакты"
-          >
-            <p className="text-[11px] text-[#4E5C70] font-bold hover:text-accent transition-colors">
-              {phone ? `${storeName} • ${phone}` : storeName}
-            </p>
-            <p className="text-[11px] text-[#4E5C70]">Реквизиты • О бренде • Контакты</p>
-          </button>
-          {legalDocsReady(storefrontSettings) && (
-            <nav aria-label="Документы" className="flex items-center justify-center gap-3 text-[11px]">
-              {LEGAL_DOC_IDS.map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    setActiveTab(id);
-                  }}
-                  className="min-h-6 px-1 font-bold text-accent hover:underline cursor-pointer"
-                >
-                  {id === 'offer' ? 'Оферта' : 'Персональные данные'}
-                </button>
-              ))}
-            </nav>
-          )}
-        </div>
+            {LEGAL_DOC_IDS.map((id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => {
+                  onClose();
+                  setActiveTab(id);
+                }}
+                className="min-h-8 px-1 font-bold text-accent hover:underline cursor-pointer"
+              >
+                {id === 'offer' ? 'Оферта' : 'Персональные данные'}
+              </button>
+            ))}
+          </nav>
+        )}
       </motion.div>
     </motion.div>
   )}

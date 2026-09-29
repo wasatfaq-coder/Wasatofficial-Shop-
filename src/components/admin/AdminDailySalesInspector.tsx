@@ -56,7 +56,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
 
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-black uppercase tracking-wider text-accent">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-accent">
                 Срез дня
               </span>
               {dayIndex !== undefined && totalDays !== undefined && (
@@ -65,19 +65,19 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
                 </span>
               )}
               {dayData.isPeakDay && (
-                <span className="text-[11px] font-black text-warning bg-warning-soft px-2 py-0.5 rounded-full flex items-center gap-1">
+                <span className="text-[11px] font-extrabold text-warning bg-warning-soft px-2 py-0.5 rounded-full flex items-center gap-1">
                   <Flame className="w-3 h-3 text-warning fill-warning" />
                   Пиковый день периода
                 </span>
               )}
               {dayData.hasRealOrders && (
-                <span className="text-[11px] font-black text-accent bg-accent/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <span className="text-[11px] font-extrabold text-accent bg-accent/10 px-2 py-0.5 rounded-full flex items-center gap-1">
                   Заказов: {dayData.realOrdersList.length}
                 </span>
               )}
             </div>
 
-            <h4 className="text-sm sm:text-base font-black text-[#2D3A4E] mt-0.5 flex items-center gap-2">
+            <h4 className="text-sm sm:text-base font-extrabold text-[#2D3A4E] mt-0.5 flex items-center gap-2">
               <span>{dayData.fullDate}</span>
               <span className="text-xs font-bold text-accent">({dayData.weekday})</span>
             </h4>
@@ -143,7 +143,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
               <DollarSign className="w-3 h-3" />
             </div>
           </div>
-          <p className="text-base sm:text-lg font-black text-accent tracking-tight">
+          <p className="text-base sm:text-lg font-extrabold text-accent tracking-tight">
             {dayData.revenue.toLocaleString('ru-RU')} ₽
           </p>
           <div className="text-[11px] text-[#4E5C70] flex items-center justify-between">
@@ -160,7 +160,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
               <ShoppingBag className="w-3 h-3" />
             </div>
           </div>
-          <p className="text-base sm:text-lg font-black text-[#2D3A4E] tracking-tight">
+          <p className="text-base sm:text-lg font-extrabold text-[#2D3A4E] tracking-tight">
             {dayData.orders} <span className="text-xs font-bold text-[#4E5C70]">шт.</span>
           </p>
           <div className="text-[11px] text-[#4E5C70] flex items-center justify-between">
@@ -177,7 +177,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
               <TrendingUp className="w-3 h-3" />
             </div>
           </div>
-          <p className="text-base sm:text-lg font-black text-success tracking-tight">
+          <p className="text-base sm:text-lg font-extrabold text-success tracking-tight">
             {dayData.avgCheck.toLocaleString('ru-RU')} ₽
           </p>
           <div className="text-[11px] text-[#4E5C70]">
@@ -193,7 +193,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
               <RotateCcw className="w-3 h-3" />
             </div>
           </div>
-          <p className="text-base sm:text-lg font-black text-[#2D3A4E] tracking-tight">
+          <p className="text-base sm:text-lg font-extrabold text-[#2D3A4E] tracking-tight">
             {dayData.returns} <span className="text-xs font-bold text-[#4E5C70]">шт.</span>
           </p>
           <div className="text-[11px] text-[#4E5C70]">
@@ -238,7 +238,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
                 >
                   <div className="space-y-1.5 min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono font-black text-[#2D3A4E] text-[12px] group-hover:text-accent transition-colors flex items-center gap-0.5">
+                      <span className="font-mono font-extrabold text-[#2D3A4E] text-[12px] group-hover:text-accent transition-colors flex items-center gap-0.5">
                         <Hash className="w-3 h-3 text-[#4E5C70]" />
                         {ord.id}
                       </span>
@@ -246,7 +246,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
                         {statusCfg.label}
                       </span>
                       {ord.isAdjusted && (
-                        <span className="text-[11px] font-black text-warning bg-warning-soft px-1.5 py-0.2 rounded-md">
+                        <span className="text-[11px] font-extrabold text-warning bg-warning-soft px-1.5 py-0.2 rounded-md">
                           Скорректирован (-{ord.refundAmount || 0} ₽)
                         </span>
                       )}
@@ -275,14 +275,14 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
 
                     {/* Items preview */}
                     {ord.items && ord.items.length > 0 && (
-                      <p className="text-[11px] text-[#4E5C70] truncate bg-white/40 px-2 py-0.5 rounded-md">
+                      <p className="text-xs text-[#4E5C70] truncate bg-white/40 px-2 py-0.5 rounded-md">
                         {ord.items.map((it) => `${it.product?.title || 'Товар'} (${it.quantity}x)`).join(', ')}
                       </p>
                     )}
                   </div>
 
                   <div className="text-right shrink-0 space-y-1">
-                    <p className="text-sm font-black text-accent tabular-nums">
+                    <p className="text-sm font-extrabold text-accent tabular-nums">
                       {ord.totalPrice.toLocaleString('ru-RU')} ₽
                     </p>
                     <span className="text-[11px] text-[#4E5C70] block">

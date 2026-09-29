@@ -273,7 +273,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                     }`}
                   />
                   {errors.house && (
-                    <p className="text-[11px] text-danger font-medium mt-1 leading-tight">
+                    <p className="text-xs text-danger font-medium mt-1 leading-tight">
                       {errors.house}
                     </p>
                   )}
@@ -305,7 +305,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                     }`}
                   />
                   {errors.entrance && (
-                    <p className="text-[11px] text-danger font-medium mt-1 leading-tight">
+                    <p className="text-xs text-danger font-medium mt-1 leading-tight">
                       {errors.entrance}
                     </p>
                   )}
@@ -368,7 +368,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                     }`}
                   />
                   {errors.intercom && (
-                    <p className="text-[11px] text-danger font-medium mt-1 leading-tight">
+                    <p className="text-xs text-danger font-medium mt-1 leading-tight">
                       {errors.intercom}
                     </p>
                   )}

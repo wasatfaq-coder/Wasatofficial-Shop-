@@ -37,7 +37,7 @@ export const OrderSuccessScreen: React.FC<OrderSuccessScreenProps> = ({
           <span className="w-1.5 h-1.5 rounded-full bg-success animate-ping" />
           Заказ оформлен • Активен
         </span>
-        <h2 className="text-2xl font-black text-[#2D3A4E] tracking-tight">
+        <h2 className="text-2xl font-extrabold text-[#2D3A4E] tracking-tight">
           Заказ № {orderId}
         </h2>
         <p className="text-xs text-[#4E5C70] max-w-xs mx-auto leading-relaxed font-medium">
@@ -47,7 +47,7 @@ export const OrderSuccessScreen: React.FC<OrderSuccessScreenProps> = ({
 
       {paymentInstructions?.trim() && (
         <div className="neu-inset rounded-3xl p-4 text-left space-y-1.5">
-          <p className="text-[11px] font-black uppercase tracking-wider text-[#4E5C70]">
+          <p className="text-[11px] font-extrabold uppercase tracking-wider text-[#4E5C70]">
             Оплата{paymentMethod ? `: ${paymentMethod}` : ''}
           </p>
           <p className="text-xs text-[#2D3A4E] leading-relaxed whitespace-pre-line">{paymentInstructions}</p>
@@ -61,8 +61,8 @@ export const OrderSuccessScreen: React.FC<OrderSuccessScreenProps> = ({
             <Package className="w-5 h-5 stroke-[2.2]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] text-[#4E5C70] font-medium">Текущий статус</p>
-            <p className="text-xs font-black text-accent flex items-center gap-1.5">
+            <p className="text-xs text-[#4E5C70] font-medium">Текущий статус</p>
+            <p className="text-xs font-extrabold text-accent flex items-center gap-1.5">
               <span>Принят в обработку</span>
               <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
             </p>

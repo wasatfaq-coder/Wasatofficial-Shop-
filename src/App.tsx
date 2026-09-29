@@ -1466,9 +1466,6 @@ export default function App() {
           isOpen={isDrawerOpen}
           onClose={() => setIsDrawerOpen(false)}
           setActiveTab={setActiveTab}
-          activeTab={activeTab}
-          cartCount={totalCartCount}
-          favoritesCount={favorites.length}
           onOpenMySizes={() => setIsMySizesModalOpen(true)}
           onOpenFilters={() => setIsAdvancedFilterOpen(true)}
           onOpenSupportChat={() => setIsSupportChatOpen(true)}
@@ -1555,7 +1552,7 @@ export default function App() {
           <aside aria-label="Объявление магазина" className="px-4 pt-2 lg:px-6">
             <p className="max-w-lg lg:max-w-none mx-auto neu-flat-sm rounded-2xl px-3 py-2 flex items-center justify-center gap-2 text-center text-xs font-bold text-[#2D3A4E]">
               {storefrontSettings.bannerBadgeText?.trim() && (
-                <span className="px-1.5 py-0.5 rounded-md bg-accent text-white text-[11px] font-black uppercase shrink-0">
+                <span className="px-1.5 py-0.5 rounded-md bg-accent text-white text-[11px] font-extrabold uppercase shrink-0">
                   {storefrontSettings.bannerBadgeText.trim()}
                 </span>
               )}

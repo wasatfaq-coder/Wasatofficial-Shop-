@@ -105,7 +105,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
                 <Icon className="w-4 h-4 shrink-0" />
                 <span>{label}</span>
                 {value > 0 && (
-                  <span className="min-w-5 h-5 px-1 rounded-full bg-accent text-white text-[11px] font-black leading-5 text-center">
+                  <span className="min-w-5 h-5 px-1 rounded-full bg-accent text-white text-[11px] font-extrabold leading-5 text-center">
                     {value > 99 ? '99+' : value}
                   </span>
                 )}

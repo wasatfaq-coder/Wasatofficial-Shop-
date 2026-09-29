@@ -84,7 +84,7 @@ export const AdminLegalTab: React.FC<AdminLegalTabProps> = ({ settings, onSaveLe
           </div>
           <div className="min-w-0">
             <h3 className="text-base font-extrabold text-[#2D3A4E]">Оферта и политика персональных данных</h3>
-            <p className="text-[11px] text-[#4E5C70] leading-snug mt-0.5">
+            <p className="text-xs text-[#4E5C70] leading-snug mt-0.5">
               Покупатели видят документы на сайте и принимают оферту кнопкой «Подтвердить заказ». Текст — шаблон по
               Закону о защите прав потребителей и 152-ФЗ; реквизиты подставляются из «Витрины». Текст можно изменить:
               метки вида {'{{продавец}}'} заменяются реквизитами при показе.
@@ -95,7 +95,7 @@ export const AdminLegalTab: React.FC<AdminLegalTabProps> = ({ settings, onSaveLe
         {missing.length > 0 ? (
           <div role="status" className="rounded-2xl p-3 bg-warning-soft border border-warning/30 text-xs text-[#2D3A4E]">
             <p className="font-bold text-warning">Документы не показываются покупателям</p>
-            <p className="text-[11px] mt-0.5 leading-snug">
+            <p className="text-xs mt-0.5 leading-snug">
               Заполните в «Витрине» → «Реквизиты»: {missing.join(', ')}. До этого оформление заказа работает без ссылки на
               оферту.
             </p>
@@ -145,7 +145,7 @@ export const AdminLegalTab: React.FC<AdminLegalTabProps> = ({ settings, onSaveLe
         ) : (
           <>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[11px] text-[#4E5C70]">
+              <p className="text-xs text-[#4E5C70]">
                 {edition
                   ? `Текст магазина, изменен ${formatLegalDate(edition.updatedAt)}`
                   : `Шаблон, редакция от ${formatLegalDate(LEGAL_TEMPLATE_DATE)}`}
@@ -179,7 +179,7 @@ export const AdminLegalTab: React.FC<AdminLegalTabProps> = ({ settings, onSaveLe
                   spellCheck
                   className="w-full neu-inset rounded-2xl p-3.5 text-xs leading-relaxed text-[#2D3A4E] resize-y font-mono"
                 />
-                <p className="text-[11px] text-[#4E5C70]">
+                <p className="text-xs text-[#4E5C70]">
                   «## » — заголовок раздела, «- » — пункт списка, пустая строка — новый абзац.
                 </p>
               </div>

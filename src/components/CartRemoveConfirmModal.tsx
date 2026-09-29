@@ -71,11 +71,11 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
               className="w-12 h-12 rounded-xl object-cover neu-flat shrink-0"
             />
             <div className="flex-1 min-w-0">
-              <p className="font-black text-xs text-[#2D3A4E] truncate">{item.product.title}</p>
-              <p className="text-[11px] text-[#4E5C70]">
+              <p className="font-extrabold text-xs text-[#2D3A4E] truncate">{item.product.title}</p>
+              <p className="text-xs text-[#4E5C70]">
                 {item.selectedColor} • {item.selectedSize} ({item.quantity} шт.)
               </p>
-              <p className="text-xs font-black text-accent pt-0.5">
+              <p className="text-xs font-extrabold text-accent pt-0.5">
                 {(item.product.price * item.quantity).toLocaleString('ru-RU')} ₽
               </p>
             </div>
@@ -110,7 +110,7 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
                   onConfirmRemove(item.id);
                   onClose();
                 }}
-                className="flex-1 py-2.5 px-3 neu-button-danger rounded-xl text-xs font-black hover:scale-102 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="flex-1 py-2.5 px-3 neu-button-danger rounded-xl text-xs font-extrabold hover:scale-102 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Удалить</span>

@@ -338,7 +338,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
     }
   };
 
-  const sectionTitle = 'text-[11px] font-black uppercase tracking-wider text-[#2D3A4E]';
+  const sectionTitle = 'text-[11px] font-extrabold uppercase tracking-wider text-[#2D3A4E]';
   const inputClass =
     'w-full min-w-0 h-10 px-3 neu-inset rounded-xl text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A]';
 
@@ -361,10 +361,10 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                 <Barcode className="w-5 h-5" />
               </div>
               <div className="min-w-0 space-y-0.5">
-                <h3 id={dialog.titleId} className="text-base font-black text-[#2D3A4E] leading-tight">
+                <h3 id={dialog.titleId} className="text-base font-extrabold text-[#2D3A4E] leading-tight">
                   Этикетки и штрихкоды
                 </h3>
-                <p className="text-[11px] font-semibold text-[#4E5C70] leading-snug">
+                <p className="text-xs font-semibold text-[#4E5C70] leading-snug">
                   {printable.length === 1
                     ? `${printable[0].product.title} · ${printable[0].sku.color} / ${printable[0].sku.size}`
                     : labels.length === printable.length
@@ -404,7 +404,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
               {formats.length === 0 && !isAddingFormat && (
                 <div className="neu-inset rounded-2xl p-3.5 space-y-2.5">
                   <p className="text-xs font-bold text-[#2D3A4E]">Форматы не настроены</p>
-                  <p className="text-[11px] text-[#4E5C70] leading-snug">
+                  <p className="text-xs text-[#4E5C70] leading-snug">
                     Добавьте размер этикеток вашего принтера. Частые размеры:
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -481,7 +481,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                 >
                   {formats.length > 0 && missingPresets.length > 0 && (
                     <div className="space-y-1.5">
-                      <p className="text-[11px] font-bold text-[#4E5C70]">Частые размеры</p>
+                      <p className="text-xs font-bold text-[#4E5C70]">Частые размеры</p>
                       <div className="flex flex-wrap gap-2">
                         {missingPresets.map((preset) => (
                           <button
@@ -540,7 +540,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                   </div>
                   <p
                     id="label-format-hint"
-                    className={`text-[11px] leading-snug ${draftProblem ? 'text-danger font-bold' : 'text-[#4E5C70]'}`}
+                    className={`text-xs leading-snug ${draftProblem ? 'text-danger font-bold' : 'text-[#4E5C70]'}`}
                     aria-live="polite"
                   >
                     {draftProblem ?? `От ${LABEL_SIZE_LIMITS.min} до ${LABEL_SIZE_LIMITS.max} мм. Ширина — сторона, по которой идет штрихкод.`}
@@ -575,7 +575,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
               <div className="space-y-3" role="radiogroup" aria-label="Шаблон этикетки">
                 {LABEL_TEMPLATE_GROUPS.map((group) => (
                   <div key={group.id} className="space-y-1.5">
-                    <p className="text-[11px] font-bold text-[#4E5C70]">{group.title}</p>
+                    <p className="text-xs font-bold text-[#4E5C70]">{group.title}</p>
                     <div className="grid grid-cols-3 gap-2">
                       {LABEL_TEMPLATES.filter((t) => t.group === group.id).map((t) => {
                         const selected = template === t.id;
@@ -636,11 +636,11 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
             {/* «Скидка» without an old price */}
             {noOldPrice.length > 0 && (
               <section className="neu-inset rounded-2xl p-3.5 border border-warning/25 space-y-2">
-                <p className="text-xs font-black text-warning flex items-center gap-1.5">
+                <p className="text-xs font-extrabold text-warning flex items-center gap-1.5">
                   <AlertTriangle className="w-4 h-4 shrink-0" />
                   Шаблон «Скидка» нельзя применить
                 </p>
-                <p className="text-[11px] text-[#2D3A4E] leading-snug">
+                <p className="text-xs text-[#2D3A4E] leading-snug">
                   У товара нет старой цены выше текущей. Задайте «Старую цену» в карточке товара (Каталог) или выберите
                   другой шаблон.
                 </p>
@@ -657,7 +657,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
             {/* Barcodes that can't be printed */}
             {barcodeIssues.length > 0 && (
               <section className="neu-inset rounded-2xl p-3.5 border border-warning/25 space-y-2.5">
-                <p className="text-xs font-black text-warning flex items-center gap-1.5">
+                <p className="text-xs font-extrabold text-warning flex items-center gap-1.5">
                   <AlertTriangle className="w-4 h-4 shrink-0" />
                   Штрихкоды нужно обновить: {barcodeIssues.length}
                 </p>
@@ -669,7 +669,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                     </li>
                   ))}
                 </ul>
-                <p className="text-[11px] text-[#4E5C70] leading-snug">
+                <p className="text-xs text-[#4E5C70] leading-snug">
                   У всех размеров одного артикула будет один штрихкод: сохранится верный код артикула или будет выдан
                   новый внутренний EAN-13 (начинается с 2). Коды сохранятся в товаре.
                 </p>
@@ -685,7 +685,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
             )}
 
             {unsaved.length > 0 && (
-              <p className="neu-inset rounded-2xl p-3 text-[11px] text-[#4E5C70] leading-snug">
+              <p className="neu-inset rounded-2xl p-3 text-xs text-[#4E5C70] leading-snug">
                 Без этикетки: {unsaved.map((r) => r.product!.title).join(', ')} — у товара нет сохраненных вариаций.
                 Откройте его в каталоге, задайте остатки и сохраните.
               </p>
@@ -737,13 +737,13 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                       {sizeText(format)} · {info.name}
                     </span>
                     {dropped.length > 0 && (
-                      <p className="text-[11px] font-bold text-warning text-center leading-snug">
+                      <p className="text-xs font-bold text-warning text-center leading-snug">
                         Не поместилось: {dropped.join(', ')}. Выберите формат крупнее или шаблон проще.
                       </p>
                     )}
                   </>
                 ) : (
-                  <p className="text-[11px] font-bold text-[#4E5C70] py-6 text-center">
+                  <p className="text-xs font-bold text-[#4E5C70] py-6 text-center">
                     {format ? 'Нет вариантов для этикеток' : 'Добавьте формат, чтобы увидеть этикетку'}
                   </p>
                 )}
@@ -764,7 +764,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
               type="button"
               onClick={handleDownload}
               disabled={!canDownload}
-              className="h-11 flex-1 min-w-0 px-4 neu-button-accent rounded-xl text-xs font-black text-white whitespace-nowrap transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-11 flex-1 min-w-0 px-4 neu-button-accent rounded-xl text-xs font-extrabold text-white whitespace-nowrap transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FileDown className="w-4 h-4 shrink-0" />
               <span>{isGenerating ? 'Готовим PDF…' : `Скачать PDF (${labels.length})`}</span>
@@ -782,8 +782,8 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
             <div className="flex items-center gap-3">
               <FormatThumb format={formatToDelete} />
               <div className="min-w-0">
-                <p className="text-xs font-black text-[#2D3A4E] truncate">{formatToDelete.name}</p>
-                <p className="text-[11px] font-bold text-[#4E5C70]">{sizeText(formatToDelete)}</p>
+                <p className="text-xs font-extrabold text-[#2D3A4E] truncate">{formatToDelete.name}</p>
+                <p className="text-xs font-bold text-[#4E5C70]">{sizeText(formatToDelete)}</p>
               </div>
             </div>
           )

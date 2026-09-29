@@ -413,7 +413,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       sublabel: `${c.phone || c.email || 'Без контактов'} • Заказов: ${c.ordersCount} (${c.totalSpent.toLocaleString('ru-RU')} ₽)`,
       badge: c.isRegisteredUser ? 'Auth' : 'Гость',
       icon: (
-        <div className="w-5 h-5 rounded-full neu-inset flex items-center justify-center text-[11px] font-black text-accent shrink-0">
+        <div className="w-5 h-5 rounded-full neu-inset flex items-center justify-center text-[11px] font-extrabold text-accent shrink-0">
           {c.name.charAt(0)}
         </div>
       ),
@@ -432,8 +432,8 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-xl font-black text-[#2D3A4E]">Клиенты</h2>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-accent/15 text-accent">
+            <h2 className="text-xl font-extrabold text-[#2D3A4E]">Клиенты</h2>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-accent/15 text-accent">
               {customerRecords.length} чел.
             </span>
           </div>
@@ -464,7 +464,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
           <div className="min-w-0">
             <span className="text-[11px] font-semibold text-[#4E5C70] block leading-tight">Всего клиентов</span>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-lg font-black text-[#2D3A4E]">{stats.totalClients}</span>
+              <span className="text-lg font-extrabold text-[#2D3A4E]">{stats.totalClients}</span>
               <span className="text-[11px] text-accent font-bold">{stats.registeredCount} с аккаунтом</span>
             </div>
           </div>
@@ -476,7 +476,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
           </div>
           <div className="min-w-0">
             <span className="text-[11px] font-semibold text-[#4E5C70] block leading-tight">Сумма покупок</span>
-            <span className="text-lg font-black text-[#2D3A4E] block truncate">
+            <span className="text-lg font-extrabold text-[#2D3A4E] block truncate">
               {stats.totalLTV.toLocaleString('ru-RU')} ₽
             </span>
           </div>
@@ -488,7 +488,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
           </div>
           <div className="min-w-0">
             <span className="text-[11px] font-semibold text-[#4E5C70] block leading-tight">Средний чек</span>
-            <span className="text-lg font-black text-[#2D3A4E] block truncate">
+            <span className="text-lg font-extrabold text-[#2D3A4E] block truncate">
               {stats.avgOrderValue.toLocaleString('ru-RU')} ₽
             </span>
           </div>
@@ -501,7 +501,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
           <div className="min-w-0">
             <span className="text-[11px] font-semibold text-[#4E5C70] block leading-tight">Постоянные</span>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-lg font-black text-[#2D3A4E]">{stats.repeatClients}</span>
+              <span className="text-lg font-extrabold text-[#2D3A4E]">{stats.repeatClients}</span>
               <span className="text-[11px] text-success font-bold">2+ заказа</span>
             </div>
           </div>
@@ -617,13 +617,13 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                         className="w-12 h-12 rounded-2xl object-cover neu-flat-sm shrink-0 border border-white/80"
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-2xl neu-flat-sm flex items-center justify-center font-black text-sm text-accent shrink-0">
+                      <div className="w-12 h-12 rounded-2xl neu-flat-sm flex items-center justify-center font-extrabold text-sm text-accent shrink-0">
                         {customer.name.slice(0, 2).toUpperCase()}
                       </div>
                     )}
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <h4 className="text-sm font-black text-[#2D3A4E] leading-snug break-words">{customer.name}</h4>
+                        <h4 className="text-sm font-extrabold text-[#2D3A4E] leading-snug break-words">{customer.name}</h4>
                         {customer.isRegisteredUser ? (
                           <span
                             className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-bold bg-accent/5 text-accent border border-accent/20"
@@ -680,23 +680,23 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 <div className="grid grid-cols-4 gap-1.5 py-1 text-center border-y border-[#BAC5D5]/30">
                   <div className="px-1">
                     <span className="text-[11px] text-[#4E5C70] block">Покупки</span>
-                    <span className="text-xs font-black text-[#2D3A4E]">
+                    <span className="text-xs font-extrabold text-[#2D3A4E]">
                       {customer.totalSpent > 0 ? `${(customer.totalSpent / 1000).toFixed(1)}k ₽` : '0 ₽'}
                     </span>
                   </div>
                   <div className="px-1 border-l border-[#BAC5D5]/30">
                     <span className="text-[11px] text-[#4E5C70] block">Заказов</span>
-                    <span className="text-xs font-black text-[#2D3A4E]">{customer.ordersCount}</span>
+                    <span className="text-xs font-extrabold text-[#2D3A4E]">{customer.ordersCount}</span>
                   </div>
                   <div className="px-1 border-l border-[#BAC5D5]/30">
                     <span className="text-[11px] text-[#4E5C70] block">Ср. чек</span>
-                    <span className="text-xs font-black text-[#2D3A4E]">
+                    <span className="text-xs font-extrabold text-[#2D3A4E]">
                       {customer.averageOrderValue > 0 ? `${Math.round(customer.averageOrderValue / 1000)}k ₽` : '—'}
                     </span>
                   </div>
                   <div className="px-1 border-l border-[#BAC5D5]/30">
                     <span className="text-[11px] text-[#4E5C70] block">Бонусы</span>
-                    <span className="text-xs font-black text-accent">{customer.bonusPoints}</span>
+                    <span className="text-xs font-extrabold text-accent">{customer.bonusPoints}</span>
                   </div>
                 </div>
 
@@ -750,7 +750,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                   <button
                     type="button"
                     onClick={() => handleOpenDetail(customer)}
-                    className="flex-1 py-2 px-3 rounded-xl neu-button text-xs font-black text-[#2D3A4E] hover:text-accent flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    className="flex-1 py-2 px-3 rounded-xl neu-button text-xs font-extrabold text-[#2D3A4E] hover:text-accent flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                   >
                     <span>Подробнее и заказы</span>
                     <ChevronRight className="w-3.5 h-3.5" />
@@ -801,13 +801,13 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     className="w-12 h-12 rounded-2xl object-cover neu-flat-sm border border-white shrink-0"
                   />
                 ) : (
-                  <div className="w-12 h-12 rounded-2xl neu-flat-sm flex items-center justify-center font-black text-base text-accent shrink-0">
+                  <div className="w-12 h-12 rounded-2xl neu-flat-sm flex items-center justify-center font-extrabold text-base text-accent shrink-0">
                     {selectedCustomer.name.slice(0, 2).toUpperCase()}
                   </div>
                 )}
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 id={customerDialog.titleId} className="text-base sm:text-lg font-black text-[#2D3A4E] truncate">
+                    <h3 id={customerDialog.titleId} className="text-base sm:text-lg font-extrabold text-[#2D3A4E] truncate">
                       {selectedCustomer.name}
                     </h3>
                     {selectedCustomer.ordersCount > 1 ? (
@@ -964,7 +964,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                                 </span>
                               )}
                             </div>
-                            <p className="text-[11px] text-[#4E5C70]">{formatAddress(sa)}</p>
+                            <p className="text-xs text-[#4E5C70]">{formatAddress(sa)}</p>
                             <div className="flex flex-wrap gap-1 pt-0.5">
                               {sa.house && (
                                 <span className="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-white/80">
@@ -1010,25 +1010,25 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                   <div className="neu-flat-sm p-2.5 rounded-xl">
                     <span className="text-[11px] text-[#4E5C70] block">Сумма покупок</span>
-                    <span className="text-sm font-black text-success">
+                    <span className="text-sm font-extrabold text-success">
                       {selectedCustomer.totalSpent.toLocaleString('ru-RU')} ₽
                     </span>
                   </div>
                   <div className="neu-flat-sm p-2.5 rounded-xl">
                     <span className="text-[11px] text-[#4E5C70] block">Всего заказов</span>
-                    <span className="text-sm font-black text-[#2D3A4E]">
+                    <span className="text-sm font-extrabold text-[#2D3A4E]">
                       {selectedCustomer.ordersCount} шт.
                     </span>
                   </div>
                   <div className="neu-flat-sm p-2.5 rounded-xl">
                     <span className="text-[11px] text-[#4E5C70] block">Средний чек</span>
-                    <span className="text-sm font-black text-[#2D3A4E]">
+                    <span className="text-sm font-extrabold text-[#2D3A4E]">
                       {selectedCustomer.averageOrderValue.toLocaleString('ru-RU')} ₽
                     </span>
                   </div>
                   <div className="neu-flat-sm p-2.5 rounded-xl">
                     <span className="text-[11px] text-[#4E5C70] block">Бонусные баллы</span>
-                    <span className="text-sm font-black text-accent">
+                    <span className="text-sm font-extrabold text-accent">
                       {selectedCustomer.bonusPoints} Б
                     </span>
                   </div>
@@ -1041,10 +1041,10 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Ruler className="w-4 h-4 text-accent" />
-                      <span className="text-xs font-black text-[#2D3A4E]">Параметры фигуры (Размеры)</span>
+                      <span className="text-xs font-extrabold text-[#2D3A4E]">Параметры фигуры (Размеры)</span>
                     </div>
                     {selectedCustomer.bodyMeasurements.preferredSize && (
-                      <span className="px-2.5 py-1 rounded-lg text-xs font-black text-accent neu-flat-sm">
+                      <span className="px-2.5 py-1 rounded-lg text-xs font-extrabold text-accent neu-flat-sm">
                         Размер: {selectedCustomer.bodyMeasurements.preferredSize}
                       </span>
                     )}
@@ -1079,13 +1079,13 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Edit3 className="w-4 h-4 text-accent" />
-                    <span className="text-xs font-black text-[#2D3A4E]">Заметки и теги менеджера</span>
+                    <span className="text-xs font-extrabold text-[#2D3A4E]">Заметки и теги менеджера</span>
                   </div>
                   <button
                     type="button"
                     onClick={handleSaveNotes}
                     disabled={isSavingNotes}
-                    className="neu-button px-3 py-1.5 rounded-xl text-xs font-black text-accent flex items-center gap-1.5 hover:text-accent-strong"
+                    className="neu-button px-3 py-1.5 rounded-xl text-xs font-extrabold text-accent flex items-center gap-1.5 hover:text-accent-strong"
                   >
                     <Save className="w-3.5 h-3.5" />
                     <span>{isSavingNotes ? 'Сохранение...' : 'Сохранить'}</span>
@@ -1158,7 +1158,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     <div className="w-7 h-7 rounded-lg neu-flat-sm flex items-center justify-center text-accent shrink-0">
                       <Package className="w-3.5 h-3.5" />
                     </div>
-                    <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] truncate">
+                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] truncate">
                       История заказов ({selectedCustomer.orders.length})
                     </h4>
                   </div>
@@ -1189,14 +1189,14 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                         <div key={`cust-detail-ord-${ord.id}-${oIdx}`} className="neu-inset rounded-2xl p-3.5 space-y-2.5">
                           <div className="flex items-center justify-between gap-2 flex-wrap">
                             <div className="flex items-center gap-2">
-                              <span className="font-black text-sm text-[#2D3A4E]">№ {ord.id}</span>
+                              <span className="font-extrabold text-sm text-[#2D3A4E]">№ {ord.id}</span>
                               <span className="text-xs text-[#4E5C70]">• {ord.date}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className={`px-2.5 py-0.5 rounded-lg text-xs font-bold border ${statusBadge.bg}`}>
                                 {statusBadge.label}
                               </span>
-                              <span className="text-sm font-black text-[#2D3A4E]">
+                              <span className="text-sm font-extrabold text-[#2D3A4E]">
                                 {ord.totalPrice.toLocaleString('ru-RU')} ₽
                               </span>
                             </div>
@@ -1254,7 +1254,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
               <button
                 type="button"
                 onClick={customerGuard.requestClose}
-                className="neu-button px-6 py-2.5 rounded-xl text-xs font-black text-[#2D3A4E] hover:text-accent transition-all"
+                className="neu-button px-6 py-2.5 rounded-xl text-xs font-extrabold text-[#2D3A4E] hover:text-accent transition-all"
               >
                 Закрыть
               </button>
@@ -1272,7 +1272,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 <Trash2 className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <h3 id={deleteCustomerDialog.titleId} className="text-sm font-black text-[#2D3A4E] truncate">Удалить клиента?</h3>
+                <h3 id={deleteCustomerDialog.titleId} className="text-sm font-extrabold text-[#2D3A4E] truncate">Удалить клиента?</h3>
                 <p className="text-xs text-[#4E5C70] truncate">{customerToDelete.name}</p>
               </div>
             </div>
@@ -1294,7 +1294,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 type="button"
                 onClick={handleDeleteCustomer}
                 disabled={isDeletingCustomer}
-                className="neu-button-danger px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="neu-button-danger px-4 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 {isDeletingCustomer ? (
                   <>

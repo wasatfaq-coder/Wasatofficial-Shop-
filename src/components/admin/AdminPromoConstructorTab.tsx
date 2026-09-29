@@ -367,11 +367,11 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
       {/* Header & Sub-Tabs Navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div className="min-w-0">
-          <h3 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+          <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
             <Tag className="w-4 h-4 text-accent shrink-0" />
             <span>Конструктор промокодов и программы лояльности</span>
           </h3>
-          <p className="text-[11px] text-[#4E5C70] truncate">
+          <p className="text-xs text-[#4E5C70] truncate">
             Процентные и фиксированные скидки (₽), генерация пачек кодов и реферальная система
           </p>
         </div>
@@ -385,7 +385,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
               setIsCreating(true);
             }
           }}
-          className={`py-2 px-3.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0 neu-inset active:scale-95 ${
+          className={`py-2 px-3.5 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0 neu-inset active:scale-95 ${
             isCreating
               ? 'text-[#4E5C70]'
               : 'text-accent hover:text-accent-strong bg-[#E3E8EF]'
@@ -412,7 +412,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
           onClick={() => setActiveSubTab('all')}
           className={`py-2 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
             activeSubTab === 'all'
-              ? 'neu-pill-active font-black'
+              ? 'neu-pill-active font-extrabold'
               : 'text-[#4E5C70] hover:text-[#2D3A4E]'
           }`}
         >
@@ -425,7 +425,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
           onClick={() => setActiveSubTab('referrals')}
           className={`py-2 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
             activeSubTab === 'referrals'
-              ? 'neu-pill-active font-black'
+              ? 'neu-pill-active font-extrabold'
               : 'text-[#4E5C70] hover:text-[#2D3A4E]'
           }`}
         >
@@ -438,7 +438,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
           onClick={() => setActiveSubTab('batch_generator')}
           className={`py-2 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
             activeSubTab === 'batch_generator'
-              ? 'neu-pill-active font-black'
+              ? 'neu-pill-active font-extrabold'
               : 'text-[#4E5C70] hover:text-[#2D3A4E]'
           }`}
         >
@@ -455,10 +455,10 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
               <TrendingUp className="w-3.5 h-3.5 text-success" />
               Привлеченная выручка
             </span>
-            <p className="text-lg font-black text-[#2D3A4E]">
+            <p className="text-lg font-extrabold text-[#2D3A4E]">
               {totalReferralRevenue.toLocaleString('ru-RU')} ₽
             </p>
-            <p className="text-[11px] text-[#4E5C70]">
+            <p className="text-xs text-[#4E5C70]">
               По заказам с партнерскими купонами
             </p>
           </div>
@@ -468,10 +468,10 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
               <DollarSign className="w-3.5 h-3.5 text-accent" />
               Комиссия к выплате
             </span>
-            <p className="text-lg font-black text-accent">
+            <p className="text-lg font-extrabold text-accent">
               {totalCommissionEarned.toLocaleString('ru-RU')} ₽
             </p>
-            <p className="text-[11px] text-[#4E5C70]">
+            <p className="text-xs text-[#4E5C70]">
               Суммарный заработок инфлюенсеров
             </p>
           </div>
@@ -481,10 +481,10 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
               <Users className="w-3.5 h-3.5 text-warning" />
               Заказов от партнеров
             </span>
-            <p className="text-lg font-black text-[#2D3A4E]">
+            <p className="text-lg font-extrabold text-[#2D3A4E]">
               {totalReferralOrders} покупок
             </p>
-            <p className="text-[11px] text-[#4E5C70]">
+            <p className="text-xs text-[#4E5C70]">
               Конверсий по реферальным ссылкам/кодам
             </p>
           </div>
@@ -496,11 +496,11 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
         <div className="neu-inset rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-4 border border-accent/30">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-[#BAC5D5]/50 pb-3">
             <div>
-              <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+              <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
                 <Wand2 className="w-4 h-4 text-accent shrink-0" />
                 <span>Генератор персональных одноразовых купонов</span>
               </h4>
-              <p className="text-[11px] text-[#4E5C70] mt-0.5">
+              <p className="text-xs text-[#4E5C70] mt-0.5">
                 Создание уникальных кодов для массовой рассылки в SMS, Telegram или Email
               </p>
             </div>
@@ -508,7 +508,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
               <button
                 type="button"
                 onClick={() => onShowToast('Каждый купон из пачки может быть активирован покупателем только 1 раз', 'info')}
-                className="neu-button px-3 py-1.5 rounded-xl text-[11px] font-black text-accent hover:text-accent-strong flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all"
+                className="neu-button px-3 py-1.5 rounded-xl text-[11px] font-extrabold text-accent hover:text-accent-strong flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all"
                 title="Лимит применения промокода"
               >
                 <Sparkles className="w-3.5 h-3.5 text-accent shrink-0" />
@@ -527,7 +527,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 value={batchPrefix}
                 onChange={(e) => setBatchPrefix(e.target.value.toUpperCase())}
                 placeholder="SMS-"
-                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-black"
+                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-extrabold"
               />
             </div>
 
@@ -541,7 +541,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 max="100"
                 value={batchCount}
                 onChange={(e) => setBatchCount(Number(e.target.value))}
-                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-black"
+                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-extrabold"
               />
             </div>
 
@@ -580,7 +580,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 min="1"
                 value={batchDiscountValue}
                 onChange={(e) => setBatchDiscountValue(Number(e.target.value))}
-                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-black"
+                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-extrabold"
               />
             </div>
           </div>
@@ -616,7 +616,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             <button
               type="button"
               onClick={handleGenerateBatch}
-              className="neu-button-accent text-white font-black text-xs py-2.5 px-4 rounded-xl flex items-center gap-1.5 cursor-pointer"
+              className="neu-button-accent text-white font-extrabold text-xs py-2.5 px-4 rounded-xl flex items-center gap-1.5 cursor-pointer"
             >
               <Wand2 className="w-4 h-4 text-white" />
               <span>Сгенерировать {batchCount} промокодов</span>
@@ -648,7 +648,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
           {/* Generated preview list */}
           {generatedBatchPreview.length > 0 && (
             <div className="neu-inset rounded-2xl p-3 space-y-2">
-              <span className="text-[11px] font-black text-[#4E5C70] uppercase tracking-wider block">
+              <span className="text-[11px] font-extrabold text-[#4E5C70] uppercase tracking-wider block">
                 Свежесгенерированные коды ({generatedBatchPreview.length} шт.):
               </span>
               <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
@@ -673,7 +673,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
           className="neu-inset rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 space-y-3.5 border border-accent/30 animate-in fade-in slide-in-from-top-2 duration-200 w-full min-w-0"
         >
           <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-2.5 gap-2">
-            <span className="text-xs font-black text-accent uppercase tracking-wider flex items-center gap-1.5 truncate">
+            <span className="text-xs font-extrabold text-accent uppercase tracking-wider flex items-center gap-1.5 truncate">
               <Sparkles className="w-3.5 h-3.5 shrink-0" />
               <span>{editingId ? 'Редактирование промокода' : 'Новый промокод'}</span>
             </span>
@@ -698,7 +698,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 placeholder="WASAT20"
-                className="w-full px-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E] uppercase font-black"
+                className="w-full px-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E] uppercase font-extrabold"
               />
             </div>
 
@@ -751,7 +751,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 required
                 value={discountValue}
                 onChange={(e) => setDiscountValue(Number(e.target.value))}
-                className="w-full px-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E] font-black"
+                className="w-full px-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E] font-extrabold"
               />
             </div>
           </div>
@@ -766,7 +766,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     type="button"
                     onClick={() => setDiscountValue(val)}
                     className={`text-[11px] font-bold px-2 py-0.5 rounded-lg neu-button cursor-pointer ${
-                      discountValue === val ? 'neu-pill-active font-black' : 'text-[#4E5C70]'
+                      discountValue === val ? 'neu-pill-active font-extrabold' : 'text-[#4E5C70]'
                     }`}
                   >
                     -{val}%
@@ -778,7 +778,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     type="button"
                     onClick={() => setDiscountValue(val)}
                     className={`text-[11px] font-bold px-2 py-0.5 rounded-lg neu-button cursor-pointer ${
-                      discountValue === val ? 'neu-pill-active font-black' : 'text-[#4E5C70]'
+                      discountValue === val ? 'neu-pill-active font-extrabold' : 'text-[#4E5C70]'
                     }`}
                   >
                     -{val.toLocaleString('ru-RU')} ₽
@@ -825,7 +825,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
               <div className="flex items-center gap-2">
                 <Share2 className="w-4 h-4 text-accent" />
                 <div>
-                  <span className="text-[11px] font-black text-[#2D3A4E] block">
+                  <span className="text-[11px] font-extrabold text-[#2D3A4E] block">
                     Партнерский промокод (Инфлюенсер / Блогер)
                   </span>
                   <span className="text-[11px] text-[#4E5C70]">
@@ -884,7 +884,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
 
           {/* Row 3: Limitations & Conditions (Min spend, Expiration, Usage Limit) */}
           <div className="p-3 sm:p-3.5 neu-inset rounded-2xl space-y-3">
-            <span className="text-[11px] font-black text-[#2D3A4E] uppercase tracking-wider block">
+            <span className="text-[11px] font-extrabold text-[#2D3A4E] uppercase tracking-wider block">
               Ограничения и условия применения:
             </span>
 
@@ -945,7 +945,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     onClick={() => setScopeType('all')}
                     className={`py-1 px-2.5 rounded-lg text-[11px] font-bold transition-all ${
                       scopeType === 'all'
-                        ? 'neu-pill-active font-black'
+                        ? 'neu-pill-active font-extrabold'
                         : 'text-[#4E5C70] hover:text-[#2D3A4E]'
                     }`}
                   >
@@ -956,7 +956,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     onClick={() => setScopeType('categories')}
                     className={`py-1 px-2.5 rounded-lg text-[11px] font-bold transition-all ${
                       scopeType === 'categories'
-                        ? 'neu-pill-active font-black'
+                        ? 'neu-pill-active font-extrabold'
                         : 'text-[#4E5C70] hover:text-[#2D3A4E]'
                     }`}
                   >
@@ -967,7 +967,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     onClick={() => setScopeType('products')}
                     className={`py-1 px-2.5 rounded-lg text-[11px] font-bold transition-all ${
                       scopeType === 'products'
-                        ? 'neu-pill-active font-black'
+                        ? 'neu-pill-active font-extrabold'
                         : 'text-[#4E5C70] hover:text-[#2D3A4E]'
                     }`}
                   >
@@ -1006,7 +1006,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                           onClick={() => handleToggleCategory(cat.id)}
                           className={`py-1.5 px-2.5 sm:px-3 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
                             isSelected
-                              ? 'neu-pill-active text-accent font-black'
+                              ? 'neu-pill-active text-accent font-extrabold'
                               : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
                           }`}
                         >
@@ -1072,7 +1072,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                             </div>
                             <div className="min-w-0">
                               <p className="text-xs font-bold text-[#2D3A4E] truncate">{prod.title}</p>
-                              <p className="text-[11px] text-[#4E5C70] font-semibold">
+                              <p className="text-xs text-[#4E5C70] font-semibold">
                                 {prod.price.toLocaleString('ru-RU')} ₽ • {prod.category}
                               </p>
                             </div>
@@ -1143,7 +1143,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             </button>
             <button
               type="submit"
-              className="py-2 px-4.5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center gap-1.5 cursor-pointer"
+              className="py-2 px-4.5 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 cursor-pointer"
             >
               <Check className="w-3.5 h-3.5 text-white" />
               <span>{editingId ? 'Сохранить изменения' : 'Создать промокод'}</span>
@@ -1181,12 +1181,12 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 {/* Top Row: Code, Discount, Badges & Actions */}
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
-                    <span className="font-mono font-black text-xs sm:text-sm text-[#2D3A4E] neu-flat-sm px-2.5 py-1 rounded-xl tracking-wider">
+                    <span className="font-mono font-extrabold text-xs sm:text-sm text-[#2D3A4E] neu-flat-sm px-2.5 py-1 rounded-xl tracking-wider">
                       {promo.code}
                     </span>
 
                     <span
-                      className={`text-xs font-black neu-button px-2.5 py-0.5 rounded-lg ${
+                      className={`text-xs font-extrabold neu-button px-2.5 py-0.5 rounded-lg ${
                         isFixed ? 'text-warning' : 'text-accent'
                       }`}
                     >
@@ -1217,7 +1217,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     <button
                       type="button"
                       onClick={() => handleToggleActive(promo.id)}
-                      className={`h-8 px-3 rounded-xl text-[11px] font-black transition-all cursor-pointer flex items-center justify-center active:scale-95 ${
+                      className={`h-8 px-3 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer flex items-center justify-center active:scale-95 ${
                         promo.active
                           ? 'neu-button text-success'
                           : 'neu-inset text-[#4E5C70]'
@@ -1251,7 +1251,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                   <h4 className="text-xs font-extrabold text-[#2D3A4E] leading-snug break-words">
                     {promo.title}
                   </h4>
-                  <p className="text-[11px] text-[#4E5C70] leading-relaxed break-words">
+                  <p className="text-xs text-[#4E5C70] leading-relaxed break-words">
                     {promo.description}
                   </p>
                 </div>
@@ -1261,11 +1261,11 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                   <div className="p-2.5 neu-flat-sm rounded-xl flex items-center justify-between gap-2 flex-wrap text-[11px]">
                     <div className="flex items-center gap-3">
                       <span>
-                        Выручка: <strong className="text-[#2D3A4E] font-black">{(promo.generatedRevenue || 0).toLocaleString('ru-RU')} ₽</strong>
+                        Выручка: <strong className="text-[#2D3A4E] font-extrabold">{(promo.generatedRevenue || 0).toLocaleString('ru-RU')} ₽</strong>
                       </span>
                       <span>
                         Комиссия ({promo.partnerCommissionPercent}%):{' '}
-                        <strong className="text-accent font-black">
+                        <strong className="text-accent font-extrabold">
                           {(promo.commissionEarned || 0).toLocaleString('ru-RU')} ₽
                         </strong>
                       </span>

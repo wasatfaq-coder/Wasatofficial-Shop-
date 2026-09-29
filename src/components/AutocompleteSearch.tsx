@@ -236,7 +236,7 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
             {searchResults.matchedProducts.length === 0 ? (
               <div className="neu-inset rounded-2xl p-4 text-center space-y-1">
                 <p className="text-xs font-bold text-[#2D3A4E]">Ничего не найдено</p>
-                <p className="text-[11px] text-[#4E5C70]">
+                <p className="text-xs text-[#4E5C70]">
                   Проверьте написание или поищите по артикулу и цвету.
                 </p>
               </div>
@@ -267,13 +267,13 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
                       <div className="flex items-center gap-1.5 min-w-0 text-[11px] text-[#4E5C70] font-medium">
                         <span className="truncate">{product.categoryLabel}</span>
                         {product.badge && (
-                          <span className={`text-[11px] font-black ${photoBadgeClass(product.badge)} px-1.5 py-0.5 rounded-md shrink-0`}>
+                          <span className={`text-[11px] font-extrabold ${photoBadgeClass(product.badge)} px-1.5 py-0.5 rounded-md shrink-0`}>
                             {product.badge}
                           </span>
                         )}
                       </div>
                       <div className="flex items-baseline gap-1.5 flex-wrap">
-                        <span className="text-xs font-black text-[#2D3A4E]">{product.price.toLocaleString('ru-RU')} ₽</span>
+                        <span className="text-xs font-extrabold text-[#2D3A4E]">{product.price.toLocaleString('ru-RU')} ₽</span>
                         {product.originalPrice && (
                           <span className="text-[11px] text-[#4E5C70] line-through">
                             {product.originalPrice.toLocaleString('ru-RU')} ₽

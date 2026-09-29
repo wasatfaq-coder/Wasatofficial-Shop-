@@ -100,7 +100,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
                 <h3 id={dialog.titleId} className="text-base font-extrabold text-[#2D3A4E]">
                   Часто задаваемые вопросы (FAQ)
                 </h3>
-                <p className="text-[11px] text-[#4E5C70]">Ответы магазина на частые вопросы</p>
+                <p className="text-xs text-[#4E5C70]">Ответы магазина на частые вопросы</p>
               </div>
             </div>
             <button
@@ -159,7 +159,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-bold text-[#2D3A4E] truncate">Не нашли ответ на свой вопрос?</p>
-                <p className="text-[11px] text-[#4E5C70]">Напишите нам в чат поддержки</p>
+                <p className="text-xs text-[#4E5C70]">Напишите нам в чат поддержки</p>
               </div>
             </div>
 

@@ -95,16 +95,16 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 id={dialog.titleId} className="text-sm font-black uppercase tracking-wider text-[#2D3A4E]">
+                <h3 id={dialog.titleId} className="text-sm font-extrabold uppercase tracking-wider text-[#2D3A4E]">
                   {config.title}
                 </h3>
                 {config.badge && (
-                  <span className="text-[11px] font-black text-accent neu-inset px-2 py-0.5 rounded-md">
+                  <span className="text-[11px] font-extrabold text-accent neu-inset px-2 py-0.5 rounded-md">
                     {config.badge}
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-[#4E5C70] font-medium mt-0.5">
+              <p className="text-xs text-[#4E5C70] font-medium mt-0.5">
                 {config.fieldLabel}
               </p>
             </div>
@@ -211,7 +211,7 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
           <button
             type="button"
             onClick={handleSave}
-            className="py-2.5 px-5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center gap-1.5 cursor-pointer transition-transform"
+            className="py-2.5 px-5 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 cursor-pointer transition-transform"
           >
             <Check className="w-4 h-4" />
             <span>Сохранить изменения</span>

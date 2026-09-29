@@ -105,7 +105,7 @@ export const AccountDataModal: React.FC<AccountDataModalProps> = ({
               {googleEmail ? (
                 <>
                   <p className="text-xs font-bold">Аккаунт Google: {googleEmail}</p>
-                  <p className="text-[11px] text-[#4E5C70] leading-snug">
+                  <p className="text-xs text-[#4E5C70] leading-snug">
                     Пароль и двухэтапная проверка настраиваются в вашем аккаунте Google.
                   </p>
                 </>
@@ -117,7 +117,7 @@ export const AccountDataModal: React.FC<AccountDataModalProps> = ({
             <button
               type="button"
               onClick={handleExport}
-              className="w-full py-3 neu-button rounded-2xl text-xs font-black text-accent flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3 neu-button rounded-2xl text-xs font-extrabold text-accent flex items-center justify-center gap-2 cursor-pointer"
             >
               <Download className="w-4 h-4" />
               Скачать мои данные (профиль и заказы)
@@ -130,7 +130,7 @@ export const AccountDataModal: React.FC<AccountDataModalProps> = ({
                   onClose();
                   onSignOut();
                 }}
-                className="w-full py-3 neu-button-danger rounded-2xl text-xs font-black flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 neu-button-danger rounded-2xl text-xs font-extrabold flex items-center justify-center gap-2 cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
                 Выйти из аккаунта

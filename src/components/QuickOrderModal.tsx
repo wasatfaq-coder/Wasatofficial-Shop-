@@ -152,7 +152,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                 </div>
                 <div>
                   <h3 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">Заказ в 1 клик</h3>
-                  <p className="text-[11px] text-[#4E5C70]">Менеджер перезвонит для подтверждения</p>
+                  <p className="text-xs text-[#4E5C70]">Менеджер перезвонит для подтверждения</p>
                 </div>
               </div>
               <button
@@ -177,11 +177,11 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   />
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-[#2D3A4E] truncate">{item.title}</p>
-                    <p className="text-[11px] text-[#4E5C70]">{item.variant}</p>
+                    <p className="text-xs text-[#4E5C70]">{item.variant}</p>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="font-extrabold text-accent">{item.price.toLocaleString('ru-RU')} ₽</p>
-                    <p className="text-[11px] text-[#4E5C70]">{item.qty} шт.</p>
+                    <p className="text-xs text-[#4E5C70]">{item.qty} шт.</p>
                   </div>
                 </div>
               ))}
@@ -195,7 +195,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
               </span>
             </div>
             {promoNotApplied && (
-              <p className="text-[11px] font-semibold text-[#4E5C70] px-1">
+              <p className="text-xs font-semibold text-[#4E5C70] px-1">
                 Промокод действует только при полном оформлении заказа
               </p>
             )}
@@ -356,7 +356,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                 <button
                   type="submit"
                   disabled={isSubmitting || !name.trim() || phone.length < 11}
-                  className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black cursor-pointer transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 btn-confirm-order ${
+                  className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-extrabold cursor-pointer transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 btn-confirm-order ${
                     isSubmitting
                       ? 'neu-inset-deep neu-inset-deep-animated text-accent ring-2 ring-accent/40'
                       : 'neu-button-accent text-white hover:scale-102 active:neu-inset-deep'

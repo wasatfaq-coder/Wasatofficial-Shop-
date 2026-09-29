@@ -168,11 +168,11 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap pb-2 border-b border-[#BAC5D5]/50">
         <div>
-          <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-2">
+          <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-2">
             <Store className="w-4 h-4 text-accent" />
             <span>Управление витриной, брендом и реквизитами</span>
           </h3>
-          <p className="text-[11px] text-[#4E5C70] font-medium mt-0.5">
+          <p className="text-xs text-[#4E5C70] font-medium mt-0.5">
             Редактирование контактов, VIP-консьержа, юридических реквизитов и философии бренда
           </p>
         </div>
@@ -195,7 +195,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               onClick={() => setShowLivePreview(!showLivePreview)}
               className={`py-1.5 px-2.5 sm:px-3 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
                 showLivePreview
-                  ? 'neu-inset text-accent font-black'
+                  ? 'neu-inset text-accent font-extrabold'
                   : 'neu-inset text-[#4E5C70] hover:text-[#2D3A4E]'
               }`}
               title={showLivePreview ? 'Скрыть интерактивную сводку' : 'Показать интерактивную сводку'}
@@ -220,7 +220,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               type="button"
               onClick={() => handleSave()}
               disabled={isSaving}
-              className="py-2 px-4.5 neu-button rounded-xl text-xs font-black text-accent hover:text-accent-strong flex items-center gap-2 cursor-pointer transition-all disabled:opacity-60 disabled:cursor-wait"
+              className="py-2 px-4.5 neu-button rounded-xl text-xs font-extrabold text-accent hover:text-accent-strong flex items-center gap-2 cursor-pointer transition-all disabled:opacity-60 disabled:cursor-wait"
               title="Применить все изменения к витрине"
             >
               {isSaved ? <Check className="w-4 h-4 text-success" /> : <Save className="w-4 h-4 text-accent" />}
@@ -249,10 +249,10 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 <AlertCircle className="w-5 h-5" />
               </div>
               <div>
-                <h4 id={resetDialog.titleId} className="text-xs font-black uppercase tracking-wider text-[#2D3A4E]">
+                <h4 id={resetDialog.titleId} className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E]">
                   Сброс настроек витрины
                 </h4>
-                <p className="text-[11px] text-[#4E5C70] mt-1 leading-relaxed">
+                <p className="text-xs text-[#4E5C70] mt-1 leading-relaxed">
                   Очистить контакты, реквизиты, описание консьерж-сервиса и тексты о бренде? Покупатели увидят «Не настроено», пока вы не заполните их снова. Тарифы доставки вернутся к значениям по умолчанию.
                 </p>
               </div>
@@ -271,7 +271,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   setIsResetConfirmOpen(false);
                   handleResetToDefaults();
                 }}
-                className="py-2 px-4 neu-button rounded-xl text-xs font-black text-danger hover:text-danger transition-all cursor-pointer border border-danger/70"
+                className="py-2 px-4 neu-button rounded-xl text-xs font-extrabold text-danger hover:text-danger transition-all cursor-pointer border border-danger/70"
               >
                 Да, сбросить
               </button>
@@ -284,7 +284,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
       {showLivePreview && (
         <div className="neu-inset rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-3 border border-accent/30">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase tracking-wider text-accent flex items-center gap-1.5">
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-accent flex items-center gap-1.5">
               <Eye className="w-3.5 h-3.5" />
               Интерактивный сводный статус
             </span>
@@ -303,7 +303,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             <div className="neu-inset rounded-2xl p-3 border border-warning/30 flex items-center gap-2.5 text-warning">
               <AlertCircle className="w-4 h-4 text-warning shrink-0" />
               <div className="text-xs">
-                <span className="font-black block">Режим закрытой примерки</span>
+                <span className="font-extrabold block">Режим закрытой примерки</span>
                 <span className="text-[11px] text-[#4E5C70]">
                   Онлайн-оформление приостановлено. Заказы принимаются через консьержа:{' '}
                   {localSettings.phone}
@@ -333,7 +333,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 <span className="text-[11px] text-[#4E5C70] block font-bold">Бренд</span>
                 <Pencil className="w-2.5 h-2.5 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <span className="text-xs font-black text-[#2D3A4E] truncate block">
+              <span className="text-xs font-extrabold text-[#2D3A4E] truncate block">
                 {localSettings.storeName}
               </span>
             </button>
@@ -357,7 +357,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 <span className="text-[11px] text-[#4E5C70] block font-bold">Юр. лицо</span>
                 <Pencil className="w-2.5 h-2.5 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <span className="text-xs font-black text-[#2D3A4E] truncate block">
+              <span className="text-xs font-extrabold text-[#2D3A4E] truncate block">
                 {localSettings.legalEntityName || '—'}
               </span>
             </button>
@@ -381,7 +381,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 <span className="text-[11px] text-[#4E5C70] block font-bold">ИНН / КПП</span>
                 <Pencil className="w-2.5 h-2.5 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <span className="text-xs font-black text-[#2D3A4E] truncate block">
+              <span className="text-xs font-extrabold text-[#2D3A4E] truncate block">
                 {localSettings.inn || '—'} / {localSettings.kpp || '—'}
               </span>
             </button>
@@ -405,7 +405,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 <span className="text-[11px] text-[#4E5C70] block font-bold">Руководитель</span>
                 <Pencil className="w-2.5 h-2.5 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <span className="text-xs font-black text-[#2D3A4E] truncate block">
+              <span className="text-xs font-extrabold text-[#2D3A4E] truncate block">
                 {localSettings.ceo || '—'}
               </span>
             </button>
@@ -429,7 +429,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 <span className="text-[11px] text-[#4E5C70] block font-bold">Беспл. доставка</span>
                 <Pencil className="w-2.5 h-2.5 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <span className="text-xs font-black text-success block">
+              <span className="text-xs font-extrabold text-success block">
                 от {localSettings.freeDeliveryThreshold?.toLocaleString('ru-RU') || 5000} ₽
               </span>
             </button>
@@ -452,7 +452,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 <Sliders className="w-2.5 h-2.5 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
               <span
-                className={`text-xs font-black block ${
+                className={`text-xs font-extrabold block ${
                   localSettings.isExpressEnabled ? 'text-success' : 'text-danger'
                 }`}
               >
@@ -467,7 +467,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
         {/* 1. STORE CONTACTS & SHOWROOM */}
         <div className="neu-inset rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-3.5 border border-transparent">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
               <Phone className="w-3.5 h-3.5 text-accent" />
               Основные контакты бутика и витрины
             </h4>
@@ -756,7 +756,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
           {/* Top Promotional Announcement Banner */}
           <div className="neu-inset rounded-2xl p-3 space-y-2.5 pt-2.5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-black/5 pb-2">
-              <span className="text-[11px] font-black uppercase tracking-wider text-accent flex items-center gap-1.5">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-accent flex items-center gap-1.5">
                 <Tag className="w-3.5 h-3.5 text-accent shrink-0" />
                 Промо-сообщение в шапке сайта
               </span>
@@ -787,7 +787,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       setLocalSettings({ ...localSettings, bannerBadgeText: e.target.value })
                     }
                     placeholder="АКЦИЯ"
-                    className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-black text-accent"
+                    className="flex-1 min-w-0 px-2.5 py-1.5 neu-flat-sm rounded-lg text-xs font-extrabold text-accent"
                   />
                   <button
                     type="button"
@@ -854,7 +854,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
         {/* 2. VIP CONCIERGE SERVICE DETAILS */}
         <div className="neu-inset rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-3.5 border border-transparent">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-accent" />
               Вкладка «Консьерж»: Описание и перечень услуг
             </h4>
@@ -906,7 +906,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               </div>
             </div>
 
-            <span className="text-[11px] font-black uppercase text-accent block pt-1">
+            <span className="text-[11px] font-extrabold uppercase text-accent block pt-1">
               Перечень услуг консьерж-сервиса
             </span>
 
@@ -915,10 +915,10 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               <div className="neu-inset rounded-2xl p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-lg neu-flat-sm flex items-center justify-center text-accent font-black text-[11px] shrink-0">
+                    <span className="w-5 h-5 rounded-lg neu-flat-sm flex items-center justify-center text-accent font-extrabold text-[11px] shrink-0">
                       1
                     </span>
-                    <span className="text-[11px] font-black text-[#2D3A4E]">Услуга 1</span>
+                    <span className="text-[11px] font-extrabold text-[#2D3A4E]">Услуга 1</span>
                   </div>
                 </div>
 
@@ -1008,10 +1008,10 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               <div className="neu-inset rounded-2xl p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-lg neu-flat-sm flex items-center justify-center text-accent font-black text-[11px] shrink-0">
+                    <span className="w-5 h-5 rounded-lg neu-flat-sm flex items-center justify-center text-accent font-extrabold text-[11px] shrink-0">
                       2
                     </span>
-                    <span className="text-[11px] font-black text-[#2D3A4E]">Услуга 2</span>
+                    <span className="text-[11px] font-extrabold text-[#2D3A4E]">Услуга 2</span>
                   </div>
                 </div>
 
@@ -1104,10 +1104,10 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               <div className="neu-inset rounded-2xl p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-lg neu-flat-sm flex items-center justify-center text-accent font-black text-[11px] shrink-0">
+                    <span className="w-5 h-5 rounded-lg neu-flat-sm flex items-center justify-center text-accent font-extrabold text-[11px] shrink-0">
                       3
                     </span>
-                    <span className="text-[11px] font-black text-[#2D3A4E]">Услуга 3</span>
+                    <span className="text-[11px] font-extrabold text-[#2D3A4E]">Услуга 3</span>
                   </div>
                 </div>
 
@@ -1199,7 +1199,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
         {/* 3. LEGAL REQUISITES OF THE ORGANIZATION */}
         <div className="neu-inset rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-3.5 border border-transparent">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
               <Building2 className="w-3.5 h-3.5 text-accent" />
               Вкладка «Реквизиты»: Официальные юридические данные
             </h4>
@@ -1208,7 +1208,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             </span>
           </div>
 
-          <p className="text-[11px] text-[#4E5C70]">
+          <p className="text-xs text-[#4E5C70]">
             Данные поля транслируются в карточки реквизитов и копируются клиентами при формировании официальных счетов и договоров.
           </p>
 
@@ -1217,7 +1217,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             <div className="neu-inset rounded-2xl p-3.5 space-y-3">
               <div className="flex items-center gap-1.5 border-b border-black/5 pb-2">
                 <Building2 className="w-3.5 h-3.5 text-accent" />
-                <span className="text-[11px] font-black text-[#2D3A4E]">Организация и адреса</span>
+                <span className="text-[11px] font-extrabold text-[#2D3A4E]">Организация и адреса</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1367,7 +1367,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             <div className="neu-inset rounded-2xl p-3.5 space-y-3">
               <div className="flex items-center gap-1.5 border-b border-black/5 pb-2">
                 <FileText className="w-3.5 h-3.5 text-accent" />
-                <span className="text-[11px] font-black text-[#2D3A4E]">Государственная регистрация (ФНС)</span>
+                <span className="text-[11px] font-extrabold text-[#2D3A4E]">Государственная регистрация (ФНС)</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1479,7 +1479,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             <div className="neu-inset rounded-2xl p-3.5 space-y-3">
               <div className="flex items-center gap-1.5 border-b border-black/5 pb-2">
                 <CreditCard className="w-3.5 h-3.5 text-accent" />
-                <span className="text-[11px] font-black text-[#2D3A4E]">Банковский счет и расчеты</span>
+                <span className="text-[11px] font-extrabold text-[#2D3A4E]">Банковский счет и расчеты</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1630,7 +1630,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
         {/* 4. BRAND PHILOSOPHY, CRAFTSMANSHIP & GUARANTEES */}
         <div className="neu-inset rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-3.5 border border-transparent">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
               <Crown className="w-3.5 h-3.5 text-accent" />
               Вкладка «Бренд»: Философия, ткани, крой и гарантии
             </h4>
@@ -1644,7 +1644,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             <div className="neu-inset rounded-2xl p-3.5 space-y-2">
               <div className="flex items-center gap-1.5">
                 <Crown className="w-3.5 h-3.5 text-accent" />
-                <span className="text-[11px] font-black text-[#2D3A4E]">Философия бренда</span>
+                <span className="text-[11px] font-extrabold text-[#2D3A4E]">Философия бренда</span>
               </div>
               <div>
                 <label htmlFor="storefront-brandPhilosophyTitle" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
@@ -1731,7 +1731,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               <div className="neu-inset rounded-2xl p-3.5 space-y-2">
                 <div className="flex items-center gap-1.5">
                   <Scissors className="w-3.5 h-3.5 text-accent" />
-                  <span className="text-[11px] font-black text-[#2D3A4E]">Материалы и ткани</span>
+                  <span className="text-[11px] font-extrabold text-[#2D3A4E]">Материалы и ткани</span>
                 </div>
                 <div>
                   <label htmlFor="storefront-brandMaterialsTitle" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
@@ -1814,7 +1814,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               <div className="neu-inset rounded-2xl p-3.5 space-y-2">
                 <div className="flex items-center gap-1.5">
                   <Award className="w-3.5 h-3.5 text-accent" />
-                  <span className="text-[11px] font-black text-[#2D3A4E]">Крой и пошив</span>
+                  <span className="text-[11px] font-extrabold text-[#2D3A4E]">Крой и пошив</span>
                 </div>
                 <div>
                   <label htmlFor="storefront-brandCraftsmanshipTitle" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
@@ -1905,7 +1905,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-success" />
-                  <span className="text-[11px] font-black text-[#2D3A4E]">
+                  <span className="text-[11px] font-extrabold text-[#2D3A4E]">
                     Стандарты подлинности и гарантии
                   </span>
                 </div>
@@ -1993,7 +1993,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
         {/* 5. DELIVERY COSTS & THRESHOLD MANAGEMENT */}
         <div className="neu-inset rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-3.5 border border-transparent">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
               <Truck className="w-3.5 h-3.5 text-accent" />
               Тарифы доставки, порог и срок возврата
             </h4>
@@ -2002,7 +2002,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             </span>
           </div>
 
-          <p className="text-[11px] text-[#4E5C70]">
+          <p className="text-xs text-[#4E5C70]">
             Укажите базовую стоимость курьерской доставки и сумму заказа, начиная с которой доставка автоматически становится бесплатной (0 ₽) в корзине и чекауте.
           </p>
 
@@ -2026,7 +2026,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         freeDeliveryThreshold: Math.max(0, Number(e.target.value) || 0),
                       })
                     }
-                    className="w-full px-3 py-2 neu-button rounded-xl text-xs font-black text-success pr-8"
+                    className="w-full px-3 py-2 neu-button rounded-xl text-xs font-extrabold text-success pr-8"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4E5C70]">
                     ₽
@@ -2080,7 +2080,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         courierDeliveryPrice: Math.max(0, Number(e.target.value) || 0),
                       })
                     }
-                    className="w-full px-3 py-2 neu-button rounded-xl text-xs font-black text-[#2D3A4E] pr-8"
+                    className="w-full px-3 py-2 neu-button rounded-xl text-xs font-extrabold text-[#2D3A4E] pr-8"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4E5C70]">
                     ₽
@@ -2134,7 +2134,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         pickupDeliveryPrice: Math.max(0, Number(e.target.value) || 0),
                       })
                     }
-                    className="w-full px-3 py-2 neu-button rounded-xl text-xs font-black text-[#2D3A4E] pr-8"
+                    className="w-full px-3 py-2 neu-button rounded-xl text-xs font-extrabold text-[#2D3A4E] pr-8"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4E5C70]">
                     ₽
@@ -2190,7 +2190,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         returnPeriodDays: Number(e.target.value) || 14,
                       })
                     }
-                    className="w-full px-3 py-2 neu-button rounded-xl text-xs font-black text-accent pr-10"
+                    className="w-full px-3 py-2 neu-button rounded-xl text-xs font-extrabold text-accent pr-10"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4E5C70]">
                     дн.
@@ -2231,7 +2231,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
         {/* 6. SYSTEM MODES & SWITCHES */}
         <div className="neu-inset rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-3.5 border border-transparent">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
               <Sliders className="w-3.5 h-3.5 text-accent" />
               Системные режимы витрины и логистики
             </h4>
@@ -2240,7 +2240,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             </span>
           </div>
 
-          <p className="text-[11px] text-[#4E5C70]">
+          <p className="text-xs text-[#4E5C70]">
             Прием заказов, экспресс-доставка и предзаказ товаров, которых нет на складе.
           </p>
 
@@ -2254,7 +2254,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   <Store className="w-4 h-4" aria-hidden="true" />
                 </div>
                 <div className="space-y-0.5 truncate">
-                  <span className="text-xs font-black text-[#2D3A4E] block truncate">Онлайн-витрина</span>
+                  <span className="text-xs font-extrabold text-[#2D3A4E] block truncate">Онлайн-витрина</span>
                   <span className={`text-[11px] font-bold block truncate ${
                     localSettings.isStoreOnline ? 'text-success' : 'text-warning'
                   }`}>
@@ -2279,7 +2279,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   <Clock className="w-4 h-4" aria-hidden="true" />
                 </div>
                 <div className="space-y-0.5 truncate">
-                  <span className="text-xs font-black text-[#2D3A4E] block truncate">Экспресс 2 часа</span>
+                  <span className="text-xs font-extrabold text-[#2D3A4E] block truncate">Экспресс 2 часа</span>
                   <span className={`text-[11px] font-bold block truncate ${
                     localSettings.isExpressEnabled ? 'text-success' : 'text-[#4E5C70]'
                   }`}>
@@ -2304,7 +2304,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   <Sparkles className="w-4 h-4" aria-hidden="true" />
                 </div>
                 <div className="space-y-0.5 truncate">
-                  <span className="text-xs font-black text-[#2D3A4E] block truncate">Предзаказ</span>
+                  <span className="text-xs font-extrabold text-[#2D3A4E] block truncate">Предзаказ</span>
                   <span className={`text-[11px] font-bold block truncate ${
                     localSettings.isPreorderMode ? 'text-accent' : 'text-[#4E5C70]'
                   }`}>
@@ -2339,7 +2339,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
           <button
             type="submit"
             disabled={isSaving}
-            className="py-3 px-6 neu-button rounded-2xl text-xs font-black text-accent hover:text-accent-strong flex items-center gap-2 cursor-pointer transition-transform disabled:opacity-60 disabled:cursor-wait"
+            className="py-3 px-6 neu-button rounded-2xl text-xs font-extrabold text-accent hover:text-accent-strong flex items-center gap-2 cursor-pointer transition-transform disabled:opacity-60 disabled:cursor-wait"
           >
             {isSaved ? <Check className="w-4 h-4 text-success" /> : <Save className="w-4 h-4 text-accent" />}
             <span>{isSaving ? 'Сохранение…' : isSaved ? 'Сохранено' : 'Применить настройки к витрине'}</span>
@@ -2368,7 +2368,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 type="button"
                 onClick={() => handleSave()}
                 disabled={isSaving}
-                className="h-9 px-4 neu-button-accent rounded-xl text-xs font-black text-white flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+                className="h-9 px-4 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
               >
                 <Save className="w-4 h-4" />
                 {isSaving ? 'Сохранение…' : 'Применить'}

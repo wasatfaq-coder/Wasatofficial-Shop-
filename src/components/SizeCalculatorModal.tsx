@@ -235,7 +235,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                   <h3 id={dialog.titleId} className="text-base font-extrabold text-[#2D3A4E]">
                     Мои размеры и лекало
                   </h3>
-                  <p className="text-[11px] text-[#4E5C70] font-medium">
+                  <p className="text-xs text-[#4E5C70] font-medium">
                     Точный расчет параметров и размера мужской одежды
                   </p>
                 </div>
@@ -257,10 +257,10 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                     <Info className="w-3.5 h-3.5 stroke-[2.4]" />
                   </div>
                   <div className="flex items-center gap-2 flex-wrap min-w-0">
-                    <span className="text-xs font-black text-[#2D3A4E]">
+                    <span className="text-xs font-extrabold text-[#2D3A4E]">
                       Силуэт изделия:
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-full neu-inset text-accent text-[11px] uppercase font-black tracking-wider border border-accent/30">
+                    <span className="px-2.5 py-0.5 rounded-full neu-inset text-accent text-[11px] uppercase font-extrabold tracking-wider border border-accent/30">
                       {silhouetteData.fitBadge}
                     </span>
                     <span className="text-[11px] font-bold text-[#4E5C70] px-2 py-0.5 rounded-md neu-inset border border-white/40">
@@ -277,7 +277,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                 </div>
               </div>
 
-              <p className="text-[11px] text-[#4E5C70] leading-relaxed font-medium pl-0.5">
+              <p className="text-xs text-[#4E5C70] leading-relaxed font-medium pl-0.5">
                 {silhouetteData.fitDescription}
               </p>
 
@@ -309,7 +309,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-accent" />
-                  <span className="text-xs font-black text-[#2D3A4E] uppercase tracking-wide">
+                  <span className="text-xs font-extrabold text-[#2D3A4E] uppercase tracking-wide">
                     Рассчитанное лекало
                   </span>
                 </div>
@@ -341,7 +341,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div className="neu-flat rounded-xl p-2.5 text-center border border-white/70">
                   <span className="text-[11px] font-medium text-[#4E5C70] block">Верхняя одежда</span>
-                  <span className="text-xs font-black text-accent block my-0.5">
+                  <span className="text-xs font-extrabold text-accent block my-0.5">
                     {russianPattern.topSizeLabel}
                   </span>
                   <span className="text-[11px] text-[#4E5C70] block">
@@ -351,7 +351,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
 
                 <div className="neu-flat rounded-xl p-2.5 text-center border border-white/70">
                   <span className="text-[11px] font-medium text-[#4E5C70] block">Брюки / Джинсы</span>
-                  <span className="text-xs font-black text-[#2D3A4E] block my-0.5">
+                  <span className="text-xs font-extrabold text-[#2D3A4E] block my-0.5">
                     {russianPattern.bottomSizeLabel}
                   </span>
                   <span className="text-[11px] text-[#4E5C70] block">Пояс: {waist} см</span>
@@ -359,7 +359,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
 
                 <div className="neu-flat rounded-xl p-2.5 text-center border border-white/70">
                   <span className="text-[11px] font-medium text-[#4E5C70] block">Ростовка РФ</span>
-                  <span className="text-xs font-black text-[#2D3A4E] block my-0.5">
+                  <span className="text-xs font-extrabold text-[#2D3A4E] block my-0.5">
                     {russianPattern.heightGroupNumber}-я группа
                   </span>
                   <span className="text-[11px] text-[#4E5C70] block">
@@ -369,7 +369,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
 
                 <div className="neu-flat rounded-xl p-2.5 text-center border border-white/70">
                   <span className="text-[11px] font-medium text-[#4E5C70] block">Полнота / ИМТ</span>
-                  <span className="text-xs font-black text-[#2D3A4E] block my-0.5">
+                  <span className="text-xs font-extrabold text-[#2D3A4E] block my-0.5">
                     {russianPattern.fullnessGroup}-я полнота
                   </span>
                   <span className="text-[11px] text-[#4E5C70] block">
@@ -410,7 +410,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                               key={row.ru}
                               className={`border-b border-[#BAC5D5]/30 transition-colors ${
                                 isMatch
-                                  ? 'neu-inset text-accent font-black'
+                                  ? 'neu-inset text-accent font-extrabold'
                                   : 'text-[#2D3A4E]'
                               }`}
                             >
@@ -521,7 +521,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                         onClick={() => setFitPreference(pref.id as any)}
                         className={`py-2 px-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                           isActive
-                            ? 'neu-pill-active font-black'
+                            ? 'neu-pill-active font-extrabold'
                             : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
                         }`}
                       >

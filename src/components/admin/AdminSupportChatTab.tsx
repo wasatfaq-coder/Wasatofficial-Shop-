@@ -151,7 +151,7 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
         className={`w-full ${wide ? 'max-w-lg' : 'max-w-md'} neu-modal rounded-3xl p-4 sm:p-5 flex flex-col gap-3.5 max-h-[90dvh] animate-in zoom-in-95 fade-in duration-200`}
       >
         <div className="flex items-center justify-between gap-3 border-b border-[#BAC5D5]/50 pb-3 shrink-0">
-          <h4 id={dialog.titleId} className="text-sm font-black text-[#2D3A4E]">{title}</h4>
+          <h4 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">{title}</h4>
           <button
             type="button"
             onClick={onClose}
@@ -641,14 +641,14 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               <User className="w-5 h-5" />
             </div>
             <div className="min-w-0 space-y-0.5">
-              <h3 className="text-sm font-black text-[#2D3A4E] leading-tight break-words">{thread.name}</h3>
-              <p className="text-[11px] text-[#4E5C70] leading-snug break-words">
+              <h3 className="text-sm font-extrabold text-[#2D3A4E] leading-tight break-words">{thread.name}</h3>
+              <p className="text-xs text-[#4E5C70] leading-snug break-words">
                 {isLegacy
                   ? 'Сообщения до разделения чата по покупателям'
                   : [contacts?.customerPhone, contacts?.customerEmail].filter(Boolean).join(' · ') ||
                     (orders.length ? 'Контакты в заказе не указаны' : 'Заказов нет, контакты неизвестны')}
               </p>
-              <p className="text-[11px] text-[#4E5C70]">Сообщений: {thread.count}</p>
+              <p className="text-xs text-[#4E5C70]">Сообщений: {thread.count}</p>
             </div>
           </div>
           <button
@@ -662,7 +662,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
         </div>
 
         {isLegacy ? (
-          <p className="neu-inset rounded-2xl p-3 text-[11px] text-[#2D3A4E] leading-snug flex gap-2">
+          <p className="neu-inset rounded-2xl p-3 text-xs text-[#2D3A4E] leading-snug flex gap-2">
             <Info className="w-4 h-4 text-accent shrink-0" />
             Ответить сюда нельзя: у этих сообщений нет покупателя, ответ никто не увидит. Историю можно очистить.
           </p>
@@ -701,7 +701,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             className="w-full flex items-center justify-between gap-2 cursor-pointer min-h-6"
           >
             <span className="flex flex-col items-start gap-0.5 min-w-0 text-left">
-              <span className="text-[11px] font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
                 <ShoppingBag className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
                 Заказ покупателя
               </span>
@@ -729,17 +729,17 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
           )}
           <div className="neu-inset rounded-2xl p-3 space-y-2">
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <span className="text-xs font-black text-[#2D3A4E]">№ {order.id}</span>
+              <span className="text-xs font-extrabold text-[#2D3A4E]">№ {order.id}</span>
               <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-accent/10 text-accent">
                 {ORDER_STATUS_LABELS[order.status]}
               </span>
             </div>
-            <p className="text-[11px] text-[#4E5C70] leading-snug">
+            <p className="text-xs text-[#4E5C70] leading-snug">
               {(order.totalPrice || 0).toLocaleString('ru-RU')} ₽ · {order.items?.length || 0} поз.
               {order.deliveryAddress ? ` · ${order.deliveryAddress}` : ''}
             </p>
             {order.trackingNumber && (
-              <p className="text-[11px] text-[#4E5C70]">
+              <p className="text-xs text-[#4E5C70]">
                 Трек-номер: <strong className="font-mono text-[#2D3A4E]">{order.trackingNumber}</strong>
               </p>
             )}
@@ -796,7 +796,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
       {/* 3. Messages */}
       <section className="neu-flat rounded-3xl p-3.5 sm:p-4 space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-black uppercase tracking-wider text-[#2D3A4E]">Переписка</span>
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#2D3A4E]">Переписка</span>
           <div className="flex items-center gap-2 flex-wrap justify-end">
           {hiddenCount > 0 && (
             <button
@@ -887,13 +887,13 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                     </button>
                   )}
                   {msg.productCard && (
-                    <p className="text-[11px] font-bold flex items-center gap-1 opacity-90">
+                    <p className="text-xs font-bold flex items-center gap-1 opacity-90">
                       <ShoppingBag className="w-3 h-3" />
                       Товар: {msg.productCard.title} · {msg.productCard.price.toLocaleString('ru-RU')} ₽
                     </p>
                   )}
                   {msg.promoCard && (
-                    <p className="text-[11px] font-bold flex items-center gap-1 opacity-90">
+                    <p className="text-xs font-bold flex items-center gap-1 opacity-90">
                       <Gift className="w-3 h-3" />
                       Промокод {msg.promoCard.code}
                       <button
@@ -910,7 +910,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                     </p>
                   )}
                   {msg.orderStatusUpdate && (
-                    <p className="text-[11px] font-bold flex items-center gap-1 opacity-90">
+                    <p className="text-xs font-bold flex items-center gap-1 opacity-90">
                       <Truck className="w-3 h-3" />
                       Заказ № {msg.orderStatusUpdate.orderId}: {msg.orderStatusUpdate.newStatusLabel}
                     </p>
@@ -955,10 +955,10 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               <div className="flex items-center gap-2 min-w-0">
                 <Pencil className="w-3.5 h-3.5 text-accent shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-[11px] font-black text-accent">
+                  <p className="text-xs font-extrabold text-accent">
                     {editing.isInternalNote ? 'Редактирование заметки' : 'Редактирование ответа'}
                   </p>
-                  <p className="text-[11px] text-[#4E5C70] truncate">{editing.text}</p>
+                  <p className="text-xs text-[#4E5C70] truncate">{editing.text}</p>
                 </div>
               </div>
               <button
@@ -1066,7 +1066,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               type="button"
               onClick={handleSendReply}
               disabled={!canSend}
-              className="h-11 px-5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+              className="h-11 px-5 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
             >
               {editing ? <Check className="w-4 h-4" /> : isInternalNote ? <Lock className="w-4 h-4" /> : <Send className="w-4 h-4" />}
               {editing ? 'Сохранить' : isInternalNote ? 'Сохранить заметку' : 'Отправить'}
@@ -1126,7 +1126,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 </span>
               </button>
             )}
-            <button type="submit" className="w-full h-11 neu-button-accent rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 cursor-pointer">
+            <button type="submit" className="w-full h-11 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center justify-center gap-1.5 cursor-pointer">
               <Check className="w-4 h-4" />
               Сохранить статус
             </button>
@@ -1152,10 +1152,10 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               <span className={labelClass}>Комментарий (необязательно)</span>
               <textarea rows={3} value={returnComment} onChange={(e) => setReturnComment(e.target.value)} className={textareaClass} />
             </label>
-            <p className="text-[11px] text-[#4E5C70] leading-snug">
+            <p className="text-xs text-[#4E5C70] leading-snug">
               Заявка попадет в историю заказа, покупатель получит сообщение в чат.
             </p>
-            <button type="submit" className="w-full h-11 neu-button-accent rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 cursor-pointer">
+            <button type="submit" className="w-full h-11 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center justify-center gap-1.5 cursor-pointer">
               <RotateCcw className="w-4 h-4" />
               Оформить заявку
             </button>
@@ -1192,7 +1192,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             </div>
           )}
           <div className="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto p-1 -m-1">
-            {filteredProducts.length === 0 && <p className="col-span-2 text-center text-[11px] text-[#4E5C70] py-4">Товары не найдены</p>}
+            {filteredProducts.length === 0 && <p className="col-span-2 text-center text-xs text-[#4E5C70] py-4">Товары не найдены</p>}
             {filteredProducts.map((p) => (
               <button
                 key={p.id}
@@ -1254,7 +1254,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               <button
                 type="button"
                 onClick={handleSendProduct}
-                className="w-full h-11 neu-button-accent rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full h-11 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Send className="w-4 h-4" />
                 Отправить «{recommended.title}»
@@ -1312,7 +1312,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                           }`}
                         >
                           <span className="min-w-0">
-                            <span className="block font-mono font-black text-xs text-[#2D3A4E] tracking-wider break-all">
+                            <span className="block font-mono font-extrabold text-xs text-[#2D3A4E] tracking-wider break-all">
                               {p.code}
                             </span>
                             <span className="block text-[11px] text-[#4E5C70] leading-snug">
@@ -1346,7 +1346,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                   <button
                     type="submit"
                     disabled={!pickedPromo}
-                    className="w-full h-11 neu-button-accent rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full h-11 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Send className="w-4 h-4" />
                     {pickedPromo ? `Отправить ${pickedPromo.code}` : 'Выберите промокод'}
@@ -1408,10 +1408,10 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 className={textareaClass}
               />
             </label>
-            <p className="text-[11px] text-[#4E5C70] leading-snug">
+            <p className="text-xs text-[#4E5C70] leading-snug">
               Промокод появится в разделе «Промокоды»: одно использование, без минимальной суммы.
             </p>
-            <button type="submit" className="w-full h-11 neu-button-accent rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 cursor-pointer">
+            <button type="submit" className="w-full h-11 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center justify-center gap-1.5 cursor-pointer">
               <Sparkles className="w-4 h-4" />
               Создать и отправить
             </button>
@@ -1430,7 +1430,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
           wide
         >
           {templates.length === 0 ? (
-            <p className="neu-inset rounded-2xl p-3 text-[11px] text-[#4E5C70] text-center">
+            <p className="neu-inset rounded-2xl p-3 text-xs text-[#4E5C70] text-center">
               Шаблонов пока нет. Добавьте ответы, которые пишете чаще всего.
             </p>
           ) : (
@@ -1472,7 +1472,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             </ul>
           )}
           <form onSubmit={handleSaveTemplate} className="neu-inset rounded-2xl p-3 space-y-2.5">
-            <p className="text-[11px] font-black uppercase tracking-wider text-[#2D3A4E]">
+            <p className="text-[11px] font-extrabold uppercase tracking-wider text-[#2D3A4E]">
               {editingTplId ? 'Изменить шаблон' : 'Новый шаблон'}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1543,8 +1543,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               <User className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-black text-[#2D3A4E] truncate">{thread.name}</p>
-              <p className="text-[11px] text-[#4E5C70]">Сообщений: {thread.count}</p>
+              <p className="text-xs font-extrabold text-[#2D3A4E] truncate">{thread.name}</p>
+              <p className="text-xs text-[#4E5C70]">Сообщений: {thread.count}</p>
             </div>
           </div>
         }
@@ -1564,8 +1564,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
         preview={
           templateToDelete && (
             <div className="min-w-0">
-              <p className="text-xs font-black text-[#2D3A4E] truncate">{templateToDelete.title}</p>
-              <p className="text-[11px] text-[#4E5C70] line-clamp-2">{templateToDelete.text}</p>
+              <p className="text-xs font-extrabold text-[#2D3A4E] truncate">{templateToDelete.title}</p>
+              <p className="text-xs text-[#4E5C70] line-clamp-2">{templateToDelete.text}</p>
             </div>
           )
         }

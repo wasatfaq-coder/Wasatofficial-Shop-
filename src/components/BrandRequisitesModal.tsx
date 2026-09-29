@@ -145,10 +145,10 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                   <Crown className="w-5 h-5 stroke-[2.2]" />
                 </div>
                 <div className="min-w-0">
-                  <h2 id={dialog.titleId} className="text-base sm:text-lg font-black text-[#2D3A4E] tracking-tight truncate">
+                  <h2 id={dialog.titleId} className="text-base sm:text-lg font-extrabold text-[#2D3A4E] tracking-tight truncate">
                     {storeName} • О бренде и реквизиты
                   </h2>
-                  <p className="text-[11px] text-[#4E5C70] font-semibold truncate">
+                  <p className="text-xs text-[#4E5C70] font-semibold truncate">
                     Контакты консьерж-сервиса и юридические данные
                   </p>
                 </div>
@@ -177,7 +177,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id as TabType)}
-                    className={`relative py-2 px-2 rounded-xl text-xs font-black transition-colors flex items-center justify-center gap-1.5 cursor-pointer select-none ${
+                    className={`relative py-2 px-2 rounded-xl text-xs font-extrabold transition-colors flex items-center justify-center gap-1.5 cursor-pointer select-none ${
                       isActive ? 'text-accent' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
                     }`}
                   >
@@ -213,7 +213,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
               {/* Concierge Intro Card */}
               <div className="neu-inset rounded-2xl p-4 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="neu-flat-sm px-2.5 py-1 rounded-full text-[11px] font-black text-accent uppercase tracking-wider inline-flex items-center gap-1">
+                  <span className="neu-flat-sm px-2.5 py-1 rounded-full text-[11px] font-extrabold text-accent uppercase tracking-wider inline-flex items-center gap-1">
                     <Sparkles className="w-3 h-3 text-accent" />
                     Консьерж-сервис
                   </span>
@@ -242,7 +242,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                     <span className="text-[11px] text-[#4E5C70] block font-bold uppercase group-hover:text-accent transition-colors">
                       Позвонить
                     </span>
-                    <span className="text-xs font-black truncate block group-hover:text-accent transition-colors">
+                    <span className="text-xs font-extrabold truncate block group-hover:text-accent transition-colors">
                       {phone}
                     </span>
                   </div>
@@ -263,7 +263,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                       <span className="text-[11px] text-[#4E5C70] block font-bold uppercase group-hover:text-success transition-colors">
                         WhatsApp
                       </span>
-                      <span className="text-xs font-black truncate block group-hover:text-success transition-colors">
+                      <span className="text-xs font-extrabold truncate block group-hover:text-success transition-colors">
                         {whatsapp}
                       </span>
                     </div>
@@ -284,7 +284,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                       <span className="text-[11px] text-[#4E5C70] block font-bold uppercase group-hover:text-accent transition-colors">
                         Telegram
                       </span>
-                      <span className="text-xs font-black truncate block group-hover:text-accent transition-colors">
+                      <span className="text-xs font-extrabold truncate block group-hover:text-accent transition-colors">
                         {telegram}
                       </span>
                     </div>
@@ -303,7 +303,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                     <span className="text-[11px] text-[#4E5C70] block font-bold uppercase group-hover:text-accent transition-colors">
                       Email
                     </span>
-                    <span className="text-xs font-black truncate block group-hover:text-accent transition-colors">
+                    <span className="text-xs font-extrabold truncate block group-hover:text-accent transition-colors">
                       {email}
                     </span>
                   </div>
@@ -319,7 +319,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                     onClose();
                     onOpenSupportChat();
                   }}
-                  className="w-full neu-button-accent rounded-2xl p-3 text-white font-black text-xs flex items-center justify-center gap-2 hover:opacity-95 transition-all cursor-pointer"
+                  className="w-full neu-button-accent rounded-2xl p-3 text-white font-extrabold text-xs flex items-center justify-center gap-2 hover:opacity-95 transition-all cursor-pointer"
                 >
                   <MessageSquare className="w-4 h-4" />
                   <span>Написать в онлайн-чат</span>
@@ -328,7 +328,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
 
               {/* Concierge Services List */}
               <div className="neu-inset rounded-2xl p-4 space-y-3">
-                <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+                <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
                   <Crown className="w-3.5 h-3.5 text-accent" />
                   Услуги консьерж-сервиса
                 </h4>
@@ -338,12 +338,12 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                   <div className="space-y-2.5 text-xs">
                     {conciergeServices.map((service, idx) => (
                       <div key={`service-${idx}`} className="flex items-start gap-2.5">
-                        <span className="w-5 h-5 rounded-lg neu-flat-sm flex items-center justify-center text-accent font-black text-[11px] shrink-0 mt-0.5">
+                        <span className="w-5 h-5 rounded-lg neu-flat-sm flex items-center justify-center text-accent font-extrabold text-[11px] shrink-0 mt-0.5">
                           {idx + 1}
                         </span>
                         <div>
                           {service.title && <strong className="text-[#2D3A4E] block">{service.title}</strong>}
-                          {service.desc && <p className="text-[11px] text-[#4E5C70]">{service.desc}</p>}
+                          {service.desc && <p className="text-xs text-[#4E5C70]">{service.desc}</p>}
                         </div>
                       </div>
                     ))}
@@ -383,7 +383,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
               {requisiteItems.length > 0 && (
               <div className="flex items-center justify-between gap-3 p-3.5 neu-inset rounded-2xl">
                 <div className="min-w-0">
-                  <span className="text-xs font-black text-[#2D3A4E] block truncate">
+                  <span className="text-xs font-extrabold text-[#2D3A4E] block truncate">
                     Официальные реквизиты организации
                   </span>
                   <span className="text-[11px] text-[#4E5C70] block">
@@ -430,7 +430,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                       <span className="text-[11px] uppercase font-bold text-[#4E5C70] block">
                         {item.label}
                       </span>
-                      <span className="text-xs font-black text-[#2D3A4E] block break-all">
+                      <span className="text-xs font-extrabold text-[#2D3A4E] block break-all">
                         {item.value}
                       </span>
                     </div>
@@ -457,7 +457,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                 <div className="neu-inset rounded-2xl p-4 space-y-2.5">
                   <div className="flex items-center gap-2">
                     <Crown className="w-4 h-4 text-accent" />
-                    <h3 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E]">
+                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E]">
                       {brandPhilosophyTitle}
                     </h3>
                   </div>
@@ -475,7 +475,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                           <span>{fact.title}</span>
                         </div>
                       )}
-                      {fact.body && <p className="text-[11px] text-[#4E5C70] leading-snug">{fact.body}</p>}
+                      {fact.body && <p className="text-xs text-[#4E5C70] leading-snug">{fact.body}</p>}
                     </div>
                   ))}
                 </div>
@@ -483,7 +483,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
 
               {brandGuaranteesList.length > 0 && (
                 <div className="neu-inset p-3.5 rounded-2xl space-y-2">
-                  <div className="flex items-center gap-1.5 text-xs font-black text-[#2D3A4E]">
+                  <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#2D3A4E]">
                     <ShieldCheck className="w-4 h-4 text-success" />
                     <span>{brandGuaranteesTitle}</span>
                   </div>

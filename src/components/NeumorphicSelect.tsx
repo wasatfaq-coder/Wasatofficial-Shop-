@@ -87,7 +87,7 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
           value={opt.value}
           label={opt.label}
           className={`neu-option min-h-[76px] px-1.5 py-2 rounded-xl flex flex-col items-center justify-center gap-1.5 text-center cursor-pointer select-none outline-none ${
-            isSelected ? 'neu-pill-active font-black' : 'text-[#2D3A4E] font-bold'
+            isSelected ? 'neu-pill-active font-extrabold' : 'text-[#2D3A4E] font-bold'
           }`}
         >
           <span
@@ -108,7 +108,7 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
         value={opt.value}
         label={opt.label}
         className={`neu-option w-full px-3 py-2 rounded-xl text-left text-xs flex items-center justify-between gap-2 cursor-pointer select-none outline-none ${
-          isSelected ? 'neu-pill-active font-black' : 'text-[#2D3A4E] font-bold'
+          isSelected ? 'neu-pill-active font-extrabold' : 'text-[#2D3A4E] font-bold'
         }`}
       >
         <span className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -129,7 +129,7 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
             )}
           </span>
           {opt.badge && (
-            <span className="neu-flat text-[11px] px-1.5 py-0.5 rounded text-accent font-black shrink-0 whitespace-nowrap">
+            <span className="neu-flat text-[11px] px-1.5 py-0.5 rounded text-accent font-extrabold shrink-0 whitespace-nowrap">
               {opt.badge}
             </span>
           )}
@@ -171,7 +171,7 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
             )}
             <span className="truncate">
               {prefix && <span className="text-[#4E5C70] font-medium mr-1.5">{prefix}</span>}
-              <span className={prefix ? 'font-black text-[#2D3A4E]' : selectedOption || triggerLabel ? '' : 'text-[#4E5C70]'}>
+              <span className={prefix ? 'font-extrabold text-[#2D3A4E]' : selectedOption || triggerLabel ? '' : 'text-[#4E5C70]'}>
                 {triggerLabel || (selectedOption ? selectedOption.label : placeholder)}
               </span>
             </span>
@@ -179,7 +179,7 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
               <span
                 className={`${
                   variant === 'inset' ? 'neu-button' : 'neu-flat'
-                } text-[11px] px-2 py-0.5 rounded-md text-accent font-black shrink-0`}
+                } text-[11px] px-2 py-0.5 rounded-md text-accent font-extrabold shrink-0`}
               >
                 {selectedOption.badge}
               </span>
@@ -208,12 +208,12 @@ export const NeumorphicSelect: React.FC<NeumorphicSelectProps> = ({
                 className={`overflow-y-auto no-scrollbar outline-none ${isGrid ? 'max-h-[min(22rem,60dvh)] space-y-2.5 p-0.5' : 'max-h-[min(20rem,55dvh)] space-y-1'}`}
               >
                 {normalizedOptions.length === 0 && (
-                  <p className="px-3 py-2.5 text-[11px] font-bold text-[#4E5C70] leading-snug">{emptyText}</p>
+                  <p className="px-3 py-2.5 text-xs font-bold text-[#4E5C70] leading-snug">{emptyText}</p>
                 )}
                 {sections.map((section) =>
                   section.label ? (
                     <Select.Group key={section.id} className={isGrid ? 'space-y-1.5' : 'space-y-1'}>
-                      <Select.GroupLabel className="px-2 pt-1 text-[11px] font-black uppercase tracking-wider text-[#4E5C70]">
+                      <Select.GroupLabel className="px-2 pt-1 text-[11px] font-extrabold uppercase tracking-wider text-[#4E5C70]">
                         {section.label}
                       </Select.GroupLabel>
                       <div className={isGrid ? 'grid grid-cols-3 sm:grid-cols-4 gap-1.5' : 'space-y-1'}>

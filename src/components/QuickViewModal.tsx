@@ -150,7 +150,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                       key={`quickview-img-${product.id}-${idx}`}
                       onClick={() => setSelectedImageIndex(idx)}
                       className={`w-12 h-12 rounded-xl overflow-hidden p-0.5 transition-all shrink-0 ${
-                        selectedImageIndex === idx ? 'neu-pill-active ring-2 ring-accent' : 'neu-button opacity-75 hover:opacity-100'
+                        selectedImageIndex === idx ? 'neu-pill-active' : 'neu-button opacity-75 hover:opacity-100'
                       }`}
                       aria-label={`Фото ${idx + 1}`}
                       aria-current={selectedImageIndex === idx}
@@ -286,7 +286,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                         !canOrder
                           ? 'neu-flat text-[#4E5C70] opacity-60 line-through cursor-not-allowed'
                           : isSelected
-                          ? 'neu-pill-active font-black cursor-pointer'
+                          ? 'neu-pill-active font-extrabold cursor-pointer'
                           : 'neu-button text-[#2D3A4E] hover:text-accent cursor-pointer'
                       }`}
                     >
@@ -296,7 +296,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                 })}
               </div>
               {sizeError && (
-                <p id="quickview-size-error" role="alert" className="text-[11px] font-bold text-danger">
+                <p id="quickview-size-error" role="alert" className="text-xs font-bold text-danger">
                   Выберите размер
                 </p>
               )}

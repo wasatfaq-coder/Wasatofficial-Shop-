@@ -166,8 +166,8 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
       title,
       preview: (
         <div className="min-w-0">
-          <p className="font-black text-xs text-[#2D3A4E] break-words">{name || 'Пустой элемент'}</p>
-          {detail && <p className="text-[11px] text-[#4E5C70] break-words">{detail}</p>}
+          <p className="font-extrabold text-xs text-[#2D3A4E] break-words">{name || 'Пустой элемент'}</p>
+          {detail && <p className="text-xs text-[#4E5C70] break-words">{detail}</p>}
         </div>
       ),
       run: () => {
@@ -250,7 +250,7 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
   );
 
   const emptyNote = (text: string) => (
-    <p className="text-[11px] font-semibold text-[#4E5C70] leading-snug">{text}</p>
+    <p className="text-xs font-semibold text-[#4E5C70] leading-snug">{text}</p>
   );
 
   return (
@@ -267,7 +267,7 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
             <LayoutList className="w-4 h-4" />
           </span>
           <span className="min-w-0">
-            <span className="block text-xs font-black text-[#2D3A4E]">Структура карточки</span>
+            <span className="block text-xs font-extrabold text-[#2D3A4E]">Структура карточки</span>
             <span className="block text-[11px] font-semibold text-[#4E5C70] leading-snug">
               Покупатель видит разделов: {shownCount} из {sections.length}. Пустые разделы скрыты.
             </span>
@@ -294,13 +294,13 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
                   <span className="flex items-center gap-2 min-w-0">
                     <SectionIcon className="w-4 h-4 text-accent shrink-0" />
                     <span className="min-w-0">
-                      <span className="block text-xs font-black text-[#2D3A4E]">{section.title}</span>
+                      <span className="block text-xs font-extrabold text-[#2D3A4E]">{section.title}</span>
                       <span className="block text-[11px] text-[#4E5C70] leading-snug">{section.hint}</span>
                     </span>
                   </span>
                   <span className="flex items-center gap-2 shrink-0">
                     <span
-                      className={`text-[11px] font-black px-2 py-0.5 rounded-lg whitespace-nowrap ${
+                      className={`text-[11px] font-extrabold px-2 py-0.5 rounded-lg whitespace-nowrap ${
                         section.shown ? 'bg-success-soft text-success' : 'bg-[#BAC5D5]/30 text-[#4E5C70]'
                       }`}
                     >
@@ -350,10 +350,10 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
                       <>
                         <div className="space-y-2">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-[11px] font-black text-[#2D3A4E]">Волокна</span>
+                            <span className="text-[11px] font-extrabold text-[#2D3A4E]">Волокна</span>
                             {value.composition.length > 0 && (
                               <span
-                                className={`text-[11px] font-black px-2 py-0.5 rounded-lg ${
+                                className={`text-[11px] font-extrabold px-2 py-0.5 rounded-lg ${
                                   compositionTotal === 100 ? 'bg-success-soft text-success' : 'bg-warning-soft text-warning'
                                 }`}
                               >
@@ -403,7 +403,7 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
                         </div>
 
                         <label className="block space-y-1">
-                          <span className="text-[11px] font-black text-[#2D3A4E]">Плотность ткани</span>
+                          <span className="text-[11px] font-extrabold text-[#2D3A4E]">Плотность ткани</span>
                           <span className="relative block">
                             <input
                               value={value.density}
@@ -420,7 +420,7 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
                         </label>
 
                         <div className="space-y-2">
-                          <span className="text-[11px] font-black text-[#2D3A4E] flex items-center gap-1.5">
+                          <span className="text-[11px] font-extrabold text-[#2D3A4E] flex items-center gap-1.5">
                             <ShieldCheck className="w-3.5 h-3.5 text-success" />
                             Сертификаты
                           </span>
@@ -447,12 +447,12 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
 
                     {section.id === 'specs' && (
                       <>
-                        <p className="text-[11px] text-[#4E5C70] leading-snug">
+                        <p className="text-xs text-[#4E5C70] leading-snug">
                           Артикул и штрихкод берутся из вариаций SKU.
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <label className="block space-y-1">
-                            <span className="text-[11px] font-black text-[#2D3A4E]">Тип переплетения</span>
+                            <span className="text-[11px] font-extrabold text-[#2D3A4E]">Тип переплетения</span>
                             <input
                               value={value.weave}
                               onChange={(e) => set('weave', e.target.value)}
@@ -461,7 +461,7 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
                             />
                           </label>
                           <label className="block space-y-1">
-                            <span className="text-[11px] font-black text-[#2D3A4E]">Страна производства</span>
+                            <span className="text-[11px] font-extrabold text-[#2D3A4E]">Страна производства</span>
                             <input
                               value={value.country}
                               onChange={(e) => set('country', e.target.value)}
@@ -471,7 +471,7 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
                           </label>
                         </div>
                         <div className="space-y-1">
-                          <span className="text-[11px] font-black text-[#2D3A4E]">Покрой / посадка</span>
+                          <span className="text-[11px] font-extrabold text-[#2D3A4E]">Покрой / посадка</span>
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5" role="group" aria-label="Покрой">
                             {([['', 'Не указан'], ...Object.entries(FIT_LABELS)] as [string, string][]).map(([fit, label]) => (
                               <button
@@ -490,7 +490,7 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
                         </div>
 
                         <div className="space-y-2">
-                          <span className="text-[11px] font-black text-[#2D3A4E]">Свои характеристики</span>
+                          <span className="text-[11px] font-extrabold text-[#2D3A4E]">Свои характеристики</span>
                           {value.specs.length === 0 && emptyNote('Например: «Застежка — молния YKK».')}
                           {value.specs.map((spec, idx) => (
                             <div key={idx} className="flex items-start gap-2">

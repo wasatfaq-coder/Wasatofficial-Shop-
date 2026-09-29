@@ -227,11 +227,11 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                     <h3 id={dialog.titleId} className="text-sm sm:text-base font-extrabold text-[#2D3A4E] truncate">
                       Управление этапами доставки
                     </h3>
-                    <span className="text-[11px] font-black text-accent neu-inset px-2.5 py-0.5 rounded-full whitespace-nowrap">
+                    <span className="text-[11px] font-extrabold text-accent neu-inset px-2.5 py-0.5 rounded-full whitespace-nowrap">
                       Заказ № {order.id}
                     </span>
                   </div>
-                  <p className="text-[11px] text-[#4E5C70] truncate mt-0.5">
+                  <p className="text-xs text-[#4E5C70] truncate mt-0.5">
                     Синхронизация отображения стадий в реальном времени с окном отслеживания клиента
                   </p>
                 </div>
@@ -291,7 +291,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                   <button
                     type="button"
                     onClick={() => setIsAddingCustomStage(!isAddingCustomStage)}
-                    className="neu-button px-2.5 py-1 rounded-xl text-[11px] font-black text-accent flex items-center gap-1 cursor-pointer transition-all"
+                    className="neu-button px-2.5 py-1 rounded-xl text-[11px] font-extrabold text-accent flex items-center gap-1 cursor-pointer transition-all"
                   >
                     <Plus className="w-3 h-3" />
                     <span>Добавить этап</span>
@@ -307,7 +307,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                 className="neu-inset rounded-2xl p-3.5 border border-accent/16 space-y-2.5 shrink-0 animate-in fade-in"
               >
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-black text-accent-strong flex items-center gap-1.5">
+                  <h4 className="text-xs font-extrabold text-accent-strong flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-accent" />
                     Новый этап выполнения заказа
                   </h4>
@@ -351,7 +351,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                           key={st.id}
                           type="button"
                           onClick={() => setNewStatus(st.id as any)}
-                          className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-black transition-all cursor-pointer ${
+                          className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer ${
                             newStatus === st.id
                               ? 'neu-pill-active'
                               : 'neu-button text-[#4E5C70]'
@@ -387,7 +387,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-1 neu-button rounded-xl text-xs font-black text-accent cursor-pointer"
+                    className="px-4 py-1 neu-button rounded-xl text-xs font-extrabold text-accent cursor-pointer"
                   >
                     Добавить в список
                   </button>
@@ -417,7 +417,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <div className="flex items-center gap-2">
                         <div
-                          className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 transition-all ${
+                          className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0 transition-all ${
                             isCompleted
                               ? 'bg-success text-white'
                               : isActive
@@ -427,7 +427,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                         >
                           {isCompleted ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : idx + 1}
                         </div>
-                        <span className="text-xs font-black text-[#2D3A4E]">
+                        <span className="text-xs font-extrabold text-[#2D3A4E]">
                           Этап #{idx + 1}
                         </span>
                       </div>
@@ -437,7 +437,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                         <button
                           type="button"
                           onClick={() => handleStatusChange(idx, 'completed')}
-                          className={`px-2 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer flex items-center gap-1 ${
+                          className={`px-2 py-1 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
                             isCompleted
                               ? 'bg-success text-white shadow-xs'
                               : 'text-[#4E5C70] hover:text-[#2D3A4E]'
@@ -450,7 +450,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                         <button
                           type="button"
                           onClick={() => handleStatusChange(idx, 'active')}
-                          className={`px-2 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer flex items-center gap-1 ${
+                          className={`px-2 py-1 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
                             isActive
                               ? 'neu-inset-deep neu-inset-deep-animated text-accent border border-accent/40'
                               : 'text-[#4E5C70] hover:text-[#2D3A4E]'
@@ -463,7 +463,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
                         <button
                           type="button"
                           onClick={() => handleStatusChange(idx, 'pending')}
-                          className={`px-2 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
+                          className={`px-2 py-1 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer ${
                             isPending
                               ? 'bg-[#4E5C70] text-white'
                               : 'text-[#4E5C70] hover:text-[#2D3A4E]'
@@ -577,7 +577,7 @@ export const AdminDeliveryStagesModal: React.FC<AdminDeliveryStagesModalProps> =
               <button
                 type="button"
                 onClick={handleSave}
-                className="neu-button-accent py-2.5 px-6 rounded-xl text-xs font-black text-white flex items-center gap-1.5 hover:scale-105 transition-transform cursor-pointer"
+                className="neu-button-accent py-2.5 px-6 rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 hover:scale-105 transition-transform cursor-pointer"
               >
                 <Save className="w-4 h-4" />
                 <span>Сохранить этапы</span>

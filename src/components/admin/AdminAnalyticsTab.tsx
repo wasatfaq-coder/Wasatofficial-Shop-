@@ -117,7 +117,7 @@ const PeriodDialog: React.FC<{
           className="w-full max-w-sm neu-modal rounded-3xl p-4 sm:p-5 space-y-3 animate-in zoom-in-95 fade-in duration-200"
         >
           <div className="flex items-center justify-between gap-3">
-            <h4 id={dialog.titleId} className="text-sm font-black text-[#2D3A4E] flex items-center gap-2">
+            <h4 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E] flex items-center gap-2">
               <CalendarRange className="w-4 h-4 text-accent" />
               Период аналитики
             </h4>
@@ -149,7 +149,7 @@ const PeriodDialog: React.FC<{
                   }`}
                 >
                   <span className="min-w-0">
-                    <span className="block text-xs font-black">{p.title}</span>
+                    <span className="block text-xs font-extrabold">{p.title}</span>
                     <span className="block text-[11px] text-[#4E5C70]">
                       {periodRangeText(p.id)} · {p.id === '6m' || p.id === '1y' ? 'по месяцам' : 'по дням'}
                     </span>
@@ -420,7 +420,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       <section className="neu-flat rounded-3xl p-4 space-y-3">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-extrabold tracking-tight flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-accent shrink-0" />
               Аналитика продаж
             </h3>
@@ -436,7 +436,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
           >
             <CalendarRange className="w-4 h-4 text-accent shrink-0" />
             <span className="min-w-0 flex-1">
-              <span className="block text-xs font-black">{periodInfo.title}</span>
+              <span className="block text-xs font-extrabold">{periodInfo.title}</span>
               <span className="block text-[11px] text-[#4E5C70]">{periodRangeText(period)}</span>
             </span>
             <ChevronDown className="w-4 h-4 text-[#4E5C70] shrink-0" />
@@ -493,7 +493,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
                   <k.icon className="w-3.5 h-3.5" />
                 </span>
               </span>
-              <span className={`block text-lg sm:text-xl font-black tracking-tight tabular-nums break-words ${selected ? 'text-accent' : ''}`}>
+              <span className={`block text-lg sm:text-xl font-extrabold tracking-tight tabular-nums break-words ${selected ? 'text-accent' : ''}`}>
                 {k.value}
               </span>
               <span className="block text-[11px] leading-snug">{k.footer}</span>
@@ -507,7 +507,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       <section className="neu-flat rounded-3xl p-4 sm:p-5 space-y-3.5">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
           <div className="flex items-center justify-between gap-2 min-w-0">
-            <h4 className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5 min-w-0">
+            <h4 className="text-xs font-extrabold uppercase tracking-wider flex items-center gap-1.5 min-w-0">
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: metric.color }} aria-hidden="true" />
               {metric.label} {isMonthly ? 'по месяцам' : 'по дням'}
             </h4>
@@ -581,7 +581,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       {/* 4. Products and categories of the period */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
         <section className="neu-flat rounded-3xl p-4 space-y-3">
-          <h4 className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
+          <h4 className="text-xs font-extrabold uppercase tracking-wider flex items-center gap-1.5">
             <Award className="w-4 h-4 text-accent" />
             Топ товаров за период
           </h4>
@@ -599,13 +599,13 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
                     )}
                     <div className="min-w-0">
                       <p className="text-xs font-bold truncate">
-                        <span className="text-accent font-black mr-1">{idx + 1}.</span>
+                        <span className="text-accent font-extrabold mr-1">{idx + 1}.</span>
                         {p.title}
                       </p>
-                      <p className="text-[11px] text-[#4E5C70]">Продано: {p.quantity} шт.</p>
+                      <p className="text-xs text-[#4E5C70]">Продано: {p.quantity} шт.</p>
                     </div>
                   </div>
-                  <span className="text-xs font-black text-accent tabular-nums shrink-0">{rub(p.revenue)}</span>
+                  <span className="text-xs font-extrabold text-accent tabular-nums shrink-0">{rub(p.revenue)}</span>
                 </li>
               ))}
             </ol>
@@ -613,7 +613,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
         </section>
 
         <section className="neu-flat rounded-3xl p-4 space-y-3">
-          <h4 className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
+          <h4 className="text-xs font-extrabold uppercase tracking-wider flex items-center gap-1.5">
             <Layers className="w-4 h-4 text-accent" />
             Категории за период
           </h4>
@@ -625,7 +625,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
                 <li key={c.name} className="space-y-1">
                   <div className="flex items-center justify-between gap-2 text-xs">
                     <span className="font-bold truncate">{c.name}</span>
-                    <span className="font-black text-accent shrink-0">
+                    <span className="font-extrabold text-accent shrink-0">
                       {c.share}% <span className="text-[11px] text-[#4E5C70] font-normal">({rub(c.revenue)})</span>
                     </span>
                   </div>
@@ -642,7 +642,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       {/* 5. Promo codes of the period */}
       <section className="neu-flat rounded-3xl p-4 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <h4 className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
+          <h4 className="text-xs font-extrabold uppercase tracking-wider flex items-center gap-1.5">
             <Tag className="w-4 h-4 text-accent" />
             Промокоды за период
           </h4>
@@ -662,7 +662,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
               return (
                 <div key={p.code} className="neu-inset rounded-2xl p-3 space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs font-black tracking-wider break-all">{p.code}</span>
+                    <span className="font-mono text-xs font-extrabold tracking-wider break-all">{p.code}</span>
                     <span
                       className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
                         !promo ? 'text-[#4E5C70] bg-[#4E5C70]/10' : promo.active ? 'text-success bg-success-soft' : 'text-[#4E5C70] bg-[#4E5C70]/10'
@@ -707,7 +707,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
             {isExportingPDF ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
           </span>
           <span className="min-w-0">
-            <span className="block text-xs font-black">{isExportingPDF ? 'Формируем отчет…' : 'Скачать отчет PDF'}</span>
+            <span className="block text-xs font-extrabold">{isExportingPDF ? 'Формируем отчет…' : 'Скачать отчет PDF'}</span>
             <span className="block text-[11px] text-white/80 leading-snug">
               {periodInfo.title} · {totalOrders} заказ(ов) на {rub(totalRevenue)}
             </span>
@@ -718,7 +718,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
           onClick={() => setIsResetConfirmOpen(true)}
           disabled={countedNow.count === 0}
           title={countedNow.count === 0 ? 'С момента последнего сброса заказов нет' : undefined}
-          className="w-full sm:w-auto min-h-14 px-4 neu-button-danger rounded-2xl font-black text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto min-h-14 px-4 neu-button-danger rounded-2xl font-extrabold text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Trash2 className="w-4 h-4" />
           Сбросить статистику
