@@ -11,3 +11,7 @@ coverage/
 .firebase/
 firebase-debug.log
 firestore-debug.log
+
+# Рабочий список задач Claude на один прогон (CLAUDE.md, «Как работать в долгих задачах»)
+TASKS.md
+.claude/settings.local.json

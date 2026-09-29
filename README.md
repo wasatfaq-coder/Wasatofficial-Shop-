@@ -11,7 +11,7 @@
 
 ## Стек
 
-- React 19 + TypeScript, Vite 6, Tailwind CSS 4, Motion, Recharts
+- React 19 + TypeScript, Vite 8, Tailwind CSS 4, Motion, Recharts
 - Firebase: Authentication (Google и анонимный вход для гостевого чата), Cloud Firestore (данные),
   Cloud Functions (серверное оформление заказов), Hosting (сайт)
 - Менеджер пакетов — [Bun](https://bun.sh) (`bun.lock`)
@@ -68,7 +68,7 @@ src/
   components/     UI-компоненты; admin/ — вкладки панели администратора
   context/        AuthContext — вход через Google и проверка прав администратора
   utils/          синхронизация с Firestore, склад, доставка, аналитика, экспорт
-  data/           начальные (демо) данные для пустой базы
+  data/           пустой профиль гостя и кэш способов доставки в браузере (демо-данных нет)
   shared/         код, общий с сервером: расчёт цены, контракт API заказа
   firebase.ts     инициализация Firebase, вызов placeOrder, личность для гостевого чата
 functions/        Cloud Functions (placeOrder) и их тесты; свой package.json (npm)
@@ -204,5 +204,8 @@ bun run deploy
 ## Документы
 
 - [CONTRIBUTING.md](CONTRIBUTING.md) — как вносить изменения
+- [CLAUDE.md](CLAUDE.md) — правила проекта для Claude Code
+- [.claude/rules/](.claude/rules/) — правила Claude для отдельных разделов: этикетки и склад, аналитика, оферта
+- [docs/briefs.md](docs/briefs.md) — готовые задания для Claude
 - [SECURITY.md](SECURITY.md) — модель безопасности и как сообщить об уязвимости
 - [LICENSE](LICENSE) — все права защищены

@@ -1,12 +1,16 @@
 # Как вносить изменения
 
-1. Создайте ветку от `main`: `git checkout -b feature/краткое-описание`.
+1. Создайте ветку от свежего `main`: `git checkout -b feature/краткое-описание` (ветки сессий Claude Code
+   называются `claude/…`). Следующий PR — снова от свежего `main`: новая ветка или та же, пересозданная
+   (`git checkout -B <ветка> origin/main`). PR сливаются со squash, и слитая ветка без этого принесёт в новый PR
+   все свои прошлые коммиты.
 2. Установите зависимости: `bun install`, запустите `bun run dev`.
 3. Перед коммитом проверьте:
    ```bash
    bun run lint     # типы
    bun run build    # сборка
    bun run test:rules  # если меняли firestore.rules (нужна Java 11+)
+   bun run test:functions  # если меняли functions/ или src/shared/ (нужна Java и npm ci --prefix functions)
    ```
 4. Откройте Pull Request в `main`. CI проверит сборку и правила,
    а для PR будет развёрнут preview-сайт в Firebase Hosting.
@@ -14,8 +18,11 @@
 
 ## Соглашения
 
-- Коммиты в стиле [Conventional Commits](https://www.conventionalcommits.org/ru/):
-  `feat: …`, `fix: …`, `docs: …`, `chore: …`.
+- Название PR и коммитов — по-русски, о том, что изменилось для покупателя или владельца:
+  «Админка: быстрая загрузка разделов — …». Большая работа на несколько PR — «Этап 2 из 5: …».
+  PR сливаются со squash, так что название попадает в историю `main`, а её читает владелец. Английские префиксы
+  `feat:`/`fix:` не пишем: инструментов, которым они нужны (changelog, автоматические релизы), в проекте нет.
+  Dependabot ставит свои префиксы сам — их не трогаем.
 - Интерфейс и тексты — на русском языке.
 - Меняете структуру данных в Firestore — обновите `firestore.rules`
   и тесты в `tests/firestore.rules.test.mjs`.
