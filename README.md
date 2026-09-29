@@ -205,6 +205,7 @@ bun run deploy
 
 - [CONTRIBUTING.md](CONTRIBUTING.md) — как вносить изменения
 - [CLAUDE.md](CLAUDE.md) — правила проекта для Claude Code
+- [.claude/rules/](.claude/rules/) — правила Claude для отдельных разделов: этикетки и склад, аналитика, оферта
 - [docs/briefs.md](docs/briefs.md) — готовые задания для Claude
 - [SECURITY.md](SECURITY.md) — модель безопасности и как сообщить об уязвимости
 - [LICENSE](LICENSE) — все права защищены
