@@ -189,7 +189,7 @@ export const VariantPickerSheet: React.FC<VariantPickerSheetProps> = ({
                   })}
                 </div>
                 {sizeError && (
-                  <p id="variant-picker-size-error" role="alert" className="text-[11px] font-bold text-danger">
+                  <p id="variant-picker-size-error" role="alert" className="text-xs font-bold text-danger">
                     Выберите размер
                   </p>
                 )}

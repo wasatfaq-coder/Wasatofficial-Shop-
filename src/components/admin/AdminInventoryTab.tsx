@@ -120,7 +120,7 @@ const StockInput: React.FC<{ value: number; label: string; onCommit: (next: numb
           setDraft(String(value));
         }
       }}
-      className="w-10 h-8 text-center text-xs font-black text-[#2D3A4E] bg-transparent"
+      className="w-10 h-8 text-center text-xs font-extrabold text-[#2D3A4E] bg-transparent"
     />
   );
 };
@@ -736,18 +736,18 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
         {/* Status Pill */}
         <div className="shrink-0">
           {isOutOfStock ? (
-            <span className="neu-flat-sm px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-black text-danger inline-flex items-center gap-1 whitespace-nowrap">
+            <span className="neu-flat-sm px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-extrabold text-danger inline-flex items-center gap-1 whitespace-nowrap">
               <XCircle className="w-3 h-3 text-danger shrink-0" />
               <span className="sm:hidden">0 шт. (Нет)</span>
               <span className="hidden sm:inline">0 шт. (Закончился)</span>
             </span>
           ) : isLowStock ? (
-            <span className="neu-flat-sm px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-black text-warning inline-flex items-center gap-1 whitespace-nowrap">
+            <span className="neu-flat-sm px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-extrabold text-warning inline-flex items-center gap-1 whitespace-nowrap">
               <AlertTriangle className="w-3 h-3 shrink-0" />
               <span>{sku.stock} шт. (Мало)</span>
             </span>
           ) : (
-            <span className="neu-flat-sm px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-black text-success inline-flex items-center gap-1 whitespace-nowrap">
+            <span className="neu-flat-sm px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-extrabold text-success inline-flex items-center gap-1 whitespace-nowrap">
               <CheckCircle2 className="w-3 h-3 shrink-0" />
               <span>{sku.stock} шт.</span>
             </span>
@@ -794,7 +794,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
             onClick={() =>
               handleUpdateStock(product.id, sku.color, sku.size, sku.stock + 5)
             }
-            className="h-7 px-2 sm:px-2.5 neu-button rounded-xl text-[11px] font-black text-accent hover:scale-105 transition-all cursor-pointer shrink-0"
+            className="h-7 px-2 sm:px-2.5 neu-button rounded-xl text-[11px] font-extrabold text-accent hover:scale-105 transition-all cursor-pointer shrink-0"
             title="Пополнить на +5 шт."
           >
             +5
@@ -827,7 +827,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
             onChange={() => toggleSkuSelection(key)}
             label={`Выбрать для этикеток: ${product.title}, ${sku.color} / ${sku.size}`}
           />
-          <span className="min-w-9 h-7 px-2 rounded-lg neu-flat-sm text-[11px] font-black text-accent flex items-center justify-center shrink-0">
+          <span className="min-w-9 h-7 px-2 rounded-lg neu-flat-sm text-[11px] font-extrabold text-accent flex items-center justify-center shrink-0">
             {sku.size}
           </span>
           <span className="min-w-0 flex flex-col text-[11px] text-[#4E5C70] font-mono leading-tight">
@@ -866,7 +866,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
         <div className="neu-flat-sm rounded-xl p-1 flex gap-1 w-full sm:w-auto overflow-x-auto no-scrollbar">
           <button
             onClick={() => setActiveSubTab('matrix')}
-            className={`py-1.5 px-3 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+            className={`py-1.5 px-3 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               activeSubTab === 'matrix'
                 ? 'neu-pill-active'
                 : 'text-[#4E5C70] hover:text-[#2D3A4E]'
@@ -877,7 +877,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
           </button>
           <button
             onClick={() => setActiveSubTab('audit')}
-            className={`py-1.5 px-3 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+            className={`py-1.5 px-3 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               activeSubTab === 'audit'
                 ? 'neu-pill-active'
                 : 'text-[#4E5C70] hover:text-[#2D3A4E]'
@@ -890,7 +890,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
           </button>
           <button
             onClick={() => setActiveSubTab('movements')}
-            className={`py-1.5 px-3 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+            className={`py-1.5 px-3 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               activeSubTab === 'movements'
                 ? 'neu-pill-active'
                 : 'text-[#4E5C70] hover:text-[#2D3A4E]'
@@ -904,7 +904,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
           <button
             onClick={() => setIsOperationModalOpen(true)}
-            className="h-9 px-4 neu-button-accent rounded-xl text-xs font-black text-white flex items-center gap-1.5 cursor-pointer transition-all"
+            className="h-9 px-4 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 cursor-pointer transition-all"
           >
             <Plus className="w-3.5 h-3.5" />
             Оформить операцию
@@ -916,7 +916,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         <div className="neu-inset rounded-2xl p-3 space-y-0.5">
           <span className="text-[11px] uppercase font-bold text-[#4E5C70] block">Всего единиц</span>
-          <span className="text-base font-black text-[#2D3A4E]">{stats.totalUnits} шт.</span>
+          <span className="text-base font-extrabold text-[#2D3A4E]">{stats.totalUnits} шт.</span>
           <span className="text-[11px] text-[#4E5C70] block font-semibold">
             в {stats.totalSkus} {pluralRu(stats.totalSkus, ['варианте', 'вариантах', 'вариантах'])}
           </span>
@@ -925,7 +925,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
         <div className="neu-inset rounded-2xl p-3 space-y-0.5">
           <span className="text-[11px] uppercase font-bold text-[#4E5C70] block">Порог дефицита</span>
           <div className="flex items-center gap-1.5">
-            <span className="text-base font-black text-accent">≤ {lowStockThreshold} шт.</span>
+            <span className="text-base font-extrabold text-accent">≤ {lowStockThreshold} шт.</span>
             <div className="flex gap-1">
               {[2, 3, 5].map((th) => (
                 <button
@@ -948,11 +948,11 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
 
         <div className="neu-inset rounded-2xl p-3 space-y-0.5">
           <span className="text-[11px] uppercase font-bold text-warning block">Мало на складе</span>
-          <span className="text-base font-black text-warning">{stats.lowStockCount} {pluralRu(stats.lowStockCount, ['вариант', 'варианта', 'вариантов'])}</span>
+          <span className="text-base font-extrabold text-warning">{stats.lowStockCount} {pluralRu(stats.lowStockCount, ['вариант', 'варианта', 'вариантов'])}</span>
           {stats.lowStockCount > 0 && (
             <button
               onClick={handleBulkRestockDeficit}
-              className="text-[11px] font-black text-accent hover:underline cursor-pointer block"
+              className="text-[11px] font-extrabold text-accent hover:underline cursor-pointer block"
             >
               Пополнить все (+6 шт)
             </button>
@@ -961,7 +961,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
 
         <div className="neu-inset rounded-2xl p-3 space-y-0.5">
           <span className="text-[11px] uppercase font-bold text-danger block">Нет в наличии</span>
-          <span className="text-base font-black text-danger">{stats.outOfStockCount} {pluralRu(stats.outOfStockCount, ['вариант', 'варианта', 'вариантов'])}</span>
+          <span className="text-base font-extrabold text-danger">{stats.outOfStockCount} {pluralRu(stats.outOfStockCount, ['вариант', 'варианта', 'вариантов'])}</span>
           <span className="text-[11px] text-[#4E5C70] block font-semibold">нулевой остаток</span>
         </div>
       </div>
@@ -1018,7 +1018,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                     role="radio"
                     aria-checked={grouping === g.id}
                     onClick={() => setGrouping(g.id)}
-                    className={`h-8 px-3 rounded-lg text-[11px] font-black cursor-pointer transition-all whitespace-nowrap ${
+                    className={`h-8 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer transition-all whitespace-nowrap ${
                       grouping === g.id ? 'neu-pill-active' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
                     }`}
                   >
@@ -1085,7 +1085,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                           .map(({ product, sku }) => ({ productId: product.id, skuId: sku.id }))
                       )
                     }
-                    className="h-9 px-3 rounded-xl neu-button text-[11px] font-black text-accent flex items-center gap-1.5 cursor-pointer transition-all"
+                    className="h-9 px-3 rounded-xl neu-button text-[11px] font-extrabold text-accent flex items-center gap-1.5 cursor-pointer transition-all"
                   >
                     <Printer className="w-3.5 h-3.5" />
                     Этикетки ({selectedSkuKeys.size})
@@ -1101,7 +1101,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
               <div className="neu-inset rounded-2xl p-8 text-center space-y-1 text-[#4E5C70]">
                 <Boxes className="w-8 h-8 mx-auto text-[#4E5C70]/50" />
                 <p className="text-xs font-bold text-[#2D3A4E]">Позиции не найдены</p>
-                <p className="text-[11px]">Попробуйте изменить параметры поиска или фильтров</p>
+                <p className="text-xs">Попробуйте изменить параметры поиска или фильтров</p>
               </div>
             ) : grouping !== 'flat' ? (
               <InventoryGroupedList
@@ -1145,7 +1145,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                       </div>
 
                       <div className="min-w-0 space-y-0.5">
-                        <h4 className="text-xs font-black text-[#2D3A4E] truncate">{product.title}</h4>
+                        <h4 className="text-xs font-extrabold text-[#2D3A4E] truncate">{product.title}</h4>
 
                         <div className="flex items-center gap-2 text-[11px] font-bold">
                           <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[#2D3A4E] inline-flex items-center gap-1">
@@ -1200,10 +1200,10 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                   <ClipboardCheck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E]">
+                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E]">
                     Инвентаризационная ведомость склада
                   </h3>
-                  <p className="text-[11px] text-[#4E5C70] font-semibold">
+                  <p className="text-xs text-[#4E5C70] font-semibold">
                     Сессия: {auditSessionDate} • Сверка фактического наличия с учетной системой
                   </p>
                 </div>
@@ -1216,7 +1216,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                     type="text"
                     value={auditOperator}
                     onChange={(e) => setAuditOperator(e.target.value)}
-                    className="w-36 py-1 px-2.5 neu-inset rounded-lg text-xs font-black text-[#2D3A4E]"
+                    className="w-36 py-1 px-2.5 neu-inset rounded-lg text-xs font-extrabold text-[#2D3A4E]"
                     placeholder="ФИО / Должность"
                   />
                 </div>
@@ -1227,13 +1227,13 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <div className="neu-flat-sm rounded-xl p-2.5">
                 <span className="text-[11px] uppercase font-bold text-[#4E5C70] block">Вариантов</span>
-                <span className="text-sm font-black text-[#2D3A4E]">{auditStats.totalItems} шт.</span>
+                <span className="text-sm font-extrabold text-[#2D3A4E]">{auditStats.totalItems} шт.</span>
                 <span className="text-[11px] text-[#4E5C70] block">в каталоге</span>
               </div>
 
               <div className="neu-flat-sm rounded-xl p-2.5">
                 <span className="text-[11px] uppercase font-bold text-warning block">Расхождений</span>
-                <span className={`text-sm font-black ${auditStats.discrepancyCount > 0 ? 'text-danger' : 'text-success'}`}>
+                <span className={`text-sm font-extrabold ${auditStats.discrepancyCount > 0 ? 'text-danger' : 'text-success'}`}>
                   {auditStats.discrepancyCount} {pluralRu(auditStats.discrepancyCount, ['вариант', 'варианта', 'вариантов'])}
                 </span>
                 <span className="text-[11px] text-[#4E5C70] block">
@@ -1243,7 +1243,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
 
               <div className="neu-flat-sm rounded-xl p-2.5">
                 <span className="text-[11px] uppercase font-bold text-danger block">Недостача</span>
-                <span className="text-sm font-black text-danger">
+                <span className="text-sm font-extrabold text-danger">
                   -{auditStats.totalShortageUnits} шт.
                 </span>
                 <span className="text-[11px] text-danger/80 block font-bold">
@@ -1253,7 +1253,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
 
               <div className="neu-flat-sm rounded-xl p-2.5">
                 <span className="text-[11px] uppercase font-bold text-accent block">Излишек</span>
-                <span className="text-sm font-black text-accent">
+                <span className="text-sm font-extrabold text-accent">
                   +{auditStats.totalSurplusUnits} шт.
                 </span>
                 <span className="text-[11px] text-accent block font-bold">
@@ -1288,7 +1288,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                 <button
                   type="button"
                   onClick={() => setAuditFilterDiscrepanciesOnly(!auditFilterDiscrepanciesOnly)}
-                  className={`py-1.5 px-3 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                  className={`py-1.5 px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
                     auditFilterDiscrepanciesOnly
                       ? 'neu-button text-danger'
                       : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
@@ -1313,7 +1313,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                   type="button"
                   onClick={handleApplyAuditResults}
                   disabled={auditStats.discrepancyCount === 0}
-                  className="py-1.5 px-4 neu-button-accent rounded-xl text-xs font-black text-white flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="py-1.5 px-4 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Утвердить инвентаризацию</span>
@@ -1354,7 +1354,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                     ? 'Расхождений не найдено! Все позиции соответствуют учетным данным.'
                     : 'Позиции не найдены'}
                 </p>
-                <p className="text-[11px]">Все физические остатки совпадают с базой</p>
+                <p className="text-xs">Все физические остатки совпадают с базой</p>
               </div>
             ) : (
               filteredAuditSkus.map(({ product, sku, key }) => {
@@ -1390,7 +1390,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                       </div>
 
                       <div className="min-w-0 space-y-0.5">
-                        <h4 className="text-xs font-black text-[#2D3A4E] truncate">{product.title}</h4>
+                        <h4 className="text-xs font-extrabold text-[#2D3A4E] truncate">{product.title}</h4>
                         <div className="flex items-center gap-1.5 text-[11px] font-bold flex-wrap">
                           <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-[#2D3A4E]">
                             {sku.color}
@@ -1402,7 +1402,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                             {sku.skuCode}
                           </span>
                         </div>
-                        <p className="text-[11px] text-[#4E5C70] font-semibold">
+                        <p className="text-xs text-[#4E5C70] font-semibold">
                           Себестоимость: <strong className="text-[#2D3A4E]">{cost.toLocaleString('ru-RU')} ₽</strong> • Штрихкод: {sku.barcode}
                         </p>
                       </div>
@@ -1413,7 +1413,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                       {/* System Stock */}
                       <div className="text-center neu-flat-sm px-2 sm:px-2.5 py-1.5 rounded-xl min-w-[64px] sm:min-w-[70px] shrink-0">
                         <span className="text-[11px] uppercase font-bold text-[#4E5C70] block">Учет</span>
-                        <span className="text-xs font-black text-[#2D3A4E] whitespace-nowrap">{sku.stock} шт.</span>
+                        <span className="text-xs font-extrabold text-[#2D3A4E] whitespace-nowrap">{sku.stock} шт.</span>
                       </div>
 
                       {/* Physical Count Stepper Input */}
@@ -1437,7 +1437,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                             value={actual}
                             onChange={(e) => handleSetAuditCount(key, parseInt(e.target.value, 10) || 0)}
                             aria-label={`Фактическое количество ${sku.skuCode || `${product.title}, ${sku.color}, ${sku.size}`}`}
-                            className="w-8 sm:w-10 h-8 text-center text-xs font-black text-accent bg-transparent"
+                            className="w-8 sm:w-10 h-8 text-center text-xs font-extrabold text-accent bg-transparent"
                           />
 
                           <button
@@ -1454,12 +1454,12 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                       {/* Difference Badge */}
                       <div className="text-right min-w-[80px] sm:min-w-[90px] shrink-0">
                         {isMatch ? (
-                          <span className="neu-flat-sm px-2 py-1 rounded-xl text-[11px] font-black text-success inline-flex items-center gap-1">
+                          <span className="neu-flat-sm px-2 py-1 rounded-xl text-[11px] font-extrabold text-success inline-flex items-center gap-1">
                             <Check className="w-3 h-3 text-success" /> Совпадает
                           </span>
                         ) : isShortage ? (
                           <div className="space-y-0.5">
-                            <span className="neu-flat-sm px-2 py-0.5 rounded-xl text-[11px] font-black text-danger inline-flex items-center gap-1">
+                            <span className="neu-flat-sm px-2 py-0.5 rounded-xl text-[11px] font-extrabold text-danger inline-flex items-center gap-1">
                               Недостача {diff} шт.
                             </span>
                             <span className="text-[11px] font-bold text-danger block">
@@ -1468,7 +1468,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                           </div>
                         ) : (
                           <div className="space-y-0.5">
-                            <span className="neu-flat-sm px-2 py-0.5 rounded-xl text-[11px] font-black text-accent inline-flex items-center gap-1">
+                            <span className="neu-flat-sm px-2 py-0.5 rounded-xl text-[11px] font-extrabold text-accent inline-flex items-center gap-1">
                               Излишек +{diff} шт.
                             </span>
                             <span className="text-[11px] font-bold text-accent block">
@@ -1488,7 +1488,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
       {activeSubTab === 'movements' && (
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
-            <h4 className="text-xs font-black uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
               <ClipboardList className="w-4 h-4 text-accent" />
               Журнал складских операций и списаний
             </h4>
@@ -1543,7 +1543,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                   onClick={() => setLogTypeFilter(t.id as any)}
                   className={`py-1.5 px-2.5 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer transition-all ${
                     logTypeFilter === t.id
-                      ? 'neu-pill-active font-black'
+                      ? 'neu-pill-active font-extrabold'
                       : 'neu-button text-[#4E5C70]'
                   }`}
                 >
@@ -1604,7 +1604,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-[#4E5C70] truncate">
+                        <p className="text-xs text-[#4E5C70] truncate">
                           Цвет: {log.color} • Размер: {log.size} • {log.reason}
                         </p>
                         <span className="text-[11px] text-[#4E5C70] block font-medium">
@@ -1615,7 +1615,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
 
                     <div className="text-right shrink-0">
                       <span
-                        className={`text-xs font-black block ${
+                        className={`text-xs font-extrabold block ${
                           isOrder
                             ? 'text-accent'
                             : isPositive
@@ -1647,10 +1647,10 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                   <Boxes className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 id={operationDialog.titleId} className="text-sm font-black uppercase text-[#2D3A4E]">
+                  <h3 id={operationDialog.titleId} className="text-sm font-extrabold uppercase text-[#2D3A4E]">
                     Складская операция
                   </h3>
-                  <p className="text-[11px] font-bold text-[#4E5C70]">
+                  <p className="text-xs font-bold text-[#4E5C70]">
                     Поступление, списание брака или инвентаризация
                   </p>
                 </div>
@@ -1682,7 +1682,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                       onClick={() => setOpType(t.id as any)}
                       className={`py-2 px-2 rounded-xl text-center font-bold text-[11px] transition-all cursor-pointer ${
                         opType === t.id
-                          ? 'neu-pill-active font-black'
+                          ? 'neu-pill-active font-extrabold'
                           : 'neu-button text-[#4E5C70]'
                       }`}
                     >
@@ -1738,7 +1738,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                     max="500"
                     value={opQuantity}
                     onChange={(e) => setOpQuantity(Number(e.target.value))}
-                    className="w-full py-2 px-3 neu-inset rounded-xl font-black text-xs text-accent"
+                    className="w-full py-2 px-3 neu-inset rounded-xl font-extrabold text-xs text-accent"
                     required
                   />
                 </div>
@@ -1778,7 +1778,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 neu-button-accent rounded-xl text-xs font-black text-white"
+                  className="flex-1 py-2.5 neu-button-accent rounded-xl text-xs font-extrabold text-white"
                 >
                   Провести операцию
                 </button>

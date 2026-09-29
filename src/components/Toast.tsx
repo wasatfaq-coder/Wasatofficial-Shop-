@@ -141,12 +141,12 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
             {renderIcon()}
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs font-black text-[#2D3A4E] leading-tight truncate">
+                <span className="text-xs font-extrabold text-[#2D3A4E] leading-tight truncate">
                   {toast.title || 'Push-уведомление'}
                 </span>
                 {toast.badgeText && (
                   <span
-                    className={`text-[11px] font-black px-2 py-0.5 rounded-full border ${
+                    className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full border ${
                       toast.badgeBg || 'bg-accent/10 text-accent border-accent/20'
                     }`}
                   >
@@ -155,7 +155,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
                 )}
               </div>
               {toast.subtitle && (
-                <p className="text-[11px] font-bold text-accent mt-0.5 truncate">
+                <p className="text-xs font-bold text-accent mt-0.5 truncate">
                   {toast.subtitle}
                 </p>
               )}
@@ -186,7 +186,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
                 toast.action?.onClick();
                 onDismiss(toast.id);
               }}
-              className="py-1.5 px-3 neu-button-accent rounded-xl text-[11px] font-black text-white flex items-center gap-1 cursor-pointer transition-transform"
+              className="py-1.5 px-3 neu-button-accent rounded-xl text-[11px] font-extrabold text-white flex items-center gap-1 cursor-pointer transition-transform"
             >
               <span>{toast.action.label}</span>
               <ArrowRight className="w-3 h-3" />

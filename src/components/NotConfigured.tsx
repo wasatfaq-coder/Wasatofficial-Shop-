@@ -21,7 +21,7 @@ export const NotConfigured: React.FC<NotConfiguredProps> = ({ title, hint, class
     <CircleSlash className="w-4 h-4 text-[#4E5C70] shrink-0 mt-0.5" aria-hidden="true" />
     <div className="min-w-0">
       <p className="text-xs font-bold text-[#2D3A4E]">{title ? `${title}: не настроено` : 'Не настроено'}</p>
-      {hint && <p className="text-[11px] text-[#4E5C70] leading-snug mt-0.5">{hint}</p>}
+      {hint && <p className="text-xs text-[#4E5C70] leading-snug mt-0.5">{hint}</p>}
     </div>
   </div>
 );

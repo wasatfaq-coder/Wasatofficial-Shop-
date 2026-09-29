@@ -201,10 +201,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <AlertCircle className="w-4 h-4" />
           </div>
           <div className="text-xs space-y-0.5">
-            <span className="font-black block text-[#2D3A4E]">
+            <span className="font-extrabold block text-[#2D3A4E]">
               Каталог в режиме закрытого шоурума
             </span>
-            <p className="text-[11px] text-[#4E5C70]">
+            <p className="text-xs text-[#4E5C70]">
               Онлайн-корзина временно на обновлении. Для резервирования моделей свяжитесь с
               консьержем{phone ? (
                 <>
@@ -292,7 +292,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {/* Left Text content */}
             <div className="flex-1 space-y-2 max-w-[52%] lg:space-y-3">
               {currentSlide.badge && (
-                <span className="text-[11px] font-black neu-flat-sm px-2.5 py-0.5 rounded-full text-accent uppercase tracking-wider inline-block">
+                <span className="text-[11px] font-extrabold neu-flat-sm px-2.5 py-0.5 rounded-full text-accent uppercase tracking-wider inline-block">
                   {currentSlide.badge}
                 </span>
               )}

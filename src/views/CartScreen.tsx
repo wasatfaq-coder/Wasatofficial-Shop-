@@ -10,6 +10,7 @@ import {
   SlidersHorizontal,
   Check,
   Sparkles,
+  ChevronRight,
 } from 'lucide-react';
 import { CartItem, Product, ActiveTab, AppliedPromoInfo, DeliveryMethod } from '../types';
 import { getVariantStock, getOrderableStock } from '../utils/inventory';
@@ -171,7 +172,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                 : `До бесплатной доставки: ${remainingForFreeDelivery.toLocaleString('ru-RU')} ₽`}
             </span>
           </div>
-          <span className="text-[11px] font-black text-accent">
+          <span className="text-[11px] font-extrabold text-accent">
             {Math.min(100, Math.floor((rawSubtotal / freeThreshold) * 100))}%
           </span>
         </div>
@@ -189,7 +190,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-[#2D3A4E]">Товаров в корзине:</span>
-          <span className="neu-inset px-2.5 py-0.5 rounded-full text-xs font-black text-accent">
+          <span className="neu-inset px-2.5 py-0.5 rounded-full text-xs font-extrabold text-accent">
             {totalItemsCount}
           </span>
         </div>
@@ -356,7 +357,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                         <SlidersHorizontal className="w-3.5 h-3.5" />
                       </div>
                       <div className="truncate">
-                        <span className="text-[11px] font-black text-[#2D3A4E] uppercase tracking-wider block">
+                        <span className="text-[11px] font-extrabold text-[#2D3A4E] uppercase tracking-wider block">
                           Выбор вариации
                         </span>
                       </div>
@@ -394,11 +395,11 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                             onClick={() => {
                               onUpdateVariant(item.id, colorName, item.selectedSize);
                             }}
-                            className={`min-h-[32px] px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer select-none active:scale-95 ${
+                            className={`min-h-[32px] px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer select-none ${
                               isCurrent
-                                ? 'neu-inset text-[#1E293B] border border-accent/40 font-black'
+                                ? 'neu-pill-active font-extrabold'
                                 : isOutOfStock
-                                ? 'opacity-35 neu-inset text-[#4E5C70] line-through cursor-not-allowed border border-transparent'
+                                ? 'neu-button-disabled line-through'
                                 : 'neu-button text-[#2D3A4E] hover:text-[#1E293B]'
                             }`}
                           >
@@ -436,11 +437,11 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                             onClick={() => {
                               onUpdateVariant(item.id, item.selectedColor, sz);
                             }}
-                            className={`min-w-[42px] min-h-[32px] px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none active:scale-95 ${
+                            className={`min-w-[42px] min-h-[32px] px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none ${
                               isCurrent
-                                ? 'neu-inset text-[#1E293B] border border-accent/40 font-black'
+                                ? 'neu-pill-active font-extrabold'
                                 : isOutOfStock
-                                ? 'opacity-35 neu-inset text-[#4E5C70] line-through cursor-not-allowed border border-transparent'
+                                ? 'neu-button-disabled line-through'
                                 : 'neu-button text-[#2D3A4E] hover:text-[#1E293B]'
                             }`}
                           >
@@ -484,7 +485,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => setEditingVariantItemId(null)}
-                      className="px-3 py-1.5 rounded-xl neu-button text-[11px] font-black text-accent hover:text-[#2D3A4E] transition-all cursor-pointer shrink-0"
+                      className="px-3 py-1.5 rounded-xl neu-button text-[11px] font-extrabold text-accent hover:text-[#2D3A4E] transition-all cursor-pointer shrink-0"
                     >
                       Готово
                     </button>
@@ -515,7 +516,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                 <p className="text-xs font-bold text-[#2D3A4E]">
                   {appliedPromo ? `Промокод: ${appliedPromo.code}` : 'Промокод'}
                 </p>
-                <p className="text-[11px] text-[#4E5C70] font-normal">
+                <p className="text-xs text-[#4E5C70] font-normal">
                   {appliedPromo
                     ? `Скидка ${promoDiscountText(appliedPromo)} применена`
                     : hasActivePromos
@@ -524,8 +525,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                 </p>
               </div>
             </div>
-            <span className="text-[11px] font-extrabold text-accent neu-inset px-2.5 py-1 rounded-xl transition-all">
+            <span className="flex items-center gap-1 text-accent font-extrabold text-xs">
               {appliedPromo ? 'Изменить' : 'Выбрать'}
+              <ChevronRight className="w-4 h-4 text-[#4E5C70] group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
             </span>
           </button>
         </div>
@@ -616,7 +618,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         {/* Action Buttons: 1-Click Quick Order + Full Checkout */}
         <div className="space-y-2">
           {unavailableCount > 0 && (
-            <p className="neu-inset rounded-2xl p-3 text-[11px] font-bold text-danger">
+            <p className="neu-inset rounded-2xl p-3 text-xs font-bold text-danger">
               Часть товаров закончилась: уменьшите количество или удалите их из корзины ({unavailableCount}).
             </p>
           )}
@@ -632,7 +634,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
             className={`w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
               !checkoutBlocker && unavailableCount === 0
                 ? 'neu-button-accent btn-confirm-order active:neu-inset-deep active:scale-[0.98] cursor-pointer'
-                : 'neu-inset text-[#4E5C70] cursor-not-allowed'
+                : 'neu-button-disabled'
             }`}
           >
             <span>Оформить заказ</span>
@@ -700,7 +702,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                   onClearCart();
                   setIsClearCartConfirmOpen(false);
                 }}
-                className="flex-1 py-2.5 rounded-xl neu-button text-xs font-black text-danger hover:text-[#2D3A4E] cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl neu-button text-xs font-extrabold text-danger hover:text-[#2D3A4E] cursor-pointer"
               >
                 Да, очистить
               </button>

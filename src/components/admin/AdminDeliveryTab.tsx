@@ -414,7 +414,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
             <span className="text-[11px] font-bold text-[#4E5C70] block uppercase tracking-wider">
               Всего способов
             </span>
-            <span className="text-xl font-black text-[#2D3A4E] block mt-0.5">
+            <span className="text-xl font-extrabold text-[#2D3A4E] block mt-0.5">
               {deliveryMethods.length}
             </span>
           </div>
@@ -428,7 +428,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
             <span className="text-[11px] font-bold text-[#4E5C70] block uppercase tracking-wider">
               Активных модулей
             </span>
-            <span className="text-xl font-black text-success block mt-0.5">
+            <span className="text-xl font-extrabold text-success block mt-0.5">
               {activeMethodsCount}
             </span>
           </div>
@@ -442,7 +442,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
             <span className="text-[11px] font-bold text-[#4E5C70] block uppercase tracking-wider">
               Пунктов выдачи
             </span>
-            <span className="text-xl font-black text-accent block mt-0.5">
+            <span className="text-xl font-extrabold text-accent block mt-0.5">
               {pickupPoints.length}
             </span>
           </div>
@@ -456,7 +456,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
             <span className="text-[11px] font-bold text-[#4E5C70] block uppercase tracking-wider">
               Бесплатно от
             </span>
-            <span className="text-lg font-black text-[#2D3A4E] block mt-0.5">
+            <span className="text-lg font-extrabold text-[#2D3A4E] block mt-0.5">
               {storefrontSettings?.freeDeliveryThreshold ? `${storefrontSettings.freeDeliveryThreshold.toLocaleString('ru-RU')} ₽` : '5 000 ₽'}
             </span>
           </div>
@@ -473,7 +473,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
           <button
             type="button"
             onClick={() => setActiveSubTab('methods')}
-            className={`flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeSubTab === 'methods'
                 ? 'neu-pill-active'
                 : 'text-[#4E5C70] hover:text-[#2D3A4E]'
@@ -481,7 +481,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
           >
             <Truck className="w-3.5 h-3.5 shrink-0" />
             <span>Способы доставки</span>
-            <span className="px-1.5 py-0.2 rounded-full neu-inset text-[11px] font-black">
+            <span className="px-1.5 py-0.2 rounded-full neu-inset text-[11px] font-extrabold">
               {deliveryMethods.length}
             </span>
           </button>
@@ -489,7 +489,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
           <button
             type="button"
             onClick={() => setActiveSubTab('pickup_points')}
-            className={`flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeSubTab === 'pickup_points'
                 ? 'neu-pill-active'
                 : 'text-[#4E5C70] hover:text-[#2D3A4E]'
@@ -497,7 +497,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
           >
             <Store className="w-3.5 h-3.5 shrink-0" />
             <span>Пункты выдачи (Самовывоз)</span>
-            <span className="px-1.5 py-0.2 rounded-full neu-inset text-[11px] font-black">
+            <span className="px-1.5 py-0.2 rounded-full neu-inset text-[11px] font-extrabold">
               {pickupPoints.length}
             </span>
           </button>
@@ -509,7 +509,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
             <button
               type="button"
               onClick={handleOpenAddMethod}
-              className="flex-1 sm:flex-none py-2 px-3.5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 cursor-pointer transition-transform"
+              className="flex-1 sm:flex-none py-2 px-3.5 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center justify-center gap-1.5 cursor-pointer transition-transform"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
               <span>Добавить способ</span>
@@ -518,7 +518,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
             <button
               type="button"
               onClick={handleOpenAddPoint}
-              className="flex-1 sm:flex-none py-2 px-3.5 neu-button-accent rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 cursor-pointer transition-transform"
+              className="flex-1 sm:flex-none py-2 px-3.5 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center justify-center gap-1.5 cursor-pointer transition-transform"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
               <span>Добавить пункт выдачи</span>
@@ -588,7 +588,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
             <div className="neu-inset rounded-2xl p-8 text-center space-y-2">
               <Truck className="w-8 h-8 text-[#4E5C70] mx-auto opacity-50" />
               <p className="text-xs font-bold text-[#2D3A4E]">Способы доставки не найдены</p>
-              <p className="text-[11px] text-[#4E5C70]">Попробуйте изменить поисковый запрос или добавьте новый способ</p>
+              <p className="text-xs text-[#4E5C70]">Попробуйте изменить поисковый запрос или добавьте новый способ</p>
               <button
                 type="button"
                 onClick={handleOpenAddMethod}
@@ -622,16 +622,16 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <h4 className="text-xs sm:text-sm font-black text-[#2D3A4E] truncate">
+                            <h4 className="text-xs sm:text-sm font-extrabold text-[#2D3A4E] truncate">
                               {method.title}
                             </h4>
                             {method.highlightBadge && (
-                              <span className="neu-fill-accent text-white text-[11px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                              <span className="neu-fill-accent text-white text-[11px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
                                 {method.highlightBadge}
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] font-bold text-[#4E5C70] mt-0.5">
+                          <p className="text-xs font-bold text-[#4E5C70] mt-0.5">
                             Срок: <span className="text-[#2D3A4E]">{method.duration}</span>
                           </p>
                         </div>
@@ -676,7 +676,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
                     {/* Method Description & Details */}
                     {method.description && (
-                      <p className="text-[11px] text-[#4E5C70] leading-snug line-clamp-2">
+                      <p className="text-xs text-[#4E5C70] leading-snug line-clamp-2">
                         {method.description}
                       </p>
                     )}
@@ -686,7 +686,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                       <div className="flex items-center gap-2">
                         <span className="text-[11px] font-bold text-[#4E5C70]">Стоимость:</span>
                         <span
-                          className={`font-black ${
+                          className={`font-extrabold ${
                             method.price === 0 ? 'text-success font-extrabold' : 'text-[#2D3A4E]'
                           }`}
                         >
@@ -715,7 +715,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
             <div className="neu-inset rounded-2xl p-8 text-center space-y-2">
               <Store className="w-8 h-8 text-[#4E5C70] mx-auto opacity-50" />
               <p className="text-xs font-bold text-[#2D3A4E]">Пункты выдачи не найдены</p>
-              <p className="text-[11px] text-[#4E5C70]">
+              <p className="text-xs text-[#4E5C70]">
                 Добавьте физические адреса бутиков и шоурумов для выбора самовывоза клиентами
               </p>
               <button
@@ -753,16 +753,16 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <h4 className="text-xs sm:text-sm font-black text-[#2D3A4E] truncate">
+                            <h4 className="text-xs sm:text-sm font-extrabold text-[#2D3A4E] truncate">
                               {point.name}
                             </h4>
                             {isDefault && (
-                              <span className="neu-inset text-accent text-[11px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                              <span className="neu-inset text-accent text-[11px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
                                 Основной адрес
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] font-bold text-accent flex items-center gap-1 mt-0.5">
+                          <p className="text-xs font-bold text-accent flex items-center gap-1 mt-0.5">
                             <MapPin className="w-3 h-3" />
                             <span>{point.city}</span>
                           </p>
@@ -854,7 +854,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 <div className="w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center text-accent">
                   <Truck className="w-4 h-4" />
                 </div>
-                <h3 id={methodDialog.titleId} className="text-sm font-black text-[#2D3A4E]">
+                <h3 id={methodDialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">
                   {editingMethod ? 'Редактировать способ доставки' : 'Новый модуль доставки'}
                 </h3>
               </div>
@@ -940,7 +940,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               </div>
 
               <div>
-                <p id="delivery-method-icon-label" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                <p id="delivery-method-icon-label" className="block text-xs font-bold text-[#2D3A4E] mb-1">
                   Иконка модуля
                 </p>
                 <div
@@ -1041,7 +1041,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 neu-button-accent rounded-xl text-xs font-black text-white cursor-pointer transition-transform"
+                  className="flex-1 py-2.5 neu-button-accent rounded-xl text-xs font-extrabold text-white cursor-pointer transition-transform"
                 >
                   {editingMethod ? 'Сохранить изменения' : 'Создать модуль'}
                 </button>
@@ -1060,7 +1060,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 <div className="w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center text-accent">
                   <Store className="w-4 h-4" />
                 </div>
-                <h3 id={pointDialog.titleId} className="text-sm font-black text-[#2D3A4E]">
+                <h3 id={pointDialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">
                   {editingPoint ? 'Редактировать пункт самовывоза' : 'Новый пункт выдачи заказов'}
                 </h3>
               </div>
@@ -1213,7 +1213,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 neu-button-accent rounded-xl text-xs font-black text-white cursor-pointer transition-transform"
+                  className="flex-1 py-2.5 neu-button-accent rounded-xl text-xs font-extrabold text-white cursor-pointer transition-transform"
                 >
                   {editingPoint ? 'Сохранить изменения' : 'Добавить пункт'}
                 </button>
@@ -1232,7 +1232,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
           <div ref={deleteMethodDialog.ref} {...deleteMethodDialog.props} className="neu-modal rounded-3xl p-5 max-w-sm w-full space-y-4 border border-white/80 text-[#2D3A4E]">
             <div className="flex items-center gap-2.5 text-danger">
               <AlertCircle className="w-5 h-5 shrink-0" />
-              <h4 id={deleteMethodDialog.titleId} className="text-sm font-black">Удалить способ доставки?</h4>
+              <h4 id={deleteMethodDialog.titleId} className="text-sm font-extrabold">Удалить способ доставки?</h4>
             </div>
             <p className="text-xs text-[#4E5C70]">
               Этот способ доставки перестанет отображаться при оформлении заказов на сайте.
@@ -1248,7 +1248,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               <button
                 type="button"
                 onClick={() => handleDeleteMethod(deletingMethodId)}
-                className="neu-button-danger flex-1 py-2 rounded-xl text-xs font-black cursor-pointer"
+                className="neu-button-danger flex-1 py-2 rounded-xl text-xs font-extrabold cursor-pointer"
               >
                 Удалить
               </button>
@@ -1262,7 +1262,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
           <div ref={deletePointDialog.ref} {...deletePointDialog.props} className="neu-modal rounded-3xl p-5 max-w-sm w-full space-y-4 border border-white/80 text-[#2D3A4E]">
             <div className="flex items-center gap-2.5 text-danger">
               <AlertCircle className="w-5 h-5 shrink-0" />
-              <h4 id={deletePointDialog.titleId} className="text-sm font-black">Удалить пункт самовывоза?</h4>
+              <h4 id={deletePointDialog.titleId} className="text-sm font-extrabold">Удалить пункт самовывоза?</h4>
             </div>
             <p className="text-xs text-[#4E5C70]">
               Пункт выдачи будет удален из списка доступных адресов для самовывоза клиентами.
@@ -1278,7 +1278,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               <button
                 type="button"
                 onClick={() => handleDeletePoint(deletingPointId)}
-                className="neu-button-danger flex-1 py-2 rounded-xl text-xs font-black cursor-pointer"
+                className="neu-button-danger flex-1 py-2 rounded-xl text-xs font-extrabold cursor-pointer"
               >
                 Удалить
               </button>

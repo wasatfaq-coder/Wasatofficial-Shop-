@@ -36,12 +36,12 @@ export const AdminPaymentTab: React.FC<AdminPaymentTabProps> = ({ settings, onUp
     ]}
     renderSummary={(m) => (
       <div className="space-y-0.5">
-        <p className="text-xs font-black text-[#2D3A4E] flex items-center gap-2 flex-wrap">
+        <p className="text-xs font-extrabold text-[#2D3A4E] flex items-center gap-2 flex-wrap">
           {m.title}
           {m.onDelivery && <span className="text-[11px] font-bold text-[#4E5C70]">при получении</span>}
           {m.isActive === false && <span className="text-[11px] font-bold text-warning">скрыт</span>}
         </p>
-        <p className="text-[11px] text-[#4E5C70] line-clamp-2">{m.description || 'Инструкция: не настроено'}</p>
+        <p className="text-xs text-[#4E5C70] line-clamp-2">{m.description || 'Инструкция: не настроено'}</p>
       </div>
     )}
     onSave={(paymentMethods) => onUpdateSettings?.({ ...settings, paymentMethods })}

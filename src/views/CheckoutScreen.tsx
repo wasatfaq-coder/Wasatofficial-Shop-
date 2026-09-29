@@ -487,7 +487,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-[#2D3A4E] truncate">{item.product.title}</p>
-                <p className="text-[11px] text-[#4E5C70]">
+                <p className="text-xs text-[#4E5C70]">
                   Размер: {item.selectedSize} / Цвет: {item.selectedColor}
                   {isPreorderVariant(item.product, item.selectedColor, item.selectedSize, storefrontSettings?.isPreorderMode === true) && (
                     <span className="font-bold text-accent"> • Предзаказ</span>
@@ -498,7 +498,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                 <p className="text-xs font-bold text-[#2D3A4E]">
                   {(item.product.price * item.quantity).toLocaleString('ru-RU')} ₽
                 </p>
-                <p className="text-[11px] text-[#4E5C70]">x{item.quantity}</p>
+                <p className="text-xs text-[#4E5C70]">x{item.quantity}</p>
               </div>
             </div>
           ))}
@@ -575,7 +575,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                 />
               </div>
               {fieldErrors.name && (
-                <p id="checkout-name-error" className="text-[11px] font-bold text-danger mt-1 ml-1">
+                <p id="checkout-name-error" className="text-xs font-bold text-danger mt-1 ml-1">
                   {fieldErrors.name}
                 </p>
               )}
@@ -607,7 +607,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                 />
               </div>
               {fieldErrors.phone && (
-                <p id="checkout-phone-error" className="text-[11px] font-bold text-danger mt-1 ml-1">
+                <p id="checkout-phone-error" className="text-xs font-bold text-danger mt-1 ml-1">
                   {fieldErrors.phone}
                 </p>
               )}
@@ -639,7 +639,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                 />
               </div>
               {fieldErrors.email && (
-                <p id="checkout-email-error" className="text-[11px] font-bold text-danger mt-1 ml-1">
+                <p id="checkout-email-error" className="text-xs font-bold text-danger mt-1 ml-1">
                   {fieldErrors.email}
                 </p>
               )}
@@ -654,7 +654,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
               Способ доставки
             </h3>
             {rawSubtotal >= freeThreshold && !noDeliveryMethods && (
-              <span className="neu-inset text-success text-[11px] font-black px-2 py-0.5 rounded-full">
+              <span className="neu-inset text-success text-[11px] font-extrabold px-2 py-0.5 rounded-full">
                 Бесплатная доставка активна
               </span>
             )}
@@ -724,13 +724,13 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                         <span className="flex items-center gap-1.5 flex-wrap">
                           <span
                             className={`block text-xs leading-snug transition-colors line-clamp-2 ${
-                              isSelected ? 'font-black text-accent' : 'font-bold text-[#2D3A4E]'
+                              isSelected ? 'font-extrabold text-accent' : 'font-bold text-[#2D3A4E]'
                             }`}
                           >
                             {method.title}
                           </span>
                           {method.highlightBadge && (
-                            <span className="neu-fill-accent text-white text-[11px] font-black px-1.5 py-0.2 rounded-full uppercase">
+                            <span className="neu-fill-accent text-white text-[11px] font-extrabold px-1.5 py-0.2 rounded-full uppercase">
                               {method.highlightBadge}
                             </span>
                           )}
@@ -815,7 +815,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                                     )}
                                   </span>
                                   <span className="block min-w-0">
-                                    <span className="text-xs font-black text-[#2D3A4E] block leading-snug line-clamp-2">
+                                    <span className="text-xs font-extrabold text-[#2D3A4E] block leading-snug line-clamp-2">
                                       {point.name}
                                     </span>
                                     <span className="text-[11px] font-bold text-accent">
@@ -825,7 +825,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                                 </span>
 
                                 {point.isDefault && (
-                                  <span className="text-[11px] font-black text-accent neu-inset px-1.5 py-0.5 rounded-md uppercase shrink-0">
+                                  <span className="text-[11px] font-extrabold text-accent neu-inset px-1.5 py-0.5 rounded-md uppercase shrink-0">
                                     Основной
                                   </span>
                                 )}
@@ -925,16 +925,16 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                     <Store className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-xs font-black text-[#2D3A4E] tracking-wider uppercase">
+                    <h3 className="text-xs font-extrabold text-[#2D3A4E] tracking-wider uppercase">
                       Пункт выдачи заказа
                     </h3>
-                    <p className="text-[11px] text-[#4E5C70] font-medium">
+                    <p className="text-xs text-[#4E5C70] font-medium">
                       {deliveryTitle}
                     </p>
                   </div>
                 </div>
                 <span
-                  className={`text-[11px] font-black neu-inset px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0 ${
+                  className={`text-[11px] font-extrabold neu-inset px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0 ${
                     deliveryFee === 0 ? 'text-success' : 'text-[#2D3A4E]'
                   }`}
                 >
@@ -947,7 +947,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-1 min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-xs font-black text-[#2D3A4E]">
+                      <span className="text-xs font-extrabold text-[#2D3A4E]">
                         {selectedPickupPoint?.name || 'Пункт выдачи'}
                       </span>
                       {selectedPickupPoint?.city && (
@@ -1097,7 +1097,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                             ? 'Адрес доставки не заполнен'
                             : 'Данные для курьера не заполнены'}
                         </p>
-                        <p className="text-[11px] text-danger leading-snug">{validationError}</p>
+                        <p className="text-xs text-danger leading-snug">{validationError}</p>
                       </div>
                     </div>
                     <button
@@ -1275,14 +1275,14 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
 
           <div className="flex items-center justify-between">
             <span className="text-[#4E5C70]">Доставка ({currentDeliveryObj.title}):</span>
-            <span className={deliveryFee === 0 ? 'font-black text-success' : 'font-bold'}>
+            <span className={deliveryFee === 0 ? 'font-extrabold text-success' : 'font-bold'}>
               {deliveryFee === 0 ? 'Бесплатно' : `${deliveryFee} ₽`}
             </span>
           </div>
 
           <div className="pt-2 border-t border-[#BAC5D5]/50 flex items-center justify-between text-sm">
-            <span className="font-black text-[#2D3A4E]">Итого к оплате:</span>
-            <span className="text-base font-black text-accent">
+            <span className="font-extrabold text-[#2D3A4E]">Итого к оплате:</span>
+            <span className="text-base font-extrabold text-accent">
               {totalPrice.toLocaleString('ru-RU')} ₽
             </span>
           </div>
@@ -1315,7 +1315,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
             isSubmitting
               ? 'neu-inset-deep neu-inset-deep-animated text-accent ring-2 ring-accent/40'
               : orderBlocked
-              ? 'neu-inset text-[#4E5C70] cursor-not-allowed'
+              ? 'neu-button-disabled'
               : 'neu-button-accent text-white active:scale-[0.98]'
           }`}
         >
@@ -1340,7 +1340,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           <div className="lg:hidden fixed inset-x-0 bottom-0 z-30 px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pointer-events-none">
             <div className="max-w-md md:max-w-lg mx-auto neu-flat rounded-2xl p-2.5 flex items-center gap-3 pointer-events-auto">
               <div className="min-w-0 pl-1.5">
-                <p className="text-[11px] text-[#4E5C70] leading-none">Итого</p>
+                <p className="text-xs text-[#4E5C70] leading-none">Итого</p>
                 <p className="text-base font-extrabold text-[#2D3A4E] leading-tight">{totalPrice.toLocaleString('ru-RU')} ₽</p>
               </div>
               <button

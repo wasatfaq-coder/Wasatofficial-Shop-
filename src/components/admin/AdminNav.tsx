@@ -59,7 +59,7 @@ const Badge: React.FC<{ value: number; label?: string; className?: string }> = (
     <>
       <span
         aria-hidden="true"
-        className={`min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[11px] font-black leading-[18px] text-center shrink-0 ${className}`}
+        className={`min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[11px] font-extrabold leading-[18px] text-center shrink-0 ${className}`}
       >
         {value > 99 ? '99+' : value}
       </span>
@@ -139,7 +139,7 @@ export const AdminNav: React.FC<AdminNavProps> = ({ tab, onRequestTab, onPrefetc
               onPointerEnter={() => onPrefetchTab?.(lastInGroup.current[g.id] ?? g.tabs[0])}
               onFocus={() => onPrefetchTab?.(lastInGroup.current[g.id] ?? g.tabs[0])}
               className={`relative min-w-0 py-2 px-1 sm:px-3 lg:py-3 lg:px-4 rounded-xl font-extrabold text-[11px] sm:text-xs lg:text-sm tracking-tight sm:tracking-normal flex items-center justify-center lg:justify-start cursor-pointer select-none transition-colors ${
-                isActive ? 'text-accent font-black' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
+                isActive ? 'text-accent font-extrabold' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
               }`}
             >
               {isActive && (
@@ -188,7 +188,7 @@ export const AdminNav: React.FC<AdminNavProps> = ({ tab, onRequestTab, onPrefetc
                   onFocus={() => onPrefetchTab?.(t)}
                   className={`h-8 px-3 rounded-xl text-[11px] sm:text-xs flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer select-none transition-colors ${
                     isActive
-                      ? 'neu-pill-active text-accent font-black'
+                      ? 'neu-pill-active text-accent font-extrabold'
                       : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E] font-extrabold'
                   }`}
                 >

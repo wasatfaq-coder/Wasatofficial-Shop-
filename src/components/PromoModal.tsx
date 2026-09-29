@@ -157,11 +157,11 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                   <h3 id={dialog.titleId} className="text-base font-extrabold text-[#2D3A4E] leading-tight whitespace-nowrap">
                     Промокоды и купоны
                   </h3>
-                  <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full neu-inset text-accent whitespace-nowrap shrink-0">
+                  <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full neu-inset text-accent whitespace-nowrap shrink-0">
                     {activePromos.length} активных
                   </span>
                 </div>
-                <p className="text-[11px] text-[#4E5C70] font-medium truncate">
+                <p className="text-xs text-[#4E5C70] font-medium truncate">
                   Процентные (-15%) и фиксированные (-500 ₽) скидки
                 </p>
               </div>
@@ -188,21 +188,21 @@ export const PromoModal: React.FC<PromoModalProps> = ({
           {appliedPromo && (
             <div className="neu-inset-deep rounded-2xl p-3.5 border border-accent/40 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl neu-fill-accent text-white font-black text-xs flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl neu-fill-accent text-white font-extrabold text-xs flex items-center justify-center shrink-0">
                   {appliedPromo.discountType === 'fixed'
                     ? `-${(appliedPromo.discountValue || 0).toLocaleString('ru-RU')} ₽`
                     : `-${appliedPromo.discountValue || appliedPromo.discountPercent}%`}
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-black text-accent">
+                    <span className="text-xs font-extrabold text-accent">
                       {appliedPromo.code}
                     </span>
                     <span className="text-[11px] font-bold text-accent neu-inset px-1.5 py-0.5 rounded-md">
                       Применен
                     </span>
                   </div>
-                  <p className="text-[11px] text-[#4E5C70] font-medium">
+                  <p className="text-xs text-[#4E5C70] font-medium">
                     {appliedPromo.discountType === 'fixed'
                       ? `Скидка ${appliedPromo.discountValue?.toLocaleString('ru-RU')} ₽ учтена`
                       : `Скидка ${appliedPromo.discountPercent}% учтена в расчете заказа`}
@@ -262,7 +262,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                       {/* Left Discount Box */}
                       <div className="w-12 h-12 rounded-2xl neu-inset flex flex-col items-center justify-center shrink-0 border border-white/60">
                         <span
-                          className={`text-xs font-black leading-none ${
+                          className={`text-xs font-extrabold leading-none ${
                             isFixed ? 'text-warning text-[11px]' : 'text-accent'
                           }`}
                         >
@@ -276,7 +276,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                       {/* Content */}
                       <div className="flex-1 min-w-0 pr-12">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-black text-[#2D3A4E] tracking-wide font-mono neu-inset px-2 py-0.5 rounded-lg border border-white/40">
+                          <span className="text-xs font-extrabold text-[#2D3A4E] tracking-wide font-mono neu-inset px-2 py-0.5 rounded-lg border border-white/40">
                             {coupon.code}
                           </span>
                           <button
@@ -286,7 +286,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                             title="Скопировать код"
                           >
                             {copiedCode === coupon.code ? (
-                              <span className="text-success font-black">Скопировано!</span>
+                              <span className="text-success font-extrabold">Скопировано!</span>
                             ) : (
                               <Copy className="w-3 h-3" />
                             )}
@@ -296,7 +296,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                         <p className="text-xs font-bold text-[#2D3A4E] mt-1">
                           {coupon.title}
                         </p>
-                        <p className="text-[11px] text-[#4E5C70] leading-snug mt-0.5">
+                        <p className="text-xs text-[#4E5C70] leading-snug mt-0.5">
                           {coupon.description}
                         </p>
 
@@ -347,7 +347,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                         type="button"
                         onClick={() => handleApply(coupon.code)}
                         disabled={isCurrentActive}
-                        className={`py-1.5 px-4 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
+                        className={`py-1.5 px-4 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1 cursor-pointer ${
                           isCurrentActive
                             ? 'neu-inset text-success opacity-80 cursor-default'
                             : 'neu-button text-accent hover:text-[#2D3A4E] hover:scale-105'
@@ -388,7 +388,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
               <button
                 type="submit"
                 disabled={!customInput.trim()}
-                className="py-2.5 px-4 rounded-2xl neu-button-accent text-white font-black text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
+                className="py-2.5 px-4 rounded-2xl neu-button-accent text-white font-extrabold text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
               >
                 Применить
               </button>

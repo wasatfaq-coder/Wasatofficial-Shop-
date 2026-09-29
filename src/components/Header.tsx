@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, ArrowLeft, Settings } from 'lucide-react';
+import { Menu, ArrowLeft } from 'lucide-react';
 import { STORE_NAME_DEFAULT } from '../utils/storeContacts';
 import { ActiveTab } from '../types';
 import { pluralRu } from '../utils/pluralize';
@@ -126,9 +126,9 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={onOpenDrawer}
             className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent transition-colors shrink-0"
-            aria-label="Настройки"
+            aria-label="Открыть меню"
           >
-            <Settings className="w-5 h-5 stroke-[2]" />
+            <Menu className="w-5 h-5 stroke-[2]" />
           </button>
         ) : (
           /* Empty spacer to maintain symmetrical balance and center the title */

@@ -256,7 +256,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
           </div>
           <div>
             <div className="text-xs font-bold text-[#2D3A4E]">Только товары в наличии</div>
-            <p className="text-[11px] text-[#4E5C70]">
+            <p className="text-xs text-[#4E5C70]">
               Скрывать распроданные размеры и товары
             </p>
           </div>
@@ -277,7 +277,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
             <Banknote className="w-4 h-4 text-accent" />
             <span>Ценовой диапазон</span>
           </div>
-          <span className="text-xs font-black text-accent text-right">{priceRangeLabel(filterState)}</span>
+          <span className="text-xs font-extrabold text-accent text-right">{priceRangeLabel(filterState)}</span>
         </div>
 
         {/* Price Slider */}
@@ -325,7 +325,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 }}
                 className={`text-[11px] font-bold px-2.5 py-1.5 rounded-xl transition-all cursor-pointer ${
                   isPresetActive
-                    ? 'neu-pill-active font-black'
+                    ? 'neu-pill-active font-extrabold'
                     : 'neu-button text-[#2D3A4E] hover:text-accent'
                 }`}
               >
@@ -368,7 +368,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 onClick={() => toggleMaterial(cat.id)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                   isSelected
-                    ? 'neu-pill-active font-black'
+                    ? 'neu-pill-active font-extrabold'
                     : 'neu-button text-[#2D3A4E] hover:text-accent'
                 }`}
               >
@@ -421,9 +421,9 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 onClick={() => toggleSize(sz)}
                 className={`py-2 px-1.5 rounded-xl text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
                   isOutOfStock
-                    ? 'opacity-40 cursor-not-allowed neu-inset border border-white/20'
+                    ? 'neu-button-disabled'
                     : isSelected
-                    ? 'neu-pill-active font-black'
+                    ? 'neu-pill-active font-extrabold'
                     : 'neu-button font-bold text-[#2D3A4E] hover:text-accent'
                 }`}
               >
@@ -446,7 +446,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
           }
           className={`p-3 rounded-2xl text-xs flex items-center justify-between transition-all cursor-pointer ${
             filterState.onlyNew
-              ? 'neu-pill-active font-black'
+              ? 'neu-pill-active font-extrabold'
               : 'neu-button font-medium text-[#2D3A4E] hover:text-accent'
           }`}
         >
@@ -464,7 +464,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
           }
           className={`p-3 rounded-2xl text-xs flex items-center justify-between transition-all cursor-pointer ${
             filterState.onlyDiscount
-              ? 'neu-pill-active font-black'
+              ? 'neu-pill-active font-extrabold'
               : 'neu-button font-medium text-[#2D3A4E] hover:text-accent'
           }`}
         >
@@ -514,7 +514,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
               <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
                 <div className="flex items-center gap-2">
                   <SlidersHorizontal className="w-4 h-4 text-accent" />
-                  <span className="text-xs font-black text-[#2D3A4E] uppercase tracking-wider">
+                  <span className="text-xs font-extrabold text-[#2D3A4E] uppercase tracking-wider">
                     Параметры фильтрации каталога
                   </span>
                 </div>

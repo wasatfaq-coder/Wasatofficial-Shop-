@@ -109,7 +109,7 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
                 <Sparkles className="w-3.5 h-3.5" />
               </div>
               <div className="min-w-0 truncate">
-                <span className="text-xs sm:text-sm font-black text-[#2D3A4E] leading-none truncate block">
+                <span className="text-xs sm:text-sm font-extrabold text-[#2D3A4E] leading-none truncate block">
                   {productTitle}
                 </span>
                 <span className="text-[11px] text-[#4E5C70] font-bold leading-tight truncate block mt-0.5">
@@ -133,7 +133,7 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
                 </button>
                 <button
                   onClick={handleResetZoom}
-                  className="h-7 sm:h-8 px-2.5 sm:px-3 text-[11px] sm:text-xs font-black text-accent neu-button rounded-xl flex items-center justify-center border border-accent/20 transition-all cursor-pointer select-none"
+                  className="h-7 sm:h-8 px-2.5 sm:px-3 text-[11px] sm:text-xs font-extrabold text-accent neu-button rounded-xl flex items-center justify-center border border-accent/20 transition-all cursor-pointer select-none"
                   title="Сбросить масштаб"
                 >
                   {Math.round(zoomLevel * 100)}%
@@ -232,7 +232,7 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
                   setPanOffset({ x: 0, y: 0 });
                 }}
                 className={`p-1 rounded-2xl transition-all cursor-pointer ${
-                  currentIndex === idx ? 'neu-pill-active ring-2 ring-accent' : 'neu-button opacity-75 hover:opacity-100'
+                  currentIndex === idx ? 'neu-pill-active' : 'neu-button opacity-75 hover:opacity-100'
                 }`}
                 aria-label={`Фото ${idx + 1} из ${images.length}`}
                 aria-current={currentIndex === idx}

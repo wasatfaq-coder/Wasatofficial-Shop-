@@ -62,7 +62,7 @@ const LegalDocumentScreen: React.FC<{ docId: LegalDocId; settings: StorefrontSet
         </div>
         <div className="min-w-0">
           <h2 className="text-lg font-extrabold text-[#2D3A4E] leading-tight">{LEGAL_DOC_TITLES[docId]}</h2>
-          <p className="text-[11px] text-[#4E5C70] mt-0.5">
+          <p className="text-xs text-[#4E5C70] mt-0.5">
             Редакция от {formatLegalDate(edition?.updatedAt || LEGAL_TEMPLATE_DATE)}
           </p>
         </div>

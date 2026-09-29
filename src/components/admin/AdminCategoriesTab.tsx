@@ -62,8 +62,8 @@ export const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({
               <Icon className="w-4 h-4" />
             </span>
             <div className="min-w-0">
-              <p className="text-xs font-black text-[#2D3A4E] truncate">{c.name}</p>
-              <p className="text-[11px] text-[#4E5C70]">
+              <p className="text-xs font-extrabold text-[#2D3A4E] truncate">{c.name}</p>
+              <p className="text-xs text-[#4E5C70]">
                 Товаров: {count}
                 <span className="font-mono ml-2">{c.id}</span>
               </p>

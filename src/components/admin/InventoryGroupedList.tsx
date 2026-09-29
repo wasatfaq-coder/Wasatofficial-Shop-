@@ -102,13 +102,13 @@ function groupCategories(rows: InventoryRow[], categories: StoreCategory[]): Cat
 const StockFlags: React.FC<{ low: number; out: number }> = ({ low, out }) => (
   <>
     {low > 0 && (
-      <span className="inline-flex items-center gap-1 text-[11px] font-black text-warning whitespace-nowrap">
+      <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-warning whitespace-nowrap">
         <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden="true" />
         мало: {low}
       </span>
     )}
     {out > 0 && (
-      <span className="inline-flex items-center gap-1 text-[11px] font-black text-danger whitespace-nowrap">
+      <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-danger whitespace-nowrap">
         <XCircle className="w-3 h-3 shrink-0" aria-hidden="true" />
         нет: {out}
       </span>
@@ -214,11 +214,11 @@ export const InventoryGroupedList: React.FC<InventoryGroupedListProps> = ({
               <img src={productImage(model.product)} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             </span>
             <span className="min-w-0 flex-1 space-y-0.5">
-              <span className="block text-xs font-black text-[#2D3A4E] truncate">{model.product.title}</span>
+              <span className="block text-xs font-extrabold text-[#2D3A4E] truncate">{model.product.title}</span>
               <span className="block text-[11px] font-semibold text-[#4E5C70]">
                 {model.articles.length} {pluralRu(model.articles.length, ['артикул', 'артикула', 'артикулов'])} ·{' '}
                 {s.variants} {pluralRu(s.variants, ['вариант', 'варианта', 'вариантов'])} ·{' '}
-                <span className="font-black text-[#2D3A4E]">{s.units} шт.</span>
+                <span className="font-extrabold text-[#2D3A4E]">{s.units} шт.</span>
               </span>
               <span className="flex items-center gap-2 flex-wrap">
                 <StockFlags low={s.low} out={s.out} />
@@ -251,11 +251,11 @@ export const InventoryGroupedList: React.FC<InventoryGroupedListProps> = ({
                     onToggle={() => toggleGroup(article.rows)}
                     label={`Выбрать для этикеток: ${model.product.title}, ${article.color}`}
                   />
-                  <span className="text-[11px] font-black text-[#2D3A4E] truncate">{article.color || 'Без цвета'}</span>
+                  <span className="text-[11px] font-extrabold text-[#2D3A4E] truncate">{article.color || 'Без цвета'}</span>
                   {article.article && (
                     <span className="text-[11px] font-mono font-bold text-[#4E5C70] truncate">{article.article}</span>
                   )}
-                  <span className="ml-auto text-[11px] font-black text-[#2D3A4E] whitespace-nowrap">
+                  <span className="ml-auto text-[11px] font-extrabold text-[#2D3A4E] whitespace-nowrap">
                     {summary(article.rows).units} шт.
                   </span>
                 </div>
@@ -303,12 +303,12 @@ export const InventoryGroupedList: React.FC<InventoryGroupedListProps> = ({
                   <Icon className="w-[18px] h-[18px]" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-black text-[#2D3A4E] truncate">{cat.name}</span>
+                  <span className="block text-sm font-extrabold text-[#2D3A4E] truncate">{cat.name}</span>
                   <span className="flex items-center gap-x-2 gap-y-0.5 flex-wrap text-[11px] font-semibold text-[#4E5C70]">
                     <span>
                       {cat.models.length} {pluralRu(cat.models.length, ['модель', 'модели', 'моделей'])} · {s.variants}{' '}
                       {pluralRu(s.variants, ['вариант', 'варианта', 'вариантов'])} ·{' '}
-                      <span className="font-black text-[#2D3A4E]">{s.units} шт.</span>
+                      <span className="font-extrabold text-[#2D3A4E]">{s.units} шт.</span>
                     </span>
                     <StockFlags low={s.low} out={s.out} />
                   </span>

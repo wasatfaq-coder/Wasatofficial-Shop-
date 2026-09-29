@@ -83,7 +83,7 @@ export const BrandRenameCard: React.FC<BrandRenameCardProps> = ({
           <Replace className="w-4 h-4" />
         </div>
         <div className="min-w-0 space-y-1">
-          <h4 className="text-sm font-black text-[#2D3A4E]">Название магазина в данных</h4>
+          <h4 className="text-sm font-extrabold text-[#2D3A4E]">Название магазина в данных</h4>
           {lines.length > 0 ? (
             <p className="text-xs text-[#4E5C70] leading-relaxed">
               В базе остались тексты шаблона со старым названием MANSTYLE: {lines.join('; ')}. Покупатели уже видят «{newName}», но
@@ -101,7 +101,7 @@ export const BrandRenameCard: React.FC<BrandRenameCardProps> = ({
         <button
           type="button"
           onClick={() => setIsConfirmOpen(true)}
-          className="w-full py-2.5 px-4 neu-button rounded-xl text-xs font-black text-accent cursor-pointer"
+          className="w-full py-2.5 px-4 neu-button rounded-xl text-xs font-extrabold text-accent cursor-pointer"
         >
           Заменить на «{newName}»
         </button>

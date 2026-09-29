@@ -60,27 +60,27 @@ export const AdminServerOrdersCard: React.FC<AdminServerOrdersCardProps> = ({ on
             <ServerCog className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <h4 className="text-sm font-black text-[#2D3A4E]">Проверка заказов на сервере</h4>
-            <p className="text-[11px] text-[#4E5C70] leading-snug">
+            <h4 className="text-sm font-extrabold text-[#2D3A4E]">Проверка заказов на сервере</h4>
+            <p className="text-xs text-[#4E5C70] leading-snug">
               Сервер пересчитывает цену, проверяет остатки и промокоды. Покупатель не сможет изменить
               сумму заказа или остатки на складе из своего браузера.
             </p>
           </div>
         </div>
         {enabled === null ? null : enabled ? (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black text-success bg-success-soft border border-success/25">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-extrabold text-success bg-success-soft border border-success/25">
             <ShieldCheck className="w-3.5 h-3.5" />
             Включено
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black text-warning bg-warning-soft border border-warning/25">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-extrabold text-warning bg-warning-soft border border-warning/25">
             Выключено
           </span>
         )}
       </div>
 
       {enabled === false && (
-        <p className="text-[11px] text-[#4E5C70] leading-snug neu-inset rounded-2xl p-3">
+        <p className="text-xs text-[#4E5C70] leading-snug neu-inset rounded-2xl p-3">
           Нужна развернутая функция placeOrder (тариф Firebase Blaze и переменная репозитория
           DEPLOY_FUNCTIONS = true). Перед включением функция проверяется: если она не отвечает,
           режим не включится и заказы продолжат работать.
@@ -101,7 +101,7 @@ export const AdminServerOrdersCard: React.FC<AdminServerOrdersCardProps> = ({ on
             type="button"
             onClick={handleEnable}
             disabled={enabled === null || isChecking}
-            className="py-2 px-3.5 neu-button rounded-xl text-xs font-black text-accent cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+            className="py-2 px-3.5 neu-button rounded-xl text-xs font-extrabold text-accent cursor-pointer disabled:opacity-50 disabled:cursor-wait"
           >
             {isChecking ? 'Проверяем функцию…' : 'Проверить и включить'}
           </button>

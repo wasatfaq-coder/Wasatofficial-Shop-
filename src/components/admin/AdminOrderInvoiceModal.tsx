@@ -87,7 +87,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
             </div>
             <div>
               <h3 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">Товарная накладная и чек</h3>
-              <p className="text-[11px] text-slate-500">Печатная форма для комплектации и передачи клиенту</p>
+              <p className="text-xs text-slate-500">Печатная форма для комплектации и передачи клиенту</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -114,15 +114,15 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
           <div className="flex justify-between items-start border-b border-slate-200 pb-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xl font-black tracking-tight text-[#2D3A4E]">{currentStoreName()}</span>
+                <span className="text-xl font-extrabold tracking-tight text-[#2D3A4E]">{currentStoreName()}</span>
                 <span className="text-[11px] font-extrabold bg-accent/10 text-accent px-2 py-0.5 rounded-full uppercase">
                   Официальный документ
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 mt-1 font-medium">
+              <p className="text-xs text-slate-500 mt-1 font-medium">
                 Интернет-магазин премиальной мужской одежды
               </p>
-              {sellerLine && <p className="text-[11px] text-slate-400">{sellerLine}</p>}
+              {sellerLine && <p className="text-xs text-slate-400">{sellerLine}</p>}
             </div>
             <div className="text-right">
               <div
@@ -131,11 +131,11 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
                 title="Нажмите, чтобы скопировать номер"
               >
                 <span className="text-xs font-bold text-slate-400 block uppercase">Накладная №</span>
-                <span className="text-base font-black text-accent tracking-wide">
+                <span className="text-base font-extrabold text-accent tracking-wide">
                   WS-INV-{order.id.slice(-6).toUpperCase()}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 font-semibold mt-0.5">
+              <p className="text-xs text-slate-500 font-semibold mt-0.5">
                 от {order.date || new Date().toLocaleDateString('ru-RU')}
               </p>
             </div>
@@ -183,7 +183,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
 
           {/* Items Table */}
           <div>
-            <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-2">
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 mb-2">
               Состав отправления ({totalQuantity} шт.)
             </h4>
             <div className="border border-slate-200 rounded-xl overflow-hidden">
@@ -223,7 +223,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
                         </td>
                         <td className="py-2.5 px-3 text-center font-bold">{it.quantity || 1} шт.</td>
                         <td className="py-2.5 px-3 text-right">{price.toLocaleString('ru-RU')} ₽</td>
-                        <td className="py-2.5 px-3 text-right font-black text-slate-900">
+                        <td className="py-2.5 px-3 text-right font-extrabold text-slate-900">
                           {sum.toLocaleString('ru-RU')} ₽
                         </td>
                       </tr>
@@ -253,9 +253,9 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
                 <span>Доставка:</span>
                 <span className="font-semibold text-success">Бесплатно</span>
               </div>
-              <div className="border-t border-slate-200 pt-2 flex justify-between items-baseline font-black text-slate-900 text-sm">
+              <div className="border-t border-slate-200 pt-2 flex justify-between items-baseline font-extrabold text-slate-900 text-sm">
                 <span>ИТОГО К ОПЛАТЕ:</span>
-                <span className="text-base text-accent font-black">
+                <span className="text-base text-accent font-extrabold">
                   {order.totalPrice.toLocaleString('ru-RU')} ₽
                 </span>
               </div>
@@ -275,7 +275,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
               <div className="w-36 border-b border-slate-400 border-dashed pb-0.5 text-center text-slate-400 font-mono text-[11px]">
                 Отпустил со склада (подпись)
               </div>
-              <p className="text-[11px] text-slate-400 mt-1">Штамп отдела контроля качества {currentStoreName()}</p>
+              <p className="text-xs text-slate-400 mt-1">Штамп отдела контроля качества {currentStoreName()}</p>
             </div>
           </div>
         </div>

@@ -169,7 +169,7 @@ export const ChatMessageDeleteDialog: React.FC<ChatMessageDeleteDialogProps> = (
                   onDeleteForAll();
                   onClose();
                 }}
-                className={`py-2.5 px-3 neu-button-danger rounded-xl text-xs font-black flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`py-2.5 px-3 neu-button-danger rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 cursor-pointer ${
                   forAllOnly ? 'col-span-2' : ''
                 }`}
               >

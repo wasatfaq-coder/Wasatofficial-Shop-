@@ -71,9 +71,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       <nav aria-label="Основная навигация" className="pointer-events-auto max-w-sm mx-auto neu-flat rounded-[26px] p-1.5 flex items-center justify-between gap-1 border border-white/70">
         {tabs.map((tab) => {
           const Icon = tab.icon;
+          // As in DesktopHeader: checkout belongs to the cart, a product page to the catalog
           const isActive =
             activeTab === tab.id ||
-            (tab.id === 'home' && (activeTab === 'product-detail' || activeTab === 'checkout' || activeTab === 'order-success'));
+            (tab.id === 'cart' && activeTab === 'checkout') ||
+            (tab.id === 'catalog' && activeTab === 'product-detail');
 
           const isCartTab = tab.isCart;
           const isFavTab = tab.isFav;
@@ -87,8 +89,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   ? 'text-accent font-bold'
                   : 'text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95'
               }`}
-              title={tab.label}
               aria-label={tab.label}
+              aria-current={isActive ? 'page' : undefined}
             >
               {isActive && (
                 <motion.div
@@ -128,7 +130,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                       }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.9, times: [0, 0.2, 0.7, 1], ease: 'easeOut' }}
-                      className="absolute -top-1 left-1/2 -translate-x-1/2 z-30 bg-accent text-white text-[11px] font-black px-1.5 py-0.5 rounded-full shadow-[var(--neu-fill-accent-shadow)] pointer-events-none ring-1 ring-white/80"
+                      className="absolute -top-1 left-1/2 -translate-x-1/2 z-30 bg-accent text-white text-[11px] font-extrabold px-1.5 py-0.5 rounded-full shadow-[var(--neu-fill-accent-shadow)] pointer-events-none ring-1 ring-white/80"
                     >
                       {cartPlusBadge.text}
                     </motion.span>
@@ -184,13 +186,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   />
                 )}
 
-                {isActive && (
-                  <motion.div
-                    layoutId="bottomNavDot"
-                    className="w-1.5 h-1.5 rounded-full bg-accent mt-0.5"
-                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                  />
-                )}
+                <span aria-hidden="true" className={`mt-0.5 text-[11px] leading-none tracking-tight ${isActive ? 'font-bold' : 'font-semibold'}`}>
+                  {tab.label}
+                </span>
               </div>
 
               {/* Badge with micro-animation pop */}

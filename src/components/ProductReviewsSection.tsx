@@ -213,7 +213,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
       <div className="neu-flat rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-2xl neu-inset flex flex-col items-center justify-center shrink-0">
-            <span className="text-2xl font-black text-accent leading-none">
+            <span className="text-2xl font-extrabold text-accent leading-none">
               {ratingInfo.rating.toFixed(1)}
             </span>
             <span className="text-[11px] text-[#4E5C70] font-bold mt-1">из 5.0</span>
@@ -235,7 +235,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
             <p className="text-xs font-bold text-[#2D3A4E] mt-1">
               {ratingInfo.count} {pluralRu(ratingInfo.count, ['отзыв', 'отзыва', 'отзывов'])}
             </p>
-            <p className="text-[11px] text-success font-semibold flex items-center gap-1 mt-0.5">
+            <p className="text-xs text-success font-semibold flex items-center gap-1 mt-0.5">
               <CheckCircle2 className="w-3.5 h-3.5" />
               {recommendShare}% покупателей оценили на 4–5
             </p>
@@ -280,12 +280,12 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
               {/* Author & Rating info */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full neu-flat-sm flex items-center justify-center font-black text-xs text-accent uppercase shrink-0">
+                  <div className="w-8 h-8 rounded-full neu-flat-sm flex items-center justify-center font-extrabold text-xs text-accent uppercase shrink-0">
                     {rev.authorName ? rev.authorName[0] : 'U'}
                   </div>
                   <div>
                     <span className="text-xs font-bold text-[#2D3A4E]">{rev.authorName}</span>
-                    <p className="text-[11px] text-[#4E5C70]">{rev.date}</p>
+                    <p className="text-xs text-[#4E5C70]">{rev.date}</p>
                   </div>
                 </div>
 
@@ -373,7 +373,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                 </div>
                 <div>
                   <h3 id={reviewDialog.titleId} className="text-base font-extrabold text-[#2D3A4E]">Оставить отзыв</h3>
-                  <p className="text-[11px] text-[#4E5C70] truncate max-w-[220px]">
+                  <p className="text-xs text-[#4E5C70] truncate max-w-[220px]">
                     {product.title}
                   </p>
                 </div>

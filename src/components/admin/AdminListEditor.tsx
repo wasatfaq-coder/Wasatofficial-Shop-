@@ -121,8 +121,8 @@ export function AdminListEditor<T extends { id: string }>({
       <div className="neu-flat rounded-2xl p-4 space-y-3">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0">
-            <h3 className="text-sm font-black text-[#2D3A4E]">{title}</h3>
-            <p className="text-[11px] text-[#4E5C70] leading-snug mt-0.5">{description}</p>
+            <h3 className="text-sm font-extrabold text-[#2D3A4E]">{title}</h3>
+            <p className="text-xs text-[#4E5C70] leading-snug mt-0.5">{description}</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {quickAction && (
@@ -145,7 +145,7 @@ export function AdminListEditor<T extends { id: string }>({
               type="button"
               onClick={startAdd}
               disabled={Boolean(draft)}
-              className="py-2 px-3 neu-button-accent rounded-xl text-xs font-black flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="py-2 px-3 neu-button-accent rounded-xl text-xs font-extrabold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus className="w-3.5 h-3.5" />
               {addLabel}
@@ -226,7 +226,7 @@ export function AdminListEditor<T extends { id: string }>({
                 type="button"
                 onClick={saveDraft}
                 disabled={missing.length > 0 || isSaving}
-                className="py-2 px-3 neu-button rounded-xl text-xs font-black text-accent flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="py-2 px-3 neu-button rounded-xl text-xs font-extrabold text-accent flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Check className="w-3.5 h-3.5" />
                 {isSaving ? 'Сохранение…' : 'Сохранить'}
