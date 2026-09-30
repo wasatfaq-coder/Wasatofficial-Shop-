@@ -10,10 +10,7 @@ import { BottomNav } from './components/BottomNav';
 import { SidebarDrawer } from './components/SidebarDrawer';
 import { ToastContainer, ToastMessage } from './components/Toast';
 import { DesktopHeader } from './components/DesktopHeader';
-import { PromoModal } from './components/PromoModal';
-import { SupportChatModal } from './components/SupportChatModal';
 import { SizeCalculatorModal } from './components/SizeCalculatorModal';
-import { BrandRequisitesModal } from './components/BrandRequisitesModal';
 import {
   CatalogAdvancedFilter,
   FilterState,
@@ -82,10 +79,18 @@ import { HomeScreen } from './views/HomeScreen';
 import { CatalogScreen } from './views/CatalogScreen';
 import { ProductDetailScreen } from './views/ProductDetailScreen';
 import { CartScreen } from './views/CartScreen';
-import { CheckoutScreen } from './views/CheckoutScreen';
-import { ProfileScreen } from './views/ProfileScreen';
-import { FavoritesScreen } from './views/FavoritesScreen';
-import { OrderSuccessScreen } from './views/OrderSuccessScreen';
+import { LazyMount } from './components/LazyMount';
+import {
+  loadBrandRequisitesModal,
+  loadCheckoutScreen,
+  loadFavoritesScreen,
+  loadOrderSuccessScreen,
+  loadProfileScreen,
+  loadPromoModal,
+  loadSupportChatModal,
+  prefetchCustomerScreensWhenIdle,
+} from './customerLoaders';
+import type { CatalogStatus } from './components/CatalogLoadState';
 import { CART_STORAGE_KEY, loadStoredCart, toStoredCart } from './utils/cartStorage';
 import { validatePromo, toPricingLine, isPromoListed, promoDiscountKind, QUICK_ORDER_DELIVERY_ID } from './shared/orderPricing';
 import { formatOrderDate } from './shared/orderDate';
@@ -101,6 +106,21 @@ import { parseRouteHash, readHistoryState, routeHash, type HistoryEntryState } f
 
 // Legal documents: a separate chunk with the templates, loaded when a document is opened
 const LegalDocumentScreen = lazy(() => import('./views/LegalDocumentScreen'));
+/** A screen loaded on demand (usually already prefetched): a quiet line instead of an empty page */
+const ScreenLoading: React.FC = () => (
+  <p className="px-4 py-10 text-center text-xs text-[#4E5C70]" role="status">
+    Загрузка…
+  </p>
+);
+
+// Not needed on the first screen: loaded on demand and prefetched in idle time (customerLoaders.ts)
+const ProfileScreen = lazy(() => loadProfileScreen().then((m) => ({ default: m.ProfileScreen })));
+const CheckoutScreen = lazy(() => loadCheckoutScreen().then((m) => ({ default: m.CheckoutScreen })));
+const OrderSuccessScreen = lazy(() => loadOrderSuccessScreen().then((m) => ({ default: m.OrderSuccessScreen })));
+const FavoritesScreen = lazy(() => loadFavoritesScreen().then((m) => ({ default: m.FavoritesScreen })));
+const SupportChatModal = lazy(() => loadSupportChatModal().then((m) => ({ default: m.SupportChatModal })));
+const PromoModal = lazy(() => loadPromoModal().then((m) => ({ default: m.PromoModal })));
+const BrandRequisitesModal = lazy(() => loadBrandRequisitesModal().then((m) => ({ default: m.BrandRequisitesModal })));
 
 // Unique across customers: messages are create-only for customers (see firestore.rules)
 function newChatMessageId(): string {
@@ -273,6 +293,8 @@ export default function App() {
   const pendingSelectedProductId = React.useRef<string | null>(initialRoute?.productId ?? null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productsLoaded, setProductsLoaded] = useState(false);
+  // The catalog subscription failed (rules, network): the screens say so instead of «Товары появятся здесь»
+  const [productsError, setProductsError] = useState(false);
   // Admin only: cost prices from `product_costs` (a product document is readable by every visitor)
   const [productCosts, setProductCosts] = useState<Record<string, number>>({});
 
@@ -422,7 +444,8 @@ export default function App() {
         if (!wantedId) return null;
         return loadedProds.find((p) => p.id === wantedId) || null;
       });
-    });
+      setProductsError(false);
+    }, () => setProductsError(true));
 
     const unsubReviews = subscribeToReviews(setStoredReviews);
     const unsubReviewVotes = subscribeToReviewVotes(setReviewVotes);
@@ -1242,6 +1265,14 @@ export default function App() {
   ].sort((a, b) => chatMessageOrder(a) - chatMessageOrder(b));
 
   const hasActivePromos = promos.some((p) => isPromoListed(p));
+  const catalogStatus: CatalogStatus = productsLoaded ? 'ready' : productsError ? 'error' : 'loading';
+  // Once the first screen has its catalog, the other customer screens are fetched in idle time
+  const prefetchedScreens = React.useRef(false);
+  React.useEffect(() => {
+    if (!productsLoaded || prefetchedScreens.current) return;
+    prefetchedScreens.current = true;
+    prefetchCustomerScreensWhenIdle();
+  }, [productsLoaded]);
 
   // Complete Order
   type CompleteOrderData = {
@@ -1530,13 +1561,16 @@ export default function App() {
           onToggleInline={() => {}}
         />
 
+        <LazyMount when={isBrandModalOpen}>
         <BrandRequisitesModal
           isOpen={isBrandModalOpen}
           onClose={() => setIsBrandModalOpen(false)}
           storefrontSettings={customerStorefront}
           onOpenSupportChat={() => setIsSupportChatOpen(true)}
         />
+        </LazyMount>
 
+        <LazyMount when={isSupportChatOpen}>
         <SupportChatModal
           isOpen={isSupportChatOpen}
           storePhone={getStoreContacts(storefrontSettings).phone}
@@ -1565,6 +1599,7 @@ export default function App() {
             }
           }}
         />
+        </LazyMount>
 
         <SizeCalculatorModal
           isOpen={isMySizesModalOpen}
@@ -1577,6 +1612,7 @@ export default function App() {
           onSaveMeasurements={handleSaveMeasurements}
         />
 
+        <LazyMount when={isPromoModalOpen}>
         <PromoModal
           isOpen={isPromoModalOpen}
           onClose={() => setIsPromoModalOpen(false)}
@@ -1587,6 +1623,7 @@ export default function App() {
           cartItems={cartItems}
           promos={promos}
         />
+        </LazyMount>
 
         {/* Promo message from Admin → «Витрина»: shown when switched on and filled in */}
         {storefrontSettings?.isStoreBannerVisible && publicSetting(storefrontSettings.storeBannerText) && (
@@ -1657,9 +1694,11 @@ export default function App() {
               transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
               className="w-full h-full"
             >
+              <Suspense fallback={<ScreenLoading />}>
               {activeTab === 'home' && (
             <HomeScreen
               products={products}
+              catalogStatus={catalogStatus}
               favorites={favorites}
               cartItemIds={cartProductIds}
               recentlyViewed={recentlyViewed}
@@ -1691,6 +1730,7 @@ export default function App() {
             <CatalogScreen
               categories={getCategories(storefrontSettings)}
               products={products}
+              catalogStatus={catalogStatus}
               favorites={favorites}
               cartItemIds={cartProductIds}
               recentlyViewed={recentlyViewed}
@@ -1919,6 +1959,7 @@ export default function App() {
               <LegalDocumentScreen docId={activeTab} settings={customerStorefront} />
             </Suspense>
           )}
+              </Suspense>
             </motion.div>
           </AnimatePresence>
         </main>

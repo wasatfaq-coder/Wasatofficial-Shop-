@@ -26,8 +26,11 @@ import type { StoreCategory } from '../types';
 import { categoryIcon } from '../utils/categories';
 import { pluralRu } from '../utils/pluralize';
 import { PRODUCTS_PAGE_SIZE } from '../utils/productListing';
+import { CatalogLoadState, type CatalogStatus } from '../components/CatalogLoadState';
 
 interface CatalogScreenProps {
+  /** Catalog subscription: placeholders while loading, a message on error; «не настроено» only when ready */
+  catalogStatus?: CatalogStatus;
   /** From Admin → «Категории» */
   categories?: StoreCategory[];
   products: Product[];
@@ -59,6 +62,7 @@ interface CatalogScreenProps {
 }
 
 export const CatalogScreen: React.FC<CatalogScreenProps> = ({
+  catalogStatus = 'ready',
   categories = [],
   products,
   favorites,
@@ -217,7 +221,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
       </div>
 
       {/* 2. Category Carousel: categories from Admin → «Категории» */}
-      {categories.length === 0 && <NotConfigured title="Категории" />}
+      {categories.length === 0 && catalogStatus === 'ready' && <NotConfigured title="Категории" />}
       {categories.length > 0 && (
       <div className="relative -mx-4 px-4">
         <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-2 scroll-smooth">
@@ -489,7 +493,9 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           exit={{ opacity: 0, y: -6 }}
           transition={{ duration: 0.18 }}
         >
-          {products.length === 0 ? (
+          {catalogStatus !== 'ready' ? (
+            <CatalogLoadState status={catalogStatus} cards={6} />
+          ) : products.length === 0 ? (
             <NotConfigured title="Каталог" hint="Товары появятся здесь, когда магазин их добавит." />
           ) : filteredProducts.length === 0 ? (
             <div className="neu-inset rounded-3xl p-8 text-center space-y-3 border border-white/60">

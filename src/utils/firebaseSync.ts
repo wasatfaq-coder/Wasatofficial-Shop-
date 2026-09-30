@@ -115,6 +115,9 @@ export function subscribeToProducts(
   return onSnapshot(
     colRef,
     async (snapshot) => {
+      // Offline, Firestore answers from the (empty) local cache first: that is «no answer yet», not an empty
+      // catalog — the screens keep the placeholders instead of «Товары появятся здесь»
+      if (snapshot.empty && snapshot.metadata.fromCache) return;
       if (snapshot.empty) {
         onUpdate([]);
         return;
