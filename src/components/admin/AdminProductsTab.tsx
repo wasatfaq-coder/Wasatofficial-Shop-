@@ -60,13 +60,15 @@ import type { StoreCategory } from '../../types';
 import { productImage } from '../../utils/productImage';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
+import { docSizeBytes, formatMegabytes, PRODUCT_SIZE_BUDGET_BYTES } from '../../utils/productSize';
 import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
 
 interface AdminProductsTabProps {
   /** Admin → «Категории»: the only category list for products */
   categories?: StoreCategory[];
   products: Product[];
-  onUpdateProducts: (updated: Product[]) => void;
+  /** Resolves to false when the database refused the write (the error toast is already shown) */
+  onUpdateProducts: (updated: Product[]) => Promise<boolean> | void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
@@ -99,6 +101,11 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
   // Modals
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
+  /** Problems found on «Сохранить»: listed next to the button instead of a pile of error toasts */
+  const [showFormErrors, setShowFormErrors] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const formErrorsRef = useRef<HTMLDivElement>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const deleteProductDialog = useDialogA11y(Boolean(productToDelete), () => setProductToDelete(null));
@@ -155,6 +162,45 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   const [formSkus, setFormSkus] = useState<ProductSKU[]>([]);
   // Card sections (description highlights, composition, characteristics, care)
   const [formCard, setFormCard] = useState<ProductCardStructure>(EMPTY_CARD_STRUCTURE);
+  // What the product will take in the database: photos (data: URIs) are almost all of it
+  const formSizeBytes = useMemo(
+    () =>
+      isProductFormOpen
+        ? docSizeBytes({
+            title: formTitle,
+            description: formDescription,
+            images: formImages,
+            colors: formColors,
+            sizes: formSizes,
+            skus: formSkus,
+            ...cardStructureToProduct(formCard),
+          })
+        : 0,
+    [isProductFormOpen, formTitle, formDescription, formImages, formColors, formSizes, formSkus, formCard]
+  );
+
+  // Checked on «Сохранить» and then live, so a fixed field drops out of the list at once
+  const validationErrors = useMemo(() => {
+    const numPrice = Number(formPrice);
+    const fibers = formCard.composition.filter((c) => c.fiber.trim() && Number(c.percentage) > 0);
+    const fiberTotal = fibers.reduce((sum, c) => sum + Number(c.percentage), 0);
+    return [
+
+      !formTitle.trim() && 'Введите название товара',
+      (!numPrice || numPrice <= 0) && 'Укажите цену больше нуля',
+      formColors.length === 0 && 'Добавьте хотя бы один цвет',
+      formSizes.length === 0 && 'Выберите хотя бы один размер',
+      formImages.length === 0 && 'Добавьте хотя бы одно фото',
+      formOldPrice && Number(formOldPrice) <= numPrice &&
+        'Старая цена должна быть больше текущей — иначе скидки нет. Очистите поле или исправьте цену',
+      fibers.length > 0 && fiberTotal !== 100 &&
+        `Сумма состава ткани — ${fiberTotal}%, а должна быть 100% («Структура карточки»)`,
+      formSizeBytes > PRODUCT_SIZE_BUDGET_BYTES &&
+        `Товар занимает ${formatMegabytes(formSizeBytes)} из ${formatMegabytes(PRODUCT_SIZE_BUDGET_BYTES)}: база его не примет. Уберите часть фото`,
+    ].filter((m): m is string => Boolean(m));
+
+  }, [formTitle, formPrice, formColors, formSizes, formImages, formOldPrice, formCard, formSizeBytes]);
+  const formErrors = [...(showFormErrors ? validationErrors : []), ...(saveError ? [saveError] : [])];
   // Removal waiting for confirmation (photo, color, size, stock reset), as in the cart
   const [pendingRemoval, setPendingRemoval] = useState<{
     title: string;
@@ -444,6 +490,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     setFormColors([]);
     setFormSkus([]);
     setFormCard(EMPTY_CARD_STRUCTURE);
+    setShowFormErrors(false);
+    setSaveError(null);
     setIsProductFormOpen(true);
   };
 
@@ -466,46 +514,28 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       prod.skus && prod.skus.length > 0 ? prod.skus : generateDefaultSKUs(prod).map((sku) => ({ ...sku, stock: 0 }))
     );
     setFormCard(cardStructureFromProduct(prod));
+    setShowFormErrors(false);
+    setSaveError(null);
     setIsProductFormOpen(true);
   };
 
-  const handleSaveProduct = (e: React.FormEvent) => {
+  // «Enter» in a field never submits the whole form: in an add-a-value row (link to a photo, colour, size)
+  // it presses that row's «+» button
+  const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    const el = e.target as HTMLElement;
+    if (e.key !== 'Enter' || el.tagName !== 'INPUT') return;
     e.preventDefault();
-    if (!formTitle.trim()) {
-      onShowToast('Введите название товара', 'error');
-      return;
-    }
+    el.closest('[data-enter-adds]')?.querySelector<HTMLButtonElement>('button:not([disabled])')?.click();
+  };
 
+  const handleSaveProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSavingProduct) return;
     const numPrice = Number(formPrice);
-    if (!numPrice || numPrice <= 0) {
-      onShowToast('Укажите корректную стоимость товара больше нуля', 'error');
-      return;
-    }
-
-    if (!formColors || formColors.length === 0) {
-      onShowToast('Добавьте хотя бы один цвет для товара', 'error');
-      return;
-    }
-
-    if (!formSizes || formSizes.length === 0) {
-      onShowToast('Выберите хотя бы один размер для товара', 'error');
-      return;
-    }
-
-    if (formImages.length === 0) {
-      onShowToast('Добавьте хотя бы одно фото товара', 'error');
-      return;
-    }
-
-    if (formOldPrice && Number(formOldPrice) <= numPrice) {
-      onShowToast('Старая цена должна быть больше текущей — иначе скидки нет. Очистите поле или исправьте цену', 'error');
-      return;
-    }
-
-    const fibers = formCard.composition.filter((c) => c.fiber.trim() && Number(c.percentage) > 0);
-    const fiberTotal = fibers.reduce((sum, c) => sum + Number(c.percentage), 0);
-    if (fibers.length > 0 && fiberTotal !== 100) {
-      onShowToast(`Сумма состава ткани — ${fiberTotal}%, а должна быть 100%. Исправьте в «Структуре карточки»`, 'error');
+    setShowFormErrors(true);
+    setSaveError(null);
+    if (validationErrors.length > 0) {
+      requestAnimationFrame(() => formErrorsRef.current?.focus());
       return;
     }
 
@@ -545,8 +575,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         ...cardFields,
       };
 
-      onUpdateProducts(products.map((p) => (p.id === editingProduct.id ? updated : p)));
-      onShowToast(`Товар "${formTitle}" обновлен`, 'success');
+      await finishSave(products.map((p) => (p.id === editingProduct.id ? updated : p)), `Товар «${formTitle.trim()}» сохранен`);
     } else {
       const newProd: Product = {
         id: `prod-${Date.now()}`,
@@ -569,11 +598,23 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         isNew: true,
       };
 
-      onUpdateProducts([newProd, ...products]);
-      onShowToast(`Товар "${formTitle}" успешно добавлен в каталог`, 'success');
+      await finishSave([newProd, ...products], `Товар «${formTitle.trim()}» добавлен в каталог`);
     }
+  };
 
-    setIsProductFormOpen(false);
+  /** The form closes and says «сохранен» only after the database accepted the product; otherwise the input stays */
+  const finishSave = async (next: Product[], successText: string) => {
+    setIsSavingProduct(true);
+    try {
+      if ((await onUpdateProducts(next)) === false) {
+        setSaveError('База не приняла товар (ошибка — в сообщении внизу экрана). Введённое осталось в форме: проверьте соединение и нажмите ещё раз');
+        return;
+      }
+      onShowToast(successText, 'success');
+      setIsProductFormOpen(false);
+    } finally {
+      setIsSavingProduct(false);
+    }
   };
 
   // Gallery file upload and drag-and-drop handlers
@@ -702,7 +743,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     }));
 
     setFormSkus((prev) => [...prev, ...newSkus]);
-    onShowToast(`Цвет «${cleanName}» добавлен (+${newSkus.length} вариаций)`, 'info');
+    onShowToast(`Цвет «${cleanName}» добавлен (+${newSkus.length} ${pluralRu(newSkus.length, ['вариация', 'вариации', 'вариаций'])})`, 'info');
   };
 
   const handleRemoveColor = (colorName: string) => {
@@ -757,7 +798,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     }));
 
     setFormSkus((prev) => [...prev, ...newSkus]);
-    onShowToast(`Размер «${size}» добавлен (+${newSkus.length} вариаций)`, 'info');
+    onShowToast(`Размер «${size}» добавлен (+${newSkus.length} ${pluralRu(newSkus.length, ['вариация', 'вариации', 'вариаций'])})`, 'info');
   };
 
   const handleTogglePresetSize = (size: string) => {
@@ -1408,7 +1449,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
               </div>
             ) : null /* no «всё уникально» banner: it showed even for an empty new product */}
 
-            <form onSubmit={handleSaveProduct} className="space-y-4">
+            <form onSubmit={handleSaveProduct} onKeyDown={handleFormKeyDown} noValidate className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Left Column: Basic Info, Category, Pricing, Photos, Description */}
                 <div className="space-y-3">
@@ -1632,6 +1673,34 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                       </div>
                     </div>
 
+                    {/* Photos live inside the product document (up to 1 MiB): show how much space is left */}
+                    {formImages.length > 0 && (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[11px] font-bold">
+                          <span className="text-[#4E5C70]">Место под фото и описание</span>
+                          <span className={formSizeBytes > PRODUCT_SIZE_BUDGET_BYTES ? 'text-danger' : formSizeBytes > PRODUCT_SIZE_BUDGET_BYTES * 0.8 ? 'text-warning' : 'text-[#2D3A4E]'}>
+                            {formatMegabytes(formSizeBytes)} из {formatMegabytes(PRODUCT_SIZE_BUDGET_BYTES)}
+                          </span>
+                        </div>
+                        <div
+                          className="h-1.5 rounded-full neu-inset overflow-hidden"
+                          role="meter"
+                          aria-label="Место под фото и описание"
+                          aria-valuemin={0}
+                          aria-valuemax={PRODUCT_SIZE_BUDGET_BYTES}
+                          aria-valuenow={Math.min(formSizeBytes, PRODUCT_SIZE_BUDGET_BYTES)}
+                        >
+                          <div
+                            className={`h-full rounded-full ${formSizeBytes > PRODUCT_SIZE_BUDGET_BYTES ? 'bg-danger' : formSizeBytes > PRODUCT_SIZE_BUDGET_BYTES * 0.8 ? 'bg-warning' : 'bg-accent'}`}
+                            style={{ width: `${Math.min(100, (formSizeBytes / PRODUCT_SIZE_BUDGET_BYTES) * 100)}%` }}
+                          />
+                        </div>
+                        {formSizeBytes > PRODUCT_SIZE_BUDGET_BYTES && (
+                          <p className="text-xs font-bold text-danger">Не поместится в базу: уберите часть фото.</p>
+                        )}
+                      </div>
+                    )}
+
                     {/* Hidden Native File Input for Gallery / Device Upload */}
                     <input
                       ref={galleryFileInputRef}
@@ -1793,7 +1862,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                       )}
 
                       {/* Add Image by URL Input */}
-                      <div className="flex gap-1.5 pt-1">
+                      <div data-enter-adds className="flex gap-1.5 pt-1">
                         <input
                           type="url"
                           value={newImageUrlInput}
@@ -1861,7 +1930,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
                     {/* Add Custom Color */}
                     <div className="flex flex-col gap-2.5">
-                      <div className="grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_7rem_auto] gap-2">
+                      <div data-enter-adds className="grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_7rem_auto] gap-2">
                         <input
                           type="text"
                           value={customColorName}
@@ -2001,7 +2070,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                     </div>
 
                     {/* Add Custom Size */}
-                    <div className="flex items-center gap-2 pt-0.5">
+                    <div data-enter-adds className="flex items-center gap-2 pt-0.5">
                       <input
                         type="text"
                         value={customSizeInput}
@@ -2202,7 +2271,20 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
               </div>
               {/* Always in reach (the form is ~2 000 px long): sticks to the bottom of the window */}
-              <div className="sticky bottom-0 z-10 neu-flat rounded-2xl p-2.5 flex items-center gap-2.5 w-full justify-end">
+              <div className="sticky bottom-0 z-10 neu-flat rounded-2xl p-2.5 space-y-2 w-full">
+                {formErrors.length > 0 && (
+                  <div
+                    ref={formErrorsRef}
+                    tabIndex={-1}
+                    role="alert"
+                    className="bg-danger-soft border border-danger/40 rounded-xl p-2.5 text-xs font-bold text-danger space-y-1"
+                  >
+                    {formErrors.map((err) => (
+                      <p key={err}>{err}</p>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center gap-2.5 justify-end">
                 <button
                   type="button"
                   onClick={productFormGuard.requestClose}
@@ -2212,11 +2294,13 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="h-11 flex-1 sm:flex-initial min-w-0 px-6 neu-button-accent rounded-xl text-xs font-extrabold text-white whitespace-nowrap cursor-pointer transition-all flex items-center justify-center gap-2"
+                  disabled={isSavingProduct}
+                  className="h-11 flex-1 sm:flex-initial min-w-0 px-6 neu-button-accent rounded-xl text-xs font-extrabold text-white whitespace-nowrap cursor-pointer transition-all flex items-center justify-center gap-2 disabled:cursor-wait"
                 >
                   <Check className="w-4 h-4 stroke-[2.5]" />
-                  <span>{editingProduct ? 'Сохранить изменения' : 'Создать товар'}</span>
+                  <span>{isSavingProduct ? 'Сохранение…' : editingProduct ? 'Сохранить изменения' : 'Создать товар'}</span>
                 </button>
+                </div>
               </div>
             </form>
           </div>

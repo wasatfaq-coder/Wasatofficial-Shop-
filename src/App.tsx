@@ -335,7 +335,8 @@ export default function App() {
       localStorage.setItem('manstyle_user_profile', JSON.stringify(updated));
     } catch {}
     if (currentUser?.uid) {
-      saveUserProfileToFirestore(currentUser.uid, updated);
+      // The profile (addresses, measurements) must not be lost silently: a refused write says so
+      void persist('профиль', saveUserProfileToFirestore(currentUser.uid, updated));
     }
   };
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
@@ -1227,10 +1228,11 @@ export default function App() {
 
   /** threadId: undefined — whole chat, null — legacy messages without a thread, string — one customer */
   const handleClearChat = async (threadId?: string | null) => {
+    // Cleared on screen only after the database deleted the messages: otherwise they would come back
+    if (!(await persist('очистка чата', clearChatMessagesInFirestore(threadId)))) return;
     setChatMessages((prev) =>
       threadId === undefined ? [] : prev.filter((m) => (m.threadId ?? null) !== threadId)
     );
-    await clearChatMessagesInFirestore(threadId);
     addToast(threadId === undefined ? 'История чата поддержки очищена' : 'Диалог очищен', 'info');
   };
 
@@ -1432,7 +1434,10 @@ export default function App() {
 
     // Promo usage, revenue and referral commission (a 1-click order has no promo, as on the server)
     if (orderPromo) {
-      void recordPromoUsageInFirestore(orderPromo, totalPrice);
+      // The order is placed either way; a refused counter write is logged with the order number
+      recordPromoUsageInFirestore(orderPromo, totalPrice).catch((err) =>
+        console.error(`Promo usage for ${newOrderId} was not recorded:`, err)
+      );
     }
 
     setOrders((prev) => [newOrder, ...prev]);
@@ -1818,7 +1823,7 @@ export default function App() {
                     .map((p) => ({ id: p.id, costPrice: p.costPrice })),
                   ...Object.keys(productCosts).filter((id) => !kept.has(id)).map((id) => ({ id })),
                 ];
-                void persist(
+                const saved = persist(
                   'товары',
                   deleteRemovedDocs('products', adminProducts, updatedWithCosts),
                   syncAllProductsToFirestore(changed),
@@ -1855,6 +1860,7 @@ export default function App() {
                     }
                   }
                 }
+                return saved;
               }}
               onUpdateOrders={(updatedOrders) => {
                 setOrders(updatedOrders);
