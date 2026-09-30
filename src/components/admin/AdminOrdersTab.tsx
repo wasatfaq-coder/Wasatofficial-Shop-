@@ -31,10 +31,10 @@ import {
   Layers,
   Trash2,
 } from 'lucide-react';
-import { Order, Product, OrderAdjustmentLog, OrderStatusHistoryStep, DeliveryStage, StorefrontSettings } from '../../types';
+import { Order, Product, OrderAdjustmentLog, OrderStatusHistoryStep, DeliveryStage, PromoCode, StorefrontSettings } from '../../types';
 import { exportOrdersToCSV } from '../../utils/csvHelpers';
 import { copyToClipboard } from '../../utils/clipboard';
-import { deductStockWithLogs, returnStockWithLogs } from '../../utils/inventory';
+import { deductStockWithLogs, returnStockWithLogs, stockShortages, type StockShortage } from '../../utils/inventory';
 import { deleteOrderFromFirestore } from '../../utils/firebaseSync';
 import { AdminActionMenu } from './AdminActionMenu';
 import {
@@ -50,6 +50,7 @@ import { AdminDeliveryStagesModal } from './AdminDeliveryStagesModal';
 import { DeliveryTrackingMapModal } from '../DeliveryTrackingMapModal';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { SelectCheckbox } from './SelectCheckbox';
+import { ConfirmDialog } from '../ConfirmDialog';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
 import { initialPaymentStatus } from '../../shared/orderApi';
@@ -58,7 +59,10 @@ interface AdminOrdersTabProps {
   orders: Order[];
   storefrontSettings?: StorefrontSettings;
   products: Product[];
-  onUpdateOrders: (updated: Order[]) => void;
+  /** Resolves to false when the database refused the write (the error toast is already shown) */
+  onUpdateOrders: (updated: Order[]) => Promise<boolean> | void;
+  /** For «Корректировка заказа»: a percent promo of the order is recalculated */
+  promos?: PromoCode[];
   onUpdateProducts?: (updated: Product[]) => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   onOpenSupportChat?: (orderId: string, customerName?: string) => void;
@@ -212,6 +216,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   storefrontSettings,
   products = [],
   onUpdateOrders,
+  promos = [],
   onUpdateProducts,
   onShowToast,
   onOpenSupportChat,
@@ -413,8 +418,24 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     return reactivated.length;
   };
 
+  /**
+   * Restoring a cancelled order takes its goods from stock again. When some are gone meanwhile, the admin
+   * sees what is missing and decides; otherwise the stock would silently drop to zero.
+   */
+  const [pendingRestore, setPendingRestore] = useState<{ shortages: StockShortage[]; run: () => void } | null>(null);
+  const withRestoreCheck = (orderIds: string[], run: () => void) => {
+    const items = orders.filter((o) => orderIds.includes(o.id) && o.isCancelled).flatMap((o) => o.items ?? []);
+    const shortages = items.length > 0 ? stockShortages(products, items) : [];
+    if (shortages.length > 0) setPendingRestore({ shortages, run });
+    else run();
+  };
+
   const handleBulkStatusChange = (newStatus: Order['status']) => {
     if (selectedOrderIds.length === 0) return;
+    withRestoreCheck(selectedOrderIds, () => applyBulkStatusChange(newStatus));
+  };
+
+  const applyBulkStatusChange = (newStatus: Order['status']) => {
     const label = STATUS_CONFIG[newStatus].label;
     const restored = changeOrdersStatus(selectedOrderIds, newStatus, `Пакетное обновление статуса оператором на "${label}"`);
     onShowToast(
@@ -495,6 +516,11 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
   // Order Status Change Handler
   const handleUpdateOrderStatus = (orderId: string, newStatus: Order['status']) => {
+    setOpenStatusDropdownId(null);
+    withRestoreCheck([orderId], () => applyOrderStatus(orderId, newStatus));
+  };
+
+  const applyOrderStatus = (orderId: string, newStatus: Order['status']) => {
     const label = STATUS_CONFIG[newStatus].label;
     const restored = changeOrdersStatus([orderId], newStatus, `Статус изменен менеджером магазина на "${label}"`);
     onShowToast(
@@ -655,11 +681,12 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   };
 
   // Order Adjustment Save Handler
-  const handleSaveOrderAdjustment = (updatedOrder: Order, _log: OrderAdjustmentLog) => {
+  const handleSaveOrderAdjustment = async (updatedOrder: Order, log: OrderAdjustmentLog | null) => {
     const updated = orders.map((ord) => (ord.id === updatedOrder.id ? updatedOrder : ord));
-    onUpdateOrders(updated);
-    onShowToast('Состав и сумма заказа успешно скорректированы', 'success');
     setSelectedOrderForAdjustment(null);
+    // «Сохранено» only after the database accepted the write; a refusal already shows «Не сохранено: …»
+    if ((await onUpdateOrders(updated)) === false) return;
+    onShowToast(log ? 'Состав и сумма заказа сохранены' : 'Заказ сохранен', 'success');
   };
 
   const handleCopyOrderId = (id: string) => {
@@ -1657,6 +1684,34 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         onShowToast={onShowToast}
       />
 
+      <ConfirmDialog
+        isOpen={pendingRestore !== null}
+        title="Не хватает товара на складе"
+        tone="neutral"
+        confirmLabel="Восстановить всё равно"
+        cancelLabel="Не восстанавливать"
+        confirmIcon={<RotateCcw className="w-4 h-4" />}
+        message={
+          <>
+            <span className="block">
+              Пока заказ был отменён, эти товары продали. Если восстановить заказ, их остаток станет 0, а
+              недостающее придётся докупить или согласовать с клиентом:
+            </span>
+            {/* the dialog message is a <p>: a list inside it would be invalid markup */}
+            {pendingRestore?.shortages.map((s) => (
+              <span key={`${s.productTitle}-${s.color}-${s.size}`} className="block mt-1 text-left font-semibold">
+                {s.productTitle} · {s.color} · {s.size}: нужно {s.needed}, на складе {s.inStock}
+              </span>
+            ))}
+          </>
+        }
+        onConfirm={() => {
+          pendingRestore?.run();
+          setPendingRestore(null);
+        }}
+        onClose={() => setPendingRestore(null)}
+      />
+
       {/* ================= MODAL: ORDER ADJUSTMENT ================= */}
       <AdminOrderAdjustmentModal
         isOpen={!!selectedOrderForAdjustment}
@@ -1664,6 +1719,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         order={selectedOrderForAdjustment}
         products={products}
         onSaveAdjustment={handleSaveOrderAdjustment}
+        promos={promos}
         onUpdateProducts={onUpdateProducts}
         onShowToast={onShowToast}
       />

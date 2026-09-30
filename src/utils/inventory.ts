@@ -420,6 +420,41 @@ export function deductStockWithLogs(
   );
 }
 
+export interface StockShortage {
+  productTitle: string;
+  color: string;
+  size: string;
+  needed: number;
+  inStock: number;
+}
+
+/**
+ * Variants that do not have enough stock for the given lines (preorder lines are not taken from stock).
+ * Deducting them anyway would cut the stock to zero and sell what is already gone.
+ */
+export function stockShortages(products: Product[], items: CartItem[]): StockShortage[] {
+  const shortages: StockShortage[] = [];
+  const norm = (v: string) => v.trim().toLowerCase();
+  for (const prod of products) {
+    const lines = items.filter((it) => it.product.id === prod.id && !it.isPreorder);
+    if (lines.length === 0) continue;
+    const skus = prod.skus && prod.skus.length > 0 ? prod.skus : generateDefaultSKUs(prod);
+    for (const sku of skus) {
+      const needed = lines
+        .filter(
+          (it) =>
+            norm(extractColorName(it.selectedColor)) === norm(extractColorName(sku.color)) &&
+            norm(extractSizeName(it.selectedSize)) === norm(extractSizeName(sku.size))
+        )
+        .reduce((sum, it) => sum + it.quantity, 0);
+      if (needed > sku.stock) {
+        shortages.push({ productTitle: prod.title, color: sku.color, size: sku.size, needed, inStock: sku.stock });
+      }
+    }
+  }
+  return shortages;
+}
+
 /**
  * Return SKU stock when order items are cancelled, adjusted, or returned
  */

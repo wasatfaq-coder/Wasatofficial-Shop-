@@ -115,7 +115,7 @@ interface ProfileScreenProps {
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   onOpenSupportChat?: () => void;
   onUpdateProducts?: (products: Product[]) => void;
-  onUpdateOrders?: (orders: Order[]) => void;
+  onUpdateOrders?: (orders: Order[]) => Promise<boolean> | void;
   promos?: PromoCode[];
   onUpdatePromos?: (promos: PromoCode[]) => void;
   bannerSlides?: BannerSlide[];
@@ -139,7 +139,6 @@ interface ProfileScreenProps {
   onUpdateStorefrontSettings?: SaveStorefrontSettings;
   /** Admin → «Документы»: the store's edition of the offer / policy, null — the template */
   onSaveLegalText?: (id: LegalDocId, text: string | null) => Promise<boolean>;
-  onSyncFirebase?: () => Promise<void>;
   deliveryMethods?: DeliveryMethod[];
   onUpdateDeliveryMethods?: (methods: DeliveryMethod[]) => void;
   pickupPoints?: PickupPoint[];
@@ -185,7 +184,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   storefrontSettings,
   onUpdateStorefrontSettings,
   onSaveLegalText,
-  onSyncFirebase,
   deliveryMethods,
   onUpdateDeliveryMethods,
   pickupPoints,
@@ -291,9 +289,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     if (onUpdateProducts) onUpdateProducts(updated);
   };
 
-  const handleUpdateOrders = (updated: Order[]) => {
-    if (onUpdateOrders) onUpdateOrders(updated);
-  };
+  const handleUpdateOrders = (updated: Order[]) => onUpdateOrders?.(updated);
 
   // Support inbox: one dialog per customer (AdminSupportInbox groups messages by threadId)
   const handleSendAdminMessage = (thread: { threadId: string; threadName: string }, payload: AdminChatPayload) => {
@@ -324,7 +320,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // Admin Authentication & Credentials State
   const { currentUser, loginWithGoogle, logoutUser, isAdmin: isFirebaseAdmin } = useAuth();
-  const [isSyncingFirebase, setIsSyncingFirebase] = useState(false);
   const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
 
 
@@ -341,17 +336,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     // Access is the Google admin account itself; firestore.rules enforce it on every write
     prefetchAdmin(adminTab);
     setActiveModal('admin');
-  };
-
-  const handleTriggerSync = async () => {
-    if (onSyncFirebase) {
-      setIsSyncingFirebase(true);
-      try {
-        await onSyncFirebase();
-      } finally {
-        setIsSyncingFirebase(false);
-      }
-    }
   };
 
   const handleGoogleAuthClick = async () => {
@@ -940,28 +924,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-sm font-bold text-[#2D3A4E]">{isFirebaseAdmin ? 'Синхронизация данных' : 'Аккаунт'}</h3>
+                  <h3 className="text-sm font-bold text-[#2D3A4E]">{isFirebaseAdmin ? 'Данные магазина' : 'Аккаунт'}</h3>
                 </div>
                 <p className="text-xs text-[#4E5C70]">
                   {isFirebaseAdmin
-                    ? 'Каталог, заказы, акции и чат хранятся в облаке'
+                    ? 'Каталог, заказы, акции и чат сохраняются в базе при каждом изменении'
                     : 'Заказы, адреса и переписка сохраняются на всех ваших устройствах'}
                 </p>
               </div>
             </div>
 
-            {isFirebaseAdmin && (
-            <button
-              type="button"
-              onClick={handleTriggerSync}
-              disabled={isSyncingFirebase}
-              title="Принудительно синхронизировать все данные с облаком"
-              className="neu-button rounded-xl p-2.5 text-accent hover:scale-105 transition-all cursor-pointer shrink-0 disabled:opacity-60"
-              aria-label="Принудительно синхронизировать все данные с облаком"
-            >
-              <RefreshCw className={`w-4 h-4 ${isSyncingFirebase ? 'animate-spin text-accent' : ''}`} />
-            </button>
-            )}
           </div>
 
           {/* User Auth Status Details */}
@@ -3137,6 +3109,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   orders={orders}
                   storefrontSettings={storefrontSettings}
                   products={productsList}
+                  promos={promos}
                   onUpdateOrders={handleUpdateOrders}
                   onUpdateProducts={handleUpdateProductsList}
                   onShowToast={onShowToast}
