@@ -122,8 +122,6 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
       };
     } else if (
       key === 'freeDeliveryThreshold' ||
-      key === 'courierDeliveryPrice' ||
-      key === 'pickupDeliveryPrice' ||
       key === 'returnPeriodDays'
     ) {
       const num = Math.max(0, parseInt(newValue.replace(/\D/g, ''), 10) || 0);
@@ -1996,7 +1994,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
               <Truck className="w-3.5 h-3.5 text-accent" />
-              Тарифы доставки, порог и срок возврата
+              Порог бесплатной доставки и срок возврата
             </h4>
             <span className="text-[11px] font-extrabold text-accent neu-flat-sm px-2.5 py-1 rounded-lg border border-white/80">
               Динамический расчет в корзине
@@ -2004,10 +2002,11 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
           </div>
 
           <p className="text-xs text-[#4E5C70]">
-            Укажите базовую стоимость курьерской доставки и сумму заказа, начиная с которой доставка автоматически становится бесплатной (0 ₽) в корзине и чекауте.
+            Сумма заказа, с которой доставка становится бесплатной, — для способов без своего порога. Цена каждого
+            способа доставки и его собственный порог задаются в разделе «Доставка и ПВЗ».
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             {/* Free Delivery Threshold */}
             <div className="neu-inset p-3 rounded-2xl space-y-1.5">
               <label htmlFor="storefront-freeDeliveryThreshold" className="block text-[11px] font-bold text-[#2D3A4E] mb-1 truncate">
@@ -2059,116 +2058,6 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               <div className="flex items-center justify-between text-[11px] text-[#4E5C70] pt-0.5">
                 <span>Свыше суммы: 0 ₽</span>
                 <span className="font-bold text-success">0 ₽ от порога</span>
-              </div>
-            </div>
-
-            {/* Courier Delivery Cost */}
-            <div className="neu-inset p-3 rounded-2xl space-y-1.5">
-              <label htmlFor="storefront-courierDeliveryPrice" className="block text-[11px] font-bold text-[#2D3A4E] mb-1 truncate">
-                Курьер (базовый тариф)
-              </label>
-              <div className="flex items-center gap-1.5">
-                <div className="relative flex-1 min-w-0">
-                  <input
-                    id="storefront-courierDeliveryPrice"
-                    type="number"
-                    min="0"
-                    step="50"
-                    value={localSettings.courierDeliveryPrice ?? 350}
-                    onChange={(e) =>
-                      setLocalSettings({
-                        ...localSettings,
-                        courierDeliveryPrice: Math.max(0, Number(e.target.value) || 0),
-                      })
-                    }
-                    className="w-full px-3 py-2 neu-button rounded-xl text-xs font-extrabold text-[#2D3A4E] pr-8"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4E5C70]">
-                    ₽
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    openQuickEdit({
-                      key: 'courierDeliveryPrice',
-                      title: 'Тарифы доставки',
-                      fieldLabel: 'Базовый тариф курьера',
-                      value: String(localSettings.courierDeliveryPrice ?? 350),
-                      badge: 'Доставка',
-                      description: 'Стоимость доставки курьером до двери при сумме заказа ниже порога бесплатной доставки.',
-                      inputType: 'number',
-                      numberMin: 0,
-                      numberStep: 50,
-                      unit: '₽',
-                    })
-                  }
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                  title="Редактировать в модальном окне"
-                  aria-label="Редактировать в модальном окне"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <div className="flex items-center justify-between text-[11px] text-[#4E5C70] pt-0.5">
-                <span>До порога</span>
-                <span className="font-semibold text-[#2D3A4E]">Стандарт</span>
-              </div>
-            </div>
-
-            {/* Pickup Point Cost */}
-            <div className="neu-inset p-3 rounded-2xl space-y-1.5">
-              <label htmlFor="storefront-pickupDeliveryPrice" className="block text-[11px] font-bold text-[#2D3A4E] mb-1 truncate">
-                Самовывоз из бутика
-              </label>
-              <div className="flex items-center gap-1.5">
-                <div className="relative flex-1 min-w-0">
-                  <input
-                    id="storefront-pickupDeliveryPrice"
-                    type="number"
-                    min="0"
-                    step="50"
-                    value={localSettings.pickupDeliveryPrice ?? 0}
-                    onChange={(e) =>
-                      setLocalSettings({
-                        ...localSettings,
-                        pickupDeliveryPrice: Math.max(0, Number(e.target.value) || 0),
-                      })
-                    }
-                    className="w-full px-3 py-2 neu-button rounded-xl text-xs font-extrabold text-[#2D3A4E] pr-8"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4E5C70]">
-                    ₽
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    openQuickEdit({
-                      key: 'pickupDeliveryPrice',
-                      title: 'Тарифы доставки',
-                      fieldLabel: 'Стоимость самовывоза',
-                      value: String(localSettings.pickupDeliveryPrice ?? 0),
-                      badge: 'Шоурум',
-                      description: 'Стоимость самовывоза из фирменного бутика (0 ₽ для бесплатного самовывоза).',
-                      inputType: 'number',
-                      numberMin: 0,
-                      numberStep: 50,
-                      unit: '₽',
-                    })
-                  }
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                  title="Редактировать в модальном окне"
-                  aria-label="Редактировать в модальном окне"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <div className="flex items-center justify-between text-[11px] text-[#4E5C70] pt-0.5">
-                <span>Шоурум бутика</span>
-                <span className="font-bold text-success">
-                  {localSettings.pickupDeliveryPrice === 0 ? 'Бесплатно' : `${localSettings.pickupDeliveryPrice} ₽`}
-                </span>
               </div>
             </div>
 

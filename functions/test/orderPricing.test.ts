@@ -2,7 +2,11 @@ import { describe, expect, test } from 'bun:test';
 import {
   calcOrderTotals,
   calcPromoDiscount,
+  formatPromoExpiry,
   getAvailableDeliveryMethods,
+  isPromoListed,
+  promoExpiryDate,
+  promoExpiryTime,
   validatePromo,
   type PricingLine,
 } from '../../src/shared/orderPricing';
@@ -75,5 +79,50 @@ test('calcOrderTotals', () => {
     discount: 1600,
     deliveryFee: 350,
     total: 14750,
+  });
+});
+
+describe('promo expiry', () => {
+  test('reads the ISO date of the form and the old text values', () => {
+    expect(promoExpiryDate('2026-08-31')).toBe('2026-08-31');
+    expect(promoExpiryDate('31 августа 2026 г.')).toBe('2026-08-31');
+    expect(promoExpiryDate('1 мая 2027')).toBe('2027-05-01');
+    expect(promoExpiryDate('3 марта 2027 г.')).toBe('2027-03-03');
+    expect(promoExpiryDate('31.08.2026')).toBe('2026-08-31');
+    expect(promoExpiryDate('Бессрочно')).toBeNull();
+    expect(promoExpiryDate('')).toBeNull();
+    expect(promoExpiryDate(undefined)).toBeNull();
+  });
+
+  test('the code works through its last day by Moscow time', () => {
+    const end = promoExpiryTime('2026-09-30')!;
+    expect(new Date(end).toISOString()).toBe('2026-09-30T20:59:59.999Z'); // 23:59:59 по Москве
+    const p = promo({ discountPercent: 10, expiresAt: '2026-09-30' });
+    expect(validatePromo(p, lines, new Date('2026-09-30T23:59:00+03:00').getTime())).toBeNull();
+    expect(validatePromo(p, lines, new Date('2026-10-01T00:00:00+03:00').getTime())).toMatch(/истек/);
+  });
+
+  test('shown as a date, text that is not a date as written', () => {
+    expect(formatPromoExpiry('2026-08-31')).toBe('31.08.2026');
+    expect(formatPromoExpiry('31 августа 2026 г.')).toBe('31.08.2026');
+    expect(formatPromoExpiry('Бессрочно')).toBe('Бессрочно');
+  });
+});
+
+describe('isPromoListed', () => {
+  const now = new Date('2026-09-30T12:00:00+03:00').getTime();
+  test('personal codes are hidden from the customer list unless marked public', () => {
+    expect(isPromoListed(promo({ discountPercent: 10 }), now)).toBe(true);
+    expect(isPromoListed(promo({ discountPercent: 10, isReferral: true }), now)).toBe(false);
+    expect(isPromoListed(promo({ discountPercent: 10, isBatch: true }), now)).toBe(false);
+    expect(isPromoListed(promo({ id: 'promo-care-1', discountPercent: 10 }), now)).toBe(false);
+    expect(isPromoListed(promo({ discountPercent: 10, isReferral: true, isPublic: true }), now)).toBe(true);
+    expect(isPromoListed(promo({ discountPercent: 10, isPublic: false }), now)).toBe(false);
+  });
+
+  test('expired, switched-off and used-up codes are not listed', () => {
+    expect(isPromoListed(promo({ discountPercent: 10, expiresAt: '2026-09-29' }), now)).toBe(false);
+    expect(isPromoListed(promo({ discountPercent: 10, active: false }), now)).toBe(false);
+    expect(isPromoListed(promo({ discountPercent: 10, usageLimit: 1, usedCount: 1 }), now)).toBe(false);
   });
 });

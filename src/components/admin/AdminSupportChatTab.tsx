@@ -47,7 +47,7 @@ import { compressChatImageFile } from '../../utils/imageUpload';
 import { ORDER_STATUS_LABELS, isTransportCompanyDelivery } from '../../utils/deliveryStages';
 import { PRIORITY_LABELS, STATUS_LABELS, type SupportThreadSummary } from '../../utils/supportThreads';
 import type { ChatMessageChange } from '../../utils/firebaseSync';
-import { validatePromo } from '../../shared/orderPricing';
+import { formatPromoExpiry, isPromoUsable, promoDiscountKind } from '../../shared/orderPricing';
 import { ChatMessageDeleteDialog, ChatMessageMenu } from '../ChatMessageActions';
 import { NotConfigured } from '../NotConfigured';
 import { orderLineImage } from '../../utils/productImage';
@@ -112,24 +112,17 @@ const newPromoCode = () => `CARE-${Math.floor(1000 + Math.random() * 9000)}`;
 
 /** Discount of a promo from «Промокоды» as the chat card shows it */
 function promoDiscount(p: PromoCode): { type: 'percent' | 'fixed'; value: number } {
-  const type = p.discountType ?? 'percent';
+  const type = promoDiscountKind(p);
   const value = p.discountValue ?? (type === 'percent' ? p.discountPercent : 0);
   return { type, value: value || 0 };
 }
 
-/** «2026-08-31» → «31.08.2026»; free-form dates stay as written */
-const formatPromoDate = (value: string) => {
-  const m = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  return m ? `${m[3]}.${m[2]}.${m[1]}` : value;
-};
 
 const formatPromoDiscount = (p: PromoCode) => {
   const { type, value } = promoDiscount(p);
   return type === 'fixed' ? `−${value.toLocaleString('ru-RU')} ₽` : `−${value}%`;
 };
 
-/** A code the customer can still use: active, not expired, limit not reached (the cart is checked at checkout) */
-const isPromoUsable = (p: PromoCode) => validatePromo({ ...p, minOrderAmount: 0 }, []) === null;
 
 /** Modal shell: rendered into <body>, over the admin panel */
 const Modal: React.FC<{ title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }> = ({
@@ -539,7 +532,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
     const note = promoReason.trim();
     const conditions = [
       pickedPromo.minOrderAmount ? `от ${pickedPromo.minOrderAmount.toLocaleString('ru-RU')} ₽` : '',
-      pickedPromo.expiresAt ? `до ${formatPromoDate(pickedPromo.expiresAt)}` : '',
+      pickedPromo.expiresAt ? `до ${formatPromoExpiry(pickedPromo.expiresAt)}` : '',
     ].filter(Boolean);
     send(
       {
@@ -1320,7 +1313,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                               {[
                                 p.title,
                                 p.minOrderAmount ? `от ${p.minOrderAmount.toLocaleString('ru-RU')} ₽` : '',
-                                p.expiresAt ? `до ${formatPromoDate(p.expiresAt)}` : 'без срока',
+                                p.expiresAt ? `до ${formatPromoExpiry(p.expiresAt)}` : 'без срока',
                                 p.usageLimit ? `осталось ${Math.max(0, p.usageLimit - (p.usedCount || 0))}` : '',
                               ]
                                 .filter(Boolean)

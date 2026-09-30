@@ -5,6 +5,7 @@ import { PromoCode, CartItem, AppliedPromoInfo } from '../types';
 import { copyToClipboard } from '../utils/clipboard';
 import { NotConfigured } from './NotConfigured';
 import { useDialogA11y } from '../utils/useDialogA11y';
+import { formatPromoExpiry, isPromoListed, promoExpiryDate } from '../shared/orderPricing';
 
 interface PromoModalProps {
   isOpen: boolean;
@@ -32,7 +33,8 @@ export const PromoModal: React.FC<PromoModalProps> = ({
   const [errorMessage, setErrorMessage] = useState('');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
-  const activePromos = promos.filter((p) => p.active);
+  // only public codes that work now: personal codes (partner, chat, single-use) are not listed
+  const activePromos = promos.filter((p) => isPromoListed(p));
 
   const getCategoryName = (catId: string) => {
     switch (catId) {
@@ -321,10 +323,10 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                             <span className="text-[#4E5C70]">Без мин. чека</span>
                           )}
 
-                          {coupon.expiresAt && (
+                          {promoExpiryDate(coupon.expiresAt) && (
                             <span className="flex items-center gap-1">
                               <Clock className="w-3 h-3 text-accent" />
-                              <span>До {coupon.expiresAt}</span>
+                              <span>До {formatPromoExpiry(coupon.expiresAt)}</span>
                             </span>
                           )}
                         </div>
@@ -374,12 +376,14 @@ export const PromoModal: React.FC<PromoModalProps> = ({
 
           {/* Manual Input Form */}
           <div className="pt-2 border-t border-[#BAC5D5]/50 space-y-2">
-            <label className="text-[11px] font-extrabold text-[#2D3A4E] block">
-              Ввести секретный промокод вручную:
+            <label htmlFor="promo-code-input" className="text-[11px] font-extrabold text-[#2D3A4E] block">
+              Есть личный промокод? Введите его:
             </label>
             <form onSubmit={handleCustomSubmit} className="flex items-center gap-2">
               <input
+                id="promo-code-input"
                 type="text"
+                autoComplete="off"
                 value={customInput}
                 onChange={(e) => setCustomInput(e.target.value.toUpperCase())}
                 placeholder="ВВЕДИТЕ КОД (НАПРИМЕР, WASAT20)"
