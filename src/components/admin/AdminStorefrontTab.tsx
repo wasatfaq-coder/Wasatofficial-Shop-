@@ -23,6 +23,7 @@ import {
   Pencil,
 } from 'lucide-react';
 import { AdminServerOrdersCard } from './AdminServerOrdersCard';
+import { AdminBackupCard } from './AdminBackupCard';
 import { SaveStorefrontSettings, StorefrontSettings } from '../../types';
 import {
   loadStorefrontSettings,
@@ -2324,6 +2325,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
         {/* Orders validated by the placeOrder Cloud Function */}
         <AdminServerOrdersCard onShowToast={onShowToast} />
+
+        {/* Free backup: a JSON copy of the database on the owner's device */}
+        <AdminBackupCard onShowToast={onShowToast} />
 
         {/* Submit Button */}
         <div className="flex items-center justify-between pt-2 gap-3 flex-wrap sm:flex-nowrap">
