@@ -79,6 +79,7 @@ import { HomeScreen } from './views/HomeScreen';
 import { CatalogScreen } from './views/CatalogScreen';
 import { ProductDetailScreen } from './views/ProductDetailScreen';
 import { CartScreen } from './views/CartScreen';
+import { PreviewBanner } from './components/PreviewBanner';
 import { LazyMount } from './components/LazyMount';
 import {
   loadBrandRequisitesModal,
@@ -1624,6 +1625,8 @@ export default function App() {
           promos={promos}
         />
         </LazyMount>
+
+        <PreviewBanner />
 
         {/* Promo message from Admin → «Витрина»: shown when switched on and filled in */}
         {storefrontSettings?.isStoreBannerVisible && publicSetting(storefrontSettings.storeBannerText) && (
