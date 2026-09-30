@@ -6,14 +6,13 @@ import { pluralRu } from '../../utils/pluralize';
 
 /**
  * «Запуск магазина»: the first thing an owner sees in the panel while something needed for the first sale is
- * missing. Each step opens its section. Hidden once every required step is done (optional ones do not keep it).
+ * missing. Each step opens its section. Hidden once everything is filled in.
  */
 export const AdminLaunchChecklist: React.FC<{ steps: LaunchStep[]; onOpenTab: (tab: AdminTab) => void }> = ({
   steps,
   onOpenTab,
 }) => {
-  const required = steps.filter((s) => !s.optional);
-  const left = required.filter((s) => !s.done).length;
+  const left = steps.filter((s) => !s.done).length;
   if (left === 0) return null;
   return (
     <section aria-labelledby="launch-checklist-title" className="neu-flat rounded-2xl p-4 space-y-3 border border-white/60">
@@ -26,7 +25,7 @@ export const AdminLaunchChecklist: React.FC<{ steps: LaunchStep[]; onOpenTab: (t
             Запуск магазина
           </h3>
           <p className="text-xs text-[#4E5C70]">
-            Для первой продажи осталось {left} {pluralRu(left, ['шаг', 'шага', 'шагов'])} из {required.length}
+            Для первой продажи осталось {left} {pluralRu(left, ['шаг', 'шага', 'шагов'])} из {steps.length}
           </p>
         </div>
       </div>

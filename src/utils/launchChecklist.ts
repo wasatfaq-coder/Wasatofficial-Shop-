@@ -8,8 +8,6 @@ export interface LaunchStep {
   /** What is still missing, in the owner's words */
   hint: string;
   done: boolean;
-  /** Not needed for the first sale: the card hides without it and does not count it as left */
-  optional?: boolean;
   tab: AdminTab;
 }
 
@@ -56,10 +54,8 @@ export function launchSteps(
     {
       id: 'legal',
       title: 'Реквизиты продавца',
-      // Решение владельца 01.10: магазин работает без реквизитов; без них оферта и политика не показываются
-      hint: 'Необязательно. Пока их нет, покупатель не видит оферту и политику',
+      hint: missingLegal.length > 0 ? `Для оферты не хватает: ${missingLegal.join(', ')}` : 'Для оферты и политики',
       done: missingLegal.length === 0,
-      optional: true,
       tab: 'storefront', // реквизиты — в «Витрине»
     },
   ];
