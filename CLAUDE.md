@@ -309,5 +309,6 @@ Wasat Shop — SPA интернет-магазина мужской одежды
 
 ## Деплой
 
-GitHub Actions `deploy.yml`: push в `main` публикует Hosting и правила, PR получает preview-канал.
-Нужен секрет `FIREBASE_SERVICE_ACCOUNT`.
+GitHub Actions `deploy.yml`: push в `main` публикует Hosting и правила, PR получает preview-канал (живёт 3 дня).
+Каналов у сайта ограниченное число, поэтому перед созданием preview workflow удаляет каналы прошлых PR (`pr<N>-…`);
+боевой `live` не трогается. Нужен секрет `FIREBASE_SERVICE_ACCOUNT`.
