@@ -87,6 +87,8 @@ describe('placeOrderCore', () => {
     expect(order.placedVia).toBe('server');
     // «Оплачен» ставит только администратор
     expect(order.paymentStatus).toBe('pending');
+    // The order keeps a light product copy: no stock, card texts or embedded photos
+    expect(order.items[0].product.skus).toBeUndefined();
 
     const stored = (await db.doc(`orders/${order.id}`).get()).data()!;
     expect(stored.totalPrice).toBe(3350);

@@ -50,6 +50,7 @@ import type { ChatMessageChange } from '../../utils/firebaseSync';
 import { validatePromo } from '../../shared/orderPricing';
 import { ChatMessageDeleteDialog, ChatMessageMenu } from '../ChatMessageActions';
 import { NotConfigured } from '../NotConfigured';
+import { orderLineImage } from '../../utils/productImage';
 
 /** What an admin sends into a customer's dialog */
 export interface AdminChatPayload {
@@ -756,8 +757,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               <ul className="space-y-1.5 pt-1">
                 {(order.items || []).map((item, idx) => (
                   <li key={`${item.id || idx}-${idx}`} className="flex items-center gap-2 min-w-0">
-                    {item.product?.images?.[0] && (
-                      <img src={item.product.images[0]} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" />
+                    {item.product && (
+                      <img src={orderLineImage(item.product, products)} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" />
                     )}
                     <span className="text-[11px] text-[#2D3A4E] min-w-0 flex-1 leading-snug">
                       {item.product?.title || 'Товар'} · {[item.selectedColor, item.selectedSize].filter(Boolean).join(' / ')} ·{' '}

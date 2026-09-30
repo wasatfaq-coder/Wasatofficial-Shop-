@@ -27,7 +27,8 @@ import {
   Trash2,
   RefreshCw,
 } from 'lucide-react';
-import { UserProfile, Order, CustomerRecord } from '../../types';
+import { UserProfile, Order, CustomerRecord, Product } from '../../types';
+import { orderLineImage } from '../../utils/productImage';
 import { updateCustomerNotesInFirestore, deleteUserFromFirestore } from '../../utils/firebaseSync';
 import { downloadCSV } from '../../utils/csvHelpers';
 import { copyToClipboard } from '../../utils/clipboard';
@@ -42,6 +43,8 @@ import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
 interface AdminCustomersTabProps {
   users: UserProfile[];
   orders: Order[];
+  /** Catalog: order lines keep no photos, the photo comes from the product */
+  products?: Product[];
   onOpenSupportChat?: (orderId?: string, customerName?: string) => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
@@ -95,6 +98,7 @@ const CUSTOMER_SORT_OPTIONS: NeumorphicSelectOption[] = [
 export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
   users = [],
   orders = [],
+  products,
   onOpenSupportChat,
   onShowToast,
 }) => {
@@ -1207,9 +1211,9 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                             {ord.items.map((it, idx) => (
                               <div key={idx} className="flex items-center justify-between text-xs text-[#4E5C70]">
                                 <div className="flex items-center gap-2 min-w-0">
-                                  {it.product.images?.[0] && (
+                                  {it.product && (
                                     <img
-                                      src={it.product.images[0]}
+                                      src={orderLineImage(it.product, products)}
                                       alt={it.product.title}
                                       referrerPolicy="no-referrer"
                                       className="w-7 h-7 rounded-lg object-cover neu-flat-sm shrink-0"

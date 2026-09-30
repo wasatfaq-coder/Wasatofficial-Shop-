@@ -73,7 +73,7 @@ import {
   saveLocalPickupPoints,
 } from '../data/deliveryData';
 import { getCategories } from '../utils/categories';
-import { productImage } from '../utils/productImage';
+import { orderLineImage } from '../utils/productImage';
 import { NeumorphicSwitch } from '../components/NeumorphicSwitch';
 import { useDialogA11y } from '../utils/useDialogA11y';
 import { isAdminTab, type AdminNavCounts, type AdminTab } from '../components/admin/adminSections';
@@ -1601,7 +1601,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                           {ord.items.slice(0, 4).map((it, idx) => (
                             <img
                               key={idx}
-                              src={productImage(it.product)}
+                              src={orderLineImage(it.product, products)}
                               alt=""
                               className="w-10 h-10 rounded-xl object-cover neu-flat p-0.5 shrink-0"
                             />
@@ -2161,7 +2161,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   >
                     <div className="flex items-center gap-2.5">
                       <img
-                        src={productImage(it.product)}
+                        src={orderLineImage(it.product, products)}
                         alt=""
                         loading="lazy"
                         decoding="async"
@@ -3165,6 +3165,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               {adminTab === 'customers' && (
                 <AdminCustomersTab
                   users={allUsers}
+                  products={productsList}
                   orders={orders}
                   onOpenSupportChat={(orderId, customerName) => {
                     if (orderId) setSupportTargetOrderId(orderId);

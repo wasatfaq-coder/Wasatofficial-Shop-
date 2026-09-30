@@ -13,3 +13,11 @@ export const PRODUCT_IMAGE_PLACEHOLDER = `data:image/svg+xml,${encodeURIComponen
 export function productImage(product: Pick<Product, 'images'> | null | undefined, index = 0): string {
   return product?.images?.[index] || product?.images?.[0] || PRODUCT_IMAGE_PLACEHOLDER;
 }
+
+/**
+ * Photo of a product in an order line. The order keeps a light product copy without embedded photos
+ * (toOrderLineProduct), so the photo comes from the catalog; a product that is gone shows the placeholder.
+ */
+export function orderLineImage(product: Pick<Product, 'id' | 'images'>, catalog?: Pick<Product, 'id' | 'images'>[]): string {
+  return productImage(catalog?.find((p) => p.id === product.id) ?? product);
+}
