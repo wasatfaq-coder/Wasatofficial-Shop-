@@ -106,7 +106,8 @@ Wasat Shop — SPA интернет-магазина мужской одежды
 
 - При `settings/server.serverOrdersEnabled == true` заказ оформляет функция `placeOrder`
   (`functions/src/placeOrder.ts`), иначе — клиент (`completeOrderLocally` в `App.tsx`: сначала дожидается записи
-  заказа, потом списывает склад). Режим серверных заказов включается в «Витрине» (`AdminServerOrdersCard`) только
+  заказа, потом списывает склад — только полями `skus` и `inStock`, `saveStockToFirestore`:
+  запись всего товара с подмешанными отзывами правила отклоняли). Режим серверных заказов включается в «Витрине» (`AdminServerOrdersCard`) только
   после ответа функции `placeOrder`.
 - Суммы — только `src/shared/orderPricing.ts` (`toPricingLine`, `calcPromoDiscount`, `calcOrderTotals`) и в корзине,
   и в оформлении.

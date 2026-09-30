@@ -11,8 +11,7 @@ import {
   type PricingLine,
 } from '../../src/shared/orderPricing';
 import { DEFAULT_STOREFRONT_SETTINGS } from '../../src/utils/inventory';
-import { mergeProductReviews, withoutCollectionReviews } from '../../src/utils/reviews';
-import type { DeliveryMethod, Product, PromoCode, StoredReview } from '../../src/types';
+import type { DeliveryMethod, PromoCode } from '../../src/types';
 
 const lines = (sum: number): PricingLine[] => [{ productId: 'p1', category: 'shirts', price: sum, quantity: 1 }];
 const promo = (over: Partial<PromoCode>): PromoCode =>
@@ -70,16 +69,6 @@ describe('Старый промокод без discountType (этап 3, зак�
   });
 });
 
-describe('Находка 5: списание склада у товара с отзывом (этап 1)', () => {
-  test.todo('запись товара после подмешивания отзывов не добавляет поле reviews, которого нет в базе', () => {
-    // Правило products разрешает покупателю менять только skus и inStock; лишнее reviews: [] → PERMISSION_DENIED,
-    // и склад молча не списывается (App.tsx:1408 без await)
-    const stored = { id: 'p1', title: 'Рубашка', price: 3000, skus: [] } as unknown as Product;
-    const review: StoredReview = {
-      id: 'p1_u1', productId: 'p1', uid: 'u1', authorName: 'Сергей', rating: 5, comment: 'Хорошая',
-      date: '30.09.2026', createdAt: '2026-09-30T09:00:00.000Z',
-    };
-    const [merged] = mergeProductReviews([stored], [review], []);
-    expect(Object.keys(withoutCollectionReviews(merged))).toEqual(Object.keys(stored));
-  });
-});
+// Находка 5 (склад у товара с отзывом не списывался) закрыта 30.09 в клиенте: после заказа пишутся только skus и inStock
+// (saveStockToFirestore в src/utils/firebaseSync.ts), а не весь товар с подмешанными отзывами. Проверка — на эмуляторе;
+// после перехода на placeOrder (этап 1) склад списывает сервер.
