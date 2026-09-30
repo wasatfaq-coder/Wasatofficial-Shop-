@@ -85,10 +85,17 @@ describe('placeOrderCore', () => {
     expect(order.customerUid).toBe('alice');
     expect(order.status).toBe('accepted');
     expect(order.placedVia).toBe('server');
+    // «Оплачен» ставит только администратор
+    expect(order.paymentStatus).toBe('pending');
 
     const stored = (await db.doc(`orders/${order.id}`).get()).data()!;
     expect(stored.totalPrice).toBe(3350);
     expect(stored.historySteps.length).toBeGreaterThan(0);
+  });
+
+  test('payment on delivery is marked for the courier, never as paid', async () => {
+    const order = await placeOrderCore(db, request({ paymentMethod: 'Наличными (при получении)' }), 'alice');
+    expect(order.paymentStatus).toBe('paid_on_delivery');
   });
 
   test('free delivery above the threshold', async () => {

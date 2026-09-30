@@ -165,7 +165,8 @@ service cloud.firestore {
         && request.resource.data.totalPrice is number
         && request.resource.data.totalPrice >= 0
         && request.resource.data.get('isCancelled', false) == false
-        && request.resource.data.get('paymentStatus', 'pending') in ['pending', 'paid', 'paid_on_delivery']
+        // «Оплачен» ставит только администратор: сайт денег не принимает
+        && request.resource.data.get('paymentStatus', 'pending') in ['pending', 'paid_on_delivery']
         // Гость не указывает customerUid, авторизованный — только свой
         && (request.resource.data.get('customerUid', null) == null
           || (isSignedIn() && request.resource.data.customerUid == request.auth.uid))

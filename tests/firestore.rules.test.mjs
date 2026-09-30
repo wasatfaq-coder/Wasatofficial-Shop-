@@ -50,7 +50,7 @@ const order = (overrides = {}) => ({
   status: 'accepted',
   items: [{ productId: 'p1', quantity: 1 }],
   totalPrice: 10000,
-  paymentStatus: 'paid',
+  paymentStatus: 'pending',
   ...overrides,
 });
 
@@ -143,6 +143,10 @@ describe('orders', () => {
     await assertFails(setDoc(doc(guest(), 'orders/MS-bob'), order({ id: 'MS-bob' })));
     await assertFails(setDoc(doc(guest(), 'orders/MS-3'), order({ id: 'MS-3', status: 'delivered' })));
     await assertFails(setDoc(doc(guest(), 'orders/MS-4'), order({ id: 'MS-4', items: [] })));
+    // «Оплачен» ставит только администратор; оплата при получении — не оплата
+    await assertFails(setDoc(doc(guest(), 'orders/MS-5'), order({ id: 'MS-5', paymentStatus: 'paid' })));
+    await assertFails(setDoc(doc(customer(), 'orders/MS-6'), order({ id: 'MS-6', customerUid: 'alice', paymentStatus: 'paid' })));
+    await assertSucceeds(setDoc(doc(guest(), 'orders/MS-7'), order({ id: 'MS-7', paymentStatus: 'paid_on_delivery' })));
     // markup in an order number would reach the admin's reports
     const badId = 'MS-<img src=x onerror=alert(1)>';
     await assertFails(setDoc(doc(guest(), 'orders', badId), order({ id: badId })));

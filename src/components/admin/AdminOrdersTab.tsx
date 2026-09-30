@@ -52,6 +52,7 @@ import { NeumorphicSelect } from '../NeumorphicSelect';
 import { SelectCheckbox } from './SelectCheckbox';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
+import { initialPaymentStatus } from '../../shared/orderApi';
 
 interface AdminOrdersTabProps {
   orders: Order[];
@@ -118,7 +119,7 @@ const PAYMENT_STATUS_CONFIG: Record<
     dot: 'bg-warning',
   },
   paid: {
-    label: 'Оплачен онлайн',
+    label: 'Оплачен',
     bg: 'bg-success-soft border-success/25',
     text: 'text-success',
     dot: 'bg-success',
@@ -337,7 +338,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
       // 6. Payment Status Filter
       if (paymentStatusFilter !== 'all') {
-        const pStat = ord.paymentStatus || 'paid';
+        const pStat = ord.paymentStatus || 'pending';
         if (pStat !== paymentStatusFilter) return false;
       }
 
@@ -963,7 +964,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
               prefix="Статус оплаты:"
               options={[
                 { value: 'all', label: 'Любой статус', icon: <DollarSign className="w-3.5 h-3.5 text-success" /> },
-                { value: 'paid', label: 'Оплачен онлайн' },
+                { value: 'paid', label: 'Оплачен' },
                 { value: 'pending', label: 'Ожидает оплаты' },
                 { value: 'paid_on_delivery', label: 'При получении' },
                 { value: 'refunded', label: 'Оформлен возврат' },
@@ -1031,7 +1032,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
           visibleOrders.map((ord, ordIdx) => {
             const statusInfo = STATUS_CONFIG[ord.status] || STATUS_CONFIG.accepted;
             const StatusIcon = statusInfo.icon;
-            const payStatus = ord.paymentStatus || (ord.paymentMethod?.toLowerCase().includes('получен') ? 'paid_on_delivery' : 'paid');
+            const payStatus = ord.paymentStatus || initialPaymentStatus(ord.paymentMethod ?? '');
             const payConfig = PAYMENT_STATUS_CONFIG[payStatus] || PAYMENT_STATUS_CONFIG.paid;
             const isAuditExpanded = expandedOrderAuditLogId === ord.id;
             const isStatusDropdownOpen = openStatusDropdownId === ord.id;

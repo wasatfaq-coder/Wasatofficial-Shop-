@@ -4,7 +4,7 @@
  */
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 import type { CartItem, DeliveryMethod, Order, Product, ProductSKU, PromoCode, StorefrontSettings } from '../../src/types';
-import type { PlaceOrderItem, PlaceOrderRequest } from '../../src/shared/orderApi';
+import { initialPaymentStatus, type PlaceOrderItem, type PlaceOrderRequest } from '../../src/shared/orderApi';
 import { formatOrderDate } from '../../src/shared/orderDate';
 import {
   QUICK_ORDER_DELIVERY_ID,
@@ -237,9 +237,7 @@ export async function placeOrderCore(
     const totals = calcOrderTotals(lines, promo?.data, deliveryFee);
 
     // ---- Order document (same shape as orders created by the storefront) ----
-    const paymentStatus: Order['paymentStatus'] = request.paymentMethod.toLowerCase().includes('получении')
-      ? 'paid_on_delivery'
-      : 'paid';
+    const paymentStatus = initialPaymentStatus(request.paymentMethod);
 
     const orderBase: Order = {
       id: orderRef.id,

@@ -85,6 +85,7 @@ import { FavoritesScreen } from './views/FavoritesScreen';
 import { OrderSuccessScreen } from './views/OrderSuccessScreen';
 import { validatePromo, toPricingLine, QUICK_ORDER_DELIVERY_ID } from './shared/orderPricing';
 import { formatOrderDate } from './shared/orderDate';
+import { initialPaymentStatus } from './shared/orderApi';
 import { extractColorName, extractSizeName } from './utils/inventory';
 import { getStoreContacts, getStoreName, publicSetting, withStoreName, withStoreNameFields } from './utils/storeContacts';
 import { getCategories } from './utils/categories';
@@ -1325,9 +1326,7 @@ export default function App() {
     const { customerName, customerPhone, customerEmail, deliveryAddress, deliveryMethod, paymentMethod } =
       resolveOrderDetails(orderData);
     const totalPrice = orderData.totalPrice ?? 0;
-    const paymentStatus: Order['paymentStatus'] = paymentMethod.toLowerCase().includes('получении')
-      ? 'paid_on_delivery'
-      : 'paid';
+    const paymentStatus = initialPaymentStatus(paymentMethod);
 
     // Sold-out variants ordered in preorder mode are marked and not taken from stock
     const orderItems: CartItem[] = orderData.items.map((item) =>

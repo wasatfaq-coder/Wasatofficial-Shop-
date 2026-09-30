@@ -321,7 +321,7 @@ function normalizeOrderFromFirestore(raw: any, docId?: string): Order {
     deliveryAddress: String(raw.deliveryAddress ?? raw.delivery_address ?? raw.address ?? 'Адрес доставки не указан'),
     deliveryMethod: String(raw.deliveryMethod ?? raw.delivery_method ?? 'Курьерская доставка'),
     paymentMethod: String(raw.paymentMethod ?? raw.payment_method ?? 'Карта (онлайн)'),
-    paymentStatus: raw.paymentStatus ?? raw.payment_status ?? 'paid',
+    paymentStatus: raw.paymentStatus ?? raw.payment_status ?? 'pending',
     trackingNumber,
     estimatedDelivery,
     historySteps,
