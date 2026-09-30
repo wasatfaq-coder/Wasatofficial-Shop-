@@ -50,6 +50,9 @@ interface CheckoutScreenProps {
     deliveryMethod: string;
     deliveryMethodId?: string;
     totalPrice: number;
+    /** Same breakdown as placeOrder writes: the order keeps the delivery fee and the promo discount */
+    deliveryFee?: number;
+    discountAmount?: number;
     paymentMethod?: string;
     usedBonusPoints?: number;
   }) => void | Promise<boolean>;
@@ -377,6 +380,8 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
       deliveryMethod: currentDeliveryObj.title || 'Курьер',
       deliveryMethodId: currentDeliveryObj.id,
       totalPrice,
+      deliveryFee,
+      discountAmount,
       paymentMethod: paymentLabel,
     });
     // The server may reject the order (e.g. out of stock) — let the user retry

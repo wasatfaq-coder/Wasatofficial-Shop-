@@ -6,6 +6,7 @@ import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 import type { CartItem, DeliveryMethod, Order, Product, ProductSKU, PromoCode, StorefrontSettings } from '../../src/types';
 import { initialPaymentStatus, type PlaceOrderItem, type PlaceOrderRequest } from '../../src/shared/orderApi';
 import { formatOrderDate } from '../../src/shared/orderDate';
+import { toOrderLineProduct } from '../../src/shared/orderLine';
 import {
   QUICK_ORDER_DELIVERY_ID,
   QUICK_ORDER_DELIVERY_TITLE,
@@ -169,7 +170,7 @@ export async function placeOrderCore(
       lines.push({ productId: product.id, category: product.category, price: product.price, quantity: item.quantity });
       cartItems.push({
         id: `cart-${idx + 1}`,
-        product,
+        product: toOrderLineProduct(product),
         selectedColor: item.color,
         selectedSize: item.size,
         quantity: item.quantity,

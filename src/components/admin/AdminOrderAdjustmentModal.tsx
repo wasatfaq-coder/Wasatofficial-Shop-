@@ -18,7 +18,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { deductStockWithLogs, returnStockWithLogs, extractColorName, extractSizeName } from '../../utils/inventory';
 import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
-import { productImage } from '../../utils/productImage';
+import { orderLineImage } from '../../utils/productImage';
+import { toOrderLineProduct } from '../../shared/orderLine';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { sameValue, useUnsavedChanges } from '../../utils/unsavedChanges';
 import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
@@ -146,7 +147,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
     } else {
       const newItem: CartItem = {
         id: `adj-item-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        product: selectedProductToAdd,
+        product: toOrderLineProduct(selectedProductToAdd),
         selectedColor,
         selectedSize,
         quantity: addQuantity,
@@ -516,7 +517,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <img
-                          src={productImage(item.product)}
+                          src={orderLineImage(item.product, products)}
                           alt={item.product.title}
                           className="w-12 h-12 rounded-xl object-cover shrink-0 neu-inset"
                         />

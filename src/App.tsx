@@ -89,6 +89,7 @@ import { OrderSuccessScreen } from './views/OrderSuccessScreen';
 import { validatePromo, toPricingLine, QUICK_ORDER_DELIVERY_ID } from './shared/orderPricing';
 import { formatOrderDate } from './shared/orderDate';
 import { initialPaymentStatus } from './shared/orderApi';
+import { toOrderLineProduct } from './shared/orderLine';
 import { extractColorName, extractSizeName } from './utils/inventory';
 import { getStoreContacts, getStoreName, publicSetting, withStoreName, withStoreNameFields } from './utils/storeContacts';
 import { getCategories } from './utils/categories';
@@ -1252,6 +1253,8 @@ export default function App() {
     deliveryMethod?: string;
     deliveryMethodId?: string; // absent for the one-click quick order
     totalPrice?: number;
+    deliveryFee?: number;
+    discountAmount?: number;
     paymentMethod?: string;
     customerName?: string;
     customerPhone?: string;
@@ -1358,13 +1361,18 @@ export default function App() {
       resolveOrderDetails(orderData);
     const totalPrice = orderData.totalPrice ?? 0;
     const paymentStatus = initialPaymentStatus(paymentMethod);
+    // A 1-click order has no promo, as on the server
+    const orderPromo = orderData.deliveryMethodId && appliedPromo?.code && orderData.discountAmount !== 0
+      ? promos.find((p) => p.code.toUpperCase() === appliedPromo.code.toUpperCase())
+      : undefined;
 
-    // Sold-out variants ordered in preorder mode are marked and not taken from stock
-    const orderItems: CartItem[] = orderData.items.map((item) =>
-      isPreorderVariant(item.product, item.selectedColor, item.selectedSize, preorderMode)
-        ? { ...item, isPreorder: true }
-        : item
-    );
+    // Sold-out variants ordered in preorder mode are marked and not taken from stock; the order keeps a light
+    // copy of the product (toOrderLineProduct), not its photos
+    const orderItems: CartItem[] = orderData.items.map((item) => ({
+      ...item,
+      product: toOrderLineProduct(item.product),
+      ...(isPreorderVariant(item.product, item.selectedColor, item.selectedSize, preorderMode) ? { isPreorder: true } : {}),
+    }));
 
     const newOrderBase = {
       id: newOrderId,
@@ -1382,6 +1390,10 @@ export default function App() {
       customerUid: currentUser?.uid,
       paymentMethod,
       paymentStatus,
+      // The same breakdown as orders placed by placeOrder: promo analytics and the invoice read it
+      deliveryFee: orderData.deliveryFee,
+      discountAmount: orderData.discountAmount || undefined,
+      promoCode: orderPromo?.code,
       trackingNumber: undefined,
       estimatedDelivery: 'Через 1-2 дня',
     };
@@ -1420,11 +1432,8 @@ export default function App() {
     }
 
     // Promo usage, revenue and referral commission (a 1-click order has no promo, as on the server)
-    const usedPromo = orderData.deliveryMethodId && appliedPromo?.code
-      ? promos.find((p) => p.code.toUpperCase() === appliedPromo.code.toUpperCase())
-      : undefined;
-    if (usedPromo) {
-      void recordPromoUsageInFirestore(usedPromo, totalPrice);
+    if (orderPromo) {
+      void recordPromoUsageInFirestore(orderPromo, totalPrice);
     }
 
     setOrders((prev) => [newOrder, ...prev]);
