@@ -98,7 +98,6 @@ const STORAGE_KEY = 'manstyle_quick_phrases_v1';
 // In-memory cache
 let cachedPhrases: QuickPhrasesData = loadFromLocalStorage();
 const listeners = new Set<(data: QuickPhrasesData) => void>();
-let isSeedingPhrases = false;
 
 function loadFromLocalStorage(): QuickPhrasesData {
   try {
@@ -154,18 +153,10 @@ export function subscribeToQuickPhrases(
 
   const unsubscribe = onSnapshot(
     docRef,
-    async (snapshot) => {
+    (snapshot) => {
+      // Nothing saved yet: the built-in phrases are offered in the admin, but nothing is written to the
+      // database until the admin saves their own (no seeding, as with every other setting)
       if (!snapshot.exists()) {
-        if (!isSeedingPhrases) {
-          isSeedingPhrases = true;
-          try {
-            await setDoc(docRef, sanitizeForFirestore(DEFAULT_QUICK_PHRASES));
-          } catch (seedErr) {
-            console.warn('Could not seed initial quick phrases to Firestore:', seedErr);
-          } finally {
-            isSeedingPhrases = false;
-          }
-        }
         notifyListeners(DEFAULT_QUICK_PHRASES);
         return;
       }

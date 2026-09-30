@@ -16,8 +16,6 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   whatsapp: '',
   pickupAddress: '',
   workingHours: '',
-  returnPeriodDays: 14,
-  freeDeliveryThreshold: 5000,
   isStoreOnline: true,
   isExpressEnabled: true,
   isPreorderMode: false,

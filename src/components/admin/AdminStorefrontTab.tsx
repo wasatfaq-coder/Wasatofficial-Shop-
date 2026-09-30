@@ -416,7 +416,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   key: 'freeDeliveryThreshold',
                   title: 'Тарифы доставки',
                   fieldLabel: 'Порог бесплатной доставки (₽)',
-                  value: String(localSettings.freeDeliveryThreshold ?? 5000),
+                  value: localSettings.freeDeliveryThreshold ? String(localSettings.freeDeliveryThreshold) : '',
                   badge: 'Доставка',
                   description: 'Сумма заказа, начиная с которой доставка становится 0 ₽.',
                 })
@@ -429,7 +429,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 <Pencil className="w-2.5 h-2.5 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
               <span className="text-xs font-extrabold text-success block">
-                от {localSettings.freeDeliveryThreshold?.toLocaleString('ru-RU') || 5000} ₽
+                {localSettings.freeDeliveryThreshold ? `от ${localSettings.freeDeliveryThreshold.toLocaleString('ru-RU')} ₽` : 'не задана'}
               </span>
             </button>
 
@@ -2019,7 +2019,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     type="number"
                     min="0"
                     step="500"
-                    value={localSettings.freeDeliveryThreshold ?? 5000}
+                    value={localSettings.freeDeliveryThreshold || ''}
+                    placeholder="нет"
                     onChange={(e) =>
                       setLocalSettings({
                         ...localSettings,
@@ -2039,7 +2040,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       key: 'freeDeliveryThreshold',
                       title: 'Тарифы доставки',
                       fieldLabel: 'Порог бесплатной доставки',
-                      value: String(localSettings.freeDeliveryThreshold ?? 5000),
+                      value: localSettings.freeDeliveryThreshold ? String(localSettings.freeDeliveryThreshold) : '',
                       badge: 'Доставка',
                       description: 'Сумма заказа в рублях, при достижении которой доставка автоматически становится бесплатной (0 ₽).',
                       inputType: 'number',
@@ -2056,8 +2057,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                 </button>
               </div>
               <div className="flex items-center justify-between text-[11px] text-[#4E5C70] pt-0.5">
-                <span>Свыше суммы: 0 ₽</span>
-                <span className="font-bold text-success">0 ₽ от порога</span>
+                <span>Пусто — бесплатной доставки от суммы нет</span>
               </div>
             </div>
 
@@ -2073,11 +2073,13 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     type="number"
                     min="1"
                     max="90"
-                    value={localSettings.returnPeriodDays}
+                    value={localSettings.returnPeriodDays || ''}
+                    placeholder="не задан"
                     onChange={(e) =>
                       setLocalSettings({
                         ...localSettings,
-                        returnPeriodDays: Number(e.target.value) || 14,
+                        // empty = not set: customers are not told a return period
+                        returnPeriodDays: Math.max(0, Number(e.target.value) || 0),
                       })
                     }
                     className="w-full px-3 py-2 neu-button rounded-xl text-xs font-extrabold text-accent pr-10"
@@ -2093,7 +2095,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       key: 'returnPeriodDays',
                       title: 'Условия покупки',
                       fieldLabel: 'Срок возврата (дней)',
-                      value: String(localSettings.returnPeriodDays ?? 14),
+                      value: localSettings.returnPeriodDays ? String(localSettings.returnPeriodDays) : '',
                       badge: 'Гарантии',
                       description: 'Количество дней на примерку и возврат товара надлежащего качества.',
                       inputType: 'number',
@@ -2112,7 +2114,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               </div>
               <div className="flex items-center justify-between text-[11px] text-[#4E5C70] pt-0.5">
                 <span>В карточках товаров</span>
-                <span className="font-bold text-accent">{localSettings.returnPeriodDays} дн.</span>
+                <span className="font-bold text-accent">{localSettings.returnPeriodDays ? `${localSettings.returnPeriodDays} дн.` : 'не показывается'}</span>
               </div>
             </div>
           </div>

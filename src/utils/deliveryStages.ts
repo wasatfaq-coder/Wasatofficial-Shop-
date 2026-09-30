@@ -342,12 +342,12 @@ export function getSynchronizedDeliveryStages(
     return [
       {
         id: 'stage-accepted',
-        title: 'Заказ принят и подтвержден',
+        title: 'Заказ принят',
         desc: isPost
           ? 'Магазин принял заявку для отправки Почтой России'
           : isPickup
-          ? 'Магазин зарезервировал позиции для самовывоза'
-          : 'Магазин принял заявку и зарезервировал позиции',
+          ? 'Магазин получил заказ на самовывоз'
+          : 'Магазин получил заказ',
         status: 'completed',
         time: existingStages[0]?.status === 'completed' && existingStages[0]?.time && !existingStages[0]?.time.includes('Ожидает')
           ? existingStages[0].time
@@ -358,7 +358,7 @@ export function getSynchronizedDeliveryStages(
         title: 'Скомплектован на складе',
         desc: isPost
           ? 'Товары будут проверены и упакованы по стандарту Почты России'
-          : 'Товары будут проверены контроллером качества и упакованы',
+          : 'Товары будут собраны и упакованы',
         status: 'pending',
         time: 'Ожидает сборки',
       },
@@ -391,10 +391,10 @@ export function getSynchronizedDeliveryStages(
     return [
       {
         id: 'stage-accepted',
-        title: 'Заказ принят и подтвержден',
+        title: 'Заказ принят',
         desc: isPost
           ? 'Магазин принял заявку для отправки Почтой России'
-          : 'Магазин принял заявку и зарезервировал позиции',
+          : 'Магазин получил заказ',
         status: 'completed',
         time: existingStages[0]?.time || orderDate,
       },
@@ -436,15 +436,15 @@ export function getSynchronizedDeliveryStages(
     return [
       {
         id: 'stage-accepted',
-        title: 'Заказ принят и подтвержден',
-        desc: 'Магазин принял заявку и зарезервировал позиции',
+        title: 'Заказ принят',
+        desc: 'Магазин получил заказ',
         status: 'completed',
         time: existingStages[0]?.time || orderDate,
       },
       {
         id: 'stage-assembled',
         title: 'Скомплектован на складе',
-        desc: 'Товары проверены контроллером качества и упакованы',
+        desc: 'Товары собраны и упакованы',
         status: 'completed',
         time: existingStages[1]?.time && !existingStages[1].time.includes('Ожидает')
           ? existingStages[1].time
@@ -479,15 +479,15 @@ export function getSynchronizedDeliveryStages(
     return [
       {
         id: 'stage-accepted',
-        title: 'Заказ принят и подтвержден',
-        desc: 'Магазин принял заявку и зарезервировал позиции',
+        title: 'Заказ принят',
+        desc: 'Магазин получил заказ',
         status: 'completed',
         time: existingStages[0]?.time || orderDate,
       },
       {
         id: 'stage-assembled',
         title: 'Скомплектован на складе',
-        desc: 'Товары проверены контроллером качества и упакованы',
+        desc: 'Товары собраны и упакованы',
         status: 'completed',
         time: existingStages[1]?.time || 'Скомплектован',
       },
@@ -519,15 +519,15 @@ export function getSynchronizedDeliveryStages(
   return [
     {
       id: 'stage-accepted',
-      title: 'Заказ принят и подтвержден',
-      desc: 'Магазин принял заявку и зарезервировал позиции',
+      title: 'Заказ принят',
+      desc: 'Магазин получил заказ',
       status: 'completed',
       time: existingStages[0]?.time || orderDate,
     },
     {
       id: 'stage-assembled',
       title: 'Скомплектован на складе',
-      desc: 'Товары проверены контроллером качества и упакованы',
+      desc: 'Товары собраны и упакованы',
       status: 'completed',
       time: existingStages[1]?.time && !existingStages[1].time.includes('Ожидает')
         ? existingStages[1].time

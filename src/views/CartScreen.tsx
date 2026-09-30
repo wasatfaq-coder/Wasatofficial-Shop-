@@ -18,7 +18,6 @@ import { CartRemoveConfirmModal } from '../components/CartRemoveConfirmModal';
 import { QuickOrderModal } from '../components/QuickOrderModal';
 import { NotConfigured } from '../components/NotConfigured';
 import {
-  DEFAULT_FREE_DELIVERY_THRESHOLD,
   QUICK_ORDER_DELIVERY_TITLE,
   calcPromoDiscount,
   getAvailableDeliveryMethods,
@@ -97,7 +96,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   // Same calculation as checkout and placeOrder (promo limited to categories/products included)
   const discountAmount = calcPromoDiscount(cartItems.map(toPricingLine), appliedPromo);
 
-  const freeThreshold = storefrontSettings?.freeDeliveryThreshold ?? DEFAULT_FREE_DELIVERY_THRESHOLD;
+  const freeThreshold = storefrontSettings?.freeDeliveryThreshold ?? 0;
   const totalItemsCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
   // The method is chosen at checkout: the cart shows what the store's methods cost for this order
   // (same prices as checkout) and adds a fee to «Итого» only when every method costs the same
@@ -161,7 +160,8 @@ export const CartScreen: React.FC<CartScreenProps> = ({
       {/* Computer (lg): items on the left, promo code and totals on the right, in view while the list scrolls */}
       <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start">
       <div className="space-y-4 lg:col-span-7">
-      {/* Free Delivery Threshold Dynamic Progress Banner */}
+      {/* Free Delivery Threshold Dynamic Progress Banner: only when the store set a threshold */}
+      {freeThreshold > 0 && (
       <div className="neu-flat rounded-2xl p-3.5 border border-white/60 space-y-2">
         <div className="flex items-center justify-between text-xs font-bold">
           <div className="flex items-center gap-1.5">
@@ -185,6 +185,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
           />
         </div>
       </div>
+      )}
 
       {/* Header bar with item counter & clear cart button */}
       <div className="flex items-center justify-between px-1">

@@ -457,7 +457,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               Бесплатно от
             </span>
             <span className="text-lg font-extrabold text-[#2D3A4E] block mt-0.5">
-              {storefrontSettings?.freeDeliveryThreshold ? `${storefrontSettings.freeDeliveryThreshold.toLocaleString('ru-RU')} ₽` : '5 000 ₽'}
+              {storefrontSettings?.freeDeliveryThreshold ? `${storefrontSettings.freeDeliveryThreshold.toLocaleString('ru-RU')} ₽` : 'не задан'}
             </span>
           </div>
           <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-warning">

@@ -41,7 +41,7 @@ export const OrderSuccessScreen: React.FC<OrderSuccessScreenProps> = ({
           Заказ № {orderId}
         </h2>
         <p className="text-xs text-[#4E5C70] max-w-xs mx-auto leading-relaxed font-medium">
-          Спасибо за выбор {currentStoreName()}! Мы уже начали сборку и передачу вашего заказа в доставку.
+          Спасибо за выбор {currentStoreName()}! Мы получили заказ: менеджер свяжется с вами, чтобы подтвердить его и оплату.
         </p>
       </div>
 

@@ -4,8 +4,6 @@
  */
 import type { CartItem, DeliveryMethod, PromoCode, StorefrontSettings } from '../types';
 
-export const DEFAULT_FREE_DELIVERY_THRESHOLD = 5000;
-
 /** Delivery method id used by the one-click "quick order" flow (no fee, no promo). */
 export const QUICK_ORDER_DELIVERY_ID = 'quick-order';
 export const QUICK_ORDER_DELIVERY_TITLE = 'Экспресс курьер (1 клик)';
@@ -176,7 +174,8 @@ export function getAvailableDeliveryMethods(
   settings: Partial<DeliverySettings> | null | undefined,
   subtotal: number
 ): DeliveryMethod[] {
-  const freeThreshold = settings?.freeDeliveryThreshold ?? DEFAULT_FREE_DELIVERY_THRESHOLD;
+  // No threshold in «Витрина» — no free delivery from a sum (an invented 5 000 ₽ used to zero the fee)
+  const freeThreshold = settings?.freeDeliveryThreshold ?? 0;
   const isExpressAllowed = settings?.isExpressEnabled !== false;
 
   return methods

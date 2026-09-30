@@ -29,7 +29,6 @@ import { CartItem, DeliveryMethod, PickupPoint, UserProfile, ActiveTab, AppliedP
 import { AddressEditModal } from '../components/AddressEditModal';
 import { formatAddress } from '../utils/addressFormat';
 import {
-  DEFAULT_FREE_DELIVERY_THRESHOLD,
   calcOrderTotals,
   calcPromoDiscount,
   toPricingLine,
@@ -250,7 +249,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   const rawSubtotal = calcSubtotal(pricingLines);
   const discountAmount = calcPromoDiscount(pricingLines, appliedPromo);
 
-  const freeThreshold = storefrontSettings?.freeDeliveryThreshold ?? DEFAULT_FREE_DELIVERY_THRESHOLD;
+  const freeThreshold = storefrontSettings?.freeDeliveryThreshold ?? 0;
 
   const baseDeliveryMethods = deliveryMethods ?? [];
   const availableDeliveryMethods = getAvailableDeliveryMethods(baseDeliveryMethods, storefrontSettings, rawSubtotal);
@@ -658,7 +657,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
             <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase">
               Способ доставки
             </h3>
-            {rawSubtotal >= freeThreshold && !noDeliveryMethods && (
+            {freeThreshold > 0 && rawSubtotal >= freeThreshold && !noDeliveryMethods && (
               <span className="neu-inset text-success text-[11px] font-extrabold px-2 py-0.5 rounded-full">
                 Бесплатная доставка активна
               </span>
