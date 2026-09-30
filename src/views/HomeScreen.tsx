@@ -12,8 +12,11 @@ import { QuickViewModal } from '../components/QuickViewModal';
 import { categoryIcon, getCategories } from '../utils/categories';
 import { formatDays } from '../utils/pluralize';
 import { PRODUCTS_PAGE_SIZE } from '../utils/productListing';
+import { CatalogLoadState, type CatalogStatus } from '../components/CatalogLoadState';
 
 interface HomeScreenProps {
+  /** Catalog subscription: placeholders while loading, a message on error; «не настроено» only when ready */
+  catalogStatus?: CatalogStatus;
   /** Search shared with the catalog (App): the text typed here is the catalog's query */
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
@@ -45,6 +48,7 @@ interface HomeScreenProps {
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
+  catalogStatus = 'ready',
   products,
   favorites,
   cartItemIds,
@@ -366,7 +370,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       )}
 
       {/* 6. Quick Category Icons Row */}
-      {categories.length === 0 && <NotConfigured title="Категории" />}
+      {/* «не настроено» only once the store has answered; while loading the catalog placeholders say enough */}
+      {categories.length === 0 && catalogStatus === 'ready' && <NotConfigured title="Категории" />}
       <div className="grid grid-cols-4 lg:grid-cols-8 gap-3 py-1">
         {categories
           .slice(0, 8)
@@ -437,7 +442,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           )}
         </div>
 
-        {popularProducts.length === 0 && (
+        {catalogStatus !== 'ready' ? (
+          <CatalogLoadState status={catalogStatus} />
+        ) : popularProducts.length === 0 && (
           <NotConfigured title="Каталог" hint="Товары появятся здесь, когда магазин их добавит." />
         )}
 
