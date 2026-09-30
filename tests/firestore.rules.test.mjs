@@ -9,6 +9,7 @@ import {
 } from '@firebase/rules-unit-testing';
 import {
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -50,7 +51,7 @@ const order = (overrides = {}) => ({
   status: 'accepted',
   items: [{ productId: 'p1', quantity: 1 }],
   totalPrice: 10000,
-  paymentStatus: 'paid',
+  paymentStatus: 'pending',
   ...overrides,
 });
 
@@ -104,6 +105,27 @@ describe('catalog', () => {
     await assertSucceeds(setDoc(doc(extraAdmin(), 'products/p2'), { ...product, id: 'p2' }));
   });
 
+  test('cost price is admin-only: never inside a product, which every visitor reads', async () => {
+    await assertFails(getDoc(doc(guest(), 'product_costs/p1')));
+    await assertFails(setDoc(doc(customer(), 'product_costs/p1'), { costPrice: 1 }));
+    await assertSucceeds(setDoc(doc(owner(), 'product_costs/p1'), { costPrice: 4000 }));
+    await assertSucceeds(getDoc(doc(extraAdmin(), 'product_costs/p1')));
+    await assertSucceeds(getDocs(collection(owner(), 'product_costs'))); // подписка админки — на всю коллекцию
+    await assertFails(getDocs(collection(customer(), 'product_costs')));
+    await assertFails(setDoc(doc(owner(), 'products/p3'), { ...product, id: 'p3', costPrice: 4000 }));
+    await assertFails(updateDoc(doc(owner(), 'products/p1'), { costPrice: 4000 }));
+  });
+
+  test('a cost price left inside a product can only be removed, and stock still deducts meanwhile', async () => {
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'products/p1'), { ...product, costPrice: 4000 }));
+    await assertSucceeds(
+      updateDoc(doc(guest(), 'products/p1'), { skus: [{ size: 'M', stock: 2 }], inStock: true })
+    );
+    await assertSucceeds(updateDoc(doc(owner(), 'products/p1'), { price: 9000 }));
+    await assertFails(updateDoc(doc(owner(), 'products/p1'), { costPrice: 1 }));
+    await assertSucceeds(updateDoc(doc(owner(), 'products/p1'), { costPrice: deleteField() }));
+  });
+
   test('unverified owner email is not admin', async () => {
     const db = env.authenticatedContext('fake', { email: ADMIN_EMAIL, email_verified: false }).firestore();
     await assertFails(updateDoc(doc(db, 'products/p1'), { price: 1 }));
@@ -143,6 +165,10 @@ describe('orders', () => {
     await assertFails(setDoc(doc(guest(), 'orders/MS-bob'), order({ id: 'MS-bob' })));
     await assertFails(setDoc(doc(guest(), 'orders/MS-3'), order({ id: 'MS-3', status: 'delivered' })));
     await assertFails(setDoc(doc(guest(), 'orders/MS-4'), order({ id: 'MS-4', items: [] })));
+    // «Оплачен» ставит только администратор; оплата при получении — не оплата
+    await assertFails(setDoc(doc(guest(), 'orders/MS-5'), order({ id: 'MS-5', paymentStatus: 'paid' })));
+    await assertFails(setDoc(doc(customer(), 'orders/MS-6'), order({ id: 'MS-6', customerUid: 'alice', paymentStatus: 'paid' })));
+    await assertSucceeds(setDoc(doc(guest(), 'orders/MS-7'), order({ id: 'MS-7', paymentStatus: 'paid_on_delivery' })));
     // markup in an order number would reach the admin's reports
     const badId = 'MS-<img src=x onerror=alert(1)>';
     await assertFails(setDoc(doc(guest(), 'orders', badId), order({ id: badId })));

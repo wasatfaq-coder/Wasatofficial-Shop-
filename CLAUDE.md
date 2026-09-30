@@ -79,6 +79,10 @@ Wasat Shop — SPA интернет-магазина мужской одежды
 - Администратор: `ADMIN_EMAIL` в `src/context/AuthContext.tsx` (дублируется в `firestore.rules`)
   или документ `admins/{uid}`; отдельного пароля панели нет. Заказы и профили видны только владельцу
   и администратору. Гостевые заказы хранятся в `localStorage`.
+- Себестоимость (`costPrice`) хранится только в `product_costs/{productId}` (читает и пишет администратор): товар
+  читает любой посетитель. При записи товара поле вырезается (`toStoredProduct` в `firebaseSync.ts`, правило
+  `keepsCostPriceOut`), админка получает товары с подмешанной себестоимостью (`adminProducts` в `App.tsx`), а старые
+  значения из товаров переносит сессия администратора (`moveProductCostsToPrivate`).
 - `users.bonusPoints/managerNotes/tags` меняет только администратор; заметки менеджера хранятся в `customer_notes`.
 - ID базы Firestore — в `firebase-applet-config.json` (`firestoreDatabaseId`) и `firebase.json`.
 - Ключи `manstyle_*` в `localStorage` и ID базы — внутренние, их не переименовывать: в ключах лежат корзина,
@@ -104,6 +108,9 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   после ответа функции `placeOrder`.
 - Суммы — только `src/shared/orderPricing.ts` (`toPricingLine`, `calcPromoDiscount`, `calcOrderTotals`) и в корзине,
   и в оформлении.
+- Статус оплаты нового заказа — «Ожидает оплаты» или «Оплата при вручении» (`initialPaymentStatus` в
+  `src/shared/orderApi.ts`, клиент и `placeOrder`); «Оплачен» ставит только администратор в «Заказах»: сайт денег не
+  принимает, и правило `orders` не пускает `paid` от клиента. «Оплаченные» в аналитике — только подтверждённые.
 - Заказ в 1 клик — без промокода и доставки (как в `placeOrder`) и убирает из корзины только заказанные строки.
 - `usedCount` промокода растёт только при заказе (`recordPromoUsageInFirestore`, `increment`), не при применении.
 - Статус отменённого заказа в админке снова списывает товар со склада (`changeOrdersStatus`).
@@ -118,6 +125,8 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   ненулевом остатке = снят администратором (`isHiddenFromSale`): такой товар не заказывается ни в клиенте
   (`getOrderableStock`), ни в `placeOrder`. Фильтр каталога — один `matchesCatalogFilters`, без верхней границы цены
   по умолчанию (`DEFAULT_FILTER_STATE`); чипы цены — `buildPricePresets` по ценам каталога (пустых диапазонов нет).
+- Товаров сразу — 8 (`PRODUCTS_PAGE_SIZE` в `src/utils/productListing.ts`, решение владельца): «Популярное» на главной —
+  8 и «Смотреть все», каталог — порциями по 8 с «Показать ещё»; новый поиск, фильтр или сортировка начинают с первой порции.
 - Способы оплаты, FAQ и категории хранятся в `settings/storefront` (`paymentMethods`, `faqItems`, `categories`;
   вкладки «Оплата», «FAQ», «Категории», общий редактор `AdminListEditor`). Без способа оплаты оформление заблокировано.
 - Разделы карточки товара (преимущества, состав, плотность, сертификаты, переплетение, посадка, страна, свои

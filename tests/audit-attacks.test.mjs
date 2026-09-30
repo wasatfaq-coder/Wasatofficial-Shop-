@@ -85,10 +85,11 @@ describe('Клиентский режим заказов (settings/server нет
       }));
     });
 
-  test('A5 посетитель без входа не может записать «оплаченный» заказ на 1 ₽ с чужими ценами и полями сервера',
+  test('A5 посетитель без входа не может записать заказ на 1 ₽ с чужими ценами и полями сервера',
     { todo: 'находка 2, этап 1' }, async () => {
+      // Статус «Оплачен» от клиента правила уже не пускают; остаётся сумма, которую никто не сверяет
       await assertFails(setDoc(doc(anon(), 'orders/WS-FAKE1'), {
-        id: 'WS-FAKE1', status: 'accepted', totalPrice: 1, paymentStatus: 'paid', placedVia: 'server',
+        id: 'WS-FAKE1', status: 'accepted', totalPrice: 1, paymentStatus: 'pending', placedVia: 'server',
         items: [{ product: { ...product, price: 1, image: 'https://attacker.example/pixel.gif' }, quantity: 5, selectedSize: 'M' }],
         customerName: 'Иван', customerPhone: '+70000000000', deliveryAddress: 'где угодно',
       }));

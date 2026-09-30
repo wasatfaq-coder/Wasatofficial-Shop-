@@ -80,10 +80,8 @@ export function orderRevenue(o: Order): number {
 
 function matchesStatusFilter(o: Order, statusFilter: OrderStatusFilter): boolean {
   if (statusFilter === 'paid') {
-    return (
-      !o.isCancelled &&
-      (o.paymentStatus === 'paid' || Boolean(o.paymentMethod && !o.paymentMethod.toLowerCase().includes('при получении')))
-    );
+    // «Оплачен» ставит только администратор: способ оплаты сам по себе не значит, что деньги пришли
+    return !o.isCancelled && o.paymentStatus === 'paid';
   }
   if (statusFilter === 'delivered') {
     return !o.isCancelled && (o.status === 'delivered' || o.status === 'ready');
