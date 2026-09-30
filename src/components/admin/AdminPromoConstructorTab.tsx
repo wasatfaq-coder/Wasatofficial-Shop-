@@ -24,6 +24,8 @@ import {
 import { PromoCode, Product, StoreCategory } from '../../types';
 import { copyToClipboard } from '../../utils/clipboard';
 import { NotConfigured } from '../NotConfigured';
+import { NeumorphicSwitch } from '../NeumorphicSwitch';
+import { formatPromoExpiry, isPromoListed, promoExpiryDate } from '../../shared/orderPricing';
 import { productImage } from '../../utils/productImage';
 import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
 
@@ -55,7 +57,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [minOrderAmount, setMinOrderAmount] = useState<number>(0);
-  const [expiresAt, setExpiresAt] = useState('31 августа 2026 г.');
+  const [expiresAt, setExpiresAt] = useState(''); // «YYYY-MM-DD», пусто — без срока
   const [usageLimit, setUsageLimit] = useState<number | undefined>(100);
   const [badgeText, setBadgeText] = useState('Новый купон');
   
@@ -65,6 +67,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [productSearchQuery, setProductSearchQuery] = useState('');
   const [isPopular, setIsPopular] = useState(false);
+  const [isPublic, setIsPublic] = useState(true);
 
   // Referral Fields
   const [isReferral, setIsReferral] = useState(false);
@@ -86,6 +89,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
     selectedCategories,
     selectedProductIds,
     isPopular,
+    isPublic,
     isReferral,
     partnerName,
     partnerCommissionPercent,
@@ -98,7 +102,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
   const [batchDiscountType, setBatchDiscountType] = useState<'percent' | 'fixed'>('fixed');
   const [batchDiscountValue, setBatchDiscountValue] = useState<number>(500);
   const [batchMinOrder, setBatchMinOrder] = useState<number>(2500);
-  const [batchExpiresAt, setBatchExpiresAt] = useState('31 августа 2026 г.');
+  const [batchExpiresAt, setBatchExpiresAt] = useState('');
   const [generatedBatchPreview, setGeneratedBatchPreview] = useState<string[]>([]);
   const [isBatchCopied, setIsBatchCopied] = useState(false);
 
@@ -109,7 +113,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
     setTitle('');
     setDescription('');
     setMinOrderAmount(0);
-    setExpiresAt('31 августа 2026 г.');
+    setExpiresAt('');
     setUsageLimit(100);
     setBadgeText('');
     setScopeType('all');
@@ -117,6 +121,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
     setSelectedProductIds([]);
     setProductSearchQuery('');
     setIsPopular(false);
+    setIsPublic(true);
     setIsReferral(false);
     setPartnerName('');
     setPartnerCommissionPercent(10);
@@ -133,7 +138,8 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
     setTitle(p.title);
     setDescription(p.description);
     setMinOrderAmount(p.minOrderAmount || 0);
-    setExpiresAt(p.expiresAt || '');
+    // старые коды хранят срок текстом («31 августа 2026 г.») — в поле-дату он переходит датой
+    setExpiresAt(promoExpiryDate(p.expiresAt) ?? '');
     setUsageLimit(p.usageLimit);
     setBadgeText(p.badgeText || '');
     
@@ -152,6 +158,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
     }
 
     setIsPopular(Boolean(p.isPopular));
+    setIsPublic(isPromoListed({ ...p, active: true, usedCount: 0, expiresAt: undefined }));
     setIsReferral(Boolean(p.isReferral));
     setPartnerName(p.partnerName || '');
     setPartnerCommissionPercent(p.partnerCommissionPercent || 10);
@@ -214,12 +221,13 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
               title: title.trim() || defaultTitle,
               description: description.trim() || 'Применяется при оформлении заказа',
               minOrderAmount: minOrderAmount > 0 ? Number(minOrderAmount) : undefined,
-              expiresAt: expiresAt.trim() || 'Бессрочно',
+              expiresAt: expiresAt || undefined,
               usageLimit: usageLimit && usageLimit > 0 ? Number(usageLimit) : undefined,
               badgeText: badgeText.trim() || undefined,
               applicableCategories: finalCategories,
               applicableProductIds: finalProductIds,
               isPopular,
+              isPublic,
               isReferral,
               partnerName: isReferral ? partnerName.trim() : undefined,
               partnerCommissionPercent: isReferral ? Number(partnerCommissionPercent) : undefined,
@@ -244,7 +252,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
         title: title.trim() || defaultTitle,
         description: description.trim() || 'Применяется при оформлении заказа',
         minOrderAmount: minOrderAmount > 0 ? Number(minOrderAmount) : undefined,
-        expiresAt: expiresAt.trim() || 'Бессрочно',
+        expiresAt: expiresAt || undefined,
         usageLimit: usageLimit && usageLimit > 0 ? Number(usageLimit) : undefined,
         usedCount: 0,
         active: true,
@@ -252,6 +260,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
         applicableCategories: finalCategories,
         applicableProductIds: finalProductIds,
         isPopular,
+        isPublic,
         isReferral,
         partnerName: isReferral ? partnerName.trim() : undefined,
         partnerCommissionPercent: isReferral ? Number(partnerCommissionPercent) : undefined,
@@ -326,7 +335,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
         title: titleStr,
         description: 'Одноразовый персональный промокод из рассылки',
         minOrderAmount: batchMinOrder > 0 ? Number(batchMinOrder) : undefined,
-        expiresAt: batchExpiresAt || '31 августа 2026 г.',
+        expiresAt: batchExpiresAt || undefined,
         usageLimit: 1, // Single-use!
         usedCount: 0,
         active: true,
@@ -600,15 +609,20 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
-                Срок действия (до)
+              <label htmlFor="batch-expires-at" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+                Действуют до (включительно)
               </label>
               <input
-                type="text"
+                id="batch-expires-at"
+                type="date"
                 value={batchExpiresAt}
                 onChange={(e) => setBatchExpiresAt(e.target.value)}
+                aria-describedby="batch-expires-at-hint"
                 className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-bold"
               />
+              <p id="batch-expires-at-hint" className="text-[11px] text-[#4E5C70] mt-1">
+                До конца дня по Москве. Пусто — без срока.
+              </p>
             </div>
           </div>
 
@@ -905,16 +919,20 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
-                  Срок действия (до)
+                <label htmlFor="promo-expires-at" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+                  Действует до (включительно)
                 </label>
                 <input
-                  type="text"
+                  id="promo-expires-at"
+                  type="date"
                   value={expiresAt}
                   onChange={(e) => setExpiresAt(e.target.value)}
-                  placeholder="31 декабря 2026 г."
+                  aria-describedby="promo-expires-at-hint"
                   className="w-full px-2.5 py-1.5 neu-flat rounded-xl text-xs text-[#2D3A4E] font-bold"
                 />
+                <p id="promo-expires-at-hint" className="text-[11px] text-[#4E5C70] mt-1">
+                  До конца дня по Москве. Пусто — без срока.
+                </p>
               </div>
 
               <div>
@@ -1129,6 +1147,19 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                   />
                 </button>
               </div>
+              <div className="flex items-center justify-between gap-3 pt-2 sm:pt-4 sm:col-span-2">
+                <span id="promo-is-public-label" className="text-[11px] font-bold text-[#2D3A4E]">
+                  Показывать покупателям в «Промокодах»
+                  <span className="block font-normal text-[#4E5C70]">
+                    Выключите для личных кодов: их знает только тот, кому вы их дали
+                  </span>
+                </span>
+                <NeumorphicSwitch
+                  checked={isPublic}
+                  onChange={setIsPublic}
+                  label="Показывать покупателям в «Промокодах»"
+                />
+              </div>
             </div>
           </div>
 
@@ -1281,7 +1312,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                   <span className="flex items-center gap-1 font-semibold">
                     <Calendar className="w-3 h-3 text-accent shrink-0" />
                     <span>
-                      Срок: <strong className="text-[#2D3A4E]">{promo.expiresAt}</strong>
+                      Срок: <strong className="text-[#2D3A4E]">{promo.expiresAt ? `до ${formatPromoExpiry(promo.expiresAt)}` : 'без срока'}</strong>
                     </span>
                   </span>
 

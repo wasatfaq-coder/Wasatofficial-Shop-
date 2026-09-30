@@ -322,12 +322,18 @@ export interface PromoCode {
   title: string;
   description: string;
   minOrderAmount?: number;
-  expiresAt?: string; // e.g. "31 августа 2026 г." or "2026-08-31"
+  /** Последний день действия, «2026-08-31» (по Москве, включительно); у старых кодов — текстом, см. promoExpiryDate */
+  expiresAt?: string;
   usageLimit?: number;
   usedCount: number;
   applicableCategories?: string[]; // category IDs or empty for all
   applicableProductIds?: string[]; // product IDs or empty for all
   active: boolean;
+  /**
+   * Показывать в окне «Промокоды» у покупателя. Без поля: партнёрские, одноразовые из рассылки и из чата — нет,
+   * остальные — да (`isPromoListed`)
+   */
+  isPublic?: boolean;
   badgeText?: string;
   isPopular?: boolean;
   // Batch code generator properties
@@ -438,6 +444,7 @@ export interface AppliedPromoInfo {
   discountValue?: number;
   applicableCategories?: string[];
   applicableProductIds?: string[];
+  minOrderAmount?: number;
   isReferral?: boolean;
   partnerName?: string;
   partnerCommissionPercent?: number;
@@ -476,9 +483,12 @@ export interface StorefrontSettings {
   workingHours: string;
   returnPeriodDays: number;
   freeDeliveryThreshold?: number;
-  courierDeliveryPrice?: number; // Cost for courier delivery when subtotal < freeDeliveryThreshold (default: 350)
-  pickupDeliveryPrice?: number;  // Cost for pickup point delivery (default: 0 or custom)
-  postDeliveryPrice?: number;    // Cost for Russian Post delivery (default: 350)
+  /** @deprecated Не используется: цена доставки — только у способа в «Доставка и ПВЗ». Поле осталось в старых документах. */
+  courierDeliveryPrice?: number;
+  /** @deprecated см. courierDeliveryPrice */
+  pickupDeliveryPrice?: number;
+  /** @deprecated см. courierDeliveryPrice */
+  postDeliveryPrice?: number;
   isStoreOnline: boolean;
   isExpressEnabled: boolean;
   /** Removed from Admin → «Витрина»: never had any effect; may still be stored in Firestore */

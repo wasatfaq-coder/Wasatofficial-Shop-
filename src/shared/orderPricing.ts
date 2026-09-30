@@ -20,13 +20,10 @@ export interface PricingLine {
 /** The promo fields pricing needs; satisfied by both PromoCode and AppliedPromoInfo. */
 export type PromoForPricing = Pick<
   PromoCode,
-  'discountPercent' | 'discountType' | 'discountValue' | 'applicableCategories' | 'applicableProductIds'
+  'discountPercent' | 'discountType' | 'discountValue' | 'applicableCategories' | 'applicableProductIds' | 'minOrderAmount'
 >;
 
-type DeliverySettings = Pick<
-  StorefrontSettings,
-  'freeDeliveryThreshold' | 'courierDeliveryPrice' | 'pickupDeliveryPrice' | 'postDeliveryPrice' | 'isExpressEnabled'
->;
+type DeliverySettings = Pick<StorefrontSettings, 'freeDeliveryThreshold' | 'isExpressEnabled'>;
 
 /** A storefront cart line as the pricing sees it */
 export function toPricingLine(item: Pick<CartItem, 'product' | 'quantity'>): PricingLine {
@@ -57,10 +54,24 @@ function calcEligibleSubtotal(lines: PricingLine[], promo: Partial<PromoForPrici
   return calcSubtotal(lines);
 }
 
+/**
+ * Fixed (₽) or percent. Old codes without `discountType` are read the way the admin shows them:
+ * a value above 100 is rubles (AdminPromoConstructorTab), otherwise percent.
+ */
+export function promoDiscountKind(promo: Partial<PromoForPricing>): 'fixed' | 'percent' {
+  if (promo.discountType) return promo.discountType;
+  return !promo.discountPercent && (promo.discountValue ?? 0) > 100 ? 'fixed' : 'percent';
+}
+
+/**
+ * Discount for the current cart. Zero below the promo's minimum order amount: the cart may shrink after
+ * the promo was applied, and the total must not keep the discount then.
+ */
 export function calcPromoDiscount(lines: PricingLine[], promo: Partial<PromoForPricing> | null | undefined): number {
   if (!promo) return 0;
+  if (promo.minOrderAmount && calcSubtotal(lines) < promo.minOrderAmount) return 0;
   const base = calcEligibleSubtotal(lines, promo);
-  if (promo.discountType === 'fixed' && promo.discountValue) {
+  if (promoDiscountKind(promo) === 'fixed' && promo.discountValue) {
     return Math.min(base, promo.discountValue);
   }
   if (promo.discountPercent) {
@@ -70,6 +81,63 @@ export function calcPromoDiscount(lines: PricingLine[], promo: Partial<PromoForP
     return Math.round((base * promo.discountValue) / 100);
   }
   return 0;
+}
+
+const MSK_OFFSET_MS = 3 * 60 * 60 * 1000; // Москва — UTC+3 круглый год
+const RU_MONTHS = ['январ', 'феврал', 'март', 'апрел', 'ма', 'июн', 'июл', 'август', 'сентябр', 'октябр', 'ноябр', 'декабр'];
+
+/**
+ * The last day of a promo as «YYYY-MM-DD», or null for «без срока» and text that is not a date.
+ * Reads the ISO date the admin form stores and the older text values («31 августа 2026 г.», «31.08.2026»).
+ */
+export function promoExpiryDate(expiresAt: string | undefined | null): string | null {
+  const value = (expiresAt || '').trim().toLowerCase();
+  if (!value) return null;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const iso = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const dotted = value.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})/);
+  if (dotted) return `${dotted[3]}-${pad(Number(dotted[2]))}-${pad(Number(dotted[1]))}`;
+  const text = value.match(/^(\d{1,2})\s+([а-яё]+)\s+(\d{4})/);
+  if (text) {
+    // «мая»/«май» — самая короткая основа, поэтому ищем самое длинное совпадение
+    let month = -1;
+    RU_MONTHS.forEach((stem, i) => {
+      if (text[2].startsWith(stem) && (month < 0 || stem.length > RU_MONTHS[month].length)) month = i;
+    });
+    if (month >= 0) return `${text[3]}-${pad(month + 1)}-${pad(Number(text[1]))}`;
+  }
+  return null;
+}
+
+/** End of the promo's last day by Moscow time (the code works through that day), or null without a date. */
+export function promoExpiryTime(expiresAt: string | undefined | null): number | null {
+  const date = promoExpiryDate(expiresAt);
+  if (!date) return null;
+  const [y, m, d] = date.split('-').map(Number);
+  return Date.UTC(y, m - 1, d + 1) - MSK_OFFSET_MS - 1;
+}
+
+/** «до 31.08.2026» for the customer and admin lists; text that is not a date is shown as written */
+export function formatPromoExpiry(expiresAt: string | undefined | null): string {
+  const date = promoExpiryDate(expiresAt);
+  if (!date) return (expiresAt || '').trim();
+  const [y, m, d] = date.split('-');
+  return `${d}.${m}.${y}`;
+}
+
+/** A code that can be used now: active, not expired, limit not reached (the cart is checked separately) */
+export function isPromoUsable(promo: PromoCode, now: number = Date.now()): boolean {
+  return validatePromo({ ...promo, minOrderAmount: 0 }, [], now) === null;
+}
+
+/**
+ * Shown to customers in the «Промокоды» list. Partner, single-use batch and support-chat codes are personal:
+ * they are hidden unless the admin marked the code public.
+ */
+export function isPromoListed(promo: PromoCode, now: number = Date.now()): boolean {
+  const personal = Boolean(promo.isReferral || promo.isBatch || promo.id.startsWith('promo-care-'));
+  return (promo.isPublic ?? !personal) && isPromoUsable(promo, now);
 }
 
 /**
@@ -83,11 +151,9 @@ export function validatePromo(promo: PromoCode, lines: PricingLine[], now: numbe
   if (promo.usageLimit && (promo.usedCount || 0) >= promo.usageLimit) {
     return 'Лимит использований данного промокода исчерпан';
   }
-  if (promo.expiresAt && promo.expiresAt.includes('-')) {
-    const expTime = new Date(promo.expiresAt).getTime();
-    if (!isNaN(expTime) && expTime < now) {
-      return `Срок действия промокода ${promo.code} истек`;
-    }
+  const expiry = promoExpiryTime(promo.expiresAt);
+  if (expiry !== null && expiry < now) {
+    return `Срок действия промокода ${promo.code} истек`;
   }
   const subtotal = calcSubtotal(lines);
   if (promo.minOrderAmount && subtotal < promo.minOrderAmount) {
@@ -101,7 +167,10 @@ export function validatePromo(promo: PromoCode, lines: PricingLine[], now: numbe
   return null;
 }
 
-/** Active delivery methods with the effective price for the given subtotal. */
+/**
+ * Active delivery methods with the effective price for the given subtotal. The price is the method's own
+ * («Доставка и ПВЗ»); free from the method's threshold, or from the storefront one when the method has none.
+ */
 export function getAvailableDeliveryMethods(
   methods: DeliveryMethod[],
   settings: Partial<DeliverySettings> | null | undefined,
@@ -113,18 +182,8 @@ export function getAvailableDeliveryMethods(
   return methods
     .filter((d) => d.isActive !== false)
     .map((d) => {
-      let effectivePrice = d.price;
       const threshold = d.freeThreshold !== undefined ? d.freeThreshold : freeThreshold;
-      if (threshold > 0 && subtotal >= threshold) {
-        effectivePrice = 0;
-      } else if (d.id === 'courier' && settings?.courierDeliveryPrice !== undefined) {
-        effectivePrice = subtotal >= freeThreshold ? 0 : settings.courierDeliveryPrice;
-      } else if (d.id === 'pickup' && settings?.pickupDeliveryPrice !== undefined) {
-        effectivePrice = settings.pickupDeliveryPrice;
-      } else if (d.id === 'post' && settings?.postDeliveryPrice !== undefined) {
-        effectivePrice = settings.postDeliveryPrice;
-      }
-      return { ...d, price: effectivePrice };
+      return { ...d, price: threshold > 0 && subtotal >= threshold ? 0 : d.price };
     })
     .filter((d) => !(d.id === 'express' && !isExpressAllowed));
 }

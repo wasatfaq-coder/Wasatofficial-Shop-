@@ -86,7 +86,7 @@ import { CheckoutScreen } from './views/CheckoutScreen';
 import { ProfileScreen } from './views/ProfileScreen';
 import { FavoritesScreen } from './views/FavoritesScreen';
 import { OrderSuccessScreen } from './views/OrderSuccessScreen';
-import { validatePromo, toPricingLine, QUICK_ORDER_DELIVERY_ID } from './shared/orderPricing';
+import { validatePromo, toPricingLine, isPromoListed, promoDiscountKind, QUICK_ORDER_DELIVERY_ID } from './shared/orderPricing';
 import { formatOrderDate } from './shared/orderDate';
 import { initialPaymentStatus } from './shared/orderApi';
 import { toOrderLineProduct } from './shared/orderLine';
@@ -1048,14 +1048,15 @@ export default function App() {
     }
 
     // usedCount grows only when an order with the promo is placed (not on applying it)
-    const isFixed = foundPromo.discountType === 'fixed';
+    const isFixed = promoDiscountKind(foundPromo) === 'fixed';
     const discValue = foundPromo.discountValue !== undefined ? foundPromo.discountValue : foundPromo.discountPercent;
 
     setAppliedPromo({
       code: foundPromo.code,
       discountPercent: foundPromo.discountPercent,
-      discountType: foundPromo.discountType || (isFixed ? 'fixed' : 'percent'),
+      discountType: isFixed ? 'fixed' : 'percent',
       discountValue: discValue,
+      minOrderAmount: foundPromo.minOrderAmount,
       isReferral: foundPromo.isReferral,
       partnerName: foundPromo.partnerName,
       partnerCommissionPercent: foundPromo.partnerCommissionPercent,
@@ -1072,6 +1073,23 @@ export default function App() {
     addToast(`Промокод ${foundPromo.code} применен: скидка ${discountText}`, 'success');
     return true;
   };
+
+  // An applied promo is checked again whenever the cart or the code changes: a shrunk cart, an expired or
+  // switched-off code must not reach the order with the discount
+  React.useEffect(() => {
+    if (!appliedPromo) return;
+    if (cartItems.length === 0) {
+      setAppliedPromo(null);
+      return;
+    }
+    const current = promos.find((p) => p.code.toUpperCase() === appliedPromo.code.toUpperCase());
+    const problem = current ? validatePromo(current, cartItems.map(toPricingLine)) : 'Промокод больше не действует';
+    if (problem) {
+      setAppliedPromo(null);
+      addToast(`Промокод ${appliedPromo.code} снят. ${problem}`, 'info');
+    }
+    // addToast is recreated on every render; the check depends only on the cart and the codes
+  }, [cartItems, promos, appliedPromo]);
 
   const handleRemovePromo = () => {
     setAppliedPromo(null);
@@ -1243,7 +1261,7 @@ export default function App() {
     ...failedChatMessages,
   ].sort((a, b) => chatMessageOrder(a) - chatMessageOrder(b));
 
-  const hasActivePromos = promos.some((p) => p.active);
+  const hasActivePromos = promos.some((p) => isPromoListed(p));
 
   // Complete Order
   type CompleteOrderData = {
