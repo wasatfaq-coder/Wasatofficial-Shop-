@@ -84,6 +84,8 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   `keepsCostPriceOut`), админка получает товары с подмешанной себестоимостью (`adminProducts` в `App.tsx`), а старые
   значения из товаров переносит сессия администратора (`moveProductCostsToPrivate`).
 - `users.bonusPoints/managerNotes/tags` меняет только администратор; заметки менеджера хранятся в `customer_notes`.
+- Резервная копия — «Витрина» → «Скачать копию базы» (`AdminBackupCard`, `exportDatabase` в `firebaseSync.ts`): JSON всех
+  коллекций из `BACKUP_COLLECTIONS` на устройство владельца, даты — `{ __timestamp }`. Новая коллекция — добавить в список.
 - ID базы Firestore — в `firebase-applet-config.json` (`firestoreDatabaseId`) и `firebase.json`.
 - Ключи `manstyle_*` в `localStorage` и ID базы — внутренние, их не переименовывать: в ключах лежат корзина,
   избранное и гостевые заказы в браузерах покупателей (после переименования они пропадут), а ID базы связывает

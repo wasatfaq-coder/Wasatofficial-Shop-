@@ -1127,3 +1127,49 @@ export async function syncAllPickupPointsToFirestore(points: PickupPoint[]) {
     handleFirestoreError(error, OperationType.WRITE, 'pickup_points');
   }
 }
+
+/**
+ * 11. DATABASE BACKUP (admin only)
+ */
+/** Every collection of the store; `test` holds only the connection probe */
+export const BACKUP_COLLECTIONS = [
+  'products', 'product_costs', 'promos', 'settings', 'banners', 'delivery_methods', 'pickup_points',
+  'orders', 'users', 'customer_notes', 'admins', 'reviews', 'review_votes',
+  'chat_messages', 'support_threads', 'support_status',
+] as const;
+
+export interface DatabaseBackup {
+  format: 'wasat-shop-backup';
+  version: 1;
+  createdAt: string;
+  databaseId: string;
+  collections: Record<string, { id: string; data: unknown }[]>;
+  /** Collections the admin session could not read, with the error */
+  failed: Record<string, string>;
+}
+
+/** Timestamps become `{ __timestamp: ISO }`, so a restore can write them back as dates */
+function toBackupValue(value: unknown): unknown {
+  if (value instanceof Timestamp) return { __timestamp: value.toDate().toISOString() };
+  if (Array.isArray(value)) return value.map(toBackupValue);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, toBackupValue(v)]));
+  }
+  return value;
+}
+
+/** Reads every collection of the store (admin session). Reads only: nothing is written to the database. */
+export async function exportDatabase(databaseId: string): Promise<DatabaseBackup> {
+  const backup: DatabaseBackup = {
+    format: 'wasat-shop-backup', version: 1, createdAt: new Date().toISOString(), databaseId, collections: {}, failed: {},
+  };
+  for (const name of BACKUP_COLLECTIONS) {
+    try {
+      const snapshot = await getDocs(collection(db, name));
+      backup.collections[name] = snapshot.docs.map((d) => ({ id: d.id, data: toBackupValue(d.data()) }));
+    } catch (error) {
+      backup.failed[name] = error instanceof Error ? error.message : String(error);
+    }
+  }
+  return backup;
+}
