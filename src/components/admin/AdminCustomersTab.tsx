@@ -172,9 +172,10 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
         phone: u.phone || '',
         avatar: u.avatar,
         isRegisteredUser: true,
-        registeredAt: u.createdAt || 'Январь 2026',
-        lastActiveAt: u.lastActive || 'Недавно',
-        bonusPoints: u.bonusPoints ?? Math.round(totalSpent * 0.05),
+        registeredAt: u.createdAt || '—',
+        lastActiveAt: u.lastActive || '—',
+        // only what the admin set: no invented «5 % от покупок»
+        bonusPoints: u.bonusPoints ?? 0,
         totalSpent,
         ordersCount: userOrders.length,
         completedOrdersCount: completedOrders,
@@ -245,7 +246,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
         isRegisteredUser: false,
         registeredAt: ord.date || 'Недавно',
         lastActiveAt: ord.date || 'Недавно',
-        bonusPoints: Math.round(totalSpent * 0.03),
+        bonusPoints: 0, // a guest has no bonus account
         totalSpent,
         ordersCount: matchedOrders.length,
         completedOrdersCount: completedOrders,
@@ -587,6 +588,15 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
           <div className="w-14 h-14 rounded-2xl neu-inset flex items-center justify-center mx-auto text-[#4E5C70]">
             <Users className="w-7 h-7" />
           </div>
+          {customerRecords.length === 0 ? (
+            <>
+              <h3 className="text-base font-bold text-[#2D3A4E]">Клиентов пока нет</h3>
+              <p className="text-xs text-[#4E5C70] max-w-sm mx-auto">
+                Клиенты появятся после первого заказа или входа покупателя через Google.
+              </p>
+            </>
+          ) : (
+          <>
           <h3 className="text-base font-bold text-[#2D3A4E]">Клиенты не найдены</h3>
           <p className="text-xs text-[#4E5C70] max-w-sm mx-auto">
             Попробуйте изменить параметры поиска или сбросить фильтры по категории.
@@ -601,6 +611,8 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
           >
             Сбросить фильтры
           </button>
+          </>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">

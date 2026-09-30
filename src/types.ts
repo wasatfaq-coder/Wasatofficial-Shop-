@@ -481,7 +481,9 @@ export interface StorefrontSettings {
   whatsapp: string;
   pickupAddress: string;
   workingHours: string;
-  returnPeriodDays: number;
+  /** Дней на возврат; без значения покупателю срок не называется */
+  returnPeriodDays?: number;
+  /** Порог бесплатной доставки для способов без своего порога; без значения бесплатной доставки от суммы нет */
   freeDeliveryThreshold?: number;
   /** @deprecated Не используется: цена доставки — только у способа в «Доставка и ПВЗ». Поле осталось в старых документах. */
   courierDeliveryPrice?: number;

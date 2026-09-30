@@ -35,8 +35,8 @@ export const FAQModal: React.FC<FAQModalProps> = ({
   onClose,
   onOpenSupportChat,
   onShowToast,
-  freeDeliveryThreshold = 5000,
-  returnPeriodDays = 14,
+  freeDeliveryThreshold,
+  returnPeriodDays,
   storePhone = '',
   storeEmail = '',
   faqItems = [],
@@ -46,10 +46,14 @@ export const FAQModal: React.FC<FAQModalProps> = ({
   const faqData = useMemo<FAQAccordionItem[]>(() => {
     const fill = (text: string) =>
       text
-        .split('{FREE_DELIVERY}').join(freeDeliveryThreshold.toLocaleString('ru-RU'))
-        .split('{RETURN_DAYS} дней').join(formatDays(returnPeriodDays));
+        .split('{FREE_DELIVERY}').join((freeDeliveryThreshold ?? 0).toLocaleString('ru-RU'))
+        .split('{RETURN_DAYS} дней').join(formatDays(returnPeriodDays ?? 0));
+    // A question built on a value the store has not set would show an invented number: it is not shown
+    const unset = (text: string) =>
+      (!freeDeliveryThreshold && text.includes('{FREE_DELIVERY}')) || (!returnPeriodDays && text.includes('{RETURN_DAYS}'));
     return faqItems
       .filter((item) => item.isActive !== false && item.question.trim())
+      .filter((item) => !unset(item.question) && !unset(item.answer))
       .map((item) => ({ id: item.id, question: fill(item.question), answer: fill(item.answer) }));
   }, [faqItems, freeDeliveryThreshold, returnPeriodDays]);
   const [searchQuery, setSearchQuery] = useState('');

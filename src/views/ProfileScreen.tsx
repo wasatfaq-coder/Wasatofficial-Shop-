@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, lazy, Suspense, useTransition } from 'react';
+import { launchSteps } from '../utils/launchChecklist';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { motion, AnimatePresence } from 'motion/react';
 import { AccountDataModal } from '../components/AccountDataModal';
@@ -1921,9 +1922,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   <Clock className="w-3.5 h-3.5 text-accent" />
                   Этапы доставки
                 </span>
-                <span className="text-[11px] text-accent font-extrabold neu-flat-sm px-2 py-0.5 rounded-full">
-                  Онлайн данные
-                </span>
               </div>
 
               {(() => {
@@ -3077,6 +3075,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   promos={localPromos}
                   onShowToast={onShowToast}
                   onSelectOrder={(ord) => setSelectedOrderIdForTracking(ord.id)}
+                  launchSteps={launchSteps(productsList, localDeliveryMethods, storefrontSettings)}
+                  onOpenTab={requestAdminTab}
                 />
               )}
 

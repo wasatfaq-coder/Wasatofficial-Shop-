@@ -90,8 +90,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   setActiveTab,
   onCompleteOrder,
   onShowToast,
-  returnPeriodDays = 14,
-  freeDeliveryThreshold = 5000,
+  returnPeriodDays,
+  freeDeliveryThreshold,
 }) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -794,7 +794,9 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               </div>
               <div>
                 <p className="text-sm font-bold text-[#2D3A4E]">Доставка</p>
-                <p className="text-xs text-[#4E5C70]">Бесплатная доставка от {freeDeliveryThreshold.toLocaleString('ru-RU')} ₽</p>
+                <p className="text-xs text-[#4E5C70]">
+                  {freeDeliveryThreshold ? `Бесплатная доставка от ${freeDeliveryThreshold.toLocaleString('ru-RU')} ₽` : 'Способы и цены — при оформлении'}
+                </p>
               </div>
             </div>
             <ChevronRight
@@ -841,7 +843,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               </div>
               <div>
                 <p className="text-sm font-bold text-[#2D3A4E]">Возврат</p>
-                <p className="text-xs text-[#4E5C70]">{formatDays(returnPeriodDays)} на возврат</p>
+                <p className="text-xs text-[#4E5C70]">{returnPeriodDays ? `${formatDays(returnPeriodDays)} на возврат` : 'Как вернуть товар'}</p>
               </div>
             </div>
             <ChevronRight
@@ -852,7 +854,10 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           </button>
           {openAccordion === 'returns' && (
             <div className="px-4 pb-4 pt-1 text-xs text-[#4E5C70] leading-relaxed border-t border-[#BAC5D5]/40">
-              Возврат в течение {formatDays(returnPeriodDays)} с момента получения при сохранении товарного вида и ярлыков. Чтобы оформить возврат, напишите нам в чат поддержки.
+              {returnPeriodDays
+                ? `Возврат в течение ${formatDays(returnPeriodDays)} с момента получения при сохранении товарного вида и ярлыков. `
+                : ''}
+              Чтобы оформить возврат, напишите нам в чат поддержки.
             </div>
           )}
         </div>

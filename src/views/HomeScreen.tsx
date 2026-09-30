@@ -10,6 +10,7 @@ import { NeumorphicImage } from '../components/NeumorphicImage';
 import { NotConfigured } from '../components/NotConfigured';
 import { QuickViewModal } from '../components/QuickViewModal';
 import { categoryIcon, getCategories } from '../utils/categories';
+import { formatDays } from '../utils/pluralize';
 import { PRODUCTS_PAGE_SIZE } from '../utils/productListing';
 
 interface HomeScreenProps {
@@ -186,8 +187,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   // Settings values with defaults
   const isOnline = storefrontSettings?.isStoreOnline !== false;
-  const freeShippingLimit = storefrontSettings?.freeDeliveryThreshold ?? 5000;
-  const returnPeriod = storefrontSettings?.returnPeriodDays ?? 14;
+  // Only conditions the store set in «Витрина»: no invented «от 5 000 ₽» or «14 дней»
+  const freeShippingLimit = storefrontSettings?.freeDeliveryThreshold ?? 0;
+  const returnPeriod = storefrontSettings?.returnPeriodDays ?? 0;
   // Demo template contacts are never shown to customers (see storeContacts.ts)
   const { phone } = getStoreContacts(storefrontSettings);
 
@@ -391,31 +393,34 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           })}
       </div>
 
-      {/* 7. Live Storefront Service & Trust Badges */}
-      <div className="grid grid-cols-2 gap-2.5 py-1">
+      {/* 7. Live Storefront Service & Trust Badges: each tile only when its value is set */}
+      {(freeShippingLimit > 0 || returnPeriod > 0) && (
+      <div className={`grid gap-2.5 py-1 ${freeShippingLimit > 0 && returnPeriod > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+        {freeShippingLimit > 0 && (
         <div className="neu-inset rounded-2xl p-3 text-center space-y-1">
           <div className="w-7 h-7 mx-auto rounded-xl neu-flat-sm flex items-center justify-center text-accent">
             <Truck className="w-3.5 h-3.5" />
           </div>
           <span className="text-[11px] font-extrabold text-[#2D3A4E] block">
-            {freeShippingLimit > 0
-              ? `Бесплатно от ${freeShippingLimit.toLocaleString('ru-RU')} ₽`
-              : 'Бесплатная доставка'}
+            {`Бесплатно от ${freeShippingLimit.toLocaleString('ru-RU')} ₽`}
           </span>
           <span className="text-[11px] text-[#4E5C70] block">Условия при оформлении</span>
         </div>
+        )}
 
+        {returnPeriod > 0 && (
         <div className="neu-inset rounded-2xl p-3 text-center space-y-1">
           <div className="w-7 h-7 mx-auto rounded-xl neu-flat-sm flex items-center justify-center text-accent">
             <RotateCcw className="w-3.5 h-3.5" />
           </div>
           <span className="text-[11px] font-extrabold text-[#2D3A4E] block">
-            {returnPeriod} дней на возврат
+            {formatDays(returnPeriod)} на возврат
           </span>
           <span className="text-[11px] text-[#4E5C70] block">Условия в FAQ</span>
         </div>
-
+        )}
       </div>
+      )}
 
       {/* 8. Popular Section: 2-column grid as in the catalog */}
       <div className="space-y-3">
