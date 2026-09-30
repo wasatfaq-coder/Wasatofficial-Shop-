@@ -1,0 +1,40 @@
+// Guest orders and writes, then signs in with Google: are the order and the chat still there?
+import { start, BASE } from './lib.mjs';
+const W = Number(process.argv[2] || 390);
+const t = await start('s2c', W);
+const { p, note, shot, step, toasts } = t;
+await t.fresh();
+await step('guest order + chat', async () => {
+  await p.goto(BASE + '#/product/polo-classic-02'); await p.waitForTimeout(2000);
+  await p.locator('[role="radiogroup"][aria-label="Размер"] [role="radio"]').filter({ hasText: /^M/ }).first().click();
+  await p.getByRole('button', { name: /^В корзину/ }).locator('visible=true').first().click(); await p.waitForTimeout(500);
+  await p.goto(BASE + '#/checkout'); await p.waitForTimeout(1800);
+  await p.fill('#checkout-name', 'Иван Петров'); await p.fill('#checkout-phone', '+7 999 000 11 22'); await p.fill('#checkout-email', 'ivan@example.ru');
+  await p.getByRole('radio', { name: /Пункт выдачи/ }).first().click(); await p.waitForTimeout(400);
+  const pts = p.locator('#checkout-address [role="radio"]'); if (await pts.count()) await pts.first().click();
+  await p.getByRole('radio', { name: /Перевод по номеру/ }).first().click();
+  await p.getByRole('button', { name: /Подтвердить/ }).locator('visible=true').last().click(); await p.waitForTimeout(3000);
+  note('  ' + (await toasts()));
+  await p.goto(BASE + '#/profile'); await p.waitForTimeout(1500);
+  await p.getByRole('button', { name: /Служба поддержки|Поддержка/ }).first().click(); await p.waitForTimeout(2000);
+  const chat = p.getByRole('dialog').last();
+  await chat.locator('textarea, input[type="text"]').last().fill('Гость: вопрос по заказу');
+  await chat.getByRole('button', { name: /Отправить/ }).last().click(); await p.waitForTimeout(3000);
+  await shot('guest-chat');
+  await p.keyboard.press('Escape'); await p.waitForTimeout(500);
+  note('  guest profile: ' + (await p.locator('main').innerText()).replace(/\s+/g, ' ').slice(0, 200));
+});
+await step('sign in', async () => {
+  await t.signIn({ sub: 'buyer-88', email: 'ivan@example.ru', name: 'Иван Петров' });
+  await p.goto(BASE + '#/profile'); await p.waitForTimeout(2500);
+  await shot('signed-in-profile');
+  note('  profile after sign-in: ' + (await p.locator('main').innerText()).replace(/\s+/g, ' ').slice(0, 250));
+  await p.getByRole('button', { name: /Заказы и трекинг/ }).first().click(); await p.waitForTimeout(1200);
+  await shot('orders-after-sign-in');
+  note('  orders dialog: ' + (await p.getByRole('dialog').last().innerText()).replace(/\s+/g, ' ').slice(0, 300));
+  await p.keyboard.press('Escape'); await p.waitForTimeout(500);
+  await p.getByRole('button', { name: /Служба поддержки|Поддержка/ }).first().click(); await p.waitForTimeout(2500);
+  await shot('chat-after-sign-in');
+  note('  chat after sign-in: ' + (await p.getByRole('dialog').last().innerText()).replace(/\s+/g, ' ').slice(0, 300));
+});
+await t.finish();

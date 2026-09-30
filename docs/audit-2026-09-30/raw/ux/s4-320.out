@@ -1,0 +1,11 @@
+STEP buyer home
+  [shot] s4-320/01-home.png
+  home: Wasat Shop Категории: не настроено Бесплатно от 5 000 ₽ Условия при оформлении 14 дней на возврат Условия в FAQ Популярное Каталог: не настроено Товары появятся здесь, когда магазин их добавит.
+STEP buyer catalog
+  [shot] s4-320/02-catalog.png
+  catalog: Категории: не настроено Каталог: не настроено Товары появятся здесь, когда магазин их добавит.
+STEP buyer menu + profile
+  !! FAIL buyer menu + profile: locator.click: Timeout 30000ms exceeded. | Call log:
+  [shot] s4-320/03-fail-buyer_menu_profile.png
+pageerrors: none
+console errors: none

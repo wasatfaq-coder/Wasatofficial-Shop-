@@ -1,0 +1,51 @@
+[
+ {
+  "run": 0,
+  "load": {
+   "wall": 360884,
+   "timedOut": false,
+   "bytesAtCards": {
+    "reqs": 20,
+    "other": 2496,
+    "js": 404172,
+    "css": 28290,
+    "font": 22427,
+    "firestore": 70664776
+   },
+   "bytesSettled": {
+    "reqs": 20,
+    "other": 2496,
+    "js": 404172,
+    "css": 28290,
+    "font": 66713,
+    "firestore": 70665152
+   },
+   "lcp": {
+    "t": 3588,
+    "size": 8277,
+    "tag": "P",
+    "src": ""
+   },
+   "lcpAll": 3,
+   "cards": 360721,
+   "empty": 3154,
+   "emptyGone": 360721,
+   "cardsCount": 100,
+   "domNodes": 3410,
+   "heap": [
+    [
+     "Nodes",
+     4332
+    ],
+    [
+     "JSHeapUsedSize",
+     327
+    ]
+   ],
+   "ltSum": 2472,
+   "ltMax": 1229
+  },
+  "steps": {},
+  "errs": []
+ }
+]

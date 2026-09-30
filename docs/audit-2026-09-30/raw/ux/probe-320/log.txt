@@ -1,0 +1,9 @@
+count 5
+item 0 visible=true box={"x":142.5625,"y":-2526.671875,"width":146.4375,"height":32} hit=none
+item 1 visible=true box={"x":142.5625,"y":-325.296875,"width":146.4375,"height":32} hit=none
+item 2 visible=true box={"x":116,"y":498.109375,"width":166,"height":32} hit=SPAN Собирается cls=
+item 3 visible=true box={"x":142.5625,"y":4932.859375,"width":146.4375,"height":32} hit=none
+item 4 visible=true box={"x":142.5625,"y":10236.171875,"width":146.4375,"height":32} hit=none
+  [shot] probe-320/01-menu.png
+pageerrors: none
+console errors: none

@@ -1,0 +1,298 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ------------------------------------------------------------------
+    // Helpers
+    // ------------------------------------------------------------------
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Администратор: верифицированный Google-аккаунт владельца
+    // или пользователь, для которого вручную создан документ /admins/{uid}
+    // (создаётся только через Firebase Console / Admin SDK).
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email == 'gunh83975@gmail.com'
+          && request.auth.token.email_verified == true)
+        || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    // Изменены только перечисленные поля существующего документа
+    function onlyChanges(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+
+    // settings/server.serverOrdersEnabled: заказы оформляет Cloud Function placeOrder
+    // (Admin SDK, правила не применяются). Клиентам запрещено создавать заказы,
+    // списывать остатки и менять счётчики промокодов напрямую.
+    function serverOrdersEnabled() {
+      let path = /databases/$(database)/documents/settings/server;
+      return exists(path) && get(path).data.get('serverOrdersEnabled', false) == true;
+    }
+
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ------------------------------------------------------------------
+    // Каталог и витрина: читают все, меняет только администратор
+    // ------------------------------------------------------------------
+
+    match /products/{productId} {
+      allow read: if true;
+      allow create, delete: if isAdmin() && isValidId(productId);
+      // Пока заказы не оформляются на сервере, покупатели списывают остатки.
+      // Остальные поля (в том числе старые отзывы внутри товара) — только администратор.
+      allow update: if isAdmin()
+        || (!serverOrdersEnabled() && onlyChanges(['skus', 'inStock']));
+    }
+
+    // ------------------------------------------------------------------
+    // Отзывы: reviews/{productId}_{uid} — один отзыв покупателя на товар,
+    // менять может только автор, удалять — автор или администратор.
+    // «Полезно»: review_votes/{reviewId}_{uid} — один голос от человека.
+    // ------------------------------------------------------------------
+
+    // Вход через Google (не анонимный гость чата)
+    function isCustomer() {
+      return isSignedIn()
+        && request.auth.token.get('firebase', {}).get('sign_in_provider', '') != 'anonymous';
+    }
+
+    function isOptionalText(data, field, maxLength) {
+      return !(field in data) || (data[field] is string && data[field].size() <= maxLength);
+    }
+
+    function isValidReview(data, reviewId) {
+      return data.keys().hasOnly(['id', 'productId', 'uid', 'authorName', 'rating', 'comment', 'pros', 'cons',
+          'sizePurchased', 'colorPurchased', 'date', 'createdAt'])
+        && data.id == reviewId
+        && data.uid == request.auth.uid
+        && data.productId is string
+        && reviewId == data.productId + '_' + request.auth.uid
+        && exists(/databases/$(database)/documents/products/$(data.productId))
+        && data.rating is int && data.rating >= 1 && data.rating <= 5
+        && data.comment is string && data.comment.size() > 0 && data.comment.size() <= 2000
+        && data.authorName is string && data.authorName.size() > 0 && data.authorName.size() <= 60
+        && data.date is string && data.date.size() <= 40
+        && data.createdAt is string && data.createdAt.size() <= 40
+        && isOptionalText(data, 'pros', 500)
+        && isOptionalText(data, 'cons', 500)
+        && isOptionalText(data, 'sizePurchased', 40)
+        && isOptionalText(data, 'colorPurchased', 60);
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isCustomer() && isValidReview(request.resource.data, reviewId);
+      allow update: if isCustomer()
+        && resource.data.uid == request.auth.uid
+        && isValidReview(request.resource.data, reviewId)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    match /review_votes/{voteId} {
+      allow read: if true;
+      allow create: if isCustomer()
+        && request.resource.data.keys().hasOnly(['reviewId', 'productId', 'uid'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.reviewId is string
+        && request.resource.data.productId is string
+        && voteId == request.resource.data.reviewId + '_' + request.auth.uid
+        // Не за свой отзыв (его id заканчивается на uid автора)
+        && !request.resource.data.reviewId.matches('.*_' + request.auth.uid);
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    match /promos/{promoId} {
+      allow read: if true;
+      allow create, delete: if isAdmin() && isValidId(promoId);
+      // Покупатели могут обновлять только счётчики использования промокода
+      // (и только пока заказы не оформляются на сервере)
+      allow update: if isAdmin()
+        || (!serverOrdersEnabled()
+          && onlyChanges(['usedCount', 'generatedRevenue', 'commissionEarned'])
+          && request.resource.data.get('usedCount', 0) >= resource.data.get('usedCount', 0));
+    }
+
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidId(bannerId);
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidId(settingId);
+    }
+
+    match /delivery_methods/{methodId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidId(methodId);
+    }
+
+    match /pickup_points/{pointId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidId(pointId);
+    }
+
+    // ------------------------------------------------------------------
+    // Заказы: оформить может любой (включая гостей), читать —
+    // владелец (по customerUid) или администратор, менять — администратор
+    // ------------------------------------------------------------------
+
+    match /orders/{orderId} {
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.customerUid == request.auth.uid);
+
+      allow create: if isAdmin() || (
+        !serverOrdersEnabled()
+        && isValidId(orderId)
+        // номер заказа показывается в админке и отчетах: только буквы, цифры и дефис
+        && orderId.matches('^[A-Za-z0-9-]{1,40}$')
+        && request.resource.data.id == orderId
+        && request.resource.data.status == 'accepted'
+        && request.resource.data.items is list
+        && request.resource.data.items.size() > 0
+        && request.resource.data.totalPrice is number
+        && request.resource.data.totalPrice >= 0
+        && request.resource.data.get('isCancelled', false) == false
+        && request.resource.data.get('paymentStatus', 'pending') in ['pending', 'paid', 'paid_on_delivery']
+        // Гость не указывает customerUid, авторизованный — только свой
+        && (request.resource.data.get('customerUid', null) == null
+          || (isSignedIn() && request.resource.data.customerUid == request.auth.uid))
+      );
+
+      allow update, delete: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------
+    // Чат поддержки
+    // ------------------------------------------------------------------
+
+    match /chat_messages/{messageId} {
+      // У каждого покупателя свой диалог: threadId = uid (для гостей — анонимный uid).
+      // Внутренние заметки сотрудников покупателю не видны.
+      // Прямое обращение к полям (не .get() с умолчанием): так правило проверяется
+      // по фильтрам запроса, и список без where('isInternalNote', '==', false) отклоняется.
+      allow read: if isAdmin() || (
+        isSignedIn()
+        && resource.data.threadId == request.auth.uid
+        && resource.data.isInternalNote == false
+      );
+      // Покупатель пишет только в свой диалог и только от себя (бота нет),
+      // без внутренних заметок.
+      allow create: if isAdmin() || (
+        isSignedIn()
+        && isValidId(messageId)
+        // только поля обычного сообщения: без карточек промокода/заказа и без пометок «скрыто»
+        && request.resource.data.keys().hasOnly(['id', 'sender', 'text', 'imageUrl', 'fileName', 'timestamp',
+            'threadId', 'threadName', 'isInternalNote', 'sentAt'])
+        && request.resource.data.get('threadId', null) == request.auth.uid
+        && request.resource.data.sender == 'user'
+        && request.resource.data.get('isInternalNote', false) == false
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 5000
+        && request.resource.data.id == messageId
+        // фото — только загруженное файлом (data:image), не ссылка на чужой сервер:
+        // внешний адрес открылся бы у сотрудника и выдал бы его IP
+        && (!('imageUrl' in request.resource.data)
+          || (request.resource.data.imageUrl is string
+            && request.resource.data.imageUrl.size() <= 900000
+            && request.resource.data.imageUrl.matches('^data:image/(png|jpe?g|webp|gif);base64,.*')))
+        && isOptionalText(request.resource.data, 'threadName', 200)
+        && isOptionalText(request.resource.data, 'timestamp', 20)
+        && isOptionalText(request.resource.data, 'fileName', 200)
+        // без sentAt (старая версия сайта) сообщение уходит, но править его потом нельзя
+        && request.resource.data.get('sentAt', request.time) == request.time
+      );
+      // Свое сообщение покупатель меняет (текст, «удалить у себя») и удаляет у всех
+      // в течение 15 минут после отправки; время — серверное (sentAt). Сотрудники — без ограничений.
+      allow update: if isAdmin() || (
+        isOwnRecentChatMessage()
+        && onlyChanges(['text', 'editedAt', 'hiddenForCustomer'])
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 5000
+        && request.resource.data.get('hiddenForCustomer', false) is bool
+        && (!('editedAt' in request.resource.data.diff(resource.data).affectedKeys())
+          || request.resource.data.editedAt == request.time)
+      );
+      allow delete: if isAdmin() || isOwnRecentChatMessage();
+    }
+
+    function isOwnRecentChatMessage() {
+      return isSignedIn()
+        && resource.data.threadId == request.auth.uid
+        && resource.data.sender == 'user'
+        && resource.data.isInternalNote == false
+        && request.time < resource.data.sentAt + duration.value(15, 'm');
+    }
+
+    // Состояние диалога поддержки (статус, приоритет) — рабочие пометки сотрудников,
+    // покупатель их не видит
+    match /support_threads/{threadId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin() && isValidId(threadId);
+    }
+
+    // Статус обращения для покупателя (без приоритета): пишет администратор, читает сам покупатель
+    match /support_status/{threadId} {
+      allow get: if isAdmin() || (isSignedIn() && request.auth.uid == threadId);
+      allow list: if isAdmin();
+      allow write: if isAdmin() && isValidId(threadId);
+    }
+
+    // ------------------------------------------------------------------
+    // Профили пользователей: свой профиль или администратор
+    // ------------------------------------------------------------------
+
+    // Бонусы и заметки менеджера меняет только администратор
+    function adminOnlyProfileFields() {
+      return ['bonusPoints', 'managerNotes', 'tags'];
+    }
+
+    match /users/{userId} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+      allow create: if isAdmin() || (
+        isSignedIn() && request.auth.uid == userId
+        && request.resource.data.get('uid', userId) == userId
+        && !request.resource.data.keys().hasAny(adminOnlyProfileFields())
+      );
+      allow update: if isAdmin() || (
+        isSignedIn() && request.auth.uid == userId
+        && request.resource.data.get('uid', userId) == userId
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(adminOnlyProfileFields())
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Заметки и теги менеджера о покупателе — только администратор
+    match /customer_notes/{userId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------
+    // Реестр администраторов: только чтение своей записи.
+    // Добавлять администраторов — вручную через Firebase Console.
+    // ------------------------------------------------------------------
+
+    match /admins/{adminId} {
+      allow read: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
+      allow write: if false;
+    }
+
+    // Проверка соединения при старте приложения (только чтение)
+    match /test/{testId} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

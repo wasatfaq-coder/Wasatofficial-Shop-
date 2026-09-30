@@ -1,0 +1,149 @@
+[
+ {
+  "run": 0,
+  "load": {
+   "wall": 183097,
+   "timedOut": true,
+   "bytesAtCards": {
+    "reqs": 14,
+    "other": 2496,
+    "js": 404172,
+    "css": 28290,
+    "font": 22427,
+    "firestore": 34371705
+   },
+   "bytesSettled": {
+    "reqs": 14,
+    "other": 2496,
+    "js": 404172,
+    "css": 28290,
+    "font": 22427,
+    "firestore": 34374705
+   },
+   "lcp": {
+    "t": 3652,
+    "size": 8277,
+    "tag": "P",
+    "src": ""
+   },
+   "lcpAll": 2,
+   "cards": null,
+   "empty": 3208,
+   "emptyGone": null,
+   "cardsCount": 0,
+   "domNodes": 164,
+   "heap": [
+    [
+     "Nodes",
+     213
+    ],
+    [
+     "JSHeapUsedSize",
+     48
+    ]
+   ],
+   "ltSum": 1116,
+   "ltMax": 406
+  },
+  "steps": {},
+  "errs": []
+ },
+ {
+  "run": 1,
+  "load": {
+   "wall": 181219,
+   "timedOut": true,
+   "bytesAtCards": {
+    "reqs": 14,
+    "other": 2496,
+    "js": 404172,
+    "css": 28290,
+    "font": 22427,
+    "firestore": 35313466
+   },
+   "bytesSettled": {
+    "reqs": 14,
+    "other": 2496,
+    "js": 404172,
+    "css": 28290,
+    "font": 22427,
+    "firestore": 35344966
+   },
+   "lcp": {
+    "t": 3636,
+    "size": 8277,
+    "tag": "P",
+    "src": ""
+   },
+   "lcpAll": 3,
+   "cards": null,
+   "empty": 3218,
+   "emptyGone": null,
+   "cardsCount": 0,
+   "domNodes": 164,
+   "heap": [
+    [
+     "Nodes",
+     213
+    ],
+    [
+     "JSHeapUsedSize",
+     70
+    ]
+   ],
+   "ltSum": 827,
+   "ltMax": 395
+  },
+  "steps": {},
+  "errs": []
+ },
+ {
+  "run": 2,
+  "load": {
+   "wall": 180682,
+   "timedOut": true,
+   "bytesAtCards": {
+    "reqs": 14,
+    "other": 2496,
+    "js": 404172,
+    "css": 28290,
+    "font": 22427,
+    "firestore": 35156872
+   },
+   "bytesSettled": {
+    "reqs": 14,
+    "other": 2496,
+    "js": 404172,
+    "css": 28290,
+    "font": 22427,
+    "firestore": 35385280
+   },
+   "lcp": {
+    "t": 3524,
+    "size": 8277,
+    "tag": "P",
+    "src": ""
+   },
+   "lcpAll": 2,
+   "cards": null,
+   "empty": 3149,
+   "emptyGone": null,
+   "cardsCount": 0,
+   "domNodes": 164,
+   "heap": [
+    [
+     "Nodes",
+     213
+    ],
+    [
+     "JSHeapUsedSize",
+     261
+    ]
+   ],
+   "ltSum": 735,
+   "ltMax": 381
+  },
+  "steps": {},
+  "errs": []
+ }
+]
