@@ -289,12 +289,9 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
     triggerChartHapticFeedback('light');
   };
 
-  const handleChartClick = useCallback((e: { activePayload?: { payload: DailyDataPoint }[] } | null) => {
-    const point = e?.activePayload?.[0]?.payload;
-    if (point) {
-      setSelectedDay(point);
-      triggerChartHapticFeedback(point.isPeakDay ? 'double' : 'medium');
-    }
+  const handleChartClick = useCallback((point: DailyDataPoint) => {
+    setSelectedDay(point);
+    triggerChartHapticFeedback(point.isPeakDay ? 'double' : 'medium');
   }, []);
 
   const showPeakDay = () => {
@@ -531,8 +528,8 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
             )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <Segments label="Какие заказы учитывать" grid="grid-cols-3" value={statusFilter} options={STATUS_FILTERS} onChange={setStatusFilter} />
-            <Segments
+            <Segments<OrderStatusFilter> label="Какие заказы учитывать" grid="grid-cols-3" value={statusFilter} options={STATUS_FILTERS} onChange={setStatusFilter} />
+            <Segments<ChartType>
               label="Вид графика"
               value={chartType}
               options={[

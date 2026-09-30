@@ -337,7 +337,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
       };
 
       const updated = formPointIsDefault
-        ? pickupPoints.map((p) => ({ ...p, isDefault: false })).concat(newPoint)
+        ? [...pickupPoints.map((p) => ({ ...p, isDefault: false })), newPoint]
         : [...pickupPoints, newPoint];
 
       onUpdatePickupPoints(updated);

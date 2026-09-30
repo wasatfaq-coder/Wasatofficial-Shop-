@@ -129,7 +129,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
   products,
   onUpdateProducts,
   onShowToast,
-  settings = {},
+  settings = {} as StorefrontSettings,
   onUpdateSettings,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'matrix' | 'audit' | 'movements'>('matrix');

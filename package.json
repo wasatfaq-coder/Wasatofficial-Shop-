@@ -32,6 +32,8 @@
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",
     "@types/node": "^22.14.0",
+    "@types/react": "19",
+    "@types/react-dom": "19",
     "autoprefixer": "^10.6.1",
     "esbuild": "^0.28.2",
     "firebase-tools": "^15.31.0",

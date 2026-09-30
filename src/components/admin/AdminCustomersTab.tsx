@@ -160,7 +160,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                (uPhone && oPhone && uPhone.length >= 7 && oPhone.includes(uPhone.slice(-7)));
       });
 
-      const totalSpent = userOrders.reduce((sum, o) => (o.status !== 'cancelled' ? sum + (o.totalPrice || 0) : sum), 0);
+      const totalSpent = userOrders.reduce((sum, o) => (!o.isCancelled ? sum + (o.totalPrice || 0) : sum), 0);
       const completedOrders = userOrders.filter((o) => o.status === 'delivered').length;
       const avgCheck = userOrders.length > 0 ? Math.round(totalSpent / userOrders.length) : 0;
 
@@ -218,7 +218,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
         const rec = map.get(existingMatchKey)!;
         if (!rec.orders.some((o) => o.id === ord.id)) {
           rec.orders.push(ord);
-          if (ord.status !== 'cancelled') {
+          if (!ord.isCancelled) {
             rec.totalSpent += ord.totalPrice || 0;
           }
           rec.ordersCount = rec.orders.length;
@@ -234,7 +234,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
         return (email && oEmail === email) || (phone && oPhone && oPhone === phone);
       });
 
-      const totalSpent = matchedOrders.reduce((sum, o) => (o.status !== 'cancelled' ? sum + (o.totalPrice || 0) : sum), 0);
+      const totalSpent = matchedOrders.reduce((sum, o) => (!o.isCancelled ? sum + (o.totalPrice || 0) : sum), 0);
       const completedOrders = matchedOrders.filter((o) => o.status === 'delivered').length;
       const avgCheck = matchedOrders.length > 0 ? Math.round(totalSpent / matchedOrders.length) : 0;
 

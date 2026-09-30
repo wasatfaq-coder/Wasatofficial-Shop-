@@ -42,7 +42,8 @@ Wasat Shop — SPA интернет-магазина мужской одежды
 ## Команды
 
 - Менеджер пакетов — Bun (`bun install`, lock-файл `bun.lock`)
-- `bun run lint` — `tsc --noEmit` (линтера ESLint нет)
+- `bun run lint` — `tsc --noEmit` (линтера ESLint нет); с `@types/react` проверяются и экраны: пропсы компонентов,
+  `useState`, обработчики
 - `bun run test:rules` — тесты `firestore.rules` в эмуляторе (нужна Java)
 - `bun run test:functions` — тесты Cloud Functions и расчёта цены (сначала `npm ci --prefix functions`)
 - `functions/`: отдельный npm-пакет; `npm run typecheck|build --prefix functions`
