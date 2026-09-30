@@ -25,6 +25,7 @@ import { NotConfigured } from '../components/NotConfigured';
 import type { StoreCategory } from '../types';
 import { categoryIcon } from '../utils/categories';
 import { pluralRu } from '../utils/pluralize';
+import { PRODUCTS_PAGE_SIZE } from '../utils/productListing';
 
 interface CatalogScreenProps {
   /** From Admin → «Категории» */
@@ -155,6 +156,12 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
     filterState,
     sortBy,
   ]);
+
+  // The catalog opens with one portion; a new search, filter or sort starts from the first portion again
+  const [visibleCount, setVisibleCount] = useState(PRODUCTS_PAGE_SIZE);
+  React.useEffect(() => setVisibleCount(PRODUCTS_PAGE_SIZE), [selectedCategory, searchQuery, filterState, sortBy]);
+  const visibleProducts = filteredProducts.slice(0, visibleCount);
+  const hiddenCount = filteredProducts.length - visibleProducts.length;
 
   return (
     <div className="space-y-4 pb-32 lg:pb-10 animate-in fade-in duration-300">
@@ -502,8 +509,9 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
               </button>
             </div>
           ) : (
+            <>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 lg:gap-5 p-1 -m-1">
-              {filteredProducts.map((product, index) => (
+              {visibleProducts.map((product, index) => (
                 <ProductCard
                   key={product.id}
                   product={product}
@@ -517,6 +525,21 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                 />
               ))}
             </div>
+            {hiddenCount > 0 && (
+              <div className="flex flex-col items-center gap-2 pt-5">
+                <p className="text-xs text-[#4E5C70]">
+                  Показано {visibleProducts.length} из {filteredProducts.length}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount((count) => count + PRODUCTS_PAGE_SIZE)}
+                  className="neu-button rounded-2xl h-11 px-6 text-sm font-extrabold text-accent cursor-pointer"
+                >
+                  Показать ещё {Math.min(PRODUCTS_PAGE_SIZE, hiddenCount)}
+                </button>
+              </div>
+            )}
+            </>
           )}
         </motion.div>
       </AnimatePresence>

@@ -10,6 +10,7 @@ import { NeumorphicImage } from '../components/NeumorphicImage';
 import { NotConfigured } from '../components/NotConfigured';
 import { QuickViewModal } from '../components/QuickViewModal';
 import { categoryIcon, getCategories } from '../utils/categories';
+import { PRODUCTS_PAGE_SIZE } from '../utils/productListing';
 
 interface HomeScreenProps {
   /** Search shared with the catalog (App): the text typed here is the catalog's query */
@@ -76,9 +77,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [activeBannerSlide, setActiveBannerSlide] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
-  // Popular items with graceful fallback
+  // Popular items with graceful fallback; the home page shows 8 of them, the rest are behind «Смотреть все»
   const popularFiltered = products.filter((p) => p.isPopular);
-  const popularProducts = popularFiltered.length > 0 ? popularFiltered : products.slice(0, 6);
+  const popularProducts = (popularFiltered.length > 0 ? popularFiltered : products).slice(0, PRODUCTS_PAGE_SIZE);
 
   // Filter active slides with real-time schedule checks
   const isSlideScheduledAndActive = (slide: BannerSlide) => {
