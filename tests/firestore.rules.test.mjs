@@ -48,12 +48,24 @@ const product = {
 
 const promo = { id: 'promo1', code: 'SALE', discountPercent: 10, usedCount: 0, generatedRevenue: 0 };
 
+// The fields completeOrderLocally (App.tsx) writes; the rules accept only these from a customer
 const order = (overrides = {}) => ({
   id: 'MS-1',
+  createdAt: '2026-09-30T12:00:00.000Z',
+  date: '30 сент., 15:00',
   status: 'accepted',
-  items: [{ productId: 'p1', quantity: 1 }],
+  items: [{ id: 'cart-1', product: { id: 'p1', title: 'Пальто', price: 10000 }, quantity: 1, selectedSize: 'M' }],
   totalPrice: 10000,
+  deliveryAddress: 'Москва, ул. Тверская, 7',
+  deliveryMethod: 'Курьер',
+  customerName: 'Иван',
+  customerPhone: '+79990000000',
+  paymentMethod: 'Перевод по номеру',
   paymentStatus: 'pending',
+  deliveryFee: 0,
+  estimatedDelivery: 'Через 1-2 дня',
+  historySteps: [],
+  deliveryStages: [],
   ...overrides,
 });
 
@@ -100,6 +112,24 @@ describe('catalog', () => {
       updateDoc(doc(customer(), 'products/p1'), { reviews: [{ rating: 4 }], rating: 4, reviewsCount: 1 })
     );
     await assertFails(updateDoc(doc(guest(), 'products/p1'), { reviews: [{ rating: 1 }] }));
+  });
+
+  test('a customer cannot add or remove variants or put a product back on sale', async () => {
+    await assertFails(updateDoc(doc(guest(), 'products/p1'), {
+      skus: [{ size: 'M', stock: 2 }, { size: 'L', stock: 1 }], inStock: true,
+    }));
+    await assertFails(updateDoc(doc(guest(), 'products/p1'), { skus: [], inStock: true }));
+    await assertSucceeds(updateDoc(doc(guest(), 'products/p1'), { skus: [{ size: 'M', stock: 0 }], inStock: false }));
+    // sold out and taken off sale: only the admin puts it back
+    await assertFails(updateDoc(doc(guest(), 'products/p1'), { skus: [{ size: 'M', stock: 0 }], inStock: true }));
+    await assertSucceeds(updateDoc(doc(owner(), 'products/p1'), { skus: [{ size: 'M', stock: 5 }], inStock: true }));
+  });
+
+  test('stock of a product with many variants is still written off', async () => {
+    const many = Array.from({ length: 60 }, (_, i) => ({ id: `v${i}`, size: String(i), stock: 5 }));
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'products/p1'), { ...product, skus: many }));
+    const lowered = many.map((v, i) => (i === 59 ? { ...v, stock: 4 } : v));
+    await assertSucceeds(updateDoc(doc(guest(), 'products/p1'), { skus: lowered, inStock: true }));
   });
 
   test('admins (owner email or /admins doc) can manage products', async () => {
@@ -154,6 +184,13 @@ describe('promos', () => {
     await assertFails(updateDoc(doc(guest(), 'promos/promo1'), { discountPercent: 99 }));
     await assertFails(updateDoc(doc(guest(), 'promos/promo1'), { usedCount: -5 }));
   });
+
+  test('one order is one use: the counter grows by 1, revenue by one order, commission not above it', async () => {
+    await assertFails(updateDoc(doc(guest(), 'promos/promo1'), { usedCount: 5, generatedRevenue: 500 }));
+    await assertFails(updateDoc(doc(guest(), 'promos/promo1'), { usedCount: 1, generatedRevenue: 5_000_000 }));
+    await assertFails(updateDoc(doc(guest(), 'promos/promo1'), { usedCount: 1, generatedRevenue: 500, commissionEarned: 900 }));
+    await assertSucceeds(updateDoc(doc(guest(), 'promos/promo1'), { usedCount: 1, generatedRevenue: 5000, commissionEarned: 500 }));
+  });
 });
 
 describe('orders', () => {
@@ -174,6 +211,18 @@ describe('orders', () => {
     // markup in an order number would reach the admin's reports
     const badId = 'MS-<img src=x onerror=alert(1)>';
     await assertFails(setDoc(doc(guest(), 'orders', badId), order({ id: badId })));
+  });
+
+  test('an order from the browser has only its own fields, sane texts and at most 30 lines', async () => {
+    await assertFails(setDoc(doc(guest(), 'orders/MS-8'), order({ id: 'MS-8', placedVia: 'server' })));
+    await assertFails(setDoc(doc(guest(), 'orders/MS-9'), order({ id: 'MS-9', customerName: '' })));
+    await assertFails(setDoc(doc(guest(), 'orders/MS-10'), order({ id: 'MS-10', customerName: 'x'.repeat(5000) })));
+    await assertFails(setDoc(doc(guest(), 'orders/MS-11'), order({ id: 'MS-11', deliveryFee: -300 })));
+    const line = order().items[0];
+    await assertFails(setDoc(doc(guest(), 'orders/MS-12'), order({ id: 'MS-12', items: Array(31).fill(line) })));
+    await assertSucceeds(setDoc(doc(guest(), 'orders/MS-13'), order({ id: 'MS-13', items: Array(30).fill(line) })));
+    // the admin creates orders without these limits
+    await assertSucceeds(setDoc(doc(owner(), 'orders/MS-14'), { id: 'MS-14', status: 'accepted', items: [] }));
   });
 
   test('customer cannot place an order in someone else\'s name', async () => {

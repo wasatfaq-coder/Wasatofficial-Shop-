@@ -30,6 +30,12 @@ service cloud.firestore {
     }
 
     // Себестоимость живёт в закрытой product_costs: в товар её не добавить и не поменять, старое значение — только удалить
+    // Число в поле выросло не больше чем на max (поле могло отсутствовать)
+    function isBoundedIncrease(field, max) {
+      let delta = request.resource.data.get(field, 0) - resource.data.get(field, 0);
+      return request.resource.data.get(field, 0) is number && delta >= 0 && delta <= max;
+    }
+
     function keepsCostPriceOut() {
       return !('costPrice' in request.resource.data)
         || request.resource.data.costPrice == resource.data.get('costPrice', null);
@@ -59,7 +65,18 @@ service cloud.firestore {
       // Пока заказы не оформляются на сервере, покупатели списывают остатки.
       // Остальные поля (в том числе старые отзывы внутри товара) — только администратор.
       allow update: if (isAdmin() && keepsCostPriceOut())
-        || (!serverOrdersEnabled() && onlyChanges(['skus', 'inStock']));
+        || (!serverOrdersEnabled() && onlyChanges(['skus', 'inStock']) && isStockDeduction());
+    }
+
+    // Списание остатков покупателем (заказы из браузера): набор вариантов не меняется (ни добавить, ни удалить),
+    // «В продаже» можно лишь снять (распродано), вернуть — только администратор. Что остаток именно уменьшился,
+    // правило не проверяет: поштучная проверка вариантов не укладывается в лимит Firestore (1000 выражений на
+    // запрос) уже на 20 вариантах. Это закрывают серверные заказы (placeOrder, этап 1), находка 1 открыта.
+    function isStockDeduction() {
+      let before = resource.data.skus;
+      let after = request.resource.data.skus;
+      return after is list && before is list && after.size() == before.size()
+        && (request.resource.data.inStock == resource.data.get('inStock', true) || request.resource.data.inStock == false);
     }
 
     // Себестоимость товаров: товар читает любой посетитель, поэтому она отдельно и только для администратора
@@ -132,10 +149,16 @@ service cloud.firestore {
       allow create, delete: if isAdmin() && isValidId(promoId);
       // Покупатели могут обновлять только счётчики использования промокода
       // (и только пока заказы не оформляются на сервере)
+      // Один заказ — одно использование: счётчик растёт ровно на 1, выручка — на сумму одного заказа (не больше
+      // 1 000 000 ₽), комиссия партнёра — не больше этой суммы. Итоги всё равно сверяет администратор.
       allow update: if isAdmin()
         || (!serverOrdersEnabled()
           && onlyChanges(['usedCount', 'generatedRevenue', 'commissionEarned'])
-          && request.resource.data.get('usedCount', 0) >= resource.data.get('usedCount', 0));
+          && request.resource.data.get('usedCount', 0) == resource.data.get('usedCount', 0) + 1
+          && isBoundedIncrease('generatedRevenue', 1000000)
+          && request.resource.data.get('commissionEarned', 0) - resource.data.get('commissionEarned', 0)
+            <= request.resource.data.get('generatedRevenue', 0) - resource.data.get('generatedRevenue', 0)
+          && request.resource.data.get('commissionEarned', 0) >= resource.data.get('commissionEarned', 0));
     }
 
     match /banners/{bannerId} {
@@ -163,6 +186,31 @@ service cloud.firestore {
     // владелец (по customerUid) или администратор, менять — администратор
     // ------------------------------------------------------------------
 
+    // Заказ из браузера (completeOrderLocally в App.tsx): только его поля, контакты и тексты разумной длины,
+    // не больше 30 строк. Цены строк правила не сверяют — это делает placeOrder (этап 1, серверные заказы).
+    function isClientOrderShape() {
+      let data = request.resource.data;
+      return data.keys().hasOnly(['id', 'createdAt', 'date', 'items', 'status', 'totalPrice', 'deliveryAddress',
+          'deliveryMethod', 'customerName', 'customerPhone', 'customerEmail', 'customerUid', 'paymentMethod',
+          'paymentStatus', 'deliveryFee', 'discountAmount', 'promoCode', 'estimatedDelivery', 'historySteps',
+          'deliveryStages'])
+        && data.items.size() <= 30
+        && data.customerName is string && data.customerName.size() > 0 && data.customerName.size() <= 100
+        && data.customerPhone is string && data.customerPhone.size() > 0 && data.customerPhone.size() <= 40
+        && data.deliveryAddress is string && data.deliveryAddress.size() <= 500
+        && data.deliveryMethod is string && data.deliveryMethod.size() <= 100
+        && data.paymentMethod is string && data.paymentMethod.size() <= 100
+        && isOptionalText(data, 'customerEmail', 120)
+        && isOptionalText(data, 'createdAt', 40)
+        && isOptionalText(data, 'date', 40)
+        && isOptionalText(data, 'promoCode', 40)
+        && isOptionalText(data, 'estimatedDelivery', 80)
+        && (!('deliveryFee' in data) || (data.deliveryFee is number && data.deliveryFee >= 0))
+        && (!('discountAmount' in data) || (data.discountAmount is number && data.discountAmount >= 0))
+        && (!('historySteps' in data) || (data.historySteps is list && data.historySteps.size() <= 20))
+        && (!('deliveryStages' in data) || (data.deliveryStages is list && data.deliveryStages.size() <= 20));
+    }
+
     match /orders/{orderId} {
       allow read: if isAdmin()
         || (isSignedIn() && resource.data.customerUid == request.auth.uid);
@@ -184,6 +232,7 @@ service cloud.firestore {
         // Гость не указывает customerUid, авторизованный — только свой
         && (request.resource.data.get('customerUid', null) == null
           || (isSignedIn() && request.resource.data.customerUid == request.auth.uid))
+        && isClientOrderShape()
       );
 
       allow update, delete: if isAdmin();
