@@ -86,6 +86,7 @@ import { CheckoutScreen } from './views/CheckoutScreen';
 import { ProfileScreen } from './views/ProfileScreen';
 import { FavoritesScreen } from './views/FavoritesScreen';
 import { OrderSuccessScreen } from './views/OrderSuccessScreen';
+import { CART_STORAGE_KEY, loadStoredCart, toStoredCart } from './utils/cartStorage';
 import { validatePromo, toPricingLine, isPromoListed, promoDiscountKind, QUICK_ORDER_DELIVERY_ID } from './shared/orderPricing';
 import { formatOrderDate } from './shared/orderDate';
 import { initialPaymentStatus } from './shared/orderApi';
@@ -251,25 +252,21 @@ export default function App() {
     return () => window.removeEventListener('manstyle_storefront_settings_updated', handleStorefrontUpdate);
   }, []);
 
-  // Saved cart, or empty. Earlier versions put three demo items (ids 'cart-init-*') into every new
-  // visitor's cart and brought them back after the cart was emptied; those items are dropped here.
+  // Saved cart (light lines, cartStorage.ts); the full products come from the catalog subscription
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     try {
-      const saved = localStorage.getItem('manstyle_cart');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.filter((item: CartItem) => !String(item?.id).startsWith('cart-init-'));
-        }
-      }
-    } catch {}
-    return [];
+      return loadStoredCart(localStorage.getItem(CART_STORAGE_KEY));
+    } catch {
+      return [];
+    }
   });
 
   React.useEffect(() => {
     try {
-      localStorage.setItem('manstyle_cart', JSON.stringify(cartItems));
-    } catch {}
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(toStoredCart(cartItems)));
+    } catch (err) {
+      console.error('Cart was not saved in the browser:', err);
+    }
   }, [cartItems]);
 
   // A product from the address is restored once the catalog loads (see the products subscription)
