@@ -46,7 +46,7 @@ import {
   subscribeToUsers,
   subscribeToOwnUserProfile,
   saveOrderToFirestore,
-  saveModifiedProductsToFirestore,
+  saveStockToFirestore,
   syncAllProductsToFirestore,
   subscribeToProductCosts,
   saveProductCosts,
@@ -1459,10 +1459,11 @@ export default function App() {
       saveGuestOrder(newOrder);
     }
     
-    // Atomically persist stock updates only for ordered products
+    // Stock of the ordered products only, and only the fields a customer may change (skus, inStock).
+    // The order is already saved: a refused stock write must not turn it into a failure for the customer
     const orderedProductIds = new Set(orderData.items.map((i) => i.product.id));
     const modifiedProducts = updatedProducts.filter((p) => orderedProductIds.has(p.id));
-    saveModifiedProductsToFirestore(modifiedProducts);
+    saveStockToFirestore(modifiedProducts).catch((err) => console.error(`Stock for ${newOrderId} was not written off:`, err));
 
     finishOrder({ id: newOrderId, totalPrice, deliveryMethod, deliveryAddress, paymentMethod }, orderData);
     return true;

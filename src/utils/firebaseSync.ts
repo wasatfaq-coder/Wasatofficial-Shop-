@@ -150,17 +150,19 @@ async function saveProductToFirestore(product: Product) {
   }
 }
 
-export async function saveModifiedProductsToFirestore(productsToSave: Product[]) {
+/**
+ * Stock after a customer order: only `skus` and `inStock` of the ordered products — the fields the rules let a
+ * customer change. Writing the whole product failed for a product with reviews (the merged `reviews` field
+ * differed from the stored one), and the stock silently stayed as it was. Throws when the write is refused.
+ */
+export async function saveStockToFirestore(productsToSave: Product[]) {
   if (productsToSave.length === 0) return;
-  if (productsToSave.length === 1) {
-    await saveProductToFirestore(productsToSave[0]);
-    return;
-  }
-  try {
-    await setDocs('products', productsToSave.map(toStoredProduct));
-  } catch (error) {
-    console.warn('Error batch-saving modified products:', error);
-  }
+  await commitInChunks(productsToSave, (batch, product) =>
+    batch.update(doc(db, 'products', product.id), {
+      skus: sanitizeForFirestore(product.skus ?? []),
+      inStock: product.inStock ?? true,
+    })
+  );
 }
 
 
