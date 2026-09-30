@@ -873,10 +873,10 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
       {/* Recently Viewed Products */}
       {recentlyViewed.length > 0 && onSelectProduct && (
         <RecentlyViewed
-          products={recentlyViewed}
+          recentlyViewed={recentlyViewed}
           onSelectProduct={onSelectProduct}
-          onClear={onClearRecentlyViewed}
-          onRemove={onRemoveFromRecentlyViewed}
+          onClearRecentlyViewed={onClearRecentlyViewed}
+          onRemoveFromRecentlyViewed={onRemoveFromRecentlyViewed}
         />
       )}
 

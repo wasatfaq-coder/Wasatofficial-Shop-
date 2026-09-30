@@ -1260,7 +1260,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
 
       {isPromoModalOpen && (
         <Modal title="Промокод в чат" onClose={() => setIsPromoModalOpen(false)} wide>
-          <Segments
+          <Segments<'existing' | 'new'>
             label="Какой промокод"
             value={promoMode}
             options={[
@@ -1350,7 +1350,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             </form>
           ) : (
           <form onSubmit={handleIssuePromo} className="space-y-3.5">
-            <Segments
+            <Segments<'percent' | 'fixed'>
               label="Тип скидки"
               value={promoType}
               options={[

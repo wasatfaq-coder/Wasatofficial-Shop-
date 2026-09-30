@@ -1891,10 +1891,8 @@ export default function App() {
                   if (matched) {
                     setSelectedProduct(matched);
                   } else {
+                    // the admin is in the profile here: the product page is not open
                     setSelectedProduct(null);
-                    if (activeTab === 'product-detail') {
-                      setActiveTab('home');
-                    }
                   }
                 }
                 return saved;
