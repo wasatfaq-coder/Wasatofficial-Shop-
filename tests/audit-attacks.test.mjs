@@ -66,37 +66,38 @@ describe('Клиентский режим заказов (settings/server нет
     });
 
   test('A2 никто, кроме администратора, не может увеличить остаток (продажа того, чего нет)',
-    { todo: 'находка 1, этап 1' }, async () => {
+    { todo: 'находка 1, этап 1: правилами не проверить (лимит 1000 выражений), нужны серверные заказы' }, async () => {
       await assertFails(updateDoc(doc(customer(), 'products/p1'), {
         skus: [{ id: 'p1-m', color: 'Черный', size: 'M', stock: 9999 }], inStock: true,
       }));
     });
 
   test('A3 посетитель без входа не может раздуть товар мусорными вариантами (~900 КБ скачивает каждый покупатель)',
-    { todo: 'находка 1, этап 1' }, async () => {
+    async () => {
       const junk = Array.from({ length: 3000 }, (_, i) => ({ id: `x${i}`, color: 'x'.repeat(200), size: 'XL', stock: 1 }));
       await assertFails(updateDoc(doc(anon(), 'products/p1'), { skus: junk }));
     });
 
   test('A4 посетитель без входа не может «израсходовать» промокод и накрутить комиссию партнёра',
-    { todo: 'находка 3, этап 1' }, async () => {
+    async () => {
       await assertFails(updateDoc(doc(anon(), 'promos/promo1'), {
         usedCount: 1_000_000, generatedRevenue: 99_000_000, commissionEarned: 9_900_000,
       }));
     });
 
-  test('A5 посетитель без входа не может записать заказ на 1 ₽ с чужими ценами и полями сервера',
+  test('A5 посетитель без входа не может записать заказ на 1 ₽ с чужими ценами',
     { todo: 'находка 2, этап 1' }, async () => {
-      // Статус «Оплачен» от клиента правила уже не пускают; остаётся сумма, которую никто не сверяет
+      // «Оплачен» и чужие поля (placedVia) правила уже не пускают; остаётся сумма, которую никто не сверяет
       await assertFails(setDoc(doc(anon(), 'orders/WS-FAKE1'), {
-        id: 'WS-FAKE1', status: 'accepted', totalPrice: 1, paymentStatus: 'pending', placedVia: 'server',
+        id: 'WS-FAKE1', status: 'accepted', totalPrice: 1, paymentStatus: 'pending', paymentMethod: 'Перевод',
+        deliveryMethod: 'Курьер',
         items: [{ product: { ...product, price: 1, image: 'https://attacker.example/pixel.gif' }, quantity: 5, selectedSize: 'M' }],
         customerName: 'Иван', customerPhone: '+70000000000', deliveryAddress: 'где угодно',
       }));
     });
 
   test('A6 заказ с произвольными полями и мусором в строках отклоняется (иначе — спам заказами без ограничений)',
-    { todo: 'находка 2, этап 1' }, async () => {
+    async () => {
       await assertFails(setDoc(doc(anon(), 'orders/SPAM-1'), {
         id: 'SPAM-1', status: 'accepted', totalPrice: 0, items: [{ x: 'y'.repeat(20000) }],
       }));
