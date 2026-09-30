@@ -1,0 +1,13 @@
+STEP guest thread
+  guest rows: 1
+  [shot] s3b320-320/01-guest-thread.png
+  guest thread view: Решенные · 0 Гость Ждет ответа Здравствуйте! Можно поменять размер в моем заказе на L? 07:24 Гость Ждет ответа Здравствуйте! Можно поменять размер в моем заказе на L? 07:24 Гость Ждет ответа Гость: вопрос по заказу 07:23 Алексей Смирнов Ждет ответа Когда приедет мой заказ WS-10000102? 12:05 Сергей Иванов Добрый день! Да, L подойдет: посадка стандартная. 12:00 Гость Заказов нет, контакты неизвестны Сообщений: 1 Очистить Статус диалога В работе Решен Закрыт Приоритет Обычный Срочно VIP ПЕРЕПИСКА Покупатель · 07:24 Здравствуйте! Можно поменять размер в моем заказе на L? Ответ покупателю Заметка для команды Фото Товар Промокод Шаблоны Текст ответа Enter — отправить, Shift+Enter — новая строка От
+STEP order status
+  cands: ["DIV role=null aria=null haspopup=null","BUTTON role=null aria=null haspopup=null","SPAN role=null aria=null haspopup=null","DIV role=null aria=null haspopup=null","BUTTON role=null aria=null haspopup=null","SPAN role=null aria=null haspopup=null"]
+  options: []
+  [shot] s3b320-320/02-status-menu.png
+  menu: ["Выбрать заказ № WS-10000114","Скопировать номер заказа","Оплата при вручении","Принят","Принят","Собирается","В пути","Готов к выдаче","Доставлен","+ Добавить заметку","Главная","Каталог","Корзина","Избранное","Профиль"]
+  !! FAIL order status: locator.click: Timeout 30000ms exceeded. | Call log:
+  [shot] s3b320-320/03-fail-order_status.png
+pageerrors: none
+console errors: none

@@ -1,0 +1,291 @@
+[
+ {
+  "run": 0,
+  "load": {
+   "wall": 95703,
+   "timedOut": false,
+   "bytesAtCards": {
+    "reqs": 20,
+    "other": 2496,
+    "js": 404172,
+    "css": 28290,
+    "font": 66713,
+    "firestore": 17550624
+   },
+   "bytesSettled": {
+    "reqs": 20,
+    "other": 2496,
+    "js": 404172,
+    "css": 28290,
+    "font": 66713,
+    "firestore": 17551000
+   },
+   "lcp": {
+    "t": 3440,
+    "size": 8277,
+    "tag": "P",
+    "src": ""
+   },
+   "lcpAll": 2,
+   "cards": 94890,
+   "empty": 3057,
+   "emptyGone": 94890,
+   "cardsCount": 25,
+   "domNodes": 1020,
+   "heap": [
+    [
+     "Nodes",
+     1310
+    ],
+    [
+     "JSHeapUsedSize",
+     162
+    ]
+   ],
+   "ltSum": 1768,
+   "ltMax": 728
+  },
+  "steps": {
+   "catalog": {
+    "ms": 57,
+    "lt": [
+     56,
+     517,
+     227,
+     72,
+     74,
+     53,
+     71
+    ],
+    "ltSum": 1070,
+    "net": {
+     "reqs": 1,
+     "other": 619
+    }
+   },
+   "product": {
+    "ms": 466,
+    "lt": [
+     65,
+     52,
+     134,
+     75
+    ],
+    "ltSum": 326,
+    "net": {
+     "reqs": 1,
+     "other": 619
+    }
+   },
+   "addToCart": {
+    "lt": [
+     72
+    ],
+    "ltSum": 72,
+    "lsBytes": 349475
+   },
+   "cart": {
+    "ms": 327,
+    "lt": [],
+    "ltSum": 0,
+    "net": {
+     "reqs": 1,
+     "other": 619
+    }
+   }
+  },
+  "errs": []
+ },
+ {
+  "run": 1,
+  "load": {
+   "wall": 93955,
+   "timedOut": false,
+   "bytesAtCards": {
+    "reqs": 20,
+    "other": 2496,
+    "js": 404172,
+    "css": 28290,
+    "font": 66713,
+    "firestore": 17550606
+   },
+   "bytesSettled": {
+    "reqs": 20,
+    "other": 2496,
+    "js": 404172,
+    "css": 28290,
+    "font": 66713,
+    "firestore": 17550982
+   },
+   "lcp": {
+    "t": 3544,
+    "size": 8277,
+    "tag": "P",
+    "src": ""
+   },
+   "lcpAll": 3,
+   "cards": 93051,
+   "empty": 3142,
+   "emptyGone": 93051,
+   "cardsCount": 25,
+   "domNodes": 1020,
+   "heap": [
+    [
+     "Nodes",
+     1310
+    ],
+    [
+     "JSHeapUsedSize",
+     203
+    ]
+   ],
+   "ltSum": 2049,
+   "ltMax": 764
+  },
+  "steps": {
+   "catalog": {
+    "ms": 86,
+    "lt": [
+     108,
+     648,
+     265,
+     58
+    ],
+    "ltSum": 1079,
+    "net": {
+     "reqs": 1,
+     "other": 619
+    }
+   },
+   "product": {
+    "ms": 479,
+    "lt": [
+     77,
+     53,
+     144,
+     133,
+     114
+    ],
+    "ltSum": 521,
+    "net": {
+     "reqs": 1,
+     "other": 619
+    }
+   },
+   "addToCart": {
+    "lt": [
+     55,
+     79
+    ],
+    "ltSum": 134,
+    "lsBytes": 349475
+   },
+   "cart": {
+    "ms": 307,
+    "lt": [
+     70
+    ],
+    "ltSum": 70,
+    "net": {
+     "reqs": 1,
+     "other": 619
+    }
+   }
+  },
+  "errs": []
+ },
+ {
+  "run": 2,
+  "load": {
+   "wall": 93413,
+   "timedOut": false,
+   "bytesAtCards": {
+    "reqs": 20,
+    "other": 2496,
+    "js": 404172,
+    "css": 28290,
+    "font": 66713,
+    "firestore": 17550600
+   },
+   "bytesSettled": {
+    "reqs": 20,
+    "other": 2496,
+    "js": 404172,
+    "css": 28290,
+    "font": 66713,
+    "firestore": 17550976
+   },
+   "lcp": {
+    "t": 3364,
+    "size": 8277,
+    "tag": "P",
+    "src": ""
+   },
+   "lcpAll": 2,
+   "cards": 92279,
+   "empty": 3018,
+   "emptyGone": 92279,
+   "cardsCount": 25,
+   "domNodes": 1020,
+   "heap": [
+    [
+     "Nodes",
+     1310
+    ],
+    [
+     "JSHeapUsedSize",
+     149
+    ]
+   ],
+   "ltSum": 2067,
+   "ltMax": 976
+  },
+  "steps": {
+   "catalog": {
+    "ms": 97,
+    "lt": [
+     112,
+     560,
+     349,
+     86
+    ],
+    "ltSum": 1107,
+    "net": {
+     "reqs": 1,
+     "other": 619
+    }
+   },
+   "product": {
+    "ms": 522,
+    "lt": [
+     100,
+     85,
+     126,
+     75
+    ],
+    "ltSum": 386,
+    "net": {
+     "reqs": 1,
+     "other": 619
+    }
+   },
+   "addToCart": {
+    "lt": [
+     94
+    ],
+    "ltSum": 94,
+    "lsBytes": 349475
+   },
+   "cart": {
+    "ms": 286,
+    "lt": [],
+    "ltSum": 0,
+    "net": {
+     "reqs": 1,
+     "other": 619
+    }
+   }
+  },
+  "errs": []
+ }
+]

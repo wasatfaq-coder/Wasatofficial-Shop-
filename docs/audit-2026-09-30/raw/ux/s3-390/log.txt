@@ -1,0 +1,34 @@
+STEP panel open
+  [shot] s3-390/01-panel.png
+STEP new product form
+  [shot] s3-390/02-products-tab.png
+  form title: Новый товар каталога
+  fields: ["Название товара **","ph:Или свой текст (например: -30% или ХИ [no label]","Категория [no label]","ph: [no label]","ph:Краткое описание преимуществ ткани и  [no label]","ph:напр. 2 990 [no label]*","ph:напр. 1 400 [no label]","ph:если есть [no label]","ph:Ссылка на фото (https://…) [no label]","ph:Новый цвет, напр. Хаки [no label]","Цвет в формате HEX [no label]","ph:Свой размер, напр. 56 [no label]"]
+  [shot] s3-390/03-form-top.png
+STEP try create empty
+  create enabled: true
+  toasts: 
+  invalid: []
+  [shot] s3-390/04-create-empty.png
+STEP fill product
+  filled /^Название/
+  filled price
+  category options: ["Пиджак","Футболка","Куртка","Брюки","Свитшот"]
+  [shot] s3-390/05-filled-basics.png
+  toasts after photos: 
+  data-url images in form: [156487,156755,156475] total chars=469717
+  [shot] s3-390/06-photos.png
+  fields now: ["Название товара **","ph:Или свой текст (например: -30% или ХИ [no label]","Категория [no label]","ph: [no label]","ph:Краткое описание преимуществ ткани и  [no label]","ph:напр. 2 990 [no label]*","ph:напр. 1 400 [no label]","ph:если есть [no label]","ph:Ссылка на фото (https://…) [no label]","ph:Новый цвет, напр. Хаки [no label]","Цвет в формате HEX [no label]","ph:Свой размер, напр. 56 [no label]"]
+STEP sizes and stock
+  around sizes: (0) Мин. 1 цвет + Цвет РАЗМЕРЫ ТОВАРА (0) Мин. 1 размер Сетка: XS S M L XL 2XL 3XL 46 48 50 52 54 + Размер ОСТАТКИ SKU (0) +5 +10 Обнулить Коды Нет вариаций SKU. Добавьте цвет и размер. Остаток 0 шт. Стоимость 0 ₽ Отмена Создать товар
+  size buttons: 4
+  after color enter: ЦВЕТА ТОВАРА (0) Мин. 1 цвет + Цвет РАЗМЕРЫ
+  stock block: ОСТАТКИ SKU (2) +5 +10 Обнулить Коды Белый M WS-SH17-БЕЛ-M 2341859367936 шт. Белый L WS-SH17-БЕЛ-L 2341859367936 шт. Остаток 10 шт. Стоимость 34 900 ₽ Отмена Создать товар
+  [shot] s3-390/07-sizes.png
+STEP create
+  toasts: Добавьте хотя бы один цвет для товара
+  invalid: []
+  [shot] s3-390/08-after-create.png
+  dialogs open: ["Панель администратора"]
+pageerrors: none
+console errors: none

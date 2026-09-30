@@ -1,0 +1,84 @@
+[
+ {
+  "run": 0,
+  "load": {
+   "wall": 1618,
+   "timedOut": false,
+   "bytesAtCards": {
+    "reqs": 19,
+    "other": 2496,
+    "js": 404172,
+    "css": 28290,
+    "font": 66713,
+    "firestore": 582451
+   },
+   "bytesSettled": {
+    "reqs": 19,
+    "other": 2496,
+    "js": 404172,
+    "css": 28290,
+    "font": 66713,
+    "firestore": 582451
+   },
+   "lcp": {
+    "t": 664,
+    "size": 8277,
+    "tag": "P",
+    "src": ""
+   },
+   "lcpAll": 2,
+   "cards": 1415,
+   "empty": 314,
+   "emptyGone": 1415,
+   "cardsCount": 4,
+   "domNodes": 348,
+   "heap": [
+    [
+     "Nodes",
+     475
+    ],
+    [
+     "JSHeapUsedSize",
+     12
+    ]
+   ],
+   "ltSum": 67,
+   "ltMax": 67
+  },
+  "steps": {
+   "catalog": {
+    "ms": 18,
+    "lt": [],
+    "ltSum": 0,
+    "net": {
+     "reqs": 1,
+     "other": 619
+    }
+   },
+   "product": {
+    "ms": 254,
+    "lt": [],
+    "ltSum": 0,
+    "net": {
+     "reqs": 1,
+     "other": 619
+    }
+   },
+   "addToCart": {
+    "lt": [],
+    "ltSum": 0,
+    "lsBytes": 1529
+   },
+   "cart": {
+    "ms": 252,
+    "lt": [],
+    "ltSum": 0,
+    "net": {
+     "reqs": 1,
+     "other": 619
+    }
+   }
+  },
+  "errs": []
+ }
+]

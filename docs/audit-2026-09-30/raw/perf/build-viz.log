@@ -1,0 +1,102 @@
+vite v8.3.1 building client environment for production...
+transforming...
+✓ 3245 modules transformed.
+
+(!) outDir /tmp/claude-0/-home-user-Wasatofficial-Shop-/6ae9196d-6e10-572e-9337-53506395115c/scratchpad/risk/perf/dist-viz is not inside project root and will not be emptied.
+Use --emptyOutDir to override.
+
+rendering chunks...
+computing gzip size...
+../perf/dist-viz/index.html                                               1.54 kB │ gzip:   0.62 kB
+../perf/dist-viz/assets/manrope-vietnamese-800-normal-ClPWri-A.woff2      4.15 kB
+../perf/dist-viz/assets/manrope-vietnamese-600-normal-C1J5PCl_.woff2      4.46 kB
+../perf/dist-viz/assets/manrope-vietnamese-700-normal-CUqMx5-1.woff2      4.55 kB
+../perf/dist-viz/assets/manrope-greek-800-normal-CDvU698_.woff2           5.18 kB
+../perf/dist-viz/assets/manrope-greek-600-normal-BoRV6lzK.woff2           5.23 kB
+../perf/dist-viz/assets/manrope-greek-700-normal-CHUG9PD8.woff2           5.23 kB
+../perf/dist-viz/assets/manrope-vietnamese-800-normal-bvg7iBCV.woff       6.12 kB
+../perf/dist-viz/assets/manrope-vietnamese-600-normal-lA7a_7Ok.woff       6.14 kB
+../perf/dist-viz/assets/manrope-vietnamese-700-normal-pt65Fn2Z.woff       6.36 kB
+../perf/dist-viz/assets/manrope-greek-800-normal-Bw-67qu9.woff            6.62 kB
+../perf/dist-viz/assets/manrope-greek-600-normal-CF2i9ZRY.woff            6.74 kB
+../perf/dist-viz/assets/manrope-greek-700-normal-DyfsrCpP.woff            6.74 kB
+../perf/dist-viz/assets/manrope-cyrillic-800-normal-AvdZ5mAV.woff2        7.58 kB
+../perf/dist-viz/assets/manrope-cyrillic-700-normal-Dw_fZAg2.woff2        7.85 kB
+../perf/dist-viz/assets/manrope-cyrillic-600-normal-DvRl3Mj-.woff2        7.87 kB
+../perf/dist-viz/assets/manrope-latin-ext-800-normal-DdFx7KEb.woff2       8.03 kB
+../perf/dist-viz/assets/manrope-latin-ext-700-normal-DYOwVNan.woff2       8.27 kB
+../perf/dist-viz/assets/manrope-latin-ext-600-normal-_gBojHdJ.woff2       8.30 kB
+../perf/dist-viz/assets/manrope-cyrillic-800-normal-BuEMjQU-.woff         9.78 kB
+../perf/dist-viz/assets/manrope-cyrillic-700-normal-7JNVKxyl.woff        10.00 kB
+../perf/dist-viz/assets/manrope-cyrillic-600-normal-It4mZcQk.woff        10.06 kB
+../perf/dist-viz/assets/manrope-latin-ext-800-normal-BQAQsuQc.woff       11.10 kB
+../perf/dist-viz/assets/manrope-latin-ext-600-normal-u5Pl7hTU.woff       11.24 kB
+../perf/dist-viz/assets/manrope-latin-ext-700-normal-eVCcYqtJ.woff       11.35 kB
+../perf/dist-viz/assets/manrope-latin-800-normal-BfWYOv1c.woff2          13.64 kB
+../perf/dist-viz/assets/manrope-latin-600-normal-4f0koTD-.woff2          14.17 kB
+../perf/dist-viz/assets/manrope-latin-700-normal-BZp_XxE4.woff2          14.21 kB
+../perf/dist-viz/assets/manrope-latin-800-normal-uHUdIJgA.woff           17.91 kB
+../perf/dist-viz/assets/manrope-latin-600-normal-BqgrALkZ.woff           18.38 kB
+../perf/dist-viz/assets/manrope-latin-700-normal-DGRFkw-m.woff           18.41 kB
+../perf/dist-viz/assets/index-Qf0z2iyr.css                              116.26 kB │ gzip:  28.43 kB
+../perf/dist-viz/assets/arrow-up-right-Dw2UCuav.js                        0.16 kB │ gzip:   0.16 kB
+../perf/dist-viz/assets/trending-up-BaQZiR8c.js                           0.17 kB │ gzip:   0.17 kB
+../perf/dist-viz/assets/dollar-sign-DPXW20QM.js                           0.21 kB │ gzip:   0.19 kB
+../perf/dist-viz/assets/chart-column-C8h78IVZ.js                          0.25 kB │ gzip:   0.19 kB
+../perf/dist-viz/assets/external-link-DPAgDzP6.js                         0.25 kB │ gzip:   0.20 kB
+../perf/dist-viz/assets/funnel-DYC5GRUE.js                                0.25 kB │ gzip:   0.21 kB
+../perf/dist-viz/assets/calendar-C37O4AXD.js                              0.25 kB │ gzip:   0.20 kB
+../perf/dist-viz/assets/arrow-up-bvQ9EfBC.js                              0.27 kB │ gzip:   0.20 kB
+../perf/dist-viz/assets/file-down-DSTQqa2r.js                             0.30 kB │ gzip:   0.21 kB
+../perf/dist-viz/assets/users-c1kfWKpo.js                                 0.30 kB │ gzip:   0.22 kB
+../perf/dist-viz/assets/save-BMwc5Vq5.js                                  0.32 kB │ gzip:   0.22 kB
+../perf/dist-viz/assets/file-spreadsheet-DuWF40YR.js                      0.50 kB │ gzip:   0.29 kB
+../perf/dist-viz/assets/upload-iwP1jpsU.js                                0.54 kB │ gzip:   0.31 kB
+../perf/dist-viz/assets/useCompositeItem-iWyPaQab.js                      0.55 kB │ gzip:   0.38 kB
+../perf/dist-viz/assets/orderStatusStyle-Cv3UrYSP.js                      0.56 kB │ gzip:   0.33 kB
+../perf/dist-viz/assets/useProgressiveList--5Hfyy4P.js                    0.64 kB │ gzip:   0.42 kB
+../perf/dist-viz/assets/printer-4NCf0JZ7.js                               0.64 kB │ gzip:   0.38 kB
+../perf/dist-viz/assets/SelectCheckbox-CQYZfxkv.js                        0.66 kB │ gzip:   0.43 kB
+../perf/dist-viz/assets/DiscardChangesDialog-BQo6PtCE.js                  0.67 kB │ gzip:   0.47 kB
+../perf/dist-viz/assets/rolldown-runtime-hePW80VL.js                      0.71 kB │ gzip:   0.42 kB
+../perf/dist-viz/assets/boxes-DuOAr4AC.js                                 0.85 kB │ gzip:   0.39 kB
+../perf/dist-viz/assets/AdminFaqTab-CJCnICPF.js                           1.62 kB │ gzip:   0.95 kB
+../perf/dist-viz/assets/with-selector-Db5v8zbF.js                         1.68 kB │ gzip:   0.75 kB
+../perf/dist-viz/assets/AdminPaymentTab-CNrV4j4V.js                       2.17 kB │ gzip:   1.12 kB
+../perf/dist-viz/assets/AdminCategoriesTab-CbmXIg98.js                    2.38 kB │ gzip:   1.27 kB
+../perf/dist-viz/assets/csvHelpers-B5Tt8Fih.js                            2.93 kB │ gzip:   1.64 kB
+../perf/dist-viz/assets/BrandRenameCard-vdlpYhC7.js                       3.55 kB │ gzip:   1.72 kB
+../perf/dist-viz/assets/react-dom-iymVxzdk.js                             3.91 kB │ gzip:   1.42 kB
+../perf/dist-viz/assets/AdminListEditor-DPmCW05x.js                       6.25 kB │ gzip:   2.15 kB
+../perf/dist-viz/assets/AdminChartNeumorphicShapes-B_-Ynu_0.js            6.68 kB │ gzip:   2.12 kB
+../perf/dist-viz/assets/AdminLegalTab-CEr1xNVG.js                         7.97 kB │ gzip:   2.96 kB
+../perf/dist-viz/assets/createLucideIcon-DQd5AsW4.js                      9.36 kB │ gzip:   3.66 kB
+../perf/dist-viz/assets/inventory-BV1yI1q-.js                             9.52 kB │ gzip:   4.05 kB
+../perf/dist-viz/assets/AdminNav-DikXs43t.js                             16.11 kB │ gzip:   6.49 kB
+../perf/dist-viz/assets/useCompositeListItem-SqYFITR2.js                 20.21 kB │ gzip:   7.84 kB
+../perf/dist-viz/assets/purify.es-DtoD0o1s.js                            27.12 kB │ gzip:  10.54 kB
+../perf/dist-viz/assets/LegalDocumentScreen-P6-OpHiy.js                  28.24 kB │ gzip:   7.78 kB
+../perf/dist-viz/assets/AdminBannersTab-DZm5gswL.js                      34.13 kB │ gzip:   7.83 kB
+../perf/dist-viz/assets/AdminDeliveryTab-CpBWBa88.js                     34.23 kB │ gzip:   7.08 kB
+../perf/dist-viz/assets/AdminPromoConstructorTab-b8hCfiam.js             36.58 kB │ gzip:   8.02 kB
+../perf/dist-viz/assets/AdminCustomersTab-VFtZLG2Y.js                    40.28 kB │ gzip:   8.75 kB
+../perf/dist-viz/assets/AdminAnalyticsTab-DTjiiFPp.js                    47.73 kB │ gzip:  12.62 kB
+../perf/dist-viz/assets/AdminSupportInbox-D21iSs8z.js                    48.46 kB │ gzip:  12.61 kB
+../perf/dist-viz/assets/AdminInventoryTab-Ci2xp-Vg.js                    91.99 kB │ gzip:  23.22 kB
+../perf/dist-viz/assets/AdminStorefrontTab-BqcfkKFX.js                   97.44 kB │ gzip:  14.76 kB
+../perf/dist-viz/assets/NeumorphicSelect--ENFF5Ta.js                    103.76 kB │ gzip:  36.32 kB
+../perf/dist-viz/assets/AdminProductsTab-Dn1VTP69.js                    121.51 kB │ gzip:  28.67 kB
+../perf/dist-viz/assets/react-CBk-t8Sq.js                               123.72 kB │ gzip:  40.15 kB
+../perf/dist-viz/assets/AdminOrdersTab-B3QXrrJk.js                      131.17 kB │ gzip:  33.07 kB
+../perf/dist-viz/assets/index.es-DFqIioTN.js                            151.41 kB │ gzip:  48.90 kB
+../perf/dist-viz/assets/html2canvas-Dn6bw578.js                         199.49 kB │ gzip:  46.77 kB
+../perf/dist-viz/assets/AdminAnalyticsChart-DBNhIEya.js                 376.70 kB │ gzip: 108.36 kB
+../perf/dist-viz/assets/jspdf.es.min-9Y2XIfM6.js                        399.81 kB │ gzip: 129.91 kB
+../perf/dist-viz/assets/index-CyCF6Em7.js                             1,310.47 kB │ gzip: 357.26 kB
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 7.36s
