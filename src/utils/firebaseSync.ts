@@ -8,6 +8,7 @@ import {
   query,
   where,
   limit,
+  orderBy,
   writeBatch,
   updateDoc,
   serverTimestamp,
@@ -19,12 +20,13 @@ import {
   deleteField,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { Product, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint } from '../types';
+import { Product, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog } from '../types';
 import { DEFAULT_STOREFRONT_SETTINGS } from './inventory';
 import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
 import type { LegalDocId, LegalTexts } from './legalDocs';
 import { compressBase64Image } from './imageUpload';
 import { SERVER_CONFIG_DOC_ID, ServerConfig } from '../shared/orderApi';
+import { STOCK_MOVEMENTS_COLLECTION } from '../shared/stockMovements';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages, isTransportCompanyDelivery } from './deliveryStages';
 
 /**
@@ -204,6 +206,34 @@ export async function saveProductCosts(changes: { id: string; costPrice?: number
     );
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'product_costs');
+  }
+}
+
+/** How many newest entries of the stock journal the admin screen loads */
+export const STOCK_MOVEMENTS_LIMIT = 500;
+
+/** Admin only: the newest entries of the stock journal (`stock_movements`, closed to customers by firestore.rules) */
+export function subscribeToStockMovements(
+  onUpdate: (movements: StockMovementLog[]) => void,
+  onError?: (error: Error) => void
+) {
+  return onSnapshot(
+    query(collection(db, STOCK_MOVEMENTS_COLLECTION), orderBy('createdAt', 'desc'), limit(STOCK_MOVEMENTS_LIMIT)),
+    (snapshot) => onUpdate(snapshot.docs.map((d) => ({ ...(d.data() as StockMovementLog), id: d.id }))),
+    (error) => {
+      console.warn('Stock journal subscription warning:', error);
+      onError?.(error);
+    }
+  );
+}
+
+/** Adds entries to the stock journal; throws when the write is refused */
+export async function saveStockMovements(movements: StockMovementLog[]) {
+  if (movements.length === 0) return;
+  try {
+    await setDocs(STOCK_MOVEMENTS_COLLECTION, movements);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, STOCK_MOVEMENTS_COLLECTION);
   }
 }
 
@@ -1140,7 +1170,7 @@ export async function syncAllPickupPointsToFirestore(points: PickupPoint[]) {
 export const BACKUP_COLLECTIONS = [
   'products', 'product_costs', 'promos', 'settings', 'banners', 'delivery_methods', 'pickup_points',
   'orders', 'users', 'customer_notes', 'admins', 'reviews', 'review_votes',
-  'chat_messages', 'support_threads', 'support_status',
+  'chat_messages', 'support_threads', 'support_status', STOCK_MOVEMENTS_COLLECTION,
 ] as const;
 
 export interface DatabaseBackup {

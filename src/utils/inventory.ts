@@ -1,5 +1,6 @@
 import { Product, ProductSKU, CartItem, StockMovementLog, StorefrontSettings } from '../types';
 import { collectBarcodes, generateInternalEan13 } from '../shared/barcode';
+import { formatOrderDate } from '../shared/orderDate';
 
 // Everything a customer reads (texts, contacts, legal details) is empty until the owner fills it
 // in Admin → «Витрина»; customer screens hide or mark as «Не настроено» what is not filled in.
@@ -286,46 +287,28 @@ export function updateProductSkuStock(
   };
 }
 
-const STOCK_LOGS_STORAGE_KEY = 'manstyle_stock_movement_logs';
+/** The journal used to be kept only in the browser of whoever changed the stock; the admin session moves it to the database */
+export const LEGACY_STOCK_LOGS_STORAGE_KEY = 'manstyle_stock_movement_logs';
 
-/**
- * Read saved stock movement logs from localStorage
- */
-export function getStockMovementLogs(): StockMovementLog[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const saved = localStorage.getItem(STOCK_LOGS_STORAGE_KEY);
-    return saved ? JSON.parse(saved) : [];
-  } catch (e) {
-    return [];
-  }
+/** Article code of the ordered variant, for the journal entry of an order line */
+export function skuCodeForLine(products: Product[], line: CartItem): string {
+  const product = products.find((p) => p.id === line.product.id) ?? line.product;
+  const color = extractColorName(line.selectedColor).trim().toLowerCase();
+  const size = extractSizeName(line.selectedSize).trim().toLowerCase();
+  const sku = (product.skus ?? []).find(
+    (s) => extractColorName(s.color).trim().toLowerCase() === color && extractSizeName(s.size).trim().toLowerCase() === size
+  );
+  return sku?.skuCode || generateSkuCode(product, line.selectedColor, line.selectedSize);
+}
+
+/** Id of a new journal entry (the variant id may hold «/», which a document id cannot) */
+export function stockMovementId(): string {
+  return `log-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 /**
- * Save stock movement logs to localStorage and dispatch custom event for instant sync
- */
-export function saveStockMovementLogs(logs: StockMovementLog[]): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(STOCK_LOGS_STORAGE_KEY, JSON.stringify(logs));
-    window.dispatchEvent(new CustomEvent('manstyle_stock_logs_updated', { detail: logs }));
-  } catch (e) {
-    // storage limit error handling
-  }
-}
-
-/**
- * Append one or more logs to history
- */
-function recordStockMovementLogs(newLogs: StockMovementLog | StockMovementLog[]): void {
-  const current = getStockMovementLogs();
-  const toAdd = Array.isArray(newLogs) ? newLogs : [newLogs];
-  const merged = [...toAdd, ...current].slice(0, 150); // keep recent 150 operations
-  saveStockMovementLogs(merged);
-}
-
-/**
- * Common internal engine for modifying SKU stock and creating audit movement logs
+ * Common internal engine for modifying SKU stock and creating journal entries.
+ * Nothing is written here: the admin screens save `generatedLogs` with `saveStockMovements`.
  */
 function applyStockChangeWithLogs(
   products: Product[],
@@ -336,7 +319,7 @@ function applyStockChangeWithLogs(
   operator: string
 ): { updatedProducts: Product[]; generatedLogs: StockMovementLog[] } {
   const generatedLogs: StockMovementLog[] = [];
-  const nowStr = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  const now = new Date();
 
   const updatedProducts = products.map((prod) => {
     // Preorder lines were never taken from stock, so they are neither deducted nor returned
@@ -363,9 +346,11 @@ function applyStockChangeWithLogs(
         const diff = newStock - oldStock;
 
         generatedLogs.push({
-          id: `log-${mode === 'deduct' ? 'ord' : 'ret'}-${Date.now()}-${sku.id || sku.skuCode}-${Math.random().toString(36).substr(2, 4)}`,
-          date: `Сегодня, ${nowStr}`,
+          id: stockMovementId(),
+          createdAt: now.toISOString(),
+          date: formatOrderDate(now),
           type: mode === 'deduct' ? 'order' : 'return',
+          orderId,
           productId: prod.id,
           productTitle: prod.title,
           skuCode: sku.skuCode || generateSkuCode(prod, sku.color, sku.size),
@@ -391,10 +376,6 @@ function applyStockChangeWithLogs(
       inStock: totalStock > 0,
     };
   });
-
-  if (generatedLogs.length > 0) {
-    recordStockMovementLogs(generatedLogs);
-  }
 
   return { updatedProducts, generatedLogs };
 }

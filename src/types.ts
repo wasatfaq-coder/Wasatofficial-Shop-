@@ -450,18 +450,26 @@ export interface AppliedPromoInfo {
   partnerCommissionPercent?: number;
 }
 
+/** An entry of the stock journal, `stock_movements/{id}` (src/shared/stockMovements.ts) */
 export interface StockMovementLog {
   id: string;
+  /** When the stock changed (ISO): the journal is sorted by it */
+  createdAt?: string;
+  /** Display text of the date */
   date: string;
   type: 'receipt' | 'writeoff' | 'inventory' | 'order' | 'return';
+  /** Order whose stock changed; a customer order writes one entry per line (`lineIndex`) */
+  orderId?: string;
+  lineIndex?: number;
   productId: string;
   productTitle: string;
   skuCode: string;
   color: string;
   size: string;
   changeQuantity: number; // positive for receipt, negative for writeoff
-  previousStock: number;
-  newStock: number;
+  /** Stock before and after; unknown for an order entry written by the customer's browser */
+  previousStock?: number;
+  newStock?: number;
   reason: string;
   operator: string;
 }

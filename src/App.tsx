@@ -19,6 +19,7 @@ import {
 } from './components/CatalogAdvancedFilter';
 import {
   deductStockWithLogs,
+  skuCodeForLine,
   loadStorefrontSettings,
   saveStorefrontSettings,
   getOrderableStock,
@@ -44,6 +45,7 @@ import {
   subscribeToOwnUserProfile,
   saveOrderToFirestore,
   saveStockToFirestore,
+  saveStockMovements,
   syncAllProductsToFirestore,
   subscribeToProductCosts,
   saveProductCosts,
@@ -98,6 +100,7 @@ import { formatOrderDate } from './shared/orderDate';
 import { initialPaymentStatus } from './shared/orderApi';
 import { toOrderLineProduct } from './shared/orderLine';
 import { extractColorName, extractSizeName } from './utils/inventory';
+import { orderStockMovements } from './shared/stockMovements';
 import { getStoreContacts, getStoreName, publicSetting, withStoreName, withStoreNameFields } from './utils/storeContacts';
 import { getCategories } from './utils/categories';
 import { promoDiscountText } from './utils/promoLabel';
@@ -1479,6 +1482,10 @@ export default function App() {
     const orderedProductIds = new Set(orderData.items.map((i) => i.product.id));
     const modifiedProducts = updatedProducts.filter((p) => orderedProductIds.has(p.id));
     saveStockToFirestore(modifiedProducts).catch((err) => console.error(`Stock for ${newOrderId} was not written off:`, err));
+    // The owner sees the write-off in «Склад и SKU» → «Журнал движений»
+    saveStockMovements(
+      orderStockMovements(newOrder, new Date(), (line) => skuCodeForLine(products, line))
+    ).catch((err) => console.error(`Stock journal for ${newOrderId} was not written:`, err));
 
     finishOrder({ id: newOrderId, totalPrice, deliveryMethod, deliveryAddress, paymentMethod }, orderData);
     return true;

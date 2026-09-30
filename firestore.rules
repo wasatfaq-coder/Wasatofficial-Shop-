@@ -294,6 +294,40 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // Журнал склада (src/shared/stockMovements.ts): читает и ведёт администратор. Покупатель (при заказах
+    // из браузера) создаёт только записи своего сохранённого заказа: id «{заказ}_{строка}», тот же товар
+    // и то же количество, что в строке заказа, — не больше одной записи на строку, без изменения и удаления.
+    function isOrderStockMovement(movementId) {
+      let data = request.resource.data;
+      let orderPath = /databases/$(database)/documents/orders/$(data.orderId);
+      return !serverOrdersEnabled()
+        && data.keys().hasOnly(['id', 'createdAt', 'date', 'type', 'orderId', 'lineIndex', 'productId',
+          'productTitle', 'skuCode', 'color', 'size', 'changeQuantity', 'reason', 'operator'])
+        && data.type == 'order'
+        && data.orderId is string && data.orderId.matches('^[A-Za-z0-9-]{1,40}$')
+        && data.lineIndex is int && data.lineIndex >= 0
+        && movementId == data.orderId + '_' + string(data.lineIndex)
+        && data.id == movementId
+        && exists(orderPath)
+        && data.lineIndex < get(orderPath).data.items.size()
+        && data.productId == get(orderPath).data.items[data.lineIndex].product.id
+        && data.changeQuantity == -get(orderPath).data.items[data.lineIndex].quantity
+        && data.createdAt is string && data.createdAt.size() <= 40
+        && data.date is string && data.date.size() <= 40
+        && data.productTitle is string && data.productTitle.size() <= 200
+        && data.skuCode is string && data.skuCode.size() <= 80
+        && data.color is string && data.color.size() <= 60
+        && data.size is string && data.size.size() <= 30
+        && data.reason is string && data.reason.size() <= 80
+        && data.operator is string && data.operator.size() <= 80;
+    }
+
+    match /stock_movements/{movementId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() || isOrderStockMovement(movementId);
+      allow update, delete: if isAdmin() && isValidId(movementId);
+    }
+
     // ------------------------------------------------------------------
     // Реестр администраторов: только чтение своей записи.
     // Добавлять администраторов — вручную через Firebase Console.

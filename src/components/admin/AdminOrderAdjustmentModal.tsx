@@ -13,7 +13,7 @@ import {
   UserCheck,
   Truck,
 } from 'lucide-react';
-import { Order, CartItem, Product, OrderAdjustmentLog, PromoCode } from '../../types';
+import { Order, CartItem, Product, OrderAdjustmentLog, PromoCode, StockMovementLog } from '../../types';
 import { adjustedOrderTotals } from '../../utils/orderAdjustment';
 import { motion, AnimatePresence } from 'motion/react';
 import { NeumorphicSelect } from '../NeumorphicSelect';
@@ -34,6 +34,8 @@ interface AdminOrderAdjustmentModalProps {
   /** Promo codes: a percent code of the order is recalculated for the new items */
   promos?: PromoCode[];
   onUpdateProducts?: (updated: Product[]) => void;
+  /** Writes the stock changes of the adjustment to the stock journal */
+  onRecordStockMovements?: (movements: StockMovementLog[]) => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
@@ -54,6 +56,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
   onSaveAdjustment,
   promos = [],
   onUpdateProducts,
+  onRecordStockMovements,
   onShowToast,
 }) => {
   const [items, setItems] = useState<CartItem[]>(() =>
@@ -276,6 +279,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
     });
 
     let currentProducts = [...products];
+    const movements: StockMovementLog[] = [];
 
     // Apply returns if any
     if (returnedItems.length > 0) {
@@ -287,6 +291,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
         'Менеджер склада'
       );
       currentProducts = resReturn.updatedProducts;
+      movements.push(...resReturn.generatedLogs);
     }
 
     // Apply deductions if any
@@ -298,10 +303,12 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
         'Менеджер склада (добавление в заказ)'
       );
       currentProducts = resDeduct.updatedProducts;
+      movements.push(...resDeduct.generatedLogs);
     }
 
     if (onUpdateProducts && (returnedItems.length > 0 || addedItems.length > 0)) {
       onUpdateProducts(currentProducts);
+      onRecordStockMovements?.(movements);
     }
 
     const updatedOrder: Order = {
