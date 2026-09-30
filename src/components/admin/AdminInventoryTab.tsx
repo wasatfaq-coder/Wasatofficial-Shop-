@@ -646,52 +646,6 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
     }
   };
 
-  // Bulk restock all low-stock SKUs
-  const handleBulkRestockDeficit = () => {
-    let restockedCount = 0;
-    const newLogs: StockMovementLog[] = [];
-    const timestamp = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-
-    const updated = products.map((prod) => {
-      const skus = prod.skus && prod.skus.length > 0 ? prod.skus : generateDefaultSKUs(prod);
-      let changed = false;
-      const updatedSkus = skus.map((s) => {
-        if (s.stock <= lowStockThreshold) {
-          restockedCount++;
-          changed = true;
-          const oldStock = s.stock;
-          const newStock = s.stock + 6;
-
-          newLogs.push({
-            id: `restock-${Date.now()}-${s.skuCode || s.id}-${Math.random().toString(36).substring(2, 6)}`,
-            date: `Сегодня, ${timestamp}`,
-            type: 'receipt',
-            productId: prod.id,
-            productTitle: prod.title,
-            skuCode: s.skuCode || `SKU-${prod.id}`,
-            color: s.color,
-            size: s.size,
-            changeQuantity: 6,
-            previousStock: oldStock,
-            newStock: newStock,
-            reason: 'Пакетное пополнение дефицитных остатков (+6 шт.)',
-            operator: 'Администратор склада',
-          });
-
-          return { ...s, stock: newStock };
-        }
-        return s;
-      });
-      return changed ? { ...prod, skus: updatedSkus, inStock: true } : prod;
-    });
-
-    onUpdateProducts(updated);
-    if (newLogs.length > 0) {
-      setMovementLogs((prev) => [...newLogs, ...prev]);
-    }
-    onShowToast(`Пополнено ${restockedCount} ${pluralRu(restockedCount, ['вариант', 'варианта', 'вариантов'])} с дефицитом (+6 шт)`, 'success');
-  };
-
   const handleCopySku = (skuCode: string) => {
     copyToClipboard(skuCode);
     setCopiedSku(skuCode);
@@ -949,14 +903,9 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
         <div className="neu-inset rounded-2xl p-3 space-y-0.5">
           <span className="text-[11px] uppercase font-bold text-warning block">Мало на складе</span>
           <span className="text-base font-extrabold text-warning">{stats.lowStockCount} {pluralRu(stats.lowStockCount, ['вариант', 'варианта', 'вариантов'])}</span>
-          {stats.lowStockCount > 0 && (
-            <button
-              onClick={handleBulkRestockDeficit}
-              className="text-[11px] font-extrabold text-accent hover:underline cursor-pointer block"
-            >
-              Пополнить все (+6 шт)
-            </button>
-          )}
+          <span className="text-[11px] text-[#4E5C70] block font-semibold">
+            {stats.lowStockCount > 0 ? 'приход — «Оформить операцию»' : `не больше ${lowStockThreshold} шт.`}
+          </span>
         </div>
 
         <div className="neu-inset rounded-2xl p-3 space-y-0.5">

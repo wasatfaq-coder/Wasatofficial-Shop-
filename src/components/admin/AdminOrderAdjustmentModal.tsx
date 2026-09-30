@@ -13,7 +13,8 @@ import {
   UserCheck,
   Truck,
 } from 'lucide-react';
-import { Order, CartItem, Product, OrderAdjustmentLog } from '../../types';
+import { Order, CartItem, Product, OrderAdjustmentLog, PromoCode } from '../../types';
+import { adjustedOrderTotals } from '../../utils/orderAdjustment';
 import { motion, AnimatePresence } from 'motion/react';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { deductStockWithLogs, returnStockWithLogs, extractColorName, extractSizeName } from '../../utils/inventory';
@@ -29,7 +30,9 @@ interface AdminOrderAdjustmentModalProps {
   products: Product[];
   isOpen: boolean;
   onClose: () => void;
-  onSaveAdjustment: (updatedOrder: Order, adjustmentLog: OrderAdjustmentLog) => void;
+  onSaveAdjustment: (updatedOrder: Order, adjustmentLog: OrderAdjustmentLog | null) => void;
+  /** Promo codes: a percent code of the order is recalculated for the new items */
+  promos?: PromoCode[];
   onUpdateProducts?: (updated: Product[]) => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
@@ -49,6 +52,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
   isOpen,
   onClose,
   onSaveAdjustment,
+  promos = [],
   onUpdateProducts,
   onShowToast,
 }) => {
@@ -105,9 +109,11 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
     }
   }, [selectedProductId, selectedProductToAdd]);
 
-  // Initial order total vs updated items total
+  // Order total before and after: items plus the order's delivery, minus its discount
   const initialTotal = order ? order.totalPrice : 0;
-  const newItemsTotal = items.reduce((sum, it) => sum + (it.product.price || 0) * it.quantity, 0);
+  const newTotals = order ? adjustedOrderTotals(order, items, promos) : null;
+  const newItemsTotal = newTotals?.total ?? 0;
+  const itemsChanged = Boolean(order) && !sameValue(items, order?.items ?? []);
   const delta = initialTotal - newItemsTotal;
   const isRefund = delta > 0;
   const isExtraCharge = delta < 0;
@@ -163,6 +169,16 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
   const handleConfirmAdjustment = () => {
     if (items.length === 0) {
       onShowToast('Заказ не может быть пустым. Если заказ отменен полностью, измените статус на отменен.', 'error');
+      return;
+    }
+
+    const isTK = isTransportCompanyDelivery(order?.deliveryMethod, order?.trackingCompany);
+    const effectiveTrackingNumber = isTK ? (trackingNumber.trim() || undefined) : undefined;
+
+    // Only the track number changed: the items, the sum and the history stay as they were
+    if (!itemsChanged) {
+      onSaveAdjustment({ ...order, trackingNumber: effectiveTrackingNumber }, null);
+      onClose();
       return;
     }
 
@@ -288,14 +304,13 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
       onUpdateProducts(currentProducts);
     }
 
-    const isTK = isTransportCompanyDelivery(order?.deliveryMethod, order?.trackingCompany);
-    const effectiveTrackingNumber = isTK ? (trackingNumber.trim() || undefined) : undefined;
-
     const updatedOrder: Order = {
       ...order,
       items,
       trackingNumber: effectiveTrackingNumber,
       totalPrice: newItemsTotal,
+      deliveryFee: newTotals?.deliveryFee,
+      discountAmount: newTotals?.discount || undefined,
       originalTotalPrice: order.originalTotalPrice || initialTotal,
       isAdjusted: true,
       refundAmount: (order.refundAmount || 0) + (isRefund ? delta : 0),
@@ -705,14 +720,35 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
         {/* Financial Recalculation & Refund Banner */}
         <div className="neu-flat rounded-2xl p-4 space-y-2.5 border border-white/80">
           <div className="flex items-center justify-between text-xs font-bold text-[#4E5C70]">
-            <span>Исходная сумма заказа:</span>
-            <span className="line-through font-bold text-[#2D3A4E]">
+            <span>{itemsChanged ? 'Было:' : 'Сумма заказа:'}</span>
+            <span className={`font-bold text-[#2D3A4E] ${itemsChanged ? 'line-through' : ''}`}>
               {initialTotal.toLocaleString('ru-RU')} ₽
             </span>
           </div>
 
+          {newTotals && (
+            <dl className="text-xs text-[#4E5C70] space-y-1">
+              <div className="flex items-center justify-between">
+                <dt>Товары</dt>
+                <dd className="font-bold text-[#2D3A4E]">{newTotals.subtotal.toLocaleString('ru-RU')} ₽</dd>
+              </div>
+              {newTotals.discount > 0 && (
+                <div className="flex items-center justify-between">
+                  <dt>Скидка{order?.promoCode ? ` (${order.promoCode})` : ''}</dt>
+                  <dd className="font-bold text-[#2D3A4E]">−{newTotals.discount.toLocaleString('ru-RU')} ₽</dd>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <dt>Доставка</dt>
+                <dd className="font-bold text-[#2D3A4E]">
+                  {newTotals.deliveryFee > 0 ? `${newTotals.deliveryFee.toLocaleString('ru-RU')} ₽` : 'бесплатно'}
+                </dd>
+              </div>
+            </dl>
+          )}
+
           <div className="flex items-center justify-between text-sm font-extrabold text-[#2D3A4E]">
-            <span>Новая итоговая сумма:</span>
+            <span>{itemsChanged ? 'Станет:' : 'Итого:'}</span>
             <span className="text-accent font-extrabold text-base">
               {newItemsTotal.toLocaleString('ru-RU')} ₽
             </span>
@@ -728,7 +764,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                     Сумма к возврату клиенту: {delta.toLocaleString('ru-RU')} ₽
                   </p>
                   <p className="text-xs text-success leading-tight">
-                    Автоматический возврат на банковскую карту клиента в течение 1–3 дней
+                    Сайт денег не принимает: верните разницу клиенту тем же способом, каким он платил
                   </p>
                 </div>
               </div>
@@ -747,7 +783,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                     Требуется доплата: {Math.abs(delta).toLocaleString('ru-RU')} ₽
                   </p>
                   <p className="text-xs text-warning leading-tight">
-                    Клиенту будет выставлена ссылка на доплату добавленных позиций
+                    Согласуйте доплату с клиентом: сайт сам ее не запрашивает
                   </p>
                 </div>
               </div>
@@ -774,8 +810,10 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
           >
             <Check className="w-4 h-4 stroke-[3]" />
             <span>
-              {isRefund
-                ? `Подтвердить и оформить возврат (${delta.toLocaleString('ru-RU')} ₽)`
+              {!itemsChanged
+                ? 'Сохранить'
+                : isRefund
+                ? `Сохранить (к возврату ${delta.toLocaleString('ru-RU')} ₽)`
                 : 'Сохранить изменения состава'}
             </span>
           </button>

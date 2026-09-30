@@ -581,25 +581,6 @@ export default function App() {
     }
   }, [currentUser, allUsers]);
 
-  // Manual full sync helper
-  const handleManualFirebaseSync = async () => {
-    try {
-      await syncAllProductsToFirestore(products);
-      await syncAllOrdersToFirestore(orders);
-      await syncAllPromosToFirestore(promos);
-      await syncAllBannersToFirestore(bannerSlides);
-      await syncAllDeliveryMethodsToFirestore(deliveryMethods);
-      await syncAllPickupPointsToFirestore(pickupPoints);
-      await saveStorefrontSettingsToFirestore(storefrontSettings);
-      if (currentUser) {
-        await saveUserProfileToFirestore(currentUser.uid, userProfile);
-      }
-      addToast('Все данные сохранены в базе', 'success');
-    } catch (err) {
-      console.error('Firebase Sync Error:', err);
-      addToast('Не удалось сохранить данные в базе', 'error');
-    }
-  };
 
   // Latest Order info for confirmation screen
   const [latestOrder, setLatestOrder] = useState<{
@@ -1877,7 +1858,7 @@ export default function App() {
               }}
               onUpdateOrders={(updatedOrders) => {
                 setOrders(updatedOrders);
-                void persist('заказы', syncAllOrdersToFirestore(changedItems(orders, updatedOrders)));
+                return persist('заказы', syncAllOrdersToFirestore(changedItems(orders, updatedOrders)));
               }}
               promos={promos}
               onUpdatePromos={(updatedPromos) => {
@@ -1905,7 +1886,6 @@ export default function App() {
               onUpdateDeliveryMethods={handleUpdateDeliveryMethods}
               pickupPoints={pickupPoints}
               onUpdatePickupPoints={handleUpdatePickupPoints}
-              onSyncFirebase={handleManualFirebaseSync}
             />
           )}
 
