@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, lazy, Suspense, useTransition } from 'react';
+import { IS_PREVIEW_BUILD } from '../utils/previewBuild';
 import { launchSteps } from '../utils/launchChecklist';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { motion, AnimatePresence } from 'motion/react';
@@ -3031,7 +3032,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                       {currentUser?.email}
                     </span>
                   </div>
-                  <p className="text-xs font-medium text-[#4E5C70] truncate">Каталог, склад, заказы и витрина</p>
+                  {IS_PREVIEW_BUILD ? (
+                    <p className="text-xs font-bold text-warning">Проверочная версия: изменения попадут в настоящий магазин</p>
+                  ) : (
+                    <p className="text-xs font-medium text-[#4E5C70] truncate">Каталог, склад, заказы и витрина</p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">

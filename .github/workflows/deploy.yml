@@ -29,7 +29,10 @@ jobs:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
+      # The preview works with the store's real database: the build shows a banner saying so (PreviewBanner)
       - run: bun run build
+        env:
+          VITE_PREVIEW_BUILD: 'true'
       - if: env.HAS_FIREBASE_SECRET != 'true'
         run: echo "::warning::FIREBASE_SERVICE_ACCOUNT secret is not set — preview deploy skipped"
       # The site holds a limited number of preview channels, and every PR opens its own. Channels of earlier PRs
