@@ -13,6 +13,8 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
+  orderBy,
   collection,
   query,
   serverTimestamp,
@@ -193,6 +195,66 @@ describe('orders', () => {
     await assertSucceeds(updateDoc(doc(owner(), 'orders/MS-alice'), { status: 'delivered' }));
     await assertSucceeds(getDocs(collection(owner(), 'orders')));
     await assertSucceeds(deleteDoc(doc(owner(), 'orders/MS-bob')));
+  });
+});
+
+describe('stock journal (stock_movements)', () => {
+  const lineOrder = order({ id: 'WS-10', items: [{ product: { id: 'p1' }, quantity: 2 }] });
+  const movement = (overrides = {}) => ({
+    id: 'WS-10_0',
+    createdAt: '2026-09-30T12:00:00.000Z',
+    date: '30 сент., 15:00',
+    type: 'order',
+    orderId: 'WS-10',
+    lineIndex: 0,
+    productId: 'p1',
+    productTitle: 'Пальто',
+    skuCode: 'WS-P1-M',
+    color: '',
+    size: 'M',
+    changeQuantity: -2,
+    reason: 'Заказ #WS-10',
+    operator: 'Иван',
+    ...overrides,
+  });
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'orders/WS-10'), lineOrder));
+  });
+
+  test('a customer writes the entry of a line of a saved order, once', async () => {
+    await assertSucceeds(setDoc(doc(guest(), 'stock_movements/WS-10_0'), movement()));
+    // no second write over it, no reading, no deleting
+    await assertFails(setDoc(doc(guest(), 'stock_movements/WS-10_0'), movement({ operator: 'Другой' })));
+    await assertFails(getDoc(doc(guest(), 'stock_movements/WS-10_0')));
+    await assertFails(getDocs(collection(customer(), 'stock_movements')));
+    await assertFails(deleteDoc(doc(guest(), 'stock_movements/WS-10_0')));
+  });
+
+  test('a customer cannot invent entries: other quantity, product, line, order or type', async () => {
+    await assertFails(setDoc(doc(guest(), 'stock_movements/WS-10_0'), movement({ changeQuantity: 50 })));
+    await assertFails(setDoc(doc(guest(), 'stock_movements/WS-10_0'), movement({ productId: 'p2' })));
+    await assertFails(setDoc(doc(guest(), 'stock_movements/WS-10_1'), movement({ id: 'WS-10_1', lineIndex: 1 })));
+    await assertFails(setDoc(doc(guest(), 'stock_movements/WS-99_0'), movement({ id: 'WS-99_0', orderId: 'WS-99' })));
+    await assertFails(setDoc(doc(guest(), 'stock_movements/any'), movement({ id: 'any' })));
+    await assertFails(setDoc(doc(guest(), 'stock_movements/WS-10_0'), movement({ type: 'receipt', changeQuantity: 2 })));
+    await assertFails(setDoc(doc(guest(), 'stock_movements/WS-10_0'), movement({ previousStock: 3, newStock: 1, extra: 1 })));
+  });
+
+  test('with server orders on, only placeOrder writes order entries', async () => {
+    await env.withSecurityRulesDisabled((ctx) =>
+      setDoc(doc(ctx.firestore(), 'settings/server'), { serverOrdersEnabled: true })
+    );
+    await assertFails(setDoc(doc(guest(), 'stock_movements/WS-10_0'), movement()));
+  });
+
+  test('the admin reads the journal and records warehouse operations', async () => {
+    const receipt = movement({ id: 'log-1', type: 'receipt', changeQuantity: 5, previousStock: 3, newStock: 8 });
+    delete receipt.orderId;
+    delete receipt.lineIndex;
+    await assertSucceeds(setDoc(doc(owner(), 'stock_movements/log-1'), receipt));
+    await assertSucceeds(getDocs(query(collection(extraAdmin(), 'stock_movements'), orderBy('createdAt', 'desc'), limit(500))));
+    await assertFails(setDoc(doc(customer(), 'stock_movements/log-2'), { ...receipt, id: 'log-2' }));
   });
 });
 

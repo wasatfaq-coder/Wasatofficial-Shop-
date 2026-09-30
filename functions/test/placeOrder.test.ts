@@ -67,6 +67,7 @@ beforeEach(async () => {
   await db.recursiveDelete(db.collection('promos'));
   await db.recursiveDelete(db.collection('delivery_methods'));
   await db.recursiveDelete(db.collection('settings'));
+  await db.recursiveDelete(db.collection('stock_movements'));
   await db.doc('products/shirt').set(shirt);
   await db.doc('products/jacket').set(jacket);
   await db.doc('delivery_methods/courier').set(courier);
@@ -118,6 +119,28 @@ describe('placeOrderCore', () => {
 
     await expectOrderError(placeOrderCore(db, request(), null), 'failed-precondition', /Недостаточно товара/);
     expect((await db.collection('orders').get()).size).toBe(1);
+  });
+
+  test('writes the write-off to the stock journal in the same transaction (finding 17)', async () => {
+    const order = await placeOrderCore(
+      db,
+      request({ items: [{ productId: 'shirt', color: 'Белый', size: 'M', quantity: 2 }] }),
+      null
+    );
+    const journal = (await db.collection('stock_movements').get()).docs.map((d) => d.data());
+    expect(journal).toHaveLength(1);
+    expect(journal[0]).toMatchObject({
+      id: `${order.id}_0`,
+      type: 'order',
+      orderId: order.id,
+      lineIndex: 0,
+      productId: 'shirt',
+      changeQuantity: -2,
+    });
+
+    // a refused order leaves no entry
+    await expectOrderError(placeOrderCore(db, request(), null), 'failed-precondition', /Недостаточно товара/);
+    expect((await db.collection('stock_movements').get()).size).toBe(1);
   });
 
   test('preorder mode accepts sold-out variants without touching stock', async () => {

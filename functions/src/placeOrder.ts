@@ -15,7 +15,8 @@ import {
   validatePromo,
   type PricingLine,
 } from '../../src/shared/orderPricing';
-import { extractColorName, extractSizeName, generateDefaultSKUs, isHiddenFromSale } from '../../src/utils/inventory';
+import { extractColorName, extractSizeName, generateDefaultSKUs, isHiddenFromSale, skuCodeForLine } from '../../src/utils/inventory';
+import { orderStockMovements, STOCK_MOVEMENTS_COLLECTION } from '../../src/shared/stockMovements';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages } from '../../src/utils/deliveryStages';
 
 export type OrderErrorCode = 'invalid-argument' | 'failed-precondition' | 'not-found';
@@ -271,6 +272,11 @@ export async function placeOrderCore(
     tx.create(orderRef, order);
     for (const { ref, skus } of stockUpdates) {
       tx.update(ref, { skus, inStock: skus.some((s) => s.stock > 0) });
+    }
+    // The owner sees the write-off in «Склад и SKU» → «Журнал движений»
+    const catalog = [...products.values()].map((p) => p.data);
+    for (const movement of orderStockMovements(order, now, (line) => skuCodeForLine(catalog, line))) {
+      tx.create(db.collection(STOCK_MOVEMENTS_COLLECTION).doc(movement.id), stripUndefined(movement));
     }
     if (promo) {
       const commissionPercent = promo.data.partnerCommissionPercent || 10;

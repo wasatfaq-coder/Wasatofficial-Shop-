@@ -35,7 +35,8 @@ import { Order, Product, OrderAdjustmentLog, OrderStatusHistoryStep, DeliverySta
 import { exportOrdersToCSV } from '../../utils/csvHelpers';
 import { copyToClipboard } from '../../utils/clipboard';
 import { deductStockWithLogs, returnStockWithLogs, stockShortages, type StockShortage } from '../../utils/inventory';
-import { deleteOrderFromFirestore } from '../../utils/firebaseSync';
+import { deleteOrderFromFirestore, saveStockMovements } from '../../utils/firebaseSync';
+import type { StockMovementLog } from '../../types';
 import { AdminActionMenu } from './AdminActionMenu';
 import {
   getDefaultDeliveryStages,
@@ -371,6 +372,14 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
    * New fulfilment status of the given orders (one or a bulk selection). A cancelled order that gets
    * a status again is active: the goods returned on cancellation are taken from stock again.
    */
+  /** Stock changes of orders go to «Склад и SKU» → «Журнал движений» */
+  const recordStockMovements = (movements: StockMovementLog[]) => {
+    saveStockMovements(movements).catch((err) => {
+      console.error('Stock journal was not written:', err);
+      onShowToast('Не сохранено: запись в журнале склада. Остатки изменены, проверьте соединение.', 'error');
+    });
+  };
+
   const changeOrdersStatus = (orderIds: string[], newStatus: Order['status'], description: string) => {
     const ids = new Set(orderIds);
     const dateNow = historyDateLabel();
@@ -378,10 +387,14 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     const reactivated = orders.filter((ord) => ids.has(ord.id) && ord.isCancelled && ord.items?.length);
     if (reactivated.length > 0 && onUpdateProducts) {
       let currentProducts = products;
+      const movements: StockMovementLog[] = [];
       for (const ord of reactivated) {
-        currentProducts = deductStockWithLogs(currentProducts, ord.items, ord.id, 'Администратор').updatedProducts;
+        const res = deductStockWithLogs(currentProducts, ord.items, ord.id, 'Администратор');
+        currentProducts = res.updatedProducts;
+        movements.push(...res.generatedLogs);
       }
       onUpdateProducts(currentProducts);
+      recordStockMovements(movements);
     }
 
     const updated = orders.map((ord) => {
@@ -471,6 +484,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     }
 
     let currentProducts = [...products];
+    const movements: StockMovementLog[] = [];
     selectedOrders.forEach((ord) => {
       if (ord.items && ord.items.length > 0) {
         const res = returnStockWithLogs(
@@ -481,11 +495,13 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
           'Администратор'
         );
         currentProducts = res.updatedProducts;
+        movements.push(...res.generatedLogs);
       }
     });
 
     if (onUpdateProducts) {
       onUpdateProducts(currentProducts);
+      recordStockMovements(movements);
     }
 
     const dateNow = historyDateLabel();
@@ -636,6 +652,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       );
       if (onUpdateProducts) {
         onUpdateProducts(resReturn.updatedProducts);
+        recordStockMovements(resReturn.generatedLogs);
       }
     }
 
@@ -1721,6 +1738,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         onSaveAdjustment={handleSaveOrderAdjustment}
         promos={promos}
         onUpdateProducts={onUpdateProducts}
+        onRecordStockMovements={recordStockMovements}
         onShowToast={onShowToast}
       />
 

@@ -31,9 +31,11 @@ import { copyToClipboard } from '../../utils/clipboard';
 import {
   generateDefaultSKUs,
   updateProductSkuStock,
-  getStockMovementLogs,
-  saveStockMovementLogs,
+  stockMovementId,
+  LEGACY_STOCK_LOGS_STORAGE_KEY,
 } from '../../utils/inventory';
+import { saveStockMovements, subscribeToStockMovements } from '../../utils/firebaseSync';
+import { formatOrderDate } from '../../shared/orderDate';
 import { AdminLabelGenerator, type LabelTarget } from './AdminLabelGenerator';
 import { articleCode, skuKey } from '../../shared/barcode';
 import { InventoryGroupedList, type InventoryGrouping, type InventoryRow } from './InventoryGroupedList';
@@ -125,6 +127,9 @@ const StockInput: React.FC<{ value: number; label: string; onCommit: (next: numb
   );
 };
 
+/** One move of the old browser journal per page load (effects run twice in development) */
+let legacyJournalMoveStarted = false;
+
 export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
   products,
   onUpdateProducts,
@@ -169,11 +174,52 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
     return saved ? parseInt(saved, 10) : 3;
   });
 
-  // Stock Movement Logs State
-  const [movementLogs, setMovementLogs] = useState<StockMovementLog[]>(() => {
-    // Real stock movements only; the log starts empty
-    return getStockMovementLogs() ?? [];
-  });
+  // Stock journal from the database (`stock_movements`): customer orders, order changes and warehouse operations
+  const [movementLogs, setMovementLogs] = useState<StockMovementLog[]>([]);
+  const [movementLogsError, setMovementLogsError] = useState(false);
+  useEffect(
+    () =>
+      subscribeToStockMovements(
+        (logs) => {
+          setMovementLogs(logs);
+          setMovementLogsError(false);
+        },
+        () => setMovementLogsError(true)
+      ),
+    []
+  );
+
+  /** New entries of the journal; the stock itself is already changed, so a refused write only warns */
+  const recordStockMovements = (logs: StockMovementLog[]) => {
+    saveStockMovements(logs).catch((err) => {
+      console.error('Stock journal was not written:', err);
+      onShowToast('Не сохранено: запись в журнале склада. Остатки изменены, проверьте соединение.', 'error');
+    });
+  };
+
+  // The journal used to be kept only in this browser: move it to the database once, keeping its order
+  useEffect(() => {
+    if (legacyJournalMoveStarted) return;
+    legacyJournalMoveStarted = true;
+    let legacy: StockMovementLog[] = [];
+    try {
+      legacy = JSON.parse(localStorage.getItem(LEGACY_STOCK_LOGS_STORAGE_KEY) || '[]');
+    } catch {
+      return;
+    }
+    if (!Array.isArray(legacy) || legacy.length === 0) return;
+    // Their own dates are texts like «Сегодня, 14:30»: they are kept for display, the order comes from the list
+    const base = Date.now() - legacy.length;
+    const moved = legacy.map((log, i) => ({
+      ...log,
+      id: stockMovementId(),
+      createdAt: new Date(base - i).toISOString(),
+      reason: `${log.reason} (перенесено из браузера)`,
+    }));
+    saveStockMovements(moved)
+      .then(() => localStorage.removeItem(LEGACY_STOCK_LOGS_STORAGE_KEY))
+      .catch((err) => console.error('Old stock journal was not moved:', err));
+  }, []);
 
   const [logTypeFilter, setLogTypeFilter] = useState<'all' | 'order' | 'receipt' | 'writeoff' | 'return'>('all');
   const [logSearchQuery, setLogSearchQuery] = useState('');
@@ -186,24 +232,6 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
   // Counted stock not yet approved («Утвердить инвентаризацию»)
   useUnsavedChanges(Object.keys(auditCounts).length > 0, 'Инвентаризация');
   const [auditSessionDate] = useState(() => new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric' }));
-
-  // Listen to external stock movement updates (e.g. from Order placed or status changed)
-  useEffect(() => {
-    const handleLogsUpdate = (e: Event) => {
-      const customEvent = e as CustomEvent<StockMovementLog[]>;
-      if (customEvent.detail) {
-        setMovementLogs(customEvent.detail);
-      } else {
-        setMovementLogs(getStockMovementLogs());
-      }
-    };
-    window.addEventListener('manstyle_stock_logs_updated', handleLogsUpdate);
-    return () => window.removeEventListener('manstyle_stock_logs_updated', handleLogsUpdate);
-  }, []);
-
-  useEffect(() => {
-    saveStockMovementLogs(movementLogs);
-  }, [movementLogs]);
 
   useEffect(() => {
     localStorage.setItem('manstyle_low_stock_threshold', String(lowStockThreshold));
@@ -351,7 +379,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
     // Update products stock in state
     let updatedProducts = [...products];
     const newLogs: StockMovementLog[] = [];
-    const timestamp = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const now = new Date();
 
     discrepantItems.forEach((item) => {
       updatedProducts = updatedProducts.map((p) =>
@@ -361,8 +389,9 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
       );
 
       newLogs.push({
-        id: `audit-${Date.now()}-${item.sku.skuCode || item.sku.id}`,
-        date: `${auditSessionDate}, ${timestamp}`,
+        id: stockMovementId(),
+        createdAt: now.toISOString(),
+        date: formatOrderDate(now),
         type: item.diff > 0 ? 'receipt' : 'writeoff',
         productId: item.product.id,
         productTitle: item.product.title,
@@ -378,7 +407,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
     });
 
     onUpdateProducts(updatedProducts);
-    setMovementLogs((prev) => [...newLogs, ...prev]);
+    recordStockMovements(newLogs);
     setAuditCounts({});
     onShowToast(`Инвентаризация утверждена: скорректировано ${discrepantItems.length} ${pluralRu(discrepantItems.length, ['вариант', 'варианта', 'вариантов'])}`, 'success');
   };
@@ -405,7 +434,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
       return;
     }
     const header = ['Дата', 'Тип', 'Товар', 'SKU', 'Цвет', 'Размер', 'Изменение', 'До', 'После', 'Причина', 'Оператор'];
-    const rows = movementLogs.map((l) => [l.date, l.type, l.productTitle, l.skuCode, l.color, l.size, l.changeQuantity, l.previousStock, l.newStock, l.reason, l.operator]);
+    const rows = movementLogs.map((l) => [l.date, l.type, l.productTitle, l.skuCode, l.color, l.size, l.changeQuantity, l.previousStock ?? '', l.newStock ?? '', l.reason, l.operator]);
     downloadCSV(`sklad_dvizheniya_${new Date().toISOString().slice(0, 10)}.csv`, [header, ...rows], ';');
     onShowToast('Журнал складских движений экспортирован в CSV', 'success');
   };
@@ -627,9 +656,11 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
     onUpdateProducts(updated);
 
     if (diff !== 0 && prod) {
+      const now = new Date();
       const newLog: StockMovementLog = {
-        id: `log-${Date.now()}`,
-        date: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+        id: stockMovementId(),
+        createdAt: now.toISOString(),
+        date: formatOrderDate(now),
         type: diff > 0 ? 'receipt' : 'writeoff',
         productId,
         productTitle: prod.title,
@@ -642,7 +673,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
         reason: reasonText,
         operator: 'Оператор склада',
       };
-      setMovementLogs((prev) => [newLog, ...prev]);
+      recordStockMovements([newLog]);
     }
   };
 
@@ -1503,6 +1534,11 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
           </div>
 
           <div className="space-y-2">
+            {movementLogsError && (
+              <p role="alert" className="bg-danger-soft border border-danger/30 rounded-2xl p-3 text-xs text-danger font-bold">
+                Не удалось загрузить журнал склада. Проверьте соединение и откройте раздел снова.
+              </p>
+            )}
             {filteredLogs.length === 0 ? (
               <div className="neu-inset rounded-2xl p-6 text-center text-[#4E5C70] text-xs">
                 Записей в журнале по выбранному фильтру не найдено
@@ -1557,7 +1593,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                           Цвет: {log.color} • Размер: {log.size} • {log.reason}
                         </p>
                         <span className="text-[11px] text-[#4E5C70] block font-medium">
-                          Оператор: {log.operator} • {log.date}
+                          {log.lineIndex !== undefined ? 'Покупатель' : 'Оператор'}: {log.operator} • {log.date}
                         </span>
                       </div>
                     </div>
@@ -1574,9 +1610,11 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                       >
                         {isPositive ? `+${log.changeQuantity}` : log.changeQuantity} шт.
                       </span>
-                      <span className="text-[11px] text-[#4E5C70] font-mono block">
-                        {log.previousStock} ➔ <strong>{log.newStock} шт.</strong>
-                      </span>
+                      {log.previousStock !== undefined && log.newStock !== undefined && (
+                        <span className="text-[11px] text-[#4E5C70] font-mono block">
+                          {log.previousStock} ➔ <strong>{log.newStock} шт.</strong>
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
