@@ -35,4 +35,8 @@ describe('находка 33: «Запуск магазина»', () => {
       categories: true, products: true, delivery: false, payment: true, legal: false,
     });
   });
+  test('реквизиты необязательны (решение владельца 01.10): без них карточка не держится', () => {
+    const steps = launchSteps([], [], {});
+    expect(steps.filter((s) => s.optional).map((s) => s.id)).toEqual(['legal']);
+  });
 });
