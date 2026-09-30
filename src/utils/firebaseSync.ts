@@ -800,7 +800,7 @@ export async function clearChatMessagesInFirestore(threadId?: string | null) {
     const docs = threadId === null ? snap.docs.filter((d) => !d.data().threadId) : snap.docs;
     await commitInChunks(docs, (batch, d) => batch.delete(d.ref));
   } catch (err) {
-    console.warn('Could not clear chat messages in Firestore:', err);
+    handleFirestoreError(err, OperationType.DELETE, 'chat_messages');
   }
 }
 

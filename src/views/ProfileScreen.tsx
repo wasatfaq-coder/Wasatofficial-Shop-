@@ -114,7 +114,8 @@ interface ProfileScreenProps {
   onRepeatOrder?: (items: CartItem[]) => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   onOpenSupportChat?: () => void;
-  onUpdateProducts?: (products: Product[]) => void;
+  /** Resolves to false when the database refused the write (the error toast is already shown) */
+  onUpdateProducts?: (products: Product[]) => Promise<boolean> | void;
   onUpdateOrders?: (orders: Order[]) => Promise<boolean> | void;
   promos?: PromoCode[];
   onUpdatePromos?: (promos: PromoCode[]) => void;
@@ -286,7 +287,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const handleUpdateProductsList = (updated: Product[]) => {
     setProductsList(updated);
-    if (onUpdateProducts) onUpdateProducts(updated);
+    return onUpdateProducts?.(updated);
   };
 
   const handleUpdateOrders = (updated: Order[]) => onUpdateOrders?.(updated);
