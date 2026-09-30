@@ -1,6 +1,5 @@
 import type { DeliveryMethod, Product, StorefrontSettings } from '../types';
 import type { AdminTab } from '../components/admin/adminSections';
-import { getCategories } from './categories';
 import { missingLegalRequisites } from './legalDocs';
 
 export interface LaunchStep {
@@ -27,7 +26,8 @@ export function launchSteps(
       id: 'categories',
       title: 'Категории',
       hint: 'Разделы каталога, по которым покупатель ищет товар',
-      done: getCategories(settings).length > 0,
+      // same filter as getCategories (categories.ts pulls in the icon components, not for Cloud Functions tests)
+      done: (settings?.categories ?? []).some((c) => c.id && c.name.trim()),
       tab: 'categories',
     },
     {
