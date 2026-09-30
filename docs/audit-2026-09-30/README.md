@@ -5,16 +5,21 @@
 
 ## Что где
 
+Исходные материалы (`raw/`, 331 файл, ≈ 79 МБ: скриншоты, фото, замеры, логи, скрипты) лежат в отдельной ветке
+[`audit-raw-2026-09-30`](https://github.com/wasatfaq-coder/Wasatofficial-Shop-/tree/audit-raw-2026-09-30/docs/audit-2026-09-30/raw),
+байт в байт как были в `main` до 30.09 (коммит 7fdb9b6). В `main` их нет: с ними репозиторий весил 83 МБ вместо ~3 МБ,
+и загрузка в Google AI Studio падала с «Internal error». Ссылки ниже и в отчётах ведут в эту ветку; ветку не удалять.
+
 | Папка | Что внутри |
 |---|---|
 | [`reports/`](reports/) | Отчёты по областям: [безопасность](reports/security.md), [заказы и склад](reports/orders.md), [данные и стоимость Firestore](reports/data.md), [скорость](reports/perf.md), [UX](reports/ux.md), [код и тесты](reports/code.md). Ссылки ведут на файлы в `raw/` |
-| [`raw/`](raw/) | Всё, что лежало во временной папке сессии, байт в байт (контрольные суммы сверены): исходные отчёты `*.md`, скриншоты, логи прогонов, замеры, скрипты |
-| [`raw/ux/`](raw/ux/) | 207 скриншотов сценариев по папкам `s<сценарий>-<ширина>` (320, 390, 1280 px), фото для загрузки в форму товара, сценарии `s1…s4*.mjs` |
-| [`raw/perf/`](raw/perf/) | Замеры скорости (`live*.json`, `p50.json`, `p200*.json` и логи), разбор сборки `stats.json`, сгенерированные фото `photos.json`, скрипты замера |
-| [`raw/security/`](raw/security/), [`raw/orders/`](raw/orders/) | Тесты атак и расчёта в том виде, как их запускали при аудите, и вывод прогонов |
-| [`raw/data/`](raw/data/) | Расчёт стоимости `forecast.py` и вывод, текст страницы тарифов Firestore на 30.09 |
-| [`raw/code/`](raw/code/) | Проба проверки типов и список неиспользуемого |
-| [`raw/_session/`](raw/_session/) | Общие файлы сессии, от которых зависят сценарии: засев эмулятора `design/seed.ts` с тестовым каталогом `current-demo.json`, стенд `ic/run.sh`, статический сервер и замер `perf/` |
+| [`raw/`](https://github.com/wasatfaq-coder/Wasatofficial-Shop-/tree/audit-raw-2026-09-30/docs/audit-2026-09-30/raw/) | Всё, что лежало во временной папке сессии, байт в байт (контрольные суммы сверены): исходные отчёты `*.md`, скриншоты, логи прогонов, замеры, скрипты |
+| [`raw/ux/`](https://github.com/wasatfaq-coder/Wasatofficial-Shop-/tree/audit-raw-2026-09-30/docs/audit-2026-09-30/raw/ux/) | 207 скриншотов сценариев по папкам `s<сценарий>-<ширина>` (320, 390, 1280 px), фото для загрузки в форму товара, сценарии `s1…s4*.mjs` |
+| [`raw/perf/`](https://github.com/wasatfaq-coder/Wasatofficial-Shop-/tree/audit-raw-2026-09-30/docs/audit-2026-09-30/raw/perf/) | Замеры скорости (`live*.json`, `p50.json`, `p200*.json` и логи), разбор сборки `stats.json`, сгенерированные фото `photos.json`, скрипты замера |
+| [`raw/security/`](https://github.com/wasatfaq-coder/Wasatofficial-Shop-/tree/audit-raw-2026-09-30/docs/audit-2026-09-30/raw/security/), [`raw/orders/`](https://github.com/wasatfaq-coder/Wasatofficial-Shop-/tree/audit-raw-2026-09-30/docs/audit-2026-09-30/raw/orders/) | Тесты атак и расчёта в том виде, как их запускали при аудите, и вывод прогонов |
+| [`raw/data/`](https://github.com/wasatfaq-coder/Wasatofficial-Shop-/tree/audit-raw-2026-09-30/docs/audit-2026-09-30/raw/data/) | Расчёт стоимости `forecast.py` и вывод, текст страницы тарифов Firestore на 30.09 |
+| [`raw/code/`](https://github.com/wasatfaq-coder/Wasatofficial-Shop-/tree/audit-raw-2026-09-30/docs/audit-2026-09-30/raw/code/) | Проба проверки типов и список неиспользуемого |
+| [`raw/_session/`](https://github.com/wasatfaq-coder/Wasatofficial-Shop-/tree/audit-raw-2026-09-30/docs/audit-2026-09-30/raw/_session/) | Общие файлы сессии, от которых зависят сценарии: засев эмулятора `design/seed.ts` с тестовым каталогом `current-demo.json`, стенд `ic/run.sh`, статический сервер и замер `perf/` |
 
 Не перенесены — собираются заново: две сборки сайта из коммита a163f0c (`perf/dist`, `perf/dist-viz`) и HTML-копия
 страницы тарифов (её текст — в `raw/data/pricing.txt`).
@@ -31,7 +36,7 @@
 
 ## Как перезапустить сценарии
 
-Скрипты в `raw/` сохранены как есть: в них пути временной папки сессии
+Скрипты в `raw/` (ветка `audit-raw-2026-09-30`: `git fetch origin audit-raw-2026-09-30 && git checkout origin/audit-raw-2026-09-30 -- docs/audit-2026-09-30/raw`) сохранены как есть: в них пути временной папки сессии
 (`/tmp/claude-0/-home-user-Wasatofficial-Shop-/6ae9196d-6e10-572e-9337-53506395115c/scratchpad`). Чтобы запустить:
 скопируйте `raw/` и содержимое `raw/_session/` в одну папку, замените в скриптах этот путь на неё (`risk/` в путях —
 это сама `raw/`), нужен Playwright с Chromium и эмуляторы Firebase (README, «Локально с эмуляторами Firebase»).

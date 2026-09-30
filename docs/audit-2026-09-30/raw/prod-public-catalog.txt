@@ -1,8 +1,0 @@
-products          docs    7 | total KB    550 | max doc KB   521 | base64 photos 3 ( 514 KB ) | url photos 0
-reviews           docs    0 | total KB      0 | max doc KB     0 | base64 photos 0 ( 0 KB ) | url photos 0
-review_votes      docs    0 | total KB      0 | max doc KB     0 | base64 photos 0 ( 0 KB ) | url photos 0
-banners           docs    3 | total KB      2 | max doc KB     1 | base64 photos 0 ( 0 KB ) | url photos 0
-delivery_methods  docs    5 | total KB      2 | max doc KB     0 | base64 photos 0 ( 0 KB ) | url photos 0
-pickup_points     docs    3 | total KB      2 | max doc KB     1 | base64 photos 0 ( 0 KB ) | url photos 0
-promos            docs    7 | total KB      5 | max doc KB     1 | base64 photos 0 ( 0 KB ) | url photos 0
-settings          docs    2 | total KB      6 | max doc KB     3 | base64 photos 0 ( 0 KB ) | url photos 0

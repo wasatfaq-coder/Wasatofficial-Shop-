@@ -95,5 +95,5 @@ Firestore-эмулятор не сжимает ответы. В бою base64-JP
 - **P2, админка**: админ подписан на все заказы (`subscribeToOrders`), а каждый заказ несёт фото товаров. Панель
   «Заказы» будет тяжелеть так же, как каталог.
 
-Замеры — [`../raw/perf/`](../raw/perf/) (`live.json`, `live2.json`, `p50.json`, `p200.json`, `p200long.json`),
+Замеры — [`../raw/perf/`](https://github.com/wasatfaq-coder/Wasatofficial-Shop-/tree/audit-raw-2026-09-30/docs/audit-2026-09-30/raw/perf/) (`live.json`, `live2.json`, `p50.json`, `p200.json`, `p200long.json`),
 скрипты замера — `e2e/audit-2026-09-30/perf/`.
