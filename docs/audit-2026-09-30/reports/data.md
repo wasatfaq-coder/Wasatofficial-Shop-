@@ -1,7 +1,7 @@
 # Обзор рисков: данные, стоимость Firestore, сохранность (main a163f0c)
 
 Все цифры — **оценка по коду** плюс замер живого каталога от 29.09 (7 товаров ≈ 550 КБ, один товар 521 КБ с 3 фото base64 ≈ 514 КБ).
-Эмуляторы не запускались. Расчёты — [`forecast.py`](../raw/data/forecast.py) (вывод — [`forecast.txt`](../raw/data/forecast.txt)); тарифы — [cloud.google.com/firestore/pricing](https://cloud.google.com/firestore/pricing).
+Эмуляторы не запускались. Расчёты — [`forecast.py`](https://github.com/wasatfaq-coder/Wasatofficial-Shop-/blob/audit-raw-2026-09-30/docs/audit-2026-09-30/raw/data/forecast.py) (вывод — [`forecast.txt`](https://github.com/wasatfaq-coder/Wasatofficial-Shop-/blob/audit-raw-2026-09-30/docs/audit-2026-09-30/raw/data/forecast.txt)); тарифы — [cloud.google.com/firestore/pricing](https://cloud.google.com/firestore/pricing).
 
 ## Находки
 

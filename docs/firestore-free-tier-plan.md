@@ -8,7 +8,7 @@
 ## Почему сейчас платится каждое чтение
 
 - Магазин работает на именованной базе `ai-studio-manstyle-2b22f2fb-…` (`firebase-applet-config.json`).
-- Страница тарифов Firestore (текст на 30.09 — `docs/audit-2026-09-30/raw/data/pricing.txt`):
+- Страница тарифов Firestore (текст на 30.09 — `raw/data/pricing.txt` в ветке [`audit-raw-2026-09-30`](https://github.com/wasatfaq-coder/Wasatofficial-Shop-/blob/audit-raw-2026-09-30/docs/audit-2026-09-30/raw/data/pricing.txt)):
   «Firestore allows exactly one free database per project» и «No free quota for named databases … those databases do
   not qualify for the free quota».
 - Базы `(default)` в проекте нет: запрос к ней отвечает `404 The database (default) does not exist` (проверено

@@ -1,8 +1,8 @@
 # Обзор рисков: заказы, цены, склад и промокоды (main a163f0c, 30.09.2026)
 
-Доказательства — тесты в репозитории (`functions/test/audit-pricing.test.ts`, `tests/audit-attacks.test.mjs`) и вывод прогона в [`../raw/orders/`](../raw/orders/):
-- `pricing.audit.test.ts`: тесты на общем коде `src/shared/orderPricing.ts`. Все 7 записаны так, как ожидал бы владелец, и все 7 падают — это и есть подтверждение. В репозитории — `functions/test/audit-pricing.test.ts` (как `test.todo`), вывод — [`orders-pricing.out.txt`](../raw/orders/pricing.audit.out.txt).
-- `client-mode.emulator.test.ts`: сценарии на своём эмуляторе с боевыми `firestore.rules`: порт 8280, проект `demo-audit-orders`, свой `firebase.json`. Все 10 проходят, значит риск подтверждён. В репозитории эти сценарии вошли в `tests/audit-attacks.test.mjs`, вывод — [`orders-client-mode.out.txt`](../raw/orders/client-mode.emulator.out.txt).
+Доказательства — тесты в репозитории (`functions/test/audit-pricing.test.ts`, `tests/audit-attacks.test.mjs`) и вывод прогона в [`../raw/orders/`](https://github.com/wasatfaq-coder/Wasatofficial-Shop-/tree/audit-raw-2026-09-30/docs/audit-2026-09-30/raw/orders/):
+- `pricing.audit.test.ts`: тесты на общем коде `src/shared/orderPricing.ts`. Все 7 записаны так, как ожидал бы владелец, и все 7 падают — это и есть подтверждение. В репозитории — `functions/test/audit-pricing.test.ts` (как `test.todo`), вывод — [`orders-pricing.out.txt`](https://github.com/wasatfaq-coder/Wasatofficial-Shop-/blob/audit-raw-2026-09-30/docs/audit-2026-09-30/raw/orders/pricing.audit.out.txt).
+- `client-mode.emulator.test.ts`: сценарии на своём эмуляторе с боевыми `firestore.rules`: порт 8280, проект `demo-audit-orders`, свой `firebase.json`. Все 10 проходят, значит риск подтверждён. В репозитории эти сценарии вошли в `tests/audit-attacks.test.mjs`, вывод — [`orders-client-mode.out.txt`](https://github.com/wasatfaq-coder/Wasatofficial-Shop-/blob/audit-raw-2026-09-30/docs/audit-2026-09-30/raw/orders/client-mode.emulator.out.txt).
 
 Режим заказов в проде неизвестен. Риски 1, 2, 3 (в части записи без входа), 5, 6, 7 и 9 действуют только в клиентском режиме, который включён по умолчанию. Серверный режим их закрывает: это проверено сценарием S6.
 

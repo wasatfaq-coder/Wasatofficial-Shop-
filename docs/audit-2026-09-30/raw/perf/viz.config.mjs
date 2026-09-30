@@ -1,3 +1,0 @@
-import base from '/tmp/claude-0/-home-user-Wasatofficial-Shop-/6ae9196d-6e10-572e-9337-53506395115c/scratchpad/risk/perf-wt/vite.config.ts';
-import { visualizer } from '/tmp/claude-0/-home-user-Wasatofficial-Shop-/6ae9196d-6e10-572e-9337-53506395115c/scratchpad/perf/tools/node_modules/rollup-plugin-visualizer/dist/plugin/index.js';
-export default async (env) => { const c = typeof base==='function'? await base(env): base; c.plugins.push(visualizer({filename:'/tmp/claude-0/-home-user-Wasatofficial-Shop-/6ae9196d-6e10-572e-9337-53506395115c/scratchpad/risk/perf/stats.json', template:'raw-data', gzipSize:true})); c.root='/tmp/claude-0/-home-user-Wasatofficial-Shop-/6ae9196d-6e10-572e-9337-53506395115c/scratchpad/risk/perf-wt'; return c; };
