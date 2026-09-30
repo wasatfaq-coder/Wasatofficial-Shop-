@@ -79,6 +79,10 @@ Wasat Shop — SPA интернет-магазина мужской одежды
 - Администратор: `ADMIN_EMAIL` в `src/context/AuthContext.tsx` (дублируется в `firestore.rules`)
   или документ `admins/{uid}`; отдельного пароля панели нет. Заказы и профили видны только владельцу
   и администратору. Гостевые заказы хранятся в `localStorage`.
+- Себестоимость (`costPrice`) хранится только в `product_costs/{productId}` (читает и пишет администратор): товар
+  читает любой посетитель. При записи товара поле вырезается (`toStoredProduct` в `firebaseSync.ts`, правило
+  `keepsCostPriceOut`), админка получает товары с подмешанной себестоимостью (`adminProducts` в `App.tsx`), а старые
+  значения из товаров переносит сессия администратора (`moveProductCostsToPrivate`).
 - `users.bonusPoints/managerNotes/tags` меняет только администратор; заметки менеджера хранятся в `customer_notes`.
 - ID базы Firestore — в `firebase-applet-config.json` (`firestoreDatabaseId`) и `firebase.json`.
 - Ключи `manstyle_*` в `localStorage` и ID базы — внутренние, их не переименовывать: в ключах лежат корзина,

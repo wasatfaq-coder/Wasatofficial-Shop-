@@ -48,6 +48,9 @@ import {
   saveOrderToFirestore,
   saveModifiedProductsToFirestore,
   syncAllProductsToFirestore,
+  subscribeToProductCosts,
+  saveProductCosts,
+  moveProductCostsToPrivate,
   deleteRemovedDocs,
   changedItems,
   recordPromoUsageInFirestore,
@@ -272,6 +275,8 @@ export default function App() {
   const pendingSelectedProductId = React.useRef<string | null>(initialRoute?.productId ?? null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productsLoaded, setProductsLoaded] = useState(false);
+  // Admin only: cost prices from `product_costs` (a product document is readable by every visitor)
+  const [productCosts, setProductCosts] = useState<Record<string, number>>({});
 
   // Screen → address. A new screen is a new history entry (so «Назад» returns to it) and opens
   // at the top; the confirmation replaces the checkout entry, «Назад» does not return to paying
@@ -481,9 +486,12 @@ export default function App() {
     if (isAdmin) {
       const unsubOrders = subscribeToOrders((loadedOrders) => setOrders(loadedOrders));
       const unsubUsers = subscribeToUsers((loadedUsers) => setAllUsers(loadedUsers));
+      const unsubCosts = subscribeToProductCosts(setProductCosts);
       return () => {
         unsubOrders();
         unsubUsers();
+        unsubCosts();
+        setProductCosts({});
       };
     }
 
@@ -792,6 +800,29 @@ export default function App() {
         return false;
       }
     );
+
+  // The admin panel sees products with their cost price; everything else keeps the public products
+  const adminProducts = React.useMemo(
+    () =>
+      isAdmin
+        ? products.map((p) => {
+            const cost = productCosts[p.id];
+            return cost !== undefined && cost !== p.costPrice ? { ...p, costPrice: cost } : p;
+          })
+        : products,
+    [isAdmin, products, productCosts]
+  );
+
+  // Cost prices once saved inside products are readable by every visitor: the admin's session moves them
+  // to `product_costs` (copy and removal in one batch)
+  const costsMovedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!isAdmin || !productsLoaded || costsMovedRef.current) return;
+    const legacy = products.filter((p) => typeof p.costPrice === 'number');
+    if (legacy.length === 0) return;
+    costsMovedRef.current = true;
+    void persist('себестоимость товаров', moveProductCostsToPrivate(legacy));
+  }, [isAdmin, productsLoaded, products]);
 
   const removeToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -1758,7 +1789,7 @@ export default function App() {
               profile={userProfile}
               allUsers={allUsers}
               orders={orders}
-              products={products}
+              products={adminProducts}
               favoritesCount={favorites.length}
               recentlyViewed={recentlyViewed}
               favorites={favorites}
@@ -1769,12 +1800,31 @@ export default function App() {
               onRepeatOrder={handleRepeatOrder}
               onShowToast={addToast}
               onOpenSupportChat={() => setIsSupportChatOpen(true)}
-              onUpdateProducts={(updatedProds) => {
+              onUpdateProducts={(updatedWithCosts: Product[]) => {
+                const changed = changedItems(adminProducts, updatedWithCosts);
+                const kept = new Set(updatedWithCosts.map((p) => p.id));
+                const costChanges: { id: string; costPrice?: number }[] = [
+                  ...changed
+                    .filter((p) => p.costPrice !== productCosts[p.id])
+                    .map((p) => ({ id: p.id, costPrice: p.costPrice })),
+                  ...Object.keys(productCosts).filter((id) => !kept.has(id)).map((id) => ({ id })),
+                ];
                 void persist(
                   'товары',
-                  deleteRemovedDocs('products', products, updatedProds),
-                  syncAllProductsToFirestore(changedItems(products, updatedProds))
+                  deleteRemovedDocs('products', adminProducts, updatedWithCosts),
+                  syncAllProductsToFirestore(changed),
+                  saveProductCosts(costChanges)
                 );
+                setProductCosts((prev) => {
+                  const next = { ...prev };
+                  for (const { id, costPrice } of costChanges) {
+                    if (typeof costPrice === 'number') next[id] = costPrice;
+                    else delete next[id];
+                  }
+                  return next;
+                });
+                // The cost price stays in the admin panel: products in the cart and in orders go without it
+                const updatedProds = updatedWithCosts.map(({ costPrice: _cost, ...p }) => p);
                 setProducts(updatedProds);
                 // Synchronize cart with updated products & remove deleted items
                 setCartItems((prevCart) =>

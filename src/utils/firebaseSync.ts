@@ -133,9 +133,18 @@ export function subscribeToProducts(
 }
 
 
+/**
+ * Product as stored in `products`, which every visitor reads: without merged-in reviews and without the cost price
+ * (it lives in the admin-only `product_costs`).
+ */
+function toStoredProduct(product: Product): Product {
+  const { costPrice: _cost, ...stored } = withoutCollectionReviews(product);
+  return stored;
+}
+
 async function saveProductToFirestore(product: Product) {
   try {
-    await setDoc(doc(db, 'products', product.id), sanitizeForFirestore(withoutCollectionReviews(product)));
+    await setDoc(doc(db, 'products', product.id), sanitizeForFirestore(toStoredProduct(product)));
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `products/${product.id}`);
   }
@@ -148,7 +157,7 @@ export async function saveModifiedProductsToFirestore(productsToSave: Product[])
     return;
   }
   try {
-    await setDocs('products', productsToSave.map(withoutCollectionReviews));
+    await setDocs('products', productsToSave.map(toStoredProduct));
   } catch (error) {
     console.warn('Error batch-saving modified products:', error);
   }
@@ -157,9 +166,59 @@ export async function saveModifiedProductsToFirestore(productsToSave: Product[])
 
 export async function syncAllProductsToFirestore(products: Product[]) {
   try {
-    await setDocs('products', products.map(withoutCollectionReviews));
+    await setDocs('products', products.map(toStoredProduct));
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'products');
+  }
+}
+
+/** Admin only: cost prices by product id (`product_costs`, closed to customers by firestore.rules) */
+export function subscribeToProductCosts(onUpdate: (costs: Record<string, number>) => void) {
+  return onSnapshot(
+    collection(db, 'product_costs'),
+    (snapshot) => {
+      const costs: Record<string, number> = {};
+      snapshot.forEach((snap) => {
+        const cost = snap.data().costPrice;
+        if (typeof cost === 'number') costs[snap.id] = cost;
+      });
+      onUpdate(costs);
+    },
+    (error) => console.warn('Product costs subscription warning:', error)
+  );
+}
+
+/** Writes the cost prices the admin changed; `undefined` removes the cost */
+export async function saveProductCosts(changes: { id: string; costPrice?: number }[]) {
+  if (changes.length === 0) return;
+  try {
+    await commitInChunks(changes, (batch, { id, costPrice }) =>
+      typeof costPrice === 'number'
+        ? batch.set(doc(db, 'product_costs', id), { costPrice, updatedAt: new Date().toISOString() })
+        : batch.delete(doc(db, 'product_costs', id))
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'product_costs');
+  }
+}
+
+/**
+ * Moves cost prices that are still stored inside products (visible to every visitor) into `product_costs`.
+ * Copy and removal go in one batch per chunk, so a cost is never lost halfway.
+ */
+export async function moveProductCostsToPrivate(products: Product[]) {
+  const legacy = products.filter((p) => typeof p.costPrice === 'number');
+  if (legacy.length === 0) return;
+  try {
+    // Two writes per product: half a batch of products at a time
+    for (let i = 0; i < legacy.length; i += BATCH_LIMIT / 2) {
+      await commitInChunks(legacy.slice(i, i + BATCH_LIMIT / 2), (batch, p) => {
+        batch.set(doc(db, 'product_costs', p.id), { costPrice: p.costPrice, updatedAt: new Date().toISOString() });
+        batch.update(doc(db, 'products', p.id), { costPrice: deleteField() });
+      });
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'product_costs');
   }
 }
 

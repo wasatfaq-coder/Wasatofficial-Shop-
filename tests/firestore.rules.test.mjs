@@ -9,6 +9,7 @@ import {
 } from '@firebase/rules-unit-testing';
 import {
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -102,6 +103,27 @@ describe('catalog', () => {
   test('admins (owner email or /admins doc) can manage products', async () => {
     await assertSucceeds(updateDoc(doc(owner(), 'products/p1'), { price: 9000 }));
     await assertSucceeds(setDoc(doc(extraAdmin(), 'products/p2'), { ...product, id: 'p2' }));
+  });
+
+  test('cost price is admin-only: never inside a product, which every visitor reads', async () => {
+    await assertFails(getDoc(doc(guest(), 'product_costs/p1')));
+    await assertFails(setDoc(doc(customer(), 'product_costs/p1'), { costPrice: 1 }));
+    await assertSucceeds(setDoc(doc(owner(), 'product_costs/p1'), { costPrice: 4000 }));
+    await assertSucceeds(getDoc(doc(extraAdmin(), 'product_costs/p1')));
+    await assertSucceeds(getDocs(collection(owner(), 'product_costs'))); // подписка админки — на всю коллекцию
+    await assertFails(getDocs(collection(customer(), 'product_costs')));
+    await assertFails(setDoc(doc(owner(), 'products/p3'), { ...product, id: 'p3', costPrice: 4000 }));
+    await assertFails(updateDoc(doc(owner(), 'products/p1'), { costPrice: 4000 }));
+  });
+
+  test('a cost price left inside a product can only be removed, and stock still deducts meanwhile', async () => {
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'products/p1'), { ...product, costPrice: 4000 }));
+    await assertSucceeds(
+      updateDoc(doc(guest(), 'products/p1'), { skus: [{ size: 'M', stock: 2 }], inStock: true })
+    );
+    await assertSucceeds(updateDoc(doc(owner(), 'products/p1'), { price: 9000 }));
+    await assertFails(updateDoc(doc(owner(), 'products/p1'), { costPrice: 1 }));
+    await assertSucceeds(updateDoc(doc(owner(), 'products/p1'), { costPrice: deleteField() }));
   });
 
   test('unverified owner email is not admin', async () => {
