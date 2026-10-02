@@ -2,6 +2,7 @@
  * Contract of the `placeOrder` Cloud Function, shared by the storefront and functions/.
  */
 import type { Order } from '../types';
+import type { AddressParts } from './personName';
 
 export const FUNCTIONS_REGION = 'europe-west1';
 export const PLACE_ORDER_FUNCTION = 'placeOrder';
@@ -43,7 +44,12 @@ export interface PlaceOrderRequest {
     name: string;
     phone: string;
     email?: string;
+    lastName?: string;
+    firstName?: string;
+    middleName?: string;
   };
+  /** Parts of the delivery address for the admin card (AddressParts) */
+  addressParts?: AddressParts;
 }
 
 export interface PlaceOrderResponse {

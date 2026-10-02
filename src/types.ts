@@ -1,3 +1,4 @@
+import type { AddressParts } from './shared/personName';
 export interface BodyMeasurements {
   height: number;
   weight: number;
@@ -144,6 +145,10 @@ export interface SavedAddress {
   apartment?: string; // Квартира / офис
   intercom?: string; // Код домофона
   postalCode?: string;
+  /** Страна / регион (для Почты России и ТК) */
+  region?: string;
+  /** Комментарий курьеру */
+  comment?: string;
   isDefault?: boolean;
 }
 
@@ -158,7 +163,11 @@ export interface SavedCard {
 }
 
 export interface UserProfile {
+  /** «Фамилия Имя Отчество» одной строкой — из частей ниже (fullName в src/shared/personName.ts) */
   name: string;
+  lastName?: string;
+  firstName?: string;
+  middleName?: string;
   email: string;
   phone: string;
   avatar: string;
@@ -298,6 +307,12 @@ export interface Order {
   promoCode?: string;
   discountAmount?: number;
   deliveryFee?: number;
+  /** Parts of `customerName` («Фамилия Имя Отчество»): orders placed since 02.10 */
+  customerLastName?: string;
+  customerFirstName?: string;
+  customerMiddleName?: string;
+  /** Parts of `deliveryAddress` for the admin card with copy buttons; absent for pickup and older orders */
+  deliveryAddressParts?: AddressParts;
 }
 
 export type ActiveTab =

@@ -266,6 +266,21 @@ describe('parsePlaceOrderRequest', () => {
     expect(() => parsePlaceOrderRequest({ ...request(), contact: { name: '', phone: '1' } })).toThrow(/имя/);
   });
 
+  test('keeps Фамилия / Имя / Отчество and the address parts, dropping unknown address fields', async () => {
+    const parsed = parsePlaceOrderRequest({
+      ...request(),
+      contact: { name: 'x', phone: '+79990000000', lastName: 'Петров', firstName: 'Иван', middleName: 'Сергеевич' },
+      addressParts: { region: 'Россия', city: 'Москва', street: 'Тверская', house: '7', hacked: 'y' },
+    });
+    expect(parsed.contact).toMatchObject({ lastName: 'Петров', firstName: 'Иван', middleName: 'Сергеевич' });
+    expect(parsed.addressParts).toEqual({ region: 'Россия', city: 'Москва', street: 'Тверская', house: '7' });
+    expect(() => parsePlaceOrderRequest({ ...request(), contact: { name: 'x', phone: '1', lastName: 'x'.repeat(61) } })).toThrow(/фамилия/);
+    const order = await placeOrderCore(db, parsed, 'alice');
+    expect(order.customerName).toBe('Петров Иван Сергеевич');
+    expect(order.customerMiddleName).toBe('Сергеевич');
+    expect(order.deliveryAddressParts?.city).toBe('Москва');
+  });
+
   test('normalizes the promo code and drops unknown fields', () => {
     const parsed = parsePlaceOrderRequest({ ...request(), promoCode: ' sale10 ', totalPrice: 1 });
     expect(parsed.promoCode).toBe('SALE10');

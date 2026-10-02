@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { AccountDataModal } from '../components/AccountDataModal';
 import { currentStoreName, getStoreContacts, getStoreName, storeInitials, telHref } from '../utils/storeContacts';
 import { GUEST_USER_PROFILE } from '../data/products';
+import { fullName, namePartsOf } from '../shared/personName';
 import { FAQModal } from '../components/FAQModal';
 import {
   User,
@@ -194,7 +195,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 }) => {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [addressToDelete, setAddressToDelete] = useState<string | null>(null);
-  const [name, setName] = useState(profile.name);
+  // Фамилия, имя, отчество (owner's request 02.10); an old single name is split into parts for the buyer to check
+  const [lastName, setLastName] = useState(() => namePartsOf(profile).lastName || '');
+  const [firstName, setFirstName] = useState(() => namePartsOf(profile).firstName || '');
+  const [middleName, setMiddleName] = useState(() => namePartsOf(profile).middleName || '');
   const [email, setEmail] = useState(profile.email);
   const [phone, setPhone] = useState(profile.phone);
   const [notifications, setNotifications] = useState(profile.notificationsEnabled);
@@ -223,11 +227,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // Keep local state in sync if prop changes
   React.useEffect(() => {
-    setName(profile.name);
+    const parts = namePartsOf(profile);
+    setLastName(parts.lastName || '');
+    setFirstName(parts.firstName || '');
+    setMiddleName(parts.middleName || '');
     setEmail(profile.email);
     setPhone(profile.phone);
     setNotifications(profile.notificationsEnabled);
-  }, [profile.name, profile.email, profile.phone, profile.notificationsEnabled]);
+  }, [profile.name, profile.lastName, profile.firstName, profile.middleName, profile.email, profile.phone, profile.notificationsEnabled]);
 
   React.useEffect(() => {
     if (products) {
@@ -488,6 +495,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [addrApartment, setAddrApartment] = useState('');
   const [addrIntercom, setAddrIntercom] = useState('');
   const [addrPostal, setAddrPostal] = useState('');
+  const [addrRegion, setAddrRegion] = useState('');
+  const [addrComment, setAddrComment] = useState('');
   const [addrIsDefault, setAddrIsDefault] = useState(false);
 
   // Body measurements modal state
@@ -562,9 +571,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
+    const parts = { lastName: lastName.trim(), firstName: firstName.trim(), middleName: middleName.trim() };
     onUpdateProfile({
       ...profile,
-      name,
+      ...parts,
+      // The full name stays in `name`: «Клиенты», the chat and older screens read it
+      name: fullName(parts),
       email,
       phone,
       notificationsEnabled: notifications,
@@ -642,6 +654,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     setAddrApartment('');
     setAddrIntercom('');
     setAddrPostal('');
+    setAddrRegion('');
+    setAddrComment('');
     setAddrIsDefault(profile.savedAddresses.length === 0);
     setIsAddingAddress(true);
   };
@@ -657,6 +671,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     setAddrApartment(addr.apartment || '');
     setAddrIntercom(addr.intercom || '');
     setAddrPostal(addr.postalCode || '');
+    setAddrRegion(addr.region || '');
+    setAddrComment(addr.comment || '');
     setAddrIsDefault(addr.isDefault || false);
     setIsAddingAddress(true);
   };
@@ -689,6 +705,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             apartment: addrApartment.trim(),
             intercom: addrIntercom.trim(),
             postalCode: addrPostal.trim(),
+            region: addrRegion.trim(),
+            comment: addrComment.trim(),
             isDefault: addrIsDefault,
           };
         }
@@ -707,6 +725,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         apartment: addrApartment.trim(),
         intercom: addrIntercom.trim(),
         postalCode: addrPostal.trim(),
+        region: addrRegion.trim(),
+        comment: addrComment.trim(),
         isDefault: addrIsDefault || updatedAddresses.length === 0,
       };
       if (addrIsDefault) {
@@ -818,7 +838,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setIsEditingProfile(false)}
-                className="text-[#4E5C70] hover:text-[#2D3A4E]"
+                className="w-8 h-8 -m-1.5 rounded-lg flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
                 aria-label="Закрыть"
               >
                 <X className="w-4 h-4" />
@@ -826,27 +846,29 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </div>
 
             <div className="space-y-2">
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Имя"
-                className="w-full neu-inset rounded-xl py-2 px-3 text-xs text-[#2D3A4E]"
-              />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
-                className="w-full neu-inset rounded-xl py-2 px-3 text-xs text-[#2D3A4E]"
-              />
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Телефон"
-                className="w-full neu-inset rounded-xl py-2 px-3 text-xs text-[#2D3A4E]"
-              />
+              {(
+                [
+                  ['profile-last-name', 'Фамилия', 'family-name', 'text', lastName, setLastName],
+                  ['profile-first-name', 'Имя', 'given-name', 'text', firstName, setFirstName],
+                  ['profile-middle-name', 'Отчество (если есть)', 'additional-name', 'text', middleName, setMiddleName],
+                  ['profile-email', 'Email', 'email', 'email', email, setEmail],
+                  ['profile-phone', 'Телефон', 'tel', 'tel', phone, setPhone],
+                ] as const
+              ).map(([id, label, autoComplete, type, value, setValue]) => (
+                <div key={id}>
+                  <label htmlFor={id} className="block text-[11px] font-bold text-[#4E5C70] mb-1 ml-1">
+                    {label}
+                  </label>
+                  <input
+                    id={id}
+                    type={type}
+                    autoComplete={autoComplete}
+                    value={value}
+                    onChange={(e) => setValue(e.target.value)}
+                    className="w-full neu-inset rounded-xl py-2 px-3 text-xs text-[#2D3A4E]"
+                  />
+                </div>
+              ))}
             </div>
 
             <button
@@ -2542,6 +2564,21 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 />
               </div>
 
+              <div>
+                <label htmlFor="profile-addr-region" className="block text-xs font-bold text-[#2D3A4E] mb-1.5">
+                  Страна / регион
+                </label>
+                <input
+                  id="profile-addr-region"
+                  type="text"
+                  autoComplete="address-level1"
+                  value={addrRegion}
+                  onChange={(e) => setAddrRegion(e.target.value)}
+                  className="w-full neu-inset rounded-2xl py-3 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A]"
+                  placeholder="Россия, Московская область"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="profile-addr-city" className="block text-xs font-bold text-[#2D3A4E] mb-1.5">Город</label>
@@ -2651,6 +2688,21 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 </div>
               </div>
 
+              <div>
+                <label htmlFor="profile-addr-comment" className="block text-xs font-bold text-[#2D3A4E] mb-1.5">
+                  Комментарий курьеру
+                </label>
+                <textarea
+                  id="profile-addr-comment"
+                  rows={2}
+                  maxLength={300}
+                  value={addrComment}
+                  onChange={(e) => setAddrComment(e.target.value)}
+                  className="w-full neu-inset rounded-2xl py-2.5 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] resize-y"
+                  placeholder="Например: позвонить за час, шлагбаум со двора"
+                />
+              </div>
+
               {/* Delivery Preview */}
               <div className="neu-inset rounded-2xl p-3 space-y-1">
                 <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider block">
@@ -2658,6 +2710,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 </span>
                 <p className="text-xs font-bold text-[#2D3A4E] leading-relaxed break-words">
                   {formatAddress({
+                    region: addrRegion,
                     city: addrCity,
                     postalCode: addrPostal,
                     street: addrStreet,

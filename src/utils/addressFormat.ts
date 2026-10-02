@@ -1,6 +1,8 @@
 import { SavedAddress } from '../types';
 
 export interface AddressComponents {
+  /** Страна / регион — первым, если указан */
+  region?: string;
   city?: string;
   street?: string;
   house?: string;
@@ -20,6 +22,10 @@ export function formatAddress(addr?: AddressComponents | Partial<SavedAddress> |
   if (!addr) return '';
 
   const parts: string[] = [];
+
+  if (addr.region && addr.region.trim()) {
+    parts.push(addr.region.trim());
+  }
 
   if (addr.city && addr.city.trim()) {
     const cityTrimmed = addr.city.trim();

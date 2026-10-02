@@ -254,7 +254,7 @@ service cloud.firestore {
       return data.keys().hasOnly(['id', 'createdAt', 'date', 'items', 'status', 'totalPrice', 'deliveryAddress',
           'deliveryMethod', 'customerName', 'customerPhone', 'customerEmail', 'customerUid', 'paymentMethod',
           'paymentStatus', 'deliveryFee', 'discountAmount', 'promoCode', 'estimatedDelivery', 'historySteps',
-          'deliveryStages'])
+          'deliveryStages', 'customerLastName', 'customerFirstName', 'customerMiddleName', 'deliveryAddressParts'])
         && data.items.size() <= 30
         && data.customerName is string && data.customerName.size() > 0 && data.customerName.size() <= 100
         && data.customerPhone is string && data.customerPhone.size() > 0 && data.customerPhone.size() <= 40
@@ -262,6 +262,11 @@ service cloud.firestore {
         && data.deliveryMethod is string && data.deliveryMethod.size() <= 100
         && data.paymentMethod is string && data.paymentMethod.size() <= 100
         && isOptionalText(data, 'customerEmail', 120)
+        // Фамилия, имя, отчество и части адреса (src/shared/personName.ts) — для карточек с копированием в админке
+        && isOptionalText(data, 'customerLastName', 60)
+        && isOptionalText(data, 'customerFirstName', 60)
+        && isOptionalText(data, 'customerMiddleName', 60)
+        && (!('deliveryAddressParts' in data) || (data.deliveryAddressParts is map && data.deliveryAddressParts.size() <= 11))
         && isOptionalText(data, 'createdAt', 40)
         && isOptionalText(data, 'date', 40)
         && isOptionalText(data, 'promoCode', 40)

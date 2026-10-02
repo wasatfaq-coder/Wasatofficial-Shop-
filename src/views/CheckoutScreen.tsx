@@ -38,14 +38,16 @@ import {
 import { NotConfigured } from '../components/NotConfigured';
 import { productImage } from '../utils/productImage';
 import { promoDiscountText } from '../utils/promoLabel';
+import { cleanAddressParts, fullName, namePartsOf, requiresFullName, type AddressParts, type PersonName } from '../shared/personName';
 
 interface CheckoutScreenProps {
   cartItems: CartItem[];
   userProfile: UserProfile;
   onCompleteOrder: (orderData: {
     items: CartItem[];
-    contact: { name: string; phone: string; email: string };
+    contact: { name: string; phone: string; email: string } & PersonName;
     address: string;
+    addressParts?: AddressParts;
     deliveryMethod: string;
     deliveryMethodId?: string;
     totalPrice: number;
@@ -67,7 +69,15 @@ interface CheckoutScreenProps {
 
 // Contacts typed on checkout survive «Назад» within the tab session (sessionStorage, per account)
 const CHECKOUT_CONTACTS_KEY = 'manstyle_checkout_contacts';
-type ContactsDraft = { owner: string; name: string; phone: string; email: string };
+type ContactsDraft = {
+  owner: string;
+  lastName: string;
+  firstName: string;
+  middleName: string;
+  noMiddleName?: boolean;
+  phone: string;
+  email: string;
+};
 
 function readContactsDraft(owner: string): ContactsDraft | null {
   try {
@@ -113,22 +123,29 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
     return () => io.disconnect();
   }, [cartItems.length]);
   // Errors next to the contact fields (one check in handleSubmit; the browser's own bubbles are off: noValidate)
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<'name' | 'phone' | 'email', string>>>({});
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<'lastName' | 'firstName' | 'middleName' | 'phone' | 'email', string>>
+  >({});
   // Never prefill made-up contact or address data: a guest could submit it unnoticed
   const draftOwner = userProfile?.email || 'guest';
   const [contactsDraft] = useState(() => readContactsDraft(draftOwner));
-  const [name, setName] = useState(contactsDraft?.name ?? (userProfile?.name || ''));
+  // Фамилия, имя, отчество — from the profile of a signed-in buyer (an old single name is split into parts)
+  const [profileName] = useState(() => namePartsOf(userProfile ?? { name: '' }));
+  const [lastName, setLastName] = useState(contactsDraft?.lastName ?? (profileName.lastName || ''));
+  const [firstName, setFirstName] = useState(contactsDraft?.firstName ?? (profileName.firstName || ''));
+  const [middleName, setMiddleName] = useState(contactsDraft?.middleName ?? (profileName.middleName || ''));
+  const [noMiddleName, setNoMiddleName] = useState(contactsDraft?.noMiddleName ?? false);
   const [phone, setPhone] = useState(contactsDraft?.phone ?? (userProfile?.phone || ''));
   const [email, setEmail] = useState(contactsDraft?.email ?? (userProfile?.email || ''));
 
   useEffect(() => {
     try {
-      const draft: ContactsDraft = { owner: draftOwner, name, phone, email };
+      const draft: ContactsDraft = { owner: draftOwner, lastName, firstName, middleName, noMiddleName, phone, email };
       sessionStorage.setItem(CHECKOUT_CONTACTS_KEY, JSON.stringify(draft));
     } catch {
       // storage unavailable (private mode): the form still works, only the draft is lost
     }
-  }, [draftOwner, name, phone, email]);
+  }, [draftOwner, lastName, firstName, middleName, noMiddleName, phone, email]);
   const defaultSaved = userProfile?.savedAddresses?.find((a) => a.isDefault) || userProfile?.savedAddresses?.[0];
 
   const [addrTitle, setAddrTitle] = useState(defaultSaved?.title || 'Дом');
@@ -140,11 +157,14 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   const [addrFloor, setAddrFloor] = useState(defaultSaved?.floor || userProfile?.address?.floor || '');
   const [addrApartment, setAddrApartment] = useState(defaultSaved?.apartment || userProfile?.address?.apartment || '');
   const [addrIntercom, setAddrIntercom] = useState(defaultSaved?.intercom || userProfile?.address?.intercom || '');
+  const [addrRegion, setAddrRegion] = useState(defaultSaved?.region || '');
+  const [addrComment, setAddrComment] = useState(defaultSaved?.comment || '');
 
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [selectedSavedId, setSelectedSavedId] = useState<string>(defaultSaved?.id || 'custom');
 
   const formattedAddress = formatAddress({
+    region: addrRegion,
     city: addrCity,
     postalCode: addrPostal,
     street: addrStreet,
@@ -166,6 +186,8 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
     setAddrFloor(saved.floor || '');
     setAddrApartment(saved.apartment || '');
     setAddrIntercom(saved.intercom || '');
+    setAddrRegion(saved.region || '');
+    setAddrComment(saved.comment || '');
     if (saved.house?.trim() && saved.entrance?.trim() && saved.intercom?.trim()) {
       setValidationError(null);
     }
@@ -283,12 +305,19 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   const isPickupSelected = selectedDelivery === 'pickup' || currentDeliveryObj.type === 'pickup';
   const isPostSelected = selectedDelivery === 'post' || currentDeliveryObj.type === 'post' || (currentDeliveryObj.title || '').toLowerCase().includes('почт');
   const isCourierSelected = !isPickupSelected && !isPostSelected;
+  // Почта России и транспортные компании выдают посылку по паспорту: полное ФИО с отчеством (или «Нет отчества»)
+  const fullNameRequired = !isPickupSelected && requiresFullName(currentDeliveryObj);
+  const middleNameMissing = fullNameRequired && !noMiddleName && !middleName.trim();
   // The carrier is whatever the store named the method («Почта России», «СДЭК»…), not a fixed name
   const deliveryTitle = currentDeliveryObj.title?.trim() || 'Доставка';
 
   // Progress over the single-page form: a step is done when its section is filled in
   const contactsDone =
-    name.trim().length >= 2 && phone.replace(/\D/g, '').length >= 10 && /\S+@\S+\.\S+/.test(email.trim());
+    lastName.trim().length > 0 &&
+    firstName.trim().length > 0 &&
+    !middleNameMissing &&
+    phone.replace(/\D/g, '').length >= 10 &&
+    /\S+@\S+\.\S+/.test(email.trim());
   // Nothing to choose from until the owner adds delivery methods / pickup points in the admin
   const noDeliveryMethods = availableDeliveryMethods.length === 0;
   const noPickupPoints = isPickupSelected && activePickupPoints.length === 0;
@@ -332,14 +361,22 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
 
     // One check for the whole form: errors next to the fields, the page scrolls to the first one
     const contactErrors: typeof fieldErrors = {};
-    if (name.trim().length < 2) contactErrors.name = 'Укажите имя и фамилию';
+    if (!lastName.trim()) contactErrors.lastName = 'Укажите фамилию';
+    if (!firstName.trim()) contactErrors.firstName = 'Укажите имя';
+    if (middleNameMissing) {
+      contactErrors.middleName = `Для доставки «${deliveryTitle}» нужно отчество — или отметьте «Нет отчества»`;
+    }
     if (phone.replace(/\D/g, '').length < 10) contactErrors.phone = 'Укажите телефон: не меньше 10 цифр';
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) contactErrors.email = 'Укажите email в формате name@example.ru';
     setFieldErrors(contactErrors);
     const addressError = isPickupSelected ? null : missingAddressText();
     setValidationError(addressError);
-    const firstInvalid = contactErrors.name
-      ? 'checkout-name'
+    const firstInvalid = contactErrors.lastName
+      ? 'checkout-last-name'
+      : contactErrors.firstName
+      ? 'checkout-first-name'
+      : contactErrors.middleName
+      ? 'checkout-middle-name'
       : contactErrors.phone
       ? 'checkout-phone'
       : contactErrors.email
@@ -372,10 +409,32 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           }${selectedPickupPoint.metro ? ` (м. ${selectedPickupPoint.metro})` : ''}`
         : formattedAddress;
 
+    const personName: PersonName = {
+      lastName: lastName.trim(),
+      firstName: firstName.trim(),
+      middleName: noMiddleName ? '' : middleName.trim(),
+    };
+    // Parts of the address for the admin card with copy buttons (none for pickup: the point is in the address)
+    const addressParts: AddressParts | undefined = isPickupSelected
+      ? undefined
+      : cleanAddressParts({
+          region: addrRegion,
+          city: addrCity,
+          street: addrStreet,
+          house: addrHouse,
+          entrance: addrEntrance,
+          floor: addrFloor,
+          intercom: addrIntercom,
+          apartment: addrApartment,
+          postalCode: addrPostal,
+          comment: addrComment,
+        });
+
     const placed = await onCompleteOrder({
       items: cartItems,
-      contact: { name, phone, email },
+      contact: { name: fullName(personName), phone, email, ...personName },
       address: finalOrderAddress,
+      addressParts,
       deliveryMethod: currentDeliveryObj.title || 'Курьер',
       deliveryMethodId: currentDeliveryObj.id,
       totalPrice,
@@ -554,36 +613,107 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           </h3>
 
           <div className="space-y-2.5">
-            <div>
-              <label htmlFor="checkout-name" className="block text-[11px] font-bold text-[#4E5C70] mb-1 ml-1">
-                Имя и фамилия
-              </label>
-              <div className="relative">
-                <User className="w-4 h-4 text-[#56647A] absolute left-3.5 top-1/2 -translate-y-1/2" aria-hidden="true" />
+            {/* Фамилия, имя, отчество (owner's request 02.10): Почта и ТК выдают посылку по паспорту */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div>
+                <label htmlFor="checkout-last-name" className="block text-[11px] font-bold text-[#4E5C70] mb-1 ml-1">
+                  Фамилия
+                </label>
                 <input
-                  id="checkout-name"
+                  id="checkout-last-name"
                   type="text"
-                  required
-                  autoComplete="name"
-                  value={name}
+                  autoComplete="family-name"
+                  value={lastName}
                   onChange={(e) => {
-                    setName(e.target.value);
-                    if (fieldErrors.name) setFieldErrors((prev) => ({ ...prev, name: undefined }));
+                    setLastName(e.target.value);
+                    if (fieldErrors.lastName) setFieldErrors((prev) => ({ ...prev, lastName: undefined }));
                   }}
-                  aria-invalid={Boolean(fieldErrors.name)}
-                  aria-describedby={fieldErrors.name ? 'checkout-name-error' : undefined}
-                  placeholder="Иван Петров"
-                  className={`w-full neu-inset rounded-2xl py-3 pl-10 pr-3 text-xs font-medium text-[#2D3A4E] ${
-                    fieldErrors.name ? 'outline-2 outline-danger' : ''
+                  aria-invalid={Boolean(fieldErrors.lastName)}
+                  aria-describedby={fieldErrors.lastName ? 'checkout-last-name-error' : undefined}
+                  className={`w-full neu-inset rounded-2xl py-3 px-3.5 text-xs font-medium text-[#2D3A4E] ${
+                    fieldErrors.lastName ? 'outline-2 outline-danger' : ''
                   }`}
                 />
+                {fieldErrors.lastName && (
+                  <p id="checkout-last-name-error" className="text-xs font-bold text-danger mt-1 ml-1">
+                    {fieldErrors.lastName}
+                  </p>
+                )}
               </div>
-              {fieldErrors.name && (
-                <p id="checkout-name-error" className="text-xs font-bold text-danger mt-1 ml-1">
-                  {fieldErrors.name}
-                </p>
-              )}
+              <div>
+                <label htmlFor="checkout-first-name" className="block text-[11px] font-bold text-[#4E5C70] mb-1 ml-1">
+                  Имя
+                </label>
+                <input
+                  id="checkout-first-name"
+                  type="text"
+                  autoComplete="given-name"
+                  value={firstName}
+                  onChange={(e) => {
+                    setFirstName(e.target.value);
+                    if (fieldErrors.firstName) setFieldErrors((prev) => ({ ...prev, firstName: undefined }));
+                  }}
+                  aria-invalid={Boolean(fieldErrors.firstName)}
+                  aria-describedby={fieldErrors.firstName ? 'checkout-first-name-error' : undefined}
+                  className={`w-full neu-inset rounded-2xl py-3 px-3.5 text-xs font-medium text-[#2D3A4E] ${
+                    fieldErrors.firstName ? 'outline-2 outline-danger' : ''
+                  }`}
+                />
+                {fieldErrors.firstName && (
+                  <p id="checkout-first-name-error" className="text-xs font-bold text-danger mt-1 ml-1">
+                    {fieldErrors.firstName}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label htmlFor="checkout-middle-name" className="block text-[11px] font-bold text-[#4E5C70] mb-1 ml-1">
+                  Отчество{fullNameRequired && !noMiddleName ? '' : ' (если есть)'}
+                </label>
+                <input
+                  id="checkout-middle-name"
+                  type="text"
+                  autoComplete="additional-name"
+                  value={noMiddleName ? '' : middleName}
+                  disabled={noMiddleName}
+                  onChange={(e) => {
+                    setMiddleName(e.target.value);
+                    if (fieldErrors.middleName) setFieldErrors((prev) => ({ ...prev, middleName: undefined }));
+                  }}
+                  aria-invalid={Boolean(fieldErrors.middleName)}
+                  aria-describedby={fieldErrors.middleName ? 'checkout-middle-name-error' : undefined}
+                  className={`w-full neu-inset rounded-2xl py-3 px-3.5 text-xs font-medium text-[#2D3A4E] ${
+                    fieldErrors.middleName ? 'outline-2 outline-danger' : ''
+                  }`}
+                />
+                {fieldErrors.middleName && (
+                  <p id="checkout-middle-name-error" className="text-xs font-bold text-danger mt-1 ml-1">
+                    {fieldErrors.middleName}
+                  </p>
+                )}
+              </div>
             </div>
+            {fullNameRequired && (
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={noMiddleName}
+                onClick={() => {
+                  setNoMiddleName((v) => !v);
+                  setFieldErrors((prev) => ({ ...prev, middleName: undefined }));
+                }}
+                className="flex items-center gap-2.5 min-h-8 ml-1 cursor-pointer select-none text-left"
+              >
+                <span
+                  className={`w-5 h-5 rounded-md flex items-center justify-center ${
+                    noMiddleName ? 'neu-fill-accent text-white' : 'neu-inset text-transparent'
+                  }`}
+                  aria-hidden="true"
+                >
+                  <Check className="w-3 h-3 stroke-[3]" />
+                </span>
+                <span className="text-xs font-bold text-[#2D3A4E]">Нет отчества</span>
+              </button>
+            )}
 
             <div>
               <label htmlFor="checkout-phone" className="block text-[11px] font-bold text-[#4E5C70] mb-1 ml-1">
@@ -1376,6 +1506,8 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           floor: addrFloor,
           apartment: addrApartment,
           intercom: addrIntercom,
+          region: addrRegion,
+          comment: addrComment,
           isDefault: true,
         }}
         onSave={(updated) => {
@@ -1388,6 +1520,8 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           setAddrFloor(updated.floor || '');
           setAddrApartment(updated.apartment || '');
           setAddrIntercom(updated.intercom || '');
+          setAddrRegion(updated.region || '');
+          setAddrComment(updated.comment || '');
           setValidationError(null);
         }}
       />

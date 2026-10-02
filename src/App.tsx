@@ -97,6 +97,7 @@ import { validatePromo, toPricingLine, isPromoListed, promoDiscountKind, QUICK_O
 import { formatOrderDate } from './shared/orderDate';
 import { initialPaymentStatus } from './shared/orderApi';
 import { toOrderLineProduct } from './shared/orderLine';
+import { cleanAddressParts, fullName, hasNameParts, namePartsOf, type AddressParts, type PersonName } from './shared/personName';
 import { extractColorName, extractSizeName } from './utils/inventory';
 import { getStoreContacts, getStoreName, publicSetting, withStoreName, withStoreNameFields } from './utils/storeContacts';
 import { getCategories } from './utils/categories';
@@ -590,7 +591,8 @@ export default function App() {
         const merged: UserProfile = {
           ...prev,
           ...(existing || {}),
-          name: currentUser.displayName || existing?.name || prev.name,
+          // The name the buyer saved (Фамилия Имя Отчество) wins over the Google account's name
+          name: existing?.name || currentUser.displayName || prev.name,
           email: currentUser.email || existing?.email || prev.email,
           avatar: currentUser.photoURL || existing?.avatar || prev.avatar,
           bonusPoints: existing?.bonusPoints ?? prev.bonusPoints ?? 0,
@@ -1278,8 +1280,9 @@ export default function App() {
   // Complete Order
   type CompleteOrderData = {
     items: CartItem[];
-    contact?: { name: string; phone: string; email?: string };
+    contact?: { name: string; phone: string; email?: string } & PersonName;
     address?: string;
+    addressParts?: AddressParts;
     deliveryMethod?: string;
     deliveryMethodId?: string; // absent for the one-click quick order
     totalPrice?: number;
@@ -1292,7 +1295,11 @@ export default function App() {
   };
 
   const resolveOrderDetails = (orderData: CompleteOrderData) => {
+    // Checkout sends Фамилия / Имя / Отчество; the order keeps them and the full name in customerName
+    const nameParts: PersonName | undefined =
+      orderData.contact && hasNameParts(orderData.contact) ? namePartsOf(orderData.contact) : undefined;
     const customerName =
+      (nameParts && fullName(nameParts)) ||
       orderData.contact?.name ||
       orderData.customerName ||
       userProfile.name ||
@@ -1315,7 +1322,8 @@ export default function App() {
     // Quick (1-click) orders have no delivery or payment choice: the manager agrees them with the buyer
     const deliveryMethod = orderData.deliveryMethod || 'Уточнит менеджер';
     const paymentMethod = orderData.paymentMethod || 'Уточнит менеджер';
-    return { customerName, customerPhone, customerEmail, deliveryAddress, deliveryMethod, paymentMethod };
+    const addressParts = orderData.addressParts ? cleanAddressParts(orderData.addressParts) : undefined;
+    return { customerName, customerPhone, customerEmail, deliveryAddress, deliveryMethod, paymentMethod, nameParts, addressParts };
   };
 
   const finishOrder = (
@@ -1358,7 +1366,9 @@ export default function App() {
           name: details.customerName,
           phone: details.customerPhone,
           email: details.customerEmail || undefined,
+          ...details.nameParts,
         },
+        addressParts: details.addressParts,
       });
       setOrders((prev) => [order, ...prev.filter((o) => o.id !== order.id)]);
       if (!currentUser) {
@@ -1387,7 +1397,7 @@ export default function App() {
     const newOrderId = `WS-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
     const placedAt = new Date();
 
-    const { customerName, customerPhone, customerEmail, deliveryAddress, deliveryMethod, paymentMethod } =
+    const { customerName, customerPhone, customerEmail, deliveryAddress, deliveryMethod, paymentMethod, nameParts, addressParts } =
       resolveOrderDetails(orderData);
     const totalPrice = orderData.totalPrice ?? 0;
     const paymentStatus = initialPaymentStatus(paymentMethod);
@@ -1416,9 +1426,13 @@ export default function App() {
       deliveryAddress,
       deliveryMethod,
       customerName,
+      customerLastName: nameParts?.lastName || undefined,
+      customerFirstName: nameParts?.firstName || undefined,
+      customerMiddleName: nameParts?.middleName || undefined,
       customerPhone,
       customerEmail,
       customerUid: currentUser?.uid,
+      deliveryAddressParts: addressParts,
       paymentMethod,
       paymentStatus,
       // The same breakdown as orders placed by placeOrder: promo analytics and the invoice read it
