@@ -18,15 +18,16 @@ import {
   WriteBatch,
   increment,
   deleteField,
+  runTransaction,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { Product, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog } from '../types';
+import { CartItem, Product, ProductSKU, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog } from '../types';
 import { DEFAULT_STOREFRONT_SETTINGS } from './inventory';
 import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
 import type { LegalDocId, LegalTexts } from './legalDocs';
 import { compressBase64Image } from './imageUpload';
 import { SERVER_CONFIG_DOC_ID, ServerConfig } from '../shared/orderApi';
-import { STOCK_MOVEMENTS_COLLECTION } from '../shared/stockMovements';
+import { orderLineMovement, STOCK_MOVEMENTS_COLLECTION } from '../shared/stockMovements';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages, isTransportCompanyDelivery } from './deliveryStages';
 
 /**
@@ -155,19 +156,52 @@ async function saveProductToFirestore(product: Product) {
   }
 }
 
+/** Colour and size of an order line and a variant match as in inventory.ts: trimmed, case-insensitive */
+const sameVariantName = (a: unknown, b: unknown) =>
+  String(a ?? '').trim().toLowerCase() === String(b ?? '').trim().toLowerCase();
+
 /**
- * Stock after a customer order: only `skus` and `inStock` of the ordered products — the fields the rules let a
- * customer change. Writing the whole product failed for a product with reviews (the merged `reviews` field
- * differed from the stored one), and the stock silently stayed as it was. Throws when the write is refused.
+ * Stock of one line of a saved customer order (server orders off), in one transaction with its journal entry
+ * (`stock_movements/{order}_{line}`). The rules let a customer change exactly one variant of the product — the
+ * line's colour and size — by exactly the entry's quantity, once per line (audit 02.10, findings 1 and 8). The
+ * product is read inside the transaction, so two orders at once do not overwrite each other's write-off.
+ * Takes what is left when the stock is short (the entry says how much). Preorder lines are not taken.
+ * Resolves to the quantity taken; throws when the write is refused.
  */
-export async function saveStockToFirestore(productsToSave: Product[]) {
-  if (productsToSave.length === 0) return;
-  await commitInChunks(productsToSave, (batch, product) =>
-    batch.update(doc(db, 'products', product.id), {
-      skus: sanitizeForFirestore(product.skus ?? []),
-      inStock: product.inStock ?? true,
-    })
-  );
+export async function deductOrderLineStock(orderId: string, line: CartItem, lineIndex: number, at: Date): Promise<number> {
+  if (line.isPreorder) return 0;
+  const productRef = doc(db, 'products', line.product.id);
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(productRef);
+    if (!snap.exists()) return 0;
+    const data = snap.data();
+    const skus: ProductSKU[] = Array.isArray(data.skus) ? data.skus : [];
+    const skuIndex = skus.findIndex(
+      (sku) => sameVariantName(sku.color, line.selectedColor) && sameVariantName(sku.size, line.selectedSize)
+    );
+    if (skuIndex < 0) return 0;
+    const sku = skus[skuIndex];
+    const stockBefore = Number(sku.stock) || 0;
+    const taken = Math.min(stockBefore, line.quantity);
+    const movement = {
+      ...orderLineMovement(orderId, line, lineIndex, at, sku.skuCode ?? '', -taken),
+      color: String(sku.color ?? '').slice(0, 60),
+      size: String(sku.size ?? '').slice(0, 30),
+      skuIndex,
+    };
+    tx.set(doc(db, STOCK_MOVEMENTS_COLLECTION, movement.id), sanitizeForFirestore(movement));
+    if (taken > 0) {
+      // The other variants are written back exactly as read: the rules compare them with the stored ones
+      const nextSkus = skus.map((s, i) => (i === skuIndex ? { ...s, stock: stockBefore - taken } : s));
+      tx.update(productRef, {
+        skus: nextSkus,
+        // «Снят с витрины» stays; otherwise the product is sold out when no variant is left
+        inStock: data.inStock === false ? false : nextSkus.some((s) => (Number(s.stock) || 0) > 0),
+        lastStockMovement: movement.id,
+      });
+    }
+    return taken;
+  });
 }
 
 
@@ -587,19 +621,17 @@ export function subscribeToPromos(
 
 
 /**
- * Client checkout (server orders off): one more use of the promo. Atomic increments, so two
- * buyers at once do not overwrite each other's count; rules allow only these counters to grow.
+ * Client checkout (server orders off): one more use of the promo by a saved order. The counter grows together with
+ * the mark `promo_uses/{order}` — the rules allow one use per order with this code and not above the limit
+ * (audit 02.10, finding 2). Revenue and the partner's commission are not written: they are counted from paid and
+ * received orders (partnerCommission.ts). An atomic increment, so two buyers at once keep both uses.
  */
-export async function recordPromoUsageInFirestore(promo: PromoCode, orderTotal: number) {
-  const commission = promo.isReferral
-    ? Math.round((orderTotal * (promo.partnerCommissionPercent || 10)) / 100)
-    : 0;
+export async function recordPromoUsageInFirestore(promo: PromoCode, orderId: string) {
   try {
-    await updateDoc(doc(db, 'promos', promo.id), {
-      usedCount: increment(1),
-      generatedRevenue: increment(orderTotal),
-      ...(commission > 0 ? { commissionEarned: increment(commission) } : {}),
-    });
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'promos', promo.id), { usedCount: increment(1), lastOrderId: orderId });
+    batch.set(doc(db, 'promo_uses', orderId), { orderId, promoId: promo.id, createdAt: new Date().toISOString() });
+    await batch.commit();
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `promos/${promo.id}`);
   }
@@ -1170,7 +1202,7 @@ export async function syncAllPickupPointsToFirestore(points: PickupPoint[]) {
 export const BACKUP_COLLECTIONS = [
   'products', 'product_costs', 'promos', 'settings', 'banners', 'delivery_methods', 'pickup_points',
   'orders', 'users', 'customer_notes', 'admins', 'reviews', 'review_votes',
-  'chat_messages', 'support_threads', 'support_status', STOCK_MOVEMENTS_COLLECTION,
+  'chat_messages', 'support_threads', 'support_status', STOCK_MOVEMENTS_COLLECTION, 'promo_uses',
 ] as const;
 
 export interface DatabaseBackup {
