@@ -283,7 +283,8 @@ export function updateProductSkuStock(
   return {
     ...product,
     skus: updatedSkus,
-    inStock: totalStock > 0,
+    // «Снят с витрины» (false with stock left) stays off sale (audit 02.10, finding 10)
+    inStock: isHiddenFromSale(product) ? false : totalStock > 0,
   };
 }
 
@@ -373,7 +374,8 @@ function applyStockChangeWithLogs(
     return {
       ...prod,
       skus: updatedSkus,
-      inStock: totalStock > 0,
+      // «Снят с витрины» (false with stock left) stays off sale (audit 02.10, finding 10); otherwise in stock = something is left
+      inStock: isHiddenFromSale(prod) ? false : totalStock > 0,
     };
   });
 

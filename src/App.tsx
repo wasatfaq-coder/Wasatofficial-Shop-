@@ -44,6 +44,8 @@ import {
   subscribeToOwnUserProfile,
   saveOrderToFirestore,
   deductOrderLineStock,
+  cancelOrderAsCustomer,
+  returnCancelledOrderStock,
   syncAllProductsToFirestore,
   subscribeToProductCosts,
   saveProductCosts,
@@ -766,7 +768,9 @@ export default function App() {
 
         // An admin loads every customer's orders: «ваш заказ» is only about their own
         const isOwnOrder = !isAdmin || currentOrder.customerUid === currentUser?.uid;
-        if (isOwnOrder && (statusChanged || cancelChanged || trackingChanged)) {
+        // The buyer cancelled it themselves: the profile already said so
+        const ownCancel = cancelChanged && currentOrder.cancelledBy === 'customer';
+        if (isOwnOrder && (statusChanged || (cancelChanged && !ownCancel) || trackingChanged)) {
           triggerOrderStatusPushNotification(currentOrder, prev.status, currentOrder.status);
         }
       }
@@ -921,6 +925,53 @@ export default function App() {
     }
     return true;
   };
+
+  /**
+   * The buyer cancels their order in the profile («Доработки 3»): the cancellation first (the rules check it), then
+   * the goods back to stock line by line. A return cut off by the network is repeated next time (effect below);
+   * meanwhile «Заказы» offers the admin «Вернуть на склад».
+   */
+  const stockReturnTriedRef = React.useRef(new Set<string>());
+  const handleCancelOwnOrder = async (order: Order, reason: string, comment: string): Promise<boolean> => {
+    // Before the write: its local snapshot would start the repeat below alongside this return
+    stockReturnTriedRef.current.add(order.id);
+    try {
+      await cancelOrderAsCustomer(order.id, reason, comment, new Date());
+    } catch (err) {
+      stockReturnTriedRef.current.delete(order.id);
+      console.error('Order cancellation was refused:', err);
+      addToast('Не удалось отменить заказ. Проверьте соединение или напишите в чат магазина.', 'error');
+      return false;
+    }
+    try {
+      await returnCancelledOrderStock(order);
+      addToast(`Заказ № ${order.id} отменён`, 'success');
+    } catch (err) {
+      console.error(`Stock of the cancelled order ${order.id} was not returned:`, err);
+      addToast(`Заказ № ${order.id} отменён. Возврат товаров на склад магазин проверит сам.`, 'info');
+    }
+    return true;
+  };
+
+  // A cancellation whose goods did not all get back to stock (network, closed tab): once a session
+  React.useEffect(() => {
+    if (!currentUser || authLoading) return;
+    for (const order of orders) {
+      if (
+        order.customerUid !== currentUser.uid ||
+        !order.isCancelled ||
+        order.cancelledBy !== 'customer' ||
+        order.stockReturned !== false ||
+        stockReturnTriedRef.current.has(order.id)
+      ) {
+        continue;
+      }
+      stockReturnTriedRef.current.add(order.id);
+      returnCancelledOrderStock(order).catch((err) =>
+        console.error(`Stock of the cancelled order ${order.id} was not returned again:`, err)
+      );
+    }
+  }, [orders, currentUser, authLoading]);
 
   // Repeat a past order: current product data and stock, unavailable items are skipped
   const handleRepeatOrder = (items: CartItem[]) => {
@@ -1875,6 +1926,7 @@ export default function App() {
               onUpdateProfile={handleUpdateProfile}
               setActiveTab={setActiveTab}
               onRepeatOrder={handleRepeatOrder}
+              onCancelOrder={handleCancelOwnOrder}
               onShowToast={addToast}
               onOpenSupportChat={() => setIsSupportChatOpen(true)}
               onUpdateProducts={(updatedWithCosts: Product[]) => {

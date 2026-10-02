@@ -2,6 +2,8 @@ import React, { useState, useMemo, useEffect, useRef, lazy, Suspense, useTransit
 import { IS_PREVIEW_BUILD } from '../utils/previewBuild';
 import { launchSteps } from '../utils/launchChecklist';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { CancelOrderDialog } from '../components/CancelOrderDialog';
+import { canCustomerCancel, cancelledByLabel, cancelReasonText, customerCancelHint, formatCancelledAt } from '../utils/orderCancel';
 import { motion, AnimatePresence } from 'motion/react';
 import { AccountDataModal } from '../components/AccountDataModal';
 import { currentStoreName, getStoreContacts, getStoreName, storeInitials, telHref } from '../utils/storeContacts';
@@ -47,6 +49,7 @@ import {
   Bike,
   Zap,
   Mail,
+  XCircle,
 } from 'lucide-react';
 import { NeumorphicSlider } from '../components/NeumorphicSlider';
 import { calculateRussianPattern, RUSSIAN_SIZE_TABLE_ROWS } from '../utils/russianSizing';
@@ -113,6 +116,8 @@ interface ProfileScreenProps {
   onUpdateProfile: (updated: UserProfile) => void;
   setActiveTab: (tab: ActiveTab) => void;
   onRepeatOrder?: (items: CartItem[]) => void;
+  /** The buyer cancels their own order (App.tsx: cancellation, then the goods back to stock) */
+  onCancelOrder?: (order: Order, reason: string, comment: string) => Promise<boolean>;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   onOpenSupportChat?: () => void;
   /** Resolves to false when the database refused the write (the error toast is already shown) */
@@ -171,6 +176,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onUpdateProfile,
   setActiveTab,
   onRepeatOrder,
+  onCancelOrder,
   onShowToast,
   onOpenSupportChat,
   onUpdateProducts,
@@ -454,6 +460,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // Selected order IDs for detailed tracking & interactive delivery map
   const [selectedOrderIdForTracking, setSelectedOrderIdForTracking] = useState<string | null>(null);
+  /** «Отменить заказ» from the order window: the window with the reason */
+  const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
   const trackingDialog = useDialogA11y(Boolean(selectedOrderIdForTracking), () => setSelectedOrderIdForTracking(null));
 
   // Derive active order reactively from orders prop
@@ -2363,9 +2371,40 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 <ShoppingBag className="w-4 h-4" />
                 <span>Повторить заказ</span>
               </button>
+              {selectedOrderForTracking.isCancelled ? (
+                <p className="mt-2.5 text-xs text-[#4E5C70] leading-relaxed">
+                  <span className="font-bold text-danger">{cancelledByLabel(selectedOrderForTracking, 'customer')}</span>
+                  {formatCancelledAt(selectedOrderForTracking) && ` · ${formatCancelledAt(selectedOrderForTracking)}`}
+                  {cancelReasonText(selectedOrderForTracking) && (
+                    <span className="block">Причина: {cancelReasonText(selectedOrderForTracking)}</span>
+                  )}
+                </p>
+              ) : onCancelOrder && canCustomerCancel(selectedOrderForTracking, currentUser?.uid) ? (
+                <button
+                  type="button"
+                  onClick={() => setOrderToCancel(selectedOrderForTracking)}
+                  className="mt-2.5 w-full neu-button-danger py-2.5 px-4 rounded-2xl text-xs font-extrabold flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <XCircle className="w-4 h-4" aria-hidden="true" />
+                  <span>Отменить заказ</span>
+                </button>
+              ) : customerCancelHint(selectedOrderForTracking, currentUser?.uid) ? (
+                <p className="mt-2.5 text-xs text-[#4E5C70] leading-relaxed text-center">
+                  {customerCancelHint(selectedOrderForTracking, currentUser?.uid)}
+                </p>
+              ) : null}
             </div>
           </div>
         </div>
+      )}
+
+      {onCancelOrder && (
+        <CancelOrderDialog
+          order={orderToCancel}
+          audience="customer"
+          onConfirm={(reason, comment) => (orderToCancel ? onCancelOrder(orderToCancel, reason, comment) : Promise.resolve(false))}
+          onClose={() => setOrderToCancel(null)}
+        />
       )}
 
       {/* ================= MODAL: SAVED ADDRESSES MANAGEMENT ================= */}
