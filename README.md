@@ -145,7 +145,7 @@ Google, пишет от своего аккаунта. Гость при пер�
 Деплой автоматический через GitHub Actions (`.github/workflows/deploy.yml`):
 
 - **push в `main`** — сборка, публикация сайта в Firebase Hosting и правил Firestore;
-- **pull request** — временный preview-канал (7 дней), ссылка появится в комментарии к PR.
+- **pull request** — временный preview-канал (3 дня), ссылка появится в комментарии к PR.
 
 ### Однократная настройка
 
