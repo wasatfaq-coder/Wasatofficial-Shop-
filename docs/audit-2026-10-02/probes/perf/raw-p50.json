@@ -1,0 +1,452 @@
+[
+ {
+  "run": 0,
+  "first": {
+   "marks": {
+    "skeleton": 2800,
+    "cards": 92625,
+    "cardCount": 8
+   },
+   "perf": {
+    "lcp": 22076,
+    "lcpEl": "P",
+    "fcp": 2812,
+    "dcl": 2600,
+    "longTasks": 5,
+    "longTaskSum": 1585,
+    "heapMB": 168.7,
+    "dom": 442
+   },
+   "net": {
+    "bytes": {
+     "other": 1284,
+     "js": 412049,
+     "css": 24972,
+     "font": 43744,
+     "firestore": 17635975,
+     "data": 0
+    },
+    "requests": 43,
+    "fonts": [
+     "manrope-cyrillic-700-normal-Dw_fZAg2.woff2",
+     "manrope-latin-700-normal-BZp_XxE4.woff2",
+     "manrope-latin-ext-800-normal-DdFx7KEb.woff2",
+     "manrope-latin-800-normal-BfWYOv1c.woff2"
+    ],
+    "jsFiles": [
+     "rolldown-runtime-hePW80VL.js:659",
+     "react-dom-iymVxzdk.js:1652",
+     "createLucideIcon-DQd5AsW4.js:3891",
+     "inventory-z1EH1EAm.js:4756",
+     "storeContacts-CqjBTa4j.js:1590",
+     "react-CBk-t8Sq.js:39941",
+     "index-3Ur7WVIK.js:306705",
+     "zap-BwDpvh5g.js:620",
+     "copy-DxErWCcf.js:442",
+     "mail-7uyYlmqO.js:434",
+     "pencil-CVDEKcpG.js:458",
+     "CheckoutScreen-CNF1Oulv.js:10995",
+     "message-circle-GrKsyu_I.js:446",
+     "phone-call-DioLWA_F.js:579",
+     "send-DtyjP6bX.js:463",
+     "clipboard-BDqqvyKO.js:548",
+     "ProfileScreen-C4xgst5V.js:29750",
+     "FavoritesScreen-B0F1NlJu.js:1154",
+     "OrderSuccessScreen-CZFvOnp3.js:1727",
+     "ellipsis-lYGN7N11.js:396",
+     "ChatMessageActions-63tTIcHW.js:2585",
+     "SupportChatModal-BmIgwl-u.js:6786",
+     "image-DZxTyM6m.js:455",
+     "loader-circle-WS_HnwoO.js:388",
+     "maximize-2-BV9XnXxZ.js:420"
+    ]
+   }
+  },
+  "transitions": {
+   "home→catalog": {
+    "ms": 1809,
+    "longTaskSum": 540,
+    "longest": 129
+   },
+   "catalog→product": {
+    "ms": 1623,
+    "longTaskSum": 230,
+    "longest": 58
+   },
+   "product→cart": {
+    "ms": 1624,
+    "longTaskSum": 0,
+    "longest": 0
+   },
+   "heapMBafter": 174.8,
+   "lsChars": 1208
+  },
+  "repeat": {
+   "marks": {
+    "skeleton": 874,
+    "cards": 90267,
+    "cardCount": 8
+   },
+   "perf": {
+    "lcp": 90280,
+    "lcpEl": "H3",
+    "fcp": 872,
+    "dcl": 541,
+    "longTasks": 6,
+    "longTaskSum": 1517,
+    "heapMB": 126.7,
+    "dom": 442
+   },
+   "net": {
+    "bytes": {
+     "other": 1284,
+     "css": 0,
+     "js": 0,
+     "font": 0,
+     "firestore": 17635962,
+     "data": 0
+    },
+    "requests": 43,
+    "fonts": [
+     "manrope-latin-700-normal-BZp_XxE4.woff2",
+     "manrope-cyrillic-700-normal-Dw_fZAg2.woff2",
+     "manrope-latin-800-normal-BfWYOv1c.woff2",
+     "manrope-latin-ext-800-normal-DdFx7KEb.woff2"
+    ],
+    "jsFiles": [
+     "rolldown-runtime-hePW80VL.js:0",
+     "createLucideIcon-DQd5AsW4.js:0",
+     "react-dom-iymVxzdk.js:0",
+     "inventory-z1EH1EAm.js:0",
+     "storeContacts-CqjBTa4j.js:0",
+     "react-CBk-t8Sq.js:0",
+     "index-3Ur7WVIK.js:0",
+     "copy-DxErWCcf.js:0",
+     "zap-BwDpvh5g.js:0",
+     "mail-7uyYlmqO.js:0",
+     "CheckoutScreen-CNF1Oulv.js:0",
+     "pencil-CVDEKcpG.js:0",
+     "message-circle-GrKsyu_I.js:0",
+     "send-DtyjP6bX.js:0",
+     "phone-call-DioLWA_F.js:0",
+     "clipboard-BDqqvyKO.js:0",
+     "FavoritesScreen-B0F1NlJu.js:0",
+     "OrderSuccessScreen-CZFvOnp3.js:0",
+     "ProfileScreen-C4xgst5V.js:0",
+     "ChatMessageActions-63tTIcHW.js:0",
+     "ellipsis-lYGN7N11.js:0",
+     "SupportChatModal-BmIgwl-u.js:0",
+     "loader-circle-WS_HnwoO.js:0",
+     "image-DZxTyM6m.js:0",
+     "maximize-2-BV9XnXxZ.js:0",
+     "rotate-cw-kN3Ah37P.js:0",
+     "user-check-C_u6hn1C.js:0",
+     "PromoModal-mikHzyY2.js:0",
+     "share-2-C-l_HaB7.js:0",
+     "BrandRequisitesModal-CglgnZdf.js:0",
+     "award-BQCx45Kb.js:0"
+    ]
+   }
+  }
+ },
+ {
+  "run": 1,
+  "first": {
+   "marks": {
+    "skeleton": 2778,
+    "cards": 92319,
+    "cardCount": 8
+   },
+   "perf": {
+    "lcp": 22808,
+    "lcpEl": "P",
+    "fcp": 2796,
+    "dcl": 2584,
+    "longTasks": 5,
+    "longTaskSum": 1441,
+    "heapMB": 24.8,
+    "dom": 442
+   },
+   "net": {
+    "bytes": {
+     "other": 1284,
+     "js": 411860,
+     "css": 24972,
+     "font": 43744,
+     "firestore": 17635956,
+     "data": 0
+    },
+    "requests": 43,
+    "fonts": [
+     "manrope-cyrillic-700-normal-Dw_fZAg2.woff2",
+     "manrope-latin-700-normal-BZp_XxE4.woff2",
+     "manrope-latin-ext-800-normal-DdFx7KEb.woff2",
+     "manrope-latin-800-normal-BfWYOv1c.woff2"
+    ],
+    "jsFiles": [
+     "rolldown-runtime-hePW80VL.js:659",
+     "react-dom-iymVxzdk.js:1652",
+     "createLucideIcon-DQd5AsW4.js:3891",
+     "inventory-z1EH1EAm.js:4756",
+     "storeContacts-CqjBTa4j.js:1590",
+     "react-CBk-t8Sq.js:39941",
+     "index-3Ur7WVIK.js:306705",
+     "zap-BwDpvh5g.js:620",
+     "copy-DxErWCcf.js:442",
+     "mail-7uyYlmqO.js:434",
+     "pencil-CVDEKcpG.js:458",
+     "CheckoutScreen-CNF1Oulv.js:10995",
+     "message-circle-GrKsyu_I.js:446",
+     "phone-call-DioLWA_F.js:579",
+     "send-DtyjP6bX.js:463",
+     "clipboard-BDqqvyKO.js:548",
+     "ProfileScreen-C4xgst5V.js:29750",
+     "FavoritesScreen-B0F1NlJu.js:1154",
+     "OrderSuccessScreen-CZFvOnp3.js:1727",
+     "ellipsis-lYGN7N11.js:396",
+     "ChatMessageActions-63tTIcHW.js:2585",
+     "SupportChatModal-BmIgwl-u.js:6786",
+     "image-DZxTyM6m.js:455",
+     "loader-circle-WS_HnwoO.js:388"
+    ]
+   }
+  },
+  "transitions": {
+   "home→catalog": {
+    "ms": 1780,
+    "longTaskSum": 408,
+    "longest": 117
+   },
+   "catalog→product": {
+    "ms": 1611,
+    "longTaskSum": 356,
+    "longest": 97
+   },
+   "product→cart": {
+    "ms": 1618,
+    "longTaskSum": 0,
+    "longest": 0
+   },
+   "heapMBafter": 31.1,
+   "lsChars": 1208
+  },
+  "repeat": {
+   "marks": {
+    "skeleton": 898,
+    "cards": 90227,
+    "cardCount": 8
+   },
+   "perf": {
+    "lcp": 90240,
+    "lcpEl": "H3",
+    "fcp": 900,
+    "dcl": 568,
+    "longTasks": 5,
+    "longTaskSum": 1486,
+    "heapMB": 223.2,
+    "dom": 442
+   },
+   "net": {
+    "bytes": {
+     "other": 1284,
+     "css": 0,
+     "js": 0,
+     "font": 0,
+     "firestore": 17635999,
+     "data": 0
+    },
+    "requests": 43,
+    "fonts": [
+     "manrope-latin-700-normal-BZp_XxE4.woff2",
+     "manrope-cyrillic-700-normal-Dw_fZAg2.woff2",
+     "manrope-latin-800-normal-BfWYOv1c.woff2",
+     "manrope-latin-ext-800-normal-DdFx7KEb.woff2"
+    ],
+    "jsFiles": [
+     "rolldown-runtime-hePW80VL.js:0",
+     "createLucideIcon-DQd5AsW4.js:0",
+     "react-dom-iymVxzdk.js:0",
+     "inventory-z1EH1EAm.js:0",
+     "storeContacts-CqjBTa4j.js:0",
+     "react-CBk-t8Sq.js:0",
+     "index-3Ur7WVIK.js:0",
+     "zap-BwDpvh5g.js:0",
+     "CheckoutScreen-CNF1Oulv.js:0",
+     "mail-7uyYlmqO.js:0",
+     "pencil-CVDEKcpG.js:0",
+     "copy-DxErWCcf.js:0",
+     "message-circle-GrKsyu_I.js:0",
+     "phone-call-DioLWA_F.js:0",
+     "send-DtyjP6bX.js:0",
+     "clipboard-BDqqvyKO.js:0",
+     "FavoritesScreen-B0F1NlJu.js:0",
+     "OrderSuccessScreen-CZFvOnp3.js:0",
+     "ChatMessageActions-63tTIcHW.js:0",
+     "SupportChatModal-BmIgwl-u.js:0",
+     "ellipsis-lYGN7N11.js:0",
+     "image-DZxTyM6m.js:0",
+     "loader-circle-WS_HnwoO.js:0",
+     "rotate-cw-kN3Ah37P.js:0",
+     "maximize-2-BV9XnXxZ.js:0",
+     "user-check-C_u6hn1C.js:0",
+     "share-2-C-l_HaB7.js:0",
+     "PromoModal-mikHzyY2.js:0",
+     "ProfileScreen-C4xgst5V.js:0",
+     "BrandRequisitesModal-CglgnZdf.js:0",
+     "award-BQCx45Kb.js:0"
+    ]
+   }
+  }
+ },
+ {
+  "run": 2,
+  "first": {
+   "marks": {
+    "skeleton": 2783,
+    "cards": 92150,
+    "cardCount": 8
+   },
+   "perf": {
+    "lcp": 36276,
+    "lcpEl": "P",
+    "fcp": 2800,
+    "dcl": 2602,
+    "longTasks": 5,
+    "longTaskSum": 1452,
+    "heapMB": 289.8,
+    "dom": 442
+   },
+   "net": {
+    "bytes": {
+     "other": 1284,
+     "js": 412235,
+     "css": 24972,
+     "font": 43744,
+     "firestore": 17635951,
+     "data": 0
+    },
+    "requests": 43,
+    "fonts": [
+     "manrope-cyrillic-700-normal-Dw_fZAg2.woff2",
+     "manrope-latin-700-normal-BZp_XxE4.woff2",
+     "manrope-latin-ext-800-normal-DdFx7KEb.woff2",
+     "manrope-latin-800-normal-BfWYOv1c.woff2"
+    ],
+    "jsFiles": [
+     "rolldown-runtime-hePW80VL.js:659",
+     "react-dom-iymVxzdk.js:1652",
+     "createLucideIcon-DQd5AsW4.js:3891",
+     "storeContacts-CqjBTa4j.js:1590",
+     "inventory-z1EH1EAm.js:4756",
+     "react-CBk-t8Sq.js:39941",
+     "index-3Ur7WVIK.js:306705",
+     "zap-BwDpvh5g.js:620",
+     "copy-DxErWCcf.js:442",
+     "mail-7uyYlmqO.js:434",
+     "pencil-CVDEKcpG.js:458",
+     "CheckoutScreen-CNF1Oulv.js:10995",
+     "message-circle-GrKsyu_I.js:446",
+     "phone-call-DioLWA_F.js:579",
+     "send-DtyjP6bX.js:463",
+     "clipboard-BDqqvyKO.js:548",
+     "ProfileScreen-C4xgst5V.js:29750",
+     "FavoritesScreen-B0F1NlJu.js:1154",
+     "OrderSuccessScreen-CZFvOnp3.js:1727",
+     "ellipsis-lYGN7N11.js:396",
+     "ChatMessageActions-63tTIcHW.js:2585",
+     "SupportChatModal-BmIgwl-u.js:6786",
+     "image-DZxTyM6m.js:455",
+     "loader-circle-WS_HnwoO.js:388",
+     "maximize-2-BV9XnXxZ.js:420",
+     "rotate-cw-kN3Ah37P.js:417"
+    ]
+   }
+  },
+  "transitions": {
+   "home→catalog": {
+    "ms": 1840,
+    "longTaskSum": 546,
+    "longest": 115
+   },
+   "catalog→product": {
+    "ms": 1606,
+    "longTaskSum": 222,
+    "longest": 56
+   },
+   "product→cart": {
+    "ms": 1633,
+    "longTaskSum": 0,
+    "longest": 0
+   },
+   "heapMBafter": 296,
+   "lsChars": 1208
+  },
+  "repeat": {
+   "marks": {
+    "skeleton": 807,
+    "cards": 90077,
+    "cardCount": 8
+   },
+   "perf": {
+    "lcp": 90088,
+    "lcpEl": "H3",
+    "fcp": 808,
+    "dcl": 525,
+    "longTasks": 5,
+    "longTaskSum": 1444,
+    "heapMB": 169.4,
+    "dom": 442
+   },
+   "net": {
+    "bytes": {
+     "other": 1284,
+     "css": 0,
+     "js": 0,
+     "font": 0,
+     "firestore": 17635927,
+     "data": 0
+    },
+    "requests": 43,
+    "fonts": [
+     "manrope-latin-700-normal-BZp_XxE4.woff2",
+     "manrope-cyrillic-700-normal-Dw_fZAg2.woff2",
+     "manrope-latin-800-normal-BfWYOv1c.woff2",
+     "manrope-latin-ext-800-normal-DdFx7KEb.woff2"
+    ],
+    "jsFiles": [
+     "rolldown-runtime-hePW80VL.js:0",
+     "react-dom-iymVxzdk.js:0",
+     "inventory-z1EH1EAm.js:0",
+     "createLucideIcon-DQd5AsW4.js:0",
+     "storeContacts-CqjBTa4j.js:0",
+     "react-CBk-t8Sq.js:0",
+     "index-3Ur7WVIK.js:0",
+     "zap-BwDpvh5g.js:0",
+     "CheckoutScreen-CNF1Oulv.js:0",
+     "copy-DxErWCcf.js:0",
+     "mail-7uyYlmqO.js:0",
+     "pencil-CVDEKcpG.js:0",
+     "message-circle-GrKsyu_I.js:0",
+     "phone-call-DioLWA_F.js:0",
+     "send-DtyjP6bX.js:0",
+     "clipboard-BDqqvyKO.js:0",
+     "FavoritesScreen-B0F1NlJu.js:0",
+     "ProfileScreen-C4xgst5V.js:0",
+     "OrderSuccessScreen-CZFvOnp3.js:0",
+     "SupportChatModal-BmIgwl-u.js:0",
+     "ChatMessageActions-63tTIcHW.js:0",
+     "ellipsis-lYGN7N11.js:0",
+     "image-DZxTyM6m.js:0",
+     "maximize-2-BV9XnXxZ.js:0",
+     "loader-circle-WS_HnwoO.js:0",
+     "rotate-cw-kN3Ah37P.js:0",
+     "share-2-C-l_HaB7.js:0",
+     "PromoModal-mikHzyY2.js:0",
+     "user-check-C_u6hn1C.js:0",
+     "award-BQCx45Kb.js:0",
+     "BrandRequisitesModal-CglgnZdf.js:0"
+    ]
+   }
+  }
+ }
+]

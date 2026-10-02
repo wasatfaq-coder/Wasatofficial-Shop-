@@ -1,0 +1,91 @@
+[
+ {
+  "run": 0,
+  "first": {
+   "marks": {
+    "skeleton": 2563,
+    "cards": 6168,
+    "cardCount": 7
+   },
+   "perf": {
+    "lcp": 6172,
+    "lcpEl": "H3",
+    "fcp": 2576,
+    "dcl": 2379,
+    "longTasks": 4,
+    "longTaskSum": 573,
+    "heapMB": 8,
+    "dom": 406
+   },
+   "net": {
+    "bytes": {
+     "other": 1284,
+     "js": 378365,
+     "css": 24972,
+     "font": 43744,
+     "firestore": 561039,
+     "data": 0
+    },
+    "requests": 42,
+    "fonts": [
+     "manrope-cyrillic-700-normal-Dw_fZAg2.woff2",
+     "manrope-latin-700-normal-BZp_XxE4.woff2",
+     "manrope-latin-ext-800-normal-DdFx7KEb.woff2",
+     "manrope-latin-800-normal-BfWYOv1c.woff2"
+    ],
+    "jsFiles": [
+     "rolldown-runtime-hePW80VL.js:659",
+     "react-dom-iymVxzdk.js:1652",
+     "createLucideIcon-DQd5AsW4.js:3891",
+     "inventory-z1EH1EAm.js:4756",
+     "storeContacts-CqjBTa4j.js:1590",
+     "react-CBk-t8Sq.js:39941",
+     "index-BKR9WDHV.js:264315",
+     "zap-BwDpvh5g.js:620",
+     "copy-DxErWCcf.js:442",
+     "mail-7uyYlmqO.js:434",
+     "CheckoutScreen-bWfyO6jW.js:10995",
+     "pencil-CVDEKcpG.js:458",
+     "message-circle-GrKsyu_I.js:446",
+     "phone-call-DioLWA_F.js:579",
+     "send-DtyjP6bX.js:463",
+     "clipboard-BDqqvyKO.js:548",
+     "FavoritesScreen-B0OvNQVn.js:1156",
+     "ProfileScreen-BL9DP-Kr.js:29750",
+     "OrderSuccessScreen-CwXACIaz.js:1728",
+     "SupportChatModal-Cd7FIc4w.js:6787",
+     "ChatMessageActions-wRI8lqJ7.js:2586",
+     "ellipsis-lYGN7N11.js:396",
+     "image-DZxTyM6m.js:455",
+     "loader-circle-WS_HnwoO.js:388",
+     "maximize-2-BV9XnXxZ.js:420",
+     "rotate-cw-kN3Ah37P.js:417",
+     "user-check-C_u6hn1C.js:440",
+     "PromoModal-B2XUr8ae.js:3902",
+     "share-2-C-l_HaB7.js:469",
+     "award-BQCx45Kb.js:459",
+     "BrandRequisitesModal-PNH63Foq.js:4402"
+    ]
+   }
+  },
+  "transitions": {
+   "home→catalog": {
+    "ms": 1844,
+    "longTaskSum": 304,
+    "longest": 90
+   },
+   "catalog→product": {
+    "ms": 1628,
+    "longTaskSum": 334,
+    "longest": 98
+   },
+   "product→cart": {
+    "ms": 1616,
+    "longTaskSum": 0,
+    "longest": 0
+   },
+   "heapMBafter": 10.7,
+   "lsChars": 1208
+  }
+ }
+]

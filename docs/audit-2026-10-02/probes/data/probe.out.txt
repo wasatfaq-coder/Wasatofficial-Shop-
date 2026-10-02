@@ -1,0 +1,48 @@
+i  emulators: Starting emulators: firestore
+i  emulators: Detected demo project ID "demo-data", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.
+i  firestore: Firestore Emulator logging to firestore-debug.log
+⚠  Unable to fetch the CLI MOTD and remote config. This is not a fatal error, but may indicate an issue with your network connection.
+✔  firestore: Firestore Emulator was started in standard edition.
+✔  firestore: Firestore Emulator UI websocket is running on 9252.
+i  Running script: node probe.mjs
+Засев: 200 товаров, товар ≈ 500 КБ (3 фото по 166 КБ), 4 с
+
+## Визит гостя (подписки App.tsx:428-503)
+| Что | Документов (= чтений) | Объём | Время до ответа |
+| products | 200 | 100009 КБ | 2251 мс |
+| reviews | 300 | 95 КБ | 73 мс |
+| review_votes | 450 | 18 КБ | 92 мс |
+| promos | 10 | 1 КБ | 12 мс |
+| settings/server | 1 | 0 КБ | 20 мс |
+| settings/storefront | 1 | 0 КБ | 7 мс |
+| banners | 3 | 879 КБ | 35 мс |
+| delivery_methods | 4 | 0 КБ | 19 мс |
+| pickup_points | 5 | 0 КБ | 15 мс |
+| **Итого гость** | **974** | **98.6 МБ** | |
+
+## Администратор открыл сайт (сверх гостевого)
+| orders (все) | 1000 | 872 КБ | 357 мс |
+| users (все) | 300 | 28 КБ | 52 мс |
+| customer_notes | 50 | 3 КБ | 24 мс |
+| product_costs | 200 | 4 КБ | 37 мс |
+| chat_messages limit(500) | 500 | 9879 КБ | 390 мс |
+| **Итого админ сверх гостя** | **2050** | **10.5 МБ** | |
+| stock_movements desc limit 500 («Склад») | 500 | 58 КБ | 137 мс |
+| support_threads («Поддержка») | 40 | 2 КБ | 18 мс |
+
+Чат админа limit(500): первый msg-1700000000000, последний msg-1700029940000; самое новое в базе msg-1700035940000 НЕ видно
+
+## Копия базы: 5204 чтений, 111.3 МБ JSON; не прочитано: нет
+вне копии: test — 0 док.
+
+## Пакетное изменение товаров (syncAllProductsToFirestore → setDocs, один пакет до 450 товаров)
+10 товаров (4.9 МБ) одним пакетом: эмулятор ПРИНЯЛ
+25 товаров (12.2 МБ) одним пакетом: эмулятор ПРИНЯЛ
+
+## Форма товара открыта до покупки, сохранена после
+остаток варианта: до покупки 5 → после покупки 0 → после «Сохранить» в форме 5
+✔  Script exited successfully (code 0)
+i  emulators: Shutting down emulators.
+i  firestore: Stopping Firestore Emulator
+i  hub: Stopping emulator hub
+i  logging: Stopping Logging Emulator

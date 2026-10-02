@@ -1,0 +1,253 @@
+i  emulators: Starting emulators: firestore
+i  emulators: Detected demo project ID "demo-orders", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.
+i  firestore: Firestore Emulator logging to firestore-debug.log
+⚠  Unable to fetch the CLI MOTD and remote config. This is not a fatal error, but may indicate an issue with your network connection.
+✔  firestore: Firestore Emulator was started in standard edition.
+✔  firestore: Firestore Emulator UI websocket is running on 9251.
+i  Running script: cd /home/user/Wasatofficial-Shop-/functions && bun test --todo test/ ; cd /home/user/Wasatofficial-Shop- && node --test tests/audit-attacks.test.mjs
+bun test v1.3.14 (0d9b296a)
+
+test/placeOrder.test.ts:
+MetadataLookupWarning: received unexpected error =  code = 403, ConnectionRefused
+      at <anonymous> (/home/user/Wasatofficial-Shop-/functions/node_modules/gcp-metadata/build/src/index.js:390:33)
+      at async isAvailable (/home/user/Wasatofficial-Shop-/functions/node_modules/gcp-metadata/build/src/index.js:397:22)
+      at async _checkIsGCE (/home/user/Wasatofficial-Shop-/functions/node_modules/google-auth-library/build/src/auth/googleauth.js:306:69)
+      at async getApplicationDefaultAsync (/home/user/Wasatofficial-Shop-/functions/node_modules/google-auth-library/build/src/auth/googleauth.js:281:24)
+      at async #determineClient (/home/user/Wasatofficial-Shop-/functions/node_modules/google-auth-library/build/src/auth/googleauth.js:786:47)
+      at async getClient (/home/user/Wasatofficial-Shop-/functions/node_modules/google-auth-library/build/src/auth/googleauth.js:751:34)
+      at async getUniverseDomain (/home/user/Wasatofficial-Shop-/functions/node_modules/google-auth-library/build/src/auth/googleauth.js:215:44)
+      at async createStub (/home/user/Wasatofficial-Shop-/functions/node_modules/google-gax/build/src/grpc.js:369:54)
+
+
+ 66 pass
+ 0 fail
+ 1195 expect() calls
+Ran 66 tests across 10 files. [4.28s]
+TAP version 13
+# Subtest: Клиентский режим заказов (settings/server нет — так сейчас на живом сайте)
+    # Subtest: A1 посетитель без входа не может обнулить остаток и снять товар с продажи
+    not ok 1 - A1 посетитель без входа не может обнулить остаток и снять товар с продажи # TODO находка 1, этап 1
+      ---
+      duration_ms: 544.743963
+      type: 'test'
+      location: '/home/user/Wasatofficial-Shop-/tests/audit-attacks.test.mjs:61:3'
+      failureType: 'testCodeFailure'
+      error: 'Expected request to fail, but it succeeded.'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        file:///home/user/Wasatofficial-Shop-/node_modules/@firebase/rules-unit-testing/dist/esm/index.esm.js:572:31
+        process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+        async TestContext.<anonymous> (file:///home/user/Wasatofficial-Shop-/tests/audit-attacks.test.mjs:63:7)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: A2 никто, кроме администратора, не может увеличить остаток (продажа того, чего нет)
+    not ok 2 - A2 никто, кроме администратора, не может увеличить остаток (продажа того, чего нет) # TODO находка 1, этап 1: правилами не проверить (лимит 1000 выражений), нужны серверные заказы
+      ---
+      duration_ms: 169.097722
+      type: 'test'
+      location: '/home/user/Wasatofficial-Shop-/tests/audit-attacks.test.mjs:68:3'
+      failureType: 'testCodeFailure'
+      error: 'Expected request to fail, but it succeeded.'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        file:///home/user/Wasatofficial-Shop-/node_modules/@firebase/rules-unit-testing/dist/esm/index.esm.js:572:31
+        process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+        async TestContext.<anonymous> (file:///home/user/Wasatofficial-Shop-/tests/audit-attacks.test.mjs:70:7)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+# [2026-10-02T13:07:55.308Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x5641e0dc error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'update' @ L54, evaluation error at L67:24 for 'update' @ L67, false for 'update' @ L54, false for 'update' @ L67
+    # Subtest: A3 посетитель без входа не может раздуть товар мусорными вариантами (~900 КБ скачивает каждый покупатель)
+    ok 3 - A3 посетитель без входа не может раздуть товар мусорными вариантами (~900 КБ скачивает каждый покупатель)
+      ---
+      duration_ms: 485.675379
+      type: 'test'
+      ...
+# [2026-10-02T13:07:55.452Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x5641e0de error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'update' @ L54, evaluation error at L154:24 for 'update' @ L154, false for 'update' @ L54, false for 'update' @ L154
+    # Subtest: A4 посетитель без входа не может «израсходовать» промокод и накрутить комиссию партнёра
+    ok 4 - A4 посетитель без входа не может «израсходовать» промокод и накрутить комиссию партнёра
+      ---
+      duration_ms: 141.659756
+      type: 'test'
+      ...
+    # Subtest: A5 посетитель без входа не может записать заказ на 1 ₽ с чужими ценами
+    not ok 5 - A5 посетитель без входа не может записать заказ на 1 ₽ с чужими ценами # TODO находка 2, этап 1
+      ---
+      duration_ms: 100.364772
+      type: 'test'
+      location: '/home/user/Wasatofficial-Shop-/tests/audit-attacks.test.mjs:88:3'
+      failureType: 'testCodeFailure'
+      error: 'Expected request to fail, but it succeeded.'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        file:///home/user/Wasatofficial-Shop-/node_modules/@firebase/rules-unit-testing/dist/esm/index.esm.js:572:31
+        process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+        async TestContext.<anonymous> (file:///home/user/Wasatofficial-Shop-/tests/audit-attacks.test.mjs:91:7)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+# [2026-10-02T13:07:55.650Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x5641e0e2 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L54, evaluation error at L218:24 for 'create' @ L218, false for 'update' @ L54, false for 'update' @ L238, false for 'create' @ L54, Property customerName is undefined on object. for 'create' @ L218
+    # Subtest: A6 заказ с произвольными полями и мусором в строках отклоняется (иначе — спам заказами без ограничений)
+    ok 6 - A6 заказ с произвольными полями и мусором в строках отклоняется (иначе — спам заказами без ограничений)
+      ---
+      duration_ms: 97.811794
+      type: 'test'
+      ...
+    # Subtest: A7 последний товар: покупатель не пишет остаток напрямую, иначе двое покупают одну вещь (гонка без транзакции)
+    not ok 7 - A7 последний товар: покупатель не пишет остаток напрямую, иначе двое покупают одну вещь (гонка без транзакции) # TODO находка 6, этап 1
+      ---
+      duration_ms: 101.114046
+      type: 'test'
+      location: '/home/user/Wasatofficial-Shop-/tests/audit-attacks.test.mjs:106:3'
+      failureType: 'testCodeFailure'
+      error: 'Expected request to fail, but it succeeded.'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        file:///home/user/Wasatofficial-Shop-/node_modules/@firebase/rules-unit-testing/dist/esm/index.esm.js:572:31
+        process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+        async TestContext.<anonymous> (file:///home/user/Wasatofficial-Shop-/tests/audit-attacks.test.mjs:109:7)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..7
+ok 1 - Клиентский режим заказов (settings/server нет — так сейчас на живом сайте)
+  ---
+  duration_ms: 2297.24649
+  type: 'suite'
+  ...
+# [2026-10-02T13:07:55.841Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x5641e0e6 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'update' @ L54, evaluation error at L67:24 for 'update' @ L67, false for 'update' @ L54, false for 'update' @ L67
+# [2026-10-02T13:07:55.882Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x5641e0e7 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'update' @ L54, evaluation error at L154:24 for 'update' @ L154, false for 'update' @ L54, false for 'update' @ L154
+# [2026-10-02T13:07:55.918Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x5641e0e8 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L54, evaluation error at L218:24 for 'create' @ L218, false for 'update' @ L54, false for 'update' @ L238, false for 'create' @ L54, false for 'create' @ L218
+# Subtest: Серверный режим заказов (serverOrdersEnabled=true) — клиентские лазейки закрыты
+    # Subtest: S1 остатки, промокод и заказ напрямую — отказ
+    ok 1 - S1 остатки, промокод и заказ напрямую — отказ
+      ---
+      duration_ms: 165.287513
+      type: 'test'
+      ...
+    1..1
+ok 2 - Серверный режим заказов (serverOrdersEnabled=true) — клиентские лазейки закрыты
+  ---
+  duration_ms: 165.680346
+  type: 'suite'
+  ...
+# Subtest: Оба режима
+    # Subtest: B1 посетитель без входа не получает список всех промокодов (личные и партнёрские, с лимитами и выручкой)
+    not ok 1 - B1 посетитель без входа не получает список всех промокодов (личные и партнёрские, с лимитами и выручкой) # TODO находка 10, этап 3
+      ---
+      duration_ms: 101.897809
+      type: 'test'
+      location: '/home/user/Wasatofficial-Shop-/tests/audit-attacks.test.mjs:128:3'
+      failureType: 'testCodeFailure'
+      error: 'Expected request to fail, but it succeeded.'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        file:///home/user/Wasatofficial-Shop-/node_modules/@firebase/rules-unit-testing/dist/esm/index.esm.js:572:31
+        async TestContext.<anonymous> (file:///home/user/Wasatofficial-Shop-/tests/audit-attacks.test.mjs:130:7)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: B2 посетитель без входа не читает шаблоны ответов поддержки
+    not ok 2 - B2 посетитель без входа не читает шаблоны ответов поддержки # TODO находка 41, этап 7
+      ---
+      duration_ms: 105.553888
+      type: 'test'
+      location: '/home/user/Wasatofficial-Shop-/tests/audit-attacks.test.mjs:133:3'
+      failureType: 'testCodeFailure'
+      error: 'Expected request to fail, but it succeeded.'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        file:///home/user/Wasatofficial-Shop-/node_modules/@firebase/rules-unit-testing/dist/esm/index.esm.js:572:31
+        async TestContext.<anonymous> (file:///home/user/Wasatofficial-Shop-/tests/audit-attacks.test.mjs:137:7)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: B3 анонимный гость чата не может записать сообщение с чужим id и картинкой ~850 КБ (вытесняет обращения в админке)
+    not ok 3 - B3 анонимный гость чата не может записать сообщение с чужим id и картинкой ~850 КБ (вытесняет обращения в админке) # TODO находка 27, этап 7
+      ---
+      duration_ms: 186.641971
+      type: 'test'
+      location: '/home/user/Wasatofficial-Shop-/tests/audit-attacks.test.mjs:140:3'
+      failureType: 'testCodeFailure'
+      error: 'Expected request to fail, but it succeeded.'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        file:///home/user/Wasatofficial-Shop-/node_modules/@firebase/rules-unit-testing/dist/esm/index.esm.js:572:31
+        process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+        async TestContext.<anonymous> (file:///home/user/Wasatofficial-Shop-/tests/audit-attacks.test.mjs:143:7)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: B4 «Полезно» нельзя поставить несуществующему отзыву (эти голоса скачивает каждый посетитель)
+    not ok 4 - B4 «Полезно» нельзя поставить несуществующему отзыву (эти голоса скачивает каждый посетитель) # TODO находка 25, этап 6
+      ---
+      duration_ms: 100.685582
+      type: 'test'
+      location: '/home/user/Wasatofficial-Shop-/tests/audit-attacks.test.mjs:150:3'
+      failureType: 'testCodeFailure'
+      error: 'Expected request to fail, but it succeeded.'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        file:///home/user/Wasatofficial-Shop-/node_modules/@firebase/rules-unit-testing/dist/esm/index.esm.js:572:31
+        process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+        async TestContext.<anonymous> (file:///home/user/Wasatofficial-Shop-/tests/audit-attacks.test.mjs:152:7)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: B5 покупатель не пишет в свой профиль произвольные поля и ~900 КБ (админка грузит профили всех)
+    not ok 5 - B5 покупатель не пишет в свой профиль произвольные поля и ~900 КБ (админка грузит профили всех) # TODO находка 41, этап 7
+      ---
+      duration_ms: 115.698321
+      type: 'test'
+      location: '/home/user/Wasatofficial-Shop-/tests/audit-attacks.test.mjs:157:3'
+      failureType: 'testCodeFailure'
+      error: 'Expected request to fail, but it succeeded.'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        file:///home/user/Wasatofficial-Shop-/node_modules/@firebase/rules-unit-testing/dist/esm/index.esm.js:572:31
+        process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+        async TestContext.<anonymous> (file:///home/user/Wasatofficial-Shop-/tests/audit-attacks.test.mjs:159:7)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+# [2026-10-02T13:07:56.669Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x5641e0f7 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L54, evaluation error at L328:24 for 'create' @ L328, false for 'update' @ L54, evaluation error at L333:24 for 'update' @ L333, false for 'create' @ L54, false for 'create' @ L328
+# [2026-10-02T13:07:56.697Z]  @firebase/firestore: Firestore (12.19.0): GrpcConnection RPC 'Write' stream 0x5641e0f8 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L54, false for 'create' @ L387, false for 'update' @ L54, false for 'update' @ L387
+    # Subtest: C1 держит: чужой заказ, бонусы, admins, почта владельца без подтверждения, чужой чат
+    ok 6 - C1 держит: чужой заказ, бонусы, admins, почта владельца без подтверждения, чужой чат
+      ---
+      duration_ms: 262.518162
+      type: 'test'
+      ...
+    1..6
+ok 3 - Оба режима
+  ---
+  duration_ms: 873.798393
+  type: 'suite'
+  ...
+1..3
+# tests 14
+# suites 3
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 9
+# duration_ms 3656.641057
+✔  Script exited successfully (code 0)
+i  emulators: Shutting down emulators.
+i  firestore: Stopping Firestore Emulator
+i  hub: Stopping emulator hub
+i  logging: Stopping Logging Emulator

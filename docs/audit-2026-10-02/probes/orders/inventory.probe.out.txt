@@ -1,0 +1,106 @@
+bun test v1.3.14 (0d9b296a)
+
+../../../../tmp/claude-0/-home-user-Wasatofficial-Shop-/2b208f14-8bf5-5160-a59d-115c60d1396c/scratchpad/audit/orders/probes/inventory.probe.test.ts:
+19 | describe('N1 «Снят с витрины» не возвращается в продажу сам', () => {
+20 |   const hidden = prod({ inStock: false }); // снят администратором при остатке 3
+21 |   test('контроль: товар считается снятым', () => expect(isHiddenFromSale(hidden)).toBe(true));
+22 |   test('отмена заказа (returnStockWithLogs) не включает «В продаже»', () => {
+23 |     const { updatedProducts } = returnStockWithLogs([hidden], [line(hidden, 1)], 'WS-1');
+24 |     expect(updatedProducts[0].inStock).toBe(false);
+                                            ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/tmp/claude-0/-home-user-Wasatofficial-Shop-/2b208f14-8bf5-5160-a59d-115c60d1396c/scratchpad/audit/orders/probes/inventory.probe.test.ts:24:40)
+(fail) N1 «Снят с витрины» не возвращается в продажу сам > отмена заказа (returnStockWithLogs) не включает «В продаже» [5.47ms]
+22 |   test('отмена заказа (returnStockWithLogs) не включает «В продаже»', () => {
+23 |     const { updatedProducts } = returnStockWithLogs([hidden], [line(hidden, 1)], 'WS-1');
+24 |     expect(updatedProducts[0].inStock).toBe(false);
+25 |   });
+26 |   test('правка остатка на складе (updateProductSkuStock) не включает «В продаже»', () => {
+27 |     expect(updateProductSkuStock(hidden, 'Черный', 'M', 5).inStock).toBe(false);
+                                                                        ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/tmp/claude-0/-home-user-Wasatofficial-Shop-/2b208f14-8bf5-5160-a59d-115c60d1396c/scratchpad/audit/orders/probes/inventory.probe.test.ts:27:68)
+(fail) N1 «Снят с витрины» не возвращается в продажу сам > правка остатка на складе (updateProductSkuStock) не включает «В продаже» [0.31ms]
+29 | });
+30 | 
+31 | describe('N2 предзаказ: распроданный товар нельзя снять с продажи', () => {
+32 |   test('товар с остатком 0 и «Снят с витрины» не заказывается при включённом предзаказе', () => {
+33 |     const soldOutHidden = prod({ inStock: false, skus: [{ id: 'p1-m', color: 'Черный', size: 'M', stock: 0, skuCode: 'X' }] });
+34 |     expect(getOrderableStock(soldOutHidden, 'Черный', 'M', true)).toBe(0);
+                                                                      ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 10
+
+      at <anonymous> (/tmp/claude-0/-home-user-Wasatofficial-Shop-/2b208f14-8bf5-5160-a59d-115c60d1396c/scratchpad/audit/orders/probes/inventory.probe.test.ts:34:66)
+(fail) N2 предзаказ: распроданный товар нельзя снять с продажи > товар с остатком 0 и «Снят с витрины» не заказывается при включённом предзаказе [0.21ms]
+37 | 
+38 | describe('N3 товар без вариантов: клиент и сервер видят разный остаток', () => {
+39 |   test('клиент (getVariantStock) не выдумывает 5 шт., как сервер (generateDefaultSKUs → 0)', () => {
+40 |     const noSkus = prod({ skus: undefined });
+41 |     const server = generateDefaultSKUs(noSkus).find((s) => s.size === 'M')!.stock;
+42 |     expect(getVariantStock(noSkus, 'Черный', 'M')).toBe(server);
+                                                       ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 5
+
+      at <anonymous> (/tmp/claude-0/-home-user-Wasatofficial-Shop-/2b208f14-8bf5-5160-a59d-115c60d1396c/scratchpad/audit/orders/probes/inventory.probe.test.ts:42:51)
+(fail) N3 товар без вариантов: клиент и сервер видят разный остаток > клиент (getVariantStock) не выдумывает 5 шт., как сервер (generateDefaultSKUs → 0) [0.35ms]
+53 |     p = returnStockWithLogs([p], [line(p, 2)], 'WS-1').updatedProducts[0];
+54 |     // «Правка состава и склад» доступна у отменённого заказа: 2 → 1, модалка возвращает разницу (AdminOrderAdjustmentModal.tsx:285-295)
+55 |     p = returnStockWithLogs([p], [line(p, 1)], 'WS-1').updatedProducts[0];
+56 |     // восстановление (changeOrdersStatus) списывает текущий состав: 1
+57 |     p = deductStockWithLogs([p], [line(p, 1)], 'WS-1').updatedProducts[0];
+58 |     expect(p.skus![0].stock).toBe(4);
+                                  ^
+error: expect(received).toBe(expected)
+
+Expected: 4
+Received: 5
+
+      at <anonymous> (/tmp/claude-0/-home-user-Wasatofficial-Shop-/2b208f14-8bf5-5160-a59d-115c60d1396c/scratchpad/audit/orders/probes/inventory.probe.test.ts:58:30)
+(fail) N4 «Корректировка» отменённого заказа возвращает товар на склад второй раз > заказ 2 шт., отмена, правка до 1 шт., восстановление: остаток должен быть 5 − 1 = 4 [0.70ms]
+60 |   test('«Корректировка»: добавленный товар без остатка — нехватка видна (как у восстановления)', () => {
+61 |     const p = prod({ skus: [{ id: 'p1-m', color: 'Черный', size: 'M', stock: 0, skuCode: 'X' }] });
+62 |     // модалка не вызывает stockShortages, а deductStockWithLogs молча режет до 0
+63 |     const res = deductStockWithLogs([p], [line(p, 2)], 'WS-1');
+64 |     expect(stockShortages([p], [line(p, 2)]).length).toBe(1); // проверка есть в коде…
+65 |     expect(res.generatedLogs[0].changeQuantity).toBe(-2); // …а журнал пишет 0 вместо −2
+                                                     ^
+error: expect(received).toBe(expected)
+
+Expected: -2
+Received: 0
+
+      at <anonymous> (/tmp/claude-0/-home-user-Wasatofficial-Shop-/2b208f14-8bf5-5160-a59d-115c60d1396c/scratchpad/audit/orders/probes/inventory.probe.test.ts:65:49)
+(fail) N4 «Корректировка» отменённого заказа возвращает товар на склад второй раз > «Корректировка»: добавленный товар без остатка — нехватка видна (как у восстановления) [0.39ms]
+70 |   test('заказ со скидкой 10 %, после заказа код поменяли на 30 % — убрали 1 из 2 строк, скидка остаётся 10 %', () => {
+71 |     const p = prod({ price: 5000 });
+72 |     const order = { items: [line(p, 1), { ...line(p, 1), id: 'l2', selectedSize: 'L' }], totalPrice: 9000, deliveryFee: 0, discountAmount: 1000, promoCode: 'SALE' };
+73 |     const promoNow = { id: 'x', code: 'SALE', active: true, discountType: 'percent', discountValue: 30, discountPercent: 30 } as PromoCode;
+74 |     const t = adjustedOrderTotals(order, [line(p, 1)], [promoNow]);
+75 |     expect(t.discount).toBe(500);
+                            ^
+error: expect(received).toBe(expected)
+
+Expected: 500
+Received: 1500
+
+      at <anonymous> (/tmp/claude-0/-home-user-Wasatofficial-Shop-/2b208f14-8bf5-5160-a59d-115c60d1396c/scratchpad/audit/orders/probes/inventory.probe.test.ts:75:24)
+(fail) N5 «Корректировка» пересчитывает скидку по сегодняшнему промокоду > заказ со скидкой 10 %, после заказа код поменяли на 30 % — убрали 1 из 2 строк, скидка остаётся 10 % [0.41ms]
+
+ 2 pass
+ 7 fail
+ 11 expect() calls
+Ran 9 tests across 1 file. [24.00ms]
