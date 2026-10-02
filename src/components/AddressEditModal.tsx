@@ -20,6 +20,8 @@ interface AddressEditModalProps {
     apartment?: string;
     intercom?: string;
     postalCode?: string;
+    region?: string;
+    comment?: string;
     isDefault?: boolean;
   }) => void;
   /** Курьеру нужны подъезд и код домофона; для Почты и адресов профиля они необязательны */
@@ -43,6 +45,8 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
   const [floor, setFloor] = useState('');
   const [apartment, setApartment] = useState('');
   const [intercom, setIntercom] = useState('');
+  const [region, setRegion] = useState('');
+  const [comment, setComment] = useState('');
   const [isDefault, setIsDefault] = useState(true);
   const [errors, setErrors] = useState<{
     house?: string;
@@ -61,6 +65,8 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
       setFloor(editingAddress.floor || '');
       setApartment(editingAddress.apartment || '');
       setIntercom(editingAddress.intercom || '');
+      setRegion(editingAddress.region || '');
+      setComment(editingAddress.comment || '');
       setIsDefault(editingAddress.isDefault ?? false);
     } else {
       setTitle('Дом');
@@ -72,6 +78,8 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
       setFloor('');
       setApartment('');
       setIntercom('');
+      setRegion('');
+      setComment('');
       setIsDefault(true);
     }
     setErrors({});
@@ -80,6 +88,7 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
 
   // Real-time formatted address preview for courier dispatch
   const previewString = formatAddress({
+    region,
     city,
     postalCode,
     street,
@@ -120,6 +129,8 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
       floor: floor.trim(),
       apartment: apartment.trim(),
       intercom: intercom.trim(),
+      region: region.trim(),
+      comment: comment.trim(),
       isDefault,
     });
     onClose();
@@ -194,6 +205,22 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Дом, Работа, Студия"
+                  className="w-full neu-inset rounded-2xl py-2.5 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A]"
+                />
+              </div>
+
+              {/* Country / region: Почта России and transport companies need it for other regions */}
+              <div>
+                <label htmlFor="address-region" className="block text-xs font-bold text-[#2D3A4E] mb-1">
+                  Страна / регион
+                </label>
+                <input
+                  id="address-region"
+                  type="text"
+                  autoComplete="address-level1"
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value)}
+                  placeholder="Россия, Московская область"
                   className="w-full neu-inset rounded-2xl py-2.5 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A]"
                 />
               </div>
@@ -373,6 +400,22 @@ export const AddressEditModal: React.FC<AddressEditModalProps> = ({
                     </p>
                   )}
                 </div>
+              </div>
+
+              {/* Comment for the courier: kept apart from the address line */}
+              <div>
+                <label htmlFor="address-comment" className="block text-xs font-bold text-[#2D3A4E] mb-1">
+                  Комментарий курьеру
+                </label>
+                <textarea
+                  id="address-comment"
+                  rows={2}
+                  maxLength={300}
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Например: позвонить за час, шлагбаум со двора"
+                  className="w-full neu-inset rounded-2xl py-2.5 px-3.5 text-xs font-semibold text-[#2D3A4E] placeholder:text-[#56647A] resize-y"
+                />
               </div>
 
               {/* Live Preview Box for Delivery */}

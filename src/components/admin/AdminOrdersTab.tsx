@@ -53,6 +53,7 @@ import { ConfirmDialog } from '../ConfirmDialog';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
 import { initialPaymentStatus } from '../../shared/orderApi';
+import { AdminOrderCopyCards } from './AdminOrderCopyCards';
 
 interface AdminOrdersTabProps {
   orders: Order[];
@@ -1336,6 +1337,8 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                       <p className="truncate text-[#2D3A4E]" title={ord.deliveryAddress}>
                         <strong>Адрес:</strong> {ord.deliveryAddress || 'не указан'}
                       </p>
+
+                      <AdminOrderCopyCards order={ord} />
 
                       {/* Tracking Carrier & Number Row - Only for Transport Companies */}
                       {(() => {

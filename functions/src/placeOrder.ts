@@ -7,6 +7,7 @@ import type { CartItem, DeliveryMethod, Order, Product, ProductSKU, PromoCode, S
 import { initialPaymentStatus, type PlaceOrderItem, type PlaceOrderRequest } from '../../src/shared/orderApi';
 import { formatOrderDate } from '../../src/shared/orderDate';
 import { toOrderLineProduct } from '../../src/shared/orderLine';
+import { ADDRESS_PART_KEYS, cleanAddressParts, fullName, type AddressParts } from '../../src/shared/personName';
 import {
   QUICK_ORDER_DELIVERY_ID,
   QUICK_ORDER_DELIVERY_TITLE,
@@ -86,8 +87,24 @@ export function parsePlaceOrderRequest(data: unknown): PlaceOrderRequest {
       name: requireString(contact.name, 'имя', 128),
       phone: requireString(contact.phone, 'телефон', 64),
       email: requireString(contact.email, 'email', 256, false),
+      lastName: requireString(contact.lastName, 'фамилия', 60, false) || undefined,
+      firstName: requireString(contact.firstName, 'имя', 60, false) || undefined,
+      middleName: requireString(contact.middleName, 'отчество', 60, false) || undefined,
     },
+    addressParts: parseAddressParts(raw.addressParts),
   };
+}
+
+/** Parts of the delivery address (admin card): only known text fields of sane length */
+function parseAddressParts(value: unknown): AddressParts | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const source = value as Record<string, unknown>;
+  const parts: AddressParts = {};
+  for (const key of ADDRESS_PART_KEYS) {
+    const text = requireString(source[key], 'адрес', key === 'comment' ? 300 : 120, false);
+    if (text) parts[key] = text;
+  }
+  return cleanAddressParts(parts);
 }
 
 function randomOrderId(): string {
@@ -253,12 +270,16 @@ export async function placeOrderCore(
       deliveryFee: totals.deliveryFee,
       discountAmount: totals.discount,
       promoCode: promo?.data.code,
-      customerName: request.contact.name,
+      customerName: fullName(request.contact) || request.contact.name,
+      customerLastName: request.contact.lastName,
+      customerFirstName: request.contact.firstName,
+      customerMiddleName: request.contact.middleName,
       customerPhone: request.contact.phone,
       customerEmail: request.contact.email || undefined,
       customerUid: customerUid ?? undefined,
       paymentMethod: request.paymentMethod,
       paymentStatus,
+      deliveryAddressParts: request.addressParts,
       estimatedDelivery: 'Через 1-2 дня',
       placedVia: 'server',
     };

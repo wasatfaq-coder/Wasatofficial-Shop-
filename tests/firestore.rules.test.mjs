@@ -338,6 +338,16 @@ describe('orders', () => {
     } }] })));
   });
 
+  test('the order keeps Фамилия / Имя / Отчество and the address parts (owner\'s request 02.10)', async () => {
+    const parts = { customerLastName: 'Петров', customerFirstName: 'Иван', customerMiddleName: 'Сергеевич' };
+    const address = { region: 'Россия', city: 'Москва', street: 'Тверская', house: '7', comment: 'Позвонить за час' };
+    await assertSucceeds(setDoc(doc(guest(), 'orders/MS-40'), order({ id: 'MS-40', ...parts, deliveryAddressParts: address })));
+    await assertFails(setDoc(doc(guest(), 'orders/MS-41'), order({ id: 'MS-41', customerLastName: 'x'.repeat(61) })));
+    const tooMany = Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`k${i}`, 'x']));
+    await assertFails(setDoc(doc(guest(), 'orders/MS-42'), order({ id: 'MS-42', deliveryAddressParts: tooMany })));
+    await assertFails(setDoc(doc(guest(), 'orders/MS-43'), order({ id: 'MS-43', deliveryAddressParts: 'Москва' })));
+  });
+
   test('customer cannot place an order in someone else\'s name', async () => {
     await assertFails(setDoc(doc(customer('alice'), 'orders/MS-5'), order({ id: 'MS-5', customerUid: 'bob' })));
     await assertSucceeds(setDoc(doc(customer('alice'), 'orders/MS-6'), order({ id: 'MS-6', customerUid: 'alice' })));
