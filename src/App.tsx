@@ -19,7 +19,6 @@ import {
 } from './components/CatalogAdvancedFilter';
 import {
   deductStockWithLogs,
-  skuCodeForLine,
   loadStorefrontSettings,
   saveStorefrontSettings,
   getOrderableStock,
@@ -44,8 +43,7 @@ import {
   subscribeToUsers,
   subscribeToOwnUserProfile,
   saveOrderToFirestore,
-  saveStockToFirestore,
-  saveStockMovements,
+  deductOrderLineStock,
   syncAllProductsToFirestore,
   subscribeToProductCosts,
   saveProductCosts,
@@ -100,7 +98,6 @@ import { formatOrderDate } from './shared/orderDate';
 import { initialPaymentStatus } from './shared/orderApi';
 import { toOrderLineProduct } from './shared/orderLine';
 import { extractColorName, extractSizeName } from './utils/inventory';
-import { orderStockMovements } from './shared/stockMovements';
 import { getStoreContacts, getStoreName, publicSetting, withStoreName, withStoreNameFields } from './utils/storeContacts';
 import { getCategories } from './utils/categories';
 import { promoDiscountText } from './utils/promoLabel';
@@ -1400,10 +1397,11 @@ export default function App() {
       : undefined;
 
     // Sold-out variants ordered in preorder mode are marked and not taken from stock; the order keeps a light
-    // copy of the product (toOrderLineProduct), not its photos
+    // copy of the product (toOrderLineProduct) without photo links: the rules refuse links in a browser's order
+    // (an outside picture would open at the staff's screen), and order screens take photos from the catalog
     const orderItems: CartItem[] = orderData.items.map((item) => ({
       ...item,
-      product: toOrderLineProduct(item.product),
+      product: { ...toOrderLineProduct(item.product), images: [] },
       ...(isPreorderVariant(item.product, item.selectedColor, item.selectedSize, preorderMode) ? { isPreorder: true } : {}),
     }));
 
@@ -1464,10 +1462,10 @@ export default function App() {
       }
     }
 
-    // Promo usage, revenue and referral commission (a 1-click order has no promo, as on the server)
+    // One more use of the promo by this order (a 1-click order has no promo, as on the server)
     if (orderPromo) {
       // The order is placed either way; a refused counter write is logged with the order number
-      recordPromoUsageInFirestore(orderPromo, totalPrice).catch((err) =>
+      recordPromoUsageInFirestore(orderPromo, newOrderId).catch((err) =>
         console.error(`Promo usage for ${newOrderId} was not recorded:`, err)
       );
     }
@@ -1477,15 +1475,19 @@ export default function App() {
       saveGuestOrder(newOrder);
     }
     
-    // Stock of the ordered products only, and only the fields a customer may change (skus, inStock).
-    // The order is already saved: a refused stock write must not turn it into a failure for the customer
-    const orderedProductIds = new Set(orderData.items.map((i) => i.product.id));
-    const modifiedProducts = updatedProducts.filter((p) => orderedProductIds.has(p.id));
-    saveStockToFirestore(modifiedProducts).catch((err) => console.error(`Stock for ${newOrderId} was not written off:`, err));
-    // The owner sees the write-off in «Склад и SKU» → «Журнал движений»
-    saveStockMovements(
-      orderStockMovements(newOrder, new Date(), (line) => skuCodeForLine(products, line))
-    ).catch((err) => console.error(`Stock journal for ${newOrderId} was not written:`, err));
+    // Stock line by line, each in one transaction with its journal entry («Склад и SKU» → «Журнал движений»):
+    // the rules let a customer take only what the saved order ordered, once per line. The order is already saved:
+    // a refused write must not turn it into a failure for the customer
+    const takenAt = new Date();
+    void (async () => {
+      for (const [lineIndex, line] of orderItems.entries()) {
+        try {
+          await deductOrderLineStock(newOrderId, line, lineIndex, takenAt);
+        } catch (err) {
+          console.error(`Stock for ${newOrderId}, line ${lineIndex} was not written off:`, err);
+        }
+      }
+    })();
 
     finishOrder({ id: newOrderId, totalPrice, deliveryMethod, deliveryAddress, paymentMethod }, orderData);
     return true;

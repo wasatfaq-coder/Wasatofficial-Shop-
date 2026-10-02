@@ -461,6 +461,8 @@ export interface StockMovementLog {
   /** Order whose stock changed; a customer order writes one entry per line (`lineIndex`) */
   orderId?: string;
   lineIndex?: number;
+  /** Index of the variant in `product.skus` a customer's browser took the stock from (the rules check it) */
+  skuIndex?: number;
   productId: string;
   productTitle: string;
   skuCode: string;

@@ -30,12 +30,6 @@ service cloud.firestore {
     }
 
     // Себестоимость живёт в закрытой product_costs: в товар её не добавить и не поменять, старое значение — только удалить
-    // Число в поле выросло не больше чем на max (поле могло отсутствовать)
-    function isBoundedIncrease(field, max) {
-      let delta = request.resource.data.get(field, 0) - resource.data.get(field, 0);
-      return request.resource.data.get(field, 0) is number && delta >= 0 && delta <= max;
-    }
-
     function keepsCostPriceOut() {
       return !('costPrice' in request.resource.data)
         || request.resource.data.costPrice == resource.data.get('costPrice', null);
@@ -62,21 +56,53 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isAdmin() && isValidId(productId) && !('costPrice' in request.resource.data);
       allow delete: if isAdmin() && isValidId(productId);
-      // Пока заказы не оформляются на сервере, покупатели списывают остатки.
+      // Пока заказы не оформляются на сервере, покупатели списывают остатки — только своим заказом.
       // Остальные поля (в том числе старые отзывы внутри товара) — только администратор.
       allow update: if (isAdmin() && keepsCostPriceOut())
-        || (!serverOrdersEnabled() && onlyChanges(['skus', 'inStock']) && isStockDeduction());
+        || (!serverOrdersEnabled()
+          && onlyChanges(['skus', 'inStock', 'lastStockMovement'])
+          && isOrderStockDeduction(productId));
     }
 
-    // Списание остатков покупателем (заказы из браузера): набор вариантов не меняется (ни добавить, ни удалить),
-    // «В продаже» можно лишь снять (распродано), вернуть — только администратор. Что остаток именно уменьшился,
-    // правило не проверяет: поштучная проверка вариантов не укладывается в лимит Firestore (1000 выражений на
-    // запрос) уже на 20 вариантах. Это закрывают серверные заказы (placeOrder, этап 1), находка 1 открыта.
-    function isStockDeduction() {
-      let before = resource.data.skus;
-      let after = request.resource.data.skus;
-      return after is list && before is list && after.size() == before.size()
-        && (request.resource.data.inStock == resource.data.get('inStock', true) || request.resource.data.inStock == false);
+    // Списание остатка заказом из браузера (deductOrderLineStock в firebaseSync.ts, аудит 02.10, находка 1):
+    // в одной транзакции с записью журнала stock_movements по строке сохранённого заказа. Запись журнала создаётся
+    // один раз на строку, поэтому и списать по строке можно один раз. Меняется ровно один вариант — тот, что
+    // в строке заказа, — и только его остаток, только вниз и ровно на количество записи журнала. Артикулы,
+    // штрихкоды, названия и другие варианты не меняются. «В продаже» снимается, только если вариант кончился.
+    // Части списка до и после варианта сравниваются целиком (по одному выражению), поэтому проверка укладывается
+    // в лимит Firestore (1000 выражений на запрос) при любом числе вариантов. Поддельный заказ по-прежнему может
+    // списать товар (его видно в «Заказах»): это закрывают серверные заказы.
+    function isOrderStockDeduction(productId) {
+      let data = request.resource.data;
+      let movementId = data.get('lastStockMovement', '');
+      let movementPath = /databases/$(database)/documents/stock_movements/$(movementId);
+      return movementId is string && movementId.matches('^[A-Za-z0-9-]{1,40}_[0-9]{1,2}$')
+        && !exists(movementPath) && existsAfter(movementPath)
+        && isSkuDeductedBy(productId, resource.data.skus, data.skus, getAfter(movementPath).data)
+        && (data.inStock == resource.data.get('inStock', true)
+          || (data.inStock == false && data.skus[getAfter(movementPath).data.skuIndex].stock == 0));
+    }
+
+    function isSkuDeductedBy(productId, before, after, movement) {
+      let i = movement.skuIndex;
+      let line = get(/databases/$(database)/documents/orders/$(movement.orderId)).data.items[movement.lineIndex];
+      return movement.productId == productId
+        && before is list && after is list && after.size() == before.size()
+        && i is int && i >= 0 && i < before.size()
+        && (i == 0 || after[0:i] == before[0:i])
+        && (i == before.size() - 1 || after[i + 1:after.size()] == before[i + 1:before.size()])
+        && after[i].diff(before[i]).affectedKeys().hasOnly(['stock'])
+        && after[i].stock is number && after[i].stock >= 0
+        && after[i].stock == before[i].stock + movement.changeQuantity
+        && sameName(before[i].get('color', ''), line.get('selectedColor', ''))
+        && sameName(before[i].get('size', ''), line.get('selectedSize', ''));
+    }
+
+    // Цвет и размер строки заказа и варианта сравниваются почти как в браузере (inventory.ts): без пробелов по краям
+    // и без учёта регистра латиницы. lower() в правилах кириллицу не меняет: «черный» и «Черный» здесь разные.
+    // На деле цвет строки берётся из цветов того же товара и совпадает с вариантом буква в букву
+    function sameName(a, b) {
+      return a is string && b is string && a.trim().lower() == b.trim().lower();
     }
 
     // Себестоимость товаров: товар читает любой посетитель, поэтому она отдельно и только для администратора
@@ -147,18 +173,50 @@ service cloud.firestore {
     match /promos/{promoId} {
       allow read: if true;
       allow create, delete: if isAdmin() && isValidId(promoId);
-      // Покупатели могут обновлять только счётчики использования промокода
-      // (и только пока заказы не оформляются на сервере)
-      // Один заказ — одно использование: счётчик растёт ровно на 1, выручка — на сумму одного заказа (не больше
-      // 1 000 000 ₽), комиссия партнёра — не больше этой суммы. Итоги всё равно сверяет администратор.
+      // Пока заказы оформляет браузер, покупатель увеличивает только счётчик использований (аудит 02.10, находка 2):
+      // ровно на 1, не выше лимита кода и только вместе с отметкой promo_uses/{заказ} в том же пакете — по одной на
+      // заказ с этим кодом. Выручку и комиссию партнёра браузер не пишет: комиссия считается из оплаченных
+      // и полученных заказов (src/utils/partnerCommission.ts).
       allow update: if isAdmin()
         || (!serverOrdersEnabled()
-          && onlyChanges(['usedCount', 'generatedRevenue', 'commissionEarned'])
+          && onlyChanges(['usedCount', 'lastOrderId'])
           && request.resource.data.get('usedCount', 0) == resource.data.get('usedCount', 0) + 1
-          && isBoundedIncrease('generatedRevenue', 1000000)
-          && request.resource.data.get('commissionEarned', 0) - resource.data.get('commissionEarned', 0)
-            <= request.resource.data.get('generatedRevenue', 0) - resource.data.get('generatedRevenue', 0)
-          && request.resource.data.get('commissionEarned', 0) >= resource.data.get('commissionEarned', 0));
+          && withinUsageLimit()
+          && request.resource.data.lastOrderId is string
+          && request.resource.data.lastOrderId.matches('^[A-Za-z0-9-]{1,40}$')
+          && !exists(/databases/$(database)/documents/promo_uses/$(request.resource.data.lastOrderId))
+          && existsAfter(/databases/$(database)/documents/promo_uses/$(request.resource.data.lastOrderId)));
+    }
+
+    // Лимит использований: без лимита (нет поля, 0 или null) — не ограничено
+    function withinUsageLimit() {
+      let usageLimit = resource.data.get('usageLimit', 0);
+      return !(usageLimit is number) || usageLimit <= 0 || request.resource.data.usedCount <= usageLimit;
+    }
+
+    // Отметка «промокод использован заказом»: одна на заказ, только если в заказе этот код, и только вместе
+    // с ростом счётчика промокода в том же пакете (recordPromoUsageInFirestore). Читает администратор.
+    match /promo_uses/{orderId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() || isOrderPromoUse(orderId);
+      allow update, delete: if isAdmin() && isValidId(orderId);
+    }
+
+    function isOrderPromoUse(orderId) {
+      let data = request.resource.data;
+      let orderPath = /databases/$(database)/documents/orders/$(orderId);
+      let promoPath = /databases/$(database)/documents/promos/$(data.promoId);
+      return !serverOrdersEnabled()
+        && orderId.matches('^[A-Za-z0-9-]{1,40}$')
+        && data.keys().hasOnly(['orderId', 'promoId', 'createdAt'])
+        && data.orderId == orderId
+        && data.promoId is string && isValidId(data.promoId)
+        && data.createdAt is string && data.createdAt.size() <= 40
+        && exists(orderPath)
+        && get(orderPath).data.get('promoCode', '') is string
+        && get(orderPath).data.get('promoCode', '').size() > 0
+        && get(orderPath).data.promoCode.upper() == get(promoPath).data.code.upper()
+        && getAfter(promoPath).data.get('lastOrderId', '') == orderId;
     }
 
     match /banners/{bannerId} {
@@ -187,7 +245,10 @@ service cloud.firestore {
     // ------------------------------------------------------------------
 
     // Заказ из браузера (completeOrderLocally в App.tsx): только его поля, контакты и тексты разумной длины,
-    // не больше 30 строк. Цены строк правила не сверяют — это делает placeOrder (этап 1, серверные заказы).
+    // не больше 30 строк, суммы в разумных границах. Строки поштучно не проверяются: даже 3 сравнения на строку
+    // не укладываются в лимит 1000 выражений на 20+ строках. Поддельные количество и цена строки не трогают склад
+    // и журнал (списание сверяется со строкой и только уменьшает остаток), а ссылку на фото из строки экраны не
+    // показывают (orderLineImage). Цены строк сверяет placeOrder (серверные заказы, этап 5).
     function isClientOrderShape() {
       let data = request.resource.data;
       return data.keys().hasOnly(['id', 'createdAt', 'date', 'items', 'status', 'totalPrice', 'deliveryAddress',
@@ -205,12 +266,16 @@ service cloud.firestore {
         && isOptionalText(data, 'date', 40)
         && isOptionalText(data, 'promoCode', 40)
         && isOptionalText(data, 'estimatedDelivery', 80)
-        && (!('deliveryFee' in data) || (data.deliveryFee is number && data.deliveryFee >= 0))
-        && (!('discountAmount' in data) || (data.discountAmount is number && data.discountAmount >= 0))
+        && data.totalPrice <= 10000000
+        && (!('deliveryFee' in data) || (data.deliveryFee is number && data.deliveryFee >= 0 && data.deliveryFee <= 100000))
+        && (!('discountAmount' in data)
+          || (data.discountAmount is number && data.discountAmount >= 0 && data.discountAmount <= 10000000))
+
         && (!('historySteps' in data) || (data.historySteps is list && data.historySteps.size() <= 20))
         && (!('deliveryStages' in data) || (data.deliveryStages is list && data.deliveryStages.size() <= 20));
     }
 
+    // Строки заказа из браузера (toOrderLineProduct, без фото): проверка развёрнута на 30 строк — циклов в правилах нет
     match /orders/{orderId} {
       allow read: if isAdmin()
         || (isSignedIn() && resource.data.customerUid == request.auth.uid);
@@ -345,13 +410,17 @@ service cloud.firestore {
 
     // Журнал склада (src/shared/stockMovements.ts): читает и ведёт администратор. Покупатель (при заказах
     // из браузера) создаёт только записи своего сохранённого заказа: id «{заказ}_{строка}», тот же товар
-    // и то же количество, что в строке заказа, — не больше одной записи на строку, без изменения и удаления.
+    // и вариант, что в строке заказа, — не больше одной записи на строку, без изменения и удаления. Списано —
+    // фактически (не больше заказанного: остатка могло не хватить); ненулевая запись — только вместе со списанием
+    // этого варианта в той же транзакции (аудит 02.10, находка 8). Причина и автор записи — постоянные.
     function isOrderStockMovement(movementId) {
       let data = request.resource.data;
       let orderPath = /databases/$(database)/documents/orders/$(data.orderId);
+      let line = get(orderPath).data.items[data.lineIndex];
+      let productPath = /databases/$(database)/documents/products/$(data.productId);
       return !serverOrdersEnabled()
         && data.keys().hasOnly(['id', 'createdAt', 'date', 'type', 'orderId', 'lineIndex', 'productId',
-          'productTitle', 'skuCode', 'color', 'size', 'changeQuantity', 'reason', 'operator'])
+          'productTitle', 'skuCode', 'color', 'size', 'changeQuantity', 'reason', 'operator', 'skuIndex'])
         && data.type == 'order'
         && data.orderId is string && data.orderId.matches('^[A-Za-z0-9-]{1,40}$')
         && data.lineIndex is int && data.lineIndex >= 0
@@ -359,16 +428,21 @@ service cloud.firestore {
         && data.id == movementId
         && exists(orderPath)
         && data.lineIndex < get(orderPath).data.items.size()
-        && data.productId == get(orderPath).data.items[data.lineIndex].product.id
-        && data.changeQuantity == -get(orderPath).data.items[data.lineIndex].quantity
+        && data.productId == line.product.id
+        && line.get('isPreorder', false) == false
+        && data.skuIndex is int && data.skuIndex >= 0
+        && data.changeQuantity is int && data.changeQuantity <= 0 && data.changeQuantity >= -line.quantity
+        && sameName(data.color, line.get('selectedColor', ''))
+        && sameName(data.size, line.get('selectedSize', ''))
+        && (data.changeQuantity == 0 || getAfter(productPath).data.get('lastStockMovement', '') == movementId)
         && data.createdAt is string && data.createdAt.size() <= 40
         && data.date is string && data.date.size() <= 40
         && data.productTitle is string && data.productTitle.size() <= 200
         && data.skuCode is string && data.skuCode.size() <= 80
         && data.color is string && data.color.size() <= 60
         && data.size is string && data.size.size() <= 30
-        && data.reason is string && data.reason.size() <= 80
-        && data.operator is string && data.operator.size() <= 80;
+        && data.reason == 'Заказ #' + data.orderId
+        && data.operator == 'Покупатель';
     }
 
     match /stock_movements/{movementId} {
