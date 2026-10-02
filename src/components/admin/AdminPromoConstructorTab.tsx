@@ -21,19 +21,23 @@ import {
   Search,
   Shirt,
 } from 'lucide-react';
-import { PromoCode, Product, StoreCategory } from '../../types';
+import { Order, PromoCode, Product, StoreCategory } from '../../types';
 import { copyToClipboard } from '../../utils/clipboard';
 import { NotConfigured } from '../NotConfigured';
 import { NeumorphicSwitch } from '../NeumorphicSwitch';
 import { formatPromoExpiry, isPromoListed, promoExpiryDate } from '../../shared/orderPricing';
 import { productImage } from '../../utils/productImage';
 import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
+import { computePartnerCommissions } from '../../utils/partnerCommission';
+import { pluralRu } from '../../utils/pluralize';
 
 interface AdminPromoConstructorTabProps {
   promos: PromoCode[];
   /** Admin → «Категории» (promo limited to categories) */
   categories?: StoreCategory[];
   products?: Product[];
+  /** Orders the partner commission is counted from (paid and received only) */
+  orders?: Order[];
   onUpdatePromos: (promos: PromoCode[]) => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
@@ -42,6 +46,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
   promos,
   categories = [],
   products = [],
+  orders = [],
   onUpdatePromos,
   onShowToast,
 }) => {
@@ -197,6 +202,11 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
     const cleanCode = code.trim().toUpperCase();
     if (!cleanCode) {
       onShowToast('Введите уникальный код купона', 'error');
+      return;
+    }
+    const percent = Number(partnerCommissionPercent);
+    if (isReferral && !(Number.isFinite(percent) && percent > 0 && percent <= 50)) {
+      onShowToast('Укажите комиссию партнера: от 0,5 до 50 %', 'error');
       return;
     }
 
@@ -359,11 +369,16 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
     onShowToast('Список промокодов скопирован в буфер для рассылки', 'success');
   };
 
-  // Referral metrics
-  const referralPromos = promos.filter((p) => p.isReferral);
-  const totalReferralRevenue = referralPromos.reduce((acc, p) => acc + (p.generatedRevenue || 0), 0);
-  const totalCommissionEarned = referralPromos.reduce((acc, p) => acc + (p.commissionEarned || 0), 0);
-  const totalReferralOrders = referralPromos.reduce((acc, p) => acc + (p.usedCount || 0), 0);
+  // Referral metrics: from the orders (paid and received), not from the promo counters a visitor can raise
+  const partnerCommissions = useMemo(() => computePartnerCommissions(promos, orders), [promos, orders]);
+  const commissionByPromo = useMemo(
+    () => new Map(partnerCommissions.map((c) => [c.promoId, c])),
+    [partnerCommissions]
+  );
+  const totalReferralRevenue = partnerCommissions.reduce((acc, c) => acc + c.confirmedSales, 0);
+  const totalCommissionEarned = partnerCommissions.reduce((acc, c) => acc + c.commission, 0);
+  const totalReferralOrders = partnerCommissions.reduce((acc, c) => acc + c.confirmedOrders, 0);
+  const totalPendingOrders = partnerCommissions.reduce((acc, c) => acc + c.pendingOrders, 0);
 
   // Filtered promos list
   const filteredPromos = promos.filter((p) => {
@@ -439,7 +454,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
           }`}
         >
           <Share2 className="w-3.5 h-3.5" />
-          <span>Реферальная система и блогеры ({referralPromos.length})</span>
+          <span>Реферальная система и блогеры ({partnerCommissions.length})</span>
         </button>
 
         <button
@@ -462,26 +477,26 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
           <div className="neu-inset rounded-2xl p-3.5 border border-transparent space-y-1">
             <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider flex items-center gap-1">
               <TrendingUp className="w-3.5 h-3.5 text-success" />
-              Привлеченная выручка
+              Продажи партнеров
             </span>
             <p className="text-lg font-extrabold text-[#2D3A4E]">
               {totalReferralRevenue.toLocaleString('ru-RU')} ₽
             </p>
             <p className="text-xs text-[#4E5C70]">
-              По заказам с партнерскими купонами
+              Оплаченные и полученные заказы с партнерскими кодами, без доставки
             </p>
           </div>
 
           <div className="neu-inset rounded-2xl p-3.5 border border-transparent space-y-1">
             <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider flex items-center gap-1">
               <DollarSign className="w-3.5 h-3.5 text-accent" />
-              Комиссия к выплате
+              Комиссия партнеров
             </span>
             <p className="text-lg font-extrabold text-accent">
               {totalCommissionEarned.toLocaleString('ru-RU')} ₽
             </p>
             <p className="text-xs text-[#4E5C70]">
-              Суммарный заработок инфлюенсеров
+              Для статистики: сайт ее не выплачивает. Процент — в настройках кода
             </p>
           </div>
 
@@ -491,10 +506,12 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
               Заказов от партнеров
             </span>
             <p className="text-lg font-extrabold text-[#2D3A4E]">
-              {totalReferralOrders} покупок
+              {totalReferralOrders} {pluralRu(totalReferralOrders, ['заказ', 'заказа', 'заказов'])}
             </p>
             <p className="text-xs text-[#4E5C70]">
-              Конверсий по реферальным ссылкам/кодам
+              {totalPendingOrders > 0
+                ? `Еще ${totalPendingOrders} ${pluralRu(totalPendingOrders, ['ждет', 'ждут', 'ждут'])} оплаты или получения — в комиссию пока не входят`
+                : 'Оплаченные и полученные клиентом'}
             </p>
           </div>
         </div>
@@ -879,12 +896,15 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
-                    Комиссия партнера (%)
+                  <label htmlFor="promo-partner-percent" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+                    Комиссия партнера (% от оплаченных и полученных заказов, без доставки)
                   </label>
                   <input
+                    id="promo-partner-percent"
                     type="number"
-                    min="1"
+                    inputMode="decimal"
+                    step="0.5"
+                    min="0.5"
                     max="50"
                     value={partnerCommissionPercent}
                     onChange={(e) => setPartnerCommissionPercent(Number(e.target.value))}
@@ -1288,24 +1308,34 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 </div>
 
                 {/* Partner stats row if referral */}
-                {promo.isReferral && (
-                  <div className="p-2.5 neu-flat-sm rounded-xl flex items-center justify-between gap-2 flex-wrap text-[11px]">
-                    <div className="flex items-center gap-3">
-                      <span>
-                        Выручка: <strong className="text-[#2D3A4E] font-extrabold">{(promo.generatedRevenue || 0).toLocaleString('ru-RU')} ₽</strong>
-                      </span>
-                      <span>
-                        Комиссия ({promo.partnerCommissionPercent}%):{' '}
-                        <strong className="text-accent font-extrabold">
-                          {(promo.commissionEarned || 0).toLocaleString('ru-RU')} ₽
-                        </strong>
-                      </span>
+                {promo.isReferral && (() => {
+                  const c = commissionByPromo.get(promo.id);
+                  if (!c) return null;
+                  return (
+                    <div className="p-2.5 neu-flat-sm rounded-xl space-y-1 text-[11px]">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span>
+                          Продажи: <strong className="text-[#2D3A4E] font-extrabold">{c.confirmedSales.toLocaleString('ru-RU')} ₽</strong>
+                        </span>
+                        <span>
+                          {c.percent === null ? (
+                            <span className="text-warning font-bold">Процент партнера не задан</span>
+                          ) : (
+                            <>
+                              Комиссия ({c.percent}%):{' '}
+                              <strong className="text-accent font-extrabold">{c.commission.toLocaleString('ru-RU')} ₽</strong>
+                            </>
+                          )}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#4E5C70]">
+                        Оплачено и получено: {c.confirmedOrders} {pluralRu(c.confirmedOrders, ['заказ', 'заказа', 'заказов'])}
+                        {c.pendingOrders > 0 &&
+                          ` · ждут оплаты или получения: ${c.pendingOrders} на ${c.pendingSales.toLocaleString('ru-RU')} ₽`}
+                      </p>
                     </div>
-                    <span className="text-[11px] text-success font-bold">
-                      Привлечено заказов: {promo.usedCount}
-                    </span>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Restrictions Chips */}
                 <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-2 border-t border-[#BAC5D5]/40 text-[11px] text-[#4E5C70] min-w-0">

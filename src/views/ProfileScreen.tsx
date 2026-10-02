@@ -3163,6 +3163,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   categories={getCategories(storefrontSettings)}
                   promos={localPromos}
                   products={productsList}
+                  orders={orders}
                   onUpdatePromos={handleUpdatePromosList}
                   onShowToast={onShowToast}
                 />

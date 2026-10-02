@@ -24,6 +24,7 @@ import {
   X,
 } from 'lucide-react';
 import { Order, PromoCode } from '../../types';
+import { computePartnerCommissions } from '../../utils/partnerCommission';
 import { generateAnalyticsPDF, preloadPdfLibraries } from '../../utils/pdfExport';
 import {
   computeFirestoreDailySales,
@@ -251,6 +252,11 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
     [orders, period, statusFilter, resetAt]
   );
   const breakdown = useMemo(() => computePeriodBreakdown(periodOrders), [periodOrders]);
+  // Partner commission of the period: paid and received orders only, for statistics (the site does not pay it)
+  const periodCommissions = useMemo(
+    () => new Map(computePartnerCommissions(promos, periodOrders).map((c) => [c.code.trim().toUpperCase(), c])),
+    [promos, periodOrders]
+  );
 
   const {
     totalRevenue,
@@ -689,6 +695,24 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
                       <span className="text-xs font-extrabold">{p.share}%</span>
                     </div>
                   </div>
+                  {periodCommissions.has(p.code) && (() => {
+                    const c = periodCommissions.get(p.code)!;
+                    return (
+                      <p className="text-[11px] text-[#4E5C70] pt-1 border-t border-[#BAC5D5]/40">
+                        Партнер{c.partnerName ? ` ${c.partnerName}` : ''}:{' '}
+                        {c.percent === null ? (
+                          'процент не задан'
+                        ) : (
+                          <>
+                            комиссия {c.percent}% —{' '}
+                            <strong className="text-accent">{rub(c.commission)}</strong> с {c.confirmedOrders} оплаченных и
+                            полученных
+                          </>
+                        )}
+                        {c.pendingOrders > 0 && `; ждут оплаты или получения: ${c.pendingOrders}`}
+                      </p>
+                    );
+                  })()}
                 </div>
               );
             })}
