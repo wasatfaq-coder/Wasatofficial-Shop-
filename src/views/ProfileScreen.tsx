@@ -36,7 +36,6 @@ import {
   Store,
   RefreshCw,
   AlertCircle,
-  Navigation,
   MessageCircle,
   Send,
   Database,
@@ -56,7 +55,6 @@ import type { LegalDocId } from '../utils/legalDocs';
 import { formatAddress } from '../utils/addressFormat';
 import type { AdminChatPayload } from '../components/admin/AdminSupportChatTab';
 import type { ChatMessageChange } from '../utils/firebaseSync';
-import { DeliveryTrackingMapModal } from '../components/DeliveryTrackingMapModal';
 import { copyToClipboard } from '../utils/clipboard';
 import { isNotificationSupported, requestNotificationPermission } from '../utils/pushNotifications';
 import {
@@ -450,7 +448,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   // Selected order IDs for detailed tracking & interactive delivery map
   const [selectedOrderIdForTracking, setSelectedOrderIdForTracking] = useState<string | null>(null);
   const trackingDialog = useDialogA11y(Boolean(selectedOrderIdForTracking), () => setSelectedOrderIdForTracking(null));
-  const [selectedOrderIdForMap, setSelectedOrderIdForMap] = useState<string | null>(null);
 
   // Derive active order reactively from orders prop
   const selectedOrderForTracking = useMemo(
@@ -458,10 +455,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     [orders, selectedOrderIdForTracking]
   );
 
-  const selectedOrderForMap = useMemo(
-    () => (selectedOrderIdForMap ? orders.find((o) => o.id === selectedOrderIdForMap) || null : null),
-    [orders, selectedOrderIdForMap]
-  );
 
   // Listen for open order tracking events (from Push Notification click)
   React.useEffect(() => {
@@ -1546,20 +1539,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                   )}
                                   {ord.deliveryMethod || 'Курьерская доставка'}
                                 </span>
-                                {isCourier && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedOrderIdForMap(ord.id);
-                                    }}
-                                    className="p-1 px-2 neu-button rounded-lg text-[11px] font-bold text-accent flex items-center gap-1 cursor-pointer hover:scale-105 transition-transform"
-                                    title="Открыть карту перемещения курьера"
-                                  >
-                                    <Navigation className="w-3 h-3" />
-                                    <span>Карта</span>
-                                  </button>
-                                )}
                               </div>
                             )}
 
@@ -1608,7 +1587,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                 e.stopPropagation();
                                 setSelectedOrderIdForTracking(null);
                                 setActiveModal(null);
-                                setSelectedOrderIdForMap(null);
                                 onOpenSupportChat();
                                 onShowToast(`Чат заботы открыт по заказу #${ord.id}`, 'info');
                               }}
@@ -1790,19 +1768,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   <p className="text-xs text-[#4E5C70] leading-snug">
                     {isPickup
                       ? `Пункт выдачи: ${selectedOrderForTracking.deliveryAddress || `Бутик ${storeName}`}. Заказ выдается сотрудниками бутика без трек-номера.`
-                      : `Адрес доставки: ${selectedOrderForTracking.deliveryAddress || 'Адрес клиента'}. Заказ доставляется штатной службой ${storeName} без сторонних трек-номеров.`}
+                      : `Адрес доставки: ${selectedOrderForTracking.deliveryAddress || 'не указан'}.`}
                   </p>
-
-                  {isCourier && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedOrderIdForMap(selectedOrderForTracking.id)}
-                      className="w-full py-2.5 px-3.5 neu-button rounded-xl text-xs font-extrabold text-accent flex items-center justify-center gap-2 hover:scale-[1.02] transition-all cursor-pointer"
-                    >
-                      <Navigation className="w-4 h-4 text-accent animate-pulse" />
-                      <span>Открыть карту перемещения курьера</span>
-                    </button>
-                  )}
                 </div>
               );
             })()}
@@ -2230,7 +2197,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                           const orderId = selectedOrderForTracking.id;
                           setSelectedOrderIdForTracking(null);
                           setActiveModal(null);
-                          setSelectedOrderIdForMap(null);
                           onOpenSupportChat();
                           onShowToast(`Чат заботы открыт по заказу #${orderId}`, 'info');
                         }}
@@ -2264,7 +2230,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                           const orderId = selectedOrderForTracking.id;
                           setSelectedOrderIdForTracking(null);
                           setActiveModal(null);
-                          setSelectedOrderIdForMap(null);
                           onOpenSupportChat();
                           onShowToast(`Чат заботы открыт по заказу #${orderId}`, 'info');
                         }}
@@ -2283,21 +2248,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 return (
                   <div className="neu-inset rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3 border border-white/70">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center text-accent font-extrabold text-xs shrink-0 border border-white/90">
-                        АС
+                      {/* No made-up courier: the store answers about delivery itself (owner's request 02.10) */}
+                      <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center text-accent shrink-0 border border-white/90">
+                        <Headphones className="w-4 h-4" aria-hidden="true" />
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-xs font-extrabold text-[#2D3A4E] truncate">
-                            {isExpress ? 'Иван (Экспресс)' : 'Алексей Смирнов'}
-                          </p>
-                          <span className="text-[11px] font-bold text-warning neu-flat px-1 py-0.2 rounded shrink-0">
-                            ★ 4.96
-                          </span>
-                        </div>
-                        <p className="text-xs text-[#4E5C70] truncate">
-                          {isExpress ? `Срочный курьер ${storeName}` : `Курьер ${storeName}`}
-                        </p>
+                        <p className="text-xs font-extrabold text-[#2D3A4E] truncate">Менеджер по доставке</p>
+                        <p className="text-xs text-[#4E5C70] truncate">{storeName}</p>
                       </div>
                     </div>
 
@@ -2319,7 +2276,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                             const orderId = selectedOrderForTracking.id;
                             setSelectedOrderIdForTracking(null);
                             setActiveModal(null);
-                            setSelectedOrderIdForMap(null);
                             onOpenSupportChat();
                             onShowToast(`Чат заботы открыт по заказу #${orderId}`, 'info');
                           }}
@@ -2354,7 +2310,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         const orderId = selectedOrderForTracking.id;
                         setSelectedOrderIdForTracking(null);
                         setActiveModal(null);
-                        setSelectedOrderIdForMap(null);
                         onOpenSupportChat();
                         onShowToast(`Чат заботы открыт по заказу #${orderId}`, 'info');
                       }}
@@ -3391,16 +3346,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Delivery Tracking Interactive Map Modal */}
-      <DeliveryTrackingMapModal
-        isOpen={!!selectedOrderForMap}
-        onClose={() => setSelectedOrderIdForMap(null)}
-        order={selectedOrderForMap}
-        storePhone={storePhone}
-        onOpenSupportChat={onOpenSupportChat}
-        onShowToast={onShowToast}
-      />
 
       {/* Neumorphic Security Settings Modal */}
       <AccountDataModal

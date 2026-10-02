@@ -1,4 +1,5 @@
-// Атаки на firestore.rules из обзора рисков 30.09.2026 (docs/audit-2026-09-30-plan.md).
+// Атаки на firestore.rules из обзоров рисков 30.09 и 02.10.2026 (docs/audit-2026-09-30-plan.md,
+// docs/audit-2026-10-02-plan.md; пробы 02.10 — docs/audit-2026-10-02/probes/).
 // Запуск вместе с остальными тестами правил: bun run test:rules.
 //
 // Каждый тест записан так, как должно быть: запрос злоумышленника отклонён. Пока уязвимость открыта, тест помечен
@@ -9,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { after, before, beforeEach, describe, test } from 'node:test';
 import { assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing';
 import {
-  collection, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, updateDoc, where,
+  collection, doc, getDoc, getDocs, increment, limit, query, serverTimestamp, setDoc, updateDoc, where, writeBatch,
 } from 'firebase/firestore';
 
 const ADMIN_EMAIL = 'gunh83975@gmail.com';
@@ -58,15 +59,15 @@ after(async () => {
 describe('Клиентский режим заказов (settings/server нет — так сейчас на живом сайте)', () => {
   beforeEach(() => seed(undefined));
 
-  test('A1 посетитель без входа не может обнулить остаток и снять товар с продажи',
-    { todo: 'находка 1, этап 1' }, async () => {
+  test('A1 посетитель без входа не может обнулить остаток и снять товар с продажи напрямую',
+    async () => {
       await assertFails(updateDoc(doc(anon(), 'products/p1'), {
         skus: [{ id: 'p1-m', color: 'Черный', size: 'M', stock: 0 }], inStock: false,
       }));
     });
 
   test('A2 никто, кроме администратора, не может увеличить остаток (продажа того, чего нет)',
-    { todo: 'находка 1, этап 1: правилами не проверить (лимит 1000 выражений), нужны серверные заказы' }, async () => {
+    async () => {
       await assertFails(updateDoc(doc(customer(), 'products/p1'), {
         skus: [{ id: 'p1-m', color: 'Черный', size: 'M', stock: 9999 }], inStock: true,
       }));
@@ -86,8 +87,9 @@ describe('Клиентский режим заказов (settings/server нет
     });
 
   test('A5 посетитель без входа не может записать заказ на 1 ₽ с чужими ценами',
-    { todo: 'находка 2, этап 1' }, async () => {
-      // «Оплачен» и чужие поля (placedVia) правила уже не пускают; остаётся сумма, которую никто не сверяет
+    { todo: 'находка 3 (02.10), этап 5: цены строк сверяет только placeOrder' }, async () => {
+      // «Оплачен» и чужие поля (placedVia) правила не пускают, склад и журнал поддельная строка не трогает,
+      // ссылку на картинку из строки экраны не показывают (orderLineImage); остаётся сумма, которую никто не сверяет
       await assertFails(setDoc(doc(anon(), 'orders/WS-FAKE1'), {
         id: 'WS-FAKE1', status: 'accepted', totalPrice: 1, paymentStatus: 'pending', paymentMethod: 'Перевод',
         deliveryMethod: 'Курьер',
@@ -103,12 +105,63 @@ describe('Клиентский режим заказов (settings/server нет
       }));
     });
 
-  test('A7 последний товар: покупатель не пишет остаток напрямую, иначе двое покупают одну вещь (гонка без транзакции)',
-    { todo: 'находка 6, этап 1' }, async () => {
-      // Оба покупателя видели остаток 1 и оба записали 0 — оба заказа прошли бы. Закрывается заказом через placeOrder.
+  test('A7 покупатель не пишет остаток напрямую: две записи по одному снимку затирали друг друга',
+    async () => {
+      // Теперь списание — транзакция по строке заказа (deductOrderLineStock). Что оба заказа на последний товар
+      // принимаются, — находка 4 (02.10, этап 2: оформление сверяет остаток) и серверные заказы (этап 5).
       await assertFails(updateDoc(doc(customer('alice'), 'products/p1'), {
         skus: [{ id: 'p1-m', color: 'Черный', size: 'M', stock: 0 }], inStock: false,
       }));
+    });
+});
+
+describe('Клиентский режим — пробы 02.10 (docs/audit-2026-10-02-plan.md)', () => {
+  beforeEach(() => seed(undefined));
+
+  const fakeOrder = (id, items) => setDoc(doc(anon(), `orders/${id}`), {
+    id, status: 'accepted', totalPrice: 1, paymentStatus: 'pending', paymentMethod: 'Перевод', deliveryMethod: 'Курьер',
+    items, customerName: 'Администратор', customerPhone: '+70000000000', deliveryAddress: 'где угодно',
+  });
+
+  test('A8 промокод без заказа не «сжигается»: 48 записей по +1 не исчерпают лимит и не начислят партнёру комиссию (находка 2)',
+    async () => {
+      await assertFails(updateDoc(doc(anon(), 'promos/promo1'), { usedCount: 3 }));
+      await assertFails(updateDoc(doc(anon(), 'promos/promo1'), { usedCount: 3, commissionEarned: 1_000_000 }));
+      await assertFails(updateDoc(doc(anon(), 'promos/promo1'), { usedCount: increment(1), lastOrderId: 'WS-REAL1' }));
+    });
+
+  test('A9 журнал склада не подделать: «приход +500, Администратор» по поддельному заказу (находка 8)',
+    async () => {
+      await assertSucceeds(fakeOrder('WS-FAKE9', [{ product: { id: 'p1', title: 'Пальто', price: 1 }, quantity: -500, selectedColor: 'Черный', selectedSize: 'M' }]));
+      await assertFails(setDoc(doc(anon(), 'stock_movements/WS-FAKE9_0'), {
+        id: 'WS-FAKE9_0', createdAt: 'x', date: 'x', type: 'order', orderId: 'WS-FAKE9', lineIndex: 0, skuIndex: 0,
+        productId: 'p1', productTitle: 'Пальто', skuCode: '', color: 'Черный', size: 'M', changeQuantity: 500,
+        reason: 'Заказ #WS-FAKE9', operator: 'Администратор',
+      }));
+    });
+
+  test('A10 артикул и штрихкод варианта посетитель не меняет (этикетки и сканер склада, находка 1)',
+    async () => {
+      await assertFails(updateDoc(doc(anon(), 'products/p1'), {
+        skus: [{ id: 'p1-m', color: 'Черный', size: 'M', stock: 1, skuCode: 'X', barcode: '1' }], inStock: true,
+      }));
+    });
+
+  test('A11 поддельный заказ не списывает товар со склада',
+    { todo: 'находка 1 (02.10), этап 5: закрывают только серверные заказы' }, async () => {
+      // Заказ из браузера записывает кто угодно, а списание по его строке правила пропускают
+      await assertSucceeds(fakeOrder('WS-FAKE11', [{ product: { id: 'p1', title: 'Пальто', price: 1 }, quantity: 99, selectedColor: 'Черный', selectedSize: 'M' }]));
+      const db = anon();
+      const batch = writeBatch(db);
+      batch.set(doc(db, 'stock_movements/WS-FAKE11_0'), {
+        id: 'WS-FAKE11_0', createdAt: 'x', date: 'x', type: 'order', orderId: 'WS-FAKE11', lineIndex: 0, skuIndex: 0,
+        productId: 'p1', productTitle: 'Пальто', skuCode: '', color: 'Черный', size: 'M', changeQuantity: -1,
+        reason: 'Заказ #WS-FAKE11', operator: 'Покупатель',
+      });
+      batch.update(doc(db, 'products/p1'), {
+        skus: [{ id: 'p1-m', color: 'Черный', size: 'M', stock: 0 }], inStock: false, lastStockMovement: 'WS-FAKE11_0',
+      });
+      await assertFails(batch.commit());
     });
 });
 

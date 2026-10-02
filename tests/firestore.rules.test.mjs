@@ -22,6 +22,8 @@ import {
   Timestamp,
   updateDoc,
   where,
+  writeBatch,
+  increment,
 } from 'firebase/firestore';
 
 const ADMIN_EMAIL = 'gunh83975@gmail.com';
@@ -69,6 +71,41 @@ const order = (overrides = {}) => ({
   ...overrides,
 });
 
+// The journal entry of an order line, as deductOrderLineStock (firebaseSync.ts) writes it
+const movement = (overrides = {}) => ({
+  id: 'WS-10_0',
+  createdAt: '2026-09-30T12:00:00.000Z',
+  date: '30 сент., 15:00',
+  type: 'order',
+  orderId: 'WS-10',
+  lineIndex: 0,
+  skuIndex: 0,
+  productId: 'p1',
+  productTitle: 'Пальто',
+  skuCode: 'WS-P1-M',
+  color: '',
+  size: 'M',
+  changeQuantity: -2,
+  reason: 'Заказ #WS-10',
+  operator: 'Покупатель',
+  ...overrides,
+});
+
+// Order WS-10: 2 × p1 size M (the product has 3 in stock)
+const lineOrder = order({
+  id: 'WS-10',
+  items: [{ id: 'cart-1', product: { id: 'p1', title: 'Пальто', price: 10000 }, quantity: 2, selectedSize: 'M' }],
+});
+
+// A browser's write-off of one order line: the journal entry and the product's variant in one batch
+function takeStock(db, { skus, inStock = true, entry = {}, productId = 'p1', productFields = {} }) {
+  const m = movement(entry);
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'stock_movements', m.id), m);
+  batch.update(doc(db, 'products', productId), { skus, inStock, lastStockMovement: m.id, ...productFields });
+  return batch.commit();
+}
+
 before(async () => {
   env = await initializeTestEnvironment({
     projectId: 'demo-manstyle',
@@ -88,6 +125,7 @@ beforeEach(async () => {
     await setDoc(doc(db, 'promos/promo1'), promo);
     await setDoc(doc(db, 'orders/MS-alice'), order({ id: 'MS-alice', customerUid: 'alice' }));
     await setDoc(doc(db, 'orders/MS-bob'), order({ id: 'MS-bob', customerUid: 'bob' }));
+    await setDoc(doc(db, 'orders/WS-10'), lineOrder);
     await setDoc(doc(db, 'users/alice'), { uid: 'alice', name: 'Alice' });
     await setDoc(doc(db, 'admins/staff'), { role: 'admin' });
   });
@@ -105,31 +143,68 @@ describe('catalog', () => {
   });
 
   test('customer can deduct stock but not rewrite reviews or rating inside the product', async () => {
-    await assertSucceeds(
-      updateDoc(doc(guest(), 'products/p1'), { skus: [{ size: 'M', stock: 2 }], inStock: true })
-    );
+    await assertSucceeds(takeStock(guest(), { skus: [{ size: 'M', stock: 1 }] }));
     await assertFails(
       updateDoc(doc(customer(), 'products/p1'), { reviews: [{ rating: 4 }], rating: 4, reviewsCount: 1 })
     );
     await assertFails(updateDoc(doc(guest(), 'products/p1'), { reviews: [{ rating: 1 }] }));
   });
 
-  test('a customer cannot add or remove variants or put a product back on sale', async () => {
+  test('stock changes only through a journal entry of a saved order line (audit 02.10, finding 1)', async () => {
+    // directly, without an order line — no matter the value
+    await assertFails(updateDoc(doc(guest(), 'products/p1'), { skus: [{ size: 'M', stock: 1 }], inStock: true }));
     await assertFails(updateDoc(doc(guest(), 'products/p1'), {
-      skus: [{ size: 'M', stock: 2 }, { size: 'L', stock: 1 }], inStock: true,
+      skus: [{ size: 'M', stock: 1 }], inStock: true, lastStockMovement: 'WS-10_0',
     }));
-    await assertFails(updateDoc(doc(guest(), 'products/p1'), { skus: [], inStock: true }));
-    await assertSucceeds(updateDoc(doc(guest(), 'products/p1'), { skus: [{ size: 'M', stock: 0 }], inStock: false }));
-    // sold out and taken off sale: only the admin puts it back
-    await assertFails(updateDoc(doc(guest(), 'products/p1'), { skus: [{ size: 'M', stock: 0 }], inStock: true }));
+    // not by more than the entry says, not up, not below zero
+    await assertFails(takeStock(guest(), { skus: [{ size: 'M', stock: 0 }] }));
+    await assertFails(takeStock(guest(), { skus: [{ size: 'M', stock: 9999 }], entry: { changeQuantity: 9996 } }));
+    await assertFails(takeStock(guest(), { skus: [{ size: 'M', stock: -1 }], entry: { changeQuantity: -4 } }));
+    // once per line: the entry exists after the first write-off
+    await assertSucceeds(takeStock(guest(), { skus: [{ size: 'M', stock: 1 }] }));
+    await assertFails(takeStock(guest(), { skus: [{ size: 'M', stock: 0 }], entry: { changeQuantity: -1 } }));
+  });
+
+  test('a customer cannot rename variants, change codes, add or remove variants or put a product back on sale', async () => {
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'products/p1'), {
+      ...product, skus: [{ size: 'M', stock: 2, skuCode: 'WS-P1-M', barcode: '4600000000001' }, { size: 'L', stock: 4 }],
+    }));
+    const l = { size: 'L', stock: 4 };
+    await assertFails(takeStock(guest(), { skus: [{ size: 'M', stock: 0, skuCode: 'X', barcode: '4600000000001' }, l] }));
+    await assertFails(takeStock(guest(), { skus: [{ size: 'M', stock: 0, skuCode: 'WS-P1-M', barcode: '1' }, l] }));
+    await assertFails(takeStock(guest(), { skus: [{ size: 'XXL', stock: 0, skuCode: 'WS-P1-M', barcode: '4600000000001' }, l] }));
+    const m0 = { size: 'M', stock: 0, skuCode: 'WS-P1-M', barcode: '4600000000001' };
+    await assertFails(takeStock(guest(), { skus: [m0, { size: 'L', stock: 0 }] })); // another variant
+    await assertFails(takeStock(guest(), { skus: [m0, l, { size: 'XL', stock: 1 }] }));
+    await assertFails(takeStock(guest(), { skus: [m0] }));
+    // the ordered size is L, not M: the entry must point at the variant of the order line
+    await assertFails(takeStock(guest(), { skus: [{ ...m0, stock: 2 }, { size: 'L', stock: 2 }], entry: { skuIndex: 1, size: 'L' } }));
+    // sold out → off sale; still on sale with stock left → no
+    await assertFails(takeStock(guest(), { skus: [{ ...m0, stock: 1 }, l], inStock: false, entry: { changeQuantity: -1 } }));
+    await assertSucceeds(takeStock(guest(), { skus: [m0, l] }));
+  });
+
+  test('a product taken off sale stays off: the customer cannot put it back', async () => {
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'products/p1'), { ...product, inStock: false }));
+    await assertFails(takeStock(guest(), { skus: [{ size: 'M', stock: 1 }], inStock: true }));
+    await assertSucceeds(takeStock(guest(), { skus: [{ size: 'M', stock: 1 }], inStock: false }));
     await assertSucceeds(updateDoc(doc(owner(), 'products/p1'), { skus: [{ size: 'M', stock: 5 }], inStock: true }));
   });
 
-  test('stock of a product with many variants is still written off', async () => {
-    const many = Array.from({ length: 60 }, (_, i) => ({ id: `v${i}`, size: String(i), stock: 5 }));
-    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'products/p1'), { ...product, skus: many }));
-    const lowered = many.map((v, i) => (i === 59 ? { ...v, stock: 4 } : v));
-    await assertSucceeds(updateDoc(doc(guest(), 'products/p1'), { skus: lowered, inStock: true }));
+  test('stock of a product with many variants is still written off (1000-expression limit)', async () => {
+    const many = Array.from({ length: 200 }, (_, i) => ({ id: `v${i}`, color: `Цвет ${i % 8}`, size: String(i), stock: 5 }));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'products/p1'), { ...product, skus: many });
+      await setDoc(doc(ctx.firestore(), 'orders/WS-11'), order({
+        id: 'WS-11',
+        items: [{ id: 'c', product: { id: 'p1', title: 'Пальто', price: 10000 }, quantity: 1, selectedColor: ' Цвет 6 ', selectedSize: '150' }],
+      }));
+    });
+    const lowered = many.map((v, i) => (i === 150 ? { ...v, stock: 4 } : v));
+    await assertSucceeds(takeStock(guest(), {
+      skus: lowered,
+      entry: { id: 'WS-11_0', orderId: 'WS-11', reason: 'Заказ #WS-11', skuIndex: 150, color: 'Цвет 6', size: '150', changeQuantity: -1 },
+    }));
   });
 
   test('admins (owner email or /admins doc) can manage products', async () => {
@@ -150,9 +225,7 @@ describe('catalog', () => {
 
   test('a cost price left inside a product can only be removed, and stock still deducts meanwhile', async () => {
     await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'products/p1'), { ...product, costPrice: 4000 }));
-    await assertSucceeds(
-      updateDoc(doc(guest(), 'products/p1'), { skus: [{ size: 'M', stock: 2 }], inStock: true })
-    );
+    await assertSucceeds(takeStock(guest(), { skus: [{ size: 'M', stock: 1 }] }));
     await assertSucceeds(updateDoc(doc(owner(), 'products/p1'), { price: 9000 }));
     await assertFails(updateDoc(doc(owner(), 'products/p1'), { costPrice: 1 }));
     await assertSucceeds(updateDoc(doc(owner(), 'products/p1'), { costPrice: deleteField() }));
@@ -179,17 +252,46 @@ describe('catalog', () => {
 });
 
 describe('promos', () => {
-  test('customer can only bump usage counters', async () => {
-    await assertSucceeds(updateDoc(doc(guest(), 'promos/promo1'), { usedCount: 1, generatedRevenue: 500 }));
-    await assertFails(updateDoc(doc(guest(), 'promos/promo1'), { discountPercent: 99 }));
-    await assertFails(updateDoc(doc(guest(), 'promos/promo1'), { usedCount: -5 }));
+  // One more use by a saved order with the code, as recordPromoUsageInFirestore (firebaseSync.ts) writes it
+  const usePromo = (db, orderId, { promoId = 'promo1', counters = { usedCount: increment(1) } } = {}) => {
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'promos', promoId), { ...counters, lastOrderId: orderId });
+    batch.set(doc(db, 'promo_uses', orderId), { orderId, promoId, createdAt: '2026-10-02T12:00:00.000Z' });
+    return batch.commit();
+  };
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'orders/WS-P1'), order({ id: 'WS-P1', promoCode: 'sale' }));
+      await setDoc(doc(ctx.firestore(), 'orders/WS-P2'), order({ id: 'WS-P2', promoCode: 'SALE' }));
+    });
   });
 
-  test('one order is one use: the counter grows by 1, revenue by one order, commission not above it', async () => {
-    await assertFails(updateDoc(doc(guest(), 'promos/promo1'), { usedCount: 5, generatedRevenue: 500 }));
-    await assertFails(updateDoc(doc(guest(), 'promos/promo1'), { usedCount: 1, generatedRevenue: 5_000_000 }));
-    await assertFails(updateDoc(doc(guest(), 'promos/promo1'), { usedCount: 1, generatedRevenue: 500, commissionEarned: 900 }));
-    await assertSucceeds(updateDoc(doc(guest(), 'promos/promo1'), { usedCount: 1, generatedRevenue: 5000, commissionEarned: 500 }));
+  test('a saved order with the code adds one use, once (audit 02.10, finding 2)', async () => {
+    await assertSucceeds(usePromo(guest(), 'WS-P1'));
+    await assertFails(usePromo(guest(), 'WS-P1')); // the same order again
+    await assertSucceeds(usePromo(guest(), 'WS-P2'));
+    await assertSucceeds(getDoc(doc(owner(), 'promo_uses/WS-P1')));
+    await assertFails(getDoc(doc(guest(), 'promo_uses/WS-P1')));
+  });
+
+  test('no use without an order with this code, no jumps, no revenue or commission from the browser', async () => {
+    await assertFails(updateDoc(doc(guest(), 'promos/promo1'), { usedCount: 1 }));
+    await assertFails(updateDoc(doc(guest(), 'promos/promo1'), { usedCount: 1, lastOrderId: 'WS-P1' }));
+    await assertFails(usePromo(guest(), 'MS-alice')); // order without a promo code
+    await assertFails(usePromo(guest(), 'WS-404')); // no such order
+    await assertFails(usePromo(guest(), 'WS-P1', { counters: { usedCount: 5 } }));
+    await assertFails(usePromo(guest(), 'WS-P1', { counters: { usedCount: increment(1), generatedRevenue: 500 } }));
+    await assertFails(usePromo(guest(), 'WS-P1', { counters: { usedCount: increment(1), commissionEarned: 50 } }));
+    await assertFails(updateDoc(doc(guest(), 'promos/promo1'), { discountPercent: 99 }));
+  });
+
+  test('a code at its usage limit is not used again', async () => {
+    await env.withSecurityRulesDisabled((ctx) =>
+      setDoc(doc(ctx.firestore(), 'promos/promo1'), { ...promo, usageLimit: 1 })
+    );
+    await assertSucceeds(usePromo(guest(), 'WS-P1'));
+    await assertFails(usePromo(guest(), 'WS-P2'));
   });
 });
 
@@ -225,6 +327,17 @@ describe('orders', () => {
     await assertSucceeds(setDoc(doc(owner(), 'orders/MS-14'), { id: 'MS-14', status: 'accepted', items: [] }));
   });
 
+  test('sums of an order from the browser stay in sane bounds (audit 02.10, finding 3)', async () => {
+    await assertFails(setDoc(doc(guest(), 'orders/MS-27'), order({ id: 'MS-27', discountAmount: 1e12 })));
+    await assertFails(setDoc(doc(guest(), 'orders/MS-28'), order({ id: 'MS-28', totalPrice: 1e12 })));
+    await assertFails(setDoc(doc(guest(), 'orders/MS-29'), order({ id: 'MS-29', deliveryFee: 5e6 })));
+    // a line as toOrderLineProduct writes it from the browser: photos dropped
+    const line = order().items[0];
+    await assertSucceeds(setDoc(doc(guest(), 'orders/MS-30'), order({ id: 'MS-30', items: [{ ...line, product: {
+      ...line.product, originalPrice: 12000, category: 'coats', categoryLabel: 'Пальто', material: 'Шерсть', colors: [], sizes: ['M'], images: [],
+    } }] })));
+  });
+
   test('customer cannot place an order in someone else\'s name', async () => {
     await assertFails(setDoc(doc(customer('alice'), 'orders/MS-5'), order({ id: 'MS-5', customerUid: 'bob' })));
     await assertSucceeds(setDoc(doc(customer('alice'), 'orders/MS-6'), order({ id: 'MS-6', customerUid: 'alice' })));
@@ -248,40 +361,27 @@ describe('orders', () => {
 });
 
 describe('stock journal (stock_movements)', () => {
-  const lineOrder = order({ id: 'WS-10', items: [{ product: { id: 'p1' }, quantity: 2 }] });
-  const movement = (overrides = {}) => ({
-    id: 'WS-10_0',
-    createdAt: '2026-09-30T12:00:00.000Z',
-    date: '30 сент., 15:00',
-    type: 'order',
-    orderId: 'WS-10',
-    lineIndex: 0,
-    productId: 'p1',
-    productTitle: 'Пальто',
-    skuCode: 'WS-P1-M',
-    color: '',
-    size: 'M',
-    changeQuantity: -2,
-    reason: 'Заказ #WS-10',
-    operator: 'Иван',
-    ...overrides,
-  });
-
-  beforeEach(async () => {
-    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'orders/WS-10'), lineOrder));
-  });
-
-  test('a customer writes the entry of a line of a saved order, once', async () => {
-    await assertSucceeds(setDoc(doc(guest(), 'stock_movements/WS-10_0'), movement()));
+  test('a customer writes the entry of a line of a saved order together with the write-off, once', async () => {
+    // an entry that takes stock is written only with the stock itself (audit 02.10, finding 8)
+    await assertFails(setDoc(doc(guest(), 'stock_movements/WS-10_0'), movement()));
+    await assertSucceeds(takeStock(guest(), { skus: [{ size: 'M', stock: 1 }] }));
     // no second write over it, no reading, no deleting
-    await assertFails(setDoc(doc(guest(), 'stock_movements/WS-10_0'), movement({ operator: 'Другой' })));
+    await assertFails(setDoc(doc(guest(), 'stock_movements/WS-10_0'), movement({ changeQuantity: 0 })));
     await assertFails(getDoc(doc(guest(), 'stock_movements/WS-10_0')));
     await assertFails(getDocs(collection(customer(), 'stock_movements')));
     await assertFails(deleteDoc(doc(guest(), 'stock_movements/WS-10_0')));
   });
 
-  test('a customer cannot invent entries: other quantity, product, line, order or type', async () => {
+  test('nothing was left: the entry says 0 and is written alone', async () => {
+    await assertSucceeds(setDoc(doc(guest(), 'stock_movements/WS-10_0'), movement({ changeQuantity: 0 })));
+  });
+
+  test('a customer cannot invent entries: other quantity, product, line, order, type, reason or author', async () => {
     await assertFails(setDoc(doc(guest(), 'stock_movements/WS-10_0'), movement({ changeQuantity: 50 })));
+    await assertFails(takeStock(guest(), { skus: [{ size: 'M', stock: 0 }], entry: { changeQuantity: -3 } })); // more than ordered
+    await assertFails(setDoc(doc(guest(), 'stock_movements/WS-10_0'), movement({ changeQuantity: 0, operator: 'Администратор' })));
+    await assertFails(setDoc(doc(guest(), 'stock_movements/WS-10_0'), movement({ changeQuantity: 0, reason: 'Приход' })));
+    await assertFails(setDoc(doc(guest(), 'stock_movements/WS-10_0'), movement({ changeQuantity: 0, size: 'XL' })));
     await assertFails(setDoc(doc(guest(), 'stock_movements/WS-10_0'), movement({ productId: 'p2' })));
     await assertFails(setDoc(doc(guest(), 'stock_movements/WS-10_1'), movement({ id: 'WS-10_1', lineIndex: 1 })));
     await assertFails(setDoc(doc(guest(), 'stock_movements/WS-99_0'), movement({ id: 'WS-99_0', orderId: 'WS-99' })));
@@ -294,13 +394,14 @@ describe('stock journal (stock_movements)', () => {
     await env.withSecurityRulesDisabled((ctx) =>
       setDoc(doc(ctx.firestore(), 'settings/server'), { serverOrdersEnabled: true })
     );
-    await assertFails(setDoc(doc(guest(), 'stock_movements/WS-10_0'), movement()));
+    await assertFails(setDoc(doc(guest(), 'stock_movements/WS-10_0'), movement({ changeQuantity: 0 })));
   });
 
   test('the admin reads the journal and records warehouse operations', async () => {
     const receipt = movement({ id: 'log-1', type: 'receipt', changeQuantity: 5, previousStock: 3, newStock: 8 });
     delete receipt.orderId;
     delete receipt.lineIndex;
+    delete receipt.skuIndex;
     await assertSucceeds(setDoc(doc(owner(), 'stock_movements/log-1'), receipt));
     await assertSucceeds(getDocs(query(collection(extraAdmin(), 'stock_movements'), orderBy('createdAt', 'desc'), limit(500))));
     await assertFails(setDoc(doc(customer(), 'stock_movements/log-2'), { ...receipt, id: 'log-2' }));
@@ -386,6 +487,7 @@ describe('server-side orders enabled (settings/server)', () => {
     await assertFails(setDoc(doc(customer('alice'), 'orders/MS-10'), order({ id: 'MS-10', customerUid: 'alice' })));
     await assertFails(updateDoc(doc(guest(), 'products/p1'), { skus: [{ size: 'M', stock: 0 }], inStock: false }));
     await assertFails(updateDoc(doc(guest(), 'promos/promo1'), { usedCount: 1 }));
+    await assertFails(takeStock(guest(), { skus: [{ size: 'M', stock: 1 }] }));
   });
 
   test('reviews and admin actions still work', async () => {

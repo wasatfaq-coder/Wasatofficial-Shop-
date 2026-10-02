@@ -534,13 +534,15 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         </div>
 
         <form onSubmit={handlePromoSubmit} className="flex items-center gap-2 pt-1 border-t border-[#BAC5D5]/50">
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-0">
             <input
               type="text"
+              aria-label="Промокод"
+              autoComplete="off"
               value={promoInput}
               onChange={(e) => setPromoInput(e.target.value)}
               placeholder={appliedPromo ? `Активен: ${appliedPromo.code}` : 'Или введите код вручную'}
-              className="w-full neu-inset rounded-xl py-2 px-3 text-xs font-medium text-[#2D3A4E] placeholder:text-[#56647A] uppercase"
+              className="w-full neu-inset rounded-xl py-2 px-3 text-xs font-medium text-[#2D3A4E] placeholder:text-[#56647A] uppercase placeholder:normal-case"
             />
           </div>
           <button
