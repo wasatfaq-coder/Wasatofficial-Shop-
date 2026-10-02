@@ -36,6 +36,7 @@ import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
 import { NeumorphicSelect, NeumorphicSelectOption } from '../NeumorphicSelect';
 import { orderStatusChip } from '../../utils/orderStatusStyle';
 import { formatAddress } from '../../utils/addressFormat';
+import { cancelledByLabel, cancelledShare, cancelReasonText, formatCancelledAt } from '../../utils/orderCancel';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { useUnsavedChanges } from '../../utils/unsavedChanges';
 import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
@@ -436,7 +437,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
   ];
 
   // Same colours and words as «Заказы» (a cancelled order shows as cancelled)
-  const getOrderStatusBadge = (ord: Pick<Order, 'status' | 'isCancelled'>) => {
+  const getOrderStatusBadge = (ord: Pick<Order, 'status' | 'isCancelled' | 'cancelledBy'>) => {
     const chip = orderStatusChip(ord);
     return { label: chip.label, bg: chip.className };
   };
@@ -1048,6 +1049,24 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     </span>
                   </div>
                 </div>
+                {/* Отмены — от всех заказов клиента: и отменённые им самим, и магазином */}
+                {selectedCustomer.orders.length > 0 && (
+                  <p className="text-xs text-[#4E5C70]">
+                    Отменено:{' '}
+                    <strong className="text-[#2D3A4E]">
+                      {cancelledShare(selectedCustomer.orders)}% ({selectedCustomer.orders.filter((o) => o.isCancelled).length} из{' '}
+                      {selectedCustomer.orders.length})
+                    </strong>
+                    {selectedCustomer.orders.some((o) => o.isCancelled && o.cancelledBy === 'customer') && (
+                      <>
+                        , из них самим клиентом —{' '}
+                        <strong className="text-[#2D3A4E]">
+                          {selectedCustomer.orders.filter((o) => o.isCancelled && o.cancelledBy === 'customer').length}
+                        </strong>
+                      </>
+                    )}
+                  </p>
+                )}
               </div>
 
               {/* Sizing & Body Measurements Card (if available) */}
@@ -1226,6 +1245,14 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                               </span>
                             </div>
                           </div>
+
+                          {ord.isCancelled && (cancelReasonText(ord) || formatCancelledAt(ord)) && (
+                            <p className="text-xs text-[#2D3A4E] rounded-xl bg-danger-soft border border-danger/25 px-2.5 py-1.5">
+                              <strong className="text-danger">{cancelledByLabel(ord)}</strong>
+                              {formatCancelledAt(ord) && ` · ${formatCancelledAt(ord)}`}
+                              {cancelReasonText(ord) && <span className="block">Причина: {cancelReasonText(ord)}</span>}
+                            </p>
+                          )}
 
                           {/* Line Items Preview */}
                           <div className="space-y-1.5 border-t border-[#BAC5D5]/30 pt-2">

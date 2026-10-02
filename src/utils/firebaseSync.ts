@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   setDoc,
+  getDoc,
   getDocs,
   deleteDoc,
   onSnapshot,
@@ -27,7 +28,16 @@ import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
 import type { LegalDocId, LegalTexts } from './legalDocs';
 import { compressBase64Image } from './imageUpload';
 import { SERVER_CONFIG_DOC_ID, ServerConfig } from '../shared/orderApi';
-import { orderLineMovement, STOCK_MOVEMENTS_COLLECTION } from '../shared/stockMovements';
+import {
+  ORDER_MOVEMENT_OPERATOR,
+  orderLineMovement,
+  orderMovementId,
+  orderReturnMovementId,
+  orderReturnReason,
+  STOCK_MOVEMENTS_COLLECTION,
+} from '../shared/stockMovements';
+import { formatOrderDate } from '../shared/orderDate';
+import { cancelReasonText, formatCancelledAt } from './orderCancel';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages, isTransportCompanyDelivery } from './deliveryStages';
 
 /**
@@ -202,6 +212,118 @@ export async function deductOrderLineStock(orderId: string, line: CartItem, line
     }
     return taken;
   });
+}
+
+/**
+ * The buyer cancels their own order (profile → order → «Отменить заказ»). The rules allow it only for a signed-in
+ * order of their own in «Принят», once, with a reason; then `returnCancelledOrderStock` returns the goods.
+ * Throws when the write is refused.
+ */
+export async function cancelOrderAsCustomer(orderId: string, reason: string, comment: string, at: Date): Promise<void> {
+  await updateDoc(doc(db, 'orders', orderId), {
+    isCancelled: true,
+    cancelledBy: 'customer',
+    cancelReason: reason,
+    ...(comment ? { cancelComment: comment } : {}),
+    cancelledAt: at.toISOString(),
+    estimatedDelivery: 'Заказ отменен',
+    stockReturned: false,
+  });
+}
+
+/** What happened to one line of a cancelled order */
+export type LineReturn = 'returned' | 'already' | 'nothing' | 'unknown';
+
+/**
+ * Returns one line of a cancelled order to stock — exactly what its write-off entry `{заказ}_{строка}` took (stock
+ * could be short at the order) — together with the entry `{заказ}_{строка}_return`, in one transaction. The entry is
+ * created once, so a repeated call (another tab, a retry, the admin) returns nothing twice. A product «Снят с
+ * витрины» stays off sale; a sold-out one is on sale again. Without a write-off entry (preorder line, an order older
+ * than the journal) the buyer returns nothing ('unknown'); the admin passes `fallbackToOrdered` and returns the
+ * ordered quantity. Throws when the write is refused.
+ */
+export async function returnOrderLineStock(
+  orderId: string,
+  line: CartItem,
+  lineIndex: number,
+  at: Date,
+  options: { operator?: string; fallbackToOrdered?: boolean } = {}
+): Promise<LineReturn> {
+  if (line.isPreorder) return 'nothing';
+  const productRef = doc(db, 'products', line.product.id);
+  const returnRef = doc(db, STOCK_MOVEMENTS_COLLECTION, orderReturnMovementId(orderId, lineIndex));
+  const takenRef = doc(db, STOCK_MOVEMENTS_COLLECTION, orderMovementId(orderId, lineIndex));
+  return runTransaction(db, async (tx) => {
+    const [returnSnap, takenSnap, productSnap] = await Promise.all([tx.get(returnRef), tx.get(takenRef), tx.get(productRef)]);
+    if (returnSnap.exists()) return 'already';
+    let quantity: number;
+    if (takenSnap.exists()) quantity = -(Number(takenSnap.data().changeQuantity) || 0);
+    else if (options.fallbackToOrdered) quantity = line.quantity;
+    else return 'unknown';
+    if (!(quantity > 0) || !productSnap.exists()) return 'nothing';
+
+    const data = productSnap.data();
+    const skus: ProductSKU[] = Array.isArray(data.skus) ? data.skus : [];
+    const skuIndex = skus.findIndex(
+      (sku) => sameVariantName(sku.color, line.selectedColor) && sameVariantName(sku.size, line.selectedSize)
+    );
+    if (skuIndex < 0) return 'nothing';
+    const sku = skus[skuIndex];
+    const stockBefore = Number(sku.stock) || 0;
+    const movement: StockMovementLog & { lineIndex: number; skuIndex: number } = {
+      id: returnRef.id,
+      createdAt: at.toISOString(),
+      date: formatOrderDate(at),
+      type: 'return',
+      orderId,
+      lineIndex,
+      productId: line.product.id,
+      productTitle: String(line.product.title ?? '').slice(0, 200),
+      skuCode: String(sku.skuCode ?? '').slice(0, 80),
+      color: String(sku.color ?? '').slice(0, 60),
+      size: String(sku.size ?? '').slice(0, 30),
+      changeQuantity: quantity,
+      reason: orderReturnReason(orderId),
+      operator: options.operator ?? ORDER_MOVEMENT_OPERATOR,
+      skuIndex,
+    };
+    tx.set(returnRef, sanitizeForFirestore(movement));
+    const nextSkus = skus.map((s, i) => (i === skuIndex ? { ...s, stock: stockBefore + quantity } : s));
+    const soldOut = skus.every((s) => (Number(s.stock) || 0) <= 0);
+    tx.update(productRef, {
+      skus: nextSkus,
+      // false with stock left = «Снят с витрины» (isHiddenFromSale): only a sold-out product goes on sale again
+      inStock: data.inStock === false && soldOut ? true : data.inStock ?? true,
+      lastStockMovement: movement.id,
+    });
+    return 'returned';
+  });
+}
+
+/**
+ * Every line of a cancelled order back to stock, one transaction per line (as the write-off). Marks the order
+ * `stockReturned` when no line is left unknown. Resolves to true when the whole order is back.
+ */
+export async function returnCancelledOrderStock(
+  order: Pick<Order, 'id' | 'items'>,
+  options: { operator?: string; fallbackToOrdered?: boolean } = {}
+): Promise<boolean> {
+  const at = new Date();
+  let complete = true;
+  for (let i = 0; i < (order.items ?? []).length; i++) {
+    let result: LineReturn;
+    try {
+      result = await returnOrderLineStock(order.id, order.items[i], i, at, options);
+    } catch (err) {
+      // Another tab (or the admin) returned this line at the same moment: its entry is there now
+      const entry = await getDoc(doc(db, STOCK_MOVEMENTS_COLLECTION, orderReturnMovementId(order.id, i))).catch(() => null);
+      if (!entry?.exists()) throw err;
+      result = 'already';
+    }
+    if (result === 'unknown') complete = false;
+  }
+  if (complete) await updateDoc(doc(db, 'orders', order.id), { stockReturned: true });
+  return complete;
 }
 
 
@@ -434,6 +556,19 @@ function normalizeOrderFromFirestore(raw: any, docId?: string): Order {
       trackingNumber,
       estimatedDelivery,
     });
+  }
+
+  // The buyer's cancellation changes only the cancel fields (the rules): its step is added for the history blocks
+  if (isCancelled && raw.cancelledBy && !historySteps.some((s) => /отмен/i.test(s.title))) {
+    historySteps = [
+      ...historySteps,
+      {
+        title: raw.cancelledBy === 'customer' ? 'Заказ отменён покупателем' : 'Заказ отменён магазином',
+        date: formatCancelledAt({ cancelledAt: raw.cancelledAt ? String(raw.cancelledAt) : undefined }) || orderDate,
+        completed: true,
+        description: cancelReasonText({ cancelReason: raw.cancelReason, cancelComment: raw.cancelComment }) || undefined,
+      },
+    ];
   }
 
   const items = Array.isArray(raw.items) ? raw.items : [];

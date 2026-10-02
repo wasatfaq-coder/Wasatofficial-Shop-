@@ -418,6 +418,128 @@ describe('stock journal (stock_movements)', () => {
   });
 });
 
+// «Доработки 3»: the buyer cancels own order WS-20 (2 × p1 size M, written off by the entry WS-20_0; 1 M left)
+describe('order cancellation by the buyer', () => {
+  const cancelFields = (overrides = {}) => ({
+    isCancelled: true,
+    cancelledBy: 'customer',
+    cancelReason: 'Заказ больше не нужен',
+    cancelComment: 'Купил в другом месте',
+    cancelledAt: '2026-10-02T18:00:00.000Z',
+    estimatedDelivery: 'Заказ отменен',
+    stockReturned: false,
+    ...overrides,
+  });
+  const cancel = (db, overrides = {}, id = 'WS-20') => updateDoc(doc(db, 'orders', id), cancelFields(overrides));
+  const returnEntry = (overrides = {}) => movement({
+    id: 'WS-20_0_return',
+    type: 'return',
+    orderId: 'WS-20',
+    changeQuantity: 2,
+    reason: 'Отмена заказа #WS-20',
+    ...overrides,
+  });
+  // returnOrderLineStock (firebaseSync.ts): the return entry and the variant's stock in one write
+  function giveBack(db, { skus = [{ size: 'M', stock: 3 }], inStock = true, entry = {} } = {}) {
+    const m = returnEntry(entry);
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'stock_movements', m.id), m);
+    batch.update(doc(db, 'products', 'p1'), { skus, inStock, lastStockMovement: m.id });
+    return batch.commit();
+  }
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'products/p1'), { ...product, skus: [{ size: 'M', stock: 1 }] });
+      await setDoc(doc(db, 'orders/WS-20'), order({
+        id: 'WS-20',
+        customerUid: 'alice',
+        items: [{ id: 'cart-1', product: { id: 'p1', title: 'Пальто', price: 10000 }, quantity: 2, selectedSize: 'M' }],
+      }));
+      await setDoc(doc(db, 'stock_movements/WS-20_0'), movement({ id: 'WS-20_0', orderId: 'WS-20', reason: 'Заказ #WS-20' }));
+    });
+  });
+
+  test('the buyer cancels own order before packing, with a reason, once', async () => {
+    await assertFails(cancel(guest()));
+    await assertFails(cancel(customer('bob')));
+    await assertFails(cancel(customer('alice'), { cancelReason: '' }));
+    await assertFails(cancel(customer('alice'), { cancelReason: 'x'.repeat(101) }));
+    await assertFails(cancel(customer('alice'), { cancelComment: 'x'.repeat(501) }));
+    await assertFails(cancel(customer('alice'), { cancelledBy: 'admin' }));
+    await assertFails(cancel(customer('alice'), { stockReturned: true }));
+    // only the cancel fields: not the payment, the sum or the status
+    await assertFails(cancel(customer('alice'), { paymentStatus: 'refunded' }));
+    await assertFails(cancel(customer('alice'), { totalPrice: 1 }));
+    await assertFails(cancel(customer('alice'), { status: 'delivered' }));
+    await assertSucceeds(cancel(customer('alice')));
+    await assertFails(cancel(customer('alice'), { cancelReason: 'Другая причина' }));
+  });
+
+  test('not after packing started, and not again after the store brought the order back', async () => {
+    await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), 'orders/WS-20'), { status: 'assembling' }));
+    await assertFails(cancel(customer('alice')));
+    await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), 'orders/WS-20'), {
+      status: 'accepted', isCancelled: false, cancelledBy: 'admin', cancelledAt: '2026-10-01T10:00:00.000Z',
+    }));
+    await assertFails(cancel(customer('alice')));
+  });
+
+  test('the cancelled order returns to stock exactly what its line took, once', async () => {
+    // the order is not cancelled yet
+    await assertFails(giveBack(customer('alice')));
+    await assertSucceeds(cancel(customer('alice')));
+    // only together: the entry alone, the stock alone
+    await assertFails(setDoc(doc(customer('alice'), 'stock_movements/WS-20_0_return'), returnEntry()));
+    await assertFails(updateDoc(doc(customer('alice'), 'products/p1'), {
+      skus: [{ size: 'M', stock: 3 }], inStock: true, lastStockMovement: 'WS-20_0_return',
+    }));
+    // not more than the line took, not someone else's order, not another author or reason
+    await assertFails(giveBack(customer('alice'), { skus: [{ size: 'M', stock: 4 }], entry: { changeQuantity: 3 } }));
+    await assertFails(giveBack(customer('bob')));
+    await assertFails(giveBack(guest()));
+    await assertFails(giveBack(customer('alice'), { entry: { operator: 'Администратор' } }));
+    await assertFails(giveBack(customer('alice'), { entry: { reason: 'Заказ #WS-20' } }));
+    // a line without a write-off entry returns nothing
+    await assertFails(giveBack(customer('alice'), { entry: { id: 'WS-20_1_return', lineIndex: 1 } }));
+    await assertSucceeds(giveBack(customer('alice')));
+    await assertFails(giveBack(customer('alice'), { skus: [{ size: 'M', stock: 5 }] }));
+  });
+
+  test('a sold-out product goes back on sale; a product taken off sale stays off', async () => {
+    await assertSucceeds(cancel(customer('alice')));
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'products/p1'), {
+      ...product, inStock: false, skus: [{ size: 'M', stock: 0 }],
+    }));
+    await assertSucceeds(giveBack(customer('alice'), { skus: [{ size: 'M', stock: 2 }], inStock: true }));
+
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await deleteDoc(doc(ctx.firestore(), 'stock_movements/WS-20_0_return'));
+      await setDoc(doc(ctx.firestore(), 'products/p1'), {
+        ...product, inStock: false, skus: [{ size: 'M', stock: 1 }, { size: 'L', stock: 4 }],
+      });
+    });
+    const l = { size: 'L', stock: 4 };
+    await assertFails(giveBack(customer('alice'), { skus: [{ size: 'M', stock: 3 }, l], inStock: true }));
+    await assertSucceeds(giveBack(customer('alice'), { skus: [{ size: 'M', stock: 3 }, l], inStock: false }));
+  });
+
+  test('the buyer reads the entries of own order one by one and marks the return', async () => {
+    await assertSucceeds(getDoc(doc(customer('alice'), 'stock_movements/WS-20_0')));
+    await assertSucceeds(getDoc(doc(customer('alice'), 'stock_movements/WS-20_0_return'))); // not written yet
+    await assertFails(getDoc(doc(customer('bob'), 'stock_movements/WS-20_0')));
+    await assertFails(getDoc(doc(guest(), 'stock_movements/WS-20_0')));
+    await assertFails(getDocs(query(collection(customer('alice'), 'stock_movements'), where('orderId', '==', 'WS-20'))));
+    // «stockReturned» only on own order cancelled by the buyer
+    await assertFails(updateDoc(doc(customer('alice'), 'orders/WS-20'), { stockReturned: true }));
+    await assertSucceeds(cancel(customer('alice')));
+    await assertFails(updateDoc(doc(customer('bob'), 'orders/WS-20'), { stockReturned: true }));
+    await assertFails(updateDoc(doc(customer('alice'), 'orders/WS-20'), { stockReturned: true, cancelReason: 'Другое' }));
+    await assertSucceeds(updateDoc(doc(customer('alice'), 'orders/WS-20'), { stockReturned: true }));
+  });
+});
+
 const review = (uid, overrides = {}) => ({
   id: `p1_${uid}`,
   productId: 'p1',

@@ -13,6 +13,16 @@ export function orderMovementId(orderId: string, lineIndex: number): string {
   return `${orderId}_${lineIndex}`;
 }
 
+/** Id of the entry returning an order line to stock on the buyer's cancellation: one per line, like the write-off */
+export function orderReturnMovementId(orderId: string, lineIndex: number): string {
+  return `${orderMovementId(orderId, lineIndex)}_return`;
+}
+
+/** Reason of a return entry; the rules require exactly this text */
+export function orderReturnReason(orderId: string): string {
+  return `Отмена заказа #${orderId}`;
+}
+
 /**
  * Author of an order entry. Constant: the customer's name comes from the order form, so a fake order could sign
  * an entry «Администратор» (audit 02.10, finding 8); the order number in `reason` leads to the customer.

@@ -29,12 +29,15 @@ import {
   MessageSquare,
   Layers,
   Trash2,
+  Archive,
+  ArchiveRestore,
+  PackageCheck,
 } from 'lucide-react';
 import { Order, Product, OrderAdjustmentLog, OrderStatusHistoryStep, DeliveryStage, PromoCode, StorefrontSettings } from '../../types';
 import { exportOrdersToCSV } from '../../utils/csvHelpers';
 import { copyToClipboard } from '../../utils/clipboard';
 import { deductStockWithLogs, returnStockWithLogs, stockShortages, type StockShortage } from '../../utils/inventory';
-import { deleteOrderFromFirestore, saveStockMovements } from '../../utils/firebaseSync';
+import { deleteOrderFromFirestore, returnCancelledOrderStock, saveStockMovements } from '../../utils/firebaseSync';
 import type { StockMovementLog } from '../../types';
 import { AdminActionMenu } from './AdminActionMenu';
 import {
@@ -54,6 +57,8 @@ import { useDialogA11y } from '../../utils/useDialogA11y';
 import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
 import { initialPaymentStatus } from '../../shared/orderApi';
 import { AdminOrderCopyCards } from './AdminOrderCopyCards';
+import { CancelOrderDialog } from '../CancelOrderDialog';
+import { cancelledByLabel, cancelReasonText, formatCancelledAt, isArchivedOrder } from '../../utils/orderCancel';
 
 interface AdminOrdersTabProps {
   orders: Order[];
@@ -223,7 +228,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 }) => {
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'cancelled' | Order['status']>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'cancelled' | 'archive' | Order['status']>('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | '7days' | 'month'>('all');
   // Delivery and payment filters: the method names found in the orders themselves ('all' — any)
   const [deliveryFilter, setDeliveryFilter] = useState<string>('all');
@@ -240,18 +245,23 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     { value: 'month', label: 'Этот месяц' },
   ], []);
 
-  // Status chips (radio): counts exclude cancelled orders, which have their own chip
+  // Status chips (radio): counts exclude cancelled orders, which have their own chip, and «Архив» (cancelled
+  // 3 days ago and what the admin moved there), which leaves the working list
   const statusChips = useMemo(() => {
-    const active = orders.filter((o) => !o.isCancelled);
+    const now = Date.now();
+    const archived = orders.filter((o) => isArchivedOrder(o, now));
+    const listed = orders.filter((o) => !isArchivedOrder(o, now));
+    const active = listed.filter((o) => !o.isCancelled);
     const count = (st: Order['status']) => active.filter((o) => o.status === st).length;
     return [
-      { value: 'all' as const, label: 'Все', count: orders.length },
+      { value: 'all' as const, label: 'Все', count: listed.length },
       { value: 'accepted' as const, label: 'Новые', count: count('accepted') },
       { value: 'assembling' as const, label: 'Сборка', count: count('assembling') },
       { value: 'in_transit' as const, label: 'В пути', count: count('in_transit') },
       { value: 'ready' as const, label: 'К выдаче', count: count('ready') },
       { value: 'delivered' as const, label: 'Доставлены', count: count('delivered') },
-      { value: 'cancelled' as const, label: 'Отменены', count: orders.length - active.length },
+      { value: 'cancelled' as const, label: 'Отменены', count: listed.length - active.length },
+      { value: 'archive' as const, label: 'Архив', count: archived.length },
     ];
   }, [orders]);
 
@@ -278,6 +288,9 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   const [selectedOrderForAdjustment, setSelectedOrderForAdjustment] = useState<Order | null>(null);
   const [selectedOrderForDeliveryStages, setSelectedOrderForDeliveryStages] = useState<Order | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  /** «Отменить и вернуть на склад»: the window with the reason (audit 02.10, finding 14) */
+  const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
+  const [returningStockOrderId, setReturningStockOrderId] = useState<string | null>(null);
   const deleteOrderDialog = useDialogA11y(Boolean(orderToDelete), () => setOrderToDelete(null));
   const [isDeletingOrder, setIsDeletingOrder] = useState(false);
   const [expandedOrderAuditLogId, setExpandedOrderAuditLogId] = useState<string | null>(null);
@@ -305,9 +318,15 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     const DAY = 24 * 60 * 60 * 1000;
 
     return orders.filter((ord) => {
-      // 1. Status Filter (a cancelled order counts only under «Отменены», like the chip counters)
+      // 1. Status Filter (a cancelled order counts only under «Отменены», like the chip counters; «Архив» — only there)
+      const archived = isArchivedOrder(ord, now.getTime());
+      if (statusFilter === 'archive') {
+        if (!archived) return false;
+      } else if (archived) {
+        return false;
+      }
       if (statusFilter === 'cancelled' && !ord.isCancelled) return false;
-      if (statusFilter !== 'all' && statusFilter !== 'cancelled' && (ord.isCancelled || ord.status !== statusFilter)) return false;
+      if (statusFilter !== 'all' && statusFilter !== 'cancelled' && statusFilter !== 'archive' && (ord.isCancelled || ord.status !== statusFilter)) return false;
 
       // 2. Date Filter
       if (dateFilter !== 'all') {
@@ -418,6 +437,8 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         ...ord,
         status: newStatus,
         isCancelled: false,
+        // a restored order is back in the working list, not in «Архив»
+        archived: ord.isCancelled ? undefined : ord.archived,
         paymentStatus: updatedPaymentStatus,
         historySteps: updatedHistorySteps,
         deliveryStages: updatedStages,
@@ -509,8 +530,13 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       return {
         ...ord,
         isCancelled: true,
+        cancelledBy: 'admin' as const,
+        cancelReason: 'Массовая отмена в «Заказах»',
+        cancelledAt: new Date().toISOString(),
+        stockReturned: true,
         estimatedDelivery: 'Заказ отменен',
-        paymentStatus: 'refunded' as const,
+        // «Возврат средств» only for what was paid
+        paymentStatus: ord.paymentStatus === 'paid' ? ('refunded' as const) : ord.paymentStatus,
         historySteps: [
           ...(ord.historySteps || []),
           {
@@ -631,14 +657,12 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     onShowToast('Внутренняя заметка сохранена', 'success');
   };
 
-  // Order Cancellation and automatic Stock Return Handler
-  const handleCancelAndReturnStock = (order: Order) => {
+  // Order Cancellation and automatic Stock Return Handler: with the reason from CancelOrderDialog
+  const handleCancelAndReturnStock = async (order: Order, reason: string, comment: string): Promise<boolean> => {
     if (order.isCancelled) {
       onShowToast(`Заказ № ${order.id} уже отменен`, 'info');
-      return;
+      return true;
     }
-
-    const dateNow = historyDateLabel();
 
     if (order.items && order.items.length > 0) {
       const resReturn = returnStockWithLogs(
@@ -654,11 +678,12 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       }
     }
 
+    const reasonText = cancelReasonText({ cancelReason: reason, cancelComment: comment });
     const cancelStep: OrderStatusHistoryStep = {
-      title: 'Заказ отменен',
-      date: dateNow,
+      title: 'Заказ отменён магазином',
+      date: historyDateLabel(),
       completed: true,
-      description: 'Заказ отменен оператором. Зарезервированные остатки возвращены на склад.',
+      description: `${reasonText}. Товары возвращены на склад.`,
     };
 
     const updated = orders.map((o) =>
@@ -666,15 +691,47 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         ? {
             ...o,
             isCancelled: true,
+            cancelledBy: 'admin' as const,
+            cancelReason: reason,
+            ...(comment ? { cancelComment: comment } : {}),
+            cancelledAt: new Date().toISOString(),
+            stockReturned: true,
             estimatedDelivery: 'Заказ отменен',
-            paymentStatus: (o.paymentStatus === 'paid' ? 'refunded' : o.paymentStatus || 'refunded') as any,
+            // «Возврат средств» only for what was paid; an unpaid order keeps its payment status
+            paymentStatus: o.paymentStatus === 'paid' ? ('refunded' as const) : o.paymentStatus,
             historySteps: [...(o.historySteps || []), cancelStep],
           }
         : o
     );
 
-    onUpdateOrders(updated);
+    const saved = await onUpdateOrders(updated);
+    if (saved === false) return false;
     onShowToast(`Заказ № ${order.id} отменен. Товары возвращены на склад.`, 'success');
+    return true;
+  };
+
+  /**
+   * «Вернуть на склад» for a buyer's cancellation whose goods did not all get back (network, or an order older than
+   * the stock journal): the same per-line return as the buyer's, lines already returned are skipped; a line without
+   * a write-off entry gets back the ordered quantity.
+   */
+  const handleReturnCancelledStock = async (order: Order) => {
+    setReturningStockOrderId(order.id);
+    try {
+      await returnCancelledOrderStock(order, { operator: 'Администратор', fallbackToOrdered: true });
+      onShowToast(`Товары заказа № ${order.id} возвращены на склад`, 'success');
+    } catch (err) {
+      console.error('Stock return failed:', err);
+      onShowToast(`Не сохранено: возврат товаров заказа № ${order.id} на склад. Проверьте соединение.`, 'error');
+    } finally {
+      setReturningStockOrderId(null);
+    }
+  };
+
+  // «В архив» / «Из архива»: a cancelled order leaves the working list (or comes back to it)
+  const handleArchiveOrder = (order: Order, archived: boolean) => {
+    onUpdateOrders(orders.map((o) => (o.id === order.id ? { ...o, archived } : o)));
+    onShowToast(archived ? `Заказ № ${order.id} в архиве` : `Заказ № ${order.id} снова в списке`, 'success');
   };
 
   // Delete Single Order Handler
@@ -747,6 +804,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
           <input
             type="text"
             placeholder="№ заказа, клиент, телефон или трек"
+            aria-label="Поиск заказов"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-8 pr-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
@@ -1131,8 +1189,13 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
                     {ord.isCancelled && (
                       <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-danger-soft text-danger border border-danger/35 flex items-center gap-1">
-                        <XCircle className="w-2.5 h-2.5" />
-                        Отменен (Остатки возвращены)
+                        <XCircle className="w-2.5 h-2.5" aria-hidden="true" />
+                        {cancelledByLabel(ord)}
+                      </span>
+                    )}
+                    {isArchivedOrder(ord) && (
+                      <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-[#D8DFE8] text-[#2D3A4E] border border-[#BAC5D5]">
+                        В архиве
                       </span>
                     )}
                   </div>
@@ -1232,6 +1295,44 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                     </div>
                   </div>
                 </div>
+
+                {/* Cancellation: who, when (to the second), why; a buyer's cancellation that did not return the goods */}
+                {ord.isCancelled && (ord.cancelledBy || ord.cancelReason || ord.cancelledAt) && (
+                  <div className="rounded-xl bg-danger-soft border border-danger/25 p-2.5 text-xs text-[#2D3A4E] space-y-1.5">
+                    <p>
+                      <strong className="text-danger">{cancelledByLabel(ord)}</strong>
+                      {formatCancelledAt(ord) && <span> · {formatCancelledAt(ord)}</span>}
+                    </p>
+                    {cancelReasonText(ord) && (
+                      <p>
+                        <strong>Причина:</strong> {cancelReasonText(ord)}
+                      </p>
+                    )}
+                    {ord.cancelledBy === 'customer' && ord.paymentStatus === 'paid' && (
+                      <p className="font-bold text-danger">Заказ был оплачен — верните деньги покупателю.</p>
+                    )}
+                    {ord.cancelledBy === 'customer' && ord.stockReturned === false && (
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <p className="font-bold text-danger">Товары этого заказа ещё не вернулись на склад.</p>
+                        <button
+                          type="button"
+                          onClick={() => handleReturnCancelledStock(ord)}
+                          disabled={returningStockOrderId === ord.id}
+                          className={`h-8 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer ${
+                            returningStockOrderId === ord.id ? 'neu-button-disabled text-[#4E5C70]' : 'neu-button text-accent'
+                          }`}
+                        >
+                          {returningStockOrderId === ord.id ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <PackageCheck className="w-3.5 h-3.5" aria-hidden="true" />
+                          )}
+                          <span>Вернуть на склад</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Items & Logistics Details */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 text-xs">
@@ -1588,25 +1689,43 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                         icon: <Clock className="w-3.5 h-3.5 text-accent" />,
                         onSelect: () => setSelectedOrderForDeliveryStages(ord),
                       },
+                      // Удаление — только отменённого: сначала отмена с возвратом на склад (задание владельца 02.10)
                       ...(!ord.isCancelled
                         ? [
                             {
                               id: 'cancel',
                               label: 'Отменить и вернуть на склад',
                               icon: <RotateCcw className="w-3.5 h-3.5 text-danger" />,
-                              onSelect: () => handleCancelAndReturnStock(ord),
+                              onSelect: () => setOrderToCancel(ord),
+                              danger: true,
                               separatorBefore: true,
                             },
                           ]
-                        : []),
-                      {
-                        id: 'delete',
-                        label: 'Удалить заказ',
-                        icon: <Trash2 className="w-3.5 h-3.5" />,
-                        onSelect: () => setOrderToDelete(ord),
-                        danger: true,
-                        separatorBefore: ord.isCancelled,
-                      },
+                        : [
+                            isArchivedOrder(ord)
+                              ? {
+                                  id: 'unarchive',
+                                  label: 'Вернуть из архива',
+                                  icon: <ArchiveRestore className="w-3.5 h-3.5 text-accent" />,
+                                  onSelect: () => handleArchiveOrder(ord, false),
+                                  separatorBefore: true,
+                                }
+                              : {
+                                  id: 'archive',
+                                  label: 'В архив',
+                                  icon: <Archive className="w-3.5 h-3.5 text-accent" />,
+                                  onSelect: () => handleArchiveOrder(ord, true),
+                                  separatorBefore: true,
+                                },
+                            {
+                              id: 'delete',
+                              label: 'Удалить навсегда',
+                              icon: <Trash2 className="w-3.5 h-3.5" />,
+                              onSelect: () => setOrderToDelete(ord),
+                              danger: true,
+                              separatorBefore: true,
+                            },
+                          ]),
                     ]}
                   />
 
@@ -1746,6 +1865,13 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         onShowToast={onShowToast}
       />
 
+      <CancelOrderDialog
+        order={orderToCancel}
+        audience="admin"
+        onConfirm={(reason, comment) => (orderToCancel ? handleCancelAndReturnStock(orderToCancel, reason, comment) : Promise.resolve(false))}
+        onClose={() => setOrderToCancel(null)}
+      />
+
       {/* ================= MODAL: BULK CANCEL CONFIRMATION ================= */}
       {isBulkCancelModalOpen && (
         <div className="admin-no-glow fixed inset-0 z-[100] bg-[#2D3A4E]/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in">
@@ -1768,7 +1894,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
               <p className="font-bold">Что произойдет:</p>
               <ul className="text-[11px] text-[#4E5C70] space-y-1 list-disc list-inside">
                 <li>Все товары из выбранных заказов будут автоматически возвращены на остатки склада</li>
-                <li>Статус оплаты будет переведен в «Возврат»</li>
+                <li>Оплаченные заказы получат статус оплаты «Возврат средств»</li>
                 <li>В историю каждого заказа запишется запись об отмене</li>
               </ul>
             </div>
@@ -1812,7 +1938,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
             </div>
 
             <p className="text-xs text-[#4E5C70]">
-              Вы действительно хотите удалить заказ № <strong className="text-[#2D3A4E]">{orderToDelete.id}</strong> на сумму <strong className="text-[#2D3A4E]">{orderToDelete.totalPrice.toLocaleString('ru-RU')} ₽</strong>? Это действие нельзя отменить.
+              Заказ № <strong className="text-[#2D3A4E]">{orderToDelete.id}</strong> на сумму <strong className="text-[#2D3A4E]">{orderToDelete.totalPrice.toLocaleString('ru-RU')} ₽</strong> уже отменён. После удаления он пропадёт из «Клиентов» и из доли отмен, восстановить его нельзя. Чтобы просто убрать заказ из списка, переместите его в «Архив».
             </p>
 
             <div className="flex items-center justify-end gap-2 pt-2">

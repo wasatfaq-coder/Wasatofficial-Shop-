@@ -295,8 +295,21 @@ export interface Order {
   deliveryStages?: DeliveryStage[];
   managerNote?: string;
   isCancelled?: boolean;
+  /** One of the reasons in `src/utils/orderCancel.ts` (older orders: free text) */
   cancelReason?: string;
+  /** The buyer's or the admin's words to the reason */
+  cancelComment?: string;
+  /** ISO time of the cancellation (older orders: display text) */
   cancelledAt?: string;
+  /** Who cancelled: the buyer in the profile or the store in «Заказы» */
+  cancelledBy?: 'customer' | 'admin';
+  /**
+   * The buyer's cancellation returned every line to stock. False while it has not (a write failed, or the order
+   * is older than the stock journal): «Заказы» then offers «Вернуть на склад».
+   */
+  stockReturned?: boolean;
+  /** «Архив» in «Заказы»: true — moved by the admin, false — taken back (a cancelled order goes there by itself) */
+  archived?: boolean;
   customerName?: string;
   customerPhone?: string;
   customerEmail?: string;

@@ -61,7 +61,27 @@ service cloud.firestore {
       allow update: if (isAdmin() && keepsCostPriceOut())
         || (!serverOrdersEnabled()
           && onlyChanges(['skus', 'inStock', 'lastStockMovement'])
-          && isOrderStockDeduction(productId));
+          && isOrderStockDeduction(productId))
+        || (onlyChanges(['skus', 'inStock', 'lastStockMovement'])
+          && isOrderStockReturn(productId));
+    }
+
+    // Возврат на склад при отмене заказа покупателем (returnOrderLineStock в firebaseSync.ts, «Доработки 3»):
+    // в одной транзакции с записью журнала «{заказ}_{строка}_return», которая создаётся один раз на строку и равна
+    // списанию этой строки (isOrderStockReturnMovement). Меняется только остаток варианта строки, вверх ровно на
+    // запись. «В продаже» включается, только если вариант был распродан: снятый с витрины товар, у которого
+    // остаток был, остаётся снятым (кроме случая, когда кончился именно этот вариант — проверить все варианты
+    // правило не может). Работает и при серверных заказах: placeOrder пишет записи списания с теми же id.
+    function isOrderStockReturn(productId) {
+      let data = request.resource.data;
+      let movementId = data.get('lastStockMovement', '');
+      let movementPath = /databases/$(database)/documents/stock_movements/$(movementId);
+      return movementId is string && movementId.matches('^[A-Za-z0-9-]{1,40}_[0-9]{1,2}_return$')
+        && !exists(movementPath) && existsAfter(movementPath)
+        && getAfter(movementPath).data.changeQuantity > 0
+        && isSkuDeductedBy(productId, resource.data.skus, data.skus, getAfter(movementPath).data)
+        && (data.inStock == resource.data.get('inStock', true)
+          || (data.inStock == true && resource.data.skus[getAfter(movementPath).data.skuIndex].stock == 0));
     }
 
     // Списание остатка заказом из браузера (deductOrderLineStock в firebaseSync.ts, аудит 02.10, находка 1):
@@ -305,7 +325,40 @@ service cloud.firestore {
         && isClientOrderShape()
       );
 
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin() || isCustomerOrderCancel() || isCustomerStockReturnedMark();
+      allow delete: if isAdmin();
+    }
+
+    // Покупатель отменяет свой заказ (вход через Google) до начала сборки («Принят»), один раз и с причиной
+    // («Доработки 3»): заказ, который магазин отменял и вернул, отменяется через чат — его товар уже возвращали.
+    // Меняются только поля отмены; оплату, состав и суммы покупатель не трогает.
+    function isCustomerOrderCancel() {
+      let data = request.resource.data;
+      return isCustomer()
+        && resource.data.get('customerUid', null) == request.auth.uid
+        && resource.data.status == 'accepted'
+        && resource.data.get('isCancelled', false) == false
+        && !('cancelledAt' in resource.data)
+        && onlyChanges(['isCancelled', 'cancelledBy', 'cancelReason', 'cancelComment', 'cancelledAt',
+          'estimatedDelivery', 'stockReturned'])
+        && data.isCancelled == true
+        && data.cancelledBy == 'customer'
+        && data.cancelReason is string && data.cancelReason.size() > 0 && data.cancelReason.size() <= 100
+        && isOptionalText(data, 'cancelComment', 500)
+        && data.cancelledAt is string && data.cancelledAt.size() <= 40
+        && isOptionalText(data, 'estimatedDelivery', 80)
+        && data.get('stockReturned', false) == false;
+    }
+
+    // После возврата всех строк на склад покупатель отмечает это в своём отменённом заказе
+    // (без отметки «Заказы» предлагают администратору «Вернуть на склад»)
+    function isCustomerStockReturnedMark() {
+      return isCustomer()
+        && resource.data.get('customerUid', null) == request.auth.uid
+        && resource.data.get('isCancelled', false) == true
+        && resource.data.get('cancelledBy', '') == 'customer'
+        && onlyChanges(['stockReturned'])
+        && request.resource.data.stockReturned == true;
     }
 
     // ------------------------------------------------------------------
@@ -450,9 +503,51 @@ service cloud.firestore {
         && data.operator == 'Покупатель';
     }
 
+    // Возврат строки отменённого покупателем заказа (returnOrderLineStock, «Доработки 3»): id «{заказ}_{строка}_return»,
+    // один на строку, ровно столько, сколько списала запись «{заказ}_{строка}», и только вместе с возвратом этого
+    // варианта в той же транзакции. Заказ — свой и отменён самим покупателем; причина и автор — постоянные.
+    function isOrderStockReturnMovement(movementId) {
+      let data = request.resource.data;
+      let order = get(/databases/$(database)/documents/orders/$(data.orderId)).data;
+      let line = order.items[data.lineIndex];
+      let takenPath = /databases/$(database)/documents/stock_movements/$(data.orderId + '_' + string(data.lineIndex));
+      let productPath = /databases/$(database)/documents/products/$(data.productId);
+      return isCustomer()
+        && data.keys().hasOnly(['id', 'createdAt', 'date', 'type', 'orderId', 'lineIndex', 'productId',
+          'productTitle', 'skuCode', 'color', 'size', 'changeQuantity', 'reason', 'operator', 'skuIndex'])
+        && data.type == 'return'
+        && data.orderId is string && data.orderId.matches('^[A-Za-z0-9-]{1,40}$')
+        && data.lineIndex is int && data.lineIndex >= 0 && data.lineIndex < order.items.size()
+        && movementId == data.orderId + '_' + string(data.lineIndex) + '_return'
+        && data.id == movementId
+        && order.get('customerUid', null) == request.auth.uid
+        && order.get('isCancelled', false) == true
+        && order.get('cancelledBy', '') == 'customer'
+        && exists(takenPath)
+        && data.productId == get(takenPath).data.productId
+        && data.productId == line.product.id
+        && data.changeQuantity is int && data.changeQuantity > 0
+        && data.changeQuantity == -get(takenPath).data.changeQuantity
+        && data.skuIndex is int && data.skuIndex >= 0
+        && sameName(data.color, line.get('selectedColor', ''))
+        && sameName(data.size, line.get('selectedSize', ''))
+        && getAfter(productPath).data.get('lastStockMovement', '') == movementId
+        && data.createdAt is string && data.createdAt.size() <= 40
+        && data.date is string && data.date.size() <= 40
+        && data.productTitle is string && data.productTitle.size() <= 200
+        && data.skuCode is string && data.skuCode.size() <= 80
+        && data.reason == 'Отмена заказа #' + data.orderId
+        && data.operator == 'Покупатель';
+    }
+
     match /stock_movements/{movementId} {
-      allow read: if isAdmin();
-      allow create: if isAdmin() || isOrderStockMovement(movementId);
+      // Покупатель читает записи своего заказа по одной — чтобы вернуть на склад ровно списанное; несуществующую
+      // запись тоже (так он узнаёт, что строку уже вернули). Списком журнал читает только администратор.
+      allow get: if isAdmin() || (isCustomer() && (resource == null
+        || get(/databases/$(database)/documents/orders/$(resource.data.orderId)).data.get('customerUid', null)
+          == request.auth.uid));
+      allow list: if isAdmin();
+      allow create: if isAdmin() || isOrderStockMovement(movementId) || isOrderStockReturnMovement(movementId);
       allow update, delete: if isAdmin() && isValidId(movementId);
     }
 
