@@ -19,7 +19,7 @@ describe('orderStockMovements', () => {
     expect(movements.map((m) => m.id)).toEqual([orderMovementId('WS-1', 0), 'WS-1_2']);
     expect(movements[0]).toMatchObject({
       type: 'order', orderId: 'WS-1', lineIndex: 0, productId: 'p1', changeQuantity: -2,
-      skuCode: 'WS-P1-BEL-M', operator: 'Иван', createdAt: '2026-09-30T12:00:00.000Z', reason: 'Заказ #WS-1',
+      skuCode: 'WS-P1-BEL-M', operator: 'Покупатель', createdAt: '2026-09-30T12:00:00.000Z', reason: 'Заказ #WS-1',
     });
     // the customer's browser does not know the stock before and after: the fields are left out, not guessed
     expect(movements[0].previousStock).toBeUndefined();

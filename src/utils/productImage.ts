@@ -15,9 +15,10 @@ export function productImage(product: Pick<Product, 'images'> | null | undefined
 }
 
 /**
- * Photo of a product in an order line. The order keeps a light product copy without embedded photos
- * (toOrderLineProduct), so the photo comes from the catalog; a product that is gone shows the placeholder.
+ * Photo of a product in an order line — only from the catalog; a product that is gone shows the placeholder.
+ * A link stored in the order itself is never shown: an order placed from a browser is written by the visitor,
+ * and an outside picture would open on the staff's screen and give away their IP (audit 02.10, finding 3).
  */
-export function orderLineImage(product: Pick<Product, 'id' | 'images'>, catalog?: Pick<Product, 'id' | 'images'>[]): string {
-  return productImage(catalog?.find((p) => p.id === product.id) ?? product);
+export function orderLineImage(product: Pick<Product, 'id'>, catalog?: Pick<Product, 'id' | 'images'>[]): string {
+  return productImage(catalog?.find((p) => p.id === product.id));
 }
