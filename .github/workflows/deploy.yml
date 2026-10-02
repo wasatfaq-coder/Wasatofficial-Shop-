@@ -35,25 +35,35 @@ jobs:
           VITE_PREVIEW_BUILD: 'true'
       - if: env.HAS_FIREBASE_SECRET != 'true'
         run: echo "::warning::FIREBASE_SERVICE_ACCOUNT secret is not set — preview deploy skipped"
-      # The site holds a limited number of preview channels, and every PR opens its own. Channels of earlier PRs
-      # are removed first, so a new preview never hits «channel quota reached»; the live site is not touched.
+      # The site holds a limited number of preview channels, and every PR opens its own. Channels of closed and merged
+      # PRs are removed first, so a new preview does not hit «channel quota reached». Channels of open PRs stay (the
+      # owner checks several PRs at once): at most the 8 newest besides this one. The live site is not touched.
       - if: env.HAS_FIREBASE_SECRET == 'true'
         uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-      - name: Remove preview channels of other PRs
+      - name: Remove preview channels of closed PRs
         if: env.HAS_FIREBASE_SECRET == 'true'
         continue-on-error: true
         env:
-          CURRENT_CHANNEL_PREFIX: pr${{ github.event.pull_request.number }}-
+          GH_TOKEN: ${{ github.token }}
+          CURRENT_PR: ${{ github.event.pull_request.number }}
+          KEEP_OPEN: 8
         run: |
+          open_prs=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --limit 100 --json number --jq '.[].number')
           bunx firebase hosting:channel:list --project "$FIREBASE_PROJECT" --json > channels.json
-          jq -r '.result.channels[]?.name | split("/") | last' channels.json \
-            | grep '^pr[0-9]' | grep -v "^${CURRENT_CHANNEL_PREFIX}" \
-            | while read -r channel; do
-                echo "Removing preview channel $channel"
-                bunx firebase hosting:channel:delete "$channel" --project "$FIREBASE_PROJECT" --force || true
-              done
+          jq -r '.result.channels[]?.name | split("/") | last' channels.json | grep '^pr[0-9]' > pr-channels.txt || true
+          kept=0
+          # Newest PR first: older open PRs lose their channel first when there are too many
+          sort -t- -k1.3,1nr pr-channels.txt | while read -r channel; do
+            number="${channel#pr}"; number="${number%%-*}"
+            [ "$number" = "$CURRENT_PR" ] && continue
+            if echo "$open_prs" | grep -qx "$number" && [ "$kept" -lt "$KEEP_OPEN" ]; then
+              kept=$((kept + 1)); echo "Keeping preview channel $channel (PR #$number is open)"; continue
+            fi
+            echo "Removing preview channel $channel"
+            bunx firebase hosting:channel:delete "$channel" --project "$FIREBASE_PROJECT" --force || true
+          done
       - if: env.HAS_FIREBASE_SECRET == 'true'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
