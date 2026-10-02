@@ -127,6 +127,11 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   хранит `deliveryFee`, `discountAmount`, `promoCode` и из браузера, как из `placeOrder`.
 - Заказ в 1 клик — без промокода и доставки (как в `placeOrder`) и убирает из корзины только заказанные строки.
 - `usedCount` промокода растёт только при заказе (`recordPromoUsageInFirestore`, `increment`), не при применении.
+- Комиссия партнёра — только для статистики (сайт её не выплачивает, решение владельца 02.10): считается из заказов
+  с кодом, которые оплачены и получены клиентом (`paymentStatus == 'paid'` и `status == 'delivered'`), от суммы без
+  доставки, по проценту из настроек кода (`computePartnerCommissions` в `src/utils/partnerCommission.ts`; «Промокоды» →
+  «Реферальная система», «Аналитика»). Счётчики `commissionEarned`/`generatedRevenue` в промокоде может накрутить
+  посторонний — на экранах их не показывать.
 - Промокод (`src/shared/orderPricing.ts`, клиент и `placeOrder`):
   - срок `expiresAt` — «YYYY-MM-DD» из поля-даты, последний день включительно по Москве (`promoExpiryTime`);
     старые текстовые сроки («31 августа 2026 г.») читает `promoExpiryDate`;
