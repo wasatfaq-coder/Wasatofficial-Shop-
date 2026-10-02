@@ -1034,8 +1034,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <div className="text-center py-3 text-xs text-[#4E5C70]">
               Сохраненных адресов нет.{' '}
               <button
+                type="button"
                 onClick={handleOpenAddAddress}
-                className="text-accent font-bold underline ml-1 cursor-pointer"
+                className="inline-flex items-center min-h-6 text-accent font-bold underline ml-1 cursor-pointer"
               >
                 Добавить адрес
               </button>
