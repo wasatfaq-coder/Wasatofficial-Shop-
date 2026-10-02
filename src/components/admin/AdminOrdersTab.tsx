@@ -7,7 +7,6 @@ import {
   RefreshCw,
   Printer,
   SlidersHorizontal,
-  Navigation,
   Clock,
   CheckCircle2,
   Truck,
@@ -48,7 +47,6 @@ import {
 import { AdminOrderInvoiceModal } from './AdminOrderInvoiceModal';
 import { AdminOrderAdjustmentModal } from './AdminOrderAdjustmentModal';
 import { AdminDeliveryStagesModal } from './AdminDeliveryStagesModal';
-import { DeliveryTrackingMapModal } from '../DeliveryTrackingMapModal';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { SelectCheckbox } from './SelectCheckbox';
 import { ConfirmDialog } from '../ConfirmDialog';
@@ -278,7 +276,6 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   // Modals & Active Order
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
   const [selectedOrderForAdjustment, setSelectedOrderForAdjustment] = useState<Order | null>(null);
-  const [selectedOrderForMap, setSelectedOrderForMap] = useState<Order | null>(null);
   const [selectedOrderForDeliveryStages, setSelectedOrderForDeliveryStages] = useState<Order | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const deleteOrderDialog = useDialogA11y(Boolean(orderToDelete), () => setOrderToDelete(null));
@@ -757,7 +754,8 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         </div>
 
         {/* Status chips: the common filter in one tap (Hick: 7 controls → chips + «Фильтры») */}
-        <div role="radiogroup" aria-label="Статус заказа" className="flex gap-1.5 overflow-x-auto no-scrollbar p-1 -m-1">
+        {/* In rows, not a sideways strip: on a phone the hidden chips («К выдаче», «Отменены») were cut off */}
+        <div role="radiogroup" aria-label="Статус заказа" className="flex flex-wrap gap-1.5">
           {statusChips.map((chip) => {
             const active = statusFilter === chip.value;
             return (
@@ -1590,12 +1588,6 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                         icon: <Clock className="w-3.5 h-3.5 text-accent" />,
                         onSelect: () => setSelectedOrderForDeliveryStages(ord),
                       },
-                      {
-                        id: 'map',
-                        label: 'Карта доставки',
-                        icon: <Navigation className="w-3.5 h-3.5 text-accent" />,
-                        onSelect: () => setSelectedOrderForMap(ord),
-                      },
                       ...(!ord.isCancelled
                         ? [
                             {
@@ -1742,19 +1734,6 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         promos={promos}
         onUpdateProducts={onUpdateProducts}
         onRecordStockMovements={recordStockMovements}
-        onShowToast={onShowToast}
-      />
-
-      {/* ================= MODAL: DELIVERY TRACKING MAP ================= */}
-      <DeliveryTrackingMapModal
-        isOpen={!!selectedOrderForMap}
-        onClose={() => setSelectedOrderForMap(null)}
-        order={selectedOrderForMap}
-        onOpenSupportChat={(orderId) => {
-          if (onOpenSupportChat && selectedOrderForMap) {
-            onOpenSupportChat(orderId || selectedOrderForMap.id, selectedOrderForMap.customerName);
-          }
-        }}
         onShowToast={onShowToast}
       />
 

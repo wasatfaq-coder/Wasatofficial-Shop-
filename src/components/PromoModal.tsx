@@ -164,7 +164,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-[#4E5C70] font-medium truncate">
-                  Процентные (-15%) и фиксированные (-500 ₽) скидки
+                  Скидка учитывается в заказе
                 </p>
               </div>
             </div>
@@ -284,8 +284,9 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                           <button
                             type="button"
                             onClick={(e) => handleCopyCode(coupon.code, e)}
-                            className="text-[#4E5C70] hover:text-accent text-[11px] flex items-center gap-0.5 font-bold transition-colors cursor-pointer"
+                            className="min-w-8 h-8 -my-2 px-1 justify-center text-[#4E5C70] hover:text-accent text-[11px] flex items-center gap-0.5 font-bold transition-colors cursor-pointer"
                             title="Скопировать код"
+                            aria-label={`Скопировать код ${coupon.code}`}
                           >
                             {copiedCode === coupon.code ? (
                               <span className="text-success font-extrabold">Скопировано!</span>
@@ -380,19 +381,24 @@ export const PromoModal: React.FC<PromoModalProps> = ({
               Есть личный промокод? Введите его:
             </label>
             <form onSubmit={handleCustomSubmit} className="flex items-center gap-2">
+              {/* min-w-0: on a phone inputs get 16px text (no zoom on focus), and without it the field pushed
+                  «Применить» past the edge of the window */}
               <input
                 id="promo-code-input"
                 type="text"
                 autoComplete="off"
+                autoCapitalize="characters"
                 value={customInput}
                 onChange={(e) => setCustomInput(e.target.value.toUpperCase())}
-                placeholder="ВВЕДИТЕ КОД (НАПРИМЕР, WASAT20)"
-                className="flex-1 px-3.5 py-2.5 neu-inset rounded-2xl text-xs uppercase font-bold text-[#2D3A4E] placeholder:text-[#56647A]"
+                placeholder="Код промокода"
+                className="flex-1 min-w-0 px-3.5 py-2.5 neu-inset rounded-2xl text-xs uppercase placeholder:normal-case font-bold text-[#2D3A4E] placeholder:text-[#56647A]"
               />
               <button
                 type="submit"
                 disabled={!customInput.trim()}
-                className="py-2.5 px-4 rounded-2xl neu-button-accent text-white font-extrabold text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
+                className={`py-2.5 px-4 rounded-2xl font-extrabold text-xs transition-all shrink-0 ${
+                  customInput.trim() ? 'neu-button-accent text-white cursor-pointer' : 'neu-button-disabled cursor-not-allowed'
+                }`}
               >
                 Применить
               </button>
