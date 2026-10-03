@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { ConfirmDialog } from '../ConfirmDialog';
 import {
   Tag,
@@ -38,9 +38,13 @@ interface AdminPromoConstructorTabProps {
   products?: Product[];
   /** Orders the partner commission is counted from (paid and received only) */
   orders?: Order[];
-  onUpdatePromos: (promos: PromoCode[]) => void;
+  /** Resolves to false when the database refused the write (App has already shown the error toast) */
+  onUpdatePromos: (promos: PromoCode[]) => Promise<boolean> | void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
+
+/** A code as the checkout compares it: case and outer spaces do not matter */
+const normalizedCode = (code: string | undefined) => (code ?? '').trim().toUpperCase();
 
 export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> = ({
   promos,
@@ -78,6 +82,37 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
   const [isReferral, setIsReferral] = useState(false);
   const [partnerName, setPartnerName] = useState('');
   const [partnerCommissionPercent, setPartnerCommissionPercent] = useState<number>(10);
+
+  /** Problems found on «Создать / Сохранить»: listed above the buttons, as in the product form, instead of error toasts */
+  const [showFormErrors, setShowFormErrors] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isSavingPromo, setIsSavingPromo] = useState(false);
+  const formErrorsRef = useRef<HTMLDivElement>(null);
+  /** Changes when the form is closed or another promo is opened: a save that finishes later leaves that form alone */
+  const formSessionRef = useRef(0);
+
+  // Checked on submit and then live, so a fixed field drops out of the list at once
+  const validationErrors = useMemo(() => {
+    const cleanCode = normalizedCode(code);
+    const value = Number(discountValue);
+    const maxValue = discountType === 'percent' ? 90 : 50000;
+    const percent = Number(partnerCommissionPercent);
+    return [
+      !cleanCode && 'Введите код промокода',
+      // Two promos with one code: the checkout would take either of them (UX audit 03.10, finding 5)
+      cleanCode &&
+        promos.some((p) => p.id !== editingId && normalizedCode(p.code) === cleanCode) &&
+        `Код ${cleanCode} уже есть у другого промокода — задайте другой`,
+      !(Number.isFinite(value) && value >= 1 && value <= maxValue) &&
+        (discountType === 'percent'
+          ? 'Размер скидки — от 1 до 90 %'
+          : `Размер скидки — от 1 до ${maxValue.toLocaleString('ru-RU')} ₽`),
+      isReferral && !partnerName.trim() && 'Укажите имя партнера или канал',
+      isReferral && !(Number.isFinite(percent) && percent > 0 && percent <= 50) &&
+        'Укажите комиссию партнера: от 0,5 до 50 %',
+    ].filter((m): m is string => Boolean(m));
+  }, [code, discountValue, discountType, partnerCommissionPercent, isReferral, partnerName, promos, editingId]);
+  const formErrors = [...(showFormErrors ? validationErrors : []), ...(saveError ? [saveError] : [])];
 
   // The open form (new or edited promo code) with unsaved edits: the admin panel asks before closing
   const isPromoFormDirty = useChangedSince(isCreating ? editingId ?? 'new' : null, [
@@ -130,8 +165,11 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
     setIsReferral(false);
     setPartnerName('');
     setPartnerCommissionPercent(10);
+    setShowFormErrors(false);
+    setSaveError(null);
     setIsCreating(false);
     setEditingId(null);
+    formSessionRef.current += 1;
   };
 
   const handleOpenEdit = (p: PromoCode) => {
@@ -167,7 +205,10 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
     setIsReferral(Boolean(p.isReferral));
     setPartnerName(p.partnerName || '');
     setPartnerCommissionPercent(p.partnerCommissionPercent || 10);
+    setShowFormErrors(false);
+    setSaveError(null);
     setIsCreating(true);
+    formSessionRef.current += 1;
   };
 
   const handleToggleCategory = (catId: string) => {
@@ -197,18 +238,17 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
     );
   }, [products, productSearchQuery]);
 
-  const handleSavePromo = (e: React.FormEvent) => {
+  /** «Создан / обновлен» and a cleared form only after the database accepted the write; otherwise the input stays */
+  const handleSavePromo = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanCode = code.trim().toUpperCase();
-    if (!cleanCode) {
-      onShowToast('Введите уникальный код купона', 'error');
+    if (isSavingPromo) return;
+    setShowFormErrors(true);
+    setSaveError(null);
+    if (validationErrors.length > 0) {
+      requestAnimationFrame(() => formErrorsRef.current?.focus());
       return;
     }
-    const percent = Number(partnerCommissionPercent);
-    if (isReferral && !(Number.isFinite(percent) && percent > 0 && percent <= 50)) {
-      onShowToast('Укажите комиссию партнера: от 0,5 до 50 %', 'error');
-      return;
-    }
+    const cleanCode = normalizedCode(code);
 
     const calculatedPercent = discountType === 'percent' ? Number(discountValue) : 0;
     const defaultTitle =
@@ -219,8 +259,9 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
     const finalCategories = scopeType === 'categories' && selectedCategories.length > 0 ? selectedCategories : undefined;
     const finalProductIds = scopeType === 'products' && selectedProductIds.length > 0 ? selectedProductIds : undefined;
 
+    let next: PromoCode[];
     if (editingId) {
-      const updated = promos.map((p) =>
+      next = promos.map((p) =>
         p.id === editingId
           ? {
               ...p,
@@ -244,15 +285,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             }
           : p
       );
-      onUpdatePromos(updated);
-      onShowToast(`Промокод ${cleanCode} успешно обновлен`, 'success');
     } else {
-      // Check duplicate
-      if (promos.some((p) => p.code.toUpperCase() === cleanCode)) {
-        onShowToast(`Промокод ${cleanCode} уже существует`, 'error');
-        return;
-      }
-
       const newPromo: PromoCode = {
         id: `promo-${Date.now()}`,
         code: cleanCode,
@@ -277,30 +310,43 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
         generatedRevenue: 0,
         commissionEarned: 0,
       };
-
-      onUpdatePromos([newPromo, ...promos]);
-      onShowToast(`Промокод ${cleanCode} создан и активирован`, 'success');
+      next = [newPromo, ...promos];
     }
 
-    resetForm();
+    const session = formSessionRef.current;
+    setIsSavingPromo(true);
+    const saved = await onUpdatePromos(next);
+    setIsSavingPromo(false);
+    // the admin closed the form or opened another promo meanwhile: that form stays as it is
+    const sameForm = formSessionRef.current === session;
+    if (saved === false) {
+      if (sameForm) {
+        setSaveError(
+          'База не приняла промокод. Введённое осталось в форме: проверьте соединение и нажмите ещё раз'
+        );
+      }
+      return;
+    }
+    onShowToast(editingId ? `Промокод ${cleanCode} обновлен` : `Промокод ${cleanCode} создан и активирован`, 'success');
+    if (sameForm) resetForm();
   };
 
-  const handleToggleActive = (id: string) => {
+  const handleToggleActive = async (id: string) => {
     const updated = promos.map((p) =>
       p.id === id ? { ...p, active: !p.active } : p
     );
-    onUpdatePromos(updated);
     const target = updated.find((p) => p.id === id);
+    if ((await onUpdatePromos(updated)) === false) return;
     onShowToast(
       `Промокод ${target?.code} ${target?.active ? 'активирован' : 'приостановлен'}`,
       'info'
     );
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     const target = promos.find((p) => p.id === id);
     const updated = promos.filter((p) => p.id !== id);
-    onUpdatePromos(updated);
+    if ((await onUpdatePromos(updated)) === false) return;
     onShowToast(`Промокод ${target?.code || ''} удален`, 'info');
   };
 
@@ -312,7 +358,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
   };
 
   // Generate Batch of Unique Single-Use Codes
-  const handleGenerateBatch = () => {
+  const handleGenerateBatch = async () => {
     const prefix = batchPrefix.trim().toUpperCase() || 'VIP-';
     const count = Math.min(Math.max(1, batchCount), 100);
     const newBatchCodes: PromoCode[] = [];
@@ -355,7 +401,8 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
       });
     }
 
-    onUpdatePromos([...newBatchCodes, ...promos]);
+    // the codes are listed for the mailing only once the database has them: a code it refused would not work
+    if ((await onUpdatePromos([...newBatchCodes, ...promos])) === false) return;
     setGeneratedBatchPreview(generatedStrings);
     onShowToast(`Сгенерировано ${count} одноразовых промокодов`, 'success');
   };
@@ -545,10 +592,11 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
 
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div>
-              <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+              <label htmlFor="batch-prefix" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
                 Префикс кодов
               </label>
               <input
+                id="batch-prefix"
                 type="text"
                 value={batchPrefix}
                 onChange={(e) => setBatchPrefix(e.target.value.toUpperCase())}
@@ -558,10 +606,11 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+              <label htmlFor="batch-count" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
                 Количество кодов
               </label>
               <input
+                id="batch-count"
                 type="number"
                 min="1"
                 max="100"
@@ -598,10 +647,11 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+              <label htmlFor="batch-discount-value" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
                 Размер скидки ({batchDiscountType === 'fixed' ? '₽' : '%'})
               </label>
               <input
+                id="batch-discount-value"
                 type="number"
                 min="1"
                 value={batchDiscountValue}
@@ -613,10 +663,11 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+              <label htmlFor="batch-min-order" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
                 Мин. сумма чека (₽)
               </label>
               <input
+                id="batch-min-order"
                 type="number"
                 value={batchMinOrder}
                 onChange={(e) => setBatchMinOrder(Number(e.target.value))}
@@ -701,6 +752,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
       {isCreating && (
         <form
           onSubmit={handleSavePromo}
+          noValidate
           className="neu-inset rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 space-y-3.5 border border-accent/30 animate-in fade-in slide-in-from-top-2 duration-200 w-full min-w-0"
         >
           <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-2.5 gap-2">
@@ -711,7 +763,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             <button
               type="button"
               onClick={handleGenerateRandomCode}
-              className="text-[11px] font-bold text-accent hover:underline flex items-center gap-1 cursor-pointer shrink-0"
+              className="min-h-6 text-[11px] font-bold text-accent hover:underline flex items-center gap-1 cursor-pointer shrink-0"
             >
               Сгенерировать код
             </button>
@@ -720,12 +772,14 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
           {/* Row 1: Code, Discount Type & Discount Value */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+              <label htmlFor="promo-code" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
                 Код промокода *
               </label>
               <input
+                id="promo-code"
                 type="text"
                 required
+                autoComplete="off"
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 placeholder="WASAT20"
@@ -772,10 +826,11 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+              <label htmlFor="promo-discount-value" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
                 Размер скидки ({discountType === 'fixed' ? '₽' : '%'}) *
               </label>
               <input
+                id="promo-discount-value"
                 type="number"
                 min="1"
                 max={discountType === 'percent' ? 90 : 50000}
@@ -796,7 +851,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     key={val}
                     type="button"
                     onClick={() => setDiscountValue(val)}
-                    className={`text-[11px] font-bold px-2 py-0.5 rounded-lg neu-button cursor-pointer ${
+                    className={`min-h-6 text-[11px] font-bold px-2 py-0.5 rounded-lg neu-button cursor-pointer ${
                       discountValue === val ? 'neu-pill-active font-extrabold' : 'text-[#4E5C70]'
                     }`}
                   >
@@ -808,7 +863,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     key={val}
                     type="button"
                     onClick={() => setDiscountValue(val)}
-                    className={`text-[11px] font-bold px-2 py-0.5 rounded-lg neu-button cursor-pointer ${
+                    className={`min-h-6 text-[11px] font-bold px-2 py-0.5 rounded-lg neu-button cursor-pointer ${
                       discountValue === val ? 'neu-pill-active font-extrabold' : 'text-[#4E5C70]'
                     }`}
                   >
@@ -820,10 +875,11 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
           {/* Row 2: Title & Description */}
           <div className="space-y-2.5">
             <div>
-              <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+              <label htmlFor="promo-title" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
                 Заголовок купона
               </label>
               <input
+                id="promo-title"
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -837,10 +893,11 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+              <label htmlFor="promo-description" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
                 Поясняющий текст для покупателей
               </label>
               <input
+                id="promo-description"
                 type="text"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -883,11 +940,13 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             {isReferral && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#BAC5D5]/50 animate-in fade-in duration-150">
                 <div>
-                  <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+                  <label htmlFor="promo-partner-name" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
                     Имя инфлюенсера / Канал *
                   </label>
                   <input
+                    id="promo-partner-name"
                     type="text"
+                    required
                     value={partnerName}
                     onChange={(e) => setPartnerName(e.target.value)}
                     placeholder="Например: @alex_fashion или Блогер Максим"
@@ -924,10 +983,11 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <div>
-                <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+                <label htmlFor="promo-min-order" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
                   Мин. сумма чека (₽)
                 </label>
                 <input
+                  id="promo-min-order"
                   type="number"
                   min="0"
                   step="500"
@@ -956,10 +1016,11 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+                <label htmlFor="promo-usage-limit" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
                   Лимит использований (шт)
                 </label>
                 <input
+                  id="promo-usage-limit"
                   type="number"
                   min="0"
                   value={usageLimit || ''}
@@ -1025,7 +1086,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                       <button
                         type="button"
                         onClick={() => setSelectedCategories([])}
-                        className="text-accent font-bold hover:underline cursor-pointer"
+                        className="min-h-6 text-accent font-bold hover:underline cursor-pointer"
                       >
                         Сбросить выбор
                       </button>
@@ -1068,7 +1129,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                       <button
                         type="button"
                         onClick={() => setSelectedProductIds([])}
-                        className="text-accent font-bold hover:underline cursor-pointer"
+                        className="min-h-6 text-accent font-bold hover:underline cursor-pointer"
                       >
                         Очистить выбор ({selectedProductIds.length})
                       </button>
@@ -1079,6 +1140,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#4E5C70]" />
                     <input
                       type="text"
+                      aria-label="Найти товар для промокода"
                       placeholder="Найти товар"
                       value={productSearchQuery}
                       onChange={(e) => setProductSearchQuery(e.target.value)}
@@ -1136,10 +1198,11 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             {/* Badges & Popular tag */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-[#BAC5D5]/40">
               <div>
-                <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+                <label htmlFor="promo-badge-text" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
                   Текст бейджа (наклейка)
                 </label>
                 <input
+                  id="promo-badge-text"
                   type="text"
                   value={badgeText}
                   onChange={(e) => setBadgeText(e.target.value)}
@@ -1183,6 +1246,20 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             </div>
           </div>
 
+          {/* Problems found on submit: one list above the buttons, no error toasts (as in the product form) */}
+          {formErrors.length > 0 && (
+            <div
+              ref={formErrorsRef}
+              tabIndex={-1}
+              role="alert"
+              className="bg-danger-soft border border-danger/40 rounded-xl p-2.5 text-xs font-bold text-danger space-y-1"
+            >
+              {formErrors.map((err) => (
+                <p key={err}>{err}</p>
+              ))}
+            </div>
+          )}
+
           {/* Form Actions */}
           <div className="flex items-center justify-end gap-2 pt-2">
             <button
@@ -1194,10 +1271,11 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             </button>
             <button
               type="submit"
-              className="py-2 px-4.5 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 cursor-pointer"
+              disabled={isSavingPromo}
+              className="py-2 px-4.5 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 cursor-pointer disabled:cursor-wait"
             >
               <Check className="w-3.5 h-3.5 text-white" />
-              <span>{editingId ? 'Сохранить изменения' : 'Создать промокод'}</span>
+              <span>{isSavingPromo ? 'Сохранение…' : editingId ? 'Сохранить изменения' : 'Создать промокод'}</span>
             </button>
           </div>
         </form>

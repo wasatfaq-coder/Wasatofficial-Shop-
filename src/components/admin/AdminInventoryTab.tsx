@@ -793,7 +793,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
             <button
               type="button"
               onClick={() => handleCopySku(sku.skuCode)}
-              className="inline-flex items-center gap-1 hover:text-accent transition-colors cursor-pointer truncate text-left"
+              className="min-h-6 inline-flex items-center gap-1 hover:text-accent transition-colors cursor-pointer truncate text-left"
               title="Скопировать артикул"
               aria-label={`Скопировать артикул ${sku.skuCode}`}
             >
@@ -925,6 +925,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
               <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#4E5C70]" />
               <input
                 type="text"
+                aria-label="Поиск по складу"
                 placeholder="Название, артикул, штрихкод или цвет"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -1111,8 +1112,9 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                           <button
                             type="button"
                             onClick={() => handleCopySku(sku.skuCode)}
-                            className="inline-flex items-center gap-1 hover:text-accent transition-colors cursor-pointer"
+                            className="min-h-6 inline-flex items-center gap-1 hover:text-accent transition-colors cursor-pointer"
                             title="Скопировать артикул"
+                            aria-label={`Скопировать артикул ${sku.skuCode}`}
                           >
                             <span>{sku.skuCode}</span>
                             {isCopied ? (
@@ -1161,8 +1163,11 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
 
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center gap-1.5 text-xs">
-                  <span className="text-[11px] font-bold text-[#4E5C70]">Инспектор:</span>
+                  <label htmlFor="inventory-audit-operator" className="text-[11px] font-bold text-[#4E5C70]">
+                    Инспектор:
+                  </label>
                   <input
+                    id="inventory-audit-operator"
                     type="text"
                     value={auditOperator}
                     onChange={(e) => setAuditOperator(e.target.value)}
@@ -1196,7 +1201,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                 <span className="text-sm font-extrabold text-danger">
                   -{auditStats.totalShortageUnits} шт.
                 </span>
-                <span className="text-[11px] text-danger/80 block font-bold">
+                <span className="text-[11px] text-danger block font-bold">
                   -{auditStats.totalShortageSum.toLocaleString('ru-RU')} ₽
                 </span>
               </div>
@@ -1277,6 +1282,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#4E5C70]" />
             <input
               type="text"
+              aria-label="Поиск по инвентаризации"
               placeholder="Артикул, товар, цвет или штрихкод"
               value={auditSearchQuery}
               onChange={(e) => setAuditSearchQuery(e.target.value)}
@@ -1674,10 +1680,11 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
               </div>
 
               <div className="min-w-0">
-                <label className="block text-[11px] font-bold text-[#4E5C70] mb-1 truncate">
+                <label htmlFor="stock-op-product" className="block text-[11px] font-bold text-[#4E5C70] mb-1 truncate">
                   Выберите товар
                 </label>
                 <NeumorphicSelect
+                  id="stock-op-product"
                   ariaLabel="Товар"
                   value={opSelectedProductId}
                   onChange={(val) => {
@@ -1693,10 +1700,11 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
               </div>
 
               <div className="min-w-0">
-                <label className="block text-[11px] font-bold text-[#4E5C70] mb-1 truncate">
+                <label htmlFor="stock-op-sku" className="block text-[11px] font-bold text-[#4E5C70] mb-1 truncate">
                   Вариация (Цвет / Размер / SKU)
                 </label>
                 <NeumorphicSelect
+                  id="stock-op-sku"
                   ariaLabel="Вариант товара"
                   value={opSelectedSkuIndex.toString()}
                   onChange={(val) => setOpSelectedSkuIndex(Number(val))}
@@ -1710,10 +1718,11 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
 
               <div className="grid grid-cols-2 gap-2">
                 <div className="min-w-0">
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1 truncate">
+                  <label htmlFor="stock-op-quantity" className="block text-[11px] font-bold text-[#4E5C70] mb-1 truncate">
                     Количество (шт.)
                   </label>
                   <input
+                    id="stock-op-quantity"
                     type="number"
                     min="1"
                     max="500"
@@ -1724,10 +1733,11 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                   />
                 </div>
                 <div className="min-w-0">
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1 truncate">
+                  <label htmlFor="stock-op-operator" className="block text-[11px] font-bold text-[#4E5C70] mb-1 truncate">
                     Оператор
                   </label>
                   <input
+                    id="stock-op-operator"
                     type="text"
                     value={opOperator}
                     onChange={(e) => setOpOperator(e.target.value)}
@@ -1737,10 +1747,11 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                <label htmlFor="stock-op-reason" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                   Основание / Причина
                 </label>
                 <input
+                  id="stock-op-reason"
                   type="text"
                   value={opReason}
                   onChange={(e) => setOpReason(e.target.value)}
