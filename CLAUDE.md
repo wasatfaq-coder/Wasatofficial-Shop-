@@ -48,11 +48,17 @@ Wasat Shop — SPA интернет-магазина мужской одежды
 - `bun run test:rules` — тесты `firestore.rules` в эмуляторе (нужна Java); сначала пишет образцы заказа `tests/.generated/`
 - `bun run test:functions` — тесты Cloud Functions и расчёта цены (сначала `npm ci --prefix functions`)
 - `functions/`: отдельный npm-пакет; `npm run typecheck|build --prefix functions`
+- `bun run test:e2e` — сценарии Playwright в `tests/e2e/` (заказ гостя с курьером, в 1 клик, заказ с входом и чат,
+  цена и этикетки в админке, пустой магазин) на эмуляторах, 390 и 1280 px. Данные — `tests/e2e/store.ts`, только
+  в эмулятор; вход — `window.e2eSignIn`, есть только в сборке с `VITE_USE_EMULATORS` (`src/firebase.ts`). Селекторы —
+  по ролям и подписям (`getByRole`, `getByLabel`), не по классам и id: вёрстка меняется, сценарий остаётся. Телефон и
+  компьютер идут параллельно на одной базе, поэтому сценарий, который меняет данные, берёт свой товар или свою почту
 
 ## Когда готово
 
 - Перед коммитом: `bun run lint && bun run build`; при изменении правил — `bun run test:rules`;
-  при изменении `functions/` или `src/shared/` — `bun run test:functions`. Это те же проверки, что в CI.
+  при изменении `functions/` или `src/shared/` — `bun run test:functions`; при изменении экранов — `bun run test:e2e`
+  (поменялся путь покупателя — поправь сценарий в том же PR). Это те же проверки, что в CI.
 - Изменение видно покупателю или в админке — проверено в браузере на эмуляторах (`VITE_USE_EMULATORS=true`)
   на 390 и 1280 px, а в разделе «Как проверить» описания PR сказано, что и на каком экране смотреть.
 - Поменялось правило — обновлён `CLAUDE.md` или файл раздела в `.claude/rules/`, а при работе по плану — и план в `docs/`.
