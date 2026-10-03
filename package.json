@@ -6,10 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:share": "bun scripts/share-pages.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "deploy": "bun run lint && bun run test:rules && bun run test:functions && bun run build && firebase deploy --only hosting,firestore",
+    "deploy": "bun run lint && bun run test:rules && bun run test:functions && bun run build && bun run build:share && firebase deploy --only hosting,firestore",
     "test:rules": "bun scripts/client-order-sample.ts && firebase emulators:exec --only firestore --project demo-manstyle 'node --test tests/firestore.rules.test.mjs tests/audit-attacks.test.mjs'",
     "test:functions": "firebase emulators:exec --only firestore --project demo-manstyle 'cd functions && bun test test/'",
     "build:functions": "cd functions && npm run build"
@@ -22,7 +23,7 @@
     "firebase": "^12.19.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
-    "lucide-react": "^0.546.0",
+    "lucide-react": "^1.49.0",
     "motion": "^13.4.6",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
