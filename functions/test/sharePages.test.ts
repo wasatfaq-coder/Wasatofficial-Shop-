@@ -1,6 +1,7 @@
 // Страницы-превью товаров для мессенджеров и поисковиков (docs/seo-plan.md, этап 1): scripts/share-pages.ts
 import { describe, expect, test } from 'bun:test';
 import {
+  catalogFingerprint,
   fromRest,
   metaBlock,
   productJsonLd,
@@ -103,5 +104,14 @@ describe('превью товара', () => {
         },
       })
     ).toEqual({ price: 3290, images: ['a'], skus: [], hiddenFromSale: false });
+  });
+
+  test('отпечаток каталога меняется от цены, но не от даты правки', () => {
+    const base = { storeName: 'Wasat Shop', slogan: '', products: [{ ...product, updatedAt: '2026-10-01T00:00:00Z' }] };
+    const fp = catalogFingerprint(base);
+    // продажа меняет остаток и дату товара, а превью — нет
+    expect(catalogFingerprint({ ...base, products: [{ ...product, updatedAt: '2026-10-03T00:00:00Z' }] })).toBe(fp);
+    expect(catalogFingerprint({ ...base, products: [{ ...product, price: 2490 }] })).not.toBe(fp);
+    expect(catalogFingerprint({ ...base, storeName: 'Другое имя' })).not.toBe(fp);
   });
 });
