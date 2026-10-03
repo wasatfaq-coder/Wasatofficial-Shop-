@@ -125,7 +125,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
   // Product Form Fields State
   const [formTitle, setFormTitle] = useState('');
-  const [formCategory, setFormCategory] = useState(categories[0]?.id ?? '');
+  // No category is picked for the admin: a preselected first one was easy to save by mistake (UX audit 03.10, finding 16)
+  const [formCategory, setFormCategory] = useState('');
   // Categories from Admin → «Категории»; a product's category missing there is still shown (and kept on save)
   const categoryIsListed = categories.some((c) => c.id === formCategory);
   const formCategoryOptions = useMemo(() => {
@@ -154,6 +155,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   const [newImageUrlInput, setNewImageUrlInput] = useState('');
   const galleryFileInputRef = useRef<HTMLInputElement | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  /** A photo that could not be read goes to the form's error list, not to a toast (UX audit 03.10, finding 17) */
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [isDraggingOverGallery, setIsDraggingOverGallery] = useState(false);
   const [previewZoomImage, setPreviewZoomImage] = useState<string | null>(null);
   const zoomDialog = useDialogA11y(Boolean(previewZoomImage), () => setPreviewZoomImage(null), { label: 'Просмотр фото' });
@@ -198,6 +201,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     return [
 
       !formTitle.trim() && 'Введите название товара',
+      !formCategory && 'Выберите категорию',
       (!numPrice || numPrice <= 0) && 'Укажите цену больше нуля',
       formColors.length === 0 && 'Добавьте хотя бы один цвет',
       formSizes.length === 0 && 'Выберите хотя бы один размер',
@@ -210,8 +214,12 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         `Товар занимает ${formatMegabytes(formSizeBytes)} из ${formatMegabytes(PRODUCT_SIZE_BUDGET_BYTES)}: база его не примет. Уберите часть фото`,
     ].filter((m): m is string => Boolean(m));
 
-  }, [formTitle, formPrice, formColors, formSizes, formImages, formOldPrice, formCard, formSizeBytes]);
-  const formErrors = [...(showFormErrors ? validationErrors : []), ...(saveError ? [saveError] : [])];
+  }, [formTitle, formCategory, formPrice, formColors, formSizes, formImages, formOldPrice, formCard, formSizeBytes]);
+  const formErrors = [
+    ...(showFormErrors ? validationErrors : []),
+    ...(photoError ? [photoError] : []),
+    ...(saveError ? [saveError] : []),
+  ];
   // Removal waiting for confirmation (photo, color, size, stock reset), as in the cart
   const [pendingRemoval, setPendingRemoval] = useState<{
     title: string;
@@ -479,7 +487,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     // A new product starts empty: no made-up price, photo, texts, colors, sizes or stock
     setEditingProduct(null);
     setFormTitle('');
-    setFormCategory(categories[0]?.id ?? '');
+    setFormCategory('');
     setFormPrice(0);
     setFormCostPrice(undefined);
     setFormOldPrice(undefined);
@@ -494,6 +502,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     setFormSkusOpened([]);
     setFormCard(EMPTY_CARD_STRUCTURE);
     setShowFormErrors(false);
+    setPhotoError(null);
     setSaveError(null);
     setIsProductFormOpen(true);
   };
@@ -501,7 +510,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   const handleOpenEditProduct = (prod: Product) => {
     setEditingProduct(prod);
     setFormTitle(prod.title);
-    setFormCategory(prod.category || categories[0]?.id || '');
+    // a product without a category does not get the first one silently: «Выберите категорию» on save
+    setFormCategory(prod.category || '');
     setFormPrice(prod.price);
     setFormCostPrice(prod.costPrice);
     setFormOldPrice(prod.originalPrice);
@@ -520,6 +530,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     setFormSkusOpened(openedSkus);
     setFormCard(cardStructureFromProduct(prod));
     setShowFormErrors(false);
+    setPhotoError(null);
     setSaveError(null);
     setIsProductFormOpen(true);
   };
@@ -538,6 +549,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     if (isSavingProduct) return;
     const numPrice = Number(formPrice);
     setShowFormErrors(true);
+    setPhotoError(null);
     setSaveError(null);
     if (validationErrors.length > 0) {
       requestAnimationFrame(() => formErrorsRef.current?.focus());
@@ -674,7 +686,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     setIsSavingProduct(true);
     try {
       if ((await onUpdateProducts(next)) === false) {
-        setSaveError('База не приняла товар (ошибка — в сообщении внизу экрана). Введённое осталось в форме: проверьте соединение и нажмите ещё раз');
+        setSaveError('База не приняла товар. Введённое осталось в форме: проверьте соединение и нажмите ещё раз');
         return false;
       }
       // every stock change is a journal entry («Склад и SKU» → «Журнал движений»)
@@ -696,19 +708,29 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   const handleGalleryFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+    await addPhotoFiles(files);
+  };
 
+  /**
+   * Photos from the device or a drop: the gallery shows them, so no «Загружено» toast; a file that could not be read
+   * is named in the form's error list (form messages go without toasts — UX audit 03.10, finding 17)
+   */
+  const addPhotoFiles = async (files: FileList) => {
     try {
       setIsUploadingImage(true);
       const loadedImages = await processImageFiles(files);
-      if (loadedImages.length > 0) {
-        setFormImages((prev) => [...prev, ...loadedImages]);
-        onShowToast(`Загружено фото: ${loadedImages.length} шт.`, 'success');
-      } else {
-        onShowToast('Не удалось загрузить фото. Поддерживаются форматы JPG, PNG, WEBP', 'error');
-      }
+      if (loadedImages.length > 0) setFormImages((prev) => [...prev, ...loadedImages]);
+      const skipped = files.length - loadedImages.length;
+      setPhotoError(
+        skipped <= 0
+          ? null
+          : loadedImages.length === 0
+          ? 'Не удалось загрузить фото. Поддерживаются форматы JPG, PNG, WEBP'
+          : `Не загружено ${skipped} из ${files.length} фото: поддерживаются форматы JPG, PNG, WEBP`
+      );
     } catch (err) {
       console.error('Error processing gallery files:', err);
-      onShowToast('Ошибка при загрузке изображений', 'error');
+      setPhotoError('Не удалось прочитать фото. Попробуйте выбрать его ещё раз');
     } finally {
       setIsUploadingImage(false);
       if (galleryFileInputRef.current) {
@@ -722,20 +744,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     setIsDraggingOverGallery(false);
     const files = e.dataTransfer.files;
     if (!files || files.length === 0) return;
-
-    try {
-      setIsUploadingImage(true);
-      const loadedImages = await processImageFiles(files);
-      if (loadedImages.length > 0) {
-        setFormImages((prev) => [...prev, ...loadedImages]);
-        onShowToast(`Загружено фото: ${loadedImages.length} шт.`, 'success');
-      }
-    } catch (err) {
-      console.error('Error processing dropped gallery files:', err);
-      onShowToast('Ошибка при чтении изображений', 'error');
-    } finally {
-      setIsUploadingImage(false);
-    }
+    await addPhotoFiles(files);
   };
 
   const photoPreview = (src: string, label: string) => (
@@ -1083,6 +1092,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
           <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#4E5C70]" />
           <input
             type="text"
+            aria-label="Поиск товаров"
             placeholder="Название, артикул или штрихкод"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -1589,6 +1599,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                     </div>
                     <input
                       type="text"
+                      aria-label="Свой текст ярлыка"
                       value={formBadge}
                       onChange={(e) => setFormBadge(e.target.value)}
                       placeholder="Или свой текст (например: -30% или ХИТ СЕЗОНА)"
@@ -1600,12 +1611,15 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   <div>
                     <div className="min-w-0">
                       <div className="flex items-center justify-between gap-2 mb-1 min-h-5">
-                        <label className="text-[11px] font-bold text-[#4E5C70]">Категория</label>
+                        <label htmlFor="product-form-category" className="text-[11px] font-bold text-[#4E5C70]">
+                          Категория *
+                        </label>
                         {!categoryIsListed && formCategory && (
                           <span className="text-[11px] font-bold text-warning whitespace-nowrap">Нет в «Категориях»</span>
                         )}
                       </div>
                       <NeumorphicSelect
+                        id="product-form-category"
                         ariaLabel="Категория"
                         value={formCategory}
                         onChange={(val) => setFormCategory(val)}
@@ -1636,7 +1650,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                             value: formDescription,
                           })
                         }
-                        className="shrink-0 text-[11px] font-bold text-accent hover:text-accent-strong flex items-center gap-1 cursor-pointer"
+                        className="shrink-0 min-h-6 text-[11px] font-bold text-accent hover:text-accent-strong flex items-center gap-1 cursor-pointer"
                         title="Открыть окно редактирования описания"
                       >
                         <Maximize2 className="w-3 h-3" />
@@ -1951,6 +1965,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                       <div data-enter-adds className="flex gap-1.5 pt-1">
                         <input
                           type="url"
+                          aria-label="Ссылка на фото"
                           value={newImageUrlInput}
                           onChange={(e) => setNewImageUrlInput(e.target.value)}
                           placeholder="Ссылка на фото (https://…)"
@@ -1959,10 +1974,11 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         <button
                           type="button"
                           onClick={() => {
+                            // the photo appears in the gallery above: no toast
                             if (newImageUrlInput.trim()) {
                               setFormImages([...formImages, newImageUrlInput.trim()]);
                               setNewImageUrlInput('');
-                              onShowToast('Фото по ссылке добавлено', 'success');
+                              setPhotoError(null);
                             }
                           }}
                           disabled={!newImageUrlInput.trim()}
@@ -2152,7 +2168,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                             key={sz}
                             type="button"
                             onClick={() => handleTogglePresetSize(sz)}
-                            className={`h-6 px-2 rounded-lg text-[11px] font-extrabold transition-all active:scale-95 cursor-pointer whitespace-nowrap ${
+                            className={`h-6 min-w-6 px-2 rounded-lg text-[11px] font-extrabold transition-all active:scale-95 cursor-pointer whitespace-nowrap ${
                               isSelected
                                 ? 'neu-pill-active'
                                 : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
@@ -2168,6 +2184,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                     <div data-enter-adds className="flex items-center gap-2 pt-0.5">
                       <input
                         type="text"
+                        aria-label="Свой размер"
                         value={customSizeInput}
                         onChange={(e) => setCustomSizeInput(e.target.value)}
                         placeholder="Свой размер, напр. 56"
