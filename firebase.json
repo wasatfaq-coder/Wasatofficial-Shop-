@@ -55,7 +55,7 @@
         ]
       },
       {
-        "source": "/index.html",
+        "source": "**/!(*.*)",
         "headers": [
           {
             "key": "Cache-Control",
@@ -64,7 +64,7 @@
         ]
       },
       {
-        "source": "/product/**",
+        "source": "/index.html",
         "headers": [
           {
             "key": "Cache-Control",
