@@ -52,7 +52,7 @@ export function summarizeSupportThreads(messages: ChatMessage[], orders: Order[]
     // messages the staff deleted for themselves do not count as the dialog's last message
     if (orderNo >= entry.lastOrder && !msg.hiddenForStaff) {
       entry.lastOrder = orderNo;
-      entry.lastText = `${msg.isInternalNote ? 'Заметка: ' : ''}${msg.text || (msg.imageUrl ? 'Фото' : 'Вложение')}`;
+      entry.lastText = `${msg.isInternalNote ? 'Заметка: ' : ''}${msg.text || (msg.imageUrl || msg.imageId ? 'Фото' : 'Вложение')}`;
       entry.lastTime = msg.timestamp;
       // notes are not answers: only the customer-visible exchange counts
       if (!msg.isInternalNote) entry.awaitingReply = msg.sender === 'user';

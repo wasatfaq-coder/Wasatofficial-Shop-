@@ -508,7 +508,7 @@ service cloud.firestore {
       return message.threadId == request.auth.uid
         && message.sender == 'user'
         && message.get('receiptOrderId', '') == orderId
-        && message.get('imageUrl', '') != '';
+        && (message.get('imageUrl', '') != '' || message.get('imageId', '') != '');
     }
 
     // После возврата всех строк на склад покупатель отмечает это в своём отменённом заказе
@@ -542,7 +542,7 @@ service cloud.firestore {
         isSignedIn()
         && isValidId(messageId)
         // только поля обычного сообщения: без карточек промокода/заказа и без пометок «скрыто»
-        && request.resource.data.keys().hasOnly(['id', 'sender', 'text', 'imageUrl', 'fileName', 'timestamp',
+        && request.resource.data.keys().hasOnly(['id', 'sender', 'text', 'imageUrl', 'imageId', 'fileName', 'timestamp',
             'threadId', 'threadName', 'isInternalNote', 'sentAt', 'receiptOrderId'])
         && request.resource.data.get('threadId', null) == request.auth.uid
         && request.resource.data.sender == 'user'
@@ -557,6 +557,10 @@ service cloud.firestore {
             // ≈ 400 КБ — потолок сжатия на сайте (imageUpload.ts): картинка в 850 КБ вытесняла обращения в админке
             && request.resource.data.imageUrl.size() <= 420000
             && request.resource.data.imageUrl.matches('^data:image/(png|jpe?g|webp|gif);base64,.*')))
+        // фото отдельным документом chat_images/{id сообщения} в том же пакете (этап 6, находка 20)
+        && (!('imageId' in request.resource.data)
+          || (request.resource.data.imageId == messageId
+            && existsAfter(/databases/$(database)/documents/chat_images/$(messageId))))
         && isOptionalText(request.resource.data, 'threadName', 200)
         && isHonestName(request.resource.data.get('threadName', ''))
         && isOptionalText(request.resource.data, 'timestamp', 20)
@@ -586,6 +590,29 @@ service cloud.firestore {
         && resource.data.isInternalNote == false
         && onlyChanges(['threadId'])
         && isLinkedAccount(request.auth.uid, request.resource.data.threadId);
+    }
+
+    // Фото сообщения чата — отдельный документ с id сообщения (этап 6, находка 20): админка больше не скачивает все фото
+    // вместе с перепиской, картинка читается, когда её показывают. Доступ — как к самому сообщению: читает тот, чей
+    // диалог (после переноса диалога гостя в аккаунт — новый владелец), и администратор
+    match /chat_images/{imageId} {
+      allow read: if isAdmin() || (isSignedIn() && isOwnVisibleMessage(get(/databases/$(database)/documents/chat_messages/$(imageId))));
+      allow create: if isAdmin() || (
+        isSignedIn()
+        && request.resource.data.keys().hasOnly(['data'])
+        && request.resource.data.data is string
+        && request.resource.data.data.size() <= 420000
+        && request.resource.data.data.matches('^data:image/(png|jpe?g|webp|gif);base64,.*')
+        && isOwnVisibleMessage(getAfter(/databases/$(database)/documents/chat_messages/$(imageId)))
+        && getAfter(/databases/$(database)/documents/chat_messages/$(imageId)).data.sender == 'user'
+        && getAfter(/databases/$(database)/documents/chat_messages/$(imageId)).data.get('imageId', '') == imageId
+      );
+      // вместе с сообщением («удалить у всех»): сообщение ещё на месте, когда проверяется фото
+      allow delete: if isAdmin() || (isSignedIn() && isOwnVisibleMessage(get(/databases/$(database)/documents/chat_messages/$(imageId))));
+    }
+
+    function isOwnVisibleMessage(message) {
+      return message != null && message.data.threadId == request.auth.uid && message.data.isInternalNote == false;
     }
 
     function isOwnRecentChatMessage() {

@@ -1294,9 +1294,29 @@ export async function clearChatMessagesInFirestore(threadId?: string | null) {
     const colRef = collection(db, 'chat_messages');
     const snap = await getDocs(threadId ? query(colRef, where('threadId', '==', threadId)) : colRef);
     const docs = threadId === null ? snap.docs.filter((d) => !d.data().threadId) : snap.docs;
+    const photos = docs.filter((d) => d.data().imageId).map((d) => doc(db, 'chat_images', d.id));
+    await commitInChunks(photos, (batch, ref) => batch.delete(ref));
     await commitInChunks(docs, (batch, d) => batch.delete(d.ref));
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, 'chat_messages');
+  }
+}
+
+/** Chat photos already read in this visit */
+const chatImageCache = new Map<string, string>();
+
+/** The photo of a chat message kept apart (`imageId`); null — not readable or gone */
+export async function loadChatImage(imageId: string, targetDb: Firestore = db): Promise<string | null> {
+  const cached = chatImageCache.get(imageId);
+  if (cached) return cached;
+  try {
+    const data = (await getDoc(doc(targetDb, 'chat_images', imageId))).data()?.data;
+    if (typeof data !== 'string') return null;
+    chatImageCache.set(imageId, data);
+    return data;
+  } catch (error) {
+    console.warn(`Chat photo ${imageId} was not read:`, error);
+    return null;
   }
 }
 
@@ -1310,10 +1330,20 @@ export async function saveChatMessageToFirestore(msg: ChatMessage, targetDb: Fir
     }
     // sentAt/editedAt are server times: firestore.rules require sentAt == request.time on create
     const { sentAt: _sentAt, editedAt: _editedAt, ...fields } = sanitizedMsg;
-    await setDoc(doc(targetDb, 'chat_messages', msg.id), {
-      ...sanitizeForFirestore(fields),
+    // the photo goes to its own document in the same batch (stage 6, finding 20): the admin's chat is no longer
+    // downloaded with every photo in it, a photo is read when it is shown
+    const photo = typeof fields.imageUrl === 'string' && fields.imageUrl.startsWith('data:image/') ? fields.imageUrl : null;
+    const batch = writeBatch(targetDb);
+    if (photo) {
+      delete fields.imageUrl;
+      batch.set(doc(targetDb, 'chat_images', msg.id), { data: photo });
+      chatImageCache.set(msg.id, photo);
+    }
+    batch.set(doc(targetDb, 'chat_messages', msg.id), {
+      ...sanitizeForFirestore(photo ? { ...fields, imageId: msg.id } : fields),
       sentAt: serverTimestamp(),
     });
+    await batch.commit();
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `chat_messages/${msg.id}`);
   }
@@ -1346,7 +1376,11 @@ async function setChatMessageHidden(
 /** «Удалить у всех» */
 async function deleteChatMessage(messageId: string, targetDb: Firestore = db) {
   try {
-    await deleteDoc(doc(targetDb, 'chat_messages', messageId));
+    // its photo document goes with it (none — the delete does nothing)
+    const batch = writeBatch(targetDb);
+    batch.delete(doc(targetDb, 'chat_images', messageId));
+    batch.delete(doc(targetDb, 'chat_messages', messageId));
+    await batch.commit();
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `chat_messages/${messageId}`);
   }
@@ -1634,7 +1668,7 @@ export async function syncAllPickupPointsToFirestore(points: PickupPoint[]) {
 export const BACKUP_COLLECTIONS = [
   'products', 'product_photos', 'product_costs', 'promos', 'settings', 'banners', 'delivery_methods', 'pickup_points',
   'orders', 'users', 'customer_notes', 'admins', 'reviews', 'review_votes',
-  'chat_messages', 'support_threads', 'support_status', STOCK_MOVEMENTS_COLLECTION, 'promo_uses', 'payment_templates',
+  'chat_messages', 'chat_images', 'support_threads', 'support_status', STOCK_MOVEMENTS_COLLECTION, 'promo_uses', 'payment_templates',
 ] as const;
 
 export interface DatabaseBackup {

@@ -503,7 +503,9 @@ export interface ChatMessage {
   threadName?: string; // Customer display name/email, shown in the admin inbox
   actionKey?: 'size_calc' | 'catalog' | 'orders';
   unreadByAdmin?: boolean;
-  imageUrl?: string; // Photo attachment (e.g., return item defect, tag, size check)
+  imageUrl?: string; // Photo attachment (e.g., return item defect, tag, size check); older messages keep it inside
+  /** The photo kept apart: `chat_images/{imageId}` (= message id; stage 6, finding 20) */
+  imageId?: string;
   fileName?: string;
   /** The buyer's receipt photo for this order («Доработки 5»): the admin confirms or rejects it from the chat */
   receiptOrderId?: string;

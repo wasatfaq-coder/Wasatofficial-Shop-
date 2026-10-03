@@ -63,6 +63,7 @@ import { formatPromoExpiry, isPromoUsable, promoDiscountKind } from '../../share
 import { ChatMessageDeleteDialog, ChatMessageMenu } from '../ChatMessageActions';
 import { NotConfigured } from '../NotConfigured';
 import { orderLineImage } from '../../utils/productImage';
+import { ChatPhoto, hasChatPhoto } from '../ChatPhoto';
 
 /** What an admin sends into a customer's dialog */
 export interface AdminChatPayload {
@@ -380,7 +381,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   const handleSendReply = async () => {
     const text = replyText.trim();
     if (editing) {
-      if (!text && !editing.imageUrl) return;
+      if (!text && !hasChatPhoto(editing)) return;
       if (text === (editing.text || '').trim()) return cancelEdit();
       if (await changeMessage({ type: 'edit', id: editing.id, text }, 'Сообщение изменено')) cancelEdit();
       return;
@@ -644,7 +645,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   };
 
   const canSend = editing
-    ? replyText.trim().length > 0 || Boolean(editing.imageUrl)
+    ? replyText.trim().length > 0 || hasChatPhoto(editing)
     : (replyText.trim().length > 0 || Boolean(photo)) && !isProcessingPhoto && !isLegacy;
 
   return (
@@ -888,19 +889,23 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                   }`}
                 >
                   {msg.text && <p className="whitespace-pre-line break-words">{msg.text}</p>}
-                  {msg.imageUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setPreviewImage(msg.imageUrl || null)}
-                      aria-label="Открыть фото"
-                      className="relative group rounded-xl overflow-hidden block max-w-full bg-black/5 cursor-pointer"
-                    >
-                      <img src={msg.imageUrl} alt="Фото из чата" className="max-h-56 w-auto max-w-[220px] rounded-xl object-contain block" loading="lazy" />
-                      <span className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 text-white text-[11px] font-bold">
-                        <Maximize2 className="w-3.5 h-3.5" />
-                        Увеличить
-                      </span>
-                    </button>
+                  {hasChatPhoto(msg) && (
+                    <ChatPhoto message={msg}>
+                      {(src) => (
+                        <button
+                          type="button"
+                          onClick={() => setPreviewImage(src)}
+                          aria-label="Открыть фото"
+                          className="relative group rounded-xl overflow-hidden block max-w-full bg-black/5 cursor-pointer"
+                        >
+                          <img src={src} alt="Фото из чата" className="max-h-56 w-auto max-w-[220px] rounded-xl object-contain block" loading="lazy" />
+                          <span className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 text-white text-[11px] font-bold">
+                            <Maximize2 className="w-3.5 h-3.5" />
+                            Увеличить
+                          </span>
+                        </button>
+                      )}
+                    </ChatPhoto>
                   )}
                   {msg.receiptOrderId && (() => {
                     // the receipt of an order: the check right here while it waits, then what was decided
