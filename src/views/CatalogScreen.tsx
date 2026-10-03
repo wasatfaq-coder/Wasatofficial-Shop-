@@ -226,7 +226,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
       {categories.length === 0 && catalogStatus === 'ready' && <NotConfigured title="Категории" />}
       {categories.length > 0 && (
       <div className="relative -mx-4 px-4">
-        <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-2 scroll-smooth">
+        <div role="radiogroup" aria-label="Категория" className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-2 scroll-smooth">
           {[{ id: 'all', name: 'Все' }, ...categories].map((cat) => {
             const isSelected = selectedCategory === cat.id;
             const IconComp = cat.id === 'all' ? Sparkles : categoryIcon(cat);
@@ -234,6 +234,9 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
             return (
               <button
                 key={cat.id}
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
                 onClick={() => onSelectCategory(cat.id)}
                 className={`relative px-4 py-2.5 rounded-2xl text-[13px] transition-all whitespace-nowrap shrink-0 flex items-center gap-2 cursor-pointer select-none bg-[#E3E8EF] ${
                   isSelected
