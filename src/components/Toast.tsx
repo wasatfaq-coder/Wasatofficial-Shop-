@@ -38,8 +38,9 @@ interface ToastProps {
 }
 
 export const ToastContainer: React.FC<ToastProps> = ({ toasts, onDismiss }) => {
+  // Computer: bottom right. Under the header the toast covered the product title and the colour choice
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 lg:top-36 lg:left-auto lg:right-6 lg:translate-x-0 z-[300] flex flex-col gap-2.5 w-11/12 max-w-sm pointer-events-none">
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 lg:top-auto lg:bottom-6 lg:left-auto lg:right-6 lg:translate-x-0 z-[300] flex flex-col gap-2.5 w-11/12 max-w-sm pointer-events-none">
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
       ))}
@@ -131,7 +132,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
   if (isRichNotification) {
     return (
       <div
-        className="pointer-events-auto neu-modal rounded-2xl p-3.5 border border-white/90 space-y-2.5 animate-in fade-in slide-in-from-top-4 duration-300 relative"
+        className="pointer-events-auto neu-modal rounded-2xl p-3.5 border border-white/90 space-y-2.5 animate-in fade-in slide-in-from-top-4 lg:slide-in-from-bottom-4 duration-300 relative"
         role="alert"
         {...pauseHandlers}
       >
@@ -200,7 +201,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
   // Standard Compact Toast Item
   return (
     <div
-      className="pointer-events-auto neu-dropdown rounded-2xl p-3 px-4 flex items-center justify-between gap-2.5 border border-white/80 animate-in fade-in slide-in-from-top-4 duration-300"
+      className="pointer-events-auto neu-dropdown rounded-2xl p-3 px-4 flex items-center justify-between gap-2.5 border border-white/80 animate-in fade-in slide-in-from-top-4 lg:slide-in-from-bottom-4 duration-300"
       role={toast.type === 'error' ? 'alert' : 'status'}
       {...pauseHandlers}
     >

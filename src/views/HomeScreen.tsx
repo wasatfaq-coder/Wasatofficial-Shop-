@@ -245,7 +245,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             onSearchSubmit={() => {
               setActiveTab('catalog');
             }}
-            placeholder="Поиск по товарам"
           />
         </div>
         <button
@@ -306,18 +305,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   {currentSlide.title}
                 </button>
               </h2>
-              <p className="text-[12px] sm:text-[13px] lg:text-base text-[#4E5C70] font-normal leading-relaxed line-clamp-2">
+              <p className="text-[12px] sm:text-[13px] lg:text-base text-[#4E5C70] font-normal leading-relaxed line-clamp-3">
                 {currentSlide.subtitle}
               </p>
             </div>
 
             {/* Right Hero Image */}
-            <div className="w-40 h-44 lg:w-[400px] lg:h-[260px] shrink-0">
+            {/* Narrower photo on 320 px: at full width it left the subtitle a column too thin to read */}
+            <div className="w-40 h-44 max-[359px]:w-28 max-[359px]:h-36 lg:w-[400px] lg:h-[260px] shrink-0">
               <NeumorphicImage
                 src={currentSlide.image}
                 alt={currentSlide.title}
                 priority={true}
-                containerClassName="w-40 h-44 lg:w-[400px] lg:h-[260px] rounded-2xl"
+                containerClassName="w-40 h-44 max-[359px]:w-28 max-[359px]:h-36 lg:w-[400px] lg:h-[260px] rounded-2xl"
                 className="w-full h-full object-cover object-top rounded-xl"
               />
             </div>
@@ -383,7 +383,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 <span className="w-14 h-14 rounded-2xl neu-button flex items-center justify-center text-[#2D3A4E] group-hover:text-accent transition-colors duration-150">
                   <IconComp className="w-6 h-6 stroke-[1.8]" aria-hidden="true" />
                 </span>
-                <span className="text-[13px] font-medium text-[#2D3A4E] group-hover:text-accent truncate max-w-full">
+                {/* Up to two lines with hyphens: on 320 px one line cut «Футболка» to «Футбо…» */}
+                <span className="text-xs sm:text-[13px] font-medium text-[#2D3A4E] group-hover:text-accent text-center leading-tight hyphens-auto break-words line-clamp-2 max-w-full">
                   {cat.name}
                 </span>
               </button>
