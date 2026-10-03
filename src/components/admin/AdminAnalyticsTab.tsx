@@ -1,3 +1,4 @@
+import { pluralRu } from '../../utils/pluralize';
 import React, { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminLaunchChecklist } from './AdminLaunchChecklist';
 import type { LaunchStep } from '../../utils/launchChecklist';
@@ -567,8 +568,8 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
           <p>Нажмите на {isMonthly ? 'месяц' : 'день'} на графике, чтобы увидеть его заказы.</p>
           {undatedCount > 0 && (
             <p>
-              {undatedCount} заказ(ов) оформлены до обновления магазина и не содержат даты — в графике и показателях
-              их нет, в разделе «Заказы» они есть.
+              Без даты (оформлены до обновления магазина): {undatedCount} {pluralRu(undatedCount, ['заказ', 'заказа', 'заказов'])} — в графике
+              и показателях их нет, в разделе «Заказы» они есть.
             </p>
           )}
         </div>
@@ -737,7 +738,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
           <span className="min-w-0">
             <span className="block text-xs font-extrabold">{isExportingPDF ? 'Формируем отчет…' : 'Скачать отчет PDF'}</span>
             <span className="block text-[11px] text-white/80 leading-snug">
-              {periodInfo.title} · {totalOrders} заказ(ов) на {rub(totalRevenue)}
+              {periodInfo.title} · {totalOrders} {pluralRu(totalOrders, ['заказ', 'заказа', 'заказов'])} на {rub(totalRevenue)}
             </span>
           </span>
         </button>
@@ -761,7 +762,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
         confirmLabel="Сбросить"
         preview={
           <div className="text-xs min-w-0">
-            <p className="font-bold text-[#2D3A4E]">Перестанут учитываться: {countedNow.count} заказ(ов)</p>
+            <p className="font-bold text-[#2D3A4E]">Перестанут учитываться: {countedNow.count} {pluralRu(countedNow.count, ['заказ', 'заказа', 'заказов'])}</p>
             <p className="text-[#4E5C70]">на сумму {rub(countedNow.revenue)}</p>
           </div>
         }

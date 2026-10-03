@@ -82,6 +82,7 @@ import { AdminReceiptReview, type ReviewReceipt } from './AdminReceiptReview';
 import { usePaymentTemplates } from './usePaymentTemplates';
 import { isReceiptOnReview } from '../../utils/paymentDetails';
 import { AdminOrderPriceWarning } from './AdminOrderPriceWarning';
+import { AdminChoiceMenu } from './AdminChoiceMenu';
 import { orderPriceIssues } from '../../utils/orderPriceCheck';
 import type { OrderPaymentDetails } from '../../types';
 import { cancelledByLabel, cancelReasonText, formatCancelledAt, isArchivedOrder, overdueUnpaidOrders, UNPAID_CANCEL_REASON } from '../../utils/orderCancel';
@@ -344,8 +345,6 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   const deleteOrderDialog = useDialogA11y(Boolean(orderToDelete), () => setOrderToDelete(null));
   const [isDeletingOrder, setIsDeletingOrder] = useState(false);
   const [expandedOrderAuditLogId, setExpandedOrderAuditLogId] = useState<string | null>(null);
-  const [openStatusDropdownId, setOpenStatusDropdownId] = useState<string | null>(null);
-  const [openPaymentStatusDropdownId, setOpenPaymentStatusDropdownId] = useState<string | null>(null);
 
   // Quick Inline Tracking Editor
   const [editingTrackOrderId, setEditingTrackOrderId] = useState<string | null>(null);
@@ -619,7 +618,6 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
   // Order Status Change Handler: the order's own chain (src/shared/orderFlow.ts)
   const handleUpdateOrderStatus = (orderId: string, newStatus: Order['status']) => {
-    setOpenStatusDropdownId(null);
     const order = orders.find((o) => o.id === orderId);
     if (!order || (order.status === newStatus && !order.isCancelled)) return;
     const blocker = statusChangeBlocker(order, newStatus);
@@ -650,7 +648,6 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         : `Статус заказа ${orderId} изменен на "${label}"`,
       'success'
     );
-    setOpenStatusDropdownId(null);
   };
 
   /** «Забрать заказ»: only a paid order (or «Оплата при получении»); the code is made now if the order has none */
@@ -680,14 +677,12 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   const handleUpdatePaymentStatus = (orderId: string, newStatus: NonNullable<Order['paymentStatus']>, checked = false) => {
     const target = orders.find((o) => o.id === orderId);
     if (!checked && newStatus === 'paid' && target && orderPriceIssues(target, products).length > 0) {
-      setOpenPaymentStatusDropdownId(null);
       setPaidDespitePrices(target);
       return;
     }
     const updated = orders.map((ord) => (ord.id === orderId ? { ...ord, paymentStatus: newStatus } : ord));
     onUpdateOrders(updated);
     onShowToast(`Статус оплаты заказа ${orderId}: "${PAYMENT_STATUS_CONFIG[newStatus].label}"`, 'success');
-    setOpenPaymentStatusDropdownId(null);
   };
 
   // Quick Tracking Edit Save Handler
@@ -1253,8 +1248,6 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
             const payStatus = ord.paymentStatus || initialPaymentStatus(ord.paymentMethod ?? '');
             const payConfig = PAYMENT_STATUS_CONFIG[payStatus] || PAYMENT_STATUS_CONFIG.paid;
             const isAuditExpanded = expandedOrderAuditLogId === ord.id;
-            const isStatusDropdownOpen = openStatusDropdownId === ord.id;
-            const isPaymentDropdownOpen = openPaymentStatusDropdownId === ord.id;
             const isEditingTrack = editingTrackOrderId === ord.id;
             const isEditingNote = editingNoteOrderId === ord.id;
             const carrierObj = TRACKING_CARRIERS.find((c) => c.id === (ord.trackingCompany || 'cdek')) || TRACKING_CARRIERS[0];
@@ -1319,97 +1312,39 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
                   {/* Top Right Badges & Dropdowns: Status & Payment Status */}
                   <div className="flex items-center justify-end w-full sm:w-auto sm:ml-auto gap-2 flex-wrap">
-                    {/* Payment Status Dropdown Button */}
-                    <div className="relative">
-                      <button
-                        onClick={() => {
-                          setOpenPaymentStatusDropdownId(isPaymentDropdownOpen ? null : ord.id);
-                          setOpenStatusDropdownId(null);
-                        }}
-                        className={`h-8 py-1 px-2.5 rounded-xl text-[11px] font-extrabold flex items-center gap-1.5 border cursor-pointer ${payConfig.bg} ${payConfig.text} active:scale-95 transition-all`}
-                        title="Изменить статус оплаты"
-                      >
-                        <span className={`w-2 h-2 rounded-full ${payConfig.dot}`} />
-                        <span>{payConfig.label}</span>
-                        <ChevronDown className="w-3 h-3 opacity-60" />
-                      </button>
+                    {/* Payment status and order status: Base UI menus — Escape closes only the menu (finding 38) */}
+                    <AdminChoiceMenu
+                      label="Статус оплаты"
+                      value={payStatus}
+                      choices={(['paid', 'pending', 'paid_on_delivery', 'refunded'] as NonNullable<Order['paymentStatus']>[])
+                        .concat(payStatus === 'receipt_review' ? ['receipt_review'] : [])
+                        .map((pst) => ({
+                          value: pst,
+                          label: PAYMENT_STATUS_CONFIG[pst].label,
+                          icon: <span className={`w-2 h-2 rounded-full ${PAYMENT_STATUS_CONFIG[pst].dot}`} />,
+                        }))}
+                      onChoose={(pst) => handleUpdatePaymentStatus(ord.id, pst)}
+                      triggerClassName={`h-8 py-1 px-2.5 rounded-xl text-[11px] font-extrabold flex items-center gap-1.5 border cursor-pointer ${payConfig.bg} ${payConfig.text} transition-all`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${payConfig.dot}`} aria-hidden="true" />
+                      <span>{payConfig.label}</span>
+                      <ChevronDown className="w-3 h-3 opacity-60" aria-hidden="true" />
+                    </AdminChoiceMenu>
 
-                      {isPaymentDropdownOpen && (
-                        <>
-                          <div
-                            className="fixed inset-0 z-30"
-                            onClick={() => setOpenPaymentStatusDropdownId(null)}
-                          />
-                          <div className="absolute right-0 top-full mt-1.5 z-40 neu-dropdown rounded-2xl p-1.5 space-y-1 min-w-[190px] animate-in fade-in border border-white/80">
-                            {(['paid', 'pending', 'paid_on_delivery', 'refunded'] as NonNullable<Order['paymentStatus']>[]).map(
-                              (pst) => {
-                                const opt = PAYMENT_STATUS_CONFIG[pst];
-                                return (
-                                  <button
-                                    key={pst}
-                                    onClick={() => handleUpdatePaymentStatus(ord.id, pst)}
-                                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                                      payStatus === pst
-                                        ? 'neu-pill-active font-extrabold'
-                                        : 'text-[#2D3A4E] hover:bg-white/40'
-                                    }`}
-                                  >
-                                    <span className={`w-2 h-2 rounded-full ${opt.dot}`} />
-                                    <span>{opt.label}</span>
-                                  </button>
-                                );
-                              }
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Order Fulfillment Status Dropdown */}
-                    <div className="relative">
-                      <button
-                        onClick={() => {
-                          setOpenStatusDropdownId(isStatusDropdownOpen ? null : ord.id);
-                          setOpenPaymentStatusDropdownId(null);
-                        }}
-                        className={`h-8 py-1 px-3 rounded-xl text-xs font-extrabold flex items-center gap-1.5 border cursor-pointer ${statusInfo.bg} ${statusInfo.text} active:scale-95 transition-all`}
-                      >
-                        <StatusIcon className="w-3.5 h-3.5" />
-                        <span>{adminStatusLabel(ord)}</span>
-                        <ChevronDown className="w-3 h-3 ml-0.5 opacity-70" />
-                      </button>
-
-                      {isStatusDropdownOpen && (
-                        <>
-                          <div
-                            className="fixed inset-0 z-30"
-                            onClick={() => setOpenStatusDropdownId(null)}
-                          />
-                          <div className="absolute right-0 top-full mt-1.5 z-40 neu-dropdown rounded-2xl p-1.5 space-y-1 min-w-[180px] animate-in fade-in border border-white/80">
-                            {flowStatuses(ord).map(
-                              (st) => {
-                                const opt = STATUS_CONFIG[st];
-                                const OptIcon = opt.icon;
-                                return (
-                                  <button
-                                    key={st}
-                                    onClick={() => handleUpdateOrderStatus(ord.id, st)}
-                                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                                      ord.status === st
-                                        ? 'neu-pill-active font-extrabold'
-                                        : 'text-[#2D3A4E] hover:bg-white/40'
-                                    }`}
-                                  >
-                                    <OptIcon className="w-3.5 h-3.5" />
-                                    <span>{adminStatusLabel(ord, st)}</span>
-                                  </button>
-                                );
-                              }
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
+                    <AdminChoiceMenu
+                      label="Статус заказа"
+                      value={ord.status}
+                      choices={flowStatuses(ord).map((st) => {
+                        const OptIcon = STATUS_CONFIG[st].icon;
+                        return { value: st, label: adminStatusLabel(ord, st), icon: <OptIcon className="w-3.5 h-3.5" /> };
+                      })}
+                      onChoose={(st) => handleUpdateOrderStatus(ord.id, st)}
+                      triggerClassName={`h-8 py-1 px-3 rounded-xl text-xs font-extrabold flex items-center gap-1.5 border cursor-pointer ${statusInfo.bg} ${statusInfo.text} transition-all`}
+                    >
+                      <StatusIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                      <span>{adminStatusLabel(ord)}</span>
+                      <ChevronDown className="w-3 h-3 ml-0.5 opacity-70" aria-hidden="true" />
+                    </AdminChoiceMenu>
                   </div>
                 </div>
 
@@ -1550,7 +1485,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                               setEditingNoteOrderId(ord.id);
                               setTempNoteValue(ord.managerNote || '');
                             }}
-                            className="text-[11px] text-accent font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                            className="min-h-6 px-1 text-[11px] text-accent font-bold hover:underline flex items-center gap-1 cursor-pointer"
                           >
                             <Edit3 className="w-2.5 h-2.5" />
                             {ord.managerNote ? 'Изменить' : '+ Добавить заметку'}
