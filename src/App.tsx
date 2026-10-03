@@ -24,7 +24,7 @@ import {
   matchesCatalogFilters,
 } from './components/CatalogAdvancedFilter';
 import {
-  deductStockWithLogs,
+  withOrderDeducted,
   loadStorefrontSettings,
   saveStorefrontSettings,
   getOrderableStock,
@@ -1692,13 +1692,8 @@ export default function App() {
       return false;
     }
 
-    // Deduct stock per size/color SKU and automatically write off log
-    const { updatedProducts } = deductStockWithLogs(
-      products,
-      orderItems,
-      newOrderId,
-      customerName
-    );
+    // The new stock shows at once; the database is changed by the line transactions below
+    const updatedProducts = withOrderDeducted(products, orderItems);
     setProducts(updatedProducts);
 
     // If active product was modified, sync selectedProduct

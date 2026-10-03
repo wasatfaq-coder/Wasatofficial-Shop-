@@ -29,8 +29,8 @@ import { Product, ProductSKU, StockMovementLog, SaveStorefrontSettings, Storefro
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { copyToClipboard } from '../../utils/clipboard';
 import {
-  generateDefaultSKUs,
   stockMovementId,
+  withMissingSkus,
   LEGACY_STOCK_LOGS_STORAGE_KEY,
 } from '../../utils/inventory';
 import { applyAdminStockChanges, saveStockMovements, subscribeToStockMovements } from '../../utils/firebaseSync';
@@ -239,7 +239,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
     }[] = [];
 
     products.forEach((prod) => {
-      const skus = prod.skus && prod.skus.length > 0 ? prod.skus : generateDefaultSKUs(prod);
+      const skus = withMissingSkus(prod);
       skus.forEach((sku) => {
         list.push({
           product: prod,
@@ -664,7 +664,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
     const prod = products.find((p) => p.id === opSelectedProductId);
     if (!prod) return;
 
-    const skus = prod.skus && prod.skus.length > 0 ? prod.skus : generateDefaultSKUs(prod);
+    const skus = withMissingSkus(prod);
     const sku = skus?.[opSelectedSkuIndex] || skus?.[0];
     if (!sku) return;
 
@@ -812,11 +812,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
   };
 
   const selectedProductForModal = products?.find((p) => p.id === opSelectedProductId) || products?.[0];
-  const selectedProductSkus = selectedProductForModal
-    ? selectedProductForModal.skus && selectedProductForModal.skus.length > 0
-      ? selectedProductForModal.skus
-      : generateDefaultSKUs(selectedProductForModal)
-    : [];
+  const selectedProductSkus = selectedProductForModal ? withMissingSkus(selectedProductForModal) : [];
 
   return (
     <div className="space-y-4">
