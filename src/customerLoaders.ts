@@ -10,6 +10,11 @@ export const loadFavoritesScreen = () => import('./views/FavoritesScreen');
 export const loadSupportChatModal = () => import('./components/SupportChatModal');
 export const loadPromoModal = () => import('./components/PromoModal');
 export const loadBrandRequisitesModal = () => import('./components/BrandRequisitesModal');
+// windows of the product, the catalog and the cart (audit 02.10, finding 37): ≈ 20 КБ gzip off the main bundle
+export const loadSizeCalculatorModal = () => import('./components/SizeCalculatorModal');
+export const loadQuickViewModal = () => import('./components/QuickViewModal');
+export const loadProductImageZoomModal = () => import('./components/ProductImageZoomModal');
+export const loadQuickOrderModal = () => import('./components/QuickOrderModal');
 
 const ALL = [
   loadCheckoutScreen,
@@ -19,6 +24,10 @@ const ALL = [
   loadSupportChatModal,
   loadPromoModal,
   loadBrandRequisitesModal,
+  loadQuickViewModal,
+  loadSizeCalculatorModal,
+  loadProductImageZoomModal,
+  loadQuickOrderModal,
 ];
 
 /** After the first screen is up: fetch the rest when the browser is idle (errors are retried on real use) */

@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { LazyMount } from '../components/LazyMount';
+import { QuickOrderModal } from '../components/lazyWindows';
 import {
   Heart,
   Minus,
@@ -15,7 +17,6 @@ import {
 import { CartItem, Product, ActiveTab, AppliedPromoInfo, DeliveryMethod } from '../types';
 import { getVariantStock, getOrderableStock } from '../utils/inventory';
 import { CartRemoveConfirmModal } from '../components/CartRemoveConfirmModal';
-import { QuickOrderModal } from '../components/QuickOrderModal';
 import { NotConfigured } from '../components/NotConfigured';
 import {
   QUICK_ORDER_DELIVERY_TITLE,
@@ -716,6 +717,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
       )}
 
       {/* Quick 1-Click Order Modal for Entire Cart */}
+      <LazyMount when={isQuickOrderOpen}>
       <QuickOrderModal
         isOpen={isQuickOrderOpen}
         onClose={() => setIsQuickOrderOpen(false)}
@@ -724,6 +726,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         promoNotApplied={Boolean(appliedPromo)}
         onSuccess={handleQuickOrderSuccess}
       />
+      </LazyMount>
     </div>
   );
 };

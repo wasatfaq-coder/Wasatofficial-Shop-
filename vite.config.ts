@@ -20,6 +20,8 @@ export default defineConfig(() => {
     resolve: {
       alias: {
         '@': path.resolve(import.meta.dirname, '.'),
+        // Firestore pipelines' regular expressions are not used: −43 КБ gzip of the main chunk (finding 36)
+        re2js: path.resolve(import.meta.dirname, 'src/vendor/re2js-stub.ts'),
       },
     },
     server: {

@@ -1,3 +1,4 @@
+import { SizeCalculatorModal } from './components/lazyWindows';
 import React, { Suspense, lazy, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ActiveTab, Product, CartItem, UserProfile, Order, BodyMeasurements, PromoCode, BannerSlide, ChatMessage, SupportStatus, AppliedPromoInfo, StorefrontSettings, DeliveryMethod, PickupPoint, ReviewVote, StoredReview, PaymentKind } from './types';
@@ -16,7 +17,6 @@ import { BottomNav } from './components/BottomNav';
 import { SidebarDrawer } from './components/SidebarDrawer';
 import { ToastContainer, ToastMessage } from './components/Toast';
 import { DesktopHeader } from './components/DesktopHeader';
-import { SizeCalculatorModal } from './components/SizeCalculatorModal';
 import {
   CatalogAdvancedFilter,
   FilterState,
@@ -1863,6 +1863,7 @@ export default function App() {
         />
         </LazyMount>
 
+        <LazyMount when={isMySizesModalOpen}>
         <SizeCalculatorModal
           isOpen={isMySizesModalOpen}
           onClose={() => setIsMySizesModalOpen(false)}
@@ -1873,6 +1874,7 @@ export default function App() {
           userProfile={userProfile}
           onSaveMeasurements={handleSaveMeasurements}
         />
+        </LazyMount>
 
         <LazyMount when={isPromoModalOpen}>
         <PromoModal

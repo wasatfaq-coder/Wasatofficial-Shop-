@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import { LazyMount } from '../components/LazyMount';
+import { QuickViewModal } from '../components/lazyWindows';
 import {
   X,
   SlidersHorizontal,
@@ -9,7 +11,6 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { Product, UserProfile, BodyMeasurements } from '../types';
 import { ProductCard } from '../components/ProductCard';
-import { QuickViewModal } from '../components/QuickViewModal';
 import { AutocompleteSearch } from '../components/AutocompleteSearch';
 import {
   CatalogAdvancedFilter,
@@ -556,6 +557,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
       </div>
 
       {/* 7. Quick View Modal */}
+      <LazyMount when={!!quickViewProduct}>
       <QuickViewModal
         product={quickViewProduct}
         isOpen={!!quickViewProduct}
@@ -574,6 +576,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
         }
         preorderMode={preorderMode}
       />
+      </LazyMount>
     </div>
   );
 };

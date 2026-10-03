@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { LazyMount } from '../components/LazyMount';
+import { QuickViewModal } from '../components/lazyWindows';
 import { ChevronRight, SlidersHorizontal, Menu, Truck, RotateCcw, AlertCircle, Pause, Play } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Product, ActiveTab, BannerSlide, StorefrontSettings, UserProfile, BodyMeasurements } from '../types';
@@ -8,7 +10,6 @@ import { AutocompleteSearch } from '../components/AutocompleteSearch';
 import { RecentlyViewed } from '../components/RecentlyViewed';
 import { NeumorphicImage } from '../components/NeumorphicImage';
 import { NotConfigured } from '../components/NotConfigured';
-import { QuickViewModal } from '../components/QuickViewModal';
 import { categoryIcon, getCategories } from '../utils/categories';
 import { formatDays } from '../utils/pluralize';
 import { PRODUCTS_PAGE_SIZE } from '../utils/productListing';
@@ -479,6 +480,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         />
       )}
 
+      <LazyMount when={!!quickViewProduct}>
       <QuickViewModal
         product={quickViewProduct}
         isOpen={!!quickViewProduct}
@@ -497,6 +499,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         }
         preorderMode={preorderMode}
       />
+      </LazyMount>
     </div>
   );
 };
