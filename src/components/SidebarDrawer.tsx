@@ -39,8 +39,9 @@ const DrawerItem: React.FC<{ icon: LucideIcon; label: string; hint?: string; onC
     <div className="flex items-center gap-3 min-w-0">
       <Icon className="w-5 h-5 text-accent stroke-[2] shrink-0" aria-hidden="true" />
       <div className="min-w-0">
-        <span className="block leading-tight truncate">{label}</span>
-        {hint && <span className="text-xs text-[#4E5C70] block truncate">{hint}</span>}
+        {/* Wraps instead of «Фильтры то…» on a 320 px phone */}
+        <span className="block leading-tight">{label}</span>
+        {hint && <span className="text-xs text-[#4E5C70] block mt-0.5 leading-snug">{hint}</span>}
       </div>
     </div>
     <ChevronRight className="w-4 h-4 shrink-0 text-[#4E5C70] group-hover:text-accent transition-colors" aria-hidden="true" />
@@ -94,7 +95,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-            className="relative w-4/5 max-w-xs h-full neu-modal p-5 sm:p-6 flex flex-col justify-between z-10 border-r border-white/60 overflow-hidden"
+            className="relative w-[85%] max-w-xs h-full neu-modal p-4 sm:p-6 flex flex-col justify-between z-10 border-r border-white/60 overflow-hidden"
           >
             <div className="flex flex-col min-h-0 flex-1">
               {/* Drawer Header */}
@@ -124,7 +125,7 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
             <DrawerItem
               icon={Building2}
               label="Бренд и реквизиты"
-              hint={phone || 'Контакты и реквизиты'}
+              hint={phone ? phone.replace(/-/g, '\u2011') /* non-breaking hyphens: the number does not split */ : 'Контакты и реквизиты'}
               onClick={() => run(onOpenBrandDetails)}
             />
             <DrawerItem

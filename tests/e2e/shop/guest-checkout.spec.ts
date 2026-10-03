@@ -10,7 +10,7 @@ test('гость находит товар и оформляет заказ с �
   await page.goto('/');
   await page.getByRole('textbox', { name: 'Поиск по товарам' }).first().fill('льнян');
   await page.getByRole('link', { name: shirt.title }).first().click();
-  await expect(page).toHaveURL(new RegExp(`#/product/${shirt.id}$`));
+  await expect(page).toHaveURL(new RegExp(`/product/${shirt.id}$`));
 
   // the size is not chosen in advance: «В корзину» without it adds nothing
   await expect(page.getByRole('radio', { checked: true })).toHaveCount(0);
@@ -52,7 +52,7 @@ test('гость находит товар и оформляет заказ с �
   await expect(confirm).toContainText(rub(total));
   await confirm.click();
 
-  await expect(page).toHaveURL(/#\/order-success$/);
+  await expect(page).toHaveURL(/\/order-success$/);
   await expect(page.getByRole('heading', { name: /^Заказ № WS-\d+$/ })).toBeVisible();
   await expect(page.getByText(/Тверская, д\. 7/)).toBeVisible();
 

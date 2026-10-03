@@ -8,14 +8,14 @@ test('покупатель оформляет заказ и пишет о нём
   const buyer = { sub: `buyer-${info.project.name}`, email: `olga-${info.project.name}@example.ru`, name: 'Ольга Покупатель' };
   const chinos = PRODUCTS.chinos;
 
-  await page.goto('/#/profile');
+  await page.goto('/profile');
   await signIn(buyer);
   await expect(page.getByRole('heading', { name: buyer.name })).toBeVisible();
 
-  await page.goto(`/#/product/${chinos.id}`);
+  await page.goto(`/product/${chinos.id}`);
   await page.getByRole('radio', { name: /^50\b/ }).click();
   await page.getByRole('button', { name: 'В корзину', exact: true }).first().click();
-  await page.goto('/#/cart');
+  await page.goto('/cart');
   await page.getByRole('button', { name: 'Оформить заказ' }).first().click();
 
   // the account's e-mail is filled in from the profile

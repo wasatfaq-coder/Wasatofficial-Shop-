@@ -1,4 +1,4 @@
-// Заказ в 1 клик со страницы товара: имя, телефон и адрес, остальное менеджер согласует по телефону
+// Заказ в 1 клик со страницы товара: нужны только имя и телефон, адрес и оплату менеджер уточнит по телефону
 import { test, expect } from '../fixtures';
 import { queryDocs } from '../emulator';
 import { PRODUCTS } from '../store';
@@ -7,7 +7,7 @@ test('заказ в 1 клик со страницы товара', async ({ pag
   const name = `Быстрый ${info.project.name}`;
   const polo = PRODUCTS.polo;
 
-  await page.goto(`/#/product/${polo.id}`);
+  await page.goto(`/product/${polo.id}`);
   await page.getByRole('radio', { name: /^L\b/ }).click();
   await page.getByRole('button', { name: 'Заказать в 1 клик' }).first().click();
 
@@ -18,13 +18,9 @@ test('заказ в 1 клик со страницы товара', async ({ pag
 
   await form.getByRole('textbox', { name: /^Ваше имя/ }).fill(name);
   await form.getByRole('textbox', { name: /^Номер телефона/ }).fill('+79990001122');
-  await form.getByRole('textbox', { name: 'Город и улица доставки' }).fill('Москва, Тверская');
-  await form.getByRole('textbox', { name: /^Дом( \*)?$/ }).fill('7');
-  await form.getByRole('textbox', { name: /^Подъезд/ }).fill('1');
-  await form.getByRole('textbox', { name: /^Домофон/ }).fill('7');
   await confirm.click();
 
-  await expect(page).toHaveURL(/#\/order-success$/);
+  await expect(page).toHaveURL(/\/order-success$/);
   await expect(page.getByRole('heading', { name: /^Заказ № WS-\d+$/ })).toBeVisible();
 
   const [order] = await queryDocs('orders', 'customerName', name);

@@ -9,7 +9,7 @@ test('владелец меняет цену и печатает этикетк�
   const item = phone ? PRODUCTS.belt : PRODUCTS.socks;
   const newPrice = item.price + 500;
 
-  await page.goto('/#/profile');
+  await page.goto('/profile');
   await signIn(ADMIN);
   await page.getByRole('button', { name: /^Панель администратора/ }).click();
   const panel = page.getByRole('dialog', { name: 'Панель администратора' });
@@ -37,6 +37,6 @@ test('владелец меняет цену и печатает этикетк�
 
   // a customer in another tab sees the new price
   const shop = await page.context().newPage();
-  await shop.goto(`/#/product/${item.id}`);
+  await shop.goto(`/product/${item.id}`);
   await expect(shop.getByRole('main').getByText(rub(newPrice)).first()).toBeVisible();
 });

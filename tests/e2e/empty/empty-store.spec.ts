@@ -7,19 +7,19 @@ test('покупатель видит «не настроено» вместо �
   await page.goto('/');
   await expect(page.getByRole('status').filter({ hasText: 'Каталог: не настроено' })).toBeVisible();
   await expect(page.getByRole('status').filter({ hasText: 'Категории: не настроено' })).toBeVisible();
-  await expect(page.locator('a[href^="#/product/"]')).toHaveCount(0);
+  await expect(page.locator('a[href*="product/"]')).toHaveCount(0);
 
   // a link to a product that is not there leads to the catalog, with a message
-  await page.goto('/#/product/nope');
+  await page.goto('/product/nope');
   await expect(page.getByRole('status').filter({ hasText: 'Товар не найден' })).toBeVisible();
-  await expect(page).toHaveURL(/#\/catalog$/);
+  await expect(page).toHaveURL(/\/catalog$/);
 
   await page.getByRole('button', { name: 'Корзина' }).first().click();
   await expect(page.getByRole('heading', { name: 'Ваша корзина пуста' })).toBeVisible();
 });
 
 test('владелец видит, что осталось до первой продажи', async ({ page, signIn }) => {
-  await page.goto('/#/profile');
+  await page.goto('/profile');
   await signIn(ADMIN);
   await page.getByRole('button', { name: /^Панель администратора/ }).click();
   const panel = page.getByRole('dialog', { name: 'Панель администратора' });

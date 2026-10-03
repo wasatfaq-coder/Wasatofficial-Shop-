@@ -1,5 +1,6 @@
 import { Order } from '../types';
 import { isTransportCompanyDelivery } from './deliveryStages';
+import { isQuickOrderDelivery } from '../shared/orderPricing';
 import { customerStatusLabel } from './orderFlow';
 import { currentStoreName } from './storeContacts';
 
@@ -90,6 +91,9 @@ async function notificationWorker(): Promise<ServiceWorkerRegistration | null> {
   }
 }
 
+/** Site icon in the notification; the badge is a white silhouette for the Android status bar (public/) */
+const NOTIFICATION_ICONS = { icon: '/icon-192.png', badge: '/badge-96.png' };
+
 /**
  * A system notification when the browser allows it: through the worker (phones), else `new Notification` (desktop).
  * Resolves to true when it was shown. Works while the site is open in a tab — the store has no push server.
@@ -99,14 +103,14 @@ export async function showSystemNotification(title: string, options?: Notificati
   const worker = await notificationWorker();
   if (worker) {
     try {
-      await worker.showNotification(title, { icon: '/favicon.ico', badge: '/favicon.ico', ...options });
+      await worker.showNotification(title, { ...NOTIFICATION_ICONS, ...options });
       return true;
     } catch (e) {
       console.debug('Worker notification failed:', e);
     }
   }
   try {
-    const notif = new Notification(title, { icon: '/favicon.ico', badge: '/favicon.ico', ...options });
+    const notif = new Notification(title, { ...NOTIFICATION_ICONS, ...options });
     setTimeout(() => notif.close(), 6000);
     return true;
   } catch (e) {
@@ -210,7 +214,8 @@ export function getOrderStatusNotification(
       const isTK = isTransportCompanyDelivery(order.deliveryMethod, order.trackingCompany);
       const dm = (order.deliveryMethod || '').toLowerCase();
       const isPickup = dm.includes('самовывоз') || dm.includes('пункт выдачи') || dm.includes('бутик') || dm.includes('шоурум');
-      const isExpress = dm.includes('экспресс') || dm.includes('express') || dm.includes('срочн');
+      // not an old 1-click order «Экспресс курьер (1 клик)»: the shop promised no express courier
+      const isExpress = !isQuickOrderDelivery(dm) && (dm.includes('экспресс') || dm.includes('express') || dm.includes('срочн'));
 
       let transitText = 'Курьер везет ваш заказ по указанному адресу.';
       if (isTK && order.trackingNumber) {
