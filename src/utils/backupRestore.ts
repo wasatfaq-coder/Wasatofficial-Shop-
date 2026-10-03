@@ -31,6 +31,7 @@ export const BACKUP_COLLECTION_TITLES: Record<string, string> = {
   reviews: 'Отзывы',
   review_votes: 'Голоса «Полезно»',
   chat_messages: 'Сообщения чата',
+  chat_images: 'Фото из чата',
   support_threads: 'Диалоги поддержки',
   support_status: 'Статусы диалогов',
   stock_movements: 'Журнал склада',

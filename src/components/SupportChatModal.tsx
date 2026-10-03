@@ -29,6 +29,8 @@ import { compressChatImageFile } from '../utils/imageUpload';
 import { currentStoreName, telHref } from '../utils/storeContacts';
 import { ModalPortal } from './ModalPortal';
 import { useDialogA11y } from '../utils/useDialogA11y';
+import type { Firestore } from 'firebase/firestore';
+import { ChatPhoto, hasChatPhoto } from './ChatPhoto';
 
 /** Firestore rules accept at most 5000 characters per message */
 const CHAT_MESSAGE_MAX_LENGTH = 5000;
@@ -57,6 +59,8 @@ interface SupportChatModalProps {
   onShowToast?: (msg: string, type?: 'success' | 'info' | 'error') => void;
   /** Typed into an empty field when the chat opens: «Вопрос по заказу № …» (audit 02.10, finding 26) */
   draftText?: string;
+  /** The database of the chat's side (a guest — the guest's sign-in): photos kept apart are read from it */
+  imageDb?: Firestore;
 }
 
 const CUSTOMER_STATUS: Record<SupportStatus['status'], { label: string; note: string; cls: string }> = {
@@ -115,6 +119,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
   onSelectProductById,
   onShowToast,
   draftText,
+  imageDb,
 }) => {
   const [inputText, setInputText] = useState('');
   // the order the customer asks about goes into the message itself, so the staff see its number
@@ -230,7 +235,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
     const text = inputText.trim();
     if (editing) {
       if (isSending) return;
-      if (!text && !editing.imageUrl) return;
+      if (!text && !hasChatPhoto(editing)) return;
       if (text === (editing.text || '').trim()) {
         cancelEdit();
         return;
@@ -269,7 +274,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
   };
 
   const canSend = editing
-    ? (inputText.trim().length > 0 || Boolean(editing.imageUrl)) && !isSending
+    ? (inputText.trim().length > 0 || hasChatPhoto(editing)) && !isSending
     : (inputText.trim().length > 0 || Boolean(attachedImage)) && !isSending && !isProcessingImage;
   const statusInfo = supportStatus ? CUSTOMER_STATUS[supportStatus.status] : null;
 
@@ -388,7 +393,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                       )}
                       <div
                         className={`rounded-2xl text-xs font-medium leading-relaxed ${
-                          msg.imageUrl && !msg.text?.trim() && !msg.productCard && !msg.promoCard && !msg.orderStatusUpdate
+                          hasChatPhoto(msg) && !msg.text?.trim() && !msg.productCard && !msg.promoCard && !msg.orderStatusUpdate
                             ? 'p-2'
                             : 'p-3.5 space-y-2.5'
                         } ${
@@ -403,24 +408,28 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                       >
                         {msg.text && <p className="whitespace-pre-line break-words">{msg.text}</p>}
 
-                        {msg.imageUrl && (
-                          <button
-                            type="button"
-                            onClick={() => setPreviewImage(msg.imageUrl || null)}
-                            aria-label="Открыть фото"
-                            className="relative group rounded-xl overflow-hidden block max-w-full bg-black/5 active:scale-[0.98] transition-transform cursor-pointer"
-                          >
-                            <img
-                              src={msg.imageUrl}
-                              alt="Прикрепленное фото"
-                              className="max-h-60 w-auto max-w-[240px] rounded-xl object-contain block mx-auto"
-                              loading="lazy"
-                            />
-                            <span className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-[11px] font-bold">
-                              <Maximize2 className="w-3.5 h-3.5" />
-                              Увеличить
-                            </span>
-                          </button>
+                        {hasChatPhoto(msg) && (
+                          <ChatPhoto message={msg} db={imageDb}>
+                            {(src) => (
+                              <button
+                                type="button"
+                                onClick={() => setPreviewImage(src)}
+                                aria-label="Открыть фото"
+                                className="relative group rounded-xl overflow-hidden block max-w-full bg-black/5 active:scale-[0.98] transition-transform cursor-pointer"
+                              >
+                                <img
+                                  src={src}
+                                  alt="Прикрепленное фото"
+                                  className="max-h-60 w-auto max-w-[240px] rounded-xl object-contain block mx-auto"
+                                  loading="lazy"
+                                />
+                                <span className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-[11px] font-bold">
+                                  <Maximize2 className="w-3.5 h-3.5" />
+                                  Увеличить
+                                </span>
+                              </button>
+                            )}
+                          </ChatPhoto>
                         )}
 
                         {/* Product the staff recommended */}
