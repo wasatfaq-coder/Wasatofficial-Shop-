@@ -198,7 +198,6 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
             onSearchChange={setSearchQuery}
             onSelectProduct={onSelectProduct}
             onSelectCategory={onSelectCategory}
-            placeholder="Поиск по товарам"
           />
         </div>
 
