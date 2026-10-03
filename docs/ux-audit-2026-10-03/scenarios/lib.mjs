@@ -1,7 +1,7 @@
 import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
 import fs from 'node:fs';
 export const BASE = process.env.BASE || 'http://127.0.0.1:5580/';
-export const UX = '/tmp/claude-0/-home-user-Wasatofficial-Shop-/2b208f14-8bf5-5160-a59d-115c60d1396c/scratchpad/audit/ux';
+export const UX = process.env.UX_OUT || '/tmp/claude-0/-home-user-Wasatofficial-Shop-/2b208f14-8bf5-5160-a59d-115c60d1396c/scratchpad/audit/ux';
 
 const scanFn = () => {
   const vis = (e) => { const r = e.getBoundingClientRect(); const s = getComputedStyle(e); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth; };
