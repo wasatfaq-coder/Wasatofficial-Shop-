@@ -30,6 +30,7 @@ describe('превью товара', () => {
     expect(html).not.toContain('<b>');
     expect(html).toContain('Рубашка «Лён» &lt;b&gt; — Wasat Shop');
     expect(html).toContain('content="https://img.example/a.jpg?w=800&amp;q=80"');
+    expect(html).toContain(`<link rel="canonical" href="${SITE}/product/linen-shirt-01" />`);
   });
 
   test('товар без фото — с обложкой магазина', () => {
@@ -68,9 +69,10 @@ describe('превью товара', () => {
   });
 
   test('проверочная версия закрыта от поисковиков', () => {
-    expect(metaBlock({ title: 't', description: 'd', url: SITE, type: 'website', siteName: 's', noindex: true })).toContain(
-      '<meta name="robots" content="noindex, nofollow" />'
-    );
+    const shell = metaBlock({ title: 't', description: 'd', url: SITE, type: 'website', siteName: 's', noindex: true });
+    expect(shell).toContain('<meta name="robots" content="noindex, nofollow" />');
+    // the shell is served for every screen's path: a canonical would glue them all to the root
+    expect(shell).not.toContain('rel="canonical"');
     expect(robotsTxt(SITE, true)).toBe('User-agent: *\nDisallow: /\n');
     expect(robotsTxt(SITE, false)).toContain(`Sitemap: ${SITE}/sitemap.xml`);
   });
@@ -84,6 +86,7 @@ describe('превью товара', () => {
   test('sitemap: главная и товары с датой изменения', () => {
     const xml = sitemapXml(SITE, [{ ...product, updatedAt: '2026-10-02T10:00:00Z' }]);
     expect(xml).toContain(`<url><loc>${SITE}/</loc></url>`);
+    expect(xml).toContain(`<url><loc>${SITE}/catalog</loc></url>`);
     expect(xml).toContain(`<url><loc>${SITE}/product/linen-shirt-01</loc><lastmod>2026-10-02</lastmod></url>`);
   });
 

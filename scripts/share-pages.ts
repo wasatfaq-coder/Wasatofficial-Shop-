@@ -1,9 +1,10 @@
 // Страницы-превью товаров для мессенджеров и поисковиков (docs/seo-plan.md, этап 1). Запускается после `vite build`
 // (`bun run build:share`, deploy.yml): читает каталог из боевой базы как любой посетитель (без ключей и записи) и пишет
 // в dist/ product/{id}.html (заголовок, описание, фото и цена товара в <head>), sitemap.xml и robots.txt.
-// Боты Telegram и WhatsApp не выполняют JS и адрес после # не видят: превью товара может быть только в HTML, который
-// отдаёт Hosting. Каталог меняется в админке между деплоями: новый товар до следующей сборки открывается по общей
-// странице магазина (rewrite на index.html), только превью у ссылки общее.
+// Боты Telegram и WhatsApp не выполняют JS: превью товара может быть только в HTML, который отдаёт Hosting. Приложение
+// на этой странице то же (index.html), оно открывает экран товара по адресу (src/utils/navigation.ts). Каталог меняется
+// в админке между деплоями: новый товар до следующей сборки открывается по общей странице магазина (rewrite на
+// index.html), только превью у ссылки общее.
 // Без сети или при ошибке базы сборка не падает: остаются общие описание, sitemap и robots.
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -88,6 +89,8 @@ interface PageMeta {
   title: string;
   description: string;
   url: string;
+  /** Only a product's page: the shop's shell (index.html) is served for every screen's path */
+  canonical?: boolean;
   type: 'website' | 'product';
   siteName: string;
   image?: PageImage;
@@ -101,7 +104,7 @@ export function metaBlock(m: PageMeta): string {
     `<title>${escapeHtml(m.title)}</title>`,
     `<meta name="description" content="${escapeHtml(m.description)}" />`,
     m.noindex ? '<meta name="robots" content="noindex, nofollow" />' : '',
-    `<link rel="canonical" href="${escapeHtml(m.url)}" />`,
+    m.canonical ? `<link rel="canonical" href="${escapeHtml(m.url)}" />` : '',
     `<meta property="og:type" content="${m.type}" />`,
     `<meta property="og:site_name" content="${escapeHtml(m.siteName)}" />`,
     '<meta property="og:locale" content="ru_RU" />',
@@ -149,6 +152,7 @@ export function productMeta(p: ShareProduct, site: string, siteName: string, noi
     title: `${p.title} — ${siteName}`,
     description: productSummary(p),
     url,
+    canonical: true,
     type: 'product',
     siteName,
     image: p.image ? { url: p.image, alt: p.title } : storeCover(site, siteName),
@@ -167,6 +171,7 @@ export function withMeta(indexHtml: string, block: string): string {
 export function sitemapXml(site: string, products: ShareProduct[]): string {
   const urls = [
     `  <url><loc>${escapeHtml(`${site}/`)}</loc></url>`,
+    `  <url><loc>${escapeHtml(`${site}/catalog`)}</loc></url>`,
     ...products.map((p) => {
       const lastmod = p.updatedAt ? `<lastmod>${p.updatedAt.slice(0, 10)}</lastmod>` : '';
       return `  <url><loc>${escapeHtml(`${site}${productPath(p.id)}`)}</loc>${lastmod}</url>`;

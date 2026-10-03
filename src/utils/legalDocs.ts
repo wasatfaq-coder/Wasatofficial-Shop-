@@ -17,7 +17,7 @@ export const LEGAL_DOC_TITLES: Record<LegalDocId, string> = {
 };
 
 /** Hash route of the document page (see navigation.ts) */
-export const LEGAL_DOC_HREF: Record<LegalDocId, string> = { offer: '#/offer', privacy: '#/privacy' };
+export const LEGAL_DOC_HREF: Record<LegalDocId, string> = { offer: '/offer', privacy: '/privacy' };
 
 /** The store's own edition of a document; none — the template is used */
 export interface LegalDocEdition {
