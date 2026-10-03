@@ -32,6 +32,8 @@ import {
 } from '../../utils/inventory';
 import { BrandRequisitesModal } from '../BrandRequisitesModal';
 import { NeumorphicSwitch } from '../NeumorphicSwitch';
+import { AdminScheduleEditor } from './AdminScheduleEditor';
+import { scheduleErrors } from '../../utils/storeSchedule';
 import { QuickTextEditModal, QuickEditFieldConfig } from './QuickTextEditModal';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { sameValue, useUnsavedChanges } from '../../utils/unsavedChanges';
@@ -84,8 +86,17 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // A schedule with a mistake (end before start, a special day without a date) is not written: the errors show at it
+  const [showScheduleErrors, setShowScheduleErrors] = useState(false);
+
   /** Resolves to false when the database rejected the write: App shows the error, no «Сохранено» here */
   const persistSettings = async (next: StorefrontSettings): Promise<boolean> => {
+    if (next.schedule && scheduleErrors(next.schedule).length > 0) {
+      setShowScheduleErrors(true);
+      document.getElementById('storefront-schedule')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return false;
+    }
+    setShowScheduleErrors(false);
     saveStorefrontSettings(next);
     if (!onUpdateSettings) return true;
     setIsSaving(true);
@@ -716,40 +727,14 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               </div>
             </div>
 
-            <div>
-              <label htmlFor="storefront-workingHours" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
-                Режим работы
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  id="storefront-workingHours"
-                  type="text"
-                  value={localSettings.workingHours}
-                  onChange={(e) =>
-                    setLocalSettings({ ...localSettings, workingHours: e.target.value })
-                  }
-                  className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E]"
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    openQuickEdit({
-                      key: 'workingHours',
-                      title: 'Основные контакты',
-                      fieldLabel: 'Режим работы',
-                      value: localSettings.workingHours,
-                      badge: 'График',
-                      description: 'Часы работы бутика и операторов консьерж-службы.',
-                    })
-                  }
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                  title="Редактировать в модальном окне"
-                  aria-label="Редактировать в модальном окне"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
+            {/* The week, special days and the comment (docs/store-schedule-spec.md) */}
+            <AdminScheduleEditor
+              schedule={localSettings.schedule}
+              comment={localSettings.workingHours}
+              onChange={(schedule) => setLocalSettings({ ...localSettings, schedule })}
+              onCommentChange={(workingHours) => setLocalSettings({ ...localSettings, workingHours })}
+              showErrors={showScheduleErrors}
+            />
           </div>
 
           {/* Top Promotional Announcement Banner */}

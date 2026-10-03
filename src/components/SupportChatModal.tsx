@@ -21,7 +21,7 @@ import {
   BellRing,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChatMessage, SupportStatus } from '../types';
+import { ChatMessage, StoreSchedule, SupportStatus } from '../types';
 import { canCustomerChangeMessage, type ChatMessageChange } from '../utils/firebaseSync';
 import { ChatMessageDeleteDialog, ChatMessageMenu } from './ChatMessageActions';
 import { copyToClipboard } from '../utils/clipboard';
@@ -31,6 +31,8 @@ import { ModalPortal } from './ModalPortal';
 import { useDialogA11y } from '../utils/useDialogA11y';
 import type { Firestore } from 'firebase/firestore';
 import { ChatPhoto, hasChatPhoto } from './ChatPhoto';
+import { useMinuteClock } from './StoreHours';
+import { chatHoursText, isScheduleConfigured, scheduleStatus } from '../utils/storeSchedule';
 
 /** Firestore rules accept at most 5000 characters per message */
 const CHAT_MESSAGE_MAX_LENGTH = 5000;
@@ -39,6 +41,8 @@ interface SupportChatModalProps {
   isOpen: boolean;
   /** Store phone from Admin → «Витрина»; the call button is hidden when empty */
   storePhone?: string;
+  /** The store's hours from «Витрина»: «Сейчас работаем до 21:00» / «ответим завтра после 10:00» under the title */
+  storeSchedule?: StoreSchedule;
   onClose: () => void;
   messages: ChatMessage[];
   /** Resolves false when the message could not be sent at all (the text stays in the field) */
@@ -105,6 +109,7 @@ const QUICK_QUESTIONS = [
 export const SupportChatModal: React.FC<SupportChatModalProps> = ({
   isOpen,
   storePhone = '',
+  storeSchedule,
   onClose,
   messages,
   onSendMessage,
@@ -168,6 +173,10 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
   // Escape leaves editing first, then closes the chat; the photo, the notice and the delete dialog are
   // windows of their own and close first
   const dialog = useDialogA11y(isOpen, () => (editing ? cancelEdit() : onClose()));
+  // the store's hours: renewed every minute while the chat is open
+  const scheduleSet = isScheduleConfigured(storeSchedule);
+  const hoursNow = useMinuteClock(isOpen && scheduleSet);
+  const hoursStatus = scheduleSet ? scheduleStatus(storeSchedule, hoursNow) : null;
   const noticeDialog = useDialogA11y(isOpen && Boolean(statusNotice), dismissStatusNotice);
   const photoDialog = useDialogA11y(isOpen && Boolean(previewImage), () => setPreviewImage(null), { label: 'Просмотр фото' });
 
@@ -324,6 +333,11 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
                   <p className="text-xs text-[#4E5C70] font-semibold leading-snug">
                     Отвечают сотрудники {storeName}, ответ придет сюда
                   </p>
+                  {hoursStatus && (
+                    <p className={`text-xs font-bold leading-snug ${hoursStatus.open ? 'text-success' : 'text-[#4E5C70]'}`}>
+                      {chatHoursText(hoursStatus)}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">

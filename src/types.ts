@@ -573,6 +573,32 @@ export interface StockMovementLog {
 /** Saves storefront settings; resolves to false when the write failed (the error toast is already shown) */
 export type SaveStorefrontSettings = (settings: StorefrontSettings) => Promise<boolean> | void;
 
+/** День недели графика работы магазина (`schedule.days` в «Витрине») */
+export type StoreWeekday = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+
+/** Часы одного дня: время «ЧЧ:ММ» по Москве, `to` — не позже «24:00» */
+export interface StoreScheduleHours {
+  open: boolean;
+  from: string;
+  to: string;
+}
+
+/** Особый день графика: праздник или другие часы */
+export interface StoreScheduleException {
+  /** «ГГГГ-ММ-ДД» */
+  date: string;
+  closed: boolean;
+  from?: string;
+  to?: string;
+  note?: string;
+}
+
+/** График работы магазина (docs/store-schedule-spec.md); статус для покупателя — src/utils/storeSchedule.ts */
+export interface StoreSchedule {
+  days: Record<StoreWeekday, StoreScheduleHours>;
+  exceptions?: StoreScheduleException[];
+}
+
 export interface StorefrontSettings {
   storeName: string;
   storeSlogan?: string;
@@ -584,7 +610,10 @@ export interface StorefrontSettings {
   telegram: string;
   whatsapp: string;
   pickupAddress: string;
+  /** Комментарий к графику (раньше — весь «Режим работы» текстом); показывается под графиком */
   workingHours: string;
+  /** График работы; без рабочих дней покупателю показывается только комментарий */
+  schedule?: StoreSchedule;
   /** Дней на возврат; без значения покупателю срок не называется */
   returnPeriodDays?: number;
   /** Порог бесплатной доставки для способов без своего порога; без значения бесплатной доставки от суммы нет */

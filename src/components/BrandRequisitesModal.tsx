@@ -22,6 +22,8 @@ import { copyToClipboard as safeCopyToClipboard } from '../utils/clipboard';
 import { getLegalDetails, getStoreContacts, getStoreName } from '../utils/storeContacts';
 import { NotConfigured } from './NotConfigured';
 import { useDialogA11y } from '../utils/useDialogA11y';
+import { StoreHours } from './StoreHours';
+import { isScheduleConfigured } from '../utils/storeSchedule';
 
 interface BrandRequisitesModalProps {
   isOpen: boolean;
@@ -368,9 +370,11 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                     <Clock className="w-3.5 h-3.5" />
                     <span>График работы</span>
                   </div>
-                  <p className={`text-xs font-bold ${workingHours ? 'text-[#2D3A4E]' : 'text-[#4E5C70]'}`}>
-                    {workingHours || 'Не настроено'}
-                  </p>
+                  {workingHours || isScheduleConfigured(storefrontSettings?.schedule) ? (
+                    <StoreHours schedule={storefrontSettings?.schedule} comment={workingHours} />
+                  ) : (
+                    <p className="text-xs font-bold text-[#4E5C70]">Не настроено</p>
+                  )}
                 </div>
               </div>
             </div>
