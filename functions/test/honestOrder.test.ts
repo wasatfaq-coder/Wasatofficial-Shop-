@@ -78,3 +78,38 @@ describe('«Технические работы» (UX audit 03.10, finding 21)',
     expect(storeAcceptsOrders(undefined)).toBe(true);
   });
 });
+
+describe('«Заказ в 1 клик» (UX audit 03.10, finding 22)', () => {
+  test('saved as «Заказ в 1 клик», recognised under the old «Экспресс курьер (1 клик)» too', async () => {
+    const { isQuickOrderDelivery, QUICK_ORDER_DELIVERY_TITLE } = await import('../../src/shared/orderPricing');
+    expect(QUICK_ORDER_DELIVERY_TITLE).toBe('Заказ в 1 клик');
+    expect(QUICK_ORDER_DELIVERY_TITLE).not.toMatch(/курьер|экспресс/i);
+    expect(isQuickOrderDelivery('Экспресс курьер (1 клик)')).toBe(true);
+    expect(isQuickOrderDelivery(QUICK_ORDER_DELIVERY_TITLE)).toBe(true);
+    expect(isQuickOrderDelivery('Экспресс-доставка')).toBe(false);
+    expect(isQuickOrderDelivery(undefined)).toBe(false);
+  });
+
+  test('an old 1-click order promises no express courier: in the stages or the status notice', async () => {
+    const { getOrderStatusNotification } = await import('../../src/utils/pushNotifications');
+    const old = { ...order(undefined, 'Уточнит менеджер'), deliveryMethod: 'Экспресс курьер (1 клик)' } as Order;
+    // the notice reads the store name from the browser's storage
+    const g = globalThis as { localStorage?: unknown };
+    const hadStorage = 'localStorage' in g;
+    if (!hadStorage) g.localStorage = { getItem: () => null };
+    try {
+      for (const status of ['accepted', 'in_transit', 'delivered'] as const) {
+        const text = JSON.stringify([
+          getSynchronizedDeliveryStages({ ...old, status }),
+          getOrderStatusNotification({ ...old, status }, 'accepted'),
+        ]);
+        expect(text).not.toMatch(/экспресс/i);
+      }
+    } finally {
+      if (!hadStorage) delete g.localStorage;
+    }
+    // a real express method of the shop keeps its words
+    const express = { ...old, deliveryMethod: 'Экспресс-доставка за 2 часа', status: 'in_transit' } as Order;
+    expect(JSON.stringify(getSynchronizedDeliveryStages(express))).toMatch(/экспресс/i);
+  });
+});

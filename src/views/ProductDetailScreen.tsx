@@ -245,7 +245,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     }, 1000);
   };
 
-  const handleQuickOrderSuccess = async (details: { name: string; phone: string; address: string }) => {
+  /** `false` — the order was not placed: the 1-click window stays open with what the buyer typed */
+  const handleQuickOrderSuccess = async (details: { name: string; phone: string; address: string }): Promise<boolean> => {
     if (onCompleteOrder) {
       const quickItem: CartItem = {
         id: `cart-quick-${Date.now()}`,
@@ -257,17 +258,17 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
       const placed = await onCompleteOrder({
         items: [quickItem],
         contact: { name: details.name, phone: details.phone },
-        address: details.address || 'Уточняется оператором',
+        address: details.address || 'Уточнит менеджер',
         deliveryMethod: QUICK_ORDER_DELIVERY_TITLE,
         totalPrice: product.price * quantity,
       });
-      if (placed === false) return;
+      if (placed === false) return false;
       if (onShowToast) {
         onShowToast(`Заказ успешно оформлен! Менеджер свяжется с вами по номеру ${details.phone}`, 'success');
       }
-    } else {
-      onAddToCartWithOptions(product, selectedColor, selectedSize, quantity);
+      return true;
     }
+    return onAddToCartWithOptions(product, selectedColor, selectedSize, quantity) !== false;
   };
 
   return (
