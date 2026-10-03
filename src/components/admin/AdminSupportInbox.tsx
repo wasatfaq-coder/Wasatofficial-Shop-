@@ -7,6 +7,8 @@ import {
   type ChatMessageChange,
 } from '../../utils/firebaseSync';
 import { AdminSupportChatTab, type AdminChatPayload } from './AdminSupportChatTab';
+import { ReceiptReviewBadge, type ReviewReceipt } from './AdminReceiptReview';
+import { isReceiptOnReview } from '../../utils/paymentDetails';
 import {
   LEGACY_THREAD_KEY,
   PRIORITY_LABELS,
@@ -25,6 +27,8 @@ interface AdminSupportInboxProps {
   initialOrderId?: string | null;
   onSend: (thread: { threadId: string; threadName: string }, payload: AdminChatPayload) => void;
   onUpdateOrders?: (orders: Order[]) => void;
+  /** «Подтвердить оплату» / «Отклонить чек» on a receipt photo («Доработки 5») */
+  onReviewReceipt?: ReviewReceipt;
   onClearThread: (threadId: string | null) => void;
   onChangeMessage: (change: ChatMessageChange) => Promise<boolean>;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
@@ -52,6 +56,7 @@ export const AdminSupportInbox: React.FC<AdminSupportInboxProps> = ({
   initialOrderId,
   onSend,
   onUpdateOrders,
+  onReviewReceipt,
   onClearThread,
   onChangeMessage,
   onShowToast,
@@ -74,6 +79,9 @@ export const AdminSupportInbox: React.FC<AdminSupportInboxProps> = ({
     open: threads.filter((t) => statusOf(t) === 'open').length,
     resolved: threads.filter((t) => statusOf(t) !== 'open').length,
   };
+
+  // a receipt waiting for the check — the pulsing badge on the dialog («Доработки 5»)
+  const receiptThreads = new Set(orders.filter(isReceiptOnReview).map((o) => o.customerUid).filter(Boolean));
 
   const visibleThreads = threads.filter((t) => {
     if (filter === 'awaiting' && !t.awaitingReply) return false;
@@ -170,6 +178,7 @@ export const AdminSupportInbox: React.FC<AdminSupportInboxProps> = ({
                   >
                     <span className="flex items-center gap-2 min-w-0">
                       <span className="text-xs font-extrabold truncate flex-1 min-w-0">{t.name}</span>
+                      {t.threadId && receiptThreads.has(t.threadId) && <ReceiptReviewBadge className="shrink-0" />}
                       {meta && meta.priority !== 'normal' && (
                         <span className="text-[11px] font-extrabold px-1.5 py-0.5 rounded-md bg-danger-soft text-danger shrink-0">
                           {PRIORITY_LABELS[meta.priority]}
@@ -222,6 +231,7 @@ export const AdminSupportInbox: React.FC<AdminSupportInboxProps> = ({
             onSend({ threadId: activeThread.threadId, threadName: activeThread.name }, payload);
           }}
           onUpdateOrders={onUpdateOrders}
+          onReviewReceipt={onReviewReceipt}
           onClear={() => onClearThread(activeThread.threadId)}
           onChangeMessage={onChangeMessage}
           onShowToast={onShowToast}

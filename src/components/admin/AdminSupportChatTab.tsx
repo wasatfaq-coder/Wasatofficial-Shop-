@@ -43,6 +43,8 @@ import { useDialogA11y } from '../../utils/useDialogA11y';
 import { useUnsavedChanges } from '../../utils/unsavedChanges';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { copyToClipboard } from '../../utils/clipboard';
+import { AdminReceiptReview, type ReviewReceipt } from './AdminReceiptReview';
+import { isReceiptOnReview } from '../../utils/paymentDetails';
 import { compressChatImageFile } from '../../utils/imageUpload';
 import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
 import {
@@ -87,6 +89,8 @@ interface AdminSupportChatTabProps {
   initialOrderId?: string | null;
   onSend: (payload: AdminChatPayload) => void;
   onUpdateOrders?: (orders: Order[]) => void;
+  /** «Подтвердить оплату» / «Отклонить чек» right on the receipt photo («Доработки 5») */
+  onReviewReceipt?: ReviewReceipt;
   onClear: () => void;
   /** Staff edit / «удалить у себя» / «удалить у всех» — any message, any time */
   onChangeMessage: (change: ChatMessageChange) => Promise<boolean>;
@@ -224,6 +228,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   initialOrderId,
   onSend,
   onUpdateOrders,
+  onReviewReceipt,
   onClear,
   onChangeMessage,
   onShowToast,
@@ -897,6 +902,22 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                       </span>
                     </button>
                   )}
+                  {msg.receiptOrderId && (() => {
+                    // the receipt of an order: the check right here while it waits, then what was decided
+                    const receiptOrder = allOrders.find((o) => o.id === msg.receiptOrderId);
+                    if (!receiptOrder) return null;
+                    const isCurrent = receiptOrder.paymentReceipt?.messageId === msg.id;
+                    if (isCurrent && isReceiptOnReview(receiptOrder) && onReviewReceipt) {
+                      return <AdminReceiptReview order={receiptOrder} onReview={onReviewReceipt} />;
+                    }
+                    const last = [...(receiptOrder.paymentLog ?? [])].reverse().find((e) => e.event !== 'receipt');
+                    if (!isCurrent || !last) return null;
+                    return (
+                      <p className={`text-xs font-bold ${last.event === 'confirmed' ? 'text-success' : 'text-danger'}`}>
+                        {last.event === 'confirmed' ? 'Оплата подтверждена' : `Чек отклонён: ${last.note ?? ''}`}
+                      </p>
+                    );
+                  })()}
                   {msg.productCard && (
                     <p className="text-xs font-bold flex items-center gap-1 opacity-90">
                       <ShoppingBag className="w-3 h-3" />

@@ -132,6 +132,36 @@ export interface OrderNotificationPayload {
   badgeBg: string;
 }
 
+/** The store checked the buyer's receipt («Доработки 5»): «Оплачен» or rejected with the reason; null — nothing to say */
+export function getOrderPaymentNotification(
+  order: Order,
+  paymentStatus: Order['paymentStatus']
+): OrderNotificationPayload | null {
+  if (paymentStatus === 'paid') {
+    return {
+      title: `Оплата заказа №${order.id} подтверждена`,
+      subtitle: 'Оплата: Оплачен',
+      text: 'Магазин получил оплату. Спасибо!',
+      icon: 'check',
+      orderId: order.id,
+      badgeText: 'Оплачен',
+      badgeBg: 'bg-success-soft text-success border-success/35',
+    };
+  }
+  if (paymentStatus === 'pending') {
+    return {
+      title: `Чек к заказу №${order.id} отклонён`,
+      subtitle: 'Оплата: Ожидает оплаты',
+      text: `${order.paymentRejectReason || 'Магазин не подтвердил оплату'}. Отправьте новый чек в заказе.`,
+      icon: 'alert',
+      orderId: order.id,
+      badgeText: 'Чек отклонён',
+      badgeBg: 'bg-danger-soft text-danger border-danger/35',
+    };
+  }
+  return null;
+}
+
 /**
  * Generates descriptive notification details based on order status transition
  */
@@ -200,7 +230,7 @@ export function getOrderStatusNotification(
         oldStatus,
         newStatus: effectiveNewStatus,
         badgeText: 'В пути',
-        badgeBg: 'bg-sky-100 text-sky-800 border-sky-300',
+        badgeBg: 'bg-accent/10 text-accent border-accent/30',
       };
     }
 

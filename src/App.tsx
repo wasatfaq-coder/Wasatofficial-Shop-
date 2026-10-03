@@ -1,9 +1,15 @@
 import React, { Suspense, lazy, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ActiveTab, Product, CartItem, UserProfile, Order, BodyMeasurements, PromoCode, BannerSlide, ChatMessage, SupportStatus, AppliedPromoInfo, StorefrontSettings, DeliveryMethod, PickupPoint, ReviewVote, StoredReview } from './types';
+import { ActiveTab, Product, CartItem, UserProfile, Order, BodyMeasurements, PromoCode, BannerSlide, ChatMessage, SupportStatus, AppliedPromoInfo, StorefrontSettings, DeliveryMethod, PickupPoint, ReviewVote, StoredReview, PaymentKind } from './types';
 import { GUEST_USER_PROFILE } from './data/products';
 import { loadLocalDeliveryMethods, saveLocalDeliveryMethods, loadLocalPickupPoints, saveLocalPickupPoints } from './data/deliveryData';
-import { playNotificationChime, sendBrowserNotification, getOrderStatusNotification } from './utils/pushNotifications';
+import {
+  playNotificationChime,
+  sendBrowserNotification,
+  getOrderStatusNotification,
+  getOrderPaymentNotification,
+  type OrderNotificationPayload,
+} from './utils/pushNotifications';
 import { DeviceFrameWrapper } from './components/DeviceFrameWrapper';
 import { DesktopTitleRow, Header, screenTitle } from './components/Header';
 import { BottomNav } from './components/BottomNav';
@@ -47,6 +53,7 @@ import {
   deductOrderLineStock,
   cancelOrderAsCustomer,
   confirmOrderReceipt,
+  submitPaymentReceipt,
   returnCancelledOrderStock,
   syncAllProductsToFirestore,
   subscribeToProductCosts,
@@ -692,16 +699,19 @@ export default function App() {
   }, []);
 
   // Order status changes push notification watcher
-  const previousOrdersMapRef = React.useRef<Map<string, { status: Order['status']; isCancelled?: boolean; trackingNumber?: string }>>(new Map());
+  const previousOrdersMapRef = React.useRef<
+    Map<string, { status: Order['status']; isCancelled?: boolean; trackingNumber?: string; paymentStatus?: Order['paymentStatus'] }>
+  >(new Map());
   const isInitialOrdersLoadRef = React.useRef(true);
 
   // Trigger push notification on order status change
   const triggerOrderStatusPushNotification = (
     order: Order,
     oldStatus?: Order['status'],
-    newStatus?: Order['status']
+    newStatus?: Order['status'],
+    payload?: OrderNotificationPayload
   ) => {
-    const notif = getOrderStatusNotification(order, oldStatus, newStatus);
+    const notif = payload ?? getOrderStatusNotification(order, oldStatus, newStatus);
 
     // Sound and a system notification only when the customer left notifications on in the profile
     if (userProfile.notificationsEnabled !== false) {
@@ -754,6 +764,7 @@ export default function App() {
           status: o.status,
           isCancelled: o.isCancelled,
           trackingNumber: o.trackingNumber,
+          paymentStatus: o.paymentStatus,
         });
       });
       isInitialOrdersLoadRef.current = false;
@@ -777,6 +788,12 @@ export default function App() {
         if (isOwnOrder && ((statusChanged && !ownStep) || (cancelChanged && !ownCancel) || trackingChanged)) {
           triggerOrderStatusPushNotification(currentOrder, prev.status, currentOrder.status);
         }
+        // the store checked the receipt («Доработки 5»): confirmed or rejected
+        const paymentNotif =
+          isOwnOrder && prev.paymentStatus === 'receipt_review'
+            ? getOrderPaymentNotification(currentOrder, currentOrder.paymentStatus)
+            : null;
+        if (paymentNotif) triggerOrderStatusPushNotification(currentOrder, prev.status, currentOrder.status, paymentNotif);
       }
 
       // Update reference
@@ -784,6 +801,7 @@ export default function App() {
         status: currentOrder.status,
         isCancelled: currentOrder.isCancelled,
         trackingNumber: currentOrder.trackingNumber,
+        paymentStatus: currentOrder.paymentStatus,
       });
     });
   }, [orders]);
@@ -966,6 +984,30 @@ export default function App() {
     } catch (err) {
       console.error('Receipt confirmation was refused:', err);
       addToast('Не удалось подтвердить получение. Проверьте соединение или напишите в чат магазина.', 'error');
+      return false;
+    }
+  };
+
+  /**
+   * «Оплачено» с фото чека («Доработки 5»): фото с подписью уходит в чат магазина, заказ — «Чек на проверке»
+   * (правило isCustomerReceiptSubmit). Только вошедший покупатель: гость получает реквизиты в чате.
+   */
+  const handleSubmitPaymentReceipt = async (order: Order, kind: PaymentKind, imageUrl: string): Promise<boolean> => {
+    if (!currentUser || currentUser.isAnonymous) return false;
+    try {
+      const message = await submitPaymentReceipt(
+        order,
+        kind,
+        imageUrl,
+        { threadId: currentUser.uid, threadName: userProfile.name || currentUser.email || 'Покупатель' },
+        new Date()
+      );
+      setChatMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]));
+      addToast(`Чек отправлен. Магазин проверит оплату заказа № ${order.id}`, 'success');
+      return true;
+    } catch (err) {
+      console.error('Payment receipt was not sent:', err);
+      addToast('Чек не отправлен. Проверьте соединение и попробуйте ещё раз — или отправьте фото в чат магазина.', 'error');
       return false;
     }
   };
@@ -1951,6 +1993,7 @@ export default function App() {
               onRepeatOrder={handleRepeatOrder}
               onCancelOrder={handleCancelOwnOrder}
               onConfirmReceipt={handleConfirmReceipt}
+              onSubmitPaymentReceipt={handleSubmitPaymentReceipt}
               onShowToast={addToast}
               onOpenSupportChat={() => setIsSupportChatOpen(true)}
               onUpdateProducts={(updatedWithCosts: Product[]) => {

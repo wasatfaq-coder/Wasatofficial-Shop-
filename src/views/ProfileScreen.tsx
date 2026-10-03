@@ -13,6 +13,16 @@ import {
   orderDeliveryKind,
   showsPickupCode,
 } from '../utils/orderFlow';
+import {
+  canPayByRequisites,
+  isReceiptOnReview,
+  PAYMENT_STATUS_LABELS,
+  paymentHint,
+  receiptReviewMessage,
+  reviewedOrder,
+  type ReceiptDecision,
+} from '../utils/paymentDetails';
+import { PaymentRequisitesModal } from '../components/PaymentRequisitesModal';
 import { canCustomerCancel, cancelledByLabel, cancelReasonText, customerCancelHint, formatCancelledAt } from '../utils/orderCancel';
 import { motion, AnimatePresence } from 'motion/react';
 import { AccountDataModal } from '../components/AccountDataModal';
@@ -61,11 +71,12 @@ import {
   Mail,
   XCircle,
   PackageCheck,
+  Landmark,
 } from 'lucide-react';
 import { NeumorphicSlider } from '../components/NeumorphicSlider';
 import { calculateRussianPattern, RUSSIAN_SIZE_TABLE_ROWS } from '../utils/russianSizing';
 import { useAuth } from '../context/AuthContext';
-import { UserProfile, Order, CartItem, ActiveTab, SavedAddress, Product, PromoCode, BannerSlide, ChatMessage, StorefrontSettings, SaveStorefrontSettings, DeliveryMethod, PickupPoint } from '../types';
+import { UserProfile, Order, CartItem, ActiveTab, SavedAddress, Product, PromoCode, BannerSlide, ChatMessage, StorefrontSettings, SaveStorefrontSettings, DeliveryMethod, PickupPoint, PaymentKind } from '../types';
 import type { LegalDocId } from '../utils/legalDocs';
 import { formatAddress } from '../utils/addressFormat';
 import type { AdminChatPayload } from '../components/admin/AdminSupportChatTab';
@@ -128,6 +139,8 @@ interface ProfileScreenProps {
   onCancelOrder?: (order: Order, reason: string, comment: string) => Promise<boolean>;
   /** «Я получил заказ» (a carrier's order): «Получен» with the time of the tap */
   onConfirmReceipt?: (order: Order) => Promise<boolean>;
+  /** «Оплачено» с фото чека («Доработки 5»): фото в чат заказа и «Чек на проверке»; true — отправлено */
+  onSubmitPaymentReceipt?: (order: Order, kind: PaymentKind, imageUrl: string) => Promise<boolean>;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   onOpenSupportChat?: () => void;
   /** Resolves to false when the database refused the write (the error toast is already shown) */
@@ -188,6 +201,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onRepeatOrder,
   onCancelOrder,
   onConfirmReceipt,
+  onSubmitPaymentReceipt,
   onShowToast,
   onOpenSupportChat,
   onUpdateProducts,
@@ -347,6 +361,27 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const { currentUser, loginWithGoogle, logoutUser, isAdmin: isFirebaseAdmin } = useAuth();
   const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
 
+  /**
+   * «Подтвердить оплату» / «Отклонить чек» («Доработки 5»), from «Заказы» and from the chat: the order changes, the
+   * buyer gets the store's message in the chat (and a notification while the site is open).
+   */
+  const handleReviewReceipt = async (order: Order, decision: ReceiptDecision, reason?: string): Promise<boolean> => {
+    const next = reviewedOrder(order, decision, { adminUid: currentUser?.uid, reason });
+    const saved = await handleUpdateOrders(orders.map((o) => (o.id === order.id ? next : o)));
+    if (saved === false) return false;
+    if (order.customerUid) {
+      handleSendAdminMessage(
+        { threadId: order.customerUid, threadName: order.customerName || 'Покупатель' },
+        { text: receiptReviewMessage(order.id, decision, reason) }
+      );
+    }
+    onShowToast(
+      decision === 'confirm' ? `Оплата заказа № ${order.id} подтверждена` : `Чек к заказу № ${order.id} отклонён`,
+      decision === 'confirm' ? 'success' : 'info'
+    );
+    return true;
+  };
+
 
   const handleOpenAdminPanel = () => {
     if (!isFirebaseAdmin) {
@@ -462,9 +497,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const adminCounts = useMemo<AdminNavCounts>(() => {
     if (!isAdminOpen) return {};
     const newOrders = orders.filter((o) => o.status === 'accepted' && !o.isCancelled).length;
+    // receipts waiting for the check count too («Доработки 5»)
+    const receipts = orders.filter(isReceiptOnReview).length;
     const awaiting = summarizeSupportThreads(localChatMessages, orders).filter((t) => t.awaitingReply).length;
     return {
-      orders: { value: newOrders, label: 'новых заказов' },
+      orders: { value: newOrders + receipts, label: receipts > 0 ? 'новых заказов и чеков на проверке' : 'новых заказов' },
       support: { value: awaiting, label: 'ждут ответа' },
     };
   }, [isAdminOpen, orders, localChatMessages]);
@@ -473,6 +510,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [selectedOrderIdForTracking, setSelectedOrderIdForTracking] = useState<string | null>(null);
   /** «Я получил заказ»: the confirmation */
   const [orderToConfirmReceipt, setOrderToConfirmReceipt] = useState<Order | null>(null);
+  /** «Выбрать способ оплаты»: the order whose requisites window is open */
+  const [orderToPay, setOrderToPay] = useState<Order | null>(null);
   /** «Отменить заказ» from the order window: the window with the reason */
   const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
   const trackingDialog = useDialogA11y(Boolean(selectedOrderIdForTracking), () => setSelectedOrderIdForTracking(null));
@@ -1931,6 +1970,47 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               );
             })()}
 
+            {/* Payment by the store's requisites and the receipt («Доработки 5») */}
+            {!selectedOrderForTracking.isCancelled && (() => {
+              const order = selectedOrderForTracking;
+              const status = order.paymentStatus ?? 'pending';
+              if (status === 'paid_on_delivery' || status === 'refunded') return null;
+              const canPay = Boolean(onSubmitPaymentReceipt) && canPayByRequisites(order, currentUser?.uid);
+              const hint = paymentHint(order, currentUser?.uid);
+              return (
+                <div className="neu-inset rounded-2xl p-3.5 space-y-2.5">
+                  <p className="text-xs text-[#2D3A4E] flex items-center justify-between gap-2">
+                    <span className="font-extrabold">Оплата</span>
+                    <span
+                      className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full border ${
+                        status === 'paid'
+                          ? 'bg-success-soft text-success border-success/30'
+                          : 'bg-warning-soft text-warning border-warning/30'
+                      }`}
+                    >
+                      {PAYMENT_STATUS_LABELS[status]}
+                    </span>
+                  </p>
+                  {status === 'pending' && order.paymentRejectReason && (
+                    <p role="status" className="rounded-xl bg-danger-soft border border-danger/25 px-2.5 py-2 text-xs text-[#2D3A4E]">
+                      <strong className="text-danger">Чек отклонён:</strong> {order.paymentRejectReason}. Проверьте оплату и отправьте новый чек.
+                    </p>
+                  )}
+                  {hint && status !== 'paid' && <p className="text-xs text-[#4E5C70] leading-relaxed">{hint}</p>}
+                  {canPay && (
+                    <button
+                      type="button"
+                      onClick={() => setOrderToPay(order)}
+                      className="w-full neu-button py-2.5 px-4 rounded-2xl text-xs font-extrabold text-accent flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Landmark className="w-4 h-4" aria-hidden="true" />
+                      <span>Выбрать способ оплаты</span>
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* Pickup code: the buyer names it to the courier or at the pickup point («Доработки 4») */}
             {showsPickupCode(selectedOrderForTracking) && (
               <div className="neu-inset rounded-2xl p-4 text-center space-y-1">
@@ -2246,6 +2326,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {onSubmitPaymentReceipt && (
+        <PaymentRequisitesModal order={orderToPay} onSubmitReceipt={onSubmitPaymentReceipt} onClose={() => setOrderToPay(null)} />
       )}
 
       <ConfirmDialog
@@ -3040,6 +3124,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   onUpdateOrders={handleUpdateOrders}
                   onUpdateProducts={handleUpdateProductsList}
                   onShowToast={onShowToast}
+                  onReviewReceipt={handleReviewReceipt}
                   onOpenSupportChat={(orderId, customerName) => {
                     setSupportTargetOrderId(orderId);
                     requestAdminTab('support');
@@ -3113,6 +3198,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   initialOrderId={supportTargetOrderId}
                   onSend={handleSendAdminMessage}
                   onUpdateOrders={handleUpdateOrders}
+                  onReviewReceipt={handleReviewReceipt}
                   onClearThread={(threadId) => onClearChat?.(threadId)}
                   onChangeMessage={async (change) => (onChangeChatMessage ? onChangeChatMessage(change) : false)}
                   onShowToast={onShowToast}

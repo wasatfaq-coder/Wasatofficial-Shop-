@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle2, KeyRound, Loader2, X } from 'lucide-react';
+import { CheckCircle2, KeyRound, Loader2, RefreshCw, X } from 'lucide-react';
 import type { Order } from '../../types';
 import { ModalPortal } from '../ModalPortal';
 import { useDialogA11y } from '../../utils/useDialogA11y';
@@ -11,6 +11,8 @@ interface AdminHandoverDialogProps {
   /** «Подтвердить выдачу»: «Выдан» with the time; resolves to true when saved */
   onConfirm: (order: Order) => Promise<boolean>;
   onClose: () => void;
+  /** «Новый код»: the old one stops working (it reached the wrong person); the buyer sees the new one in the order */
+  onNewCode?: (order: Order) => Promise<void>;
 }
 
 /**
@@ -18,8 +20,9 @@ interface AdminHandoverDialogProps {
  * чтобы сверить с покупателем; «Подтвердить выдачу» переводит заказ в «Выдан». Открывается только для оплаченного
  * заказа или «Оплата при получении» (`canHandOver`).
  */
-export const AdminHandoverDialog: React.FC<AdminHandoverDialogProps> = ({ order, onConfirm, onClose }) => {
+export const AdminHandoverDialog: React.FC<AdminHandoverDialogProps> = ({ order, onConfirm, onClose, onNewCode }) => {
   const [busy, setBusy] = useState(false);
+  const [replacing, setReplacing] = useState(false);
   const dialog = useDialogA11y(Boolean(order), () => !busy && onClose(), { closeOnEscape: !busy });
   if (!order) return null;
 
@@ -90,6 +93,21 @@ export const AdminHandoverDialog: React.FC<AdminHandoverDialogProps> = ({ order,
               {order.pickupCode}
             </p>
             <p className="text-xs text-[#4E5C70]">Попросите покупателя назвать код и сверьте</p>
+            {onNewCode && (
+              <button
+                type="button"
+                onClick={async () => {
+                  setReplacing(true);
+                  await onNewCode(order);
+                  setReplacing(false);
+                }}
+                disabled={busy || replacing}
+                className="mt-2 h-8 px-3 neu-button rounded-xl text-xs font-bold text-accent inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${replacing ? 'animate-spin' : ''}`} aria-hidden="true" />
+                Новый код
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-2 pt-1">

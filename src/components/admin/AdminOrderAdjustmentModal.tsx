@@ -18,6 +18,7 @@ import { adjustedOrderTotals } from '../../utils/orderAdjustment';
 import { motion, AnimatePresence } from 'motion/react';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { deductStockWithLogs, returnStockWithLogs, extractColorName, extractSizeName } from '../../utils/inventory';
+import { adminStatusLabel } from '../../utils/orderFlow';
 import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
 import { orderLineImage } from '../../utils/productImage';
 import { toOrderLineProduct } from '../../shared/orderLine';
@@ -393,11 +394,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
           <div className="flex items-center gap-2">
             <span className="text-[#4E5C70] font-bold shrink-0">Статус заказа:</span>
             <span className="neu-flat px-2.5 py-1 rounded-lg font-extrabold text-accent">
-              {order.status === 'accepted' && 'Принят в обработку'}
-              {order.status === 'assembling' && 'На сборке'}
-              {order.status === 'in_transit' && 'В пути'}
-              {order.status === 'ready' && 'Готов к выдаче'}
-              {order.status === 'delivered' && 'Доставлен'}
+              {adminStatusLabel(order)}
             </span>
           </div>
           <div className="flex items-center gap-2 text-[#4E5C70] min-w-0">

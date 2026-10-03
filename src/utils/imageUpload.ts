@@ -37,6 +37,11 @@ export async function compressChatImageFile(file: File): Promise<string> {
   return compressImageFile(file, 800, 800, 0.72);
 }
 
+/** Photo of a payment receipt («Доработки 5»): larger than a chat photo so the sums and the account stay legible */
+export async function compressReceiptImageFile(file: File): Promise<string> {
+  return compressImageFile(file, 1400, 1400, 0.82);
+}
+
 /**
  * Compress an existing base64 image data URL to ensure it fits safely in Firestore.
  */
