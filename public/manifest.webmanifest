@@ -1,0 +1,21 @@
+{
+  "id": "/",
+  "name": "Wasat Shop — мужская одежда",
+  "short_name": "Wasat Shop",
+  "description": "Магазин мужской одежды: каталог с фильтрами по размеру, цвету и цене, подбор размера, заказ онлайн и чат с магазином.",
+  "lang": "ru",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#E3E8EF",
+  "theme_color": "#E3E8EF",
+  "categories": ["shopping", "lifestyle"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
