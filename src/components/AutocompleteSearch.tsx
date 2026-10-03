@@ -160,6 +160,7 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
             if (cleanQuery) setIsOpen(true);
           }}
           placeholder={placeholder}
+          aria-label={placeholder}
           className="w-full neu-inset rounded-full h-11 py-2.5 pl-9 pr-8 text-[13px] text-[#2D3A4E] placeholder:text-[#56647A] transition-all"
         />
         {searchQuery && (

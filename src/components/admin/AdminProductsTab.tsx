@@ -812,7 +812,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     }));
 
     setFormSkus((prev) => [...prev, ...newSkus]);
-    onShowToast(`Цвет «${cleanName}» добавлен (+${newSkus.length} ${pluralRu(newSkus.length, ['вариация', 'вариации', 'вариаций'])})`, 'info');
   };
 
   const handleRemoveColor = (colorName: string) => {
@@ -838,7 +837,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       run: () => {
         setFormColors((prev) => prev.filter((c) => c.name !== colorName));
         setFormSkus((prev) => prev.filter((s) => s.color !== colorName));
-        onShowToast(`Цвет «${colorName}» удален`, 'info');
       },
     });
   };
@@ -867,7 +865,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     }));
 
     setFormSkus((prev) => [...prev, ...newSkus]);
-    onShowToast(`Размер «${size}» добавлен (+${newSkus.length} ${pluralRu(newSkus.length, ['вариация', 'вариации', 'вариаций'])})`, 'info');
   };
 
   const handleTogglePresetSize = (size: string) => {
@@ -889,7 +886,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       }));
 
       setFormSkus((prev) => [...prev, ...newSkus]);
-      onShowToast(`Размер «${size}» добавлен`, 'info');
     }
   };
 
@@ -914,7 +910,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       run: () => {
         setFormSizes((prev) => prev.filter((s) => s !== sizeToRemove));
         setFormSkus((prev) => prev.filter((s) => s.size !== sizeToRemove));
-        onShowToast(`Размер «${sizeToRemove}» удален`, 'info');
       },
     });
   };
@@ -1593,7 +1588,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                   {/* Description Section - directly below Category */}
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-1 min-h-5">
-                      <label className="text-[11px] font-bold text-[#4E5C70]">
+                      <label htmlFor="product-form-description" className="text-[11px] font-bold text-[#4E5C70]">
                         Описание товара
                       </label>
                       <button
@@ -1616,11 +1611,12 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                     </div>
                     <div className="relative">
                       <textarea
+                        id="product-form-description"
                         rows={2}
                         value={formDescription}
                         onChange={(e) => setFormDescription(e.target.value)}
                         placeholder="Краткое описание преимуществ ткани и кроя..."
-                        className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] resize-none leading-relaxed"
+                        className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] resize-y leading-relaxed"
                       />
                     </div>
                   </div>
@@ -1649,10 +1645,11 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
                     <div className="grid grid-cols-3 gap-2 items-end">
                       <div className="min-w-0">
-                        <label className="text-[11px] font-bold text-[#4E5C70] block mb-1 leading-tight">
+                        <label htmlFor="product-form-price" className="text-[11px] font-bold text-[#4E5C70] block mb-1 leading-tight">
                           Цена, ₽ *
                         </label>
                         <input
+                          id="product-form-price"
                           type="number"
                           value={formPrice || ''}
                           onChange={(e) => setFormPrice(Number(e.target.value))}
@@ -1664,10 +1661,11 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                       </div>
 
                       <div className="min-w-0">
-                        <label className="text-[11px] font-bold text-[#4E5C70] block mb-1 leading-tight" title="Себестоимость закупки">
+                        <label htmlFor="product-form-cost" className="text-[11px] font-bold text-[#4E5C70] block mb-1 leading-tight" title="Себестоимость закупки">
                           Закупка, ₽
                         </label>
                         <input
+                          id="product-form-cost"
                           type="number"
                           value={formCostPrice ?? ''}
                           onChange={(e) =>
@@ -1679,10 +1677,11 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                       </div>
 
                       <div className="min-w-0">
-                        <label className="text-[11px] font-bold text-[#4E5C70] block mb-1 leading-tight">
+                        <label htmlFor="product-form-old-price" className="text-[11px] font-bold text-[#4E5C70] block mb-1 leading-tight">
                           Старая цена, ₽
                         </label>
                         <input
+                          id="product-form-old-price"
                           type="number"
                           value={formOldPrice ?? ''}
                           onChange={(e) =>

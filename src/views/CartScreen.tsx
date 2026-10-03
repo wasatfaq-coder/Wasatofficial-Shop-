@@ -264,8 +264,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => setEditingVariantItemId(isEditingVariant ? null : item.id)}
-                      className="neu-button px-2.5 py-0.5 rounded-xl flex items-center gap-1.5 text-[11px] font-bold text-accent hover:scale-102 transition-transform cursor-pointer"
+                      className="neu-button min-h-8 px-2.5 py-0.5 rounded-xl flex items-center gap-1.5 text-[11px] font-bold text-accent hover:scale-102 transition-transform cursor-pointer"
                       title="Нажмите, чтобы изменить цвет или размер"
+                      aria-label={`Цвет и размер: ${item.selectedColor}, ${item.selectedSize}. Изменить`}
                     >
                       <span>{item.selectedColor} • {item.selectedSize}</span>
                       <SlidersHorizontal className="w-3 h-3 text-accent" />

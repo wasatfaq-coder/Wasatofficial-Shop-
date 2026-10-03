@@ -170,7 +170,9 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
   return (
     <div className="space-y-4 pb-32 lg:pb-10 animate-in fade-in duration-300">
       {/* Computer (lg): filters in a column on the left, applied at once; search is in the top bar */}
-      <div className="lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-6 lg:items-start">
+      <div className={products.length > 0 ? 'lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-6 lg:items-start' : ''}>
+      {/* an empty store has nothing to filter: no made-up price scale and materials with 0 (finding 40) */}
+      {products.length > 0 && (
       <aside aria-label="Фильтры каталога" className="hidden lg:block lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto no-scrollbar p-1 -m-1">
         <CatalogAdvancedFilter
           variant="sidebar"
@@ -185,6 +187,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           onToggleInline={() => {}}
         />
       </aside>
+      )}
       <div className="space-y-4 min-w-0">
       {/* 1. Search Bar & Master Filter Button with Unified Neumorphic Geometry */}
       <div className="flex items-center gap-3 pt-1 lg:hidden">
