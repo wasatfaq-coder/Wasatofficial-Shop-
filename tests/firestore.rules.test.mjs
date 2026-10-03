@@ -688,6 +688,20 @@ describe('reviews', () => {
     );
   });
 
+  test('the author does not pose as the store (finding 31)', async () => {
+    const db = customer('alice');
+    for (const authorName of ['Wasat Shop (официально)', 'АДМИНИСТРАТОР', 'Служба поддержки', 'admin']) {
+      await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { authorName })));
+    }
+    await assertSucceeds(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { authorName: 'Администратова Анна' })));
+  });
+
+  test('«Полезно» only to an existing review (finding 16)', async () => {
+    await assertFails(setDoc(doc(customer('bob'), 'review_votes/p1_alice_bob'), { reviewId: 'p1_alice', productId: 'p1', uid: 'bob' }));
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'reviews/p1_alice'), review('alice')));
+    await assertSucceeds(setDoc(doc(customer('bob'), 'review_votes/p1_alice_bob'), { reviewId: 'p1_alice', productId: 'p1', uid: 'bob' }));
+  });
+
   test('only the author edits a review; the author or admin deletes it', async () => {
     await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'reviews/p1_alice'), review('alice')));
     await assertSucceeds(updateDoc(doc(customer('alice'), 'reviews/p1_alice'), { rating: 3, comment: 'Уже не так' }));
@@ -702,6 +716,7 @@ describe('reviews', () => {
 
   test('one «Полезно» vote per person, removable only by its owner', async () => {
     const vote = (uid) => ({ reviewId: 'p1_alice', productId: 'p1', uid });
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'reviews/p1_alice'), review('alice')));
     await assertSucceeds(setDoc(doc(customer('bob'), 'review_votes/p1_alice_bob'), vote('bob')));
     await assertFails(setDoc(doc(customer('bob'), 'review_votes/p1_alice_carol'), vote('carol')));
     await assertFails(setDoc(doc(customer('bob'), 'review_votes/extra'), vote('bob')));
@@ -912,6 +927,23 @@ describe('users & admins', () => {
     // merge-save of editable fields keeps admin-owned fields untouched
     await assertSucceeds(setDoc(doc(db, 'users/carol'), { name: 'Carol' }, { merge: true }));
     await assertSucceeds(updateDoc(doc(owner(), 'users/carol'), { bonusPoints: 500 }));
+  });
+
+  test('profile: only its own fields of sane size and the Google account\'s email (findings 25, 23)', async () => {
+    const db = customer('dave');
+    await assertFails(setDoc(doc(db, 'users/dave'), { uid: 'dave', name: 'x', role: 'admin' }));
+    await assertFails(setDoc(doc(db, 'users/dave'), { uid: 'dave', name: 'z'.repeat(900) }));
+    await assertFails(setDoc(doc(db, 'users/dave'), { uid: 'dave', email: 'victim@example.com' }));
+    await assertSucceeds(setDoc(doc(db, 'users/dave'), {
+      uid: 'dave', name: 'Дэйв', email: 'dave@example.com', phone: '+79990000000', avatar: 'https://lh3.googleusercontent.com/a/x',
+      address: { street: '', city: '', postalCode: '' }, savedAddresses: [], savedCards: [], notificationsEnabled: true,
+      bodyMeasurements: { height: 180 }, updatedAt: '2026-10-03T08:00:00.000Z',
+    }));
+    // an old profile with a field the site no longer writes still saves the editable ones
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'users/dave'), { legacyField: 1 }, { merge: true }));
+    await assertSucceeds(setDoc(doc(db, 'users/dave'), { name: 'Дэйв Смит' }, { merge: true }));
+    await assertFails(setDoc(doc(db, 'users/dave'), { email: 'victim@example.com' }, { merge: true }));
+    await assertFails(setDoc(doc(db, 'users/dave'), { savedAddresses: Array.from({ length: 11 }, (_, i) => ({ id: String(i) })) }, { merge: true }));
   });
 
   test('manager notes are admin-only', async () => {

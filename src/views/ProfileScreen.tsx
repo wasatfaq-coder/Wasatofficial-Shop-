@@ -27,7 +27,6 @@ import { canCustomerCancel, cancelledByLabel, cancelReasonText, customerCancelHi
 import { motion, AnimatePresence } from 'motion/react';
 import { AccountDataModal } from '../components/AccountDataModal';
 import { currentStoreName, getStoreContacts, getStoreName, storeInitials, telHref } from '../utils/storeContacts';
-import { GUEST_USER_PROFILE } from '../data/products';
 import { fullName, namePartsOf } from '../shared/personName';
 import { FAQModal } from '../components/FAQModal';
 import {
@@ -686,6 +685,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     }
   };
 
+  // The profile is reset by App when the account is gone; nothing is written here: a write right after the sign-out
+  // went into the previous account's document and wiped its addresses (audit 02.10, finding 23)
   const handleFullLogout = async () => {
     try {
       if (currentUser) {
@@ -693,11 +694,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       }
     } catch (e) {
       console.warn('Logout error:', e);
+      onShowToast('Не удалось выйти из аккаунта. Проверьте соединение и попробуйте ещё раз.', 'error');
+      return;
     }
-    try {
-      localStorage.removeItem('manstyle_user_profile');
-    } catch {}
-    onUpdateProfile(GUEST_USER_PROFILE);
     onShowToast('Вы успешно вышли из аккаунта', 'info');
   };
 

@@ -158,18 +158,25 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
   const customerRecords: CustomerRecord[] = useMemo(() => {
     const map = new Map<string, CustomerRecord>();
 
-    // A. Incorporate Registered Users from Firestore
+    // Orders already in a card: each order is counted once
+    const attached = new Set<string>();
+
+    // A. Incorporate Registered Users from Firestore. A signed-in buyer's card is their uid, and their orders are those
+    // with their uid: by the email a profile could take someone else's card and bonuses (audit 02.10, finding 25). Guest
+    // orders (no uid) with the same email or phone are added to the card
     users.forEach((u) => {
-      const key = (u.email || u.uid || u.phone || u.name).toLowerCase().trim();
+      const key = u.uid ? `uid:${u.uid}` : (u.email || u.phone || u.name).toLowerCase().trim();
       if (!key) return;
 
       const userOrders = orders.filter((o) => {
+        if (o.customerUid) return Boolean(u.uid) && o.customerUid === u.uid;
         const oEmail = (o.customerEmail || '').toLowerCase().trim();
         const oPhone = (o.customerPhone || '').replace(/\D/g, '');
         const uPhone = (u.phone || '').replace(/\D/g, '');
         return (oEmail && oEmail === (u.email || '').toLowerCase().trim()) ||
                (uPhone && oPhone && uPhone.length >= 7 && oPhone.includes(uPhone.slice(-7)));
       });
+      userOrders.forEach((o) => attached.add(o.id));
 
       const totalSpent = userOrders.reduce((sum, o) => (!o.isCancelled ? sum + (o.totalPrice || 0) : sum), 0);
       const completedOrders = userOrders.filter((o) => o.status === 'delivered').length;
@@ -206,18 +213,27 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
 
     // B. Group Orders for Customers who may have placed guest orders without an explicit /users profile
     orders.forEach((ord) => {
+      if (attached.has(ord.id)) return;
       const email = (ord.customerEmail || '').toLowerCase().trim();
       const phone = (ord.customerPhone || '').replace(/\D/g, '');
-      const key = email || (phone ? `phone-${phone}` : `order-cust-${ord.id}`);
+      // a signed-in buyer without a profile document: their card is still their uid
+      const key = ord.customerUid ? `uid:${ord.customerUid}` : email || (phone ? `phone-${phone}` : `order-cust-${ord.id}`);
 
       if (map.has(key)) {
-        // Already mapped via registered user
+        const rec = map.get(key)!;
+        if (!rec.orders.some((o) => o.id === ord.id)) {
+          rec.orders.push(ord);
+          if (!ord.isCancelled) rec.totalSpent += ord.totalPrice || 0;
+          rec.ordersCount = rec.orders.length;
+          rec.averageOrderValue = Math.round(rec.totalSpent / rec.ordersCount);
+        }
+        attached.add(ord.id);
         return;
       }
 
-      // Check if any existing customer record matches phone
+      // A guest order joins a card with the same phone; an order with a uid never joins someone else's card
       let existingMatchKey: string | null = null;
-      for (const [k, c] of map.entries()) {
+      for (const [k, c] of ord.customerUid ? [] : map.entries()) {
         const cPhone = c.phone.replace(/\D/g, '');
         if (phone && cPhone && (phone.includes(cPhone.slice(-7)) || cPhone.includes(phone.slice(-7)))) {
           existingMatchKey = k;
@@ -240,10 +256,13 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
 
       // Create new customer record from order data
       const matchedOrders = orders.filter((o) => {
+        if (attached.has(o.id)) return false;
+        if (ord.customerUid || o.customerUid) return o.customerUid === ord.customerUid;
         const oEmail = (o.customerEmail || '').toLowerCase().trim();
         const oPhone = (o.customerPhone || '').replace(/\D/g, '');
         return (email && oEmail === email) || (phone && oPhone && oPhone === phone);
       });
+      matchedOrders.forEach((o) => attached.add(o.id));
 
       const totalSpent = matchedOrders.reduce((sum, o) => (!o.isCancelled ? sum + (o.totalPrice || 0) : sum), 0);
       const completedOrders = matchedOrders.filter((o) => o.status === 'delivered').length;

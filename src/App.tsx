@@ -38,6 +38,7 @@ import { formatAddress } from './utils/addressFormat';
 import { ADMIN_EMAIL, useAuth } from './context/AuthContext';
 import {
   ChatIdentity,
+  auth,
   createGuestChatIdentity,
   db,
   placeOrderOnServer,
@@ -262,11 +263,6 @@ export default function App() {
     } catch {}
   }, []);
 
-  React.useEffect(() => {
-    try {
-      localStorage.setItem(CHAT_CACHE_STORAGE_KEY, JSON.stringify(chatMessages));
-    } catch {}
-  }, [chatMessages]);
 
   // Delivery state of the customer's own chat messages (a failed one stays on screen with «повторить»)
   const [pendingChatIds, setPendingChatIds] = useState<ReadonlySet<string>>(() => new Set());
@@ -368,7 +364,9 @@ export default function App() {
     try {
       localStorage.setItem('manstyle_user_profile', JSON.stringify(updated));
     } catch {}
-    if (currentUser?.uid) {
+    // Only into the account that is signed in right now: right after «Выйти» this closure still holds the previous
+    // user, and the guest profile used to overwrite their addresses and measurements (audit 02.10, finding 23)
+    if (currentUser?.uid && auth.currentUser?.uid === currentUser.uid) {
       // The profile (addresses, measurements) must not be lost silently: a refused write says so
       void persist('профиль', saveUserProfileToFirestore(currentUser.uid, updated));
     }
@@ -550,6 +548,31 @@ export default function App() {
     setOrders(loadGuestOrders());
     setAllUsers([]);
   }, [authLoading, isAdmin, currentUser]);
+
+  // Only a customer's own thread is cached (it opens at once next time). The admin's chat — every customer's
+  // messages and staff notes — never stays in this browser (audit 02.10, finding 24)
+  React.useEffect(() => {
+    try {
+      if (isAdmin) localStorage.removeItem(CHAT_CACHE_STORAGE_KEY);
+      else localStorage.setItem(CHAT_CACHE_STORAGE_KEY, JSON.stringify(chatMessages));
+    } catch {}
+  }, [chatMessages, isAdmin]);
+
+  // Signed out: the profile and the chat of that account leave this browser (only locally — nothing is written)
+  const signedInUidRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (authLoading) return;
+    const uid = currentUser?.uid ?? null;
+    if (signedInUidRef.current && !uid) {
+      setUserProfile(GUEST_USER_PROFILE);
+      setChatMessages([]);
+      try {
+        localStorage.removeItem('manstyle_user_profile');
+        localStorage.removeItem(CHAT_CACHE_STORAGE_KEY);
+      } catch {}
+    }
+    signedInUidRef.current = uid;
+  }, [authLoading, currentUser]);
 
   // 1c. Support chat identity: signed-in customers chat as themselves, guests reuse
   // an anonymous chat session if they started one earlier (created on first message).

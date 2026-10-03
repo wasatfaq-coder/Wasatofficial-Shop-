@@ -359,7 +359,7 @@ export async function submitPaymentReceipt(
   at: Date
 ): Promise<ChatMessage> {
   const message: ChatMessage = {
-    id: `msg-receipt-${order.id}-${at.getTime()}`,
+    id: `msg-${at.getTime()}-receipt-${order.id}`,
     sender: 'user',
     text: receiptMessageText(order.id, kind),
     imageUrl,
@@ -1080,8 +1080,12 @@ export async function setReviewVoteInFirestore(vote: ReviewVote, voted: boolean)
  */
 /** Numeric timestamp prefix of ids like `msg-1727000000000` or `msg-1727000000000-ab12`. */
 export function chatMessageOrder(msg: ChatMessage): number {
-  const match = msg.id.match(/\d+/);
-  return match ? Number(match[0]) : 0;
+  // the server time first; a message not yet saved — the time in its id («msg-1791…»: the longest run of digits,
+  // not the first one — «msg-receipt-WS-10000106-1791…» starts with the order number)
+  if (typeof msg.sentAt === 'number') return msg.sentAt;
+  const runs: string[] = msg.id.match(/\d+/g) ?? [];
+  const longest = runs.reduce((best, run) => (run.length > best.length ? run : best), '');
+  return longest ? Number(longest) : 0;
 }
 
 /** The old seeded greeting (`msg-welcome`, before the chat was split by customer) is never shown */
@@ -1140,8 +1144,11 @@ export function subscribeToChatMessages(
     );
   }
 
+  // The newest 500 by the server time: without the order the query returned the 500 oldest, and after 500 messages new
+  // requests no longer reached the admin (audit 02.10, finding 17). Messages without `sentAt` (an old site version)
+  // are left out
   const colRef = collection(db, 'chat_messages');
-  const q = query(colRef, limit(500));
+  const q = query(colRef, orderBy('sentAt', 'desc'), limit(500));
   return onSnapshot(
     q,
     async (snapshot) => {
