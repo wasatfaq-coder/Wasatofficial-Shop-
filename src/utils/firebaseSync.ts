@@ -28,6 +28,7 @@ import { paymentLogEntry, receiptMessageText } from './paymentDetails';
 import { DEFAULT_STOREFRONT_SETTINGS, stockMovementId } from './inventory';
 import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
 import type { LegalDocId, LegalTexts } from './legalDocs';
+import type { RestoreWrite } from './backupRestore';
 import { compressBase64Image } from './imageUpload';
 import { SERVER_CONFIG_DOC_ID, ServerConfig } from '../shared/orderApi';
 import {
@@ -1562,6 +1563,40 @@ function toBackupValue(value: unknown): unknown {
     return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, toBackupValue(v)]));
   }
   return value;
+}
+
+/** Ids of the documents now in these collections (the «Только недостающие» restore): reads, writes nothing */
+export async function readExistingIds(names: string[]): Promise<Record<string, Set<string>>> {
+  const result: Record<string, Set<string>> = {};
+  for (const name of names) {
+    const snapshot = await getDocs(collection(db, name));
+    result[name] = new Set(snapshot.docs.map((d) => d.id));
+  }
+  return result;
+}
+
+/**
+ * Writes a restore plan (backupRestore.ts) in batches; `onProgress` gets the number written. Nothing is deleted.
+ * A refused batch stops the restore: what was written stays, the error names the collection.
+ */
+export async function restoreDatabase(
+  chunks: RestoreWrite[][],
+  onProgress: (written: number) => void
+): Promise<number> {
+  let written = 0;
+  for (const chunk of chunks) {
+    const batch = writeBatch(db);
+    for (const write of chunk) batch.set(doc(db, write.collection, write.id), write.data);
+    try {
+      await batch.commit();
+    } catch (error) {
+      const names = [...new Set(chunk.map((w) => w.collection))].join(', ');
+      throw new Error(`Не записано: ${names} (${error instanceof Error ? error.message : String(error)})`);
+    }
+    written += chunk.length;
+    onProgress(written);
+  }
+  return written;
 }
 
 /** Reads every collection of the store (admin session). Reads only: nothing is written to the database. */
