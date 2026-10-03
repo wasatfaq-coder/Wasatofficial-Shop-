@@ -11,17 +11,27 @@ const reload = () => window.location.reload();
 
 /**
  * While the catalog loads: placeholder cards in the grid of the screen (not «Товары появятся здесь»,
- * which made the store look empty for seconds). If it takes long or fails — say so and offer to reload.
+ * which made the store look empty for seconds). If it takes long — say so, but do not offer a reload while the data
+ * is coming (audit 02.10, finding 28: a reload started the download from scratch, and a big catalog never opened).
+ * Without a connection — say that; Firestore goes on by itself when it is back. A failed subscription offers a reload.
  */
 export const CatalogLoadState: React.FC<{ status: Exclude<CatalogStatus, 'ready'>; cards?: number }> = ({
   status,
   cards = 4,
 }) => {
   const [slow, setSlow] = useState(false);
+  const [offline, setOffline] = useState(() => typeof navigator !== 'undefined' && navigator.onLine === false);
   useEffect(() => {
     if (status !== 'loading') return;
     const timer = window.setTimeout(() => setSlow(true), SLOW_AFTER_MS);
-    return () => window.clearTimeout(timer);
+    const update = () => setOffline(navigator.onLine === false);
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('online', update);
+      window.removeEventListener('offline', update);
+    };
   }, [status]);
 
   if (status === 'error') {
@@ -58,16 +68,14 @@ export const CatalogLoadState: React.FC<{ status: Exclude<CatalogStatus, 'ready'
           </div>
         ))}
       </div>
-      {slow && (
-        <div className="neu-inset rounded-2xl p-3 flex items-center justify-between gap-3">
-          <p className="text-xs text-[#4E5C70]">Каталог загружается дольше обычного. Проверьте соединение.</p>
-          <button
-            type="button"
-            onClick={reload}
-            className="neu-button rounded-xl px-3 h-9 text-xs font-bold text-accent shrink-0 cursor-pointer"
-          >
-            Обновить
-          </button>
+      {(slow || offline) && (
+        <div role="status" className="neu-inset rounded-2xl p-3 flex items-center gap-3">
+          {offline && <WifiOff className="w-4 h-4 text-warning shrink-0" aria-hidden="true" />}
+          <p className="text-xs text-[#4E5C70]">
+            {offline
+              ? 'Нет соединения с интернетом. Каталог загрузится сам, когда связь появится.'
+              : 'Каталог загружается дольше обычного: фото товаров ещё скачиваются. Страница откроется сама — обновлять не нужно.'}
+          </p>
         </div>
       )}
     </div>

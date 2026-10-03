@@ -387,7 +387,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       icon: TrendingUp,
       value: rub(totalRevenue),
       footer: <Growth value={revenueGrowth} hasBase={prevTotalRevenue > 0} />,
-      extra: null,
+      extra: <span className="text-[11px] text-[#4E5C70]">Только оплаченные заказы</span>,
     },
     {
       metric: 'orders',

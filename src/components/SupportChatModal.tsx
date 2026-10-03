@@ -55,6 +55,8 @@ interface SupportChatModalProps {
   onAddToCart?: (productId: string, color?: string, size?: string) => void;
   onSelectProductById?: (productId: string) => void;
   onShowToast?: (msg: string, type?: 'success' | 'info' | 'error') => void;
+  /** Typed into an empty field when the chat opens: «Вопрос по заказу № …» (audit 02.10, finding 26) */
+  draftText?: string;
 }
 
 const CUSTOMER_STATUS: Record<SupportStatus['status'], { label: string; note: string; cls: string }> = {
@@ -112,8 +114,13 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
   onAddToCart,
   onSelectProductById,
   onShowToast,
+  draftText,
 }) => {
   const [inputText, setInputText] = useState('');
+  // the order the customer asks about goes into the message itself, so the staff see its number
+  useEffect(() => {
+    if (isOpen && draftText) setInputText((prev) => (prev.trim() ? prev : draftText));
+  }, [isOpen, draftText]);
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [isSending, setIsSending] = useState(false);
