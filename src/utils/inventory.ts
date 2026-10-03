@@ -1,6 +1,7 @@
 import { Product, ProductSKU, CartItem, StockMovementLog, StorefrontSettings } from '../types';
 import { collectBarcodes, generateInternalEan13 } from '../shared/barcode';
 import { formatOrderDate } from '../shared/orderDate';
+import { normalizeColorName } from './colorCode';
 
 // Everything a customer reads (texts, contacts, legal details) is empty until the owner fills it
 // in Admin → «Витрина»; customer screens hide or mark as «Не настроено» what is not filled in.
@@ -111,7 +112,7 @@ export function generateSkuCode(
   const colorCode = colorStr
     .slice(0, 3)
     .toUpperCase()
-    .replace(/[^A-ZА-Я0-9]/g, 'CLR') || 'DEF';
+    .replace(/[^A-ZА-ЯЁ0-9]/g, 'CLR') || 'DEF';
   const sizeStr = extractSizeName(size) || 'M';
   return `${prefix}-${catCode}${idNum}-${colorCode}-${sizeStr}`.toUpperCase();
 }
@@ -149,6 +150,19 @@ export function generateDefaultSKUs(product: Partial<Product> & { id: string }):
   });
 
   return skus;
+}
+
+/**
+ * Variations of every colour × size of the product: the existing ones stay as they are (stock, codes), a colour or
+ * size added from elsewhere (CSV import) gets its variations with stock 0. Without colours or sizes — nothing is added.
+ */
+export function withMissingSkus(product: Product): ProductSKU[] {
+  const skus = product.skus ?? [];
+  if (!product.colors?.length || !product.sizes?.length) return skus;
+  const key = (color: unknown, size: unknown) =>
+    `${normalizeColorName(extractColorName(color))}|${extractSizeName(size).trim().toLowerCase()}`;
+  const present = new Set(skus.map((s) => key(s.color, s.size)));
+  return [...skus, ...generateDefaultSKUs(product).filter((s) => !present.has(key(s.color, s.size)))];
 }
 
 /**
