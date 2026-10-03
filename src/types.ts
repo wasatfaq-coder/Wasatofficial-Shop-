@@ -586,6 +586,11 @@ export interface StorefrontSettings {
   returnPeriodDays?: number;
   /** Порог бесплатной доставки для способов без своего порога; без значения бесплатной доставки от суммы нет */
   freeDeliveryThreshold?: number;
+  /**
+   * Через сколько дней неоплаченный заказ в «Принят» отменяется с возвратом товара на склад (этап 5 без Blaze:
+   * поддельный заказ не держит товар); без значения — автоотмены нет. Срабатывает в «Заказах» у администратора.
+   */
+  unpaidOrderCancelDays?: number;
   /** @deprecated Не используется: цена доставки — только у способа в «Доставка и ПВЗ». Поле осталось в старых документах. */
   courierDeliveryPrice?: number;
   /** @deprecated см. courierDeliveryPrice */

@@ -217,6 +217,15 @@ describe('placeOrderCore', () => {
     expect(promo.generatedRevenue).toBe(order.totalPrice);
   });
 
+  test('a partner code without a percent earns no commission (finding 47: the percent is not made up)', async () => {
+    await db.doc('promos/p4').set({
+      id: 'p4', code: 'PARTNER', title: '', description: '', discountPercent: 10, isReferral: true,
+      active: true, usedCount: 0, generatedRevenue: 0, commissionEarned: 0,
+    });
+    await placeOrderCore(db, request({ promoCode: 'PARTNER' }), null);
+    expect((await db.doc('promos/p4').get()).data()!.commissionEarned).toBe(0);
+  });
+
   test('rejects exhausted, inactive and unknown promos', async () => {
     await db.doc('promos/p2').set({
       id: 'p2', code: 'ONCE', title: '', description: '', discountPercent: 50,

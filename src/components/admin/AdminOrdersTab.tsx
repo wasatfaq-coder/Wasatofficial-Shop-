@@ -1,6 +1,6 @@
 import { orderTimestamp } from '../../shared/orderDate';
 import { useProgressiveList } from '../../utils/useProgressiveList';
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Package,
   Search,
@@ -81,8 +81,10 @@ import { AdminOrderPaymentBlock } from './AdminOrderPaymentBlock';
 import { AdminReceiptReview, type ReviewReceipt } from './AdminReceiptReview';
 import { usePaymentTemplates } from './usePaymentTemplates';
 import { isReceiptOnReview } from '../../utils/paymentDetails';
+import { AdminOrderPriceWarning } from './AdminOrderPriceWarning';
+import { orderPriceIssues } from '../../utils/orderPriceCheck';
 import type { OrderPaymentDetails } from '../../types';
-import { cancelledByLabel, cancelReasonText, formatCancelledAt, isArchivedOrder } from '../../utils/orderCancel';
+import { cancelledByLabel, cancelReasonText, formatCancelledAt, isArchivedOrder, overdueUnpaidOrders, UNPAID_CANCEL_REASON } from '../../utils/orderCancel';
 
 interface AdminOrdersTabProps {
   orders: Order[];
@@ -673,7 +675,15 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   };
 
   // Payment Status Change Handler
-  const handleUpdatePaymentStatus = (orderId: string, newStatus: NonNullable<Order['paymentStatus']>) => {
+  // «Оплачен» for an order whose prices differ from the catalog — after «Отметить оплаченным?» (stage 5 without Blaze)
+  const [paidDespitePrices, setPaidDespitePrices] = useState<Order | null>(null);
+  const handleUpdatePaymentStatus = (orderId: string, newStatus: NonNullable<Order['paymentStatus']>, checked = false) => {
+    const target = orders.find((o) => o.id === orderId);
+    if (!checked && newStatus === 'paid' && target && orderPriceIssues(target, products).length > 0) {
+      setOpenPaymentStatusDropdownId(null);
+      setPaidDespitePrices(target);
+      return;
+    }
     const updated = orders.map((ord) => (ord.id === orderId ? { ...ord, paymentStatus: newStatus } : ord));
     onUpdateOrders(updated);
     onShowToast(`Статус оплаты заказа ${orderId}: "${PAYMENT_STATUS_CONFIG[newStatus].label}"`, 'success');
@@ -738,7 +748,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
    * restored took its goods again by the ordered quantity, so it returns them the same way. A return that did not go
    * through leaves «Вернуть на склад» in the card.
    */
-  const cancelOrdersAsAdmin = async (targets: Order[], reason: string, comment: string): Promise<boolean> => {
+  const cancelOrdersAsAdmin = async (targets: Order[], reason: string, comment: string, label?: string): Promise<boolean> => {
     const active = targets.filter((o) => !o.isCancelled);
     if (active.length === 0) {
       onShowToast('Выбранные заказы уже отменены', 'info');
@@ -785,7 +795,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         notReturned.push(ord.id);
       }
     }
-    const what = active.length === 1 ? `Заказ № ${active[0].id} отменен` : `Отменено ${active.length} ${pluralRu(active.length, ['заказ', 'заказа', 'заказов'])}`;
+    const what = label ?? (active.length === 1 ? `Заказ № ${active[0].id} отменен` : `Отменено ${active.length} ${pluralRu(active.length, ['заказ', 'заказа', 'заказов'])}`);
     if (notReturned.length > 0) {
       onShowToast(`${what}. Не вернулись на склад товары заказов ${notReturned.map((id) => `№ ${id}`).join(', ')} — нажмите «Вернуть на склад» в карточке.`, 'error');
     } else {
@@ -793,6 +803,28 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     }
     return true;
   };
+
+  // Unpaid orders past «Витрина» → «Отменять неоплаченные заказы через» are cancelled with their stock returned (stage 5
+  // without Blaze: a made-up order does not hold the goods). Once per order while «Заказы» are open
+  const unpaidCancelDays = storefrontSettings?.unpaidOrderCancelDays;
+  const autoCancelTried = useRef(new Set<string>());
+  const overdueKey = overdueUnpaidOrders(orders, unpaidCancelDays)
+    .map((o) => o.id)
+    .filter((id) => !autoCancelTried.current.has(id))
+    .sort()
+    .join(',');
+  useEffect(() => {
+    if (!overdueKey) return;
+    const targets = overdueUnpaidOrders(orders, unpaidCancelDays).filter((o) => !autoCancelTried.current.has(o.id));
+    targets.forEach((o) => autoCancelTried.current.add(o.id));
+    const days = unpaidCancelDays ?? 0;
+    void cancelOrdersAsAdmin(
+      targets,
+      UNPAID_CANCEL_REASON,
+      `Отменён автоматически: не оплачен ${days} ${pluralRu(days, ['день', 'дня', 'дней'])}`,
+      `Автоотмена: ${targets.length === 1 ? `заказ № ${targets[0].id} не оплачен` : `${targets.length} ${pluralRu(targets.length, ['заказ не оплачен', 'заказа не оплачены', 'заказов не оплачены'])}`} за ${days} ${pluralRu(days, ['день', 'дня', 'дней'])} и отменен${targets.length === 1 ? '' : 'ы'}`
+    );
+  }, [overdueKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** «Удалить заказ» of an active order: first the cancellation with the stock return, then «Удалить навсегда» or «В архив» */
   const [cancelThenDelete, setCancelThenDelete] = useState(false);
@@ -1462,6 +1494,9 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                   </div>
                 )}
 
+                {/* Prices of an order from the browser are not checked by the database (stage 5 without Blaze) */}
+                <AdminOrderPriceWarning order={ord} products={products} />
+
                 {/* The buyer's receipt: confirm the payment or reject the receipt («Доработки 5») */}
                 {isReceiptOnReview(ord) && onReviewReceipt && (
                   <AdminReceiptReview
@@ -1995,6 +2030,26 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
           setHandoverOrder(withCode);
           onShowToast(`Новый код выдачи ${withCode.pickupCode}: старый больше не действует, покупатель видит новый в заказе`, 'success');
         }}
+      />
+      <ConfirmDialog
+        isOpen={paidDespitePrices !== null}
+        title="Отметить оплаченным?"
+        tone="neutral"
+        confirmLabel="Отметить оплаченным"
+        cancelLabel="Не отмечать"
+        confirmIcon={<CheckCircle2 className="w-4 h-4" />}
+        message={
+          <>
+            Цены заказа № {paidDespitePrices?.id} не совпадают с каталогом:{' '}
+            {paidDespitePrices ? orderPriceIssues(paidDespitePrices, products).join('; ') : ''}. Отмечайте, если поступила
+            верная сумма.
+          </>
+        }
+        onConfirm={() => {
+          if (paidDespitePrices) handleUpdatePaymentStatus(paidDespitePrices.id, 'paid', true);
+          setPaidDespitePrices(null);
+        }}
+        onClose={() => setPaidDespitePrices(null)}
       />
       <ConfirmDialog
         isOpen={orderToCloseManually !== null}

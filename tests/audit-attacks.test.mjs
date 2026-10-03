@@ -20,6 +20,14 @@ let env;
 const anon = () => env.unauthenticatedContext().firestore(); // посетитель без входа
 const guestChat = (uid = 'anon1') =>
   env.authenticatedContext(uid, { firebase: { sign_in_provider: 'anonymous' } }).firestore();
+// Заказ из браузера — только под входом и вместе с отметкой частоты order_rate/{uid} (этап 5): так злоумышленник
+// и пишет поддельный заказ — с анонимного входа, который Firebase даёт любому посетителю
+const signedOrder = (db, uid, data) => {
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'orders', data.id), { ...data, customerUid: uid });
+  batch.set(doc(db, 'order_rate', uid), { lastOrderAt: serverTimestamp(), orderId: data.id });
+  return batch.commit();
+};
 const customer = (uid = 'mallory') =>
   env.authenticatedContext(uid, { email: `${uid}@gmail.com`, email_verified: true, firebase: { sign_in_provider: 'google.com' } }).firestore();
 
@@ -86,11 +94,12 @@ describe('Клиентский режим заказов (settings/server нет
       }));
     });
 
-  test('A5 посетитель без входа не может записать заказ на 1 ₽ с чужими ценами',
-    { todo: 'находка 3 (02.10), этап 5: цены строк сверяет только placeOrder' }, async () => {
+  test('A5 посетитель не может записать заказ на 1 ₽ с чужими ценами',
+    { todo: 'находка 3 (02.10): цены строк сверяет только placeOrder (Blaze); без Blaze администратор видит «Цены не совпадают с каталогом» (этап 5)' }, async () => {
       // «Оплачен» и чужие поля (placedVia) правила не пускают, склад и журнал поддельная строка не трогает,
-      // ссылку на картинку из строки экраны не показывают (orderLineImage); остаётся сумма, которую никто не сверяет
-      await assertFails(setDoc(doc(anon(), 'orders/WS-FAKE1'), {
+      // ссылку на картинку из строки экраны не показывают (orderLineImage); остаётся сумма, которую никто не сверяет.
+      // Без входа заказ больше не записать (этап 5) — злоумышленник берёт анонимный вход
+      await assertFails(signedOrder(guestChat('anon-a5'), 'anon-a5', {
         id: 'WS-FAKE1', status: 'accepted', totalPrice: 1, paymentStatus: 'pending', paymentMethod: 'Перевод',
         deliveryMethod: 'Курьер',
         items: [{ product: { ...product, price: 1, image: 'https://attacker.example/pixel.gif' }, quantity: 5, selectedSize: 'M' }],
@@ -118,7 +127,7 @@ describe('Клиентский режим заказов (settings/server нет
 describe('Клиентский режим — пробы 02.10 (docs/audit-2026-10-02-plan.md)', () => {
   beforeEach(() => seed(undefined));
 
-  const fakeOrder = (id, items) => setDoc(doc(anon(), `orders/${id}`), {
+  const fakeOrder = (id, items) => signedOrder(guestChat(`anon-${id}`), `anon-${id}`, {
     id, status: 'accepted', totalPrice: 1, paymentStatus: 'pending', paymentMethod: 'Перевод', deliveryMethod: 'Курьер',
     items, customerName: 'Администратор', customerPhone: '+70000000000', deliveryAddress: 'где угодно',
   });
@@ -140,6 +149,24 @@ describe('Клиентский режим — пробы 02.10 (docs/audit-2026-
       }));
     });
 
+  test('A12 заказ без входа не записать, а с одного входа — не чаще раза в 30 с (спам заказами, этап 5 без Blaze)',
+    async () => {
+      const order = (id) => ({
+        id, status: 'accepted', totalPrice: 100, paymentStatus: 'pending', paymentMethod: 'Перевод', deliveryMethod: 'Курьер',
+        items: [{ product: { id: 'p1', title: 'Пальто', price: 100 }, quantity: 1, selectedSize: 'M' }],
+        customerName: 'Иван', customerPhone: '+70000000000', deliveryAddress: 'Москва',
+      });
+      await assertFails(setDoc(doc(anon(), 'orders/WS-SPAM0'), order('WS-SPAM0')));
+      await assertSucceeds(signedOrder(guestChat('anon-spam'), 'anon-spam', order('WS-SPAM1')));
+      await assertFails(signedOrder(guestChat('anon-spam'), 'anon-spam', order('WS-SPAM2')));
+      // чужой промокод поддельным заказом без своего входа не «сжечь»
+      const visitor = anon();
+      const batch = writeBatch(visitor);
+      batch.update(doc(visitor, 'promos/promo1'), { usedCount: increment(1), lastOrderId: 'WS-REAL1' });
+      batch.set(doc(visitor, 'promo_uses/WS-REAL1'), { orderId: 'WS-REAL1', promoId: 'promo1', createdAt: 'x' });
+      await assertFails(batch.commit());
+    });
+
   test('A10 артикул и штрихкод варианта посетитель не меняет (этикетки и сканер склада, находка 1)',
     async () => {
       await assertFails(updateDoc(doc(anon(), 'products/p1'), {
@@ -148,7 +175,7 @@ describe('Клиентский режим — пробы 02.10 (docs/audit-2026-
     });
 
   test('A11 поддельный заказ не списывает товар со склада',
-    { todo: 'находка 1 (02.10), этап 5: закрывают только серверные заказы' }, async () => {
+    { todo: 'находка 1 (02.10): закрывают только серверные заказы (Blaze); без них товар возвращает автоотмена неоплаченных (этап 5)' }, async () => {
       // Заказ из браузера записывает кто угодно, а списание по его строке правила пропускают
       await assertSucceeds(fakeOrder('WS-FAKE11', [{ product: { id: 'p1', title: 'Пальто', price: 1 }, quantity: 99, selectedColor: 'Черный', selectedSize: 'M' }]));
       const db = anon();
@@ -179,7 +206,7 @@ describe('Оба режима', () => {
   beforeEach(() => seed(true));
 
   test('B1 посетитель без входа не получает список всех промокодов (личные и партнёрские, с лимитами и выручкой)',
-    { todo: 'находка 10 от 30.09 и 43 от 02.10, этап 5' }, async () => {
+    { todo: 'находка 10 от 30.09: проверка кода на сервере (Blaze); покупателю список уже фильтрует isPromoListed' }, async () => {
       await assertFails(getDocs(collection(anon(), 'promos')));
     });
 

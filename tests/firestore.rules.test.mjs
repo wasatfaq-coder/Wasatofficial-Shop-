@@ -35,6 +35,21 @@ const customer = (uid = 'alice') =>
   env.authenticatedContext(uid, { email: `${uid}@example.com`, email_verified: true }).firestore();
 const owner = () =>
   env.authenticatedContext('owner', { email: ADMIN_EMAIL, email_verified: true }).firestore();
+// A guest's anonymous sign-in (the 'guest-chat' app in the browser): orders and promo uses come from it (audit stage 5)
+const buyer = (uid) => env.authenticatedContext(uid, { firebase: { sign_in_provider: 'anonymous' } }).firestore();
+// An order as placeClientOrder (firebaseSync.ts) writes it: the order with the buyer's uid and its rate mark in one batch
+const placeOrder = (db, uid, data, rate = { lastOrderAt: serverTimestamp(), orderId: data.id }) => {
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'orders', data.id), 'customerUid' in data ? data : { ...data, customerUid: uid });
+  batch.set(doc(db, 'order_rate', uid), rate);
+  return batch.commit();
+};
+let guestSeq = 0;
+// An order of a new guest (its own anonymous sign-in, so the 30 s limit does not join the checks)
+const guestOrder = (data) => {
+  const uid = `anon-${++guestSeq}`;
+  return placeOrder(buyer(uid), uid, data);
+};
 const extraAdmin = () => env.authenticatedContext('staff', { email: 'staff@example.com', email_verified: true }).firestore();
 
 const product = {
@@ -262,27 +277,30 @@ describe('promos', () => {
 
   beforeEach(async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), 'orders/WS-P1'), order({ id: 'WS-P1', promoCode: 'sale' }));
-      await setDoc(doc(ctx.firestore(), 'orders/WS-P2'), order({ id: 'WS-P2', promoCode: 'SALE' }));
+      await setDoc(doc(ctx.firestore(), 'orders/WS-P1'), order({ id: 'WS-P1', promoCode: 'sale', customerUid: 'anon-p' }));
+      await setDoc(doc(ctx.firestore(), 'orders/WS-P2'), order({ id: 'WS-P2', promoCode: 'SALE', customerUid: 'anon-p' }));
     });
   });
 
   test('a saved order with the code adds one use, once (audit 02.10, finding 2)', async () => {
-    await assertSucceeds(usePromo(guest(), 'WS-P1'));
-    await assertFails(usePromo(guest(), 'WS-P1')); // the same order again
-    await assertSucceeds(usePromo(guest(), 'WS-P2'));
+    await assertSucceeds(usePromo(buyer('anon-p'), 'WS-P1'));
+    await assertFails(usePromo(buyer('anon-p'), 'WS-P1')); // the same order again
+    await assertSucceeds(usePromo(buyer('anon-p'), 'WS-P2'));
     await assertSucceeds(getDoc(doc(owner(), 'promo_uses/WS-P1')));
+    // only the order's owner burns the code (stage 5): not a visitor without sign-in, not another buyer
+    await assertFails(usePromo(guest(), 'WS-P2'));
+    await assertFails(usePromo(buyer('anon-x'), 'WS-P2'));
     await assertFails(getDoc(doc(guest(), 'promo_uses/WS-P1')));
   });
 
   test('no use without an order with this code, no jumps, no revenue or commission from the browser', async () => {
     await assertFails(updateDoc(doc(guest(), 'promos/promo1'), { usedCount: 1 }));
     await assertFails(updateDoc(doc(guest(), 'promos/promo1'), { usedCount: 1, lastOrderId: 'WS-P1' }));
-    await assertFails(usePromo(guest(), 'MS-alice')); // order without a promo code
-    await assertFails(usePromo(guest(), 'WS-404')); // no such order
-    await assertFails(usePromo(guest(), 'WS-P1', { counters: { usedCount: 5 } }));
-    await assertFails(usePromo(guest(), 'WS-P1', { counters: { usedCount: increment(1), generatedRevenue: 500 } }));
-    await assertFails(usePromo(guest(), 'WS-P1', { counters: { usedCount: increment(1), commissionEarned: 50 } }));
+    await assertFails(usePromo(buyer('anon-p'), 'MS-alice')); // order without a promo code
+    await assertFails(usePromo(buyer('anon-p'), 'WS-404')); // no such order
+    await assertFails(usePromo(buyer('anon-p'), 'WS-P1', { counters: { usedCount: 5 } }));
+    await assertFails(usePromo(buyer('anon-p'), 'WS-P1', { counters: { usedCount: increment(1), generatedRevenue: 500 } }));
+    await assertFails(usePromo(buyer('anon-p'), 'WS-P1', { counters: { usedCount: increment(1), commissionEarned: 50 } }));
     await assertFails(updateDoc(doc(guest(), 'promos/promo1'), { discountPercent: 99 }));
   });
 
@@ -290,50 +308,50 @@ describe('promos', () => {
     await env.withSecurityRulesDisabled((ctx) =>
       setDoc(doc(ctx.firestore(), 'promos/promo1'), { ...promo, usageLimit: 1 })
     );
-    await assertSucceeds(usePromo(guest(), 'WS-P1'));
-    await assertFails(usePromo(guest(), 'WS-P2'));
+    await assertSucceeds(usePromo(buyer('anon-p'), 'WS-P1'));
+    await assertFails(usePromo(buyer('anon-p'), 'WS-P2'));
   });
 });
 
 describe('orders', () => {
   test('guest can place an order but not read orders', async () => {
-    await assertSucceeds(setDoc(doc(guest(), 'orders/MS-2'), order({ id: 'MS-2' })));
+    await assertSucceeds(guestOrder(order({ id: 'MS-2' })));
     await assertFails(getDoc(doc(guest(), 'orders/MS-alice')));
     await assertFails(getDocs(collection(guest(), 'orders')));
   });
 
   test('cannot overwrite an existing order or create a pre-shipped one', async () => {
-    await assertFails(setDoc(doc(guest(), 'orders/MS-bob'), order({ id: 'MS-bob' })));
-    await assertFails(setDoc(doc(guest(), 'orders/MS-3'), order({ id: 'MS-3', status: 'delivered' })));
-    await assertFails(setDoc(doc(guest(), 'orders/MS-4'), order({ id: 'MS-4', items: [] })));
+    await assertFails(guestOrder(order({ id: 'MS-bob' })));
+    await assertFails(guestOrder(order({ id: 'MS-3', status: 'delivered' })));
+    await assertFails(guestOrder(order({ id: 'MS-4', items: [] })));
     // «Оплачен» ставит только администратор; оплата при получении — не оплата
-    await assertFails(setDoc(doc(guest(), 'orders/MS-5'), order({ id: 'MS-5', paymentStatus: 'paid' })));
-    await assertFails(setDoc(doc(customer(), 'orders/MS-6'), order({ id: 'MS-6', customerUid: 'alice', paymentStatus: 'paid' })));
-    await assertSucceeds(setDoc(doc(guest(), 'orders/MS-7'), order({ id: 'MS-7', paymentStatus: 'paid_on_delivery' })));
+    await assertFails(guestOrder(order({ id: 'MS-5', paymentStatus: 'paid' })));
+    await assertFails(placeOrder(customer(), 'alice', order({ id: 'MS-6', customerUid: 'alice', paymentStatus: 'paid' })));
+    await assertSucceeds(guestOrder(order({ id: 'MS-7', paymentStatus: 'paid_on_delivery' })));
     // markup in an order number would reach the admin's reports
     const badId = 'MS-<img src=x onerror=alert(1)>';
-    await assertFails(setDoc(doc(guest(), 'orders', badId), order({ id: badId })));
+    await assertFails(guestOrder(order({ id: badId })));
   });
 
   test('an order from the browser has only its own fields, sane texts and at most 30 lines', async () => {
-    await assertFails(setDoc(doc(guest(), 'orders/MS-8'), order({ id: 'MS-8', placedVia: 'server' })));
-    await assertFails(setDoc(doc(guest(), 'orders/MS-9'), order({ id: 'MS-9', customerName: '' })));
-    await assertFails(setDoc(doc(guest(), 'orders/MS-10'), order({ id: 'MS-10', customerName: 'x'.repeat(5000) })));
-    await assertFails(setDoc(doc(guest(), 'orders/MS-11'), order({ id: 'MS-11', deliveryFee: -300 })));
+    await assertFails(guestOrder(order({ id: 'MS-8', placedVia: 'server' })));
+    await assertFails(guestOrder(order({ id: 'MS-9', customerName: '' })));
+    await assertFails(guestOrder(order({ id: 'MS-10', customerName: 'x'.repeat(5000) })));
+    await assertFails(guestOrder(order({ id: 'MS-11', deliveryFee: -300 })));
     const line = order().items[0];
-    await assertFails(setDoc(doc(guest(), 'orders/MS-12'), order({ id: 'MS-12', items: Array(31).fill(line) })));
-    await assertSucceeds(setDoc(doc(guest(), 'orders/MS-13'), order({ id: 'MS-13', items: Array(30).fill(line) })));
+    await assertFails(guestOrder(order({ id: 'MS-12', items: Array(31).fill(line) })));
+    await assertSucceeds(guestOrder(order({ id: 'MS-13', items: Array(30).fill(line) })));
     // the admin creates orders without these limits
     await assertSucceeds(setDoc(doc(owner(), 'orders/MS-14'), { id: 'MS-14', status: 'accepted', items: [] }));
   });
 
   test('sums of an order from the browser stay in sane bounds (audit 02.10, finding 3)', async () => {
-    await assertFails(setDoc(doc(guest(), 'orders/MS-27'), order({ id: 'MS-27', discountAmount: 1e12 })));
-    await assertFails(setDoc(doc(guest(), 'orders/MS-28'), order({ id: 'MS-28', totalPrice: 1e12 })));
-    await assertFails(setDoc(doc(guest(), 'orders/MS-29'), order({ id: 'MS-29', deliveryFee: 5e6 })));
+    await assertFails(guestOrder(order({ id: 'MS-27', discountAmount: 1e12 })));
+    await assertFails(guestOrder(order({ id: 'MS-28', totalPrice: 1e12 })));
+    await assertFails(guestOrder(order({ id: 'MS-29', deliveryFee: 5e6 })));
     // a line as toOrderLineProduct writes it from the browser: photos dropped
     const line = order().items[0];
-    await assertSucceeds(setDoc(doc(guest(), 'orders/MS-30'), order({ id: 'MS-30', items: [{ ...line, product: {
+    await assertSucceeds(guestOrder(order({ id: 'MS-30', items: [{ ...line, product: {
       ...line.product, originalPrice: 12000, category: 'coats', categoryLabel: 'Пальто', material: 'Шерсть', colors: [], sizes: ['M'], images: [],
     } }] })));
   });
@@ -341,23 +359,47 @@ describe('orders', () => {
   test('the order keeps Фамилия / Имя / Отчество and the address parts (owner\'s request 02.10)', async () => {
     const parts = { customerLastName: 'Петров', customerFirstName: 'Иван', customerMiddleName: 'Сергеевич' };
     const address = { region: 'Россия', city: 'Москва', street: 'Тверская', house: '7', comment: 'Позвонить за час' };
-    await assertSucceeds(setDoc(doc(guest(), 'orders/MS-40'), order({ id: 'MS-40', ...parts, deliveryAddressParts: address })));
-    await assertFails(setDoc(doc(guest(), 'orders/MS-41'), order({ id: 'MS-41', customerLastName: 'x'.repeat(61) })));
+    await assertSucceeds(guestOrder(order({ id: 'MS-40', ...parts, deliveryAddressParts: address })));
+    await assertFails(guestOrder(order({ id: 'MS-41', customerLastName: 'x'.repeat(61) })));
     const tooMany = Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`k${i}`, 'x']));
-    await assertFails(setDoc(doc(guest(), 'orders/MS-42'), order({ id: 'MS-42', deliveryAddressParts: tooMany })));
-    await assertFails(setDoc(doc(guest(), 'orders/MS-43'), order({ id: 'MS-43', deliveryAddressParts: 'Москва' })));
+    await assertFails(guestOrder(order({ id: 'MS-42', deliveryAddressParts: tooMany })));
+    await assertFails(guestOrder(order({ id: 'MS-43', deliveryAddressParts: 'Москва' })));
   });
 
   test('the order keeps its delivery kind and the first history entry («Доработки 4»)', async () => {
     const log = [{ status: 'accepted', at: '2026-10-02T09:00:00.000Z', by: 'customer' }];
-    await assertSucceeds(setDoc(doc(guest(), 'orders/MS-44'), order({ id: 'MS-44', deliveryKind: 'carrier', statusLog: log })));
-    await assertFails(setDoc(doc(guest(), 'orders/MS-45'), order({ id: 'MS-45', deliveryKind: 'teleport' })));
-    await assertFails(setDoc(doc(guest(), 'orders/MS-46'), order({ id: 'MS-46', statusLog: [...log, { ...log[0], status: 'delivered' }] })));
+    await assertSucceeds(guestOrder(order({ id: 'MS-44', deliveryKind: 'carrier', statusLog: log })));
+    await assertFails(guestOrder(order({ id: 'MS-45', deliveryKind: 'teleport' })));
+    await assertFails(guestOrder(order({ id: 'MS-46', statusLog: [...log, { ...log[0], status: 'delivered' }] })));
+  });
+
+  test('an order only under a sign-in, with its rate mark, at most once in 30 s (audit stage 5)', async () => {
+    // without sign-in, or without the rate mark in the same batch
+    await assertFails(setDoc(doc(guest(), 'orders/MS-60'), order({ id: 'MS-60' })));
+    await assertFails(setDoc(doc(buyer('anon-a'), 'orders/MS-60'), order({ id: 'MS-60', customerUid: 'anon-a' })));
+    // a guest's order without its uid or with another one
+    await assertFails(placeOrder(buyer('anon-a'), 'anon-a', order({ id: 'MS-60', customerUid: null })));
+    await assertFails(placeOrder(buyer('anon-a'), 'anon-a', order({ id: 'MS-60', customerUid: 'anon-b' })));
+    // the mark of another order, a made-up time, another buyer's mark
+    await assertFails(placeOrder(buyer('anon-a'), 'anon-a', order({ id: 'MS-60' }), { lastOrderAt: serverTimestamp(), orderId: 'MS-61' }));
+    await assertFails(placeOrder(buyer('anon-a'), 'anon-a', order({ id: 'MS-60' }), { lastOrderAt: Timestamp.fromMillis(0), orderId: 'MS-60' }));
+    await assertFails(placeOrder(buyer('anon-a'), 'anon-b', order({ id: 'MS-60', customerUid: 'anon-a' })));
+    await assertSucceeds(placeOrder(buyer('anon-a'), 'anon-a', order({ id: 'MS-60' })));
+    // the second order of the same sign-in right away — refused; after 30 s — taken
+    await assertFails(placeOrder(buyer('anon-a'), 'anon-a', order({ id: 'MS-61' })));
+    await env.withSecurityRulesDisabled((ctx) =>
+      setDoc(doc(ctx.firestore(), 'order_rate/anon-a'), { lastOrderAt: Timestamp.fromMillis(Date.now() - 31_000), orderId: 'MS-60' })
+    );
+    await assertSucceeds(placeOrder(buyer('anon-a'), 'anon-a', order({ id: 'MS-61' })));
+    // the mark alone (without a new order) is not moved, someone else's is not read
+    await assertFails(setDoc(doc(buyer('anon-b'), 'order_rate/anon-b'), { lastOrderAt: serverTimestamp(), orderId: 'MS-62' }));
+    await assertSucceeds(getDoc(doc(buyer('anon-a'), 'order_rate/anon-a')));
+    await assertFails(getDoc(doc(buyer('anon-b'), 'order_rate/anon-a')));
   });
 
   test('customer cannot place an order in someone else\'s name', async () => {
-    await assertFails(setDoc(doc(customer('alice'), 'orders/MS-5'), order({ id: 'MS-5', customerUid: 'bob' })));
-    await assertSucceeds(setDoc(doc(customer('alice'), 'orders/MS-6'), order({ id: 'MS-6', customerUid: 'alice' })));
+    await assertFails(placeOrder(customer('alice'), 'alice', order({ id: 'MS-5', customerUid: 'bob' })));
+    await assertSucceeds(placeOrder(customer('alice'), 'alice', order({ id: 'MS-6', customerUid: 'alice' })));
   });
 
   test('customer reads only own orders', async () => {
@@ -738,8 +780,8 @@ describe('server-side orders enabled (settings/server)', () => {
   });
 
   test('clients can no longer create orders, deduct stock or bump promo counters', async () => {
-    await assertFails(setDoc(doc(guest(), 'orders/MS-9'), order({ id: 'MS-9' })));
-    await assertFails(setDoc(doc(customer('alice'), 'orders/MS-10'), order({ id: 'MS-10', customerUid: 'alice' })));
+    await assertFails(guestOrder(order({ id: 'MS-9' })));
+    await assertFails(placeOrder(customer('alice'), 'alice', order({ id: 'MS-10', customerUid: 'alice' })));
     await assertFails(updateDoc(doc(guest(), 'products/p1'), { skus: [{ size: 'M', stock: 0 }], inStock: false }));
     await assertFails(updateDoc(doc(guest(), 'promos/promo1'), { usedCount: 1 }));
     await assertFails(takeStock(guest(), { skus: [{ size: 'M', stock: 1 }] }));

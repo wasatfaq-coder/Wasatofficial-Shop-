@@ -11,6 +11,7 @@ import {
   User,
 } from 'firebase/auth';
 import { Firestore, connectFirestoreEmulator, initializeFirestore, getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { connectFunctionsEmulator, getFunctions, httpsCallable } from 'firebase/functions';
 import firebaseConfig from '../firebase-applet-config.json';
 import { FUNCTIONS_REGION, PLACE_ORDER_FUNCTION, PlaceOrderRequest, PlaceOrderResponse } from './shared/orderApi';
@@ -19,6 +20,21 @@ const app = initializeApp(firebaseConfig);
 
 // `VITE_USE_EMULATORS=true bun run dev` talks to local Firebase emulators (see README)
 const USE_EMULATORS = import.meta.env.VITE_USE_EMULATORS === 'true';
+
+// App Check (reCAPTCHA v3, free on Spark): with enforcement on in the console the database answers only requests from
+// this site, not scripts with the public config (audit 02.10, stage 5 without Blaze). The site key is the build
+// variable VITE_RECAPTCHA_SITE_KEY (GitHub variable RECAPTCHA_SITE_KEY); without it App Check is off
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+
+function protectWithAppCheck(firebaseApp: FirebaseApp) {
+  if (!RECAPTCHA_SITE_KEY || USE_EMULATORS) return;
+  try {
+    initializeAppCheck(firebaseApp, { provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY), isTokenAutoRefreshEnabled: true });
+  } catch (err) {
+    console.error('App Check was not started:', err);
+  }
+}
+protectWithAppCheck(app);
 
 function connectEmulators(firebaseApp: FirebaseApp, firestore: Firestore) {
   if (!USE_EMULATORS) return;
@@ -87,6 +103,7 @@ let guestChat: { auth: Auth; db: Firestore } | null = null;
 function getGuestChat() {
   if (!guestChat) {
     const guestApp = initializeApp(firebaseConfig, 'guest-chat');
+    protectWithAppCheck(guestApp);
     guestChat = { auth: getAuth(guestApp), db: createFirestore(guestApp) };
     connectEmulators(guestApp, guestChat.db);
   }

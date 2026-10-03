@@ -35,6 +35,7 @@ import {
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages } from './utils/deliveryStages';
 import { deliveryKindOfMethod, initialStatusLog } from './shared/orderFlow';
 import { formatAddress } from './utils/addressFormat';
+import { pluralRu } from './utils/pluralize';
 import { ADMIN_EMAIL, useAuth } from './context/AuthContext';
 import {
   ChatIdentity,
@@ -52,7 +53,8 @@ import {
   subscribeToChatMessages,
   subscribeToUsers,
   subscribeToOwnUserProfile,
-  saveOrderToFirestore,
+  placeClientOrder,
+  orderRateWaitSeconds,
   deductOrderLineStock,
   cancelOrderAsCustomer,
   confirmOrderReceipt,
@@ -1541,6 +1543,23 @@ export default function App() {
       addToast(`Не хватает на складе: ${stockProblems.map(stockProblemText).join('; ')}. Измените корзину.`, 'error');
       return false;
     }
+    // Every order has an owner (rules, stage 5 without Blaze): the signed-in buyer or the guest's anonymous session —
+    // the same one the guest's support chat uses
+    let orderOwner: { uid: string; db: ChatIdentity['db'] };
+    if (currentUser) {
+      orderOwner = { uid: currentUser.uid, db };
+    } else {
+      try {
+        const identity = chatIdentity?.isGuest ? chatIdentity : await createGuestChatIdentity();
+        if (identity !== chatIdentity) setChatIdentity(identity);
+        orderOwner = { uid: identity.uid, db: identity.db };
+      } catch (err) {
+        console.error('Guest sign-in for the order failed:', err);
+        addToast('Не удалось оформить заказ без входа. Войдите через Google в «Профиле» или проверьте соединение.', 'error');
+        return false;
+      }
+    }
+
     // Orders are create-only for customers, so IDs must not collide with existing ones
     const newOrderId = `WS-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
     const placedAt = new Date();
@@ -1582,7 +1601,7 @@ export default function App() {
       customerMiddleName: nameParts?.middleName || undefined,
       customerPhone,
       customerEmail,
-      customerUid: currentUser?.uid,
+      customerUid: orderOwner.uid,
       deliveryAddressParts: addressParts,
       paymentMethod,
       paymentStatus,
@@ -1606,10 +1625,17 @@ export default function App() {
     // The order must reach the database before it is shown as placed and stock is taken:
     // a rejected write (rules, network error) used to be reported as a successful order
     try {
-      await saveOrderToFirestore(newOrder);
+      await placeClientOrder(newOrder, orderOwner.uid, orderOwner.db);
     } catch (err) {
       console.error('Order was not saved:', err);
-      addToast('Не удалось оформить заказ. Проверьте соединение и попробуйте еще раз.', 'error');
+      // the rules take one order in 30 s from a sign-in: say how long to wait instead of «check the connection»
+      const wait = await orderRateWaitSeconds(orderOwner.uid, orderOwner.db);
+      addToast(
+        wait > 0
+          ? `Заказы можно оформлять не чаще раза в 30 секунд. Попробуйте снова через ${wait} ${pluralRu(wait, ['секунду', 'секунды', 'секунд'])}.`
+          : 'Не удалось оформить заказ. Проверьте соединение и попробуйте еще раз.',
+        'error'
+      );
       return false;
     }
 
@@ -1633,7 +1659,7 @@ export default function App() {
     // One more use of the promo by this order (a 1-click order has no promo, as on the server)
     if (orderPromo) {
       // The order is placed either way; a refused counter write is logged with the order number
-      recordPromoUsageInFirestore(orderPromo, newOrderId).catch((err) =>
+      recordPromoUsageInFirestore(orderPromo, newOrderId, orderOwner.db).catch((err) =>
         console.error(`Promo usage for ${newOrderId} was not recorded:`, err)
       );
     }

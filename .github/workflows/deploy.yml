@@ -33,6 +33,7 @@ jobs:
       - run: bun run build
         env:
           VITE_PREVIEW_BUILD: 'true'
+          VITE_RECAPTCHA_SITE_KEY: ${{ vars.RECAPTCHA_SITE_KEY }}
       - if: env.HAS_FIREBASE_SECRET != 'true'
         run: echo "::warning::FIREBASE_SERVICE_ACCOUNT secret is not set — preview deploy skipped"
       # The site holds a limited number of preview channels, and every PR opens its own. Channels of closed and merged
@@ -97,6 +98,8 @@ jobs:
       # Never publish rules that fail their tests
       - run: bun run test:rules
       - run: bun run build
+        env:
+          VITE_RECAPTCHA_SITE_KEY: ${{ vars.RECAPTCHA_SITE_KEY }}
       - name: Install and test Cloud Functions
         if: env.DEPLOY_FUNCTIONS == 'true'
         run: |

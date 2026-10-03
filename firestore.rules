@@ -242,6 +242,9 @@ service cloud.firestore {
         && data.promoId is string && isValidId(data.promoId)
         && data.createdAt is string && data.createdAt.size() <= 40
         && exists(orderPath)
+        // код «сжигает» только владелец заказа (находка 43): поддельный заказ без входа больше не записать
+        && isSignedIn()
+        && get(orderPath).data.get('customerUid', '') == request.auth.uid
         && get(orderPath).data.get('promoCode', '') is string
         && get(orderPath).data.get('promoCode', '').size() > 0
         && get(orderPath).data.promoCode.upper() == get(promoPath).data.code.upper()
@@ -339,14 +342,31 @@ service cloud.firestore {
         && request.resource.data.get('isCancelled', false) == false
         // «Оплачен» ставит только администратор: сайт денег не принимает
         && request.resource.data.get('paymentStatus', 'pending') in ['pending', 'paid_on_delivery']
-        // Гость не указывает customerUid, авторизованный — только свой
-        && (request.resource.data.get('customerUid', null) == null
-          || (isSignedIn() && request.resource.data.customerUid == request.auth.uid))
+        // Заказ — только под входом (Google или анонимный вход гостя) и со своим uid, вместе с отметкой частоты
+        // order_rate/{uid} в том же пакете: не чаще раза в 30 с с одного входа (аудит 02.10, этап 5 без Blaze;
+        // анонимных входов Firebase даёт не больше 100 в час с одного адреса)
+        && isSignedIn()
+        && request.resource.data.get('customerUid', null) == request.auth.uid
+        && getAfter(/databases/$(database)/documents/order_rate/$(request.auth.uid)).data.orderId == orderId
         && isClientOrderShape()
       );
 
       allow update: if isAdmin() || isCustomerOrderCancel() || isCustomerStockReturnedMark()
         || isCustomerReceiptConfirm() || isCustomerReceiptSubmit(orderId);
+      allow delete: if isAdmin();
+    }
+
+    // Отметка частоты заказов: одна на вход, обновляется только вместе с новым заказом этого входа и не чаще раза в 30 с
+    match /order_rate/{uid} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+      allow create, update: if isSignedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['lastOrderAt', 'orderId'])
+        && request.resource.data.lastOrderAt == request.time
+        && request.resource.data.orderId is string
+        && request.resource.data.orderId.matches('^[A-Za-z0-9-]{1,40}$')
+        && (resource == null || request.time > resource.data.lastOrderAt + duration.value(30, 's'))
+        && !exists(/databases/$(database)/documents/orders/$(request.resource.data.orderId))
+        && getAfter(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data.customerUid == uid;
       allow delete: if isAdmin();
     }
 
