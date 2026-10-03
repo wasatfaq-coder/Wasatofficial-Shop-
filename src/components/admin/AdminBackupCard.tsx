@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { DatabaseBackup, Download } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { DatabaseBackup, Download, Upload } from 'lucide-react';
 import firebaseConfig from '../../../firebase-applet-config.json';
 import { exportDatabase } from '../../utils/firebaseSync';
 import { pluralRu } from '../../utils/pluralize';
+import { parseBackup, type ParsedBackup } from '../../utils/backupRestore';
+import { AdminRestoreDialog } from './AdminRestoreDialog';
 
 interface AdminBackupCardProps {
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
@@ -15,6 +17,25 @@ interface AdminBackupCardProps {
 export const AdminBackupCard: React.FC<AdminBackupCardProps> = ({ onShowToast }) => {
   const [isExporting, setIsExporting] = useState(false);
   const [lastResult, setLastResult] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState<{ backup: ParsedBackup; fileName: string } | null>(null);
+  const [isReading, setIsReading] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const handleFile = async (file: File | undefined) => {
+    if (!file) return;
+    setIsReading(true);
+    try {
+      const parsed = parseBackup(await file.text());
+      if (typeof parsed === 'string') onShowToast(parsed, 'error');
+      else setRestoring({ backup: parsed, fileName: file.name });
+    } catch (err) {
+      console.error('Backup file was not read:', err);
+      onShowToast('Не удалось прочитать файл. Большую копию открывайте с компьютера', 'error');
+    } finally {
+      setIsReading(false);
+      if (fileInput.current) fileInput.current.value = '';
+    }
+  };
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -71,8 +92,34 @@ export const AdminBackupCard: React.FC<AdminBackupCardProps> = ({ onShowToast })
           <Download className="w-4 h-4" />
           {isExporting ? 'Готовим копию…' : 'Скачать копию базы'}
         </button>
+        <button
+          type="button"
+          onClick={() => fileInput.current?.click()}
+          disabled={isReading}
+          className={`h-10 px-4 rounded-2xl text-xs font-extrabold flex items-center gap-2 ${
+            isReading ? 'neu-button-disabled' : 'neu-button text-[#2D3A4E] cursor-pointer'
+          }`}
+        >
+          <Upload className="w-4 h-4" aria-hidden="true" />
+          {isReading ? 'Читаем файл…' : 'Восстановить из копии'}
+        </button>
+        <input
+          ref={fileInput}
+          type="file"
+          accept=".json,application/json"
+          className="sr-only"
+          tabIndex={-1}
+          aria-hidden="true"
+          onChange={(e) => handleFile(e.target.files?.[0])}
+        />
         {lastResult && <p className="text-xs text-[#4E5C70]">Последняя: {lastResult}</p>}
       </div>
+      <AdminRestoreDialog
+        backup={restoring?.backup ?? null}
+        fileName={restoring?.fileName ?? ''}
+        onClose={() => setRestoring(null)}
+        onShowToast={onShowToast}
+      />
     </div>
   );
 };
