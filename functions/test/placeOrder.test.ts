@@ -258,6 +258,8 @@ describe('placeOrderCore', () => {
   test('quick order has no delivery fee and refuses promos', async () => {
     const order = await placeOrderCore(db, request({ deliveryMethodId: 'quick-order' }), null);
     expect(order.totalPrice).toBe(3000);
+    // the manager agrees the delivery: no made-up «Экспресс курьер» (UX audit 03.10, finding 22)
+    expect(order.deliveryMethod).toBe('Заказ в 1 клик');
     await expectOrderError(
       placeOrderCore(db, request({ deliveryMethodId: 'quick-order', promoCode: 'X' }), null),
       'invalid-argument'

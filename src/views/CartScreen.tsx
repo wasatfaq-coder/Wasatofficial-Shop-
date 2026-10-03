@@ -47,7 +47,7 @@ interface CartScreenProps {
   onApplyPromo: (code: string) => void;
   onOpenPromoModal: () => void;
   onRemovePromo: () => void;
-  onCompleteOrder?: (orderData: any) => void;
+  onCompleteOrder?: (orderData: any) => void | Promise<boolean>;
   storefrontSettings?: import('../types').StorefrontSettings;
   /** What is missing for checkout (e.g. «Способы доставки»); null when checkout is possible */
   checkoutBlocker?: string | null;
@@ -119,21 +119,19 @@ export const CartScreen: React.FC<CartScreenProps> = ({
     setPromoInput('');
   };
 
-  const handleQuickOrderSuccess = (details: { name: string; phone: string; address: string }) => {
-    if (onCompleteOrder) {
-      onCompleteOrder({
-        items: cartItems,
-        contact: { name: details.name, phone: details.phone, email: '' },
-        address: details.address || 'Уточняется оператором',
-        deliveryMethod: QUICK_ORDER_DELIVERY_TITLE,
-        // as placeOrder counts a 1-click order: goods only, no promo, delivery agreed by the manager
-        totalPrice: rawSubtotal,
-        paymentMethod: 'При получении (наличные / картой)',
-      });
-    } else {
-      onClearCart();
-      onShowToast(`Быстрый заказ успешно оформлен! Менеджер свяжется с вами по номеру ${details.phone}`, 'success');
-    }
+  /** `false` — the order was not placed: the 1-click window stays open with what the buyer typed */
+  const handleQuickOrderSuccess = async (details: { name: string; phone: string; address: string }): Promise<boolean> => {
+    if (!onCompleteOrder) return false;
+    const placed = await onCompleteOrder({
+      items: cartItems,
+      contact: { name: details.name, phone: details.phone, email: '' },
+      address: details.address || 'Уточнит менеджер',
+      deliveryMethod: QUICK_ORDER_DELIVERY_TITLE,
+      // as placeOrder counts a 1-click order: goods only, no promo, delivery and payment agreed by the manager
+      // (no made-up «При получении (наличные / картой)»: the shop may not take cash — UX audit 03.10, finding 22)
+      totalPrice: rawSubtotal,
+    });
+    return placed !== false;
   };
 
   if (cartItems.length === 0) {

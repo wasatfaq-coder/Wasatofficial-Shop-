@@ -1,4 +1,5 @@
 import { Order, DeliveryStage, OrderStatusHistoryStep } from '../types';
+import { isQuickOrderDelivery } from '../shared/orderPricing';
 
 /**
  * Checks if order is delivered via Russian Post (Почта России / Почтой России).
@@ -80,6 +81,8 @@ export function isCourierDelivery(
   const tcLower = tc.toLowerCase().trim();
 
   return (
+    // a 1-click order: the manager agrees the delivery — like a courier order, the buyer may call the store
+    isQuickOrderDelivery(dm) ||
     dmLower.includes('курьер') ||
     dmLower.includes('courier') ||
     dmLower.includes('до двери') ||
@@ -189,7 +192,10 @@ export function getSynchronizedDeliveryStages(
   const isPost = isRussianPostDelivery(order.deliveryMethod, order.trackingCompany);
   const isTK = isTransportCompanyDelivery(order.deliveryMethod, order.trackingCompany);
   const isPickup = isPickupDelivery(order.deliveryMethod);
-  const isExpress = (order.deliveryMethod || '').toLowerCase().includes('экспресс') || (order.deliveryMethod || '').toLowerCase().includes('express');
+  // An old 1-click order said «Экспресс курьер (1 клик)»: no express courier was promised (UX audit 03.10, finding 22)
+  const isExpress =
+    !isQuickOrderDelivery(order.deliveryMethod) &&
+    ((order.deliveryMethod || '').toLowerCase().includes('экспресс') || (order.deliveryMethod || '').toLowerCase().includes('express'));
   const hasTrack = isTK && !!order.trackingNumber;
 
   // Case 1: Order is Cancelled
