@@ -43,6 +43,7 @@ import {
   generateSkuCode,
   generateBarcode,
   getProductTotalStock,
+  isHiddenFromSale,
   mergeFormStock,
   stockMovementId,
 } from '../../utils/inventory';
@@ -257,8 +258,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         stockFilter === 'all'
           ? true
           : stockFilter === 'in_stock'
-          ? p.inStock !== false
-          : p.inStock === false;
+          ? !isHiddenFromSale(p)
+          : isHiddenFromSale(p);
 
       return matchesSearch && matchesCat && matchesStock;
     });
@@ -378,7 +379,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   // Bulk Operations
   const handleBulkToggleStock = (inStock: boolean) => {
     const updated = products.map((p) =>
-      selectedProductIds.includes(p.id) ? { ...p, inStock } : p
+      selectedProductIds.includes(p.id) ? { ...p, inStock, hiddenFromSale: !inStock } : p
     );
     onUpdateProducts(updated);
     onShowToast(
@@ -498,7 +499,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     setFormCostPrice(prod.costPrice);
     setFormOldPrice(prod.originalPrice);
     setFormBadge(prod.badge || '');
-    setFormInStock(prod.inStock !== false);
+    setFormInStock(!isHiddenFromSale(prod));
     setFormImages([...(prod.images ?? [])]);
     setNewImageUrlInput('');
     setFormDescription(prod.description || '');
@@ -593,6 +594,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         colors: formColors,
         skus: savedSkus,
         inStock: formInStock && (savedSkus.length === 0 || savedSkus.some((s) => s.stock > 0)),
+        // «Снят с витрины» apart from «sold out»: a hidden sold-out product is not preordered (finding 12)
+        hiddenFromSale: !formInStock,
         ...cardFields,
       };
 
@@ -617,6 +620,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         colors: formColors,
         skus: savedSkus,
         inStock: formInStock && (savedSkus.length === 0 || savedSkus.some((s) => s.stock > 0)),
+        // «Снят с витрины» apart from «sold out»: a hidden sold-out product is not preordered (finding 12)
+        hiddenFromSale: !formInStock,
         ...cardFields,
         rating: 0,
         reviewsCount: 0,
@@ -1080,11 +1085,11 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
             { id: 'all', label: `Все (${products.length})` },
             {
               id: 'in_stock',
-              label: `В наличии (${products.filter((p) => p.inStock !== false).length})`,
+              label: `В продаже (${products.filter((p) => !isHiddenFromSale(p)).length})`,
             },
             {
               id: 'out_of_stock',
-              label: `Сняты (${products.filter((p) => p.inStock === false).length})`,
+              label: `Сняты (${products.filter((p) => isHiddenFromSale(p)).length})`,
             },
           ].map((sf) => (
             <button
@@ -1283,11 +1288,15 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                           {prod.badge}
                         </span>
                       )}
-                      {prod.inStock === false && (
+                      {isHiddenFromSale(prod) ? (
                         <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-md neu-inset text-danger shrink-0 border border-danger/25 whitespace-nowrap">
                           Снят с витрины
                         </span>
-                      )}
+                      ) : prod.inStock === false ? (
+                        <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-md neu-inset text-[#4E5C70] shrink-0 whitespace-nowrap">
+                          Распродан
+                        </span>
+                      ) : null}
                     </div>
 
                     <div className="flex items-center gap-2 text-[11px] text-[#4E5C70] font-semibold flex-wrap">

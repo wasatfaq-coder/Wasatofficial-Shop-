@@ -128,6 +128,12 @@ export async function createGuestChatIdentity(): Promise<ChatIdentity> {
   const user = guest.auth.currentUser || credential!.user;
   return { uid: user.uid, db: guest.db, isGuest: true };
 }
+/** The guest's anonymous session ends (its orders and chat went to the account): a later guest gets a new one */
+export async function forgetGuestChatIdentity(): Promise<void> {
+  if (!guestChat?.auth.currentUser) return;
+  await signOut(guestChat.auth);
+}
+
 const googleProvider = new GoogleAuthProvider();
 
 export enum OperationType {

@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product } from '../types';
-import { isProductInStock } from '../utils/inventory';
+import { isHiddenFromSale, isProductInStock } from '../utils/inventory';
 import { productRatingValue } from '../utils/productRating';
 import { pluralRu } from '../utils/pluralize';
 import { NeumorphicSwitch } from './NeumorphicSwitch';
@@ -136,7 +136,7 @@ const matchesMaterialFilter = (productMaterial: string, selectedMaterialIds: str
 };
 
 const isProductAvailableInSize = (product: Product, size: string): boolean => {
-  if (product.inStock === false) return false;
+  if (product.inStock === false || isHiddenFromSale(product)) return false;
   if (!product.sizes.includes(size)) return false;
   if (product.skus && product.skus.length > 0) {
     const matchingSkus = product.skus.filter((sku) => sku.size === size);

@@ -141,7 +141,8 @@ interface ProfileScreenProps {
   /** «Оплачено» с фото чека («Доработки 5»): фото в чат заказа и «Чек на проверке»; true — отправлено */
   onSubmitPaymentReceipt?: (order: Order, kind: PaymentKind, imageUrl: string) => Promise<boolean>;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
-  onOpenSupportChat?: () => void;
+  /** With an order: the chat opens with «Вопрос по заказу № …» typed in (audit 02.10, finding 26) */
+  onOpenSupportChat?: (orderId?: string) => void;
   /** Resolves to false when the database refused the write (the error toast is already shown) */
   onUpdateProducts?: (products: Product[]) => Promise<boolean> | void;
   onUpdateOrders?: (orders: Order[]) => Promise<boolean> | void;
@@ -1676,8 +1677,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                 e.stopPropagation();
                                 setSelectedOrderIdForTracking(null);
                                 setActiveModal(null);
-                                onOpenSupportChat();
-                                onShowToast(`Чат заботы открыт по заказу #${ord.id}`, 'info');
+                                onOpenSupportChat(ord.id);
                               }}
                               className="p-2 rounded-xl neu-button text-[#4E5C70] hover:text-accent hover:scale-105 transition-transform flex items-center justify-center cursor-pointer"
                               title="Написать в службу поддержки"
@@ -2157,8 +2157,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                           const orderId = selectedOrderForTracking.id;
                           setSelectedOrderIdForTracking(null);
                           setActiveModal(null);
-                          onOpenSupportChat();
-                          onShowToast(`Чат заботы открыт по заказу #${orderId}`, 'info');
+                          onOpenSupportChat(orderId);
                         }}
                         className="py-1.5 px-3 rounded-xl neu-button text-accent hover:text-accent-strong hover:scale-105 transition-transform flex items-center gap-1 text-[11px] font-bold cursor-pointer shrink-0"
                         title="Написать в чат поддержки"
@@ -2190,8 +2189,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                           const orderId = selectedOrderForTracking.id;
                           setSelectedOrderIdForTracking(null);
                           setActiveModal(null);
-                          onOpenSupportChat();
-                          onShowToast(`Чат заботы открыт по заказу #${orderId}`, 'info');
+                          onOpenSupportChat(orderId);
                         }}
                         className="py-1.5 px-3 rounded-xl neu-button text-[#2D3A4E] hover:text-accent hover:scale-105 transition-transform flex items-center gap-1 text-[11px] font-bold cursor-pointer shrink-0"
                         title="Написать в чат поддержки"
@@ -2236,8 +2234,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                             const orderId = selectedOrderForTracking.id;
                             setSelectedOrderIdForTracking(null);
                             setActiveModal(null);
-                            onOpenSupportChat();
-                            onShowToast(`Чат заботы открыт по заказу #${orderId}`, 'info');
+                            onOpenSupportChat(orderId);
                           }}
                           className="py-1.5 px-2.5 rounded-xl neu-button text-[#2D3A4E] hover:text-accent hover:scale-105 transition-transform flex items-center gap-1 text-[11px] font-bold cursor-pointer"
                           title="Написать в чат поддержки"
@@ -2270,8 +2267,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         const orderId = selectedOrderForTracking.id;
                         setSelectedOrderIdForTracking(null);
                         setActiveModal(null);
-                        onOpenSupportChat();
-                        onShowToast(`Чат заботы открыт по заказу #${orderId}`, 'info');
+                        onOpenSupportChat(orderId);
                       }}
                       className="py-1.5 px-3 rounded-xl neu-button text-[#2D3A4E] hover:text-accent hover:scale-105 transition-transform flex items-center gap-1 text-[11px] font-bold cursor-pointer shrink-0"
                       title="Написать в чат поддержки"

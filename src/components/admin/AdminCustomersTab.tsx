@@ -35,7 +35,9 @@ import { copyToClipboard } from '../../utils/clipboard';
 import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
 import { NeumorphicSelect, NeumorphicSelectOption } from '../NeumorphicSelect';
 import { orderStatusChip } from '../../utils/orderStatusStyle';
+import { isRevenueOrder, orderRevenue } from '../../utils/analyticsEngine';
 import { formatAddress } from '../../utils/addressFormat';
+import { pluralRu } from '../../utils/pluralize';
 import { cancelledByLabel, cancelledShare, cancelReasonText, formatCancelledAt } from '../../utils/orderCancel';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { useUnsavedChanges } from '../../utils/unsavedChanges';
@@ -178,9 +180,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       });
       userOrders.forEach((o) => attached.add(o.id));
 
-      const totalSpent = userOrders.reduce((sum, o) => (!o.isCancelled ? sum + (o.totalPrice || 0) : sum), 0);
       const completedOrders = userOrders.filter((o) => o.status === 'delivered').length;
-      const avgCheck = userOrders.length > 0 ? Math.round(totalSpent / userOrders.length) : 0;
 
       map.set(key, {
         id: u.uid || `user-${key}`,
@@ -194,10 +194,11 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
         lastActiveAt: displayDate(u.lastActive),
         // only what the admin set: no invented «5 % от покупок»
         bonusPoints: u.bonusPoints ?? 0,
-        totalSpent,
+        totalSpent: 0,
         ordersCount: userOrders.length,
+        paidOrdersCount: 0,
         completedOrdersCount: completedOrders,
-        averageOrderValue: avgCheck,
+        averageOrderValue: 0,
         orders: userOrders,
         savedAddresses: u.savedAddresses || [],
         primaryAddress: u.address
@@ -226,9 +227,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
         const rec = map.get(key)!;
         if (!rec.orders.some((o) => o.id === ord.id)) {
           rec.orders.push(ord);
-          if (!ord.isCancelled) rec.totalSpent += ord.totalPrice || 0;
           rec.ordersCount = rec.orders.length;
-          rec.averageOrderValue = Math.round(rec.totalSpent / rec.ordersCount);
         }
         attached.add(ord.id);
         return;
@@ -248,11 +247,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
         const rec = map.get(existingMatchKey)!;
         if (!rec.orders.some((o) => o.id === ord.id)) {
           rec.orders.push(ord);
-          if (!ord.isCancelled) {
-            rec.totalSpent += ord.totalPrice || 0;
-          }
           rec.ordersCount = rec.orders.length;
-          rec.averageOrderValue = Math.round(rec.totalSpent / rec.ordersCount);
         }
         return;
       }
@@ -267,9 +262,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       });
       matchedOrders.forEach((o) => attached.add(o.id));
 
-      const totalSpent = matchedOrders.reduce((sum, o) => (!o.isCancelled ? sum + (o.totalPrice || 0) : sum), 0);
       const completedOrders = matchedOrders.filter((o) => o.status === 'delivered').length;
-      const avgCheck = matchedOrders.length > 0 ? Math.round(totalSpent / matchedOrders.length) : 0;
 
       map.set(key, {
         id: `guest-${key}`,
@@ -280,20 +273,32 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
         registeredAt: ord.date || 'Недавно',
         lastActiveAt: ord.date || 'Недавно',
         bonusPoints: 0, // a guest has no bonus account
-        totalSpent,
+        totalSpent: 0,
         ordersCount: matchedOrders.length,
+        paidOrdersCount: 0,
         completedOrdersCount: completedOrders,
-        averageOrderValue: avgCheck,
+        averageOrderValue: 0,
         orders: matchedOrders,
         savedAddresses: ord.deliveryAddress
           ? [{ id: `addr-${ord.id}`, title: 'Адрес из заказа', city: ord.deliveryAddress.split(',')[0] || '', street: ord.deliveryAddress, isDefault: true }]
           : [],
         primaryAddress: ord.deliveryAddress,
-        tags: totalSpent > 30000 ? ['Гость', 'Крупный чек'] : ['Гость'],
+        tags: ['Гость'],
       });
     });
 
-    return Array.from(map.values());
+    // Sums of paid orders only (owner's decision 02.10, finding 29): an unpaid order is not a purchase yet
+    return Array.from(map.values()).map((rec) => {
+      const totalSpent = rec.orders.reduce((sum, o) => sum + orderRevenue(o), 0);
+      const paidOrdersCount = rec.orders.filter(isRevenueOrder).length;
+      return {
+        ...rec,
+        totalSpent,
+        paidOrdersCount,
+        averageOrderValue: paidOrdersCount > 0 ? Math.round(totalSpent / paidOrdersCount) : 0,
+        tags: !rec.isRegisteredUser && totalSpent > 30000 ? ['Гость', 'Крупный чек'] : rec.tags,
+      };
+    });
   }, [users, orders]);
 
   // 2. Filter & Search
@@ -316,7 +321,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       if (filterType === 'with_orders' && c.ordersCount === 0) {
         return false;
       }
-      if (filterType === 'repeat' && c.ordersCount < 2) {
+      if (filterType === 'repeat' && c.paidOrdersCount < 2) {
         return false;
       }
       if (filterType === 'registered' && !c.isRegisteredUser) {
@@ -343,8 +348,9 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
     const registeredCount = customerRecords.filter((c) => c.isRegisteredUser).length;
     const totalLTV = customerRecords.reduce((sum, c) => sum + c.totalSpent, 0);
     const totalOrders = customerRecords.reduce((sum, c) => sum + c.ordersCount, 0);
-    const avgOrderValue = totalOrders > 0 ? Math.round(totalLTV / totalOrders) : 0;
-    const repeatClients = customerRecords.filter((c) => c.ordersCount >= 2).length;
+    const paidOrders = customerRecords.reduce((sum, c) => sum + c.paidOrdersCount, 0);
+    const avgOrderValue = paidOrders > 0 ? Math.round(totalLTV / paidOrders) : 0;
+    const repeatClients = customerRecords.filter((c) => c.paidOrdersCount >= 2).length;
 
     return {
       totalClients,
@@ -702,13 +708,13 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     </div>
                   </div>
 
-                  {customer.ordersCount > 1 ? (
+                  {customer.paidOrdersCount > 1 ? (
                     <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-success-soft text-success border border-success/25 shrink-0">
-                      Постоянный ({customer.ordersCount})
+                      Постоянный ({customer.paidOrdersCount})
                     </span>
-                  ) : customer.ordersCount === 1 ? (
+                  ) : customer.ordersCount > 0 ? (
                     <span className="px-2.5 py-1 rounded-xl text-[11px] font-medium bg-accent/5 text-accent border border-accent/20 shrink-0">
-                      1 заказ
+                      {customer.ordersCount} {pluralRu(customer.ordersCount, ['заказ', 'заказа', 'заказов'])}
                     </span>
                   ) : (
                     <span className="px-2.5 py-1 rounded-xl text-[11px] font-medium bg-[#D8DFE8] text-[#4E5C70] shrink-0">
@@ -859,17 +865,17 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     <h3 id={customerDialog.titleId} className="text-base sm:text-lg font-extrabold text-[#2D3A4E] break-words min-w-0">
                       {selectedCustomer.name}
                     </h3>
-                    {selectedCustomer.ordersCount > 1 ? (
+                    {selectedCustomer.paidOrdersCount > 1 ? (
                       <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-success-soft text-success border border-success/25">
                         Постоянный покупатель
                       </span>
-                    ) : selectedCustomer.ordersCount === 1 ? (
+                    ) : selectedCustomer.paidOrdersCount === 1 ? (
                       <span className="px-2.5 py-0.5 rounded-lg text-xs font-medium bg-accent/5 text-accent border border-accent/20">
                         1 покупка
                       </span>
                     ) : (
                       <span className="px-2.5 py-0.5 rounded-lg text-xs font-medium bg-[#D8DFE8] text-[#4E5C70]">
-                        Новый профиль
+                        {selectedCustomer.ordersCount > 0 ? 'Нет оплаченных заказов' : 'Новый профиль'}
                       </span>
                     )}
                   </div>

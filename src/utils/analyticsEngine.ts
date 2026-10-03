@@ -70,12 +70,31 @@ function formatDateLabels(d: Date): { label: string; date: string; fullDate: str
   };
 }
 
-/** Revenue an order brings: its total minus a refund; a cancelled order brings nothing */
-export function orderRevenue(o: Order): number {
+/** The order's sum minus a refund, whatever its payment (a cancelled order — 0) */
+export function orderTotalAfterRefund(o: Order): number {
   if (o.isCancelled) return 0;
   const price = typeof o.totalPrice === 'number' ? o.totalPrice : Number(o.totalPrice) || 0;
   const refund = typeof o.refundAmount === 'number' ? o.refundAmount : 0;
   return Math.max(0, price - refund);
+}
+
+/**
+ * Revenue an order brings: only paid money (owner's decision 02.10, finding 29) — «Оплачен» is set by the admin after
+ * checking the money, and payment on delivery becomes «Оплачен» when the order is handed over. A refund is taken off;
+ * a refunded order without the refunded sum counts as refunded in full. Unpaid and cancelled orders bring nothing.
+ */
+export function orderRevenue(o: Order): number {
+  if (o.isCancelled) return 0;
+  const price = typeof o.totalPrice === 'number' ? o.totalPrice : Number(o.totalPrice) || 0;
+  const refund = typeof o.refundAmount === 'number' ? o.refundAmount : null;
+  if (o.paymentStatus === 'paid') return Math.max(0, price - (refund ?? 0));
+  if (o.paymentStatus === 'refunded') return refund === null ? 0 : Math.max(0, price - refund);
+  return 0;
+}
+
+/** The order is counted in «Выручка» and «Средний чек»: paid (a partly refunded one too) and not cancelled */
+export function isRevenueOrder(o: Order): boolean {
+  return !o.isCancelled && (o.paymentStatus === 'paid' || (o.paymentStatus === 'refunded' && orderRevenue(o) > 0));
 }
 
 function matchesStatusFilter(o: Order, statusFilter: OrderStatusFilter): boolean {
@@ -175,6 +194,7 @@ export function computeFirestoreDailySales(
     const inBucket = dated.filter((d) => d.t >= b.start && d.t < b.end).map((d) => d.order);
     const active = inBucket.filter((o) => !o.isCancelled);
     const revenue = active.reduce((sum, o) => sum + orderRevenue(o), 0);
+    const paidCount = active.filter(isRevenueOrder).length;
     return {
       dateKey: b.dateKey,
       label: b.label,
@@ -185,7 +205,8 @@ export function computeFirestoreDailySales(
       prevRevenue: 0,
       orders: active.length,
       prevOrders: 0,
-      avgCheck: active.length > 0 ? Math.round(revenue / active.length) : 0,
+      // the check of the paid orders: unpaid ones bring no revenue and would lower it
+      avgCheck: paidCount > 0 ? Math.round(revenue / paidCount) : 0,
       returns: inBucket.length - active.length,
       prevReturns: 0,
       isPeakDay: false,
@@ -206,6 +227,7 @@ export function computeFirestoreDailySales(
 
   const totalRevenue = dailyData.reduce((sum, item) => sum + item.revenue, 0);
   const totalOrders = dailyData.reduce((sum, item) => sum + item.orders, 0);
+  const totalPaidOrders = dated.filter((d) => d.t >= periodStart && d.t < periodEnd && isRevenueOrder(d.order)).length;
   const totalReturns = dailyData.reduce((sum, item) => sum + item.returns, 0);
   const prevTotalRevenue = prevActive.reduce((sum, o) => sum + orderRevenue(o), 0);
   const prevTotalOrders = prevActive.length;
@@ -227,7 +249,7 @@ export function computeFirestoreDailySales(
         peakIndex !== -1
           ? { date: dailyData[peakIndex].fullDate, label: dailyData[peakIndex].date, revenue: dailyData[peakIndex].revenue }
           : null,
-      avgCheck: totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0,
+      avgCheck: totalPaidOrders > 0 ? Math.round(totalRevenue / totalPaidOrders) : 0,
       totalReturns,
       // cancelled among all orders placed in the period
       returnRate: allPlaced > 0 ? ((totalReturns / allPlaced) * 100).toFixed(1) : '0',

@@ -352,8 +352,56 @@ service cloud.firestore {
       );
 
       allow update: if isAdmin() || isCustomerOrderCancel() || isCustomerStockReturnedMark()
-        || isCustomerReceiptConfirm() || isCustomerReceiptSubmit(orderId);
+        || isCustomerReceiptConfirm() || isCustomerReceiptSubmit(orderId) || isGuestOrderHandover();
       allow delete: if isAdmin();
+    }
+
+    // Гость вошёл через Google — его заказы и переписка переходят в аккаунт (аудит 02.10, находка 26). Согласны обе
+    // стороны в этом браузере: анонимный вход гостя пишет guest_links/{гость} = { accountUid }, аккаунт —
+    // account_guests/{аккаунт}_{гость}. Без второй половины посторонний не «подкинет» заказы чужому аккаунту.
+    match /guest_links/{guestUid} {
+      allow read: if isSignedIn() && request.auth.uid == guestUid;
+      allow create, update: if isAnonymousSelf(guestUid)
+        && request.resource.data.keys().hasOnly(['accountUid'])
+        && request.resource.data.accountUid is string
+        && request.resource.data.accountUid.matches('^[A-Za-z0-9-]{1,128}$')
+        && request.resource.data.accountUid != guestUid;
+      allow delete: if isAdmin();
+    }
+
+    match /account_guests/{linkId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.accountUid == request.auth.uid);
+      allow create: if isSignedIn()
+        && signInProvider() != 'anonymous'
+        && request.resource.data.keys().hasOnly(['accountUid', 'guestUid'])
+        && request.resource.data.accountUid == request.auth.uid
+        && request.resource.data.guestUid is string
+        && request.resource.data.guestUid.matches('^[A-Za-z0-9-]{1,128}$')
+        && linkId == request.auth.uid + '_' + request.resource.data.guestUid;
+      allow delete: if isAdmin();
+    }
+
+    function signInProvider() {
+      return request.auth.token.get('firebase', {}).get('sign_in_provider', '');
+    }
+
+    function isAnonymousSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid && signInProvider() == 'anonymous';
+    }
+
+    // Аккаунт accountUid принял гостя guestUid (обе половины связи на месте)
+    function isLinkedAccount(guestUid, accountUid) {
+      let link = get(/databases/$(database)/documents/guest_links/$(guestUid));
+      return accountUid is string
+        && link != null && link.data.accountUid == accountUid
+        && exists(/databases/$(database)/documents/account_guests/$(accountUid + '_' + guestUid));
+    }
+
+    // Гость передаёт свой заказ своему аккаунту: меняется только владелец
+    function isGuestOrderHandover() {
+      return isAnonymousSelf(resource.data.get('customerUid', ''))
+        && onlyChanges(['customerUid'])
+        && isLinkedAccount(request.auth.uid, request.resource.data.customerUid);
     }
 
     // Отметка частоты заказов: одна на вход, обновляется только вместе с новым заказом этого входа и не чаще раза в 30 с
@@ -508,7 +556,7 @@ service cloud.firestore {
       );
       // Свое сообщение покупатель меняет (текст, «удалить у себя») и удаляет у всех
       // в течение 15 минут после отправки; время — серверное (sentAt). Сотрудники — без ограничений.
-      allow update: if isAdmin() || (
+      allow update: if isAdmin() || isGuestThreadHandover() || (
         isOwnRecentChatMessage()
         && onlyChanges(['text', 'editedAt', 'hiddenForCustomer'])
         && request.resource.data.text is string
@@ -518,6 +566,14 @@ service cloud.firestore {
           || request.resource.data.editedAt == request.time)
       );
       allow delete: if isAdmin() || isOwnRecentChatMessage();
+    }
+
+    // Переписка гостя переходит в диалог его аккаунта (находка 26): меняется только диалог сообщения, которое видит гость
+    function isGuestThreadHandover() {
+      return isAnonymousSelf(resource.data.threadId)
+        && resource.data.isInternalNote == false
+        && onlyChanges(['threadId'])
+        && isLinkedAccount(request.auth.uid, request.resource.data.threadId);
     }
 
     function isOwnRecentChatMessage() {

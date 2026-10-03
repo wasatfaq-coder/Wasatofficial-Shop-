@@ -1,5 +1,5 @@
 import { Order, PromoCode } from '../types';
-import { orderRevenue } from './analyticsEngine';
+import { orderTotalAfterRefund } from './analyticsEngine';
 
 /**
  * Partner commission for statistics, counted from the orders themselves. The promo's `commissionEarned` counter
@@ -15,7 +15,8 @@ export function isCommissionConfirmed(order: Order): boolean {
 /** Sales the commission is taken from: the order total minus a refund and the delivery fee */
 export function commissionBase(order: Order): number {
   const delivery = Number(order.deliveryFee) || 0;
-  return Math.max(0, orderRevenue(order) - delivery);
+  // the order's own sum (an order still waiting for payment is shown with it among the pending ones)
+  return Math.max(0, orderTotalAfterRefund(order) - delivery);
 }
 
 /** The partner's percent, or null when it is not set (no commission is made up) */

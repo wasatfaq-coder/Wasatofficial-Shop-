@@ -199,7 +199,8 @@ export function getOrderableStock(
  * inStock is both the admin's «В продаже / Снят с витрины» switch and the «sold out» flag set when stock
  * runs out. With stock still left, false can only mean the admin took the product off sale.
  */
-export function isHiddenFromSale(product: Pick<Product, 'inStock' | 'skus'>): boolean {
+export function isHiddenFromSale(product: Pick<Product, 'inStock' | 'skus' | 'hiddenFromSale'>): boolean {
+  if (typeof product.hiddenFromSale === 'boolean') return product.hiddenFromSale;
   return product.inStock === false && (product.skus ?? []).some((s) => s.stock > 0);
 }
 
@@ -234,7 +235,7 @@ export function getProductTotalStock(product: Product): number {
  * On sale and some size/color available (the storefront's «Только в наличии»)
  */
 export function isProductInStock(product: Product): boolean {
-  if (!product || product.inStock === false) return false;
+  if (!product || product.inStock === false || isHiddenFromSale(product)) return false;
   if (!product.skus || product.skus.length === 0) return true;
   return getProductTotalStock(product) > 0;
 }
