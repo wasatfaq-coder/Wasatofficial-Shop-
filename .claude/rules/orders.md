@@ -160,5 +160,10 @@ paths:
   `ORDER_JOURNAL_SINCE`).
 - Предзаказ (`isPreorderMode`): распроданный вариант можно заказать (`getOrderableStock`), позиция получает
   `isPreorder` и не списывается/не возвращается на склад. Логика — и в `App.tsx`, и в `placeOrder`.
+- Срок доставки заказа (`estimatedDelivery`) — `duration` способа из «Доставка и ПВЗ» (`estimatedDeliveryOf` в
+  `src/shared/orderFlow.ts`, клиент и `placeOrder`); у заказа в 1 клик и способа без срока его нет, смена статуса сроков
+  не выдумывает (`getEstimatedDeliveryForStatus`). Тексты деталей и этапов заказа — без «бутика», «консьержа», «примерки»
+  и «курьерской службы магазина»: этого у магазина может не быть (аудит UX 03.10, этап 1). Адрес самовывоза на экранах —
+  `pickupPlace` (без «Самовывоз:», который оформление ставит в начало).
 - Дата заказа — `createdAt` (ISO); `date` — только текст для показа (`formatOrderDate` из `src/shared/orderDate.ts`,
   клиент и `placeOrder`). Для расчетов — `orderTimestamp` (у старых заказов «Сегодня, 14:30» даты нет).

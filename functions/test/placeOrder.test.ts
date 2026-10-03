@@ -299,6 +299,13 @@ describe('parsePlaceOrderRequest', () => {
     expect(quick.deliveryKind).toBeUndefined();
   });
 
+  test('the delivery time is the method\'s own; a 1-click order has none (UX audit 03.10, stage 1)', async () => {
+    const order = await placeOrderCore(db, request(), 'alice');
+    expect(order.estimatedDelivery).toBe('1-2 дня');
+    const quick = await placeOrderCore(db, request({ deliveryMethodId: 'quick-order' }), null);
+    expect(quick.estimatedDelivery).toBeUndefined();
+  });
+
   test('normalizes the promo code and drops unknown fields', () => {
     const parsed = parsePlaceOrderRequest({ ...request(), promoCode: ' sale10 ', totalPrice: 1 });
     expect(parsed.promoCode).toBe('SALE10');

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Phone, User, MapPin, ShieldCheck, ShoppingBag, AlertCircle } from 'lucide-react';
+import { X, Phone, User, MapPin, MessageCircle, ShoppingBag, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CartItem, Product } from '../types';
 import { productImage } from '../utils/productImage';
@@ -338,10 +338,11 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                 </div>
               </div>
 
-              {/* Guarantee Badge */}
-              <div className="p-2 rounded-xl neu-flat flex items-center gap-2 text-[11px] text-success font-semibold">
-                <ShieldCheck className="w-4 h-4 text-success shrink-0" />
-                <span>Оплата при получении после примерки. Бесплатный возврат.</span>
+              {/* The order goes out with «Уточнит менеджер» for delivery and payment: no made-up fitting or free returns
+                  (audit 02.10, finding 44) */}
+              <div className="p-2 rounded-xl neu-flat flex items-center gap-2 text-xs text-[#4E5C70] font-semibold">
+                <MessageCircle className="w-4 h-4 text-accent shrink-0" aria-hidden="true" />
+                <span>Доставку и оплату менеджер согласует с вами после заказа.</span>
               </div>
 
               {/* Action Buttons */}

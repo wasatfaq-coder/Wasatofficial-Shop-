@@ -87,6 +87,7 @@ import {
   isRussianPostDelivery,
   isCourierDelivery,
   isPickupDelivery,
+  pickupPlace,
 } from '../utils/deliveryStages';
 import {
   loadLocalDeliveryMethods,
@@ -1833,20 +1834,21 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     <div className="space-y-0.5">
                       <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider flex items-center gap-1">
                         {isPickup ? <Store className="w-3.5 h-3.5 text-accent" /> : isExpress ? <Zap className="w-3.5 h-3.5 text-warning" /> : <Bike className="w-3.5 h-3.5 text-accent" />}
-                        {isPickup ? 'Самовывоз из бутика' : isExpress ? 'Срочная экспресс-доставка' : `Курьерская служба ${storeName}`}
+                        {/* the store's own words only: no «бутик» or «курьерская служба магазина» it may not have */}
+                        {isPickup ? 'Самовывоз' : isExpress ? 'Срочная экспресс-доставка' : 'Доставка курьером'}
                       </span>
                       <p className="text-xs font-extrabold text-[#2D3A4E]">
                         {selectedOrderForTracking.deliveryMethod || (isPickup ? 'Самовывоз' : 'Курьерская доставка')}
                       </p>
                     </div>
-                    <span className="text-[11px] font-bold text-accent neu-flat px-2 py-0.5 rounded-lg">
-                      {isPickup ? 'В бутике' : 'До двери'}
-                    </span>
+                    {!isPickup && (
+                      <span className="text-[11px] font-bold text-accent neu-flat px-2 py-0.5 rounded-lg">До двери</span>
+                    )}
                   </div>
 
                   <p className="text-xs text-[#4E5C70] leading-snug">
                     {isPickup
-                      ? `Пункт выдачи: ${selectedOrderForTracking.deliveryAddress || `Бутик ${storeName}`}. Заказ выдается сотрудниками бутика без трек-номера.`
+                      ? `Где забрать: ${pickupPlace(selectedOrderForTracking.deliveryAddress) || 'сообщит магазин'}. Трек-номера у самовывоза нет — заказ выдают по коду получения.`
                       : `Адрес доставки: ${selectedOrderForTracking.deliveryAddress || 'не указан'}.`}
                   </p>
                 </div>
@@ -2167,8 +2169,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         {storeInitials(storeName)}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-extrabold text-[#2D3A4E] truncate">Бутик {storeName}</p>
-                        <p className="text-xs text-[#4E5C70] truncate">Выдача заказов</p>
+                        <p className="text-xs font-extrabold text-[#2D3A4E] truncate">{storeName}</p>
+                        <p className="text-xs text-[#4E5C70] truncate">Вопросы о выдаче заказа</p>
                       </div>
                     </div>
                     {onOpenSupportChat && (
@@ -2184,7 +2186,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         title="Написать в чат поддержки"
                       >
                         <MessageCircle className="w-3.5 h-3.5 text-accent" />
-                        <span>Консьерж</span>
+                        <span>Чат</span>
                       </button>
                     )}
                   </div>

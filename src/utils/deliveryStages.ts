@@ -27,6 +27,11 @@ export function isRussianPostDelivery(
   );
 }
 
+/** Where to collect a pickup order: the address without the «Самовывоз:» the checkout puts in front of it */
+export function pickupPlace(deliveryAddress?: string): string {
+  return String(deliveryAddress ?? '').replace(/^\s*самовывоз\s*:\s*/i, '').trim();
+}
+
 /**
  * Checks if order is pickup from boutique/store.
  */
@@ -305,7 +310,7 @@ export function getSynchronizedDeliveryStages(
       return `Доставка в почтовое отделение по адресу: ${order.deliveryAddress || 'Почтовый индекс'}`;
     }
     if (isPickup) {
-      return `Адрес пункта выдачи: ${order.deliveryAddress || 'бутик магазина'}`;
+      return `Адрес пункта выдачи: ${pickupPlace(order.deliveryAddress) || 'сообщит магазин'}`;
     }
     if (isTK) {
       return `Адрес доставки: ${order.deliveryAddress || 'Город назначения'}`;
@@ -331,10 +336,14 @@ export function getSynchronizedDeliveryStages(
     if (isPost) {
       return 'Предъявите паспорт или штрихкод из приложения Почты России для получения';
     }
+    // No made-up fitting rooms or receipts: the store hands an order over by its pickup code
     if (isPickup) {
-      return 'Примерка в комфортных залах бутика, проверка и получение чека';
+      return 'Заказ выдают по коду получения из карточки заказа';
     }
-    return 'Проверка содержимого, примерка и получение чека';
+    if (isTK) {
+      return 'Получение заказа в транспортной компании';
+    }
+    return 'Курьер передаёт заказ по коду получения из карточки заказа';
   };
 
   // Case 2: Order is "accepted" (Заказ принят)
@@ -496,14 +505,14 @@ export function getSynchronizedDeliveryStages(
         title: getStage3Title('ready'),
         desc: getStage3Desc('ready'),
         status: 'completed',
-        time: isPost ? 'Доставлено в отделение' : isPickup ? 'Поступило в бутик' : 'Доставлено в город',
+        time: isPost ? 'Доставлено в отделение' : isPickup ? 'Поступил в пункт выдачи' : 'Доставлено в город',
       },
       {
         id: 'stage-transit',
         title: getStage4Title('ready'),
         desc: getStage4Desc('ready'),
         status: 'completed',
-        time: isPost ? 'Прибыло в отделение' : isPickup ? 'Поступил в бутик' : 'Прибыл по адресу',
+        time: isPost ? 'Прибыло в отделение' : isPickup ? 'В пункте выдачи' : 'Прибыл по адресу',
       },
       {
         id: 'stage-delivered',
@@ -618,15 +627,15 @@ export function getDefaultHistorySteps(order: {
     : isTK && order.trackingNumber
     ? `Транспортная компания (трек-номер ${order.trackingNumber})`
     : isPickup
-    ? 'Самовывоз из бутика магазина'
+    ? 'Самовывоз из пункта выдачи'
     : isExpress
     ? 'Срочная доставка экспресс-курьером'
-    : 'Курьерская служба магазина';
+    : 'Доставка курьером';
 
   const readyTitle = isPost
     ? (isDelivered ? 'Посылка получена в отделении' : 'Прибыло в отделение связи / Готово к выдаче')
     : isPickup
-    ? (isDelivered ? 'Заказ получен в бутике' : 'Готов к выдаче в бутике')
+    ? (isDelivered ? 'Заказ получен в пункте выдачи' : 'Готов к выдаче в пункте')
     : isTK
     ? (isDelivered ? 'Заказ получен' : 'Готов к выдаче / Доставлен')
     : (isDelivered ? 'Заказ вручен курьером' : 'Курьер прибыл / Вручение');
@@ -653,7 +662,7 @@ export function getDefaultHistorySteps(order: {
       date: isTransit
         ? status === 'in_transit'
           ? isPost ? 'В пути в отделение' : isPickup ? 'В пути в пункт' : 'Курьер в пути'
-          : isPost ? 'Прибыло в отделение' : isPickup ? 'Доставлен в бутик' : 'Доставлен в город'
+          : isPost ? 'Прибыло в отделение' : isPickup ? 'Доставлен в пункт выдачи' : 'Доставлен в город'
         : 'Ожидает передачи',
       completed: isTransit,
       description: transitDesc,
@@ -676,27 +685,28 @@ export function getDefaultHistorySteps(order: {
 /**
  * Returns an appropriate estimated delivery text based on the order status
  */
+/** Texts of statuses and the old made-up delivery times, not a delivery time of the store's method */
+const STATUS_ESTIMATES = new Set([
+  'Заказ отменен',
+  'Вручен получателю',
+  'Готов к выдаче',
+  'Готов к выдаче сегодня',
+  'Ожидается сегодня / завтра',
+  'Через 1-2 дня',
+  'Через 1-3 дня',
+]);
+
 export function getEstimatedDeliveryForStatus(
   status: Order['status'],
   currentEstimate?: string,
   isCancelled?: boolean
 ): string {
   if (isCancelled) return 'Заказ отменен';
-  switch (status) {
-    case 'delivered':
-      return 'Вручен получателю';
-    case 'ready':
-      return 'Готов к выдаче сегодня';
-    case 'in_transit':
-      return 'Ожидается сегодня / завтра';
-    case 'assembling':
-      return 'Через 1-2 дня';
-    case 'accepted':
-    default:
-      return currentEstimate && !currentEstimate.includes('Вручен') && !currentEstimate.includes('Готов')
-        ? currentEstimate
-        : 'Через 1-3 дня';
-  }
+  if (status === 'delivered') return 'Вручен получателю';
+  if (status === 'ready') return 'Готов к выдаче';
+  // On the way: the delivery time of the order's own method stays; no made-up «сегодня / завтра» or «через 1–3 дня».
+  // The texts the site used to put in every order are not the store's promise either, so they go
+  return currentEstimate && !STATUS_ESTIMATES.has(currentEstimate) ? currentEstimate : '';
 }
 
 /**
