@@ -34,7 +34,7 @@ import {
   stockMovementId,
   LEGACY_STOCK_LOGS_STORAGE_KEY,
 } from '../../utils/inventory';
-import { saveStockMovements, subscribeToStockMovements } from '../../utils/firebaseSync';
+import { applyAdminStockChanges, saveStockMovements, subscribeToStockMovements } from '../../utils/firebaseSync';
 import { formatOrderDate } from '../../shared/orderDate';
 import { AdminLabelGenerator, type LabelTarget } from './AdminLabelGenerator';
 import { articleCode, skuKey } from '../../shared/barcode';
@@ -350,7 +350,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
   }, [allProductSKUs, auditCounts, auditFilterDiscrepanciesOnly, auditSearchQuery]);
 
   // Apply Audit Results: Batch Update products stock & log movements
-  const handleApplyAuditResults = () => {
+  const handleApplyAuditResults = async () => {
     const discrepantItems: {
       product: Product;
       sku: ProductSKU;
@@ -376,38 +376,28 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
       return;
     }
 
-    // Update products stock in state
-    let updatedProducts = [...products];
-    const newLogs: StockMovementLog[] = [];
-    const now = new Date();
-
-    discrepantItems.forEach((item) => {
-      updatedProducts = updatedProducts.map((p) =>
-        p.id === item.product.id
-          ? updateProductSkuStock(p, item.sku.color, item.sku.size, item.newStock)
-          : p
-      );
-
-      newLogs.push({
-        id: stockMovementId(),
-        createdAt: now.toISOString(),
-        date: formatOrderDate(now),
-        type: item.diff > 0 ? 'receipt' : 'writeoff',
+    // The counted stock is the truth of the shelf: set exactly, each variation in a transaction with its journal entry
+    const { failed } = await applyAdminStockChanges(
+      discrepantItems.map((item) => ({
         productId: item.product.id,
         productTitle: item.product.title,
-        skuCode: item.sku.skuCode || `SKU-${item.product.id}`,
         color: item.sku.color,
         size: item.sku.size,
-        changeQuantity: item.diff,
-        previousStock: item.oldStock,
-        newStock: item.newStock,
+        delta: item.diff,
+        setTo: item.newStock,
         reason: `Инвентаризация склада (${item.diff > 0 ? 'Оприходование излишка' : 'Списание недостачи'})`,
-        operator: auditOperator || 'Инспектор склада',
-      });
-    });
-
-    onUpdateProducts(updatedProducts);
-    recordStockMovements(newLogs);
+      })),
+      { reason: 'Инвентаризация склада', operator: auditOperator || 'Инспектор склада' }
+    );
+    if (failed.length > 0) {
+      onShowToast(
+        `Не сохранено: ${failed.length} ${pluralRu(failed.length, ['вариант', 'варианта', 'вариантов'])} инвентаризации (${failed
+          .map((f) => `${f.productTitle} ${f.color} ${f.size}`)
+          .join(', ')}). Проверьте соединение и утвердите ещё раз`,
+        'error'
+      );
+      return;
+    }
     setAuditCounts({});
     onShowToast(`Инвентаризация утверждена: скорректировано ${discrepantItems.length} ${pluralRu(discrepantItems.length, ['вариант', 'варианта', 'вариантов'])}`, 'success');
   };
@@ -637,44 +627,35 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
   );
 
   // Update Stock for a SKU with automatic log recording
-  const handleUpdateStock = (
+  // Stock change of one variation (matrix, stepper, +5, warehouse operation): the difference from what the admin sees is
+  // applied in a transaction against the stock in the database, with its journal entry (finding 51) — a sale in the
+  // same seconds stays sold instead of being overwritten by the whole product from this browser
+  const handleUpdateStock = async (
     productId: string,
     color: string,
     size: string,
     newStock: number,
-    reasonText = 'Ручная корректировка в матрице'
-  ) => {
-    const validStock = Math.max(0, newStock);
+    reasonText = 'Ручная корректировка в матрице',
+    operator = 'Администратор'
+  ): Promise<boolean> => {
     const prod = products.find((p) => p.id === productId);
     const currentSku = (prod?.skus || []).find((s) => s.color === color && s.size === size);
-    const oldStock = currentSku ? currentSku.stock : 0;
-    const diff = validStock - oldStock;
-
-    const updated = products.map((p) =>
-      p.id === productId ? updateProductSkuStock(p, color, size, validStock) : p
+    const delta = Math.max(0, newStock) - (currentSku ? currentSku.stock : 0);
+    if (!prod || delta === 0) return true;
+    const { failed } = await applyAdminStockChanges(
+      [{ productId, productTitle: prod.title, color, size, delta }],
+      { reason: reasonText, operator }
     );
-    onUpdateProducts(updated);
-
-    if (diff !== 0 && prod) {
-      const now = new Date();
-      const newLog: StockMovementLog = {
-        id: stockMovementId(),
-        createdAt: now.toISOString(),
-        date: formatOrderDate(now),
-        type: diff > 0 ? 'receipt' : 'writeoff',
-        productId,
-        productTitle: prod.title,
-        skuCode: currentSku?.skuCode || `SKU-${productId}`,
-        color,
-        size,
-        changeQuantity: diff,
-        previousStock: oldStock,
-        newStock: validStock,
-        reason: reasonText,
-        operator: 'Оператор склада',
-      };
-      recordStockMovements([newLog]);
+    if (failed.length > 0) {
+      onShowToast(
+        currentSku
+          ? `Не сохранено: остаток ${prod.title} (${color}, ${size}). Проверьте соединение и повторите`
+          : `У «${prod.title}» нет варианта ${color}, ${size}: добавьте его в форме товара`,
+        'error'
+      );
+      return false;
     }
+    return true;
   };
 
   const handleCopySku = (skuCode: string) => {
@@ -685,7 +666,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
   };
 
   // Execute warehouse operation modal
-  const handleExecuteOperation = (e: React.FormEvent) => {
+  const handleExecuteOperation = async (e: React.FormEvent) => {
     e.preventDefault();
     const prod = products.find((p) => p.id === opSelectedProductId);
     if (!prod) return;
@@ -700,7 +681,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
     const oldStock = sku.stock;
     const newStock = Math.max(0, oldStock + qtyChange);
 
-    handleUpdateStock(prod.id, sku.color, sku.size, newStock, `${opReason} (${opOperator})`);
+    if (!(await handleUpdateStock(prod.id, sku.color, sku.size, newStock, opReason, opOperator || 'Администратор'))) return;
     onShowToast(
       `Складская операция проведена: ${sku.skuCode} ${qtyChange > 0 ? `+${qtyChange}` : qtyChange} шт.`,
       'success'
