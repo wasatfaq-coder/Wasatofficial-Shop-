@@ -242,16 +242,21 @@ async function readDoc(docPath: string): Promise<Record<string, unknown> | null>
 
 const IMAGE_TYPES: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 
-/** og:image needs a link: a photo stored as data: becomes a file in dist/share/ (its hash in the name, so a new photo is a new link) */
-function imageUrl(source: string, productId: string, site: string, dist: string): string {
+/**
+ * og:image needs a link: a photo stored as data: becomes a file in dist/share/ (its hash in the name, so a new photo is
+ * a new link). Without `dist` (the fingerprint run) only the link is computed
+ */
+function imageUrl(source: string, productId: string, site: string, dist: string | null): string {
   if (/^https:\/\//.test(source)) return source;
   const match = /^data:(image\/[a-z]+);base64,(.+)$/s.exec(source);
   const ext = match && IMAGE_TYPES[match[1]];
   if (!match || !ext) return '';
   const bytes = Buffer.from(match[2], 'base64');
   const name = `${productId}-${createHash('sha256').update(bytes).digest('hex').slice(0, 10)}.${ext}`;
-  mkdirSync(path.join(dist, 'share'), { recursive: true });
-  writeFileSync(path.join(dist, 'share', name), bytes);
+  if (dist) {
+    mkdirSync(path.join(dist, 'share'), { recursive: true });
+    writeFileSync(path.join(dist, 'share', name), bytes);
+  }
   return `${site}/share/${name}`;
 }
 
@@ -259,7 +264,7 @@ async function toShareProduct(
   { product, updatedAt }: { product: Product; updatedAt?: string },
   storeName: string,
   site: string,
-  dist: string
+  dist: string | null
 ): Promise<ShareProduct | null> {
   if (!SAFE_ID.test(product.id) || !product.title || typeof product.price !== 'number') return null;
   if (isHiddenFromSale(product)) return null;
@@ -280,28 +285,62 @@ async function toShareProduct(
   };
 }
 
+interface Catalog {
+  storeName: string;
+  slogan: string;
+  products: ShareProduct[];
+  /** false — the database did not answer: the pages keep the common preview */
+  read: boolean;
+}
+
+async function readCatalog(site: string, dist: string | null): Promise<Catalog> {
+  try {
+    const settings = (await readDoc('settings/storefront')) as Partial<StorefrontSettings> | null;
+    const storeName = getStoreName(settings);
+    const slogan = withStoreName(typeof settings?.storeSlogan === 'string' ? settings.storeSlogan.trim() : '', storeName);
+    const rows = await readProducts();
+    const products = (await Promise.all(rows.map((row) => toShareProduct(row, storeName, site, dist)))).filter(
+      (p): p is ShareProduct => p !== null
+    );
+    products.sort((a, b) => a.id.localeCompare(b.id));
+    return { storeName, slogan, products, read: true };
+  } catch (err) {
+    console.warn(`::warning::Каталог не прочитан, страницы товаров не созданы (общее превью магазина): ${String(err)}`);
+    return { storeName: getStoreName(null), slogan: '', products: [], read: false };
+  }
+}
+
+/**
+ * What the previews show (docs/seo-plan.md, stage 3): the scheduled workflow publishes Hosting again only when it
+ * changes. Without the edit date: a sale changes the product's stock and its date, not its preview
+ */
+export function catalogFingerprint(c: Pick<Catalog, 'storeName' | 'slogan' | 'products'>): string {
+  const products = c.products.map(({ updatedAt: _updatedAt, ...shown }) => shown);
+  return createHash('sha256').update(JSON.stringify({ storeName: c.storeName, slogan: c.slogan, products })).digest('hex');
+}
+
+export const MANIFEST_FILE = 'share-manifest.json';
+
+function siteUrl(): string {
+  return (process.env.SITE_URL || `https://${firebaseConfig.projectId}.web.app`).replace(/\/+$/, '');
+}
+
 async function main() {
+  const site = siteUrl();
+  // `--fingerprint`: print what the previews would show, write nothing (share-pages.yml compares it with the site's)
+  if (process.argv.includes('--fingerprint')) {
+    const catalog = await readCatalog(site, null);
+    if (!catalog.read) process.exit(1);
+    console.log(catalogFingerprint(catalog));
+    return;
+  }
   const dist = path.resolve(import.meta.dirname, '..', 'dist');
   const indexPath = path.join(dist, 'index.html');
   if (!existsSync(indexPath)) throw new Error('dist/index.html is missing: run `bun run build` first');
-  const site = (process.env.SITE_URL || `https://${firebaseConfig.projectId}.web.app`).replace(/\/+$/, '');
   const noindex = process.env.VITE_PREVIEW_BUILD === 'true';
   const indexHtml = readFileSync(indexPath, 'utf8');
-
-  let storeName = getStoreName(null);
-  let slogan = '';
-  let products: ShareProduct[] = [];
-  try {
-    const settings = (await readDoc('settings/storefront')) as Partial<StorefrontSettings> | null;
-    storeName = getStoreName(settings);
-    slogan = withStoreName(typeof settings?.storeSlogan === 'string' ? settings.storeSlogan.trim() : '', storeName);
-    const rows = await readProducts();
-    products = (await Promise.all(rows.map((row) => toShareProduct(row, storeName, site, dist)))).filter(
-      (p): p is ShareProduct => p !== null
-    );
-  } catch (err) {
-    console.warn(`::warning::Каталог не прочитан, страницы товаров не созданы (общее превью магазина): ${String(err)}`);
-  }
+  const catalog = await readCatalog(site, dist);
+  const { storeName, slogan, products } = catalog;
 
   writeFileSync(
     indexPath,
@@ -321,6 +360,11 @@ async function main() {
   }
   writeFileSync(path.join(dist, 'sitemap.xml'), sitemapXml(site, noindex ? [] : products));
   writeFileSync(path.join(dist, 'robots.txt'), robotsTxt(site, noindex));
+  // A build without the catalog has no fingerprint: the next scheduled run publishes the pages
+  writeFileSync(
+    path.join(dist, MANIFEST_FILE),
+    `${JSON.stringify({ fingerprint: catalog.read ? catalogFingerprint(catalog) : null, products: products.length })}\n`
+  );
   console.log(`share pages: ${products.length} товаров, адрес ${site}${noindex ? ' (проверочная версия, noindex)' : ''}`);
 }
 

@@ -89,6 +89,15 @@
             "value": "no-cache"
           }
         ]
+      },
+      {
+        "source": "/share-manifest.json",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
       }
     ]
   },

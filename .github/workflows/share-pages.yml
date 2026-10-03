@@ -1,0 +1,71 @@
+name: Refresh product previews
+
+# Product pages for messengers and search engines are written by the build (scripts/share-pages.ts, docs/seo-plan.md),
+# and the catalog changes in the admin panel between deploys. Every hour this compares what the previews would show
+# with share-manifest.json on the live site and, only when it differs, publishes Hosting again from main.
+# It publishes only a commit whose regular deploy (deploy.yml) passed, and never the Firestore rules or functions.
+# «Run workflow» on the Actions tab refreshes the previews at once.
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  FIREBASE_PROJECT: ai-studio-applet-webapp-e9574
+  HAS_FIREBASE_SECRET: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+  SITE_URL: ${{ vars.SITE_URL }}
+
+jobs:
+  refresh:
+    name: Product previews (Hosting only)
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # The same group as the production deploy: never two publishes at once
+    concurrency:
+      group: firebase-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Compare the catalog with the live previews
+        id: compare
+        run: |
+          site="${SITE_URL:-https://$FIREBASE_PROJECT.web.app}"
+          if ! now=$(SITE_URL="$site" bun scripts/share-pages.ts --fingerprint); then
+            echo "::warning::The catalog was not read: previews stay as they are"
+            echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          live=$(curl -fsS "$site/share-manifest.json" | jq -r '.fingerprint // ""' || true)
+          echo "catalog $now, live ${live:-none}"
+          if [ "$now" = "$live" ]; then echo "changed=false" >> "$GITHUB_OUTPUT"; else echo "changed=true" >> "$GITHUB_OUTPUT"; fi
+      - name: This commit passed its deploy
+        id: deployed
+        if: steps.compare.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          passed=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow deploy.yml --branch main --commit "$GITHUB_SHA" \
+            --status success --json databaseId --jq 'length')
+          if [ "$passed" -gt 0 ]; then echo "ok=true" >> "$GITHUB_OUTPUT"; else
+            echo "::warning::Deploy of $GITHUB_SHA has not passed yet: the previews wait for it (it writes them too)"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.deployed.outputs.ok == 'true'
+        run: bun run build
+        env:
+          VITE_RECAPTCHA_SITE_KEY: ${{ vars.RECAPTCHA_SITE_KEY }}
+      - if: steps.deployed.outputs.ok == 'true'
+        run: bun run build:share
+      - if: steps.deployed.outputs.ok == 'true' && env.HAS_FIREBASE_SECRET != 'true'
+        run: echo "::warning::FIREBASE_SERVICE_ACCOUNT secret is not set — previews not published"
+      - if: steps.deployed.outputs.ok == 'true' && env.HAS_FIREBASE_SECRET == 'true'
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - if: steps.deployed.outputs.ok == 'true' && env.HAS_FIREBASE_SECRET == 'true'
+        run: bunx firebase deploy --only hosting --project "$FIREBASE_PROJECT" --non-interactive
