@@ -635,7 +635,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
             />
           )}
           <button
-            onClick={() => setActiveTab('cart')}
+            onClick={() => setActiveTab('checkout')}
             disabled={Boolean(checkoutBlocker) || unavailableCount > 0}
             className={`w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
               !checkoutBlocker && unavailableCount === 0
