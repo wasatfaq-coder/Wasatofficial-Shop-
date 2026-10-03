@@ -17,13 +17,13 @@ import { subscribeToLegalTexts } from '../utils/firebaseSync';
 import { LegalText } from '../components/LegalText';
 import { NotConfigured } from '../components/NotConfigured';
 
-/** Site address for the documents: the shop's own origin and path, without the screen's hash */
+/** Site address for the documents: the shop's own origin, without the screen's path */
 export function siteUrl(): string {
-  return `${window.location.origin}${window.location.pathname}`.replace(/\/$/, '');
+  return window.location.origin;
 }
 
 /**
- * «Публичная оферта» (#/offer) and «Политика обработки персональных данных» (#/privacy): the store's edition
+ * «Публичная оферта» (/offer) and «Политика обработки персональных данных» (/privacy): the store's edition
  * from Admin → «Документы» or the template, with the requisites from «Витрина». Loaded as a separate chunk.
  */
 const LegalDocumentScreen: React.FC<{ docId: LegalDocId; settings: StorefrontSettings }> = ({ docId, settings }) => {

@@ -122,7 +122,7 @@ import { getCategories } from './utils/categories';
 import { promoDiscountText } from './utils/promoLabel';
 import { hasOrderableVariant, needsVariantChoice } from './utils/variantSelection';
 import { VariantPickerSheet } from './components/VariantPickerSheet';
-import { parseRouteHash, readHistoryState, routeHash, type HistoryEntryState } from './utils/navigation';
+import { currentRoutePath, parseRoute, readHistoryState, routePath, type HistoryEntryState } from './utils/navigation';
 import { afterWindowHistory, isWindowHistoryBusy, windowDepth } from './utils/windowHistory';
 
 // Legal documents: a separate chunk with the templates, loaded when a document is opened
@@ -188,8 +188,8 @@ function forgetGuestOrders(ids: string[]) {
 }
 
 export default function App() {
-  // The screen comes from the address (#/catalog, #/product/{id}): reload, a shared link and «Назад» work
-  const [initialRoute] = useState(() => parseRouteHash(window.location.hash));
+  // The screen comes from the address (/catalog, /product/{id}, an old #/…): reload, a shared link and «Назад» work
+  const [initialRoute] = useState(() => parseRoute(window.location));
   const [activeTab, setActiveTabState] = useState<ActiveTab>(() =>
     // The confirmation needs the order just placed: after a reload there is none
     !initialRoute || initialRoute.tab === 'order-success' ? 'home' : initialRoute.tab
@@ -202,7 +202,7 @@ export default function App() {
   const replaceNextRoute = React.useRef(false);
   const isFirstRouteSync = React.useRef(true);
   // The address of the screen on show: a popstate to it with the same idx only closed a window (windowHistory.ts)
-  const shownHash = React.useRef('');
+  const shownPath = React.useRef('');
   // A screen change waited for a window to take its history entry back: sync the address again
   const [routeRetry, setRouteRetry] = useState(0);
   /** Every screen change goes through here: remembers the scroll of the screen being left */
@@ -335,17 +335,18 @@ export default function App() {
   React.useEffect(() => {
     // A product that is not resolved yet (catalog loading) or is gone: wait, see the not-found effect
     if (activeTab === 'product-detail' && !routeProductId) return;
-    const hash = routeHash({ tab: activeTab, productId: routeProductId });
+    const path = routePath({ tab: activeTab, productId: routeProductId });
     if (isFirstRouteSync.current) {
       isFirstRouteSync.current = false;
       replaceNextRoute.current = false;
       window.history.scrollRestoration = 'manual';
-      window.history.replaceState({ wasat: true, idx: 0 } satisfies HistoryEntryState, '', hash);
-      shownHash.current = hash;
+      // An old #/… link becomes the screen's path; the query (ad tags) stays
+      window.history.replaceState({ wasat: true, idx: 0 } satisfies HistoryEntryState, '', path + window.location.search);
+      shownPath.current = path;
       return;
     }
     // Already there: a Back/Forward the popstate handler applied
-    if (window.location.hash === hash) return;
+    if (currentRoutePath() === path) return;
     // A window has just closed and is taking its history entry back: the new address goes after it
     if (isWindowHistoryBusy()) {
       afterWindowHistory(() => setRouteRetry((n) => n + 1));
@@ -353,15 +354,15 @@ export default function App() {
     }
     // The confirmation replaces only the checkout; after «Заказ в 1 клик» «Назад» returns to the product or the cart
     const replace =
-      replaceNextRoute.current || (activeTab === 'order-success' && shownHash.current === routeHash({ tab: 'checkout' }));
+      replaceNextRoute.current || (activeTab === 'order-success' && shownPath.current === routePath({ tab: 'checkout' }));
     replaceNextRoute.current = false;
-    shownHash.current = hash;
+    shownPath.current = path;
     pendingScroll.current = 0;
     if (windowDepth(window.history.state) > 0) {
       // Left the screen from a window: the window's entry becomes the new screen's, «Назад» returns to the screen
       // under the window (its scroll was saved when the window opened)
       historyIdx.current += 1;
-      window.history.replaceState({ wasat: true, idx: historyIdx.current } satisfies HistoryEntryState, '', hash);
+      window.history.replaceState({ wasat: true, idx: historyIdx.current } satisfies HistoryEntryState, '', path);
       return;
     }
     window.history.replaceState(
@@ -369,10 +370,10 @@ export default function App() {
       ''
     );
     if (replace) {
-      window.history.replaceState({ wasat: true, idx: historyIdx.current } satisfies HistoryEntryState, '', hash);
+      window.history.replaceState({ wasat: true, idx: historyIdx.current } satisfies HistoryEntryState, '', path);
     } else {
       historyIdx.current += 1;
-      window.history.pushState({ wasat: true, idx: historyIdx.current } satisfies HistoryEntryState, '', hash);
+      window.history.pushState({ wasat: true, idx: historyIdx.current } satisfies HistoryEntryState, '', path);
     }
   }, [activeTab, routeProductId, routeRetry]);
   // Filled as the visitor opens products; no made-up history
@@ -740,16 +741,16 @@ export default function App() {
     const onPopState = (e: PopStateEvent) => {
       const entry = readHistoryState(e.state);
       // The same entry of the screen: «Назад» closed a window over it (windowHistory.ts), the screen stays
-      if (entry && entry.idx === historyIdx.current && window.location.hash === shownHash.current) return;
-      shownHash.current = window.location.hash;
-      const route = parseRouteHash(window.location.hash) ?? { tab: 'home' as ActiveTab };
+      if (entry && entry.idx === historyIdx.current && currentRoutePath() === shownPath.current) return;
+      const route = parseRoute(window.location) ?? { tab: 'home' as ActiveTab };
       if (entry) {
         historyIdx.current = entry.idx;
       } else {
-        // A link or an edited address: a new entry of the shop's history
+        // A link or an edited address (an old #/… too): a new entry of the shop's history, at the screen's path
         historyIdx.current += 1;
-        window.history.replaceState({ wasat: true, idx: historyIdx.current } satisfies HistoryEntryState, '');
+        window.history.replaceState({ wasat: true, idx: historyIdx.current } satisfies HistoryEntryState, '', routePath(route));
       }
+      shownPath.current = currentRoutePath();
       pendingScroll.current = entry?.scrollY ?? 0;
       if (route.tab === 'product-detail' && route.productId) {
         const product = productsRef.current.find((p) => p.id === route.productId);
@@ -767,6 +768,24 @@ export default function App() {
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
+
+  // A link to a screen of the shop (the other document under the offer, an old #/… in a text) opens the screen without
+  // reloading the page and the catalog; product links (ProductCard) open their product themselves
+  React.useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const link = e.target instanceof Element ? e.target.closest('a[href]') : null;
+      if (!(link instanceof HTMLAnchorElement) || (link.target && link.target !== '_self') || link.hasAttribute('download')) return;
+      const url = new URL(link.href);
+      if (url.origin !== window.location.origin) return;
+      const route = parseRoute(url) ?? (url.pathname === '/' && !url.hash ? { tab: 'home' as ActiveTab } : null);
+      if (!route || route.tab === 'product-detail' || route.tab === 'order-success') return;
+      e.preventDefault();
+      setActiveTab(route.tab);
+    };
+    document.addEventListener('click', onClick);
+    return () => document.removeEventListener('click', onClick);
+  }, [setActiveTab]);
 
   // A product link to a product that no longer exists: back to the catalog instead of an empty page
   React.useEffect(() => {
