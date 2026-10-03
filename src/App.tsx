@@ -1831,6 +1831,7 @@ export default function App() {
         <SupportChatModal
           isOpen={isSupportChatOpen}
           draftText={chatDraft}
+          imageDb={chatIdentity?.db}
           storePhone={getStoreContacts(storefrontSettings).phone}
           onClose={() => {
             setIsSupportChatOpen(false);

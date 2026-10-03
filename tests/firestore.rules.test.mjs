@@ -1077,3 +1077,48 @@ describe('guest data goes to the account after sign-in', () => {
     await assertFails(setDoc(doc(customer('bob'), 'account_guests', 'alice_anon-g'), { accountUid: 'alice', guestUid: 'anon-g' }));
   });
 });
+
+// Этап 6 (находка 20): фото сообщения чата — отдельный документ chat_images/{id сообщения}. Доступ — как к сообщению
+describe('chat photos apart from messages', () => {
+  const photo = 'data:image/jpeg;base64,AAAA';
+  const message = (id, uid, extra = {}) => ({
+    id, sender: 'user', text: '', threadId: uid, isInternalNote: false, sentAt: serverTimestamp(), imageId: id, ...extra,
+  });
+  const sendWithPhoto = (db, id, uid, extra = {}, data = photo) => {
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'chat_images', id), { data });
+    batch.set(doc(db, 'chat_messages', id), message(id, uid, extra));
+    return batch.commit();
+  };
+
+  test('a customer sends a photo with its message and reads it; others do not', async () => {
+    await assertSucceeds(sendWithPhoto(customer('alice'), 'm1', 'alice'));
+    await assertSucceeds(getDoc(doc(customer('alice'), 'chat_images/m1')));
+    await assertFails(getDoc(doc(customer('bob'), 'chat_images/m1')));
+    await assertFails(getDoc(doc(guest(), 'chat_images/m1')));
+    await assertSucceeds(getDoc(doc(owner(), 'chat_images/m1')));
+  });
+
+  test('no photo without its message, no message pointing at a missing photo, no photo in someone else\'s thread', async () => {
+    await assertFails(setDoc(doc(customer('alice'), 'chat_images/m2'), { data: photo }));
+    await assertFails(setDoc(doc(customer('alice'), 'chat_messages/m3'), message('m3', 'alice')));
+    await assertFails(sendWithPhoto(customer('alice'), 'm4', 'bob'));
+    await assertFails(sendWithPhoto(customer('alice'), 'm5', 'alice', {}, 'https://attacker.example/x.png'));
+    await assertFails(sendWithPhoto(customer('alice'), 'm6', 'alice', { imageId: 'other' }));
+  });
+
+  test('the photo goes with its message («удалить у всех»), staff notes stay hidden', async () => {
+    await assertSucceeds(sendWithPhoto(customer('alice'), 'm7', 'alice'));
+    const db = customer('alice');
+    const batch = writeBatch(db);
+    batch.delete(doc(db, 'chat_images', 'm7'));
+    batch.delete(doc(db, 'chat_messages', 'm7'));
+    await assertSucceeds(batch.commit());
+    // a staff photo in an internal note is not the customer's
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'chat_messages/n1'), { ...message('n1', 'alice'), sender: 'admin', isInternalNote: true, sentAt: Timestamp.now() });
+      await setDoc(doc(ctx.firestore(), 'chat_images/n1'), { data: photo });
+    });
+    await assertFails(getDoc(doc(customer('alice'), 'chat_images/n1')));
+  });
+});

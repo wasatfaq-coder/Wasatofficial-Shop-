@@ -12,7 +12,7 @@ function chatMessagePreview(msg: ChatMessage): string {
   if (msg.promoCard) return `Промокод ${msg.promoCard.code}`;
   if (msg.productCard) return `Товар: ${msg.productCard.title}`;
   if (msg.orderStatusUpdate) return `Статус заказа № ${msg.orderStatusUpdate.orderId}`;
-  return msg.imageUrl ? 'Фото' : 'Сообщение';
+  return msg.imageUrl || msg.imageId ? 'Фото' : 'Сообщение';
 }
 
 interface ChatMessageMenuProps {
@@ -133,7 +133,7 @@ export const ChatMessageDeleteDialog: React.FC<ChatMessageDeleteDialogProps> = (
                 <img src={message.imageUrl} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
               ) : null}
               <p className="text-xs text-[#2D3A4E] leading-snug break-words min-w-0 whitespace-pre-line">
-                {message.imageUrl && !message.text?.trim() ? (
+                {(message.imageUrl || message.imageId) && !message.text?.trim() ? (
                   <span className="flex items-center gap-1">
                     <ImageIcon className="w-3.5 h-3.5" /> Фото
                   </span>
