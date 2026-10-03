@@ -23,6 +23,8 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run lint
       - run: bun run build
+      # Product preview pages read the catalog as a visitor; without the database they are skipped with a warning
+      - run: bun run build:share
 
   rules:
     name: Firestore rules tests

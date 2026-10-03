@@ -65,7 +65,35 @@ jobs:
             echo "Removing preview channel $channel"
             bunx firebase hosting:channel:delete "$channel" --project "$FIREBASE_PROJECT" --force || true
           done
-      - if: env.HAS_FIREBASE_SECRET == 'true'
+      # Product pages for messengers (docs/seo-plan.md): og:image and og:url need this channel's own address, or a
+      # Telegram preview of the channel would show the live site's photos. A PR's channel keeps its address between pushes
+      - name: Product preview pages
+        env:
+          VITE_PREVIEW_BUILD: 'true'
+          CURRENT_PR: ${{ github.event.pull_request.number }}
+        run: |
+          site=""
+          if [ -f channels.json ]; then
+            site=$(jq -r --arg p "pr${CURRENT_PR}-" '.result.channels[]? | select(.name | split("/") | last | startswith($p)) | .url' channels.json | head -1)
+          fi
+          SITE_URL="$site" bun run build:share
+          echo "SHARE_SITE_URL=$site" >> "$GITHUB_ENV"
+      - id: deploy
+        if: env.HAS_FIREBASE_SECRET == 'true'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ env.FIREBASE_PROJECT }}
+          expires: 3d
+      # The PR's first deploy creates the channel: the pages are rebuilt with its address and published once more
+      - name: Product preview pages with the new channel's address
+        if: env.HAS_FIREBASE_SECRET == 'true' && steps.deploy.outputs.details_url != '' && steps.deploy.outputs.details_url != env.SHARE_SITE_URL
+        env:
+          VITE_PREVIEW_BUILD: 'true'
+          SITE_URL: ${{ steps.deploy.outputs.details_url }}
+        run: bun run build:share
+      - if: env.HAS_FIREBASE_SECRET == 'true' && steps.deploy.outputs.details_url != '' && steps.deploy.outputs.details_url != env.SHARE_SITE_URL
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
@@ -103,6 +131,11 @@ jobs:
       - run: bun run build
         env:
           VITE_RECAPTCHA_SITE_KEY: ${{ vars.RECAPTCHA_SITE_KEY }}
+      # Pages with each product's name, photo and price for messengers and search engines, sitemap.xml, robots.txt
+      # (docs/seo-plan.md). SITE_URL — the shop's address in links; empty — the project's web.app address
+      - run: bun run build:share
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
       # Prices, cart and stock are tested before every deploy, not only when the functions are deployed (finding 21)
       - name: Install and test Cloud Functions and shared code
         run: |

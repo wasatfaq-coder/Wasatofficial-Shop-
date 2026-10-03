@@ -60,7 +60,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
           <Menu className="w-5 h-5" />
         </button>
         <a
-          href="#/"
+          href="/"
           onClick={(e) => {
             e.preventDefault();
             setActiveTab('home');

@@ -248,105 +248,105 @@ STEP owner-first-visit
 pageerrors: none
 console errors: Failed to load resource: the server responded with a status of 403 (Forbidden)
 
-######## back-button после этапа 2 (03.10), 390
+######## back-button на main после этапа 2 (#112) и адресов без «#» (#122), 03.10, 390
 STEP home: menu → chat (one window replaces another)
-  chat open: #/, dialogs 1, scroll 600
-  after Back: #/, dialogs 0, scroll 600
+  chat open: /, dialogs 1, scroll 600
+  after Back: /, dialogs 0, scroll 600
   OK Back closed the chat, home and its scroll stay
 STEP home → catalog
-  catalog: #/catalog, dialogs 0, scroll 0
+  catalog: /catalog, dialogs 0, scroll 0
 STEP filter sheet
-  filter open: #/catalog, dialogs 1, scroll 150
-  after Back: #/catalog, dialogs 0, scroll 150
+  filter open: /catalog, dialogs 1, scroll 150
+  after Back: /catalog, dialogs 0, scroll 150
   OK Back closed the filter sheet, catalog and its scroll stay
 STEP quick view
-  quick view open: #/catalog, dialogs 1, scroll 450
-  after Back: #/catalog, dialogs 0, scroll 450
+  quick view open: /catalog, dialogs 1, scroll 450
+  after Back: /catalog, dialogs 0, scroll 450
   OK Back closed quick view, catalog and its scroll stay
 STEP closed with × and Escape leave no extra entry
-  closed: #/catalog, dialogs 0, scroll 450
-  after Back: #/, dialogs 0, scroll 600
+  closed: /catalog, dialogs 0, scroll 450
+  after Back: /, dialogs 0, scroll 600
   OK Back returned to the home screen with its scroll
-  after Forward: #/catalog, dialogs 0, scroll 450
+  after Forward: /catalog, dialogs 0, scroll 450
   OK Forward returned to the catalog
 STEP window closes as the screen changes
-  product page: #/product/p1, dialogs 0, scroll 0
-  after Back: #/catalog, dialogs 0, scroll 450
+  product page: /product/p1, dialogs 0, scroll 0
+  after Back: /catalog, dialogs 0, scroll 450
   OK one Back from the product returns to the catalog
-  after second Back: #/, dialogs 0, scroll 600
+  after second Back: /, dialogs 0, scroll 600
   OK next Back returns home with its scroll
 STEP variant picker from «+» on a card
-  picker open: #/catalog, dialogs 1, scroll 0
-  after Back: #/catalog, dialogs 0, scroll 0
+  picker open: /catalog, dialogs 1, scroll 0
+  after Back: /catalog, dialogs 0, scroll 0
   OK Back closed the variant picker
 STEP window over a window: quick view → size calculator
-  two windows: #/catalog, dialogs 2, scroll 0
-  after Back: #/catalog, dialogs 1, scroll 0
+  two windows: /catalog, dialogs 2, scroll 0
+  after Back: /catalog, dialogs 1, scroll 0
   OK Back closed only the top window
-  after second Back: #/catalog, dialogs 0, scroll 0
+  after second Back: /catalog, dialogs 0, scroll 0
   OK second Back closed quick view, catalog stays
 STEP admin: product form with edits asks before closing
-  form with edits: #/profile, dialogs 2, scroll 0
-  after Back: #/profile, dialogs 3, scroll 0
+  form with edits: /profile, dialogs 2, scroll 0
+  after Back: /profile, dialogs 3, scroll 0
   OK Back asked «Закрыть без сохранения?», profile stays
-  after Back on the question: #/profile, dialogs 2, scroll 0
+  after Back on the question: /profile, dialogs 2, scroll 0
   OK Back on the question returns to the form with the edits
-  after «Не сохранять»: #/profile, dialogs 1, scroll 0
+  after «Не сохранять»: /profile, dialogs 1, scroll 0
   OK the form closed, the panel stays
-  after Back: #/profile, dialogs 0, scroll 0
+  after Back: /profile, dialogs 0, scroll 0
   OK Back closed the admin panel
-  after Back: #/catalog, dialogs 0, scroll 0
+  after Back: /catalog, dialogs 0, scroll 0
   OK next Back leaves the profile: no extra entries
 pageerrors: none
 console errors: none
-######## back-button после этапа 2 (03.10), 1280
+######## back-button на main после этапа 2 (#112) и адресов без «#» (#122), 03.10, 1280
 STEP home: menu → chat (one window replaces another)
-  chat open: #/, dialogs 1, scroll 505
-  after Back: #/, dialogs 0, scroll 505
+  chat open: /, dialogs 1, scroll 502
+  after Back: /, dialogs 0, scroll 502
   OK Back closed the chat, home and its scroll stay
 STEP home → catalog
-  catalog: #/catalog, dialogs 0, scroll 0
+  catalog: /catalog, dialogs 0, scroll 0
 STEP filter sheet
-  filter open: #/catalog, dialogs 1, scroll 150
-  after Back: #/catalog, dialogs 0, scroll 150
+  filter open: /catalog, dialogs 1, scroll 150
+  after Back: /catalog, dialogs 0, scroll 150
   OK Back closed the filter sheet, catalog and its scroll stay
 STEP quick view
-  quick view open: #/catalog, dialogs 1, scroll 450
-  after Back: #/catalog, dialogs 0, scroll 450
+  quick view open: /catalog, dialogs 1, scroll 450
+  after Back: /catalog, dialogs 0, scroll 450
   OK Back closed quick view, catalog and its scroll stay
 STEP closed with × and Escape leave no extra entry
-  closed: #/catalog, dialogs 0, scroll 450
-  after Back: #/, dialogs 0, scroll 505
+  closed: /catalog, dialogs 0, scroll 450
+  after Back: /, dialogs 0, scroll 502
   OK Back returned to the home screen with its scroll
-  after Forward: #/catalog, dialogs 0, scroll 450
+  after Forward: /catalog, dialogs 0, scroll 450
   OK Forward returned to the catalog
 STEP window closes as the screen changes
-  product page: #/product/p1, dialogs 0, scroll 0
-  after Back: #/catalog, dialogs 0, scroll 450
+  product page: /product/p1, dialogs 0, scroll 0
+  after Back: /catalog, dialogs 0, scroll 450
   OK one Back from the product returns to the catalog
-  after second Back: #/, dialogs 0, scroll 505
+  after second Back: /, dialogs 0, scroll 502
   OK next Back returns home with its scroll
 STEP variant picker from «+» on a card
-  picker open: #/catalog, dialogs 1, scroll 0
-  after Back: #/catalog, dialogs 0, scroll 0
+  picker open: /catalog, dialogs 1, scroll 0
+  after Back: /catalog, dialogs 0, scroll 0
   OK Back closed the variant picker
 STEP window over a window: quick view → size calculator
-  two windows: #/catalog, dialogs 2, scroll 0
-  after Back: #/catalog, dialogs 1, scroll 0
+  two windows: /catalog, dialogs 2, scroll 0
+  after Back: /catalog, dialogs 1, scroll 0
   OK Back closed only the top window
-  after second Back: #/catalog, dialogs 0, scroll 0
+  after second Back: /catalog, dialogs 0, scroll 0
   OK second Back closed quick view, catalog stays
 STEP admin: product form with edits asks before closing
-  form with edits: #/profile, dialogs 2, scroll 0
-  after Back: #/profile, dialogs 3, scroll 0
+  form with edits: /profile, dialogs 2, scroll 0
+  after Back: /profile, dialogs 3, scroll 0
   OK Back asked «Закрыть без сохранения?», profile stays
-  after Back on the question: #/profile, dialogs 2, scroll 0
+  after Back on the question: /profile, dialogs 2, scroll 0
   OK Back on the question returns to the form with the edits
-  after «Не сохранять»: #/profile, dialogs 1, scroll 0
+  after «Не сохранять»: /profile, dialogs 1, scroll 0
   OK the form closed, the panel stays
-  after Back: #/profile, dialogs 0, scroll 0
+  after Back: /profile, dialogs 0, scroll 0
   OK Back closed the admin panel
-  after Back: #/catalog, dialogs 0, scroll 0
+  after Back: /catalog, dialogs 0, scroll 0
   OK next Back leaves the profile: no extra entries
 pageerrors: none
 console errors: none

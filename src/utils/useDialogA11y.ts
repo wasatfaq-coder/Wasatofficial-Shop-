@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from 'react';
-import { openDialogEntry } from './dialogHistory';
+import { registerWindow } from './windowHistory';
 
 /**
  * Keyboard and screen-reader behaviour of a window (the panel of a modal, not its backdrop):
@@ -8,8 +8,7 @@ import { openDialogEntry } from './dialogHistory';
  *   to the element that opened it when it closes;
  * - Tab / Shift+Tab stay inside the window;
  * - Escape closes only the top-most window;
- * - the browser's «Назад» (and the Android gesture) closes the top-most window, not the screen
- *   (`dialogHistory.ts`): an open window has its own history entry.
+ * - the browser's «Назад» closes the top-most window too and leaves the screen as it is (`windowHistory.ts`).
  * Portaled popups of Base UI (a select's menu) are outside the panel: keys pressed there are theirs.
  *
  * Usage: `const dialog = useDialogA11y(isOpen, onClose);` then
@@ -35,7 +34,7 @@ function inFloatingLayer(target: EventTarget | null): boolean {
 interface DialogA11yOptions {
   /** Name when the window has no visible title */
   label?: string;
-  /** false — do not close on Escape (e.g. while saving) */
+  /** false — do not close on Escape or «Назад» (e.g. while saving) */
   closeOnEscape?: boolean;
 }
 
@@ -47,12 +46,19 @@ export function useDialogA11y(open: boolean, onClose: () => void, options: Dialo
   const closeOnEscapeRef = useRef(options.closeOnEscape !== false);
   closeOnEscapeRef.current = options.closeOnEscape !== false;
 
+  // «Назад» closes the window as Escape does; a window that stays open (unsaved changes ask first) keeps its entry
+  useEffect(() => {
+    if (!open) return;
+    return registerWindow(() => {
+      if (closeOnEscapeRef.current) onCloseRef.current();
+    });
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     let node: HTMLElement | null = null;
     let registered = false;
-    const releaseHistoryEntry = openDialogEntry(() => onCloseRef.current());
 
     // The panel may mount a frame later (AnimatePresence, portals): wait for it
     const register = () => {
@@ -102,7 +108,6 @@ export function useDialogA11y(open: boolean, onClose: () => void, options: Dialo
     return () => {
       cancelAnimationFrame(frame);
       document.removeEventListener('keydown', onKeyDown, true);
-      releaseHistoryEntry();
       if (node) {
         const index = openDialogs.lastIndexOf(node);
         if (index !== -1) openDialogs.splice(index, 1);
