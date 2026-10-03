@@ -22,7 +22,8 @@ interface QuickOrderModalProps {
   promoNotApplied?: boolean;
   /** «Технические работы» in «Витрина»: the site takes no orders — said here, the button is off */
   ordersPaused?: boolean;
-  onSuccess: (details: { name: string; phone: string; address: string }) => void;
+  /** Places the order; `false` — not placed (the screen said why): the window stays open with what was typed */
+  onSuccess: (details: { name: string; phone: string; address: string }) => boolean | void | Promise<boolean | void>;
 }
 
 export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
@@ -35,7 +36,9 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
   ordersPaused = false,
   onSuccess,
 }) => {
-  const dialog = useDialogA11y(isOpen, onClose);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // While the order is being written the window stays: Escape and «Назад» do not close it
+  const dialog = useDialogA11y(isOpen, onClose, { closeOnEscape: !isSubmitting });
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('+7 ');
   const [address, setAddress] = useState('');
@@ -43,13 +46,6 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
   const [entrance, setEntrance] = useState('');
   const [apartment, setApartment] = useState('');
   const [intercom, setIntercom] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<{
-    house?: string;
-    entrance?: string;
-    intercom?: string;
-    general?: string;
-  }>({});
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.value;
@@ -59,50 +55,28 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
     setPhone(val);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Only the name and the phone are needed (the offer, 3.2): the manager calls and agrees the delivery, so the address
+  // is optional — before, the window demanded a house, an entrance and an intercom code (UX audit 03.10, finding 22)
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (ordersPaused || !name.trim() || phone.length < 11) return;
+    if (isSubmitting || ordersPaused || !name.trim() || phone.length < 11) return;
 
-    const newErrors: { house?: string; entrance?: string; intercom?: string; general?: string } = {};
-    if (!house.trim()) {
-      newErrors.house = 'Номер дома';
-    }
-    if (!entrance.trim()) {
-      newErrors.entrance = 'Подъезд';
-    }
-    if (!intercom.trim()) {
-      newErrors.intercom = 'Код домофона';
-    }
+    const extra: string[] = [];
+    if (house.trim()) extra.push(`д. ${house.trim()}`);
+    if (entrance.trim()) extra.push(`подъезд ${entrance.trim()}`);
+    if (apartment.trim()) extra.push(`кв. ${apartment.trim()}`);
+    if (intercom.trim()) extra.push(`домофон: ${intercom.trim()}`);
+    const finalAddr = [address.trim(), ...extra].filter(Boolean).join(', ');
 
-    if (Object.keys(newErrors).length > 0) {
-      newErrors.general = 'Для доставки курьером заполните номер дома, подъезд и код домофона.';
-      setErrors(newErrors);
-      return;
-    }
-
-    setErrors({});
+    // The window closes once the order is written; not placed — it stays with what was typed
     setIsSubmitting(true);
-    setTimeout(() => {
+    let placed: boolean | void = false;
+    try {
+      placed = await onSuccess({ name: name.trim(), phone: phone.trim(), address: finalAddr || 'Уточнит менеджер' });
+    } finally {
       setIsSubmitting(false);
-
-      let finalAddr = address.trim();
-      const extra: string[] = [];
-      if (house.trim()) extra.push(`д. ${house.trim()}`);
-      if (entrance.trim()) extra.push(`подъезд ${entrance.trim()}`);
-      if (apartment.trim()) extra.push(`кв. ${apartment.trim()}`);
-      if (intercom.trim()) extra.push(`домофон: ${intercom.trim()}`);
-
-      if (extra.length > 0) {
-        finalAddr = finalAddr ? `${finalAddr}, ${extra.join(', ')}` : extra.join(', ');
-      }
-
-      onSuccess({
-        name: name.trim(),
-        phone: phone.trim(),
-        address: finalAddr || 'Уточняется оператором',
-      });
-      onClose();
-    }, 600);
+    }
+    if (placed !== false) onClose();
   };
 
   const displayItems = singleProduct
@@ -204,14 +178,6 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
               </p>
             )}
 
-            {/* Error Banner */}
-            {errors.general && (
-              <div className="p-3 rounded-2xl bg-danger-soft border border-danger/35 text-danger text-xs flex items-center gap-2 animate-in fade-in duration-200">
-                <AlertCircle className="w-4 h-4 text-danger shrink-0" />
-                <span className="font-medium">{errors.general}</span>
-              </div>
-            )}
-
             {/* Fast Form */}
             <form onSubmit={handleSubmit} className="space-y-3">
               <div className="space-y-1">
@@ -252,59 +218,49 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
               <div className="space-y-1">
                 <label htmlFor="quick-order-address" className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
-                  <span>Город и улица доставки</span>
+                  <span>Адрес доставки — по желанию</span>
                 </label>
                 <input
                   id="quick-order-address"
                   type="text"
                   autoComplete="street-address"
-                  placeholder="Город, улица, дом"
+                  placeholder="Город, улица"
+                  aria-describedby="quick-order-address-hint"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
                 />
+                <p id="quick-order-address-hint" className="text-xs text-[#4E5C70]">
+                  Можно не заполнять: менеджер уточнит адрес, когда позвонит.
+                </p>
               </div>
 
               {/* Дополнительные поля: Номер дома, Подъезд, Квартира/Офис, Домофон */}
               <div className="grid grid-cols-4 gap-2 text-[11px]">
                 <div>
                   <label htmlFor="quick-order-house" className="text-[11px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
-                    Дом <span className="text-danger">*</span>
+                    Дом
                   </label>
                   <input
                     id="quick-order-house"
                     type="text"
                     placeholder="10"
                     value={house}
-                    onChange={(e) => {
-                      setHouse(e.target.value);
-                      if (errors.house && e.target.value.trim()) {
-                        setErrors(prev => ({ ...prev, house: undefined, general: undefined }));
-                      }
-                    }}
-                    className={`w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A] transition-all ${
-                      errors.house ? 'ring-2 ring-danger/50 bg-danger-soft' : ''
-                    }`}
+                    onChange={(e) => setHouse(e.target.value)}
+                    className="w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
                   />
                 </div>
                 <div>
                   <label htmlFor="quick-order-entrance" className="text-[11px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
-                    Подъезд <span className="text-danger">*</span>
+                    Подъезд
                   </label>
                   <input
                     id="quick-order-entrance"
                     type="text"
                     placeholder="2"
                     value={entrance}
-                    onChange={(e) => {
-                      setEntrance(e.target.value);
-                      if (errors.entrance && e.target.value.trim()) {
-                        setErrors(prev => ({ ...prev, entrance: undefined, general: undefined }));
-                      }
-                    }}
-                    className={`w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A] transition-all ${
-                      errors.entrance ? 'ring-2 ring-danger/50 bg-danger-soft' : ''
-                    }`}
+                    onChange={(e) => setEntrance(e.target.value)}
+                    className="w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
                   />
                 </div>
                 <div>
@@ -322,22 +278,15 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                 </div>
                 <div>
                   <label htmlFor="quick-order-intercom" className="text-[11px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
-                    Домофон <span className="text-danger">*</span>
+                    Домофон
                   </label>
                   <input
                     id="quick-order-intercom"
                     type="text"
                     placeholder="25K"
                     value={intercom}
-                    onChange={(e) => {
-                      setIntercom(e.target.value);
-                      if (errors.intercom && e.target.value.trim()) {
-                        setErrors(prev => ({ ...prev, intercom: undefined, general: undefined }));
-                      }
-                    }}
-                    className={`w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A] transition-all ${
-                      errors.intercom ? 'ring-2 ring-danger/50 bg-danger-soft' : ''
-                    }`}
+                    onChange={(e) => setIntercom(e.target.value)}
+                    className="w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
                   />
                 </div>
               </div>
