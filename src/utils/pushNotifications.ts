@@ -75,22 +75,48 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
 }
 
 /**
- * Sends a native browser system notification if permitted
+ * Service worker only for notifications (`public/notification-sw.js`): Android Chrome refuses `new Notification()`
+ * and shows a system notification only through `registration.showNotification`. Registered on first use.
  */
-export function sendBrowserNotification(title: string, options?: NotificationOptions) {
-  if (!isNotificationSupported() || Notification.permission !== 'granted') return;
+async function notificationWorker(): Promise<ServiceWorkerRegistration | null> {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return null;
   try {
-    const notif = new Notification(title, {
-      icon: '/favicon.ico',
-      badge: '/favicon.ico',
-      ...options,
-    });
+    await navigator.serviceWorker.register('/notification-sw.js');
+    return await navigator.serviceWorker.ready;
+  } catch (e) {
+    console.debug('Notification worker is unavailable:', e);
+    return null;
+  }
+}
 
-    // Auto-close after 6 seconds
+/**
+ * A system notification when the browser allows it: through the worker (phones), else `new Notification` (desktop).
+ * Resolves to true when it was shown. Works while the site is open in a tab — the store has no push server.
+ */
+export async function showSystemNotification(title: string, options?: NotificationOptions): Promise<boolean> {
+  if (!isNotificationSupported() || Notification.permission !== 'granted') return false;
+  const worker = await notificationWorker();
+  if (worker) {
+    try {
+      await worker.showNotification(title, { icon: '/favicon.ico', badge: '/favicon.ico', ...options });
+      return true;
+    } catch (e) {
+      console.debug('Worker notification failed:', e);
+    }
+  }
+  try {
+    const notif = new Notification(title, { icon: '/favicon.ico', badge: '/favicon.ico', ...options });
     setTimeout(() => notif.close(), 6000);
+    return true;
   } catch (e) {
     console.debug('Failed to send browser notification:', e);
+    return false;
   }
+}
+
+/** Fire-and-forget form for the order status watcher */
+export function sendBrowserNotification(title: string, options?: NotificationOptions) {
+  void showSystemNotification(title, options);
 }
 
 export interface OrderNotificationPayload {

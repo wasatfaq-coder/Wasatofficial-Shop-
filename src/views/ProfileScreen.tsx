@@ -60,7 +60,7 @@ import { formatAddress } from '../utils/addressFormat';
 import type { AdminChatPayload } from '../components/admin/AdminSupportChatTab';
 import type { ChatMessageChange } from '../utils/firebaseSync';
 import { copyToClipboard } from '../utils/clipboard';
-import { isNotificationSupported, requestNotificationPermission } from '../utils/pushNotifications';
+import { isNotificationSupported, requestNotificationPermission, showSystemNotification } from '../utils/pushNotifications';
 import {
   getSynchronizedDeliveryStages,
   ORDER_STATUS_LABELS,
@@ -586,46 +586,52 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     onShowToast('Профиль успешно обновлен', 'success');
   };
 
+  /**
+   * Уведомления о статусе заказа: системные — только когда браузер их разрешил (на телефоне — через
+   * `public/notification-sw.js`). Переключатель показывает, придут ли они на самом деле: включено в профиле и
+   * разрешено браузером (браузер без уведомлений — только звук и сообщение на сайте).
+   */
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>(() =>
+    isNotificationSupported() ? Notification.permission : 'unsupported'
+  );
+  const notificationsOn =
+    notifications !== false && (notificationPermission === 'granted' || notificationPermission === 'unsupported');
+
+  const saveNotifications = (enabled: boolean) => {
+    setNotifications(enabled);
+    onUpdateProfile({ ...profile, notificationsEnabled: enabled });
+  };
+
   const toggleNotifications = async () => {
-    const nextVal = !notifications;
-    if (nextVal) {
-      if (isNotificationSupported()) {
-        try {
-          const perm = await requestNotificationPermission();
-          if (perm === 'granted') {
-            setNotifications(true);
-            onUpdateProfile({
-              ...profile,
-              notificationsEnabled: true,
-            });
-            onShowToast('Push-уведомления включены! Статусы заказов будут приходить на устройство', 'success');
-            try {
-              new Notification(currentStoreName(), {
-                body: 'Уведомления успешно подключены!',
-                icon: '/favicon.ico',
-              });
-            } catch {}
-            return;
-          } else if (perm === 'denied') {
-            onShowToast('Уведомления заблокированы в настройках браузера', 'info');
-            setNotifications(false);
-            onUpdateProfile({
-              ...profile,
-              notificationsEnabled: false,
-            });
-            return;
-          }
-        } catch {
-          // sandbox fallback
-        }
-      }
+    if (notificationsOn) {
+      saveNotifications(false);
+      onShowToast('Уведомления о заказах выключены', 'info');
+      return;
     }
-    setNotifications(nextVal);
-    onUpdateProfile({
-      ...profile,
-      notificationsEnabled: nextVal,
-    });
-    onShowToast(nextVal ? 'Уведомления включены' : 'Уведомления отключены', 'info');
+    if (!isNotificationSupported()) {
+      saveNotifications(true);
+      onShowToast('Этот браузер не показывает системные уведомления: смена статуса будет видна на сайте, пока он открыт', 'info');
+      return;
+    }
+    const perm = await requestNotificationPermission();
+    setNotificationPermission(perm);
+    if (perm === 'granted') {
+      saveNotifications(true);
+      const shown = await showSystemNotification(currentStoreName(), { body: 'Уведомления о статусе заказов включены' });
+      onShowToast(
+        shown
+          ? 'Уведомления включены: о смене статуса заказа сообщим, пока сайт открыт'
+          : 'Уведомления включены, но браузер не показал пробное — проверьте уведомления Chrome в настройках телефона',
+        'success'
+      );
+    } else if (perm === 'denied') {
+      onShowToast(
+        'Браузер запретил уведомления — как разрешить, написано под переключателем',
+        'error'
+      );
+    } else {
+      onShowToast('Разрешение не дано: нажмите ещё раз и выберите «Разрешить»', 'info');
+    }
   };
 
   const handleFullLogout = async () => {
@@ -1365,13 +1371,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </div>
               <div>
                 <p className="text-sm font-bold text-[#2D3A4E]">Уведомления</p>
-                <p className="text-xs text-[#4E5C70]">Push о статусе заказов</p>
+                <p className="text-xs text-[#4E5C70]">О смене статуса заказа, пока сайт открыт</p>
+                {notificationPermission === 'denied' && (
+                  <p className="text-xs font-bold text-danger">
+                    Запрещены в браузере: значок слева от адреса сайта → «Уведомления» → «Разрешить», затем включите снова
+                  </p>
+                )}
               </div>
             </div>
 
             <NeumorphicSwitch
-              checked={notifications}
-              onChange={() => toggleNotifications()}
+              checked={notificationsOn}
+              onChange={() => void toggleNotifications()}
               label="Уведомления о статусе заказов"
             />
           </div>
@@ -2529,8 +2540,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           <div
             ref={addressFormDialog.ref}
             {...addressFormDialog.props}
-            className="neu-modal rounded-[28px] p-6 max-w-md w-full space-y-4 relative text-[#2D3A4E] border border-white/80">
-            <div className="flex items-center justify-between pb-1 border-b border-[#BAC5D5]/50">
+            className="neu-modal rounded-[28px] p-6 max-w-md w-full max-h-[90dvh] flex flex-col gap-4 relative text-[#2D3A4E] border border-white/80">
+            <div className="flex items-center justify-between pb-1 border-b border-[#BAC5D5]/50 shrink-0">
               <h3 id={addressFormDialog.titleId} className="text-base font-extrabold text-[#2D3A4E]">
                 {editingAddress ? 'Редактировать адрес' : 'Добавить адрес'}
               </h3>
@@ -2544,12 +2555,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </button>
             </div>
 
-            <form onSubmit={handleSaveAddress} className="space-y-4 text-xs">
+            {/* The form scrolls inside the window: with region and comment it is taller than a phone screen */}
+            <form onSubmit={handleSaveAddress} className="space-y-4 text-xs flex-1 min-h-0 overflow-y-auto overscroll-contain -mx-2 px-2 pb-1">
               <div>
-                <label className="block text-xs font-bold text-[#2D3A4E] mb-1.5">
+                <label htmlFor="profile-addr-title" className="block text-xs font-bold text-[#2D3A4E] mb-1.5">
                   Название (например: Дом, Работа)
                 </label>
                 <input
+                  id="profile-addr-title"
                   type="text"
                   value={addrTitle}
                   onChange={(e) => setAddrTitle(e.target.value)}
@@ -2589,8 +2602,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#2D3A4E] mb-1.5">Индекс</label>
+                  <label htmlFor="profile-addr-postal" className="block text-xs font-bold text-[#2D3A4E] mb-1.5">Индекс</label>
                   <input
+                    id="profile-addr-postal"
                     type="text"
                     value={addrPostal}
                     onChange={(e) => setAddrPostal(e.target.value)}
@@ -2601,10 +2615,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#2D3A4E] mb-1.5">
+                <label htmlFor="profile-addr-street" className="block text-xs font-bold text-[#2D3A4E] mb-1.5">
                   Улица
                 </label>
                 <input
+                  id="profile-addr-street"
                   type="text"
                   value={addrStreet}
                   onChange={(e) => setAddrStreet(e.target.value)}
@@ -2617,10 +2632,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               {/* Номер дома, Подъезд, Этаж */}
               <div className="grid grid-cols-3 gap-2.5">
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="profile-addr-house" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     Номер дома
                   </label>
                   <input
+                    id="profile-addr-house"
                     type="text"
                     value={addrHouse}
                     onChange={(e) => setAddrHouse(e.target.value)}
@@ -2630,10 +2646,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="profile-addr-entrance" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     Подъезд
                   </label>
                   <input
+                    id="profile-addr-entrance"
                     type="text"
                     value={addrEntrance}
                     onChange={(e) => setAddrEntrance(e.target.value)}
@@ -2642,10 +2659,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="profile-addr-floor" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     Этаж
                   </label>
                   <input
+                    id="profile-addr-floor"
                     type="text"
                     value={addrFloor}
                     onChange={(e) => setAddrFloor(e.target.value)}
@@ -2658,10 +2676,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               {/* Квартира / Офис & Код домофона */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="profile-addr-apartment" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     Квартира / Офис
                   </label>
                   <input
+                    id="profile-addr-apartment"
                     type="text"
                     value={addrApartment}
                     onChange={(e) => setAddrApartment(e.target.value)}
@@ -2670,10 +2689,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="profile-addr-intercom" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     Код домофона
                   </label>
                   <input
+                    id="profile-addr-intercom"
                     type="text"
                     value={addrIntercom}
                     onChange={(e) => setAddrIntercom(e.target.value)}
