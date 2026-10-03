@@ -1,5 +1,6 @@
 import { Order } from '../types';
 import { isTransportCompanyDelivery } from './deliveryStages';
+import { isQuickOrderDelivery } from '../shared/orderPricing';
 import { customerStatusLabel } from './orderFlow';
 import { currentStoreName } from './storeContacts';
 
@@ -213,7 +214,8 @@ export function getOrderStatusNotification(
       const isTK = isTransportCompanyDelivery(order.deliveryMethod, order.trackingCompany);
       const dm = (order.deliveryMethod || '').toLowerCase();
       const isPickup = dm.includes('самовывоз') || dm.includes('пункт выдачи') || dm.includes('бутик') || dm.includes('шоурум');
-      const isExpress = dm.includes('экспресс') || dm.includes('express') || dm.includes('срочн');
+      // not an old 1-click order «Экспресс курьер (1 клик)»: the shop promised no express courier
+      const isExpress = !isQuickOrderDelivery(dm) && (dm.includes('экспресс') || dm.includes('express') || dm.includes('срочн'));
 
       let transitText = 'Курьер везет ваш заказ по указанному адресу.';
       if (isTK && order.trackingNumber) {

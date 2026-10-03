@@ -80,6 +80,7 @@ import { useAuth } from '../context/AuthContext';
 import { UserProfile, Order, CartItem, ActiveTab, SavedAddress, Product, PromoCode, BannerSlide, ChatMessage, StorefrontSettings, SaveStorefrontSettings, DeliveryMethod, PickupPoint, PaymentKind } from '../types';
 import type { LegalDocId } from '../utils/legalDocs';
 import { formatAddress } from '../utils/addressFormat';
+import { isQuickOrderDelivery, QUICK_ORDER_DELIVERY_TITLE } from '../shared/orderPricing';
 import type { AdminChatPayload } from '../components/admin/AdminSupportChatTab';
 import type { ChatMessageChange } from '../utils/firebaseSync';
 import { copyToClipboard } from '../utils/clipboard';
@@ -1574,7 +1575,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         const isPost = isRussianPostDelivery(ord.deliveryMethod, ord.trackingCompany);
                         const isTK = isTransportCompanyDelivery(ord.deliveryMethod, ord.trackingCompany);
                         const isPickup = isPickupDelivery(ord.deliveryMethod);
-                        const isExpress = (ord.deliveryMethod || '').toLowerCase().includes('экспресс') || (ord.deliveryMethod || '').toLowerCase().includes('express');
+                        // «Заказ в 1 клик»: the manager agrees the delivery (older ones said «Экспресс курьер (1 клик)»)
+                        const isQuick = isQuickOrderDelivery(ord.deliveryMethod);
+                        const isExpress = !isQuick && ((ord.deliveryMethod || '').toLowerCase().includes('экспресс') || (ord.deliveryMethod || '').toLowerCase().includes('express'));
 
                         return (
                           <div className="flex items-center justify-between text-xs pt-0.5 flex-wrap gap-1.5">
@@ -1614,18 +1617,28 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                 <span className="text-[11px] font-bold text-[#2D3A4E] neu-inset px-2 py-0.5 rounded-lg flex items-center gap-1">
                                   {isPickup ? (
                                     <Store className="w-3 h-3 text-accent" />
+                                  ) : isQuick ? (
+                                    <MessageCircle className="w-3 h-3 text-accent" />
                                   ) : isExpress ? (
                                     <Zap className="w-3 h-3 text-warning" />
                                   ) : (
                                     <Bike className="w-3 h-3 text-accent" />
                                   )}
-                                  {ord.deliveryMethod || 'Курьерская доставка'}
+                                  {isQuick ? QUICK_ORDER_DELIVERY_TITLE : ord.deliveryMethod || 'Курьерская доставка'}
                                 </span>
                               </div>
                             )}
 
                             <span className="text-[11px] text-[#4E5C70] font-medium">
-                              {isPost ? 'Почтовое отправление' : isTK ? (ord.deliveryMethod || 'ТК') : isPickup ? 'Самовывоз' : 'Курьерская доставка'}
+                              {isPost
+                                ? 'Почтовое отправление'
+                                : isTK
+                                ? ord.deliveryMethod || 'ТК'
+                                : isPickup
+                                ? 'Самовывоз'
+                                : isQuick
+                                ? 'Доставку согласует менеджер'
+                                : 'Курьерская доставка'}
                             </span>
                           </div>
                         );
@@ -1739,7 +1752,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               const isPost = isRussianPostDelivery(selectedOrderForTracking.deliveryMethod, selectedOrderForTracking.trackingCompany);
               const isTK = isTransportCompanyDelivery(selectedOrderForTracking.deliveryMethod, selectedOrderForTracking.trackingCompany);
               const isPickup = isPickupDelivery(selectedOrderForTracking.deliveryMethod);
-              const isExpress = (selectedOrderForTracking.deliveryMethod || '').toLowerCase().includes('экспресс') || (selectedOrderForTracking.deliveryMethod || '').toLowerCase().includes('express');
+              const isQuick = isQuickOrderDelivery(selectedOrderForTracking.deliveryMethod);
+              const isExpress = !isQuick && ((selectedOrderForTracking.deliveryMethod || '').toLowerCase().includes('экспресс') || (selectedOrderForTracking.deliveryMethod || '').toLowerCase().includes('express'));
 
               if (isPost) {
                 return (
@@ -1834,15 +1848,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   <div className="flex items-center justify-between gap-2">
                     <div className="space-y-0.5 min-w-0">
                       <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider flex items-center gap-1">
-                        {isPickup ? <Store className="w-3.5 h-3.5 text-accent" /> : isExpress ? <Zap className="w-3.5 h-3.5 text-warning" /> : <Bike className="w-3.5 h-3.5 text-accent" />}
+                        {isPickup ? <Store className="w-3.5 h-3.5 text-accent" /> : isQuick ? <MessageCircle className="w-3.5 h-3.5 text-accent" /> : isExpress ? <Zap className="w-3.5 h-3.5 text-warning" /> : <Bike className="w-3.5 h-3.5 text-accent" />}
                         {/* the store's own words only: no «бутик» or «курьерская служба магазина» it may not have */}
-                        {isPickup ? 'Самовывоз' : isExpress ? 'Срочная экспресс-доставка' : 'Доставка курьером'}
+                        {isPickup ? 'Самовывоз' : isQuick ? 'Доставку согласует менеджер' : isExpress ? 'Срочная экспресс-доставка' : 'Доставка курьером'}
                       </span>
                       <p className="text-xs font-extrabold text-[#2D3A4E]">
-                        {selectedOrderForTracking.deliveryMethod || (isPickup ? 'Самовывоз' : 'Курьерская доставка')}
+                        {isQuick ? QUICK_ORDER_DELIVERY_TITLE : selectedOrderForTracking.deliveryMethod || (isPickup ? 'Самовывоз' : 'Курьерская доставка')}
                       </p>
                     </div>
-                    {!isPickup && (
+                    {!isPickup && !isQuick && (
                       <span className="text-[11px] font-bold text-accent neu-flat px-2 py-0.5 rounded-lg whitespace-nowrap shrink-0">До двери</span>
                     )}
                   </div>
@@ -1850,6 +1864,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   <p className="text-xs text-[#4E5C70] leading-snug">
                     {isPickup
                       ? `Где забрать: ${pickupPlace(selectedOrderForTracking.deliveryAddress) || 'сообщит магазин'}. Трек-номера у самовывоза нет — заказ выдают по коду получения.`
+                      : isQuick
+                      ? !selectedOrderForTracking.deliveryAddress || selectedOrderForTracking.deliveryAddress === 'Уточнит менеджер'
+                        ? 'Менеджер позвонит и согласует адрес, доставку и оплату.'
+                        : `Менеджер позвонит и согласует доставку и оплату. Адрес: ${selectedOrderForTracking.deliveryAddress}.`
                       : `Адрес доставки: ${selectedOrderForTracking.deliveryAddress || 'не указан'}.`}
                   </p>
                 </div>
