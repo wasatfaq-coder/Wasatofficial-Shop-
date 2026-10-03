@@ -42,6 +42,7 @@ import {
   auth,
   createGuestChatIdentity,
   db,
+  forgetGuestChatIdentity,
   placeOrderOnServer,
   restoreGuestChatIdentity,
 } from './firebase';
@@ -55,6 +56,7 @@ import {
   subscribeToOwnUserProfile,
   placeClientOrder,
   orderRateWaitSeconds,
+  handOverGuestData,
   deductOrderLineStock,
   cancelOrderAsCustomer,
   confirmOrderReceipt,
@@ -171,6 +173,15 @@ function loadGuestOrders(): Order[] {
 function saveGuestOrder(order: Order) {
   try {
     localStorage.setItem(GUEST_ORDERS_STORAGE_KEY, JSON.stringify([order, ...loadGuestOrders()]));
+  } catch {}
+}
+
+/** Guest orders that moved to the account: the account's subscription shows them now */
+function forgetGuestOrders(ids: string[]) {
+  if (ids.length === 0) return;
+  try {
+    const moved = new Set(ids);
+    localStorage.setItem(GUEST_ORDERS_STORAGE_KEY, JSON.stringify(loadGuestOrders().filter((o) => !moved.has(o.id))));
   } catch {}
 }
 
@@ -377,6 +388,13 @@ export default function App() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
   const [isSupportChatOpen, setIsSupportChatOpen] = useState(false);
+  /** «Вопрос по заказу № …» typed into the chat opened from an order (finding 26) */
+  const [chatDraft, setChatDraft] = useState('');
+  // An order passed in (the profile's order buttons) types «Вопрос по заказу № …»; a click event is not an order
+  const openSupportChat = (orderId?: unknown) => {
+    setChatDraft(typeof orderId === 'string' && orderId ? `Вопрос по заказу № ${orderId}: ` : '');
+    setIsSupportChatOpen(true);
+  };
   const [isMySizesModalOpen, setIsMySizesModalOpen] = useState(false);
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
@@ -532,8 +550,13 @@ export default function App() {
     }
 
     if (currentUser) {
+      // plus guest orders of this browser that the account does not hold (placed before the move or without a sign-in
+      // of the guest, finding 26): they stay visible after signing in
       const unsubOrders = subscribeToOrders(
-        (loadedOrders) => setOrders(loadedOrders),
+        (loadedOrders) => {
+          const own = new Set(loadedOrders.map((o) => o.id));
+          setOrders([...loadedOrders, ...loadGuestOrders().filter((o) => !own.has(o.id))]);
+        },
         undefined,
         currentUser.uid
       );
@@ -592,6 +615,32 @@ export default function App() {
       cancelled = true;
     };
   }, [authLoading, currentUser]);
+
+  // 1c'. A guest signed in with Google: the orders and the chat of the guest's anonymous sign-in move to the account
+  // (audit 02.10, finding 26). Both sides agree in this browser (rules), then the guest's session ends
+  React.useEffect(() => {
+    if (authLoading || !currentUser || isAdmin) return;
+    let cancelled = false;
+    restoreGuestChatIdentity().then(async (guest) => {
+      if (cancelled || !guest || guest.uid === currentUser.uid) return;
+      try {
+        const { orderIds, messages } = await handOverGuestData(guest, currentUser.uid);
+        forgetGuestOrders(orderIds);
+        await forgetGuestChatIdentity();
+        const parts = [
+          orderIds.length > 0 ? `${orderIds.length} ${pluralRu(orderIds.length, ['заказ', 'заказа', 'заказов'])}` : '',
+          messages > 0 ? 'переписка с магазином' : '',
+        ].filter(Boolean);
+        if (parts.length > 0) addToast(`Перенесено в ваш аккаунт то, что было без входа: ${parts.join(' и ')}`, 'success');
+      } catch (err) {
+        // the guest's orders stay visible from this browser; the move is tried again at the next sign-in
+        console.error('Guest orders and chat were not moved to the account:', err);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, currentUser, isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 1d. Chat messages: admins see every thread, customers only their own
   React.useEffect(() => {
@@ -1748,7 +1797,7 @@ export default function App() {
           setActiveTab={setActiveTab}
           onOpenMySizes={() => setIsMySizesModalOpen(true)}
           onOpenFilters={() => setIsAdvancedFilterOpen(true)}
-          onOpenSupportChat={() => setIsSupportChatOpen(true)}
+          onOpenSupportChat={openSupportChat}
           onOpenBrandDetails={() => setIsBrandModalOpen(true)}
           storefrontSettings={customerStorefront}
         />
@@ -1774,15 +1823,19 @@ export default function App() {
           isOpen={isBrandModalOpen}
           onClose={() => setIsBrandModalOpen(false)}
           storefrontSettings={customerStorefront}
-          onOpenSupportChat={() => setIsSupportChatOpen(true)}
+          onOpenSupportChat={openSupportChat}
         />
         </LazyMount>
 
         <LazyMount when={isSupportChatOpen}>
         <SupportChatModal
           isOpen={isSupportChatOpen}
+          draftText={chatDraft}
           storePhone={getStoreContacts(storefrontSettings).phone}
-          onClose={() => setIsSupportChatOpen(false)}
+          onClose={() => {
+            setIsSupportChatOpen(false);
+            setChatDraft('');
+          }}
           messages={customerChatMessages}
           onSendMessage={handleSendMessageFromUser}
           pendingIds={pendingChatIds}
@@ -1924,7 +1977,7 @@ export default function App() {
               onSearchChange={setCatalogSearch}
               bannerSlides={customerBannerSlides}
               storefrontSettings={customerStorefront}
-              onOpenSupportChat={() => setIsSupportChatOpen(true)}
+              onOpenSupportChat={openSupportChat}
               onApplyPromo={handleApplyPromo}
               onShowToast={addToast}
               userProfile={userProfile}
@@ -2064,7 +2117,7 @@ export default function App() {
               onConfirmReceipt={handleConfirmReceipt}
               onSubmitPaymentReceipt={handleSubmitPaymentReceipt}
               onShowToast={addToast}
-              onOpenSupportChat={() => setIsSupportChatOpen(true)}
+              onOpenSupportChat={openSupportChat}
               onUpdateProducts={(updatedWithCosts: Product[]) => {
                 const changed = changedItems(adminProducts, updatedWithCosts);
                 const kept = new Set(updatedWithCosts.map((p) => p.id));

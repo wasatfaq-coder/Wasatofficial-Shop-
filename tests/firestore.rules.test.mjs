@@ -1026,3 +1026,54 @@ describe('product photos', () => {
     await assertSucceeds(deleteDoc(doc(owner(), 'product_photos/p1_a')));
   });
 });
+
+// Находка 26 (аудит 02.10): гость вошёл через Google — заказы и переписка анонимного входа переходят в аккаунт.
+// Обе стороны подтверждают связь: guest_links/{гость} пишет гость, account_guests/{аккаунт}_{гость} — аккаунт
+describe('guest data goes to the account after sign-in', () => {
+  const linkBoth = async (guestUid = 'anon-g', accountUid = 'alice') => {
+    await setDoc(doc(customer(accountUid), 'account_guests', `${accountUid}_${guestUid}`), { accountUid, guestUid });
+    await setDoc(doc(buyer(guestUid), 'guest_links', guestUid), { accountUid });
+  };
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'orders/WS-G1'), order({ id: 'WS-G1', customerUid: 'anon-g' }));
+      await setDoc(doc(db, 'orders/WS-B1'), order({ id: 'WS-B1', customerUid: 'bob' }));
+      for (let i = 0; i < 30; i++) {
+        await setDoc(doc(db, `chat_messages/g${i}`), { id: `g${i}`, sender: i % 2 ? 'admin' : 'user', text: 'x', threadId: 'anon-g', isInternalNote: false, sentAt: Timestamp.now() });
+      }
+      await setDoc(doc(db, 'chat_messages/gn'), { id: 'gn', sender: 'admin', text: 'заметка', threadId: 'anon-g', isInternalNote: true, sentAt: Timestamp.now() });
+    });
+  });
+
+  test('with both halves of the link the guest moves its orders and the whole chat it sees, in batches', async () => {
+    await linkBoth();
+    const db = buyer('anon-g');
+    await assertSucceeds(updateDoc(doc(db, 'orders/WS-G1'), { customerUid: 'alice' }));
+    const batch = writeBatch(db);
+    for (let i = 0; i < 30; i++) batch.update(doc(db, `chat_messages/g${i}`), { threadId: 'alice' });
+    await assertSucceeds(batch.commit());
+    // the account now reads them
+    await assertSucceeds(getDoc(doc(customer('alice'), 'orders/WS-G1')));
+    // staff notes stay where they are; only the owner changes in an order
+    await assertFails(updateDoc(doc(db, 'chat_messages/gn'), { threadId: 'alice' }));
+  });
+
+  test('without the account\'s half nothing moves: orders cannot be planted on someone else', async () => {
+    await setDoc(doc(buyer('anon-g'), 'guest_links', 'anon-g'), { accountUid: 'bob' });
+    await assertFails(updateDoc(doc(buyer('anon-g'), 'orders/WS-G1'), { customerUid: 'bob' }));
+    await assertFails(updateDoc(doc(buyer('anon-g'), 'chat_messages/g0'), { threadId: 'bob' }));
+  });
+
+  test('only the guest\'s own orders and only the owner field; links are written only by their side', async () => {
+    await linkBoth();
+    await assertFails(updateDoc(doc(buyer('anon-g'), 'orders/WS-B1'), { customerUid: 'alice' }));
+    await assertFails(updateDoc(doc(buyer('anon-g'), 'orders/WS-G1'), { customerUid: 'alice', totalPrice: 1 }));
+    await assertFails(updateDoc(doc(buyer('anon-g'), 'orders/WS-G1'), { customerUid: 'mallory' }));
+    // a Google account cannot pose as a guest, a guest cannot confirm for an account
+    await assertFails(setDoc(doc(customer('bob'), 'guest_links', 'bob'), { accountUid: 'alice' }));
+    await assertFails(setDoc(doc(buyer('anon-x'), 'account_guests', 'anon-x_anon-g'), { accountUid: 'anon-x', guestUid: 'anon-g' }));
+    await assertFails(setDoc(doc(customer('bob'), 'account_guests', 'alice_anon-g'), { accountUid: 'alice', guestUid: 'anon-g' }));
+  });
+});

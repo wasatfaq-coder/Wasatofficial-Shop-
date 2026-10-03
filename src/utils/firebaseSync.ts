@@ -465,8 +465,9 @@ export async function returnOrderLineStock(
     const soldOut = skus.every((s) => (Number(s.stock) || 0) <= 0);
     tx.update(productRef, {
       skus: nextSkus,
-      // false with stock left = «Снят с витрины» (isHiddenFromSale): only a sold-out product goes on sale again
-      inStock: data.inStock === false && soldOut ? true : data.inStock ?? true,
+      // false with stock left = «Снят с витрины» (isHiddenFromSale): only a sold-out product goes on sale again, and not
+      // one the admin took off sale (hiddenFromSale)
+      inStock: data.inStock === false && soldOut && data.hiddenFromSale !== true ? true : data.inStock ?? true,
       lastStockMovement: movement.id,
     });
     return 'returned';
@@ -912,6 +913,35 @@ export async function orderRateWaitSeconds(uid: string, targetDb: Firestore = db
   } catch {
     return 0;
   }
+}
+
+/**
+ * A guest signed in with Google: the orders and the support chat of the guest's anonymous sign-in go to the account
+ * (audit 02.10, finding 26). Both sides agree in this browser (rules: guest_links + account_guests), then the guest's
+ * session moves each order (`customerUid`) and each message it sees (`threadId`). Returns what was moved.
+ */
+export async function handOverGuestData(
+  guest: { uid: string; db: Firestore },
+  accountUid: string
+): Promise<{ orderIds: string[]; messages: number }> {
+  await setDoc(doc(db, 'account_guests', `${accountUid}_${guest.uid}`), { accountUid, guestUid: guest.uid });
+  await setDoc(doc(guest.db, 'guest_links', guest.uid), { accountUid });
+
+  const orders = await getDocs(query(collection(guest.db, 'orders'), where('customerUid', '==', guest.uid)));
+  const messages = await getDocs(
+    query(collection(guest.db, 'chat_messages'), where('threadId', '==', guest.uid), where('isInternalNote', '==', false))
+  );
+  const refs = [
+    ...orders.docs.map((d) => ({ ref: d.ref, data: { customerUid: accountUid } })),
+    ...messages.docs.map((d) => ({ ref: d.ref, data: { threadId: accountUid } })),
+  ];
+  // 10 per batch: each write checks both halves of the link, and a batch may read at most 20 documents in the rules
+  for (let i = 0; i < refs.length; i += 10) {
+    const batch = writeBatch(guest.db);
+    for (const { ref, data } of refs.slice(i, i + 10)) batch.update(ref, data);
+    await batch.commit();
+  }
+  return { orderIds: orders.docs.map((d) => d.id), messages: messages.size };
 }
 
 export async function deleteOrderFromFirestore(orderId: string) {

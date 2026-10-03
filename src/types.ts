@@ -117,7 +117,13 @@ export interface Product {
   photoIds?: string[];
   colors: { name: string; hex: string }[];
   sizes: string[];
+  /** «Есть в наличии»: false when sold out (or, in old products without hiddenFromSale, taken off sale with stock left) */
   inStock: boolean;
+  /**
+   * «Снят с витрины» — the admin's switch, apart from «sold out» (owner's decision 02.10, finding 12): with preorders on,
+   * a sold-out product taken off sale used to be preordered. Old products without the field: inStock false with stock left
+   */
+  hiddenFromSale?: boolean;
   skus?: ProductSKU[]; // Breakdown per size and color
   isPopular?: boolean;
   isNew?: boolean;
@@ -210,8 +216,11 @@ export interface CustomerRecord {
   registeredAt?: string;
   lastActiveAt?: string;
   bonusPoints: number;
+  /** Paid money only (orderRevenue): «Сумма покупок» (owner's decision 02.10, finding 29) */
   totalSpent: number;
   ordersCount: number;
+  /** Paid orders: «Постоянный покупатель» from 2 */
+  paidOrdersCount: number;
   completedOrdersCount: number;
   averageOrderValue: number;
   orders: Order[];

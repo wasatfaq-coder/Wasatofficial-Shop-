@@ -242,7 +242,7 @@ export function getSynchronizedDeliveryStages(
     if (status === 'accepted' || status === 'assembling') {
       return 'Ожидает передачи курьеру';
     }
-    return 'Передан штатному курьеру';
+    return 'Передан курьеру';
   };
 
   const getStage3Desc = (status: Order['status']) => {
