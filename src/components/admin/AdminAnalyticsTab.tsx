@@ -86,7 +86,7 @@ const METRICS: { id: ActiveMetric; label: string; unit: string; color: string; f
 const STATUS_FILTERS: { id: OrderStatusFilter; label: string }[] = [
   { id: 'all', label: 'Все заказы' },
   { id: 'paid', label: 'Оплаченные' },
-  { id: 'delivered', label: 'Врученные' },
+  { id: 'delivered', label: 'Полученные' },
 ];
 
 /** «20 сент. — 26 сент.» / «апр. 2026 — сент. 2026»: what the period covers today */

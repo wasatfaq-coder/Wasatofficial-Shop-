@@ -588,6 +588,66 @@ describe('receipt confirmation by the buyer', () => {
   });
 });
 
+describe('payment receipt from the buyer', () => {
+  const details = { sbp: { phone: '79991234567', bank: 'Т-Банк', holder: 'Иванов Иван Иванович' } };
+  const at = '2026-10-03T08:00:00.000Z';
+  const receipt = { method: 'sbp', at, messageId: 'msg-receipt-WS-40' };
+  const entry = { event: 'receipt', at, by: 'customer' };
+  const submit = (db, fields = {}) =>
+    updateDoc(doc(db, 'orders/WS-40'), { paymentStatus: 'receipt_review', paymentReceipt: receipt, paymentLog: [entry], ...fields });
+  const message = (uid, fields = {}) => ({
+    id: 'msg-receipt-WS-40', sender: 'user', text: 'Клиент прикрепил подтверждение оплаты к заказу № WS-40',
+    imageUrl: 'data:image/jpeg;base64,AAAA', threadId: uid, isInternalNote: false, receiptOrderId: 'WS-40', ...fields,
+  });
+  const set = (fields) => env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), 'orders/WS-40'), fields));
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'orders/WS-40'), order({ id: 'WS-40', customerUid: 'alice', paymentDetails: details }));
+      await deleteDoc(doc(ctx.firestore(), 'chat_messages/msg-receipt-WS-40'));
+    });
+  });
+
+  test('the buyer sends a receipt photo to the chat and the order waits for the check', async () => {
+    // the message comes from the buyer's own chat with the receipt field
+    await assertSucceeds(setDoc(doc(customer('alice'), 'chat_messages/msg-receipt-WS-40'), message('alice')));
+    await assertFails(submit(guest()));
+    await assertFails(submit(customer('bob')));
+    // never «Оплачен», no other fields, only a filled way, one own entry
+    await assertFails(submit(customer('alice'), { paymentStatus: 'paid' }));
+    await assertFails(submit(customer('alice'), { totalPrice: 1 }));
+    await assertFails(submit(customer('alice'), { paymentReceipt: { ...receipt, method: 'card' } }));
+    await assertFails(submit(customer('alice'), { paymentLog: [{ ...entry, by: 'admin' }] }));
+    await assertFails(submit(customer('alice'), { paymentLog: [{ ...entry, event: 'confirmed' }] }));
+    await assertSucceeds(submit(customer('alice')));
+  });
+
+  test('not without the photo message, not someone else\'s message, not twice, not without requisites', async () => {
+    await assertFails(submit(customer('alice')));
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'chat_messages/msg-receipt-WS-40'), message('bob')));
+    await assertFails(submit(customer('alice')));
+    await env.withSecurityRulesDisabled((ctx) =>
+      setDoc(doc(ctx.firestore(), 'chat_messages/msg-receipt-WS-40'), message('alice', { receiptOrderId: 'WS-41' }))
+    );
+    await assertFails(submit(customer('alice')));
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'chat_messages/msg-receipt-WS-40'), message('alice')));
+    await set({ paymentStatus: 'receipt_review' });
+    await assertFails(submit(customer('alice')));
+    await set({ paymentStatus: 'pending', paymentDetails: deleteField() });
+    await assertFails(submit(customer('alice')));
+    await set({ paymentDetails: details, isCancelled: true });
+    await assertFails(submit(customer('alice')));
+  });
+
+  test('templates of requisites — only the admin', async () => {
+    const template = { id: 't1', name: 'Т-Банк СБП', kind: 'sbp', fields: details.sbp };
+    await assertFails(getDocs(collection(customer('alice'), 'payment_templates')));
+    await assertFails(setDoc(doc(customer('alice'), 'payment_templates/t1'), template));
+    await assertSucceeds(setDoc(doc(owner(), 'payment_templates/t1'), template));
+    await assertSucceeds(getDocs(collection(owner(), 'payment_templates')));
+  });
+});
+
 const review = (uid, overrides = {}) => ({
   id: `p1_${uid}`,
   productId: 'p1',

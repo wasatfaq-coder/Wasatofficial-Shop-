@@ -12,13 +12,15 @@ import {
 } from '../utils/orderCancel';
 
 interface CancelOrderDialogProps {
-  /** The order to cancel; null — the window is closed */
-  order: Order | null;
+  /** The order to cancel, or the admin's bulk selection; null — the window is closed */
+  order: Order | Order[] | null;
   /** The buyer in the profile or the admin in «Заказы»: own reasons and own words */
   audience: 'customer' | 'admin';
   /** Resolves to true when the order is cancelled (the window closes), false to stay with the choice made */
   onConfirm: (reason: string, comment: string) => Promise<boolean>;
   onClose: () => void;
+  /** «Удалить заказ» of an active order: cancelled first, then deleted or archived (owner's decision 03.10) */
+  intent?: 'cancel' | 'delete';
 }
 
 /**
@@ -26,8 +28,11 @@ interface CancelOrderDialogProps {
  * The buyer's and the admin's cancellation (owner's request 02.10; audit 02.10, finding 14: the admin cancelled with one
  * tap, without a reason). Focus starts on «Не отменять», so Enter by accident cancels nothing.
  */
-export const CancelOrderDialog: React.FC<CancelOrderDialogProps> = ({ order, audience, onConfirm, onClose }) => {
-  const isOpen = Boolean(order);
+export const CancelOrderDialog: React.FC<CancelOrderDialogProps> = ({ order: target, audience, onConfirm, onClose, intent = 'cancel' }) => {
+  const list = target === null ? [] : Array.isArray(target) ? target : [target];
+  const order = list[0] ?? null;
+  const isBulk = list.length > 1;
+  const isOpen = list.length > 0;
   const [reason, setReason] = useState('');
   const [comment, setComment] = useState('');
   const [error, setError] = useState('');
@@ -44,8 +49,10 @@ export const CancelOrderDialog: React.FC<CancelOrderDialogProps> = ({ order, aud
 
   if (!order) return null;
   const reasons = audience === 'customer' ? CUSTOMER_CANCEL_REASONS : ADMIN_CANCEL_REASONS;
-  const itemsCount = (order.items ?? []).reduce((sum, it) => sum + (it.quantity || 0), 0);
-  const isPaid = order.paymentStatus === 'paid';
+  const itemsCount = list.reduce((sum, o) => sum + (o.items ?? []).reduce((n, it) => n + (it.quantity || 0), 0), 0);
+  const totalSum = list.reduce((sum, o) => sum + (o.totalPrice ?? 0), 0);
+  // a receipt on the check may mean the money is already sent
+  const isPaid = list.some((o) => o.paymentStatus === 'paid' || o.paymentStatus === 'receipt_review');
   const errorId = `cancel-order-error-${order.id}`;
 
   const submit = async () => {
@@ -81,7 +88,11 @@ export const CancelOrderDialog: React.FC<CancelOrderDialogProps> = ({ order, aud
                 <AlertTriangle className="w-4 h-4" aria-hidden="true" />
               </div>
               <h3 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">
-                Отменить заказ № {order.id}?
+                {isBulk
+                  ? `Отменить ${list.length} ${pluralRu(list.length, ['заказ', 'заказа', 'заказов'])}?`
+                  : intent === 'delete'
+                  ? `Удалить заказ № ${order.id}?`
+                  : `Отменить заказ № ${order.id}?`}
               </h3>
             </div>
             <button
@@ -97,9 +108,13 @@ export const CancelOrderDialog: React.FC<CancelOrderDialogProps> = ({ order, aud
 
           <div className="neu-inset rounded-2xl p-2.5 text-xs text-[#2D3A4E] space-y-0.5">
             <p className="font-bold">
-              {itemsCount} {pluralRu(itemsCount, ['товар', 'товара', 'товаров'])} · {(order.totalPrice ?? 0).toLocaleString('ru-RU')} ₽
+              {itemsCount} {pluralRu(itemsCount, ['товар', 'товара', 'товаров'])} · {totalSum.toLocaleString('ru-RU')} ₽
             </p>
-            {audience === 'admin' && order.customerName && <p className="text-[#4E5C70]">{order.customerName}</p>}
+            {isBulk ? (
+              <p className="text-[#4E5C70] break-words">{list.map((o) => `№ ${o.id}`).join(', ')}</p>
+            ) : (
+              audience === 'admin' && order.customerName && <p className="text-[#4E5C70]">{order.customerName}</p>
+            )}
           </div>
 
           <fieldset className="space-y-2" aria-describedby={error ? errorId : undefined}>
@@ -162,10 +177,14 @@ export const CancelOrderDialog: React.FC<CancelOrderDialogProps> = ({ order, aud
           <p className="text-xs text-[#4E5C70] leading-relaxed">
             {audience === 'customer'
               ? 'Товары вернутся на склад, заказ останется в истории отменённым.'
+              : intent === 'delete'
+              ? 'Сначала заказ отменяется и товары возвращаются на склад. Затем выберите: удалить навсегда или перенести в «Архив».'
               : 'Товары вернутся на склад, заказ перейдёт в «Отменены», а через 3 дня — в «Архив».'}
             {isPaid &&
               (audience === 'customer'
                 ? ' Заказ уже оплачен: о возврате денег договоритесь с магазином в чате.'
+                : isBulk
+                ? ' Оплаченные заказы получат статус «Возврат средств», деньги покупателям верните сами.'
                 : ' Заказ оплачен: статус оплаты станет «Возврат средств», деньги покупателю верните сами.')}
           </p>
 
@@ -190,7 +209,7 @@ export const CancelOrderDialog: React.FC<CancelOrderDialogProps> = ({ order, aud
               ) : (
                 <XCircle className="w-3.5 h-3.5" aria-hidden="true" />
               )}
-              <span>{busy ? 'Отменяем…' : 'Отменить заказ'}</span>
+              <span>{busy ? 'Отменяем…' : isBulk ? 'Отменить заказы' : 'Отменить заказ'}</span>
             </button>
           </div>
         </div>

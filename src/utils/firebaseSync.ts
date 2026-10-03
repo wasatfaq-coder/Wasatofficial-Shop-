@@ -22,7 +22,8 @@ import {
   runTransaction,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { CartItem, Product, ProductSKU, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog } from '../types';
+import { CartItem, Product, ProductSKU, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog, PaymentKind, PaymentTemplate } from '../types';
+import { paymentLogEntry, receiptMessageText } from './paymentDetails';
 import { DEFAULT_STOREFRONT_SETTINGS } from './inventory';
 import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
 import type { LegalDocId, LegalTexts } from './legalDocs';
@@ -242,6 +243,62 @@ export async function confirmOrderReceipt(order: Pick<Order, 'id' | 'statusLog'>
     status: 'delivered',
     statusLog: [...(order.statusLog ?? []), entry],
   });
+}
+
+/**
+ * «Оплачено» с фото чека («Доработки 5»): сначала сообщение в чат заказа (фото и «Клиент прикрепил подтверждение
+ * оплаты к заказу № …»), потом заказ — «Чек на проверке» со ссылкой на это сообщение и записью в истории оплаты.
+ * Правило `isCustomerReceiptSubmit` пускает только эти поля и только при сообщении покупателя. Throws when refused.
+ */
+export async function submitPaymentReceipt(
+  order: Pick<Order, 'id' | 'paymentLog'>,
+  kind: PaymentKind,
+  imageUrl: string,
+  thread: Pick<ChatMessage, 'threadId' | 'threadName'>,
+  at: Date
+): Promise<ChatMessage> {
+  const message: ChatMessage = {
+    id: `msg-receipt-${order.id}-${at.getTime()}`,
+    sender: 'user',
+    text: receiptMessageText(order.id, kind),
+    imageUrl,
+    fileName: `Чек ${order.id}.jpg`,
+    receiptOrderId: order.id,
+    timestamp: at.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+    ...thread,
+  };
+  await saveChatMessageToFirestore(message);
+  await updateDoc(doc(db, 'orders', order.id), {
+    paymentStatus: 'receipt_review',
+    paymentReceipt: { method: kind, at: at.toISOString(), messageId: message.id },
+    paymentLog: [...(order.paymentLog ?? []), paymentLogEntry('receipt', 'customer', { at })],
+  });
+  return message;
+}
+
+/** Admin only: requisites templates («Сбербанк — ИП Иванов»), `payment_templates` */
+export function subscribeToPaymentTemplates(onUpdate: (templates: PaymentTemplate[]) => void) {
+  return onSnapshot(
+    collection(db, 'payment_templates'),
+    (snapshot) => {
+      const list: PaymentTemplate[] = [];
+      snapshot.forEach((snap) => {
+        const data = snap.data() as PaymentTemplate;
+        if (data && data.kind && data.fields) list.push({ ...data, id: snap.id });
+      });
+      list.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+      onUpdate(list);
+    },
+    (error) => console.warn('Payment templates subscription warning:', error)
+  );
+}
+
+export async function savePaymentTemplate(template: PaymentTemplate): Promise<void> {
+  await setDoc(doc(db, 'payment_templates', template.id), sanitizeForFirestore({ ...template, updatedAt: new Date().toISOString() }));
+}
+
+export async function deletePaymentTemplate(templateId: string): Promise<void> {
+  await deleteDoc(doc(db, 'payment_templates', templateId));
 }
 
 /** What happened to one line of a cancelled order */
@@ -1021,7 +1078,8 @@ export async function saveChatMessageToFirestore(msg: ChatMessage, targetDb: Fir
   try {
     // isInternalNote must always be present: customers query their thread by isInternalNote == false
     let sanitizedMsg = { ...msg, isInternalNote: msg.isInternalNote === true };
-    if (sanitizedMsg.imageUrl && sanitizedMsg.imageUrl.startsWith('data:image/') && sanitizedMsg.imageUrl.length > 300 * 1024) {
+    // a receipt photo is compressed for legibility by the payment window (up to the rules' 900 000 characters)
+    if (!sanitizedMsg.receiptOrderId && sanitizedMsg.imageUrl && sanitizedMsg.imageUrl.startsWith('data:image/') && sanitizedMsg.imageUrl.length > 300 * 1024) {
       sanitizedMsg.imageUrl = await compressBase64Image(sanitizedMsg.imageUrl, 800, 800, 0.72);
     }
     // sentAt/editedAt are server times: firestore.rules require sentAt == request.time on create
@@ -1350,7 +1408,7 @@ export async function syncAllPickupPointsToFirestore(points: PickupPoint[]) {
 export const BACKUP_COLLECTIONS = [
   'products', 'product_costs', 'promos', 'settings', 'banners', 'delivery_methods', 'pickup_points',
   'orders', 'users', 'customer_notes', 'admins', 'reviews', 'review_votes',
-  'chat_messages', 'support_threads', 'support_status', STOCK_MOVEMENTS_COLLECTION, 'promo_uses',
+  'chat_messages', 'support_threads', 'support_status', STOCK_MOVEMENTS_COLLECTION, 'promo_uses', 'payment_templates',
 ] as const;
 
 export interface DatabaseBackup {

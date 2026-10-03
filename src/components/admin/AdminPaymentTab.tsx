@@ -1,6 +1,7 @@
 import React from 'react';
 import type { SaveStorefrontSettings, StorefrontSettings, StorePaymentMethod } from '../../types';
 import { AdminListEditor } from './AdminListEditor';
+import { AdminPaymentTemplatesCard } from './AdminPaymentTemplatesCard';
 
 interface AdminPaymentTabProps {
   settings: StorefrontSettings;
@@ -8,8 +9,9 @@ interface AdminPaymentTabProps {
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
-/** Admin → «Оплата»: the payment methods offered at checkout */
+/** Admin → «Оплата»: the payment methods offered at checkout and the requisites templates for orders */
 export const AdminPaymentTab: React.FC<AdminPaymentTabProps> = ({ settings, onUpdateSettings, onShowToast }) => (
+  <div className="space-y-4">
   <AdminListEditor<StorePaymentMethod>
     title="Способы оплаты"
     description="Покупатель выбирает один из них при оформлении и видит вашу инструкцию. Онлайн-оплаты на сайте нет: укажите, как перевести деньги."
@@ -47,4 +49,6 @@ export const AdminPaymentTab: React.FC<AdminPaymentTabProps> = ({ settings, onUp
     onSave={(paymentMethods) => onUpdateSettings?.({ ...settings, paymentMethods })}
     onShowToast={onShowToast}
   />
+  <AdminPaymentTemplatesCard onShowToast={onShowToast} />
+  </div>
 );

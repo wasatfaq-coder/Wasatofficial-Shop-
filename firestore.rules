@@ -259,6 +259,13 @@ service cloud.firestore {
       allow write: if isAdmin() && isValidId(pointId);
     }
 
+    // Шаблоны реквизитов оплаты («Доработки 5»): только администратор. Покупатель видит реквизиты,
+    // применённые к его заказу (поле paymentDetails), а не всю библиотеку
+    match /payment_templates/{templateId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin() && isValidId(templateId);
+    }
+
     // ------------------------------------------------------------------
     // Заказы: оформить может любой (включая гостей), читать —
     // владелец (по customerUid) или администратор, менять — администратор
@@ -329,7 +336,7 @@ service cloud.firestore {
       );
 
       allow update: if isAdmin() || isCustomerOrderCancel() || isCustomerStockReturnedMark()
-        || isCustomerReceiptConfirm();
+        || isCustomerReceiptConfirm() || isCustomerReceiptSubmit(orderId);
       allow delete: if isAdmin();
     }
 
@@ -376,6 +383,44 @@ service cloud.firestore {
         && data.statusLog[n].at is string && data.statusLog[n].at.size() <= 40;
     }
 
+    // «Оплачено» с фото чека («Доработки 5»): свой заказ (вход через Google), не отменённый, «Ожидает оплаты»
+    // и с реквизитами от магазина становится «Чек на проверке». Способ — один из тех, что магазин заполнил; в историю
+    // оплаты — ровно одна запись покупателя; ссылка — на его собственное сообщение в чате с фото чека к этому заказу.
+    // «Оплачен» покупатель по-прежнему поставить не может.
+    function isCustomerReceiptSubmit(orderId) {
+      let data = request.resource.data;
+      let before = resource.data.get('paymentLog', []);
+      let n = before.size();
+      let receipt = data.get('paymentReceipt', {});
+      return isCustomer()
+        && resource.data.get('customerUid', null) == request.auth.uid
+        && resource.data.get('isCancelled', false) == false
+        && resource.data.get('paymentStatus', 'pending') == 'pending'
+        && resource.data.get('paymentDetails', null) is map
+        && onlyChanges(['paymentStatus', 'paymentReceipt', 'paymentLog'])
+        && data.paymentStatus == 'receipt_review'
+        && receipt.keys().hasOnly(['method', 'at', 'messageId'])
+        && receipt.method in ['sbp', 'card', 'account']
+        && receipt.method in resource.data.paymentDetails
+        && receipt.at is string && receipt.at.size() <= 40
+        && receipt.messageId is string && receipt.messageId.size() <= 120
+        && data.paymentLog is list && data.paymentLog.size() == n + 1
+        && (n == 0 || data.paymentLog[0:n] == before)
+        && data.paymentLog[n].keys().hasOnly(['event', 'at', 'by'])
+        && data.paymentLog[n].event == 'receipt'
+        && data.paymentLog[n].by == 'customer'
+        && data.paymentLog[n].at is string && data.paymentLog[n].at.size() <= 40
+        && isOwnReceiptMessage(receipt.messageId, orderId);
+    }
+
+    function isOwnReceiptMessage(messageId, orderId) {
+      let message = get(/databases/$(database)/documents/chat_messages/$(messageId)).data;
+      return message.threadId == request.auth.uid
+        && message.sender == 'user'
+        && message.get('receiptOrderId', '') == orderId
+        && message.get('imageUrl', '') != '';
+    }
+
     // После возврата всех строк на склад покупатель отмечает это в своём отменённом заказе
     // (без отметки «Заказы» предлагают администратору «Вернуть на склад»)
     function isCustomerStockReturnedMark() {
@@ -408,7 +453,7 @@ service cloud.firestore {
         && isValidId(messageId)
         // только поля обычного сообщения: без карточек промокода/заказа и без пометок «скрыто»
         && request.resource.data.keys().hasOnly(['id', 'sender', 'text', 'imageUrl', 'fileName', 'timestamp',
-            'threadId', 'threadName', 'isInternalNote', 'sentAt'])
+            'threadId', 'threadName', 'isInternalNote', 'sentAt', 'receiptOrderId'])
         && request.resource.data.get('threadId', null) == request.auth.uid
         && request.resource.data.sender == 'user'
         && request.resource.data.get('isInternalNote', false) == false
@@ -424,6 +469,8 @@ service cloud.firestore {
         && isOptionalText(request.resource.data, 'threadName', 200)
         && isOptionalText(request.resource.data, 'timestamp', 20)
         && isOptionalText(request.resource.data, 'fileName', 200)
+        // фото чека к заказу («Доработки 5»): номер заказа — для кнопок «Подтвердить оплату» / «Отклонить чек»
+        && isOptionalText(request.resource.data, 'receiptOrderId', 40)
         // без sentAt (старая версия сайта) сообщение уходит, но править его потом нельзя
         && request.resource.data.get('sentAt', request.time) == request.time
       );

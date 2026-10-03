@@ -84,7 +84,8 @@ function matchesStatusFilter(o: Order, statusFilter: OrderStatusFilter): boolean
     return !o.isCancelled && o.paymentStatus === 'paid';
   }
   if (statusFilter === 'delivered') {
-    return !o.isCancelled && (o.status === 'delivered' || o.status === 'ready');
+    // «Врученные» — только полученные: «Готов к выдаче» и «Ожидает подтверждения» ещё у магазина или у перевозчика
+    return !o.isCancelled && o.status === 'delivered';
   }
   return true;
 }

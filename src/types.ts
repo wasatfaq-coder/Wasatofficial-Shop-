@@ -274,6 +274,51 @@ export interface OrderAdjustmentLog {
   changedItemsSummary: string;
 }
 
+/** Ways to pay by requisites («Доработки 5»): СБП, card transfer, bank account */
+export type PaymentKind = 'sbp' | 'card' | 'account';
+
+export interface SbpRequisites {
+  phone: string;
+  bank: string;
+  holder: string;
+}
+export interface CardRequisites {
+  cardNumber: string;
+  bank: string;
+  holder: string;
+}
+export interface AccountRequisites {
+  /** Organisation or «ИП Фамилия И. О.» */
+  orgName: string;
+  account: string;
+  inn: string;
+  kpp?: string;
+  bik: string;
+  corrAccount: string;
+  bank?: string;
+}
+export interface PaymentRequisitesByKind {
+  sbp: SbpRequisites;
+  card: CardRequisites;
+  account: AccountRequisites;
+}
+/** Requisites of one order: only the ways the admin filled */
+export type OrderPaymentDetails = { [K in PaymentKind]?: PaymentRequisitesByKind[K] };
+
+/** A named set of requisites («Сбербанк — ИП Иванов»): `payment_templates/{id}`, admin only */
+export type PaymentTemplate = {
+  [K in PaymentKind]: { id: string; name: string; kind: K; fields: PaymentRequisitesByKind[K]; updatedAt?: string };
+}[PaymentKind];
+
+export interface PaymentLogEntry {
+  event: 'receipt' | 'confirmed' | 'rejected';
+  /** ISO time */
+  at: string;
+  by: 'customer' | 'admin';
+  byUid?: string;
+  note?: string;
+}
+
 export interface Order {
   id: string;
   date: string;
@@ -288,7 +333,16 @@ export interface Order {
   deliveryAddress: string;
   deliveryMethod: string;
   paymentMethod?: string;
-  paymentStatus?: 'pending' | 'paid' | 'paid_on_delivery' | 'refunded';
+  /** «Чек на проверке» (receipt_review): the buyer sent a photo of the receipt, the admin checks it («Доработки 5») */
+  paymentStatus?: 'pending' | 'receipt_review' | 'paid' | 'paid_on_delivery' | 'refunded';
+  /** Requisites the admin applied to this order (`src/utils/paymentDetails.ts`): the buyer sees only filled ones */
+  paymentDetails?: OrderPaymentDetails;
+  /** The buyer's «Оплачено»: the way paid, the time and the chat message with the receipt photo */
+  paymentReceipt?: { method: PaymentKind; at: string; messageId: string };
+  /** «Отклонить чек»: the reason the buyer sees until a new receipt */
+  paymentRejectReason?: string;
+  /** Receipt sent, confirmed, rejected — with time and who («Доработки 5») */
+  paymentLog?: PaymentLogEntry[];
   trackingCompany?: 'cdek' | 'pochta' | 'boxberry' | 'yandex' | 'dhl' | 'other';
   trackingNumber?: string;
   estimatedDelivery?: string;
@@ -439,6 +493,8 @@ export interface ChatMessage {
   unreadByAdmin?: boolean;
   imageUrl?: string; // Photo attachment (e.g., return item defect, tag, size check)
   fileName?: string;
+  /** The buyer's receipt photo for this order («Доработки 5»): the admin confirms or rejects it from the chat */
+  receiptOrderId?: string;
   tag?: 'return' | 'sizing' | 'delivery' | 'complaint' | 'consultation' | 'discount'; // Categorization tag
   isInternalNote?: boolean; // Staff-only internal note (hidden from customer)
   productCard?: ProductRecommendationCard; // Attached product card recommendation
