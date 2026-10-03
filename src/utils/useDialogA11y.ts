@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef } from 'react';
+import { openDialogEntry } from './dialogHistory';
 
 /**
  * Keyboard and screen-reader behaviour of a window (the panel of a modal, not its backdrop):
@@ -6,7 +7,9 @@ import { useEffect, useId, useRef } from 'react';
  * - focus moves into the window when it opens (`[data-autofocus]`, else the panel itself) and returns
  *   to the element that opened it when it closes;
  * - Tab / Shift+Tab stay inside the window;
- * - Escape closes only the top-most window.
+ * - Escape closes only the top-most window;
+ * - the browser's «Назад» (and the Android gesture) closes the top-most window, not the screen
+ *   (`dialogHistory.ts`): an open window has its own history entry.
  * Portaled popups of Base UI (a select's menu) are outside the panel: keys pressed there are theirs.
  *
  * Usage: `const dialog = useDialogA11y(isOpen, onClose);` then
@@ -49,6 +52,7 @@ export function useDialogA11y(open: boolean, onClose: () => void, options: Dialo
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     let node: HTMLElement | null = null;
     let registered = false;
+    const releaseHistoryEntry = openDialogEntry(() => onCloseRef.current());
 
     // The panel may mount a frame later (AnimatePresence, portals): wait for it
     const register = () => {
@@ -98,6 +102,7 @@ export function useDialogA11y(open: boolean, onClose: () => void, options: Dialo
     return () => {
       cancelAnimationFrame(frame);
       document.removeEventListener('keydown', onKeyDown, true);
+      releaseHistoryEntry();
       if (node) {
         const index = openDialogs.lastIndexOf(node);
         if (index !== -1) openDialogs.splice(index, 1);

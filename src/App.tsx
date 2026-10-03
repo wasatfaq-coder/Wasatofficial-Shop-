@@ -123,6 +123,7 @@ import { promoDiscountText } from './utils/promoLabel';
 import { hasOrderableVariant, needsVariantChoice } from './utils/variantSelection';
 import { VariantPickerSheet } from './components/VariantPickerSheet';
 import { parseRouteHash, readHistoryState, routeHash, type HistoryEntryState } from './utils/navigation';
+import { handleDialogPopState, takeDialogEntriesForScreen } from './utils/dialogHistory';
 
 // Legal documents: a separate chunk with the templates, loaded when a document is opened
 const LegalDocumentScreen = lazy(() => import('./views/LegalDocumentScreen'));
@@ -339,17 +340,24 @@ export default function App() {
     }
     // Already there: a Back/Forward the popstate handler applied
     if (window.location.hash === hash) return;
-    const replace = replaceNextRoute.current || activeTab === 'order-success';
+    // A window closed as the screen changed (or stays open): the new screen takes the window's entry,
+    // «Назад» returns to the screen under it (its scroll was saved when the window opened)
+    const overWindowEntry = takeDialogEntriesForScreen();
+    const replace = !overWindowEntry && (replaceNextRoute.current || activeTab === 'order-success');
     replaceNextRoute.current = false;
-    window.history.replaceState(
-      { ...readHistoryState(window.history.state), wasat: true, idx: historyIdx.current, scrollY: leavingScroll.current } satisfies HistoryEntryState,
-      ''
-    );
+    if (!overWindowEntry) {
+      window.history.replaceState(
+        { ...readHistoryState(window.history.state), wasat: true, idx: historyIdx.current, scrollY: leavingScroll.current } satisfies HistoryEntryState,
+        ''
+      );
+    }
     if (replace) {
       window.history.replaceState({ wasat: true, idx: historyIdx.current } satisfies HistoryEntryState, '', hash);
     } else {
       historyIdx.current += 1;
-      window.history.pushState({ wasat: true, idx: historyIdx.current } satisfies HistoryEntryState, '', hash);
+      const entry = { wasat: true, idx: historyIdx.current } satisfies HistoryEntryState;
+      if (overWindowEntry) window.history.replaceState(entry, '', hash);
+      else window.history.pushState(entry, '', hash);
     }
     pendingScroll.current = 0;
   }, [activeTab, routeProductId]);
@@ -711,6 +719,8 @@ export default function App() {
   latestOrderRef.current = latestOrder;
   React.useEffect(() => {
     const onPopState = (e: PopStateEvent) => {
+      // «Назад» from an open window closes it and keeps the screen
+      if (handleDialogPopState(e.state, historyIdx.current)) return;
       const route = parseRouteHash(window.location.hash) ?? { tab: 'home' as ActiveTab };
       const entry = readHistoryState(e.state);
       if (entry) {

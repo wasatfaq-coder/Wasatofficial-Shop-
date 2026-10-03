@@ -52,6 +52,8 @@ export interface HistoryEntryState {
   wasat: true;
   idx: number;
   scrollY?: number;
+  /** An open window's entry above the screen's own (see `dialogHistory.ts`): how many windows are open */
+  dialog?: number;
 }
 
 export function readHistoryState(state: unknown): HistoryEntryState | null {
