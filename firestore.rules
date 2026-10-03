@@ -274,7 +274,7 @@ service cloud.firestore {
       return data.keys().hasOnly(['id', 'createdAt', 'date', 'items', 'status', 'totalPrice', 'deliveryAddress',
           'deliveryMethod', 'customerName', 'customerPhone', 'customerEmail', 'customerUid', 'paymentMethod',
           'paymentStatus', 'deliveryFee', 'discountAmount', 'promoCode', 'estimatedDelivery', 'historySteps',
-          'deliveryStages', 'customerLastName', 'customerFirstName', 'customerMiddleName', 'deliveryAddressParts'])
+          'deliveryStages', 'customerLastName', 'customerFirstName', 'customerMiddleName', 'deliveryAddressParts', 'deliveryKind', 'statusLog'])
         && data.items.size() <= 30
         && data.customerName is string && data.customerName.size() > 0 && data.customerName.size() <= 100
         && data.customerPhone is string && data.customerPhone.size() > 0 && data.customerPhone.size() <= 40
@@ -297,7 +297,10 @@ service cloud.firestore {
           || (data.discountAmount is number && data.discountAmount >= 0 && data.discountAmount <= 10000000))
 
         && (!('historySteps' in data) || (data.historySteps is list && data.historySteps.size() <= 20))
-        && (!('deliveryStages' in data) || (data.deliveryStages is list && data.deliveryStages.size() <= 20));
+        && (!('deliveryStages' in data) || (data.deliveryStages is list && data.deliveryStages.size() <= 20))
+        // тип доставки и первая запись истории («Доработки 4»)
+        && (!('deliveryKind' in data) || data.deliveryKind in ['carrier', 'courier', 'pickup'])
+        && (!('statusLog' in data) || (data.statusLog is list && data.statusLog.size() <= 1));
     }
 
     // Строки заказа из браузера (toOrderLineProduct, без фото): проверка развёрнута на 30 строк — циклов в правилах нет
@@ -325,7 +328,8 @@ service cloud.firestore {
         && isClientOrderShape()
       );
 
-      allow update: if isAdmin() || isCustomerOrderCancel() || isCustomerStockReturnedMark();
+      allow update: if isAdmin() || isCustomerOrderCancel() || isCustomerStockReturnedMark()
+        || isCustomerReceiptConfirm();
       allow delete: if isAdmin();
     }
 
@@ -348,6 +352,28 @@ service cloud.firestore {
         && data.cancelledAt is string && data.cancelledAt.size() <= 40
         && isOptionalText(data, 'estimatedDelivery', 80)
         && data.get('stockReturned', false) == false;
+    }
+
+    // «Я получил заказ» («Доработки 4»): свой заказ (вход через Google) у транспортной компании или Почты, переданный
+    // перевозчику или ожидающий получения, становится «Получен»; в историю добавляется ровно одна запись покупателя,
+    // прежние записи не меняются. Оплату покупатель не трогает. У старых заказов без deliveryKind кнопку решает сайт.
+    function isCustomerReceiptConfirm() {
+      let data = request.resource.data;
+      let before = resource.data.get('statusLog', []);
+      let n = before.size();
+      return isCustomer()
+        && resource.data.get('customerUid', null) == request.auth.uid
+        && resource.data.get('isCancelled', false) == false
+        && resource.data.status in ['in_transit', 'ready']
+        && resource.data.get('deliveryKind', 'carrier') == 'carrier'
+        && onlyChanges(['status', 'statusLog'])
+        && data.status == 'delivered'
+        && data.statusLog is list && data.statusLog.size() == n + 1
+        && (n == 0 || data.statusLog[0:n] == before)
+        && data.statusLog[n].keys().hasOnly(['status', 'at', 'by'])
+        && data.statusLog[n].status == 'delivered'
+        && data.statusLog[n].by == 'customer'
+        && data.statusLog[n].at is string && data.statusLog[n].at.size() <= 40;
     }
 
     // После возврата всех строк на склад покупатель отмечает это в своём отменённом заказе

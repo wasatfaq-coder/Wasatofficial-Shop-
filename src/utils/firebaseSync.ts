@@ -38,6 +38,7 @@ import {
 } from '../shared/stockMovements';
 import { formatOrderDate } from '../shared/orderDate';
 import { cancelReasonText, formatCancelledAt } from './orderCancel';
+import type { OrderStatusLogEntry } from '../shared/orderFlow';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages, isTransportCompanyDelivery } from './deliveryStages';
 
 /**
@@ -228,6 +229,18 @@ export async function cancelOrderAsCustomer(orderId: string, reason: string, com
     cancelledAt: at.toISOString(),
     estimatedDelivery: 'Заказ отменен',
     stockReturned: false,
+  });
+}
+
+/**
+ * «Я получил заказ» (заказ у транспортной компании или Почты, «Доработки 4»): «Получен» и запись покупателя в истории.
+ * Правило `isCustomerReceiptConfirm` пускает только это. Throws when the write is refused.
+ */
+export async function confirmOrderReceipt(order: Pick<Order, 'id' | 'statusLog'>, at: Date): Promise<void> {
+  const entry: OrderStatusLogEntry = { status: 'delivered', at: at.toISOString(), by: 'customer' };
+  await updateDoc(doc(db, 'orders', order.id), {
+    status: 'delivered',
+    statusLog: [...(order.statusLog ?? []), entry],
   });
 }
 

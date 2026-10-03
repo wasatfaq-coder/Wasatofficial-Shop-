@@ -1,4 +1,5 @@
 import type { AddressParts } from './shared/personName';
+import type { DeliveryKind, OrderStatusLogEntry } from './shared/orderFlow';
 export interface BodyMeasurements {
   height: number;
   weight: number;
@@ -310,6 +311,12 @@ export interface Order {
   stockReturned?: boolean;
   /** «Архив» in «Заказы»: true — moved by the admin, false — taken back (a cancelled order goes there by itself) */
   archived?: boolean;
+  /** Delivery kind at order time: its chain of statuses (`src/shared/orderFlow.ts`); older orders — by the method's name */
+  deliveryKind?: DeliveryKind;
+  /** Every status change with its time to the second and who made it — the order's history */
+  statusLog?: OrderStatusLogEntry[];
+  /** Code the buyer names to the courier or at pickup («842-190»), made by the admin's browser */
+  pickupCode?: string;
   customerName?: string;
   customerPhone?: string;
   customerEmail?: string;

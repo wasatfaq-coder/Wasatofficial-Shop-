@@ -281,6 +281,15 @@ describe('parsePlaceOrderRequest', () => {
     expect(order.deliveryAddressParts?.city).toBe('Москва');
   });
 
+  test('writes the delivery kind and the first history entry («Доработки 4»)', async () => {
+    const order = await placeOrderCore(db, request(), 'alice');
+    expect(order.deliveryKind).toBe('courier');
+    expect(order.statusLog).toHaveLength(1);
+    expect(order.statusLog?.[0]).toMatchObject({ status: 'accepted', by: 'customer' });
+    const quick = await placeOrderCore(db, request({ deliveryMethodId: 'quick-order' }), null);
+    expect(quick.deliveryKind).toBeUndefined();
+  });
+
   test('normalizes the promo code and drops unknown fields', () => {
     const parsed = parsePlaceOrderRequest({ ...request(), promoCode: ' sale10 ', totalPrice: 1 });
     expect(parsed.promoCode).toBe('SALE10');

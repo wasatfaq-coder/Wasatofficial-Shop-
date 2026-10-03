@@ -348,6 +348,13 @@ describe('orders', () => {
     await assertFails(setDoc(doc(guest(), 'orders/MS-43'), order({ id: 'MS-43', deliveryAddressParts: 'Москва' })));
   });
 
+  test('the order keeps its delivery kind and the first history entry («Доработки 4»)', async () => {
+    const log = [{ status: 'accepted', at: '2026-10-02T09:00:00.000Z', by: 'customer' }];
+    await assertSucceeds(setDoc(doc(guest(), 'orders/MS-44'), order({ id: 'MS-44', deliveryKind: 'carrier', statusLog: log })));
+    await assertFails(setDoc(doc(guest(), 'orders/MS-45'), order({ id: 'MS-45', deliveryKind: 'teleport' })));
+    await assertFails(setDoc(doc(guest(), 'orders/MS-46'), order({ id: 'MS-46', statusLog: [...log, { ...log[0], status: 'delivered' }] })));
+  });
+
   test('customer cannot place an order in someone else\'s name', async () => {
     await assertFails(setDoc(doc(customer('alice'), 'orders/MS-5'), order({ id: 'MS-5', customerUid: 'bob' })));
     await assertSucceeds(setDoc(doc(customer('alice'), 'orders/MS-6'), order({ id: 'MS-6', customerUid: 'alice' })));
@@ -537,6 +544,47 @@ describe('order cancellation by the buyer', () => {
     await assertFails(updateDoc(doc(customer('bob'), 'orders/WS-20'), { stockReturned: true }));
     await assertFails(updateDoc(doc(customer('alice'), 'orders/WS-20'), { stockReturned: true, cancelReason: 'Другое' }));
     await assertSucceeds(updateDoc(doc(customer('alice'), 'orders/WS-20'), { stockReturned: true }));
+  });
+});
+
+// «Доработки 4»: «Я получил заказ» — свой заказ у транспортной компании становится «Получен»
+describe('receipt confirmation by the buyer', () => {
+  const log = [
+    { status: 'accepted', at: '2026-10-02T09:00:00.000Z', by: 'customer' },
+    { status: 'in_transit', at: '2026-10-02T10:00:00.000Z', by: 'admin', byUid: 'owner' },
+  ];
+  const mine = { status: 'delivered', at: '2026-10-03T08:00:00.000Z', by: 'customer' };
+  const confirm = (db, fields = {}) =>
+    updateDoc(doc(db, 'orders/WS-30'), { status: 'delivered', statusLog: [...log, mine], ...fields });
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled((ctx) =>
+      setDoc(doc(ctx.firestore(), 'orders/WS-30'), order({
+        id: 'WS-30', customerUid: 'alice', deliveryKind: 'carrier', status: 'in_transit', statusLog: log, trackingNumber: '1234',
+      }))
+    );
+  });
+
+  test('the buyer closes own carrier order with one entry of their own', async () => {
+    await assertFails(confirm(guest()));
+    await assertFails(confirm(customer('bob')));
+    // not the payment, not someone else's entry, not a rewritten history
+    await assertFails(confirm(customer('alice'), { paymentStatus: 'paid' }));
+    await assertFails(updateDoc(doc(customer('alice'), 'orders/WS-30'), { status: 'delivered', statusLog: [...log, { ...mine, by: 'admin' }] }));
+    await assertFails(updateDoc(doc(customer('alice'), 'orders/WS-30'), { status: 'delivered', statusLog: [log[0], mine] }));
+    await assertFails(updateDoc(doc(customer('alice'), 'orders/WS-30'), { status: 'delivered', statusLog: [...log, { ...mine, byUid: 'x' }] }));
+    await assertFails(updateDoc(doc(customer('alice'), 'orders/WS-30'), { status: 'ready', statusLog: [...log, { ...mine, status: 'ready' }] }));
+    await assertSucceeds(confirm(customer('alice')));
+  });
+
+  test('not before it leaves, not a courier or pickup order, not a cancelled one', async () => {
+    const set = (fields) => env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), 'orders/WS-30'), fields));
+    await set({ status: 'assembling' });
+    await assertFails(confirm(customer('alice')));
+    await set({ status: 'ready', deliveryKind: 'pickup' });
+    await assertFails(confirm(customer('alice')));
+    await set({ deliveryKind: 'carrier', isCancelled: true });
+    await assertFails(confirm(customer('alice')));
   });
 });
 

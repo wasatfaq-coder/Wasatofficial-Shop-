@@ -1,6 +1,6 @@
 import { Product, Order } from '../types';
 import { extractColorName, getProductTotalStock } from './inventory';
-import { ORDER_STATUS_LABELS } from './deliveryStages';
+import { adminStatusLabel } from './orderFlow';
 
 /**
  * One CSV cell: quoted with doubled quotes. Text starting with = + - @ would run as a formula in Excel
@@ -161,7 +161,7 @@ export function exportOrdersToCSV(orders: Order[]): void {
   const rows = orders.map((ord) => [
     ord.id,
     ord.date,
-    ord.isCancelled ? 'Отменен' : ORDER_STATUS_LABELS[ord.status] || ord.status,
+    ord.isCancelled ? 'Отменен' : adminStatusLabel(ord),
     ord.totalPrice,
     ord.customerName || '',
     ord.customerLastName || '',

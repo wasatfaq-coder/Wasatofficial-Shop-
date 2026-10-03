@@ -44,7 +44,17 @@ import { useUnsavedChanges } from '../../utils/unsavedChanges';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { copyToClipboard } from '../../utils/clipboard';
 import { compressChatImageFile } from '../../utils/imageUpload';
-import { ORDER_STATUS_LABELS, isTransportCompanyDelivery } from '../../utils/deliveryStages';
+import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
+import {
+  adminStatusLabel,
+  customerStatusLabel,
+  flowStatuses,
+  generatePickupCode,
+  statusChangeBlocker,
+  statusLogEntry,
+  usesPickupCode,
+} from '../../utils/orderFlow';
+import { useAuth } from '../../context/AuthContext';
 import { PRIORITY_LABELS, STATUS_LABELS, type SupportThreadSummary } from '../../utils/supportThreads';
 import type { ChatMessageChange } from '../../utils/firebaseSync';
 import { formatPromoExpiry, isPromoUsable, promoDiscountKind } from '../../shared/orderPricing';
@@ -256,6 +266,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
 
   // --- order status ---
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const { currentUser } = useAuth();
   const [newStatus, setNewStatus] = useState<Order['status']>('in_transit');
   const [newTracking, setNewTracking] = useState('');
   const [notifyCustomer, setNotifyCustomer] = useState(true);
@@ -409,27 +420,33 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   const handleSaveStatus = (e: React.FormEvent) => {
     e.preventDefault();
     if (!order) return;
-    const label = ORDER_STATUS_LABELS[newStatus];
     const isTK = isTransportCompanyDelivery(order.deliveryMethod, order.trackingCompany);
     const tracking = isTK ? newTracking.trim() || order.trackingNumber : order.trackingNumber;
+    const withTracking: Order = { ...order, trackingNumber: tracking };
+    // the same chain as in «Заказы»: a carrier's order leaves only with its track number
+    const blocker = statusChangeBlocker(withTracking, newStatus);
+    if (blocker) {
+      onShowToast(blocker, 'error');
+      return;
+    }
+    const label = adminStatusLabel(withTracking, newStatus);
+    const needsCode = usesPickupCode(order) && (newStatus === 'in_transit' || newStatus === 'ready') && !order.pickupCode;
     const updated: Order = {
-      ...order,
+      ...withTracking,
       status: newStatus,
-      trackingNumber: tracking,
-      historySteps: [
-        ...(order.historySteps || []),
-        {
-          title: `Статус изменен на «${label}» (служба заботы)`,
-          date: new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
-          completed: true,
-          description: tracking && isTK ? `Трек-номер: ${tracking}` : undefined,
-        },
+      statusLog: [
+        ...(order.statusLog ?? []),
+        statusLogEntry(newStatus, 'admin', {
+          byUid: currentUser?.uid,
+          note: newStatus === 'delivered' ? 'Закрыт администратором в чате поддержки' : 'Из чата поддержки',
+        }),
       ],
+      ...(needsCode ? { pickupCode: generatePickupCode() } : {}),
     };
     onUpdateOrders?.(allOrders.map((o) => (o.id === order.id ? updated : o)));
     if (notifyCustomer && !isLegacy) {
       send({
-        text: `Статус вашего заказа № ${order.id}: «${label}»${tracking && isTK ? `. Трек-номер: ${tracking}` : ''}.`,
+        text: `Статус вашего заказа № ${order.id}: «${customerStatusLabel(withTracking, newStatus)}»${tracking && isTK ? `. Трек-номер: ${tracking}` : ''}.`,
         orderStatusUpdate: {
           orderId: order.id,
           oldStatus: order.status,
@@ -718,14 +735,14 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               onChange={setOrderId}
               variant="inset"
               triggerClassName="h-10 px-3 rounded-xl"
-              options={sortedOrders.map((o) => ({ value: o.id, label: `№ ${o.id} · ${o.date} · ${ORDER_STATUS_LABELS[o.status]}` }))}
+              options={sortedOrders.map((o) => ({ value: o.id, label: `№ ${o.id} · ${o.date} · ${adminStatusLabel(o)}` }))}
             />
           )}
           <div className="neu-inset rounded-2xl p-3 space-y-2">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <span className="text-xs font-extrabold text-[#2D3A4E]">№ {order.id}</span>
               <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-accent/10 text-accent">
-                {ORDER_STATUS_LABELS[order.status]}
+                {adminStatusLabel(order)}
               </span>
             </div>
             <p className="text-xs text-[#4E5C70] leading-snug">
@@ -1097,7 +1114,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 onChange={(v) => setNewStatus(v as Order['status'])}
                 variant="inset"
                 triggerClassName="h-10 px-3 rounded-xl"
-                options={(Object.keys(ORDER_STATUS_LABELS) as Order['status'][]).map((s) => ({ value: s, label: ORDER_STATUS_LABELS[s] }))}
+                options={flowStatuses(order).map((s) => ({ value: s, label: adminStatusLabel(order, s) }))}
               />
             </div>
             {isTransportCompanyDelivery(order.deliveryMethod, order.trackingCompany) && (

@@ -18,6 +18,7 @@ import {
 } from '../../src/shared/orderPricing';
 import { extractColorName, extractSizeName, generateDefaultSKUs, isHiddenFromSale, skuCodeForLine } from '../../src/utils/inventory';
 import { orderStockMovements, STOCK_MOVEMENTS_COLLECTION } from '../../src/shared/stockMovements';
+import { deliveryKindOfMethod, initialStatusLog, type DeliveryKind } from '../../src/shared/orderFlow';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages } from '../../src/utils/deliveryStages';
 
 export type OrderErrorCode = 'invalid-argument' | 'failed-precondition' | 'not-found';
@@ -241,6 +242,7 @@ export async function placeOrderCore(
 
     let deliveryTitle = QUICK_ORDER_DELIVERY_TITLE;
     let deliveryFee = 0;
+    let deliveryKind: DeliveryKind | undefined;
     if (!isQuickOrder) {
       const subtotal = lines.reduce((acc, l) => acc + l.price * l.quantity, 0);
       const method = getAvailableDeliveryMethods(deliveryMethods, settings, subtotal).find(
@@ -251,6 +253,7 @@ export async function placeOrderCore(
       }
       deliveryTitle = method.title;
       deliveryFee = method.price || 0;
+      deliveryKind = deliveryKindOfMethod(method);
     }
 
     const totals = calcOrderTotals(lines, promo?.data, deliveryFee);
@@ -281,6 +284,8 @@ export async function placeOrderCore(
       paymentStatus,
       deliveryAddressParts: request.addressParts,
       estimatedDelivery: 'Через 1-2 дня',
+      deliveryKind,
+      statusLog: initialStatusLog(now),
       placedVia: 'server',
     };
     const order: Order = stripUndefined({

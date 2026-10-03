@@ -3,6 +3,16 @@ import { IS_PREVIEW_BUILD } from '../utils/previewBuild';
 import { launchSteps } from '../utils/launchChecklist';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { CancelOrderDialog } from '../components/CancelOrderDialog';
+import { OrderTimeline } from '../components/OrderTimeline';
+import {
+  canCustomerConfirmReceipt,
+  customerStatusLabel,
+  customerStepLabel,
+  flowStatuses,
+  isAwaitingReceipt,
+  orderDeliveryKind,
+  showsPickupCode,
+} from '../utils/orderFlow';
 import { canCustomerCancel, cancelledByLabel, cancelReasonText, customerCancelHint, formatCancelledAt } from '../utils/orderCancel';
 import { motion, AnimatePresence } from 'motion/react';
 import { AccountDataModal } from '../components/AccountDataModal';
@@ -50,11 +60,12 @@ import {
   Zap,
   Mail,
   XCircle,
+  PackageCheck,
 } from 'lucide-react';
 import { NeumorphicSlider } from '../components/NeumorphicSlider';
 import { calculateRussianPattern, RUSSIAN_SIZE_TABLE_ROWS } from '../utils/russianSizing';
 import { useAuth } from '../context/AuthContext';
-import { UserProfile, Order, CartItem, OrderStatusHistoryStep, ActiveTab, SavedAddress, Product, PromoCode, BannerSlide, ChatMessage, StorefrontSettings, SaveStorefrontSettings, DeliveryMethod, PickupPoint } from '../types';
+import { UserProfile, Order, CartItem, ActiveTab, SavedAddress, Product, PromoCode, BannerSlide, ChatMessage, StorefrontSettings, SaveStorefrontSettings, DeliveryMethod, PickupPoint } from '../types';
 import type { LegalDocId } from '../utils/legalDocs';
 import { formatAddress } from '../utils/addressFormat';
 import type { AdminChatPayload } from '../components/admin/AdminSupportChatTab';
@@ -62,13 +73,10 @@ import type { ChatMessageChange } from '../utils/firebaseSync';
 import { copyToClipboard } from '../utils/clipboard';
 import { isNotificationSupported, requestNotificationPermission, showSystemNotification } from '../utils/pushNotifications';
 import {
-  getSynchronizedDeliveryStages,
-  ORDER_STATUS_LABELS,
   isTransportCompanyDelivery,
   isRussianPostDelivery,
   isCourierDelivery,
   isPickupDelivery,
-  getDefaultHistorySteps,
 } from '../utils/deliveryStages';
 import {
   loadLocalDeliveryMethods,
@@ -118,6 +126,8 @@ interface ProfileScreenProps {
   onRepeatOrder?: (items: CartItem[]) => void;
   /** The buyer cancels their own order (App.tsx: cancellation, then the goods back to stock) */
   onCancelOrder?: (order: Order, reason: string, comment: string) => Promise<boolean>;
+  /** «Я получил заказ» (a carrier's order): «Получен» with the time of the tap */
+  onConfirmReceipt?: (order: Order) => Promise<boolean>;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   onOpenSupportChat?: () => void;
   /** Resolves to false when the database refused the write (the error toast is already shown) */
@@ -177,6 +187,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   setActiveTab,
   onRepeatOrder,
   onCancelOrder,
+  onConfirmReceipt,
   onShowToast,
   onOpenSupportChat,
   onUpdateProducts,
@@ -460,6 +471,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // Selected order IDs for detailed tracking & interactive delivery map
   const [selectedOrderIdForTracking, setSelectedOrderIdForTracking] = useState<string | null>(null);
+  /** «Я получил заказ»: the confirmation */
+  const [orderToConfirmReceipt, setOrderToConfirmReceipt] = useState<Order | null>(null);
   /** «Отменить заказ» from the order window: the window with the reason */
   const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
   const trackingDialog = useDialogA11y(Boolean(selectedOrderIdForTracking), () => setSelectedOrderIdForTracking(null));
@@ -762,25 +775,21 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     onShowToast('Основной адрес сохранен', 'success');
   };
 
-  // Helper for tracking progress % and stage colors
-  const getOrderStatusProgress = (status: Order['status'], isCancelled?: boolean) => {
-    if (isCancelled) {
-      return { percent: 0, label: 'Отменен', color: 'bg-danger', text: 'text-danger' };
+  // Progress by the order's own chain of statuses (src/shared/orderFlow.ts): steps done of its steps
+  const STATUS_TONE: Record<Order['status'], { color: string; text: string }> = {
+    accepted: { color: 'bg-accent', text: 'text-accent-strong' },
+    assembling: { color: 'bg-warning', text: 'text-warning' },
+    in_transit: { color: 'bg-accent', text: 'text-accent-strong' },
+    ready: { color: 'bg-success', text: 'text-success' },
+    delivered: { color: 'bg-success', text: 'text-success' },
+  };
+  const getOrderStatusProgress = (order: Order) => {
+    if (order.isCancelled) {
+      return { percent: 0, label: cancelledByLabel(order, 'customer'), color: 'bg-danger', text: 'text-danger' };
     }
-    switch (status) {
-      case 'accepted':
-        return { percent: 20, label: ORDER_STATUS_LABELS.accepted, color: 'bg-accent', text: 'text-accent-strong' };
-      case 'assembling':
-        return { percent: 45, label: ORDER_STATUS_LABELS.assembling, color: 'bg-warning', text: 'text-warning' };
-      case 'in_transit':
-        return { percent: 75, label: ORDER_STATUS_LABELS.in_transit, color: 'bg-accent', text: 'text-accent-strong' };
-      case 'ready':
-        return { percent: 90, label: ORDER_STATUS_LABELS.ready, color: 'bg-success', text: 'text-success' };
-      case 'delivered':
-        return { percent: 100, label: ORDER_STATUS_LABELS.delivered, color: 'bg-success', text: 'text-success' };
-      default:
-        return { percent: 10, label: 'В обработке', color: 'bg-accent', text: 'text-accent-strong' };
-    }
+    const chain = flowStatuses(order);
+    const percent = Math.round(((chain.indexOf(order.status) + 1) / chain.length) * 100);
+    return { percent, label: customerStatusLabel(order), ...(STATUS_TONE[order.status] ?? STATUS_TONE.accepted) };
   };
 
   const filteredOrders = orders.filter((ord) => {
@@ -1475,7 +1484,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               ) : (
                 <div className="space-y-3.5">
                   {filteredOrders.map((ord) => {
-                    const statusInfo = getOrderStatusProgress(ord.status, ord.isCancelled);
+                    const statusInfo = getOrderStatusProgress(ord);
                     return (
                       <div
                         key={ord.id}
@@ -1818,18 +1827,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
             {/* Status Header Banner with Animated Milestone Progress Bar */}
             {(() => {
-              const trackingStatusInfo = getOrderStatusProgress(
-                selectedOrderForTracking.status,
-                selectedOrderForTracking.isCancelled
-              );
+              const trackingStatusInfo = getOrderStatusProgress(selectedOrderForTracking);
 
-              const milestoneSteps: { key: Order['status']; label: string; threshold: number }[] = [
-                { key: 'accepted', label: 'Принят', threshold: 20 },
-                { key: 'assembling', label: 'Сборка', threshold: 45 },
-                { key: 'in_transit', label: 'В пути', threshold: 75 },
-                { key: 'ready', label: 'Готов', threshold: 90 },
-                { key: 'delivered', label: 'Вручен', threshold: 100 },
-              ];
+              // The steps of this order's chain: a carrier has «Передан в ТК» and «Доставлен», pickup — «В пункте выдачи»
+              const chain = flowStatuses(selectedOrderForTracking);
+              const milestoneSteps = chain.map((key, i) => ({
+                key,
+                label: customerStepLabel(selectedOrderForTracking, key),
+                threshold: Math.round(((i + 1) / chain.length) * 100),
+              }));
 
               return (
                 <div className="neu-inset rounded-2xl p-4 space-y-3">
@@ -1925,211 +1931,44 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               );
             })()}
 
-            {/* Delivery Stages Timeline (Real Admin Synced Data) */}
-            <div className="neu-inset rounded-2xl p-4 space-y-3">
-              <div className="flex items-center justify-between border-b border-[#BAC5D5]/40 pb-2">
-                <span className="text-xs font-extrabold text-[#2D3A4E] uppercase tracking-wider flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-accent" />
-                  Этапы доставки
-                </span>
+            {/* Pickup code: the buyer names it to the courier or at the pickup point («Доработки 4») */}
+            {showsPickupCode(selectedOrderForTracking) && (
+              <div className="neu-inset rounded-2xl p-4 text-center space-y-1">
+                <p className="text-[11px] font-extrabold text-[#4E5C70] uppercase tracking-wider">Код получения</p>
+                <p className="text-2xl font-extrabold font-mono tracking-widest text-[#2D3A4E]">{selectedOrderForTracking.pickupCode}</p>
+                <p className="text-xs text-[#4E5C70]">
+                  {orderDeliveryKind(selectedOrderForTracking) === 'pickup'
+                    ? 'Назовите код сотруднику пункта выдачи'
+                    : 'Назовите код курьеру при получении'}
+                </p>
               </div>
+            )}
 
-              {(() => {
-                const stages = getSynchronizedDeliveryStages(selectedOrderForTracking);
+            {/* «Я получил заказ»: a carrier's order is closed by the buyer (or by the store for a guest) */}
+            {isAwaitingReceipt(selectedOrderForTracking) && (
+              <div className="neu-inset rounded-2xl p-3.5 space-y-2.5">
+                <p className="text-xs text-[#2D3A4E] leading-relaxed">
+                  {canCustomerConfirmReceipt(selectedOrderForTracking, currentUser?.uid)
+                    ? 'Забрали посылку? Подтвердите получение — так магазин узнает, что заказ у вас.'
+                    : 'Когда заберёте посылку, магазин отметит заказ полученным. Вопросы — в чат магазина.'}
+                </p>
+                {onConfirmReceipt && canCustomerConfirmReceipt(selectedOrderForTracking, currentUser?.uid) && (
+                  <button
+                    type="button"
+                    onClick={() => setOrderToConfirmReceipt(selectedOrderForTracking)}
+                    className="w-full neu-button py-2.5 px-4 rounded-2xl text-xs font-extrabold text-success flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <PackageCheck className="w-4 h-4" aria-hidden="true" />
+                    <span>Я получил заказ</span>
+                  </button>
+                )}
+              </div>
+            )}
 
-                return (
-                  <div className="relative space-y-0 pt-1">
-                    {stages.map((stage, idx) => {
-                      const isCompleted = stage.status === 'completed';
-                      const isActive = stage.status === 'active';
-                      const isLast = idx === stages.length - 1;
-
-                      const nextStage = stages[idx + 1];
-                      const isPathToNextFilled = isCompleted && nextStage && nextStage.status === 'completed';
-                      const isPathToNextActive = (isCompleted && nextStage && nextStage.status === 'active') || (isActive && nextStage);
-
-                      return (
-                        <div key={stage.id || idx} className="relative flex items-start gap-3">
-                          {/* Left Column: Stage Node & Animated Vertical Path to Next Step */}
-                          <div className="flex flex-col items-center self-stretch shrink-0">
-                            {/* Step Node Circle */}
-                            <div
-                              className={`w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-[11px] font-extrabold transition-all z-10 ${
-                                isCompleted
-                                  ? 'neu-fill-accent text-white'
-                                  : isActive
-                                  ? 'neu-inset-deep text-accent border border-accent ring-2 ring-accent/20'
-                                  : 'neu-inset text-[#4E5C70]'
-                              }`}
-                            >
-                              {isCompleted ? (
-                                <Check className="w-4 h-4 stroke-[3]" />
-                              ) : (
-                                idx + 1
-                              )}
-                            </div>
-
-                            {/* Connecting Path Groove between this stage and the next */}
-                            {!isLast && (
-                              <div className="relative w-1.5 flex-1 my-1 neu-inset rounded-full overflow-hidden min-h-[38px]">
-                                <div
-                                  className={`w-full rounded-full transition-all duration-500 ease-out relative ${
-                                    isPathToNextFilled
-                                      ? 'h-full bg-gradient-to-b from-accent to-[#7888EC]'
-                                      : isPathToNextActive
-                                      ? 'h-full bg-gradient-to-b from-accent via-[#8594F7] to-[#BAC5D5]'
-                                      : 'h-0 bg-transparent'
-                                  }`}
-                                >
-                                  {(isPathToNextFilled || isPathToNextActive) && (
-                                    <div className="neu-progress-beam-vertical" />
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Right Column: Stage Details Card */}
-                          <div
-                            className={`flex-1 min-w-0 mb-3 rounded-2xl p-3 sm:p-3.5 border transition-all ${
-                              isActive
-                                ? 'neu-inset-deep border-accent/50'
-                                : isCompleted
-                                ? 'neu-flat-sm border-accent/40'
-                                : 'neu-flat-sm border-white/60 opacity-60'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-1.5">
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span
-                                    className={`text-xs font-bold truncate ${
-                                      isActive
-                                        ? 'text-accent font-extrabold'
-                                        : isCompleted
-                                        ? 'text-[#2D3A4E]'
-                                        : 'text-[#4E5C70]'
-                                    }`}
-                                  >
-                                    {stage.title}
-                                  </span>
-                                  {isActive && (
-                                    <span className="text-[11px] font-extrabold text-accent neu-inset px-2 py-0.5 rounded-full flex items-center gap-1">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
-                                      <span>В процессе</span>
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-xs text-[#4E5C70] leading-snug mt-1">
-                                  {stage.desc}
-                                </p>
-                              </div>
-
-                              {stage.time && (
-                                <span
-                                  className={`text-[11px] font-mono shrink-0 px-2 py-0.5 rounded-md font-bold ${
-                                    isActive
-                                      ? 'text-accent neu-inset'
-                                      : isCompleted
-                                      ? 'text-success neu-flat'
-                                      : 'text-[#4E5C70]'
-                                  }`}
-                                >
-                                  {stage.time}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
+            {/* История заказа: each step with its date and time (instead of «Этапы доставки» and «История статусов») */}
+            <div className="neu-inset rounded-2xl p-4">
+              <OrderTimeline order={selectedOrderForTracking} audience="customer" />
             </div>
-
-            {/* Detailed History Timeline */}
-            {(() => {
-              const rawHistory = selectedOrderForTracking.historySteps;
-              const hasCustomHistory = Array.isArray(rawHistory) && rawHistory.length > 0;
-
-              // Generate clean chronological steps
-              const stepsToRender: OrderStatusHistoryStep[] = hasCustomHistory
-                ? rawHistory.map((step: any, idx) => {
-                    const isStepActuallyCompleted =
-                      selectedOrderForTracking.status === 'accepted' && !selectedOrderForTracking.isCancelled
-                        ? idx === 0 || String(step.title || '').toLowerCase().includes('принят')
-                        : Boolean(step.completed);
-
-                    return {
-                      title: step.title || `Этап ${idx + 1}`,
-                      date: step.date || selectedOrderForTracking.date || 'Сегодня',
-                      completed: isStepActuallyCompleted,
-                      description: step.description,
-                    };
-                  })
-                : getDefaultHistorySteps(selectedOrderForTracking);
-
-              return (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <span className="text-xs font-bold text-[#2D3A4E]">История статусов:</span>
-                    <span className="text-[11px] text-[#4E5C70] font-semibold">
-                      Выполнено: {stepsToRender.filter((s) => s.completed).length} из {stepsToRender.length}
-                    </span>
-                  </div>
-                  <div className="relative space-y-0">
-                    {stepsToRender.map((step, idx, arr) => {
-                      const isLast = idx === arr.length - 1;
-                      const isPathFilled = step.completed && arr[idx + 1]?.completed;
-
-                      return (
-                        <div key={idx} className="relative flex items-start gap-3">
-                          <div className="flex flex-col items-center self-stretch shrink-0">
-                            <div
-                              className={`w-3.5 h-3.5 rounded-full mt-1.5 shrink-0 transition-all ${
-                                step.completed
-                                  ? 'bg-accent ring-4 ring-accent/20'
-                                  : 'bg-[#BAC5D5]'
-                              }`}
-                            />
-                            {!isLast && (
-                              <div className="w-1 flex-1 my-1 neu-inset rounded-full min-h-[26px] overflow-hidden">
-                                <div
-                                  className={`w-full h-full transition-all duration-300 ${
-                                    isPathFilled
-                                      ? 'bg-accent'
-                                      : 'bg-transparent'
-                                  }`}
-                                />
-                              </div>
-                            )}
-                          </div>
-
-                          <div
-                            className={`flex-1 neu-flat-sm rounded-xl p-3 border mb-2.5 transition-all ${
-                              step.completed
-                                ? 'border-accent/50'
-                                : 'border-white/60 opacity-60'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between text-xs gap-2">
-                              <span className="font-bold text-[#2D3A4E] truncate">{step.title}</span>
-                              <span className="text-[11px] text-[#4E5C70] font-medium shrink-0">{step.date}</span>
-                            </div>
-                            {step.description && (
-                              <p className="text-xs text-[#4E5C70] leading-snug mt-0.5">
-                                {step.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })()}
 
             {/* Order Items Preview */}
             <div className="space-y-2 pt-1 border-t border-[#BAC5D5]/50">
@@ -2408,6 +2247,20 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={orderToConfirmReceipt !== null}
+        title="Подтвердить получение?"
+        tone="neutral"
+        confirmLabel="Да, получил"
+        cancelLabel="Ещё нет"
+        confirmIcon={<PackageCheck className="w-4 h-4" />}
+        message={`Заказ № ${orderToConfirmReceipt?.id ?? ''} станет «Получен». Подтверждайте, когда посылка уже у вас.`}
+        onConfirm={() => {
+          if (orderToConfirmReceipt && onConfirmReceipt) void onConfirmReceipt(orderToConfirmReceipt);
+        }}
+        onClose={() => setOrderToConfirmReceipt(null)}
+      />
 
       {onCancelOrder && (
         <CancelOrderDialog

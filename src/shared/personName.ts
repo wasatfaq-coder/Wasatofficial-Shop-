@@ -3,6 +3,7 @@
  * Полное имя одной строкой — «Фамилия Имя Отчество» — остаётся в `name` профиля и `customerName` заказа: его читают
  * «Клиенты», накладные, этикетки, чат и старые заказы. Shared with Cloud Functions — no browser APIs.
  */
+import { deliveryKindOfMethod } from './orderFlow';
 
 export interface PersonName {
   lastName?: string;
@@ -47,10 +48,8 @@ export function namePartsOf(source: PersonName & { name?: string }): PersonName 
  * Почта России и транспортные компании выдают посылку по паспорту: им нужно полное ФИО с отчеством
  * (галочка «Нет отчества» — для тех, у кого его нет). `title` — название способа, которое задал магазин.
  */
-export function requiresFullName(method: { type?: string; title?: string }): boolean {
-  if (method.type === 'post') return true;
-  const title = (method.title ?? '').toLowerCase();
-  return /почт|сдэк|cdek|boxberry|боксберри|dpd|pec|пэк|деловые линии|dellin|яндекс доставк|5post|пятёрочк|пятерочк|транспортн/.test(title);
+export function requiresFullName(method: { id?: string; type?: string; title?: string }): boolean {
+  return deliveryKindOfMethod(method) === 'carrier';
 }
 
 /** Parts of a delivery address kept in the order for the admin card with copy buttons */

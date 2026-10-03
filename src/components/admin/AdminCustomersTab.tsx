@@ -437,7 +437,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
   ];
 
   // Same colours and words as «Заказы» (a cancelled order shows as cancelled)
-  const getOrderStatusBadge = (ord: Pick<Order, 'status' | 'isCancelled' | 'cancelledBy'>) => {
+  const getOrderStatusBadge = (ord: Order) => {
     const chip = orderStatusChip(ord);
     return { label: chip.label, bg: chip.className };
   };

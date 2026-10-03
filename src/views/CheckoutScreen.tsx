@@ -39,6 +39,7 @@ import { NotConfigured } from '../components/NotConfigured';
 import { productImage } from '../utils/productImage';
 import { promoDiscountText } from '../utils/promoLabel';
 import { cleanAddressParts, fullName, namePartsOf, requiresFullName, type AddressParts, type PersonName } from '../shared/personName';
+import { deliveryKindOfMethod } from '../shared/orderFlow';
 
 interface CheckoutScreenProps {
   cartItems: CartItem[];
@@ -303,7 +304,10 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   const { total: totalPrice } = calcOrderTotals(pricingLines, appliedPromo, deliveryFee);
 
   const isPickupSelected = selectedDelivery === 'pickup' || currentDeliveryObj.type === 'pickup';
-  const isPostSelected = selectedDelivery === 'post' || currentDeliveryObj.type === 'post' || (currentDeliveryObj.title || '').toLowerCase().includes('почт');
+  // Почта и транспортные компании (тип «Транспортная компания» или СДЭК в названии) — адрес с индексом, без подъезда
+  // и домофона: их спрашивает только курьер магазина (src/shared/orderFlow.ts)
+  const isPostSelected =
+    !isPickupSelected && (selectedDelivery === 'post' || deliveryKindOfMethod(currentDeliveryObj) === 'carrier');
   const isCourierSelected = !isPickupSelected && !isPostSelected;
   // Почта России и транспортные компании выдают посылку по паспорту: полное ФИО с отчеством (или «Нет отчества»)
   const fullNameRequired = !isPickupSelected && requiresFullName(currentDeliveryObj);
