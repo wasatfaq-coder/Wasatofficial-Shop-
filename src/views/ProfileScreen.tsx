@@ -1902,8 +1902,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
                   {/* Horizontal Milestone Tracker & Smooth Filling Path */}
                   <div className="space-y-2 pt-1">
-                    {/* Visual Milestone Nodes */}
-                    <div className="relative flex items-center justify-between z-10 px-1 gap-1">
+                    {/* Visual Milestone Nodes. A future step is told apart by its number in a well and a lighter
+                        label, not by transparency: #4E5C70 at 70% was 2.99:1 (UX audit 03.10, finding 6) */}
+                    <div className="relative flex items-start justify-between z-10 gap-0.5">
                       {milestoneSteps.map((step, idx, arr) => {
                         const isStepDone = trackingStatusInfo.percent >= step.threshold;
                         const prevThreshold = idx === 0 ? 0 : arr[idx - 1].threshold;
@@ -1911,14 +1912,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                           !isStepDone && trackingStatusInfo.percent > prevThreshold;
 
                         return (
-                          <div key={step.key} className="flex flex-col items-center flex-1 min-w-0">
+                          // Width from the label (flex-auto): five steps fit on 320 px without cutting «Получен»
+                          <div key={step.key} className="flex flex-col items-center flex-auto min-w-0">
                             <div
                               className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-extrabold transition-all shrink-0 ${
                                 isStepDone
                                   ? 'neu-fill-accent text-white'
                                   : isStepActive
                                   ? 'neu-inset-deep text-accent border border-accent ring-1 ring-accent/30 font-extrabold'
-                                  : 'neu-inset text-[#4E5C70]/70'
+                                  : 'neu-inset text-[#4E5C70]'
                               }`}
                             >
                               {isStepDone ? (
@@ -1927,13 +1929,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                 idx + 1
                               )}
                             </div>
+                            {/* Whole words instead of «При…»; a word breaks only if a screen is narrower still */}
                             <span
-                              className={`text-[11px] mt-1 font-bold transition-colors text-center truncate max-w-full ${
+                              className={`text-[11px] mt-1 leading-tight transition-colors text-center max-w-full break-words hyphens-auto ${
                                 isStepDone
-                                  ? 'text-[#2D3A4E]'
+                                  ? 'text-[#2D3A4E] font-bold'
                                   : isStepActive
                                   ? 'text-accent font-extrabold'
-                                  : 'text-[#4E5C70]/70'
+                                  : 'text-[#4E5C70] font-medium'
                               }`}
                               title={step.label}
                             >

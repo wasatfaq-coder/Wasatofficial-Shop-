@@ -373,15 +373,10 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
 
       {/* Main Details Card */}
       <div className="neu-flat rounded-3xl p-5 space-y-4 lg:col-span-5 lg:sticky lg:top-24">
-        {/* Title, Badge & Favorite */}
+        {/* Title, rating & Favorite. The badge («Новинка») is on the photo only, not repeated here */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              {product.badge && (
-                <span className="neu-flat text-accent font-extrabold text-[11px] px-3 py-1 rounded-full uppercase tracking-wider">
-                  {product.badge}
-                </span>
-              )}
               <RatingBadge
                 rating={getProductRating(product)?.rating}
                 reviewsCount={getProductRating(product)?.count}
@@ -517,15 +512,16 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           </div>
         </div>
 
-        {/* Live Inventory Status Banner & Price */}
+        {/* Live Inventory Status Banner & Price. On a phone the stock is on its own line under the price:
+            side by side «2 990 ₽» and «В наличии: 13 шт.» wrapped on 390 px, and the line jumped with the size */}
         <div className="space-y-2.5 pt-1">
-          <div className="flex items-center justify-between">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-extrabold text-[#2D3A4E]">
+          <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-baseline gap-x-2 flex-wrap">
+              <span className="text-2xl font-extrabold text-[#2D3A4E] whitespace-nowrap">
                 {product.price.toLocaleString('ru-RU')} ₽
               </span>
               {product.originalPrice && (
-                <span className="text-sm text-[#4E5C70] line-through">
+                <span className="text-sm text-[#4E5C70] line-through whitespace-nowrap">
                   {product.originalPrice.toLocaleString('ru-RU')} ₽
                 </span>
               )}
@@ -572,11 +568,12 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           )}
         </div>
 
-        {/* Quantity Controls & Primary Action Buttons */}
+        {/* Quantity Controls & Primary Action Buttons. Below ~350 px the button goes under the counter at full width:
+            side by side it ran past the card on 320 px and squeezed the counter */}
         <div className="space-y-2 pt-2">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {/* Quantity Counter */}
-            <div className="neu-inset rounded-full p-1 flex items-center gap-2">
+            <div className="neu-inset rounded-full p-1 flex items-center gap-2 shrink-0">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
                 disabled={quantity <= 1 || orderableStock === 0}
@@ -607,7 +604,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               ref={addButtonRef}
               onClick={handleAddToCart}
               disabled={isAdded || orderableStock === 0}
-              className={`flex-1 py-3.5 px-6 rounded-2xl font-bold text-sm flex items-center justify-center gap-2.5 transition-all duration-300 cursor-pointer ${
+              // Narrower padding on a phone and no bag before «Выберите размер»: the prompt fits on one line on 390 px
+              className={`grow basis-36 py-3.5 px-4 sm:px-6 rounded-2xl font-bold text-sm leading-tight flex items-center justify-center gap-2 sm:gap-2.5 transition-all duration-300 cursor-pointer ${
                 orderableStock === 0
                   ? 'neu-button-disabled'
                   : isAdded
@@ -627,7 +625,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 </>
               ) : (
                 <>
-                  <ShoppingBag className="w-4 h-4 stroke-[2]" />
+                  <ShoppingBag className={`w-4 h-4 stroke-[2] ${sizeChosen ? '' : 'hidden sm:block'}`} />
                   <span>{!sizeChosen ? 'Выберите размер' : isPreorder ? 'Предзаказ' : 'В корзину'}</span>
                 </>
               )}
@@ -897,7 +895,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
         <div className="lg:hidden fixed inset-x-0 bottom-[78px] z-30 px-3 pointer-events-none">
           <div className="max-w-md md:max-w-lg mx-auto neu-flat rounded-2xl p-2 flex items-center gap-3 pointer-events-auto">
             <div className="min-w-0 pl-1.5">
-              <p className="text-base font-extrabold text-[#2D3A4E] leading-tight">{product.price.toLocaleString('ru-RU')} ₽</p>
+              <p className="text-base font-extrabold text-[#2D3A4E] leading-tight whitespace-nowrap">{product.price.toLocaleString('ru-RU')} ₽</p>
               <p className="text-xs text-[#4E5C70] leading-tight truncate">
                 {selectedSize ? `Размер ${selectedSize}` : 'Размер не выбран'}
               </p>
@@ -910,7 +908,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 isAdded ? 'neu-button-success' : 'neu-button-accent'
               }`}
             >
-              {isAdded ? <Check className="w-4 h-4 stroke-[3]" aria-hidden="true" /> : <ShoppingBag className="w-4 h-4" aria-hidden="true" />}
+              {/* No bag before «Выберите размер»: with it the prompt took two lines on 320 px */}
+              {isAdded ? <Check className="w-4 h-4 stroke-[3]" aria-hidden="true" /> : sizeChosen && <ShoppingBag className="w-4 h-4" aria-hidden="true" />}
               <span>{isAdded ? 'Добавлено' : !sizeChosen ? 'Выберите размер' : isPreorder ? 'Предзаказ' : 'В корзину'}</span>
             </button>
           </div>

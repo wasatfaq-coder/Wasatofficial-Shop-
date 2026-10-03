@@ -245,7 +245,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             onSearchSubmit={() => {
               setActiveTab('catalog');
             }}
-            placeholder="Поиск по товарам"
+            // Between the menu and filter buttons «Поиск по товарам» was cut on 320 px (the field is 16 px on a phone)
+            placeholder="Поиск"
+            label="Поиск по товарам"
           />
         </div>
         <button
@@ -365,7 +367,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       {/* 6. Quick Category Icons Row */}
       {/* «не настроено» only once the store has answered; while loading the catalog placeholders say enough */}
       {categories.length === 0 && catalogStatus === 'ready' && <NotConfigured title="Категории" />}
-      <div className="grid grid-cols-4 lg:grid-cols-8 gap-3 py-1">
+      {/* The tiles are 56 px wide whatever the gap: a narrow column gap on a phone gives the labels room («Футболка» on 320 px) */}
+      <div className="grid grid-cols-4 lg:grid-cols-8 gap-x-1 gap-y-3 lg:gap-3 py-1">
         {categories
           .slice(0, 8)
           .map((cat, index) => {
@@ -383,7 +386,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 <span className="w-14 h-14 rounded-2xl neu-button flex items-center justify-center text-[#2D3A4E] group-hover:text-accent transition-colors duration-150">
                   <IconComp className="w-6 h-6 stroke-[1.8]" aria-hidden="true" />
                 </span>
-                <span className="text-[13px] font-medium text-[#2D3A4E] group-hover:text-accent truncate max-w-full">
+                {/* Up to two lines instead of «Футбо…»; a word longer than the column breaks rather than being cut */}
+                <span className="text-[13px] leading-tight text-center font-medium text-[#2D3A4E] group-hover:text-accent max-w-full line-clamp-2 break-words hyphens-auto">
                   {cat.name}
                 </span>
               </button>

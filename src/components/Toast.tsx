@@ -37,9 +37,11 @@ interface ToastProps {
   onDismiss: (id: string) => void;
 }
 
+// Phone: on top. Computer (lg): bottom left — the right column holds the buying block (product, cart, checkout) and the
+// admin's «Применить»/«Сохранить»; at the top right the toast covered the product title and colours (UX audit 03.10, finding 12)
 export const ToastContainer: React.FC<ToastProps> = ({ toasts, onDismiss }) => {
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 lg:top-36 lg:left-auto lg:right-6 lg:translate-x-0 z-[300] flex flex-col gap-2.5 w-11/12 max-w-sm pointer-events-none">
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 lg:top-auto lg:bottom-6 lg:left-6 lg:translate-x-0 z-[300] flex flex-col gap-2.5 w-11/12 max-w-sm pointer-events-none">
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
       ))}

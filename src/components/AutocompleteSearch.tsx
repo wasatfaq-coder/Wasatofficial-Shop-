@@ -17,6 +17,8 @@ interface AutocompleteSearchProps {
   onSelectCategory?: (category: string) => void;
   onSearchSubmit?: (query: string) => void;
   placeholder?: string;
+  /** Name for a screen reader when the placeholder is shortened to fit (home on 320 px: «Поиск») */
+  label?: string;
   className?: string;
 }
 
@@ -29,6 +31,7 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
   onSelectCategory,
   onSearchSubmit,
   placeholder = 'Поиск по названию, артикулу, цвету...',
+  label = placeholder,
   className = '',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -160,7 +163,7 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
             if (cleanQuery) setIsOpen(true);
           }}
           placeholder={placeholder}
-          aria-label={placeholder}
+          aria-label={label}
           className="w-full neu-inset rounded-full h-11 py-2.5 pl-9 pr-8 text-[13px] text-[#2D3A4E] placeholder:text-[#56647A] transition-all"
         />
         {searchQuery && (
