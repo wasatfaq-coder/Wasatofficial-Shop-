@@ -77,6 +77,9 @@ jobs:
     name: Hosting + Firestore rules (main)
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # The deploy signs in with the service account; the GitHub token only reads the code
+    permissions:
+      contents: read
     environment:
       name: production
       url: https://${{ env.FIREBASE_PROJECT }}.web.app
@@ -100,8 +103,8 @@ jobs:
       - run: bun run build
         env:
           VITE_RECAPTCHA_SITE_KEY: ${{ vars.RECAPTCHA_SITE_KEY }}
-      - name: Install and test Cloud Functions
-        if: env.DEPLOY_FUNCTIONS == 'true'
+      # Prices, cart and stock are tested before every deploy, not only when the functions are deployed (finding 21)
+      - name: Install and test Cloud Functions and shared code
         run: |
           npm ci --prefix functions
           npm run typecheck --prefix functions

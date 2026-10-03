@@ -397,6 +397,16 @@ describe('orders', () => {
     await assertFails(getDoc(doc(buyer('anon-b'), 'order_rate/anon-a')));
   });
 
+  // Находка 22: заказ ровно в том виде, в каком его собирает сайт (buildClientOrder → scripts/client-order-sample.ts).
+  // Новое поле заказа без правки isClientOrderShape делает этот тест красным, а не отклоняет заказы на живом сайте
+  test('the order exactly as the site builds it is accepted (all optional fields, and a 1-click order)', async () => {
+    const samples = JSON.parse(readFileSync('tests/.generated/client-orders.json', 'utf8'));
+    for (const [name, sample] of Object.entries(samples)) {
+      const uid = `sample-${name}`;
+      await assertSucceeds(placeOrder(buyer(uid), uid, { ...sample, customerUid: uid }));
+    }
+  });
+
   test('customer cannot place an order in someone else\'s name', async () => {
     await assertFails(placeOrder(customer('alice'), 'alice', order({ id: 'MS-5', customerUid: 'bob' })));
     await assertSucceeds(placeOrder(customer('alice'), 'alice', order({ id: 'MS-6', customerUid: 'alice' })));

@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
 
+# Checks only read the code
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
