@@ -27,6 +27,24 @@ export const ADMIN_CANCEL_REASONS = [
   OTHER_CANCEL_REASON,
 ] as const;
 
+/** The reason of the automatic cancellation of an unpaid order (one of ADMIN_CANCEL_REASONS) */
+export const UNPAID_CANCEL_REASON = 'Заказ не оплачен';
+
+/**
+ * Orders the store cancels itself after `days` without payment («Витрина» → `unpaidOrderCancelDays`, stage 5 without
+ * Blaze): still in «Принят» and «Ожидает оплаты». A receipt on review, payment on delivery, an order already packed or
+ * an order with an unknown date (old «Сегодня, 14:30») are not touched.
+ */
+export function overdueUnpaidOrders(orders: Order[], days: number | undefined, now = Date.now()): Order[] {
+  if (!days || days <= 0) return [];
+  const limit = days * 24 * 60 * 60 * 1000;
+  return orders.filter((o) => {
+    if (o.isCancelled || o.status !== 'accepted' || (o.paymentStatus ?? 'pending') !== 'pending') return false;
+    const at = orderTimestamp(o);
+    return at !== null && now - at > limit;
+  });
+}
+
 /** Lengths the rules allow (`firestore.rules`, `isCustomerOrderCancel`) */
 export const CANCEL_REASON_MAX = 100;
 export const CANCEL_COMMENT_MAX = 500;

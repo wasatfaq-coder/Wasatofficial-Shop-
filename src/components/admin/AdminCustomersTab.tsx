@@ -211,13 +211,16 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       });
     });
 
-    // B. Group Orders for Customers who may have placed guest orders without an explicit /users profile
+    // B. Group Orders for Customers who may have placed guest orders without an explicit /users profile. A guest's order
+    // carries the uid of the browser's anonymous session (stage 5): without a profile it is grouped like any guest order
+    const profileUids = new Set(users.map((u) => u.uid).filter(Boolean));
+    const accountUid = (o: Order) => (o.customerUid && profileUids.has(o.customerUid) ? o.customerUid : undefined);
     orders.forEach((ord) => {
       if (attached.has(ord.id)) return;
       const email = (ord.customerEmail || '').toLowerCase().trim();
       const phone = (ord.customerPhone || '').replace(/\D/g, '');
-      // a signed-in buyer without a profile document: their card is still their uid
-      const key = ord.customerUid ? `uid:${ord.customerUid}` : email || (phone ? `phone-${phone}` : `order-cust-${ord.id}`);
+      const ownUid = accountUid(ord);
+      const key = ownUid ? `uid:${ownUid}` : email || (phone ? `phone-${phone}` : `order-cust-${ord.id}`);
 
       if (map.has(key)) {
         const rec = map.get(key)!;
@@ -233,7 +236,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
 
       // A guest order joins a card with the same phone; an order with a uid never joins someone else's card
       let existingMatchKey: string | null = null;
-      for (const [k, c] of ord.customerUid ? [] : map.entries()) {
+      for (const [k, c] of ownUid ? [] : map.entries()) {
         const cPhone = c.phone.replace(/\D/g, '');
         if (phone && cPhone && (phone.includes(cPhone.slice(-7)) || cPhone.includes(phone.slice(-7)))) {
           existingMatchKey = k;
@@ -257,7 +260,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       // Create new customer record from order data
       const matchedOrders = orders.filter((o) => {
         if (attached.has(o.id)) return false;
-        if (ord.customerUid || o.customerUid) return o.customerUid === ord.customerUid;
+        if (ownUid || accountUid(o)) return accountUid(o) === ownUid;
         const oEmail = (o.customerEmail || '').toLowerCase().trim();
         const oPhone = (o.customerPhone || '').replace(/\D/g, '');
         return (email && oEmail === email) || (phone && oPhone && oPhone === phone);

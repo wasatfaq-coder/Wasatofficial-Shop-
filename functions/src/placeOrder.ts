@@ -305,7 +305,8 @@ export async function placeOrderCore(
       tx.create(db.collection(STOCK_MOVEMENTS_COLLECTION).doc(movement.id), stripUndefined(movement));
     }
     if (promo) {
-      const commissionPercent = promo.data.partnerCommissionPercent || 10;
+      // the percent is not made up (owner's decision 02.10, finding 47): without it — no commission
+      const commissionPercent = promo.data.partnerCommissionPercent || 0;
       tx.update(promo.ref, stripUndefined({
         usedCount: (promo.data.usedCount || 0) + 1,
         generatedRevenue: (promo.data.generatedRevenue || 0) + totals.total,

@@ -2212,6 +2212,38 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               />
             </div>
           </div>
+
+          {/* Unpaid orders give their goods back (stage 5 without Blaze): a made-up order does not hold the stock */}
+          <div className="neu-inset p-3 rounded-2xl space-y-1.5">
+            <label htmlFor="storefront-unpaidOrderCancelDays" className="block text-xs font-extrabold text-[#2D3A4E]">
+              Отменять неоплаченные заказы через
+            </label>
+            <div className="relative max-w-[12rem]">
+              <input
+                id="storefront-unpaidOrderCancelDays"
+                type="number"
+                min="1"
+                max="30"
+                value={localSettings.unpaidOrderCancelDays || ''}
+                placeholder="не отменять"
+                aria-describedby="storefront-unpaidOrderCancelDays-hint"
+                onChange={(e) =>
+                  setLocalSettings({
+                    ...localSettings,
+                    // empty = off
+                    unpaidOrderCancelDays: Math.min(30, Math.max(0, Math.round(Number(e.target.value) || 0))),
+                  })
+                }
+                className="w-full px-3 py-2 neu-button rounded-xl text-xs font-extrabold text-accent pr-10"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4E5C70]">дн.</span>
+            </div>
+            <p id="storefront-unpaidOrderCancelDays-hint" className="text-[11px] text-[#4E5C70]">
+              Заказ в «Принят» со статусом «Ожидает оплаты» отменяется с причиной «Заказ не оплачен», товар возвращается на
+              склад. Срабатывает, когда вы открываете «Заказы». Чек на проверке и оплата при получении не отменяются. Пусто —
+              не отменять.
+            </p>
+          </div>
         </div>
 
         {/* Orders validated by the placeOrder Cloud Function */}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Loader2, MessageSquare, X, XCircle } from 'lucide-react';
-import type { Order } from '../../types';
+import type { Order, Product } from '../../types';
+import { AdminOrderPriceWarning } from './AdminOrderPriceWarning';
 import { ModalPortal } from '../ModalPortal';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import {
@@ -30,13 +31,15 @@ interface AdminReceiptReviewProps {
   onReview: ReviewReceipt;
   /** «Открыть чек в чате» (in «Заказы»); absent in the chat itself */
   onOpenChat?: () => void;
+  /** The catalog: «Цены не совпадают с каталогом» right above the buttons (in the chat; «Заказы» show it in the card) */
+  products?: Product[];
 }
 
 /**
  * The receipt the buyer sent («Доработки 5» §4): which way and when, «Подтвердить оплату» (→ «Оплачен», the buyer gets
  * a message and a notification) and «Отклонить чек» with the reason (→ «Ожидает оплаты»).
  */
-export const AdminReceiptReview: React.FC<AdminReceiptReviewProps> = ({ order, onReview, onOpenChat }) => {
+export const AdminReceiptReview: React.FC<AdminReceiptReviewProps> = ({ order, onReview, onOpenChat, products }) => {
   const [busy, setBusy] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const receipt = order.paymentReceipt;
@@ -61,6 +64,7 @@ export const AdminReceiptReview: React.FC<AdminReceiptReviewProps> = ({ order, o
           )}
         </span>
       </div>
+      {products && <AdminOrderPriceWarning order={order} products={products} />}
       <p className="text-[#4E5C70]">Сверьте поступление {(order.totalPrice ?? 0).toLocaleString('ru-RU')} ₽ и подтвердите оплату или отклоните чек.</p>
       <div className="flex items-center gap-2 flex-wrap">
         {onOpenChat && (

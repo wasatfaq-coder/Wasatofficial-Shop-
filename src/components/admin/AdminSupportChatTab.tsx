@@ -908,7 +908,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                     if (!receiptOrder) return null;
                     const isCurrent = receiptOrder.paymentReceipt?.messageId === msg.id;
                     if (isCurrent && isReceiptOnReview(receiptOrder) && onReviewReceipt) {
-                      return <AdminReceiptReview order={receiptOrder} onReview={onReviewReceipt} />;
+                      return <AdminReceiptReview order={receiptOrder} onReview={onReviewReceipt} products={products} />;
                     }
                     const last = [...(receiptOrder.paymentLog ?? [])].reverse().find((e) => e.event !== 'receipt');
                     if (!isCurrent || !last) return null;

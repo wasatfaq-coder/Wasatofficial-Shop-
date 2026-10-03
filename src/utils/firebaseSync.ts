@@ -827,6 +827,30 @@ export async function saveOrderToFirestore(order: Order): Promise<void> {
   }
 }
 
+/**
+ * An order from the browser (`completeOrderLocally`): together with its rate mark `order_rate/{uid}` in one batch — the
+ * rules take an order only under a sign-in (Google or the guest's anonymous one) and not more often than every 30 s
+ * from it (audit 02.10, stage 5 without Blaze). Throws when refused.
+ */
+export async function placeClientOrder(order: Order, uid: string, targetDb: Firestore = db): Promise<void> {
+  const batch = writeBatch(targetDb);
+  batch.set(doc(targetDb, 'orders', order.id), sanitizeForFirestore(order));
+  batch.set(doc(targetDb, 'order_rate', uid), { lastOrderAt: serverTimestamp(), orderId: order.id });
+  await batch.commit();
+}
+
+/** Seconds left until this sign-in may place the next order (`order_rate/{uid}`); 0 — not limited or unknown */
+export async function orderRateWaitSeconds(uid: string, targetDb: Firestore = db): Promise<number> {
+  try {
+    const snap = await getDoc(doc(targetDb, 'order_rate', uid));
+    const at = snap.data()?.lastOrderAt;
+    const last = at instanceof Timestamp ? at.toMillis() : 0;
+    return Math.max(0, Math.ceil((last + 30_000 - Date.now()) / 1000));
+  } catch {
+    return 0;
+  }
+}
+
 export async function deleteOrderFromFirestore(orderId: string) {
   try {
     await deleteDoc(doc(db, 'orders', orderId));
@@ -932,11 +956,12 @@ export function subscribeToPromos(
  * (audit 02.10, finding 2). Revenue and the partner's commission are not written: they are counted from paid and
  * received orders (partnerCommission.ts). An atomic increment, so two buyers at once keep both uses.
  */
-export async function recordPromoUsageInFirestore(promo: PromoCode, orderId: string) {
+export async function recordPromoUsageInFirestore(promo: PromoCode, orderId: string, targetDb: Firestore = db) {
   try {
-    const batch = writeBatch(db);
-    batch.update(doc(db, 'promos', promo.id), { usedCount: increment(1), lastOrderId: orderId });
-    batch.set(doc(db, 'promo_uses', orderId), { orderId, promoId: promo.id, createdAt: new Date().toISOString() });
+    // the order's owner writes it (rules): a guest — from the anonymous guest session that placed the order
+    const batch = writeBatch(targetDb);
+    batch.update(doc(targetDb, 'promos', promo.id), { usedCount: increment(1), lastOrderId: orderId });
+    batch.set(doc(targetDb, 'promo_uses', orderId), { orderId, promoId: promo.id, createdAt: new Date().toISOString() });
     await batch.commit();
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `promos/${promo.id}`);
