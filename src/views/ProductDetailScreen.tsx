@@ -374,33 +374,25 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
 
       {/* Main Details Card */}
       <div className="neu-flat rounded-3xl p-5 space-y-4 lg:col-span-5 lg:sticky lg:top-24">
-        {/* Title, Badge & Favorite */}
+        {/* Title, rating & favorite. The badge is shown on the photo only: a second copy here repeated it */}
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {product.badge && (
-                <span className="neu-flat text-accent font-extrabold text-[11px] px-3 py-1 rounded-full uppercase tracking-wider">
-                  {product.badge}
-                </span>
-              )}
-              <RatingBadge
-                rating={getProductRating(product)?.rating}
-                reviewsCount={getProductRating(product)?.count}
-                showLabel
-                size="md"
-              />
-            </div>
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-xl font-bold text-[#2D3A4E] tracking-tight leading-snug min-w-0 break-words">
+              {product.title}
+            </h1>
             <AnimatedFavoriteButton
               isFavorite={isFavorite}
               onToggle={(e) => onToggleFavorite(product, e)}
               size="md"
-              className="neu-button ml-auto"
+              className="neu-button shrink-0"
             />
           </div>
-
-          <h1 className="text-xl font-bold text-[#2D3A4E] tracking-tight leading-snug">
-            {product.title}
-          </h1>
+          <RatingBadge
+            rating={getProductRating(product)?.rating}
+            reviewsCount={getProductRating(product)?.count}
+            showLabel
+            size="md"
+          />
         </div>
 
         {/* Interactive Selectors: Color & Size */}
@@ -520,13 +512,14 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
 
         {/* Live Inventory Status Banner & Price */}
         <div className="space-y-2.5 pt-1">
-          <div className="flex items-center justify-between">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-extrabold text-[#2D3A4E]">
+          {/* Price on one line, the stock badge below it: side by side they wrapped «2 990 ₽» on a phone */}
+          <div className="flex flex-col items-start gap-2">
+            <div className="flex items-baseline gap-x-2 flex-wrap">
+              <span className="text-2xl font-extrabold text-[#2D3A4E] whitespace-nowrap">
                 {product.price.toLocaleString('ru-RU')} ₽
               </span>
               {product.originalPrice && (
-                <span className="text-sm text-[#4E5C70] line-through">
+                <span className="text-sm text-[#4E5C70] line-through whitespace-nowrap">
                   {product.originalPrice.toLocaleString('ru-RU')} ₽
                 </span>
               )}
@@ -575,7 +568,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
 
         {/* Quantity Controls & Primary Action Buttons */}
         <div className="space-y-2 pt-2">
-          <div className="flex items-center gap-3">
+          {/* On a narrow phone the button moves under the counter instead of wrapping its text */}
+          <div className="flex flex-wrap items-center gap-3">
             {/* Quantity Counter */}
             <div className="neu-inset rounded-full p-1 flex items-center gap-2">
               <button
@@ -608,7 +602,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               ref={addButtonRef}
               onClick={handleAddToCart}
               disabled={isAdded || orderableStock === 0}
-              className={`flex-1 py-3.5 px-6 rounded-2xl font-bold text-sm flex items-center justify-center gap-2.5 transition-all duration-300 cursor-pointer ${
+              className={`flex-1 basis-44 py-3.5 px-4 rounded-2xl font-bold text-sm whitespace-nowrap flex items-center justify-center gap-2.5 transition-all duration-300 cursor-pointer ${
                 orderableStock === 0
                   ? 'neu-button-disabled'
                   : isAdded
@@ -898,8 +892,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
         <div className="lg:hidden fixed inset-x-0 bottom-[78px] z-30 px-3 pointer-events-none">
           <div className="max-w-md md:max-w-lg mx-auto neu-flat rounded-2xl p-2 flex items-center gap-3 pointer-events-auto">
             <div className="min-w-0 pl-1.5">
-              <p className="text-base font-extrabold text-[#2D3A4E] leading-tight">{product.price.toLocaleString('ru-RU')} ₽</p>
-              <p className="text-xs text-[#4E5C70] leading-tight truncate">
+              <p className="text-base font-extrabold text-[#2D3A4E] leading-tight whitespace-nowrap">{product.price.toLocaleString('ru-RU')} ₽</p>
+              <p className="text-xs text-[#4E5C70] leading-tight">
                 {selectedSize ? `Размер ${selectedSize}` : 'Размер не выбран'}
               </p>
             </div>
@@ -907,7 +901,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               type="button"
               onClick={handleAddToCart}
               disabled={isAdded}
-              className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 cursor-pointer ${
+              className={`flex-1 py-3 px-2 rounded-xl font-bold text-sm whitespace-nowrap flex items-center justify-center gap-2 cursor-pointer ${
                 isAdded ? 'neu-button-success' : 'neu-button-accent'
               }`}
             >
