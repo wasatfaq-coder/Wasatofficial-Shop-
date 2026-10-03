@@ -15,7 +15,7 @@ test('владелец меняет цену и печатает этикетк�
   const panel = page.getByRole('dialog', { name: 'Панель администратора' });
   await panel.getByRole('tab', { name: 'Каталог', exact: true }).click();
   await panel.getByRole('tab', { name: 'Товары', exact: true }).click();
-  await panel.getByRole('textbox', { name: 'Название, артикул или штрихкод' }).fill(item.title);
+  await panel.getByRole('textbox', { name: 'Поиск товаров' }).fill(item.title);
   await panel.getByRole('button', { name: 'Редактировать' }).click();
 
   const form = page.getByRole('dialog', { name: 'Редактирование товара' });
