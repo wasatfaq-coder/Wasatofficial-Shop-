@@ -25,7 +25,7 @@ import {
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { CartItem, Product, ProductSKU, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog, PaymentKind, PaymentTemplate } from '../types';
 import { paymentLogEntry, receiptMessageText } from './paymentDetails';
-import { DEFAULT_STOREFRONT_SETTINGS, stockMovementId } from './inventory';
+import { DEFAULT_STOREFRONT_SETTINGS, isHiddenFromSale, stockMovementId } from './inventory';
 import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
 import type { LegalDocId, LegalTexts } from './legalDocs';
 import type { RestoreWrite } from './backupRestore';
@@ -256,7 +256,12 @@ export interface AdminStockChange {
   productTitle?: string;
   color: string;
   size: string;
+  /** By how much: the difference from the stock the admin saw (a sale meanwhile stays sold) */
   delta: number;
+  /** The exact stock instead (inventory count: what is on the shelf now) */
+  setTo?: number;
+  /** The journal's reason for this variant (instead of the common one) */
+  reason?: string;
 }
 
 /**
@@ -272,7 +277,7 @@ export async function applyAdminStockChanges(
   const at = meta.at ?? new Date();
   const failed: AdminStockChange[] = [];
   for (const change of changes) {
-    if (!change.delta) continue;
+    if (!change.delta && change.setTo === undefined) continue;
     const productRef = doc(db, 'products', change.productId);
     try {
       await runTransaction(db, async (tx) => {
@@ -284,9 +289,9 @@ export async function applyAdminStockChanges(
         if (skuIndex < 0) throw new Error('variant missing');
         const sku = skus[skuIndex];
         const before = Number(sku.stock) || 0;
-        const after = Math.max(0, before + change.delta);
+        const after = Math.max(0, change.setTo !== undefined ? change.setTo : before + change.delta);
         if (after === before) return;
-        const hidden = data.inStock === false && skus.some((s) => (Number(s.stock) || 0) > 0);
+        const hidden = isHiddenFromSale({ inStock: data.inStock, skus, hiddenFromSale: data.hiddenFromSale });
         const nextSkus = skus.map((s, i) => (i === skuIndex ? { ...s, stock: after } : s));
         const movement: StockMovementLog = {
           id: stockMovementId(),
@@ -302,7 +307,7 @@ export async function applyAdminStockChanges(
           changeQuantity: after - before,
           previousStock: before,
           newStock: after,
-          reason: meta.reason,
+          reason: change.reason ?? meta.reason,
           operator: meta.operator,
         };
         tx.set(doc(db, STOCK_MOVEMENTS_COLLECTION, movement.id), sanitizeForFirestore(movement));
