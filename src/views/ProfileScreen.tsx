@@ -147,7 +147,8 @@ interface ProfileScreenProps {
   onUpdateProducts?: (products: Product[]) => Promise<boolean> | void;
   onUpdateOrders?: (orders: Order[]) => Promise<boolean> | void;
   promos?: PromoCode[];
-  onUpdatePromos?: (promos: PromoCode[]) => void;
+  /** Resolves to false when the database refused the write (the error toast is already shown) */
+  onUpdatePromos?: (promos: PromoCode[]) => Promise<boolean> | void;
   bannerSlides?: BannerSlide[];
   onUpdateBannerSlides?: (banners: BannerSlide[]) => void;
   chatMessages?: ChatMessage[];
@@ -311,7 +312,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const handleUpdatePromosList = (updated: PromoCode[]) => {
     setLocalPromos(updated);
-    if (onUpdatePromos) onUpdatePromos(updated);
+    return onUpdatePromos?.(updated);
   };
 
   const handleUpdateBannersList = (updated: BannerSlide[]) => {

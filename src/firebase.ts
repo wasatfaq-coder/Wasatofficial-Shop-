@@ -6,6 +6,7 @@ import {
   GoogleAuthProvider,
   onAuthStateChanged,
   signInAnonymously,
+  signInWithCredential,
   signInWithPopup,
   signOut,
   User,
@@ -60,6 +61,13 @@ function createFirestore(firebaseApp: FirebaseApp): Firestore {
 export const db = createFirestore(app);
 export const auth = getAuth(app);
 connectEmulators(app, db);
+
+// Scenario tests (tests/e2e) sign in to the Auth emulator without Google's popup. Only in the emulator build:
+// the production build drops this block
+if (USE_EMULATORS) {
+  (window as Window & { e2eSignIn?: (user: { sub: string; email: string; name: string }) => Promise<unknown> }).e2eSignIn =
+    (user) => signInWithCredential(auth, GoogleAuthProvider.credential(JSON.stringify({ ...user, email_verified: true })));
+}
 
 // The Functions client is loaded only for server orders («Витрина» → «Проверка заказов на сервере»): ≈ 8 КБ gzip off
 // the main bundle (audit 02.10, finding 37)

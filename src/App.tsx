@@ -2216,12 +2216,14 @@ export default function App() {
               }}
               promos={promos}
               onUpdatePromos={(updatedPromos) => {
-                void persist(
+                const saved = persist(
                   'промокоды',
                   deleteRemovedDocs('promos', promos, updatedPromos),
                   syncAllPromosToFirestore(changedItems(promos, updatedPromos))
                 );
                 setPromos(updatedPromos);
+                // «Промокоды» say «создан/обновлен» and close the form only after the database answered (UX audit 03.10, finding 5)
+                return saved;
               }}
               bannerSlides={bannerSlides}
               onUpdateBannerSlides={handleUpdateBannerSlides}

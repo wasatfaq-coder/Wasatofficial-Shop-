@@ -19,4 +19,5 @@
 - [ ] `bun run lint` и `bun run build` проходят
 - [ ] Если менялись `firestore.rules`, обновлены тесты и `bun run test:rules` проходит
 - [ ] Если менялись `functions/` или `src/shared/`, `bun run test:functions` проходит
+- [ ] Если менялись экраны, `bun run test:e2e` проходит (или сценарий поправлен вместе с экраном)
 - [ ] Нет секретов и одноразовых скриптов в диффе

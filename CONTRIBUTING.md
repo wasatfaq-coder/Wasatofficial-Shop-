@@ -11,6 +11,7 @@
    bun run build    # сборка
    bun run test:rules  # если меняли firestore.rules (нужна Java 21)
    bun run test:functions  # если меняли functions/ или src/shared/ (нужна Java и npm ci --prefix functions)
+   bun run test:e2e  # если меняли экраны: сценарии покупателя и владельца в браузере (нужна Java 21)
    ```
 4. Откройте Pull Request в `main`. CI проверит сборку и правила,
    а для PR будет развёрнут preview-сайт в Firebase Hosting.
