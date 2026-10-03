@@ -148,6 +148,12 @@ service cloud.firestore {
       return !(field in data) || (data[field] is string && data[field].size() <= maxLength);
     }
 
+    // Имя автора отзыва и диалога чата не выдаёт себя за магазин: «Wasat Shop (официально)», «Администратор»,
+    // «Служба поддержки» (аудит 02.10, находка 31). (?i) в RE2 сравнивает и кириллицу без учёта регистра
+    function isHonestName(name) {
+      return !name.matches('(?i).*(официальн|служба (поддержки|заботы)|поддержка магазина|(^|[^а-яёa-z])(администратор|админ|модератор|admin|support|official)([^а-яёa-z]|$)).*');
+    }
+
     function isValidReview(data, reviewId) {
       return data.keys().hasOnly(['id', 'productId', 'uid', 'authorName', 'rating', 'comment', 'pros', 'cons',
           'sizePurchased', 'colorPurchased', 'date', 'createdAt'])
@@ -159,6 +165,7 @@ service cloud.firestore {
         && data.rating is int && data.rating >= 1 && data.rating <= 5
         && data.comment is string && data.comment.size() > 0 && data.comment.size() <= 2000
         && data.authorName is string && data.authorName.size() > 0 && data.authorName.size() <= 60
+        && isHonestName(data.authorName)
         && data.date is string && data.date.size() <= 40
         && data.createdAt is string && data.createdAt.size() <= 40
         && isOptionalText(data, 'pros', 500)
@@ -185,6 +192,8 @@ service cloud.firestore {
         && request.resource.data.reviewId is string
         && request.resource.data.productId is string
         && voteId == request.resource.data.reviewId + '_' + request.auth.uid
+        // только к существующему отзыву: голоса скачивает каждый посетитель (аудит 02.10, находка 16)
+        && exists(/databases/$(database)/documents/reviews/$(request.resource.data.reviewId))
         // Не за свой отзыв (его id заканчивается на uid автора)
         && !request.resource.data.reviewId.matches('.*_' + request.auth.uid);
       allow delete: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
@@ -245,7 +254,8 @@ service cloud.firestore {
     }
 
     match /settings/{settingId} {
-      allow read: if true;
+      // шаблоны быстрых ответов поддержки — рабочие тексты сотрудников (аудит 02.10, находка 49 / тест B2)
+      allow read: if settingId != 'quick_phrases' || isAdmin();
       allow write: if isAdmin() && isValidId(settingId);
     }
 
@@ -464,9 +474,11 @@ service cloud.firestore {
         // внешний адрес открылся бы у сотрудника и выдал бы его IP
         && (!('imageUrl' in request.resource.data)
           || (request.resource.data.imageUrl is string
-            && request.resource.data.imageUrl.size() <= 900000
+            // ≈ 400 КБ — потолок сжатия на сайте (imageUpload.ts): картинка в 850 КБ вытесняла обращения в админке
+            && request.resource.data.imageUrl.size() <= 420000
             && request.resource.data.imageUrl.matches('^data:image/(png|jpe?g|webp|gif);base64,.*')))
         && isOptionalText(request.resource.data, 'threadName', 200)
+        && isHonestName(request.resource.data.get('threadName', ''))
         && isOptionalText(request.resource.data, 'timestamp', 20)
         && isOptionalText(request.resource.data, 'fileName', 200)
         // фото чека к заказу («Доработки 5»): номер заказа — для кнопок «Подтвердить оплату» / «Отклонить чек»
@@ -519,17 +531,44 @@ service cloud.firestore {
       return ['bonusPoints', 'managerNotes', 'tags'];
     }
 
+    // Профиль покупателя (UserProfile в src/types.ts): только свои поля разумного размера — админка грузит профили всех;
+    // почта — та, что в Google-аккаунте: по ней «Клиенты» связывали карточку, и чужая почта подменяла клиента
+    // (аудит 02.10, находка 25). На изменении проверяются только изменённые поля: старые профили не ломаются
+    function isOwnProfileWrite(changed) {
+      let data = request.resource.data;
+      return changed.hasOnly(['uid', 'name', 'lastName', 'firstName', 'middleName', 'email', 'phone', 'avatar',
+          'address', 'savedAddresses', 'savedCards', 'notificationsEnabled', 'bodyMeasurements', 'updatedAt',
+          'createdAt', 'lastActive'])
+        && (!('email' in changed) || data.email == '' || data.email == request.auth.token.email)
+        && isOptionalText(data, 'name', 200)
+        && isOptionalText(data, 'lastName', 60)
+        && isOptionalText(data, 'firstName', 60)
+        && isOptionalText(data, 'middleName', 60)
+        && isOptionalText(data, 'phone', 40)
+        && isOptionalText(data, 'avatar', 2000)
+        && isOptionalText(data, 'updatedAt', 40)
+        && isOptionalText(data, 'createdAt', 40)
+        && isOptionalText(data, 'lastActive', 40)
+        && (!('address' in changed) || (data.address is map && data.address.size() <= 15))
+        && (!('savedAddresses' in changed) || (data.savedAddresses is list && data.savedAddresses.size() <= 10))
+        && (!('savedCards' in changed) || (data.savedCards is list && data.savedCards.size() <= 5))
+        && (!('bodyMeasurements' in changed) || (data.bodyMeasurements is map && data.bodyMeasurements.size() <= 30))
+        && (!('notificationsEnabled' in changed) || data.notificationsEnabled is bool);
+    }
+
     match /users/{userId} {
       allow read: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
       allow create: if isAdmin() || (
         isSignedIn() && request.auth.uid == userId
         && request.resource.data.get('uid', userId) == userId
         && !request.resource.data.keys().hasAny(adminOnlyProfileFields())
+        && isOwnProfileWrite(request.resource.data.keys())
       );
       allow update: if isAdmin() || (
         isSignedIn() && request.auth.uid == userId
         && request.resource.data.get('uid', userId) == userId
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(adminOnlyProfileFields())
+        && isOwnProfileWrite(request.resource.data.diff(resource.data).affectedKeys())
       );
       allow delete: if isAdmin();
     }

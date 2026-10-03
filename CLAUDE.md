@@ -85,6 +85,10 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   `keepsCostPriceOut`), админка получает товары с подмешанной себестоимостью (`adminProducts` в `App.tsx`), а старые
   значения из товаров переносит сессия администратора (`moveProductCostsToPrivate`).
 - `users.bonusPoints/managerNotes/tags` меняет только администратор; заметки менеджера хранятся в `customer_notes`.
+- Профиль покупатель пишет только своими полями разумного размера и с почтой своего Google-аккаунта (`isOwnProfileWrite`;
+  новое поле профиля — добавить туда); при выходе профиль не пишется. «Клиенты» связывают карточку и заказы по `uid`.
+  Имя отзыва и диалога не может выдавать себя за магазин (`isHonestName`). Чат администратора в `localStorage` не
+  кэшируется; админка берёт последние 500 сообщений по `sentAt`.
 - Резервная копия — «Витрина» → «Скачать копию базы» (`AdminBackupCard`, `exportDatabase` в `firebaseSync.ts`): JSON всех
   коллекций из `BACKUP_COLLECTIONS` (в том числе `promo_uses`) на устройство владельца, даты — `{ __timestamp }`. Новая коллекция — добавить в список.
 - ID базы Firestore — в `firebase-applet-config.json` (`firestoreDatabaseId`) и `firebase.json`.

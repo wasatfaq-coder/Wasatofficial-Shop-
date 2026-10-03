@@ -179,19 +179,17 @@ describe('Оба режима', () => {
   beforeEach(() => seed(true));
 
   test('B1 посетитель без входа не получает список всех промокодов (личные и партнёрские, с лимитами и выручкой)',
-    { todo: 'находка 10, этап 3' }, async () => {
+    { todo: 'находка 10 от 30.09 и 43 от 02.10, этап 5' }, async () => {
       await assertFails(getDocs(collection(anon(), 'promos')));
     });
 
-  test('B2 посетитель без входа не читает шаблоны ответов поддержки',
-    { todo: 'находка 41, этап 7' }, async () => {
+  test('B2 посетитель без входа не читает шаблоны ответов поддержки (находка 49, этап 3)', async () => {
       // settings/server покупатель читает по замыслу: по нему сайт выбирает режим заказов
       await assertSucceeds(getDoc(doc(anon(), 'settings/server')));
       await assertFails(getDoc(doc(anon(), 'settings/quick_phrases')));
     });
 
-  test('B3 анонимный гость чата не может записать сообщение с чужим id и картинкой ~850 КБ (вытесняет обращения в админке)',
-    { todo: 'находка 27, этап 7' }, async () => {
+  test('B3 анонимный гость чата не может записать сообщение с картинкой ~850 КБ от имени «Службы поддержки» (находки 17 и 31, этап 3)', async () => {
       const id = '0000-spam-0001'; // сортируется раньше настоящих msg-<время>, а админка берёт limit(500) без orderBy
       await assertFails(setDoc(doc(guestChat('anon1'), `chat_messages/${id}`), {
         id, sender: 'user', text: 'спам', threadId: 'anon1', isInternalNote: false,
@@ -200,15 +198,13 @@ describe('Оба режима', () => {
       }));
     });
 
-  test('B4 «Полезно» нельзя поставить несуществующему отзыву (эти голоса скачивает каждый посетитель)',
-    { todo: 'находка 25, этап 6' }, async () => {
+  test('B4 «Полезно» нельзя поставить несуществующему отзыву (эти голоса скачивает каждый посетитель, находка 16, этап 3)', async () => {
       await assertFails(setDoc(doc(customer('mallory'), 'review_votes/nope_victim_mallory'), {
         reviewId: 'nope_victim', productId: 'nope', uid: 'mallory',
       }));
     });
 
-  test('B5 покупатель не пишет в свой профиль произвольные поля и ~900 КБ (админка грузит профили всех)',
-    { todo: 'находка 41, этап 7' }, async () => {
+  test('B5 покупатель не пишет в свой профиль произвольные поля и ~900 КБ (админка грузит профили всех, находка 25, этап 3)', async () => {
       await assertFails(setDoc(doc(customer('mallory'), 'users/mallory'), {
         uid: 'mallory', name: 'x', role: 'admin', isAdmin: true, blob: 'z'.repeat(900_000),
       }));
