@@ -4,6 +4,8 @@ import { launchSteps } from '../utils/launchChecklist';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { CancelOrderDialog } from '../components/CancelOrderDialog';
 import { OrderTimeline } from '../components/OrderTimeline';
+import { StoreHours } from '../components/StoreHours';
+import { isScheduleConfigured } from '../utils/storeSchedule';
 import {
   canCustomerConfirmReceipt,
   customerStatusLabel,
@@ -841,6 +843,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     pickupAddress,
   } = getStoreContacts(storefrontSettings);
   const workingHours = (storefrontSettings?.workingHours ?? '').trim();
+  // The store's hours from «Витрина»: the status, the week and the comment (docs/store-schedule-spec.md)
+  const storeSchedule = storefrontSettings?.schedule;
+  const hasHours = Boolean(workingHours) || isScheduleConfigured(storeSchedule);
 
   return (
     <div className="space-y-5 pb-28 lg:pb-10 animate-in fade-in duration-300">
@@ -1291,7 +1296,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       </div>
 
       {/* Store contacts: only what the owner filled in. The chat is in «Поддержка» below */}
-      {(pickupAddress || workingHours || storePhone || storeTelegram) && (
+      {(pickupAddress || hasHours || storePhone || storeTelegram) && (
       <div className="space-y-2">
         <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase px-1">
           Контакты магазина
@@ -1307,7 +1312,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </div>
           </div>
 
-          {(pickupAddress || workingHours) && (
+          {(pickupAddress || hasHours) && (
             <div className="neu-inset rounded-2xl p-3 space-y-1.5 text-xs text-[#2D3A4E]">
               {pickupAddress && (
                 <div className="flex items-start gap-2">
@@ -1315,12 +1320,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   <span className="font-semibold leading-relaxed">{pickupAddress}</span>
                 </div>
               )}
-              {workingHours && (
-                <div className="flex items-center gap-2">
-                  <Clock className="w-3.5 h-3.5 text-[#4E5C70] shrink-0" />
-                  <span className="text-[#4E5C70]">{workingHours}</span>
-                </div>
-              )}
+              <StoreHours schedule={storeSchedule} comment={workingHours} />
             </div>
           )}
 
@@ -3349,7 +3349,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                       <Phone className="w-4 h-4" />
                     </a>
                   </div>
-                  {workingHours && <p className="text-xs text-[#4E5C70]">{workingHours}</p>}
+                  <StoreHours schedule={storeSchedule} comment={workingHours} />
                 </div>
                 )}
 

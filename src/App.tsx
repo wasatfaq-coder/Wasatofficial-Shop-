@@ -1835,6 +1835,7 @@ export default function App() {
           draftText={chatDraft}
           imageDb={chatIdentity?.db}
           storePhone={getStoreContacts(storefrontSettings).phone}
+          storeSchedule={storefrontSettings.schedule}
           onClose={() => {
             setIsSupportChatOpen(false);
             setChatDraft('');
