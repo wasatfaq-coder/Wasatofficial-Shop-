@@ -20,11 +20,12 @@ import {
   increment,
   deleteField,
   runTransaction,
+  documentId,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { CartItem, Product, ProductSKU, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog, PaymentKind, PaymentTemplate } from '../types';
 import { paymentLogEntry, receiptMessageText } from './paymentDetails';
-import { DEFAULT_STOREFRONT_SETTINGS } from './inventory';
+import { DEFAULT_STOREFRONT_SETTINGS, stockMovementId } from './inventory';
 import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
 import type { LegalDocId, LegalTexts } from './legalDocs';
 import { compressBase64Image } from './imageUpload';
@@ -214,6 +215,106 @@ export async function deductOrderLineStock(orderId: string, line: CartItem, line
     }
     return taken;
   });
+}
+
+/** Orders since this moment write a journal entry per line together with the stock (audit 02.10, stage 1) */
+export const ORDER_JOURNAL_SINCE = '2026-10-02T19:03:19.000Z';
+
+/**
+ * Lines of new orders whose stock was never taken: the buyer's browser lost the connection or the rules refused the
+ * write-off (audit 02.10, finding 8 — before, only the console knew). An order since stage 1 has an entry
+ * `{заказ}_{строка}` for every line that is not a preorder; a missing entry is a line to take. Admin only.
+ */
+export async function findUntakenOrderLines(
+  orders: Pick<Order, 'id' | 'items' | 'createdAt'>[]
+): Promise<Record<string, number[]>> {
+  const wanted = new Map<string, { orderId: string; lineIndex: number }>();
+  for (const order of orders) {
+    if (!order.createdAt || order.createdAt < ORDER_JOURNAL_SINCE) continue;
+    (order.items ?? []).forEach((line, i) => {
+      if (!line.isPreorder) wanted.set(orderMovementId(order.id, i), { orderId: order.id, lineIndex: i });
+    });
+  }
+  const ids = [...wanted.keys()];
+  const found = new Set<string>();
+  for (let i = 0; i < ids.length; i += 30) {
+    const snap = await getDocs(query(collection(db, STOCK_MOVEMENTS_COLLECTION), where(documentId(), 'in', ids.slice(i, i + 30))));
+    snap.forEach((d) => found.add(d.id));
+  }
+  const missing: Record<string, number[]> = {};
+  for (const [id, { orderId, lineIndex }] of wanted) {
+    if (!found.has(id)) (missing[orderId] ??= []).push(lineIndex);
+  }
+  return missing;
+}
+
+/** One stock change the admin makes by an order: «+» back to stock, «−» taken from it */
+export interface AdminStockChange {
+  productId: string;
+  productTitle?: string;
+  color: string;
+  size: string;
+  delta: number;
+}
+
+/**
+ * Stock changes of the admin by an order («Правка состава», restoring or cancelling a restored order), each in its own
+ * transaction with its journal entry: the stock is read from the database at that moment and changed by the difference.
+ * Before, the browser wrote the whole product from its copy and an order placed meanwhile came back as stock (audit
+ * 02.10, finding 5 and its kin). A deduction stops at 0; «Снят с витрины» stays off sale. Returns what was not applied.
+ */
+export async function applyAdminStockChanges(
+  changes: AdminStockChange[],
+  meta: { orderId?: string; reason: string; operator: string; at?: Date }
+): Promise<{ failed: AdminStockChange[] }> {
+  const at = meta.at ?? new Date();
+  const failed: AdminStockChange[] = [];
+  for (const change of changes) {
+    if (!change.delta) continue;
+    const productRef = doc(db, 'products', change.productId);
+    try {
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(productRef);
+        if (!snap.exists()) throw new Error('product removed');
+        const data = snap.data();
+        const skus: ProductSKU[] = Array.isArray(data.skus) ? data.skus : [];
+        const skuIndex = skus.findIndex((sku) => sameVariantName(sku.color, change.color) && sameVariantName(sku.size, change.size));
+        if (skuIndex < 0) throw new Error('variant missing');
+        const sku = skus[skuIndex];
+        const before = Number(sku.stock) || 0;
+        const after = Math.max(0, before + change.delta);
+        if (after === before) return;
+        const hidden = data.inStock === false && skus.some((s) => (Number(s.stock) || 0) > 0);
+        const nextSkus = skus.map((s, i) => (i === skuIndex ? { ...s, stock: after } : s));
+        const movement: StockMovementLog = {
+          id: stockMovementId(),
+          createdAt: at.toISOString(),
+          date: formatOrderDate(at),
+          type: after > before ? (meta.orderId ? 'return' : 'receipt') : meta.orderId ? 'order' : 'writeoff',
+          ...(meta.orderId ? { orderId: meta.orderId } : {}),
+          productId: change.productId,
+          productTitle: String(change.productTitle ?? data.title ?? '').slice(0, 200),
+          skuCode: String(sku.skuCode ?? '').slice(0, 80),
+          color: String(sku.color ?? '').slice(0, 60),
+          size: String(sku.size ?? '').slice(0, 30),
+          changeQuantity: after - before,
+          previousStock: before,
+          newStock: after,
+          reason: meta.reason,
+          operator: meta.operator,
+        };
+        tx.set(doc(db, STOCK_MOVEMENTS_COLLECTION, movement.id), sanitizeForFirestore(movement));
+        tx.update(productRef, {
+          skus: nextSkus,
+          inStock: hidden ? false : nextSkus.some((s) => (Number(s.stock) || 0) > 0),
+        });
+      });
+    } catch (err) {
+      console.error(`Stock change ${change.productId} ${change.color} ${change.size} ${change.delta} failed:`, err);
+      failed.push(change);
+    }
+  }
+  return { failed };
 }
 
 /**

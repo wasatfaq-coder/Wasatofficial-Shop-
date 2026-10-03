@@ -26,7 +26,7 @@ describe('adjustedOrderTotals', () => {
     expect(adjustedOrderTotals(order, [line(shirt, 1)])).toEqual({ subtotal: 4000, discount: 500, deliveryFee: 350, total: 3850 });
   });
 
-  test('a percent promo from «Промокоды» is recalculated for the new items', () => {
+  test('a percent promo keeps the order\'s own percent for the new items', () => {
     const promo = { id: 'x', code: 'SALE10', discountType: 'percent', discountValue: 10, discountPercent: 10, active: true, usedCount: 0, minOrderAmount: 5000 } as PromoCode;
     const order = { items: [line(shirt, 1), line(polo, 1)], totalPrice: 5400, deliveryFee: 0, discountAmount: 600, promoCode: 'SALE10' };
     // the minimum of the promo is not checked again: the customer already got it

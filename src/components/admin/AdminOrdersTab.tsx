@@ -1,6 +1,6 @@
 import { orderTimestamp } from '../../shared/orderDate';
 import { useProgressiveList } from '../../utils/useProgressiveList';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Package,
   Search,
@@ -36,9 +36,16 @@ import {
 import { Order, Product, OrderAdjustmentLog, PromoCode, StorefrontSettings } from '../../types';
 import { exportOrdersToCSV } from '../../utils/csvHelpers';
 import { copyToClipboard } from '../../utils/clipboard';
-import { deductStockWithLogs, returnStockWithLogs, stockShortages, type StockShortage } from '../../utils/inventory';
-import { deleteOrderFromFirestore, returnCancelledOrderStock, saveStockMovements } from '../../utils/firebaseSync';
-import type { StockMovementLog } from '../../types';
+import { extractColorName, extractSizeName, stockShortages, type StockShortage } from '../../utils/inventory';
+import {
+  applyAdminStockChanges,
+  deductOrderLineStock,
+  deleteOrderFromFirestore,
+  findUntakenOrderLines,
+  ORDER_JOURNAL_SINCE,
+  returnCancelledOrderStock,
+  type AdminStockChange,
+} from '../../utils/firebaseSync';
 import { AdminActionMenu } from './AdminActionMenu';
 import {
   getDefaultDeliveryStages,
@@ -85,7 +92,6 @@ interface AdminOrdersTabProps {
   onUpdateOrders: (updated: Order[]) => Promise<boolean> | void;
   /** For «Корректировка заказа»: a percent promo of the order is recalculated */
   promos?: PromoCode[];
-  onUpdateProducts?: (updated: Product[]) => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   onOpenSupportChat?: (orderId: string, customerName?: string) => void;
   /** «Подтвердить оплату» / «Отклонить чек» («Доработки 5»): the order and a message to the buyer's chat */
@@ -259,7 +265,6 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   products = [],
   onUpdateOrders,
   promos = [],
-  onUpdateProducts,
   onShowToast,
   onOpenSupportChat,
   onReviewReceipt,
@@ -413,6 +418,49 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   }, [orders, searchQuery, statusFilter, dateFilter, deliveryFilter, paymentFilter, paymentStatusFilter]);
   const visibleOrders = useProgressiveList<Order>(filteredOrders, 3);
 
+  // Lines whose stock the buyer's browser did not take (finding 8): checked for active orders older than 2 minutes
+  // (a fresh order may still be writing off), again when that list changes
+  const [untakenLines, setUntakenLines] = useState<Record<string, number[]>>({});
+  const [takingStockOrderId, setTakingStockOrderId] = useState<string | null>(null);
+  const [untakenCheck, setUntakenCheck] = useState(0);
+  const untakenCandidates = useMemo(() => {
+    const ready = Date.now() - 2 * 60 * 1000;
+    return orders.filter(
+      (o) => !o.isCancelled && o.status !== 'delivered' && o.createdAt && o.createdAt >= ORDER_JOURNAL_SINCE && Date.parse(o.createdAt) < ready
+    );
+  }, [orders]);
+  const untakenKey = untakenCandidates.map((o) => o.id).sort().join(',');
+  useEffect(() => {
+    if (!untakenKey) {
+      setUntakenLines({});
+      return;
+    }
+    let alive = true;
+    findUntakenOrderLines(untakenCandidates)
+      .then((missing) => alive && setUntakenLines(missing))
+      .catch((err) => console.warn('Untaken order lines were not checked:', err));
+    return () => {
+      alive = false;
+    };
+    // the candidates are read when their ids change or after «Списать со склада»
+  }, [untakenKey, untakenCheck]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** «Списать со склада»: the same per-line write-off as the buyer's, with the same journal entry */
+  const handleTakeOrderStock = async (order: Order) => {
+    setTakingStockOrderId(order.id);
+    const at = new Date();
+    try {
+      for (const i of untakenLines[order.id] ?? []) await deductOrderLineStock(order.id, order.items[i], i, at);
+      onShowToast(`Товары заказа № ${order.id} списаны со склада`, 'success');
+    } catch (err) {
+      console.error('Stock was not taken:', err);
+      onShowToast(`Не сохранено: списание товаров заказа № ${order.id}. Проверьте соединение.`, 'error');
+    } finally {
+      setTakingStockOrderId(null);
+      setUntakenCheck((n) => n + 1);
+    }
+  };
+
   // Bulk Operations Handlers
   const handleToggleSelectAll = () => {
     if (selectedOrderIds.length === filteredOrders.length) {
@@ -432,12 +480,33 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
    * New fulfilment status of the given orders (one or a bulk selection). A cancelled order that gets
    * a status again is active: the goods returned on cancellation are taken from stock again.
    */
-  /** Stock changes of orders go to «Склад и SKU» → «Журнал движений» */
-  const recordStockMovements = (movements: StockMovementLog[]) => {
-    saveStockMovements(movements).catch((err) => {
-      console.error('Stock journal was not written:', err);
-      onShowToast('Не сохранено: запись в журнале склада. Остатки изменены, проверьте соединение.', 'error');
-    });
+
+  /**
+   * The whole order back to stock (+1) or taken again (−1) — restoring a cancelled order and cancelling a restored one.
+   * Each line in its own transaction against the stock in the database now, with its journal entry; preorder lines
+   * were never taken. A refused line is named in a toast.
+   */
+  const changeOrderStock = (order: Order, sign: 1 | -1, reason: string) => {
+    const changes: AdminStockChange[] = (order.items ?? [])
+      .filter((it) => !it.isPreorder)
+      .map((it) => ({
+        productId: it.product.id,
+        productTitle: it.product.title,
+        color: extractColorName(it.selectedColor),
+        size: extractSizeName(it.selectedSize),
+        delta: sign * it.quantity,
+      }));
+    if (changes.length === 0) return;
+    void applyAdminStockChanges(changes, { orderId: order.id, reason: `${reason} #${order.id}`, operator: 'Администратор' }).then(
+      ({ failed }) => {
+        if (failed.length > 0) {
+          onShowToast(
+            `Заказ № ${order.id}: не изменён остаток — ${failed.map((c) => `${c.productTitle ?? c.productId} (${c.color}, ${c.size})`).join('; ')}`,
+            'error'
+          );
+        }
+      }
+    );
   };
 
   /**
@@ -450,17 +519,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     const ids = new Set(orderIds);
 
     const reactivated = orders.filter((ord) => ids.has(ord.id) && ord.isCancelled && ord.items?.length);
-    if (reactivated.length > 0 && onUpdateProducts) {
-      let currentProducts = products;
-      const movements: StockMovementLog[] = [];
-      for (const ord of reactivated) {
-        const res = deductStockWithLogs(currentProducts, ord.items, ord.id, 'Администратор');
-        currentProducts = res.updatedProducts;
-        movements.push(...res.generatedLogs);
-      }
-      onUpdateProducts(currentProducts);
-      recordStockMovements(movements);
-    }
+    for (const ord of reactivated) changeOrderStock(ord, -1, 'Заказ восстановлен после отмены');
 
     const updated = orders.map((ord) => {
       if (!ids.has(ord.id)) return ord;
@@ -690,17 +749,8 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     const restoredBefore = new Set(active.filter((o) => Boolean(o.cancelledAt)).map((o) => o.id));
 
     // restored once: the ordered quantity back, as it was taken on restore
-    const legacy = active.filter((o) => restoredBefore.has(o.id) && o.items?.length);
-    if (legacy.length > 0 && onUpdateProducts) {
-      let currentProducts = products;
-      const movements: StockMovementLog[] = [];
-      for (const ord of legacy) {
-        const res = returnStockWithLogs(currentProducts, ord.items, ord.id, 'Отмена заказа администратором', 'Администратор');
-        currentProducts = res.updatedProducts;
-        movements.push(...res.generatedLogs);
-      }
-      onUpdateProducts(currentProducts);
-      recordStockMovements(movements);
+    for (const ord of active) {
+      if (restoredBefore.has(ord.id) && ord.items?.length) changeOrderStock(ord, 1, 'Отмена заказа администратором');
     }
 
     const ids = new Set(active.map((o) => o.id));
@@ -1390,6 +1440,28 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                   </div>
                 )}
 
+                {/* The buyer's browser did not take the stock of some lines (finding 8) */}
+                {!ord.isCancelled && (untakenLines[ord.id]?.length ?? 0) > 0 && (
+                  <div className="rounded-xl bg-warning-soft border border-warning/30 p-2.5 text-xs text-[#2D3A4E] flex items-center justify-between gap-2 flex-wrap">
+                    <p>
+                      <strong className="text-warning">Товар не списан со склада:</strong>{' '}
+                      {untakenLines[ord.id].map((i) => ord.items[i]?.product?.title ?? `строка ${i + 1}`).join(', ')}. Связь у покупателя
+                      оборвалась при оформлении.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => handleTakeOrderStock(ord)}
+                      disabled={takingStockOrderId === ord.id}
+                      className={`h-8 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer ${
+                        takingStockOrderId === ord.id ? 'neu-button-disabled text-[#4E5C70]' : 'neu-button text-accent'
+                      }`}
+                    >
+                      {takingStockOrderId === ord.id ? <RefreshCw className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> : <PackageCheck className="w-3.5 h-3.5" aria-hidden="true" />}
+                      <span>Списать со склада</span>
+                    </button>
+                  </div>
+                )}
+
                 {/* The buyer's receipt: confirm the payment or reject the receipt («Доработки 5») */}
                 {isReceiptOnReview(ord) && onReviewReceipt && (
                   <AdminReceiptReview
@@ -1756,12 +1828,17 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                   {/* Rarely used actions: «Ещё» menu; delete is the last item, after a line */}
                   <AdminActionMenu
                     actions={[
-                      {
-                        id: 'adjust',
-                        label: 'Правка состава и склад',
-                        icon: <SlidersHorizontal className="w-3.5 h-3.5 text-warning" />,
-                        onSelect: () => setSelectedOrderForAdjustment(ord),
-                      },
+                      // a cancelled order already returned its goods: a second return here doubled the stock (finding 6)
+                      ...(!ord.isCancelled
+                        ? [
+                            {
+                              id: 'adjust',
+                              label: 'Правка состава и склад',
+                              icon: <SlidersHorizontal className="w-3.5 h-3.5 text-warning" />,
+                              onSelect: () => setSelectedOrderForAdjustment(ord),
+                            },
+                          ]
+                        : []),
                       // Удаление — только отменённого: сначала отмена с возвратом на склад (задание владельца 02.10)
                       ...(!ord.isCancelled
                         ? [
@@ -1903,8 +1980,6 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         products={products}
         onSaveAdjustment={handleSaveOrderAdjustment}
         promos={promos}
-        onUpdateProducts={onUpdateProducts}
-        onRecordStockMovements={recordStockMovements}
         onShowToast={onShowToast}
       />
 

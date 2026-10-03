@@ -214,9 +214,9 @@ export function getVariantStock(
   sizeName?: unknown
 ): number {
   if (!product) return 0;
-  if (!product.skus || product.skus.length === 0) {
-    return product.inStock ? 5 : 0;
-  }
+  // Without variants the stock is unknown — 0, as in placeOrder (audit 02.10, finding 15): a made-up «5» sold goods
+  // the store never counted
+  if (!product.skus || product.skus.length === 0) return 0;
   const sku = getProductSKU(product, colorName, sizeName);
   return sku ? Math.max(0, sku.stock) : 0;
 }
@@ -226,9 +226,7 @@ export function getVariantStock(
  */
 export function getProductTotalStock(product: Product): number {
   if (!product) return 0;
-  if (!product.skus || product.skus.length === 0) {
-    return product.inStock ? 10 : 0;
-  }
+  if (!product.skus || product.skus.length === 0) return 0;
   return product.skus.reduce((total, sku) => total + Math.max(0, sku.stock), 0);
 }
 
@@ -434,6 +432,95 @@ export function stockShortages(products: Product[], items: CartItem[]): StockSho
     }
   }
   return shortages;
+}
+
+/** A cart line the store cannot sell now: not enough stock, taken off sale or removed from the catalog */
+export interface OrderStockProblem {
+  productId: string;
+  title: string;
+  color: string;
+  size: string;
+  /** In the order (all lines of this variant together) */
+  wanted: number;
+  /** What can be ordered now (`getOrderableStock`) */
+  available: number;
+  reason: 'short' | 'hidden' | 'removed';
+}
+
+/**
+ * Checkout checks the stock before the order is written (audit 02.10, finding 4): the cart stopped a buyer with too
+ * many items, the checkout did not — the order went through and the stock silently stopped at 0. The product is taken
+ * from the live catalog (`products`); lines of one variant count together.
+ */
+export function orderStockProblems(items: CartItem[], products: Product[], preorderMode: boolean): OrderStockProblem[] {
+  const groups = new Map<string, { item: CartItem; wanted: number }>();
+  for (const item of items) {
+    const key = [
+      item.product.id,
+      extractColorName(item.selectedColor).trim().toLowerCase(),
+      extractSizeName(item.selectedSize).trim().toLowerCase(),
+    ].join('|');
+    const group = groups.get(key);
+    if (group) group.wanted += item.quantity;
+    else groups.set(key, { item, wanted: item.quantity });
+  }
+  const problems: OrderStockProblem[] = [];
+  for (const { item, wanted } of groups.values()) {
+    const product = products.find((p) => p.id === item.product.id);
+    const base = {
+      productId: item.product.id,
+      title: product?.title || item.product.title || 'Товар',
+      color: extractColorName(item.selectedColor),
+      size: extractSizeName(item.selectedSize),
+      wanted,
+    };
+    if (!product) {
+      problems.push({ ...base, available: 0, reason: 'removed' });
+      continue;
+    }
+    const available = getOrderableStock(product, item.selectedColor, item.selectedSize, preorderMode);
+    if (wanted > available) problems.push({ ...base, available, reason: isHiddenFromSale(product) ? 'hidden' : 'short' });
+  }
+  return problems;
+}
+
+/** One line for the buyer: «Рубашка (Белый, M) — снята с продажи» / «… — в наличии 1 из 3» */
+export function stockProblemText(problem: OrderStockProblem): string {
+  const variant = [problem.color, problem.size].filter(Boolean).join(', ');
+  const name = variant ? `${problem.title} (${variant})` : problem.title;
+  if (problem.reason === 'removed') return `${name} — больше нет в каталоге`;
+  if (problem.reason === 'hidden') return `${name} — снят с продажи`;
+  return problem.available > 0 ? `${name} — в наличии ${problem.available} из ${problem.wanted}` : `${name} — закончился`;
+}
+
+/** What the product form saves as the stock of each variant, and what it changed */
+export interface FormStockMerge {
+  skus: ProductSKU[];
+  /** Variants whose stock the admin changed in the form: from the live stock to the form's value */
+  changes: { sku: ProductSKU; before: number; after: number }[];
+}
+
+const sameVariant = (a: Pick<ProductSKU, 'id' | 'color' | 'size'>, b: Pick<ProductSKU, 'id' | 'color' | 'size'>) =>
+  (Boolean(a.id) && a.id === b.id) ||
+  (a.color.trim().toLowerCase() === b.color.trim().toLowerCase() && a.size.trim().toLowerCase() === b.size.trim().toLowerCase());
+
+/**
+ * The product form keeps a copy of the variants from the moment it opened. A stock the admin did not touch in the form
+ * is saved as it is in the database now — otherwise an order placed meanwhile came back as stock (audit 02.10,
+ * finding 5: 5 → sold → 0 → «Сохранить» → 5 again). A stock changed in the form is saved as typed and goes to the journal.
+ */
+export function mergeFormStock(formSkus: ProductSKU[], openedSkus: ProductSKU[], liveSkus: ProductSKU[]): FormStockMerge {
+  const changes: FormStockMerge['changes'] = [];
+  const skus = formSkus.map((sku) => {
+    const opened = openedSkus.find((o) => sameVariant(o, sku));
+    const live = liveSkus.find((l) => sameVariant(l, sku));
+    const liveStock = live ? Number(live.stock) || 0 : 0;
+    const formStock = Math.max(0, Math.floor(Number(sku.stock) || 0));
+    if (opened && formStock === (Number(opened.stock) || 0)) return { ...sku, stock: liveStock };
+    if (formStock !== liveStock) changes.push({ sku, before: liveStock, after: formStock });
+    return { ...sku, stock: formStock };
+  });
+  return { skus, changes };
 }
 
 /**

@@ -28,6 +28,8 @@ import {
   loadStorefrontSettings,
   saveStorefrontSettings,
   getOrderableStock,
+  orderStockProblems,
+  stockProblemText,
   isPreorderVariant,
 } from './utils/inventory';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages } from './utils/deliveryStages';
@@ -1498,11 +1500,24 @@ export default function App() {
     }
   };
 
+  /** What the cart has beyond the stock now: the checkout lists it and does not send the order */
+  const checkoutStockProblems = React.useMemo(
+    () => (activeTab === 'checkout' ? orderStockProblems(cartItems, products, preorderMode) : []),
+    [activeTab, cartItems, products, preorderMode]
+  );
+
   const handleCompleteOrder = (orderData: CompleteOrderData): Promise<boolean> =>
     serverOrdersEnabled ? completeOrderOnServer(orderData) : completeOrderLocally(orderData);
 
   // Legacy client-side checkout, used until the Cloud Function is deployed and enabled
   const completeOrderLocally = async (orderData: CompleteOrderData): Promise<boolean> => {
+    // The stock as the catalog has it now (finding 4): the checkout shows the same list next to «Подтвердить», this
+    // stops a 1-click order and a catalog that changed after the page was opened
+    const stockProblems = orderStockProblems(orderData.items, products, preorderMode);
+    if (stockProblems.length > 0) {
+      addToast(`Не хватает на складе: ${stockProblems.map(stockProblemText).join('; ')}. Измените корзину.`, 'error');
+      return false;
+    }
     // Orders are create-only for customers, so IDs must not collide with existing ones
     const newOrderId = `WS-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
     const placedAt = new Date();
@@ -1953,6 +1968,7 @@ export default function App() {
             <CheckoutScreen
               hasActivePromos={hasActivePromos}
               cartItems={cartItems}
+              stockProblems={checkoutStockProblems}
               userProfile={userProfile}
               onCompleteOrder={handleCompleteOrder}
               setActiveTab={setActiveTab}
