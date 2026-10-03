@@ -32,6 +32,13 @@ describe('превью товара', () => {
     expect(html).toContain('content="https://img.example/a.jpg?w=800&amp;q=80"');
   });
 
+  test('товар без фото — с обложкой магазина', () => {
+    const html = productMeta({ ...product, image: '' }, SITE, 'Wasat Shop', false);
+    expect(html).toContain(`<meta property="og:image" content="${SITE}/og-image.png" />`);
+    expect(html).toContain('<meta property="og:image:width" content="1200" />');
+    expect(html).toContain('<meta name="twitter:card" content="summary_large_image" />');
+  });
+
   test('JSON-LD не закрывает тег script текстом товара', () => {
     const ld = productJsonLd({ ...product, description: '</script><script>alert(1)</script>' }, `${SITE}/product/x`);
     expect(ld.match(/<\/script>/g)).toHaveLength(1);

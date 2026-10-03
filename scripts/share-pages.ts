@@ -65,9 +65,23 @@ export function productSummary(p: ShareProduct): string {
   return `${price}${stock}${description ? ` · ${description}` : ''}`;
 }
 
+const STORE_TAIL = 'каталог с фильтрами по размеру, цвету и цене, подбор размера, заказ онлайн и чат с магазином.';
+
 export function storeDescription(storeName: string, slogan: string): string {
-  const tail = 'каталог с ценами, размерами и составом ткани, заказ онлайн.';
-  return slogan ? `${storeName}: ${shortText(slogan, 80)} — ${tail}` : `${storeName} — интернет-магазин мужской одежды: ${tail}`;
+  return slogan ? `${storeName}: ${shortText(slogan, 60)} — ${STORE_TAIL}` : `Магазин мужской одежды ${storeName}: ${STORE_TAIL}`;
+}
+
+/** The store's cover (public/og-image.png): the preview of the shop and of a product without a photo */
+export function storeCover(site: string, storeName: string): PageImage {
+  return { url: `${site}/og-image.png`, type: 'image/png', width: 1200, height: 630, alt: `${storeName} — магазин мужской одежды` };
+}
+
+export interface PageImage {
+  url: string;
+  type?: string;
+  width?: number;
+  height?: number;
+  alt?: string;
 }
 
 interface PageMeta {
@@ -76,7 +90,7 @@ interface PageMeta {
   url: string;
   type: 'website' | 'product';
   siteName: string;
-  image?: string;
+  image?: PageImage;
   noindex: boolean;
   extra?: string;
 }
@@ -94,7 +108,11 @@ export function metaBlock(m: PageMeta): string {
     `<meta property="og:title" content="${escapeHtml(m.title)}" />`,
     `<meta property="og:description" content="${escapeHtml(m.description)}" />`,
     `<meta property="og:url" content="${escapeHtml(m.url)}" />`,
-    m.image ? `<meta property="og:image" content="${escapeHtml(m.image)}" />` : '',
+    m.image ? `<meta property="og:image" content="${escapeHtml(m.image.url)}" />` : '',
+    m.image?.type ? `<meta property="og:image:type" content="${escapeHtml(m.image.type)}" />` : '',
+    m.image?.width ? `<meta property="og:image:width" content="${m.image.width}" />` : '',
+    m.image?.height ? `<meta property="og:image:height" content="${m.image.height}" />` : '',
+    m.image?.alt ? `<meta property="og:image:alt" content="${escapeHtml(m.image.alt)}" />` : '',
     `<meta name="twitter:card" content="${m.image ? 'summary_large_image' : 'summary'}" />`,
     m.extra ?? '',
   ];
@@ -133,7 +151,7 @@ export function productMeta(p: ShareProduct, site: string, siteName: string, noi
     url,
     type: 'product',
     siteName,
-    image: p.image || undefined,
+    image: p.image ? { url: p.image, alt: p.title } : storeCover(site, siteName),
     noindex,
     extra: priceTags,
   });
@@ -288,6 +306,7 @@ async function main() {
       url: `${site}/`,
       type: 'website',
       siteName: storeName,
+      image: storeCover(site, storeName),
       noindex,
     }))
   );
