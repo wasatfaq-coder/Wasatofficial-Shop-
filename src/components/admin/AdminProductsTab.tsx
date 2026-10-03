@@ -446,7 +446,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   // Duplicate Product Handler
   const handleDuplicateProduct = (prod: Product) => {
     const newId = `prod-${Date.now()}`;
-    const baseSkus = prod.skus && prod.skus.length > 0 ? prod.skus : generateDefaultSKUs(prod);
+    const baseSkus = withMissingSkus(prod);
     const taken = collectBarcodes(products);
     const colorCodes = new Map<string, string>();
     const clonedSkus: ProductSKU[] = baseSkus.map((s, idx) => {
@@ -513,9 +513,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     setFormSizes([...(prod.sizes ?? [])]);
     // an old colour saved as a string («Черный») becomes { name, hex } here, as the form expects
     setFormColors(normalizeProductColors(prod.colors));
-    // Without saved variants the stock is unknown: variants start at 0 for the admin to fill in
-    const openedSkus =
-      prod.skus && prod.skus.length > 0 ? prod.skus : generateDefaultSKUs(prod).map((sku) => ({ ...sku, stock: 0 }));
+    // Every colour × size has its variation: one without a saved variation (a colour added by an old CSV import)
+    // starts at 0 for the admin to fill in, and is written with the product
+    const openedSkus = withMissingSkus(prod);
     setFormSkus(openedSkus);
     setFormSkusOpened(openedSkus);
     setFormCard(cardStructureFromProduct(prod));

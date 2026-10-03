@@ -25,7 +25,7 @@ import {
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { CartItem, Product, ProductSKU, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog, PaymentKind, PaymentTemplate } from '../types';
 import { paymentLogEntry, receiptMessageText } from './paymentDetails';
-import { DEFAULT_STOREFRONT_SETTINGS, isHiddenFromSale, stockMovementId } from './inventory';
+import { DEFAULT_STOREFRONT_SETTINGS, generateDefaultSKUs, inStockAfterReturn, inStockAfterStockChange, stockMovementId } from './inventory';
 import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
 import type { LegalDocId, LegalTexts } from './legalDocs';
 import type { RestoreWrite } from './backupRestore';
@@ -276,14 +276,20 @@ export async function applyAdminStockChanges(
         const snap = await tx.get(productRef);
         if (!snap.exists()) throw new Error('product removed');
         const data = snap.data();
-        const skus: ProductSKU[] = Array.isArray(data.skus) ? data.skus : [];
-        const skuIndex = skus.findIndex((sku) => sameVariantName(sku.color, change.color) && sameVariantName(sku.size, change.size));
-        if (skuIndex < 0) throw new Error('variant missing');
+        const savedSkus: ProductSKU[] = Array.isArray(data.skus) ? data.skus : [];
+        const matches = (sku: ProductSKU) => sameVariantName(sku.color, change.color) && sameVariantName(sku.size, change.size);
+        // A colour × size of the product without a saved variation (a colour added by an old CSV import) gets one here,
+        // with stock 0; anything else is not a variation of this product
+        const missing = savedSkus.some(matches)
+          ? undefined
+          : generateDefaultSKUs({ ...(data as Product), id: change.productId }).find(matches);
+        if (!savedSkus.some(matches) && !missing) throw new Error('variant missing');
+        const skus = missing ? [...savedSkus, missing] : savedSkus;
+        const skuIndex = skus.findIndex(matches);
         const sku = skus[skuIndex];
         const before = Number(sku.stock) || 0;
         const after = Math.max(0, change.setTo !== undefined ? change.setTo : before + change.delta);
         if (after === before) return;
-        const hidden = isHiddenFromSale({ inStock: data.inStock, skus, hiddenFromSale: data.hiddenFromSale });
         const nextSkus = skus.map((s, i) => (i === skuIndex ? { ...s, stock: after } : s));
         const movement: StockMovementLog = {
           id: stockMovementId(),
@@ -305,7 +311,7 @@ export async function applyAdminStockChanges(
         tx.set(doc(db, STOCK_MOVEMENTS_COLLECTION, movement.id), sanitizeForFirestore(movement));
         tx.update(productRef, {
           skus: nextSkus,
-          inStock: hidden ? false : nextSkus.some((s) => (Number(s.stock) || 0) > 0),
+          inStock: inStockAfterStockChange({ inStock: data.inStock, skus: savedSkus, hiddenFromSale: data.hiddenFromSale }, nextSkus),
         });
       });
     } catch (err) {
@@ -459,12 +465,11 @@ export async function returnOrderLineStock(
     };
     tx.set(returnRef, sanitizeForFirestore(movement));
     const nextSkus = skus.map((s, i) => (i === skuIndex ? { ...s, stock: stockBefore + quantity } : s));
-    const soldOut = skus.every((s) => (Number(s.stock) || 0) <= 0);
     tx.update(productRef, {
       skus: nextSkus,
       // false with stock left = «Снят с витрины» (isHiddenFromSale): only a sold-out product goes on sale again, and not
-      // one the admin took off sale (hiddenFromSale)
-      inStock: data.inStock === false && soldOut && data.hiddenFromSale !== true ? true : data.inStock ?? true,
+      // one the admin took off sale (hiddenFromSale); the rules check the same expression for the buyer
+      inStock: inStockAfterReturn({ inStock: data.inStock, skus, hiddenFromSale: data.hiddenFromSale }),
       lastStockMovement: movement.id,
     });
     return 'returned';
