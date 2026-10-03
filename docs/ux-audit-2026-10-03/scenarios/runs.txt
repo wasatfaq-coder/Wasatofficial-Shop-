@@ -1,0 +1,249 @@
+######## s50 320
+STEP home
+  [scan home] ok
+  [axe home] ok
+STEP catalog-filter
+  after category chip: Рубашка льняная
+  chosen chips state: До 3 000 ₽ pressed=null checked=null role=null | M5 шт. pressed=null checked=null role=null
+  [scan filter] tinyTargets: 216x16 input «Максимальная цена»
+  [axe filter] ok
+  apply button: Показать 1 товар
+  results: Рубашка льняная
+  [scan catalog-results] ok
+  [axe catalog-results] ok
+STEP product
+  preselected size radios: 
+  [scan product] ok
+  [axe product] ok
+  without size → focus button# «S4 шт.» invalid=null; toasts: Выберите размер, чтобы добавить товар в корзину
+  added → toasts: Добавлено в корзину: Рубашка льняная (Бежевый, M)В корзину
+STEP cart
+  [scan cart] ok
+  [axe cart] ok
+STEP checkout-empty-submit
+  [scan checkout] ok
+  [axe checkout] ok
+  empty submit → focus input#checkout-last-name «» invalid=true; invalid: checkout-last-name,checkout-first-name,checkout-phone,checkout-email
+STEP checkout-fill
+  [scan address-modal] ok
+  [axe address-modal] ok
+  steps: Данные: заполнено | Доставка: заполнено | Оплата: заполнено | Подтверждение: текущий шаг
+STEP submit
+  url /order-success; toasts: 
+  [scan success] ok
+  [axe success] ok
+  success text: ЗАКАЗ ОФОРМЛЕН • АКТИВЕН Заказ № WS-50395519 Спасибо за выбор Wasat Shop! Мы получили заказ: менеджер свяжется с вами, чтобы подтвердить его и оплату. ОПЛАТА: ПЕРЕВОД ПО НОМЕРУ ТЕЛЕФОНА После подтверждения менеджер пришлет номер для перевода. Текущий статус Принят в обработку Сумма заказа: 3 340 ₽ Доставка: Курьером до двери Адрес: г. Москва, Тверская, д. 7, подъезд 2, кв. 12, домофон: 12 Отследить заказ в профиле Вернуться на главную
+pageerrors: none
+console errors: Failed to load resource: the server responded with a status of 403 (Forbidden)
+######## s50 1280
+STEP home
+  [scan home] ok
+  [axe home] ok
+STEP catalog-filter
+  after category chip: Рубашка льняная
+  chosen chips state: До 3 000 ₽ pressed=null checked=null role=null | M5 шт. pressed=null checked=null role=null
+  [scan filter] tinyTargets: 216x16 input «Максимальная цена»
+  [axe filter] ok
+  results: Рубашка льняная
+  [scan catalog-results] tinyTargets: 216x16 input «Максимальная цена»
+  [axe catalog-results] ok
+STEP product
+  preselected size radios: 
+  [scan product] ok
+  [axe product] ok
+  without size → focus button# «S4 шт.» invalid=null; toasts: Выберите размер, чтобы добавить товар в корзину
+  added → toasts: Добавлено в корзину: Рубашка льняная (Бежевый, M)В корзину
+STEP cart
+  [scan cart] ok
+  [axe cart] ok
+STEP checkout-empty-submit
+  [scan checkout] ok
+  [axe checkout] ok
+  empty submit → focus input#checkout-last-name «» invalid=true; invalid: checkout-last-name,checkout-first-name,checkout-phone,checkout-email
+STEP checkout-fill
+  [scan address-modal] ok
+  [axe address-modal] ok
+  steps: Данные: заполнено | Доставка: заполнено | Оплата: заполнено | Подтверждение: текущий шаг
+STEP submit
+  url /order-success; toasts: 
+  [scan success] ok
+  [axe success] ok
+  success text: Заказ оформлен Успешно ЗАКАЗ ОФОРМЛЕН • АКТИВЕН Заказ № WS-54028077 Спасибо за выбор Wasat Shop! Мы получили заказ: менеджер свяжется с вами, чтобы подтвердить его и оплату. ОПЛАТА: ПЕРЕВОД ПО НОМЕРУ ТЕЛЕФОНА После подтверждения менеджер пришлет номер для перевода. Текущий статус Принят в обработку Сумма заказа: 3 340 ₽ Доставка: Курьером до двери Адрес: г. Москва, Тверская, д. 7, подъезд 2, кв. 12, домофон: 12 Отследить заказ в профиле Вернуться на главную
+pageerrors: none
+console errors: Failed to load resource: the server responded with a status of 403 (Forbidden)
+######## s51 390
+STEP sign-in-and-order
+  prefilled: checkout-last-name=Покупатель checkout-first-name=Ольга checkout-email=olga.s51@example.ru
+  url /order-success; toasts: 
+STEP profile-orders
+  [scan profile] ok
+  [axe profile] ok
+  [scan orders] ok
+  [axe orders] ok
+  orders dialog buttons: Все заказы | Активные | Завершенные | Детали | Детали
+STEP order-detail
+  [scan order-detail] ok
+  [axe order-detail] color-contrast/serious×3: span[title="Собран"] (2.99:1 #7b8696/#e3e8ef) | span[title="В пункте"] (2.99:1 #7b8696/#e3e8ef) | span[title="Получен"] (2.99:1 #7b8696/#e3e8ef)
+  detail text: Заказ № WS-56302076 Трекинг Оформлен: 3 окт., 17:09 САМОВЫВОЗ ИЗ БУТИКА Пункт выдачи В бутике Пункт выдачи: Самовывоз: Пункт выдачи на Тверской, г. Москва, ул. Тверская, 7. Заказ выдается сотрудниками бутика без трек-номера. ТЕКУЩИЙ СТАТУС Заказ принят в обработку 25% выполнено Ожидается: Через 1-2 дня Принят 2 Собран 3 В пункте 4 Получен ИСТОРИЯ ЗАКАЗА Заказ оформлен 3 окт. 2026 г., 17:09:23 · Вы Состав заказа: Поло классическое Темно-синий, разм. L • 1 шт. 2 490 ₽ Адрес доставки: Самовывоз: Пункт выдачи на Тверской, г. Москва, ул. Тверская, 7 (Пункт выдачи) Оплата: Наличными или картой при получении WS Бутик Wasat Shop Выдача заказов Консьерж Повторить заказ Отменить заказ
+STEP chat-from-order
+  !! FAIL chat-from-order: locator.textContent: Timeout 30000ms exceeded. | Call log:
+pageerrors: none
+console errors: Failed to load resource: the server responded with a status of 403 (Forbidden) || Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. WS-56302076
+######## s52 390
+STEP panel
+  [scan panel] ok
+  [axe panel] ok
+  [scan products] noLabel: input[text] placeholder=«Название, артикул или штрихкод» name=
+  [axe products] ok
+STEP form-empty-submit
+  [scan form] tinyTargets: 1x1 input «» ; 153x17 button «Открыть окно редактирования описания» || noLabel: input[text] placeholder=«Название, артикул или штрихкод» name= ; input[text] placeholder=«Или свой текст (например: -30% или ХИТ СЕЗОНА)» name= ; input[text] placeholder=«» name=
+  [axe form] ok
+  category preselected: Рубашка
+  errors: Введите название товара Укажите цену больше нуля Добавьте хотя бы один цвет Выберите хотя бы один размер Добавьте хотя бы одно фото
+  focus: DIV#
+STEP form-fill-create
+  toasts while filling: Загружено фото: 1 шт.
+  created: Товар «Рубашка оксфорд» добавлен в каталог; dialogs: 1
+STEP labels
+  [scan inventory] noLabel: input[text] placeholder=«Название, артикул, штрихкод или цвет» name=
+  [axe inventory] ok
+  checkboxes: 6
+  [scan labels] noLabel: input[text] placeholder=«Название, артикул, штрихкод или цвет» name=
+  [axe labels] ok
+  pdf: labels-58x40-2026-10-03.pdf; toasts: Формат «Термоэтикетка» добавлен | PDF: 1 этикетка 58×40 мм
+pageerrors: none
+console errors: Failed to load resource: the server responded with a status of 403 (Forbidden)
+######## s51 320
+STEP sign-in-and-order
+  prefilled: checkout-last-name=Покупатель checkout-first-name=Ольга checkout-email=olga.s51@example.ru
+  url /order-success; toasts: 
+STEP profile-orders
+  [scan profile] ok
+  [axe profile] ok
+  [scan orders] ok
+  [axe orders] ok
+  orders dialog buttons: Все заказы | Активные | Завершенные | Детали | Детали
+STEP order-detail
+  [scan order-detail] ok
+  [axe order-detail] color-contrast/serious×3: span[title="Собран"] (2.99:1 #7b8696/#e3e8ef) | span[title="В пункте"] (2.99:1 #7b8696/#e3e8ef) | span[title="Получен"] (2.99:1 #7b8696/#e3e8ef)
+  detail text: Заказ № WS-66681724 Трекинг Оформлен: 3 окт., 17:11 САМОВЫВОЗ ИЗ БУТИКА Пункт выдачи В бутике Пункт выдачи: Самовывоз: Пункт выдачи на Тверской, г. Москва, ул. Тверская, 7. Заказ выдается сотрудниками бутика без трек-номера. ТЕКУЩИЙ СТАТУС Заказ принят в обработку 25% выполнено Ожидается: Через 1-2 дня Принят 2 Собран 3 В пункте 4 Получен ИСТОРИЯ ЗАКАЗА Заказ оформлен 3 окт. 2026 г., 17:11:06 · Вы Состав заказа: Поло классическое Темно-синий, разм. L • 1 шт. 2 490 ₽ Адрес доставки: Самовывоз: Пункт выдачи на Тверской, г. Москва, ул. Тверская, 7 (Пункт выдачи) Оплата: Наличными или картой при получении WS Бутик Wasat Shop Выдача заказов Консьерж Повторить заказ Отменить заказ
+STEP chat-from-order
+  !! FAIL chat-from-order: locator.textContent: Timeout 30000ms exceeded. | Call log:
+pageerrors: none
+console errors: Failed to load resource: the server responded with a status of 403 (Forbidden) || Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. WS-66681724
+######## s51 1280
+STEP sign-in-and-order
+  prefilled: checkout-last-name=Покупатель checkout-first-name=Ольга checkout-email=olga.s51@example.ru
+  url /order-success; toasts: 
+STEP profile-orders
+  [scan profile] ok
+  [axe profile] ok
+  [scan orders] ok
+  [axe orders] ok
+  orders dialog buttons: Все заказы | Активные | Завершенные | Детали | Детали
+STEP order-detail
+  [scan order-detail] ok
+  [axe order-detail] color-contrast/serious×3: span[title="Собран"] (2.99:1 #7b8696/#e3e8ef) | span[title="В пункте"] (2.99:1 #7b8696/#e3e8ef) | span[title="Получен"] (2.99:1 #7b8696/#e3e8ef)
+  detail text: Заказ № WS-72828028 Трекинг Оформлен: 3 окт., 17:12 САМОВЫВОЗ ИЗ БУТИКА Пункт выдачи В бутике Пункт выдачи: Самовывоз: Пункт выдачи на Тверской, г. Москва, ул. Тверская, 7. Заказ выдается сотрудниками бутика без трек-номера. ТЕКУЩИЙ СТАТУС Заказ принят в обработку 25% выполнено Ожидается: Через 1-2 дня Принят 2 Собран 3 В пункте 4 Получен ИСТОРИЯ ЗАКАЗА Заказ оформлен 3 окт. 2026 г., 17:12:08 · Вы Состав заказа: Поло классическое Темно-синий, разм. L • 1 шт. 2 490 ₽ Адрес доставки: Самовывоз: Пункт выдачи на Тверской, г. Москва, ул. Тверская, 7 (Пункт выдачи) Оплата: Наличными или картой при получении WS Бутик Wasat Shop Выдача заказов Консьерж Повторить заказ Отменить заказ
+STEP chat-from-order
+  chat button: Консьерж
+  draft: «Вопрос по заказу № WS-72828028: »
+  [scan chat] ok
+  [axe chat] ok
+  messages: Служба заботы Отвечают сотрудники Wasat Shop, ответ придет сюда Вопрос по заказу № WS-72828028: Можно забрать завтра вечером? 17:12 Сообщение отправлено. Сотрудник ответит здесь — ответ сохранится в этом чате. Подбор размера Где мой заказ Возврат и обмен
+  Back with the chat open → /order-success, dialogs 1
+pageerrors: none
+console errors: Failed to load resource: the server responded with a status of 403 (Forbidden) || Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. WS-72828028
+######## s52 1280
+STEP panel
+  [scan panel] ok
+  [axe panel] ok
+  [scan products] tinyTargets: 1x1 input «» || noLabel: input[text] placeholder=«Название, артикул или штрихкод» name= ; input[text] placeholder=«» name=
+  [axe products] ok
+STEP form-empty-submit
+  [scan form] tinyTargets: 1x1 input «» ; 153x17 button «Открыть окно редактирования описания» ; 24x24 button «S» ; 23x24 button «L» || noLabel: input[text] placeholder=«Название, артикул или штрихкод» name= ; input[text] placeholder=«» name= ; input[text] placeholder=«Или свой текст (например: -30% или ХИТ СЕЗОНА)» name= ; input[text] placeholder=«» name= ; input[text] placeholder=«Свой размер, напр. 56» name=
+  [axe form] ok
+  category preselected: Рубашка
+  errors: Введите название товара Укажите цену больше нуля Добавьте хотя бы один цвет Выберите хотя бы один размер Добавьте хотя бы одно фото
+  focus: DIV#
+STEP form-fill-create
+  toasts while filling: Загружено фото: 1 шт.
+  created: Товар «Рубашка оксфорд» добавлен в каталог; dialogs: 1
+STEP labels
+  [scan inventory] tinyTargets: 1x1 input «» ; 102x14 button «Скопировать артикул WS-SH17-ГОЛ-M» ; 102x14 button «Скопировать артикул WS-SH17-ГОЛ-L» || noLabel: input[text] placeholder=«Название, артикул, штрихкод или цвет» name= ; input[text] placeholder=«» name= ; input[text] placeholder=«» name=
+  [axe inventory] ok
+  checkboxes: 6
+  [scan labels] tinyTargets: 1x1 input «» ; 102x14 button «Скопировать артикул WS-SH17-ГОЛ-M» ; 102x14 button «Скопировать артикул WS-SH17-ГОЛ-L» || noLabel: input[text] placeholder=«Название, артикул, штрихкод или цвет» name= ; input[text] placeholder=«» name= ; input[text] placeholder=«» name=
+  [axe labels] ok
+  pdf: labels-58x40-2026-10-03.pdf; toasts: Формат «Термоэтикетка» добавлен | PDF: 1 этикетка 58×40 мм
+pageerrors: none
+console errors: Failed to load resource: the server responded with a status of 403 (Forbidden)
+######## s53 320
+STEP customer
+  [scan home] ok
+  [axe home] ok
+  home: Wasat Shop Категории: не настроено Популярное Каталог: не настроено Товары появятся здесь, когда магазин их добавит.
+  [scan catalog] ok
+  [axe catalog] ok
+  catalog: Категории: не настроено Каталог: не настроено Товары появятся здесь, когда магазин их добавит.
+  product link to nothing → /catalog; toasts: Товар не найден: возможно, его сняли с продажи | Категории: не настроено | Каталог: не настроеноТовары появятся здесь, когда магазин их добавит.
+  [scan cart] ok
+  [axe cart] ok
+  cart: Ваша корзина пуста Выберите стильные новинки из нашего каталога мужской одежды Перейти в каталог
+  [scan profile] ok
+  [axe profile] ok
+  [scan side-menu] ok
+  [axe side-menu] ok
+  side menu: Wasat Shop Фильтры товаров Мои размеры Бренд и реквизиты Контакты и реквизиты Поддержка Онлайн-чат с магазином
+STEP owner-first-visit
+  [scan admin] ok
+  [axe admin] ok
+  admin: Панель администратора Каталог, склад, заказы и витрина Продажи Каталог Маркетинг Магазин Аналитика Заказы Клиенты Чат поддержки Запуск магазина Для первой продажи осталось 5 шагов из 5 1 Категории — не сделано Разделы каталога, по которым покупатель ищет товар 2 Первый товар — не сделано Фото, цена, размеры и остаток 3 Способ доставки — не сделано Без него оформление заказа недоступно 4 Способ оплаты — не сделано Без него оформление заказа недоступно 5 Реквизиты продавца — не сделано Для оферты не хватает: название продавца (организация или ИП), ИНН, ОГРН или ОГРНИП, юридический адрес, email или телефон Аналитика продаж По дням. Сравнение — с предыдущим периодом той же длины Последние 7 дней
+pageerrors: none
+console errors: Failed to load resource: the server responded with a status of 403 (Forbidden)
+######## s53 390
+STEP customer
+  [scan home] ok
+  [axe home] ok
+  home: Wasat Shop Категории: не настроено Популярное Каталог: не настроено Товары появятся здесь, когда магазин их добавит.
+  [scan catalog] ok
+  [axe catalog] ok
+  catalog: Категории: не настроено Каталог: не настроено Товары появятся здесь, когда магазин их добавит.
+  product link to nothing → /catalog; toasts: Товар не найден: возможно, его сняли с продажи | Категории: не настроено | Каталог: не настроеноТовары появятся здесь, когда магазин их добавит.
+  [scan cart] ok
+  [axe cart] ok
+  cart: Ваша корзина пуста Выберите стильные новинки из нашего каталога мужской одежды Перейти в каталог
+  [scan profile] ok
+  [axe profile] ok
+  [scan side-menu] ok
+  [axe side-menu] ok
+  side menu: Wasat Shop Фильтры товаров Мои размеры Бренд и реквизиты Контакты и реквизиты Поддержка Онлайн-чат с магазином
+STEP owner-first-visit
+  [scan admin] ok
+  [axe admin] ok
+  admin: Панель администратора Каталог, склад, заказы и витрина Продажи Каталог Маркетинг Магазин Аналитика Заказы Клиенты Чат поддержки Запуск магазина Для первой продажи осталось 5 шагов из 5 1 Категории — не сделано Разделы каталога, по которым покупатель ищет товар 2 Первый товар — не сделано Фото, цена, размеры и остаток 3 Способ доставки — не сделано Без него оформление заказа недоступно 4 Способ оплаты — не сделано Без него оформление заказа недоступно 5 Реквизиты продавца — не сделано Для оферты не хватает: название продавца (организация или ИП), ИНН, ОГРН или ОГРНИП, юридический адрес, email или телефон Аналитика продаж По дням. Сравнение — с предыдущим периодом той же длины Последние 7 дней
+pageerrors: none
+console errors: Failed to load resource: the server responded with a status of 403 (Forbidden)
+######## s53 1280
+STEP customer
+  [scan home] ok
+  [axe home] ok
+  home: Wasat Shop Категории: не настроено Популярное Каталог: не настроено Товары появятся здесь, когда магазин их добавит.
+  [scan catalog] ok
+  [axe catalog] ok
+  catalog: Каталог Поиск и фильтры Категории: не настроено Каталог: не настроено Товары появятся здесь, когда магазин их добавит.
+  product link to nothing → /catalog; toasts: Товар не найден: возможно, его сняли с продажи | Категории: не настроено | Каталог: не настроеноТовары появятся здесь, когда магазин их добавит.
+  [scan cart] ok
+  [axe cart] ok
+  cart: Корзина 0 товаров Ваша корзина пуста Выберите стильные новинки из нашего каталога мужской одежды Перейти в каталог
+  [scan profile] ok
+  [axe profile] ok
+  [scan side-menu] ok
+  [axe side-menu] ok
+  side menu: Wasat Shop Фильтры товаров Мои размеры Бренд и реквизиты Контакты и реквизиты Поддержка Онлайн-чат с магазином
+STEP owner-first-visit
+  [scan admin] ok
+  [axe admin] ok
+  admin: Панель администратора gunh83975@gmail.com Каталог, склад, заказы и витрина Продажи Каталог Маркетинг Магазин Аналитика Заказы Клиенты Чат поддержки Запуск магазина Для первой продажи осталось 5 шагов из 5 1 Категории — не сделано Разделы каталога, по которым покупатель ищет товар 2 Первый товар — не сделано Фото, цена, размеры и остаток 3 Способ доставки — не сделано Без него оформление заказа недоступно 4 Способ оплаты — не сделано Без него оформление заказа недоступно 5 Реквизиты продавца — не сделано Для оферты не хватает: название продавца (организация или ИП), ИНН, ОГРН или ОГРНИП, юридический адрес, email или телефон Аналитика продаж По дням. Сравнение — с предыдущим периодом той же дл
+pageerrors: none
+console errors: Failed to load resource: the server responded with a status of 403 (Forbidden)

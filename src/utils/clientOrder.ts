@@ -1,7 +1,7 @@
 import type { CartItem, DeliveryMethod, Order } from '../types';
 import { formatOrderDate } from '../shared/orderDate';
 import { initialPaymentStatus } from '../shared/orderApi';
-import { deliveryKindOfMethod, initialStatusLog } from '../shared/orderFlow';
+import { deliveryKindOfMethod, estimatedDeliveryOf, initialStatusLog } from '../shared/orderFlow';
 import type { AddressParts, PersonName } from '../shared/personName';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages } from './deliveryStages';
 
@@ -15,7 +15,7 @@ export interface ClientOrderInput {
   deliveryAddress: string;
   deliveryMethod: string;
   /** The chosen method of «Доставка и ПВЗ»; absent for a 1-click order */
-  method?: Pick<DeliveryMethod, 'id' | 'type' | 'title'>;
+  method?: Pick<DeliveryMethod, 'id' | 'type' | 'title'> & Partial<Pick<DeliveryMethod, 'duration'>>;
   customerName: string;
   nameParts?: PersonName;
   customerPhone: string;
@@ -59,7 +59,7 @@ export function buildClientOrder(input: ClientOrderInput): Order {
     discountAmount: input.discountAmount || undefined,
     promoCode: input.promoCode,
     trackingNumber: undefined,
-    estimatedDelivery: 'Через 1-2 дня',
+    estimatedDelivery: estimatedDeliveryOf(input.method),
     // its chain of statuses and the first entry of the history (src/shared/orderFlow.ts, as in placeOrder)
     deliveryKind: input.method ? deliveryKindOfMethod(input.method) : undefined,
     statusLog: initialStatusLog(input.placedAt),

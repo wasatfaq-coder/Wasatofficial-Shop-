@@ -14,6 +14,7 @@ import { categoryIcon, getCategories } from '../utils/categories';
 import { formatDays } from '../utils/pluralize';
 import { PRODUCTS_PAGE_SIZE } from '../utils/productListing';
 import { CatalogLoadState, type CatalogStatus } from '../components/CatalogLoadState';
+import { STORE_PAUSED_TEXT, storeAcceptsOrders } from '../shared/orderApi';
 
 interface HomeScreenProps {
   /** Catalog subscription: placeholders while loading, a message on error; «не настроено» only when ready */
@@ -185,7 +186,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const currentSlide = displaySlides[activeBannerSlide] || displaySlides[0];
 
   // Settings values with defaults
-  const isOnline = storefrontSettings?.isStoreOnline !== false;
+  const isOnline = storeAcceptsOrders(storefrontSettings);
   // Only conditions the store set in «Витрина»: no invented «от 5 000 ₽» or «14 дней»
   const freeShippingLimit = storefrontSettings?.freeDeliveryThreshold ?? 0;
   const returnPeriod = storefrontSettings?.returnPeriodDays ?? 0;
@@ -196,25 +197,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     <div className="space-y-5 pb-36 lg:pb-10 animate-in fade-in duration-300">
       {/* The home screen has no title bar: the page heading is for screen readers only */}
       <h1 className="sr-only">{getStoreName(storefrontSettings)}</h1>
-      {/* 1. Maintenance / Concierge Banner (if store is offline) */}
+      {/* 1. «Технические работы» in «Витрина»: the site takes no orders now (checkout and 1-click refuse too) */}
       {!isOnline && (
         <div className="neu-flat rounded-2xl p-3.5 border border-warning/30 flex items-center gap-3 text-warning animate-in fade-in">
           <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-warning shrink-0">
             <AlertCircle className="w-4 h-4" />
           </div>
           <div className="text-xs space-y-0.5">
-            <span className="font-extrabold block text-[#2D3A4E]">
-              Каталог в режиме закрытого шоурума
-            </span>
+            <span className="font-extrabold block text-[#2D3A4E]">{STORE_PAUSED_TEXT}</span>
             <p className="text-xs text-[#4E5C70]">
-              Онлайн-корзина временно на обновлении. Для резервирования моделей свяжитесь с
-              консьержем{phone ? (
+              Каталог открыт, корзина сохранится. Чтобы заказать сейчас, напишите в чат поддержки
+              {phone ? (
                 <>
-                  : <strong className="text-accent">{phone}</strong>
+                  {' '}или позвоните: <strong className="text-accent">{phone}</strong>
                 </>
-              ) : (
-                ' в чате поддержки'
-              )}.
+              ) : null}
+              .
             </p>
           </div>
         </div>
@@ -247,7 +245,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             onSearchSubmit={() => {
               setActiveTab('catalog');
             }}
-            placeholder="Поиск по товарам"
           />
         </div>
         <button
@@ -308,18 +305,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   {currentSlide.title}
                 </button>
               </h2>
-              <p className="text-[12px] sm:text-[13px] lg:text-base text-[#4E5C70] font-normal leading-relaxed line-clamp-2">
+              <p className="text-[12px] sm:text-[13px] lg:text-base text-[#4E5C70] font-normal leading-relaxed line-clamp-3">
                 {currentSlide.subtitle}
               </p>
             </div>
 
             {/* Right Hero Image */}
-            <div className="w-40 h-44 lg:w-[400px] lg:h-[260px] shrink-0">
+            {/* Narrower photo on 320 px: at full width it left the subtitle a column too thin to read */}
+            <div className="w-40 h-44 max-[359px]:w-28 max-[359px]:h-36 lg:w-[400px] lg:h-[260px] shrink-0">
               <NeumorphicImage
                 src={currentSlide.image}
                 alt={currentSlide.title}
                 priority={true}
-                containerClassName="w-40 h-44 lg:w-[400px] lg:h-[260px] rounded-2xl"
+                containerClassName="w-40 h-44 max-[359px]:w-28 max-[359px]:h-36 lg:w-[400px] lg:h-[260px] rounded-2xl"
                 className="w-full h-full object-cover object-top rounded-xl"
               />
             </div>
@@ -385,7 +383,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 <span className="w-14 h-14 rounded-2xl neu-button flex items-center justify-center text-[#2D3A4E] group-hover:text-accent transition-colors duration-150">
                   <IconComp className="w-6 h-6 stroke-[1.8]" aria-hidden="true" />
                 </span>
-                <span className="text-[13px] font-medium text-[#2D3A4E] group-hover:text-accent truncate max-w-full">
+                {/* Up to two lines with hyphens: on 320 px one line cut «Футболка» to «Футбо…» */}
+                <span className="text-xs sm:text-[13px] font-medium text-[#2D3A4E] group-hover:text-accent text-center leading-tight hyphens-auto break-words line-clamp-2 max-w-full">
                   {cat.name}
                 </span>
               </button>

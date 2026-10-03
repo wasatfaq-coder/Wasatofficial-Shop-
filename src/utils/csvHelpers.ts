@@ -1,6 +1,7 @@
 import { Product, Order } from '../types';
 import { extractColorName, getProductTotalStock } from './inventory';
 import { adminStatusLabel } from './orderFlow';
+import { colorHexForName, normalizeColorName, readColorCode, splitColorEntry, UNKNOWN_COLOR_HEX } from './colorCode';
 
 /**
  * One CSV cell: quoted with doubled quotes. Text starting with = + - @ would run as a formula in Excel
@@ -56,7 +57,14 @@ export function exportProductsToCSV(products: Product[]): void {
     p.inStock !== false ? 'Да' : 'Нет',
     getProductTotalStock(p),
     (p.sizes || []).join('; '),
-    (p.colors || []).map((c) => extractColorName(c)).join('; '),
+    // «Хаки #556B2F»: the code goes with the name, so a re-imported file keeps the shade
+    (p.colors || [])
+      .map((c) => {
+        const name = extractColorName(c);
+        const hex = typeof c === 'object' && c ? readColorCode(String(c.hex ?? ''), { bare: true }) : null;
+        return hex ? `${name} ${hex}` : name;
+      })
+      .join('; '),
     p.images?.[0] || '',
     p.description || '',
   ]);
@@ -97,9 +105,13 @@ const listCells = (value: string) =>
 
 /**
  * Parse CSV text into partial Products. Only what the file has: a row without a name, a price or a photo
- * is skipped (nothing is invented), missing sizes and colours stay empty.
+ * is skipped (nothing is invented); an empty sizes or colours cell is left out, so an existing product keeps its own.
  */
-export function parseProductsFromCSV(csvText: string): { products: Partial<Product>[]; skipped: number } {
+export function parseProductsFromCSV(
+  csvText: string,
+  /** the catalog: a colour of an existing product written without a code keeps its shade */
+  catalog: Pick<Product, 'id' | 'colors'>[] = []
+): { products: Partial<Product>[]; skipped: number } {
   const lines = csvText.split(/\r?\n/).filter((l) => l.trim().length > 0);
   if (lines.length < 2) return { products: [], skipped: 0 };
   // files saved by Excel in the Russian locale use «;»
@@ -117,6 +129,21 @@ export function parseProductsFromCSV(csvText: string): { products: Partial<Produ
     }
     const originalPrice = Number(String(oldPriceCell ?? '').replace(/\s/g, '').replace(',', '.'));
     const inStockText = (inStockCell || '').toLowerCase();
+    const sizes = listCells(sizesCell || '');
+    // «Хаки #556B2F», «Navy (1F2A44)» or just «Хаки»: the code from the file, otherwise the shade the product already
+    // has for this colour, otherwise a shade by the name
+    const knownColors = id ? catalog.find((p) => p.id === id)?.colors ?? [] : [];
+    const colors = listCells(colorsCell || '').map((cell) => {
+      const { name, hex } = splitColorEntry(cell);
+      const colorName = name || hex || cell;
+      const known = knownColors.find((c) => normalizeColorName(extractColorName(c)) === normalizeColorName(colorName));
+      const knownHex = known && typeof known === 'object' ? readColorCode(String(known.hex ?? ''), { bare: true }) : null;
+      // the product's own spelling stays: its variations are written with it («Тёмно-синий», not «темно-синий»)
+      return {
+        name: known ? extractColorName(known) : colorName,
+        hex: hex ?? knownHex ?? colorHexForName(colorName) ?? UNKNOWN_COLOR_HEX,
+      };
+    });
     products.push({
       ...(id ? { id } : {}),
       title,
@@ -124,11 +151,9 @@ export function parseProductsFromCSV(csvText: string): { products: Partial<Produ
       price,
       ...(originalPrice > price ? { originalPrice } : {}),
       inStock: inStockText !== 'нет' && inStockText !== 'false',
-      sizes: listCells(sizesCell || ''),
-      colors: listCells(colorsCell || '').map((name) => ({
-        name,
-        hex: name.toLowerCase().includes('черн') ? '#0F172A' : name.toLowerCase().includes('син') ? '#1E293B' : '#D4C3B3',
-      })),
+      // an empty cell leaves the sizes and colours of an existing product as they are
+      ...(sizes.length ? { sizes } : {}),
+      ...(colors.length ? { colors } : {}),
       images: [image],
       description: description || '',
     });

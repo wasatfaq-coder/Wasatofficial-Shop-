@@ -1,0 +1,11 @@
+import { start } from './lib.mjs';
+const t = await start('probe56', Number(process.argv[2] || 390));
+const { p, note, fresh, shot } = t;
+await fresh('#/catalog');
+await p.getByRole('button', { name: 'Фильтры' }).click();
+await p.waitForTimeout(800);
+await p.goBack();
+await p.waitForTimeout(1500);
+note('after Back: ' + p.url().split('#')[1] + ', dialogs ' + (await p.locator('[role=dialog]').count()));
+await shot('filter-after-back');
+await t.finish();

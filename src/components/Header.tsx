@@ -107,7 +107,8 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Center Header Title */}
         <div className="text-center flex-1 min-w-0 px-2">
-          <h1 className="text-lg font-extrabold text-[#2D3A4E] leading-tight truncate tracking-tight">
+          {/* A step smaller on 320 px, so a short product name fits; the full one is on the product card */}
+          <h1 className="text-lg max-[359px]:text-base font-extrabold text-[#2D3A4E] leading-tight truncate tracking-tight">
             {titleInfo.main}
             {/* Brand mark: a gold dot after the store name */}
             {titleInfo.main === storeName && (

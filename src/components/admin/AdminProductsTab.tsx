@@ -46,7 +46,9 @@ import {
   isHiddenFromSale,
   mergeFormStock,
   stockMovementId,
+  withMissingSkus,
 } from '../../utils/inventory';
+import { colorHexForName, normalizeColorName, normalizeProductColors, readColorCode, splitColorEntry } from '../../utils/colorCode';
 import { droppedPhotoIds, splitProductPhotos, storedImagesEstimate } from '../../utils/productPhotos';
 import { articleGroupKey, collectBarcodes, unifyArticleBarcodes } from '../../shared/barcode';
 import { AdminBulkOperationsModal } from './AdminBulkOperationsModal';
@@ -220,7 +222,10 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   } | null>(null);
   const [customSizeInput, setCustomSizeInput] = useState('');
   const [customColorName, setCustomColorName] = useState('');
+  // What is typed or pasted into the code field («#1E2B37», «1e2b37», «rgb(30, 43, 55)»); read by readColorCode
   const [customColorHex, setCustomColorHex] = useState('#2D3A4E');
+  // The admin chose the shade (typed a code or tapped the palette): the name no longer picks it
+  const [customColorHexChosen, setCustomColorHexChosen] = useState(false);
 
   // Unsaved edits: Escape, «×» and «Отмена» ask before the form closes; the admin panel asks too
   const isProductFormDirty = useChangedSince(isProductFormOpen ? editingProduct?.id ?? 'new' : null, [
@@ -441,7 +446,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   // Duplicate Product Handler
   const handleDuplicateProduct = (prod: Product) => {
     const newId = `prod-${Date.now()}`;
-    const baseSkus = prod.skus && prod.skus.length > 0 ? prod.skus : generateDefaultSKUs(prod);
+    const baseSkus = withMissingSkus(prod);
     const taken = collectBarcodes(products);
     const colorCodes = new Map<string, string>();
     const clonedSkus: ProductSKU[] = baseSkus.map((s, idx) => {
@@ -506,10 +511,11 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     setNewImageUrlInput('');
     setFormDescription(prod.description || '');
     setFormSizes([...(prod.sizes ?? [])]);
-    setFormColors([...(prod.colors ?? [])]);
-    // Without saved variants the stock is unknown: variants start at 0 for the admin to fill in
-    const openedSkus =
-      prod.skus && prod.skus.length > 0 ? prod.skus : generateDefaultSKUs(prod).map((sku) => ({ ...sku, stock: 0 }));
+    // an old colour saved as a string («Черный») becomes { name, hex } here, as the form expects
+    setFormColors(normalizeProductColors(prod.colors));
+    // Every colour × size has its variation: one without a saved variation (a colour added by an old CSV import)
+    // starts at 0 for the admin to fill in, and is written with the product
+    const openedSkus = withMissingSkus(prod);
     setFormSkus(openedSkus);
     setFormSkusOpened(openedSkus);
     setFormCard(cardStructureFromProduct(prod));
@@ -789,16 +795,39 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   };
 
   // Color management with SKU synchronization
+  // A code inside the name («Хаки #556B2F» pasted from a supplier's table) wins over the code field
+  const pendingColor = splitColorEntry(customColorName);
+  const pendingColorHex = pendingColor.hex ?? readColorCode(customColorHex, { bare: true });
+  const customColorHexUnreadable =
+    !pendingColor.hex && customColorHex.trim() !== '' && !readColorCode(customColorHex, { bare: true });
+
+  const handleCustomColorNameChange = (value: string) => {
+    // a whole code pasted with the name goes to the code field («#55» while typing is not a code yet)
+    const entry = splitColorEntry(value, 6);
+    if (entry.hex) {
+      setCustomColorName(entry.name);
+      setCustomColorHex(entry.hex);
+      setCustomColorHexChosen(true);
+      return;
+    }
+    setCustomColorName(value);
+    const byName = customColorHexChosen ? null : colorHexForName(value);
+    if (byName) setCustomColorHex(byName);
+  };
+
   const handleAddCustomColor = () => {
-    if (!customColorName.trim()) return;
-    const cleanName = customColorName.trim();
-    if (formColors.some((c) => c.name.toLowerCase() === cleanName.toLowerCase())) {
+    const cleanName = pendingColor.name.trim();
+    const hex = pendingColorHex;
+    if (!cleanName || !hex) return;
+    if (formColors.some((c) => normalizeColorName(c.name) === normalizeColorName(cleanName))) {
       onShowToast(`Цвет «${cleanName}» уже добавлен`, 'error');
       return;
     }
-    const newColors = [...formColors, { name: cleanName, hex: customColorHex }];
+    const newColors = [...formColors, { name: cleanName, hex }];
     setFormColors(newColors);
     setCustomColorName('');
+    setCustomColorHex(hex);
+    setCustomColorHexChosen(false);
 
     const prodId = editingProduct ? editingProduct.id : `prod-${Date.now()}`;
     const colorBarcode = generateBarcode(takenBarcodes());
@@ -956,14 +985,14 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   }, [totalFormStock, formPrice]);
 
   // CSV Import execution
-  const handleExecuteCSVImport = () => {
+  const handleExecuteCSVImport = async () => {
     if (!csvInputText.trim()) {
       onShowToast('Вставьте текст CSV или загрузите файл', 'error');
       return;
     }
 
     try {
-      const { products: parsed, skipped } = parseProductsFromCSV(csvInputText);
+      const { products: parsed, skipped } = parseProductsFromCSV(csvInputText, products);
       if (parsed.length === 0) {
         onShowToast(
           skipped > 0
@@ -981,12 +1010,15 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       for (const [idx, p] of parsed.entries()) {
         const existing = p.id ? byId.get(p.id) : undefined;
         if (existing) {
-          byId.set(existing.id, {
+          const updated: Product = {
             ...existing,
             ...p,
             id: existing.id,
             categoryLabel: categories.find((c) => c.id === p.category)?.name || existing.categoryLabel,
-          });
+          };
+          // a colour or size new in the file gets its variations (stock 0); the existing ones keep their stock
+          updated.skus = withMissingSkus(updated);
+          byId.set(existing.id, updated);
           updatedCount++;
           continue;
         }
@@ -1011,7 +1043,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         newProducts.push(fullProd);
       }
 
-      onUpdateProducts([...newProducts, ...products.map((p) => byId.get(p.id) ?? p)]);
+      // «Добавлено» only after the database answered; a failure already showed «Не сохранено: …»
+      const saved = await onUpdateProducts([...newProducts, ...products.map((p) => byId.get(p.id) ?? p)]);
+      if (saved === false) return;
       onShowToast(
         [
           `Добавлено: ${newProducts.length}`,
@@ -1969,9 +2003,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                             <button
                               type="button"
                               onClick={() => handleRemoveColor(c.name)}
-                              className="text-[#4E5C70] hover:text-danger ml-1 active:scale-90 transition-transform cursor-pointer"
+                              className="-my-1 -mr-1.5 ml-0.5 w-6 h-6 inline-flex items-center justify-center rounded-lg text-[#4E5C70] hover:text-danger cursor-pointer"
                               title={`Удалить цвет «${c.name}»`}
-                              aria-label="Закрыть"
+                              aria-label={`Удалить цвет «${c.name}»`}
                             >
                               <X className="w-3 h-3" />
                             </button>
@@ -1986,8 +2020,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         <input
                           type="text"
                           value={customColorName}
-                          onChange={(e) => setCustomColorName(e.target.value)}
+                          onChange={(e) => handleCustomColorNameChange(e.target.value)}
                           placeholder="Новый цвет, напр. Хаки"
+                          aria-label="Название нового цвета"
                           className="col-span-2 sm:col-span-1 min-w-0 h-9 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
                         />
                         <div className="relative min-w-0">
@@ -1995,36 +2030,41 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                             type="text"
                             value={customColorHex}
                             onChange={(e) => {
-                              const val = e.target.value;
-                              if (!val.startsWith('#')) {
-                                setCustomColorHex('#' + val.replace(/[^0-9A-Fa-f]/g, ''));
-                              } else {
-                                setCustomColorHex(val);
-                              }
+                              setCustomColorHex(e.target.value);
+                              setCustomColorHexChosen(true);
+                            }}
+                            // the field shows the code it read: « 1e2b37 », «rgb(30, 43, 55)» → «#1E2B37»
+                            onBlur={() => {
+                              const code = readColorCode(customColorHex, { bare: true });
+                              if (code) setCustomColorHex(code);
                             }}
                             placeholder="#HEX"
-                            maxLength={7}
+                            maxLength={40}
                             className="w-full h-9 pl-8 pr-2 neu-inset rounded-xl text-xs text-[#2D3A4E] uppercase font-mono"
-                            aria-label="Цвет в формате HEX"
+                            aria-label="Код цвета: HEX или rgb"
+                            aria-invalid={customColorHexUnreadable || undefined}
+                            aria-describedby={customColorHexUnreadable ? 'product-color-code-error' : undefined}
                           />
                           <div
                             className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-black/15 shadow-inner"
-                            style={{
-                              backgroundColor: /^#([0-9A-F]{3}){1,2}$/i.test(customColorHex)
-                                ? customColorHex
-                                : 'transparent',
-                            }}
+                            style={{ backgroundColor: pendingColorHex ?? 'transparent' }}
                           />
                         </div>
                         <button
                           type="button"
                           onClick={handleAddCustomColor}
-                          disabled={!customColorName.trim() || !/^#([0-9A-F]{3}){1,2}$/i.test(customColorHex)}
+                          disabled={!pendingColor.name.trim() || !pendingColorHex}
                           className="h-9 px-3 neu-button rounded-xl text-xs font-extrabold text-accent cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0 whitespace-nowrap"
                         >
                           + Цвет
                         </button>
                       </div>
+                      {customColorHexUnreadable && (
+                        <p id="product-color-code-error" className="text-xs font-semibold text-danger">
+                          Код цвета не читается. Подойдёт HEX (#1E2B37 или 1E2B37) или rgb(30, 43, 55) — либо выберите
+                          оттенок ниже.
+                        </p>
+                      )}
 
                       {/* Swatch Palette */}
                       <div className="flex flex-wrap gap-1.5 pt-0.5">
@@ -2048,13 +2088,16 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                           <button
                             key={hex}
                             type="button"
-                            onClick={() => setCustomColorHex(hex)}
-                            className={`w-7 h-7 rounded-lg flex items-center justify-center p-1 transition-all active:scale-95 cursor-pointer ${
-                              customColorHex.toUpperCase() === hex ? 'neu-pill-active' : 'neu-button'
+                            onClick={() => {
+                              setCustomColorHex(hex);
+                              setCustomColorHexChosen(true);
+                            }}
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center p-1 transition-all cursor-pointer ${
+                              pendingColorHex === hex ? 'neu-pill-active' : 'neu-button'
                             }`}
                             title={hex}
                             aria-label={`Цвет ${hex}`}
-                            aria-pressed={customColorHex.toUpperCase() === hex}
+                            aria-pressed={pendingColorHex === hex}
                           >
                             <span
                               className="w-full h-full rounded-md border border-black/10"
@@ -2088,9 +2131,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                             <button
                               type="button"
                               onClick={() => handleRemoveSize(s)}
-                              className="text-[#4E5C70] hover:text-danger ml-1 active:scale-90 transition-transform cursor-pointer"
+                              className="-my-1 -mr-1.5 ml-0.5 w-6 h-6 inline-flex items-center justify-center rounded-lg text-[#4E5C70] hover:text-danger cursor-pointer"
                               title={`Удалить размер ${s}`}
-                              aria-label="Закрыть"
+                              aria-label={`Удалить размер ${s}`}
                             >
                               <X className="w-3 h-3" />
                             </button>

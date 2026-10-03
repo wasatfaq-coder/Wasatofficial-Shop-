@@ -1,6 +1,6 @@
-import { Product, ProductSKU, CartItem, StockMovementLog, StorefrontSettings } from '../types';
-import { collectBarcodes, generateInternalEan13 } from '../shared/barcode';
-import { formatOrderDate } from '../shared/orderDate';
+import { Product, ProductSKU, CartItem, StorefrontSettings } from '../types';
+import { generateInternalEan13 } from '../shared/barcode';
+import { normalizeColorName } from './colorCode';
 
 // Everything a customer reads (texts, contacts, legal details) is empty until the owner fills it
 // in Admin → «Витрина»; customer screens hide or mark as «Не настроено» what is not filled in.
@@ -111,7 +111,7 @@ export function generateSkuCode(
   const colorCode = colorStr
     .slice(0, 3)
     .toUpperCase()
-    .replace(/[^A-ZА-Я0-9]/g, 'CLR') || 'DEF';
+    .replace(/[^A-ZА-ЯЁ0-9]/g, 'CLR') || 'DEF';
   const sizeStr = extractSizeName(size) || 'M';
   return `${prefix}-${catCode}${idNum}-${colorCode}-${sizeStr}`.toUpperCase();
 }
@@ -125,17 +125,17 @@ export function generateBarcode(taken: Set<string> = new Set()): string {
 }
 
 /**
- * Generate full SKU array for a product from its colors and sizes if not already present
+ * Variations of the product's own colours × sizes, stock 0. A product without colours or sizes has none: no made-up
+ * «Основной» colour or M/L sizes that would show on the stock screens and be written with the product.
  */
 export function generateDefaultSKUs(product: Partial<Product> & { id: string }): ProductSKU[] {
   const skus: ProductSKU[] = [];
-  const colors = product.colors && product.colors.length > 0 ? product.colors : [{ name: 'Основной', hex: '#2D3A4E' }];
-  const sizes = product.sizes && product.sizes.length > 0 ? product.sizes : ['M', 'L'];
-
-  colors.forEach((color) => {
+  for (const color of product.colors ?? []) {
     const colorName = extractColorName(color);
-    sizes.forEach((size) => {
+    if (!colorName.trim()) continue;
+    for (const size of product.sizes ?? []) {
       const sizeName = extractSizeName(size);
+      if (!sizeName.trim()) continue;
       // Stock is unknown until the admin sets it; the barcode is issued when the SKU is saved
       // (label generator → «Выдать новые штрихкоды»), so it does not change on every render
       skus.push({
@@ -145,10 +145,22 @@ export function generateDefaultSKUs(product: Partial<Product> & { id: string }):
         stock: 0,
         skuCode: generateSkuCode(product, colorName, sizeName),
       });
-    });
-  });
-
+    }
+  }
   return skus;
+}
+
+/**
+ * Variations of every colour × size of the product: the existing ones stay as they are (stock, codes), a colour or
+ * size added from elsewhere (CSV import) gets its variations with stock 0. Without colours or sizes — nothing is added.
+ */
+export function withMissingSkus(product: Product): ProductSKU[] {
+  const skus = product.skus ?? [];
+  if (!product.colors?.length || !product.sizes?.length) return skus;
+  const key = (color: unknown, size: unknown) =>
+    `${normalizeColorName(extractColorName(color))}|${extractSizeName(size).trim().toLowerCase()}`;
+  const present = new Set(skus.map((s) => key(s.color, s.size)));
+  return [...skus, ...generateDefaultSKUs(product).filter((s) => !present.has(key(s.color, s.size)))];
 }
 
 /**
@@ -240,51 +252,21 @@ export function isProductInStock(product: Product): boolean {
   return getProductTotalStock(product) > 0;
 }
 
+/** «В наличии» after the admin changes a variation's stock: a product taken off sale stays off (audit 02.10, finding 10) */
+export function inStockAfterStockChange(
+  product: Pick<Product, 'inStock' | 'skus' | 'hiddenFromSale'>,
+  nextSkus: ProductSKU[]
+): boolean {
+  return isHiddenFromSale(product) ? false : nextSkus.some((s) => (Number(s.stock) || 0) > 0);
+}
+
 /**
- * Update stock for a single SKU in a product
+ * «В наличии» after goods of a cancelled order come back (the same expression the rules check for the buyer): only
+ * a sold-out product goes on sale again, not one the admin took off sale (finding 10)
  */
-export function updateProductSkuStock(
-  product: Product,
-  color: unknown,
-  size: unknown,
-  newStock: number
-): Product {
-  const currentSkus = product.skus && product.skus.length > 0 ? product.skus : generateDefaultSKUs(product);
-  const safeStock = Math.max(0, Math.floor(newStock));
-  const colorStr = extractColorName(color);
-  const sizeStr = extractSizeName(size);
-
-  let matched = false;
-  const updatedSkus = currentSkus.map((sku) => {
-    if (
-      extractColorName(sku.color).trim().toLowerCase() === colorStr.trim().toLowerCase() &&
-      extractSizeName(sku.size).trim().toLowerCase() === sizeStr.trim().toLowerCase()
-    ) {
-      matched = true;
-      return { ...sku, stock: safeStock };
-    }
-    return sku;
-  });
-
-  if (!matched) {
-    updatedSkus.push({
-      id: `${product.id}-${colorStr}-${sizeStr}`,
-      color: colorStr,
-      size: sizeStr,
-      stock: safeStock,
-      skuCode: generateSkuCode(product, colorStr, sizeStr),
-      barcode: generateBarcode(collectBarcodes([{ id: product.id, skus: updatedSkus }])),
-    });
-  }
-
-  const totalStock = updatedSkus.reduce((acc, s) => acc + s.stock, 0);
-
-  return {
-    ...product,
-    skus: updatedSkus,
-    // «Снят с витрины» (false with stock left) stays off sale (audit 02.10, finding 10)
-    inStock: isHiddenFromSale(product) ? false : totalStock > 0,
-  };
+export function inStockAfterReturn(product: Pick<Product, 'inStock' | 'skus' | 'hiddenFromSale'>): boolean {
+  const soldOut = (product.skus ?? []).every((s) => (Number(s.stock) || 0) <= 0);
+  return product.inStock === false && soldOut && product.hiddenFromSale !== true ? true : product.inStock ?? true;
 }
 
 /** The journal used to be kept only in the browser of whoever changed the stock; the admin session moves it to the database */
@@ -307,97 +289,28 @@ export function stockMovementId(): string {
 }
 
 /**
- * Common internal engine for modifying SKU stock and creating journal entries.
- * Nothing is written here: the admin screens save `generatedLogs` with `saveStockMovements`.
+ * The browser's copy of the catalog right after an order, so the new stock shows at once. The database itself is
+ * changed by the order's transactions with their journal entries (`deductOrderLineStock`); preorder lines are not
+ * taken from stock.
  */
-function applyStockChangeWithLogs(
-  products: Product[],
-  items: CartItem[],
-  mode: 'deduct' | 'return',
-  orderId: string,
-  reason: string,
-  operator: string
-): { updatedProducts: Product[]; generatedLogs: StockMovementLog[] } {
-  const generatedLogs: StockMovementLog[] = [];
-  const now = new Date();
-
-  const updatedProducts = products.map((prod) => {
-    // Preorder lines were never taken from stock, so they are neither deducted nor returned
-    const relevantItems = items.filter((it) => it.product.id === prod.id && !it.isPreorder);
-    if (relevantItems.length === 0) return prod;
-
-    const currentSkus = prod.skus && prod.skus.length > 0 ? prod.skus : generateDefaultSKUs(prod);
-
-    const updatedSkus = currentSkus.map((sku) => {
-      // Several cart lines of the same variant add up
-      const matchedQuantity = relevantItems
+export function withOrderDeducted(products: Product[], items: CartItem[]): Product[] {
+  const norm = (v: unknown, read: (x: unknown) => string) => read(v).trim().toLowerCase();
+  return products.map((prod) => {
+    const lines = items.filter((it) => it.product.id === prod.id && !it.isPreorder);
+    if (lines.length === 0 || !prod.skus?.length) return prod;
+    const nextSkus = prod.skus.map((sku) => {
+      // several cart lines of the same variation add up
+      const quantity = lines
         .filter(
           (it) =>
-            extractColorName(it.selectedColor).trim().toLowerCase() === extractColorName(sku.color).trim().toLowerCase() &&
-            extractSizeName(it.selectedSize).trim().toLowerCase() === extractSizeName(sku.size).trim().toLowerCase()
+            norm(it.selectedColor, extractColorName) === norm(sku.color, extractColorName) &&
+            norm(it.selectedSize, extractSizeName) === norm(sku.size, extractSizeName)
         )
         .reduce((sum, it) => sum + it.quantity, 0);
-
-      if (matchedQuantity > 0) {
-        const oldStock = sku.stock;
-        const newStock = mode === 'deduct'
-          ? Math.max(0, sku.stock - matchedQuantity)
-          : oldStock + matchedQuantity;
-        const diff = newStock - oldStock;
-
-        generatedLogs.push({
-          id: stockMovementId(),
-          createdAt: now.toISOString(),
-          date: formatOrderDate(now),
-          type: mode === 'deduct' ? 'order' : 'return',
-          orderId,
-          productId: prod.id,
-          productTitle: prod.title,
-          skuCode: sku.skuCode || generateSkuCode(prod, sku.color, sku.size),
-          color: sku.color,
-          size: sku.size,
-          changeQuantity: diff,
-          previousStock: oldStock,
-          newStock: newStock,
-          reason,
-          operator,
-        });
-
-        return { ...sku, stock: newStock };
-      }
-      return sku;
+      return quantity > 0 ? { ...sku, stock: Math.max(0, (Number(sku.stock) || 0) - quantity) } : sku;
     });
-
-    const totalStock = updatedSkus.reduce((acc, s) => acc + s.stock, 0);
-
-    return {
-      ...prod,
-      skus: updatedSkus,
-      // «Снят с витрины» (false with stock left) stays off sale (audit 02.10, finding 10); otherwise in stock = something is left
-      inStock: isHiddenFromSale(prod) ? false : totalStock > 0,
-    };
+    return { ...prod, skus: nextSkus, inStock: inStockAfterStockChange(prod, nextSkus) };
   });
-
-  return { updatedProducts, generatedLogs };
-}
-
-/**
- * Automatically deduct SKU stock when order is placed and write structured movement logs
- */
-export function deductStockWithLogs(
-  products: Product[],
-  items: CartItem[],
-  orderId: string,
-  operator = 'Система оформления'
-): { updatedProducts: Product[]; generatedLogs: StockMovementLog[] } {
-  return applyStockChangeWithLogs(
-    products,
-    items,
-    'deduct',
-    orderId,
-    `Автоматическое списание по заказу #${orderId}`,
-    operator
-  );
 }
 
 export interface StockShortage {
@@ -418,19 +331,26 @@ export function stockShortages(products: Product[], items: CartItem[]): StockSho
   for (const prod of products) {
     const lines = items.filter((it) => it.product.id === prod.id && !it.isPreorder);
     if (lines.length === 0) continue;
-    const skus = prod.skus && prod.skus.length > 0 ? prod.skus : generateDefaultSKUs(prod);
+    const skus = withMissingSkus(prod);
+    const isLineOf = (it: CartItem, sku: ProductSKU) =>
+      norm(extractColorName(it.selectedColor)) === norm(extractColorName(sku.color)) &&
+      norm(extractSizeName(it.selectedSize)) === norm(extractSizeName(sku.size));
     for (const sku of skus) {
-      const needed = lines
-        .filter(
-          (it) =>
-            norm(extractColorName(it.selectedColor)) === norm(extractColorName(sku.color)) &&
-            norm(extractSizeName(it.selectedSize)) === norm(extractSizeName(sku.size))
-        )
-        .reduce((sum, it) => sum + it.quantity, 0);
+      const needed = lines.filter((it) => isLineOf(it, sku)).reduce((sum, it) => sum + it.quantity, 0);
       if (needed > sku.stock) {
         shortages.push({ productTitle: prod.title, color: sku.color, size: sku.size, needed, inStock: sku.stock });
       }
     }
+    // a line of a colour or size the product no longer has: there is nothing to take it from
+    const unknown = new Map<string, StockShortage>();
+    for (const it of lines.filter((line) => !skus.some((sku) => isLineOf(line, sku)))) {
+      const color = extractColorName(it.selectedColor);
+      const size = extractSizeName(it.selectedSize);
+      const key = `${norm(color)}|${norm(size)}`;
+      const known = unknown.get(key);
+      unknown.set(key, { productTitle: prod.title, color, size, needed: (known?.needed ?? 0) + it.quantity, inStock: 0 });
+    }
+    shortages.push(...unknown.values());
   }
   return shortages;
 }
@@ -522,24 +442,4 @@ export function mergeFormStock(formSkus: ProductSKU[], openedSkus: ProductSKU[],
     return { ...sku, stock: formStock };
   });
   return { skus, changes };
-}
-
-/**
- * Return SKU stock when order items are cancelled, adjusted, or returned
- */
-export function returnStockWithLogs(
-  products: Product[],
-  items: CartItem[],
-  orderId: string,
-  reason = 'Возврат товара / Корректировка заказа',
-  operator = 'Администратор'
-): { updatedProducts: Product[]; generatedLogs: StockMovementLog[] } {
-  return applyStockChangeWithLogs(
-    products,
-    items,
-    'return',
-    orderId,
-    `Возврат остатка по заказу #${orderId} (${reason})`,
-    operator
-  );
 }

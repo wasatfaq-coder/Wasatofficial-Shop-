@@ -24,7 +24,7 @@ import {
   matchesCatalogFilters,
 } from './components/CatalogAdvancedFilter';
 import {
-  deductStockWithLogs,
+  withOrderDeducted,
   loadStorefrontSettings,
   saveStorefrontSettings,
   getOrderableStock,
@@ -114,6 +114,7 @@ import type { CatalogStatus } from './components/CatalogLoadState';
 import { CART_STORAGE_KEY, loadStoredCart, toStoredCart } from './utils/cartStorage';
 import { validatePromo, toPricingLine, isPromoListed, promoDiscountKind, QUICK_ORDER_DELIVERY_ID } from './shared/orderPricing';
 import { toOrderLineProduct } from './shared/orderLine';
+import { STORE_PAUSED_TEXT, storeAcceptsOrders } from './shared/orderApi';
 import { cleanAddressParts, fullName, hasNameParts, namePartsOf, type AddressParts, type PersonName } from './shared/personName';
 import { extractColorName, extractSizeName } from './utils/inventory';
 import { getStoreContacts, getStoreName, publicSetting, withStoreName, withStoreNameFields } from './utils/storeContacts';
@@ -122,6 +123,7 @@ import { promoDiscountText } from './utils/promoLabel';
 import { hasOrderableVariant, needsVariantChoice } from './utils/variantSelection';
 import { VariantPickerSheet } from './components/VariantPickerSheet';
 import { parseRouteHash, readHistoryState, routeHash, type HistoryEntryState } from './utils/navigation';
+import { afterWindowHistory, isWindowHistoryBusy, windowDepth } from './utils/windowHistory';
 
 // Legal documents: a separate chunk with the templates, loaded when a document is opened
 const LegalDocumentScreen = lazy(() => import('./views/LegalDocumentScreen'));
@@ -199,6 +201,10 @@ export default function App() {
   const pendingScroll = React.useRef<number | null>(null);
   const replaceNextRoute = React.useRef(false);
   const isFirstRouteSync = React.useRef(true);
+  // The address of the screen on show: a popstate to it with the same idx only closed a window (windowHistory.ts)
+  const shownHash = React.useRef('');
+  // A screen change waited for a window to take its history entry back: sync the address again
+  const [routeRetry, setRouteRetry] = useState(0);
   /** Every screen change goes through here: remembers the scroll of the screen being left */
   const setActiveTab = React.useCallback((tab: ActiveTab) => {
     leavingScroll.current = window.scrollY;
@@ -322,7 +328,8 @@ export default function App() {
   const [productCosts, setProductCosts] = useState<Record<string, number>>({});
 
   // Screen → address. A new screen is a new history entry (so «Назад» returns to it) and opens
-  // at the top; the confirmation replaces the checkout entry, «Назад» does not return to paying
+  // at the top; the confirmation replaces the checkout entry, «Назад» does not return to paying.
+  // Open windows have entries of their own over the screen's (windowHistory.ts)
   const routeProductId =
     activeTab === 'product-detail' ? selectedProduct?.id ?? pendingSelectedProductId.current ?? undefined : undefined;
   React.useEffect(() => {
@@ -334,12 +341,29 @@ export default function App() {
       replaceNextRoute.current = false;
       window.history.scrollRestoration = 'manual';
       window.history.replaceState({ wasat: true, idx: 0 } satisfies HistoryEntryState, '', hash);
+      shownHash.current = hash;
       return;
     }
     // Already there: a Back/Forward the popstate handler applied
     if (window.location.hash === hash) return;
-    const replace = replaceNextRoute.current || activeTab === 'order-success';
+    // A window has just closed and is taking its history entry back: the new address goes after it
+    if (isWindowHistoryBusy()) {
+      afterWindowHistory(() => setRouteRetry((n) => n + 1));
+      return;
+    }
+    // The confirmation replaces only the checkout; after «Заказ в 1 клик» «Назад» returns to the product or the cart
+    const replace =
+      replaceNextRoute.current || (activeTab === 'order-success' && shownHash.current === routeHash({ tab: 'checkout' }));
     replaceNextRoute.current = false;
+    shownHash.current = hash;
+    pendingScroll.current = 0;
+    if (windowDepth(window.history.state) > 0) {
+      // Left the screen from a window: the window's entry becomes the new screen's, «Назад» returns to the screen
+      // under the window (its scroll was saved when the window opened)
+      historyIdx.current += 1;
+      window.history.replaceState({ wasat: true, idx: historyIdx.current } satisfies HistoryEntryState, '', hash);
+      return;
+    }
     window.history.replaceState(
       { ...readHistoryState(window.history.state), wasat: true, idx: historyIdx.current, scrollY: leavingScroll.current } satisfies HistoryEntryState,
       ''
@@ -350,8 +374,7 @@ export default function App() {
       historyIdx.current += 1;
       window.history.pushState({ wasat: true, idx: historyIdx.current } satisfies HistoryEntryState, '', hash);
     }
-    pendingScroll.current = 0;
-  }, [activeTab, routeProductId]);
+  }, [activeTab, routeProductId, routeRetry]);
   // Filled as the visitor opens products; no made-up history
   const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
@@ -710,8 +733,11 @@ export default function App() {
   latestOrderRef.current = latestOrder;
   React.useEffect(() => {
     const onPopState = (e: PopStateEvent) => {
-      const route = parseRouteHash(window.location.hash) ?? { tab: 'home' as ActiveTab };
       const entry = readHistoryState(e.state);
+      // The same entry of the screen: «Назад» closed a window over it (windowHistory.ts), the screen stays
+      if (entry && entry.idx === historyIdx.current && window.location.hash === shownHash.current) return;
+      shownHash.current = window.location.hash;
+      const route = parseRouteHash(window.location.hash) ?? { tab: 'home' as ActiveTab };
       if (entry) {
         historyIdx.current = entry.idx;
       } else {
@@ -1602,8 +1628,14 @@ export default function App() {
     [activeTab, cartItems, products, preorderMode]
   );
 
-  const handleCompleteOrder = (orderData: CompleteOrderData): Promise<boolean> =>
-    serverOrdersEnabled ? completeOrderOnServer(orderData) : completeOrderLocally(orderData);
+  const handleCompleteOrder = (orderData: CompleteOrderData): Promise<boolean> => {
+    // «Технические работы» in «Витрина»: no orders (the checkout and the 1-click window say so before this)
+    if (!storeAcceptsOrders(storefrontSettings)) {
+      addToast(`${STORE_PAUSED_TEXT}. Напишите в чат поддержки.`, 'error');
+      return Promise.resolve(false);
+    }
+    return serverOrdersEnabled ? completeOrderOnServer(orderData) : completeOrderLocally(orderData);
+  };
 
   // Legacy client-side checkout, used until the Cloud Function is deployed and enabled
   const completeOrderLocally = async (orderData: CompleteOrderData): Promise<boolean> => {
@@ -1692,13 +1724,8 @@ export default function App() {
       return false;
     }
 
-    // Deduct stock per size/color SKU and automatically write off log
-    const { updatedProducts } = deductStockWithLogs(
-      products,
-      orderItems,
-      newOrderId,
-      customerName
-    );
+    // The new stock shows at once; the database is changed by the line transactions below
+    const updatedProducts = withOrderDeducted(products, orderItems);
     setProducts(updatedProducts);
 
     // If active product was modified, sync selectedProduct
@@ -1717,7 +1744,8 @@ export default function App() {
       );
     }
 
-    setOrders((prev) => [newOrder, ...prev]);
+    // the orders subscription may already hold it (the local write is seen at once): one card, not two
+    setOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);
     if (!currentUser) {
       saveGuestOrder(newOrder);
     }
@@ -1832,6 +1860,7 @@ export default function App() {
           draftText={chatDraft}
           imageDb={chatIdentity?.db}
           storePhone={getStoreContacts(storefrontSettings).phone}
+          storeSchedule={storefrontSettings.schedule}
           onClose={() => {
             setIsSupportChatOpen(false);
             setChatDraft('');
@@ -2018,6 +2047,7 @@ export default function App() {
           {activeTab === 'product-detail' && selectedProduct && (
             <ProductDetailScreen
               preorderMode={preorderMode}
+              ordersPaused={!storeAcceptsOrders(storefrontSettings)}
               product={products.find((p) => p.id === selectedProduct.id) ?? selectedProduct}
               returnPeriodDays={storefrontSettings.returnPeriodDays}
               freeDeliveryThreshold={storefrontSettings.freeDeliveryThreshold}
@@ -2039,6 +2069,7 @@ export default function App() {
             <CartScreen
               hasActivePromos={hasActivePromos}
               preorderMode={preorderMode}
+              ordersPaused={!storeAcceptsOrders(storefrontSettings)}
               cartItems={cartItems}
               favorites={favorites}
               onUpdateQuantity={handleUpdateQuantity}

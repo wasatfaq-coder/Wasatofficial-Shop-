@@ -30,6 +30,8 @@ import { useDialogA11y } from '../utils/useDialogA11y';
 
 interface CartScreenProps {
   cartItems: CartItem[];
+  /** «Технические работы» in «Витрина»: the 1-click window says the site takes no orders */
+  ordersPaused?: boolean;
   favorites: string[];
   onUpdateQuantity: (cartItemId: string, newQty: number) => void;
   onRemoveItem: (cartItemId: string) => void;
@@ -57,6 +59,7 @@ interface CartScreenProps {
 
 export const CartScreen: React.FC<CartScreenProps> = ({
   cartItems,
+  ordersPaused = false,
   favorites,
   onUpdateQuantity,
   onRemoveItem,
@@ -724,6 +727,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         cartItems={cartItems}
         totalPrice={rawSubtotal}
         promoNotApplied={Boolean(appliedPromo)}
+        ordersPaused={ordersPaused}
         onSuccess={handleQuickOrderSuccess}
       />
       </LazyMount>

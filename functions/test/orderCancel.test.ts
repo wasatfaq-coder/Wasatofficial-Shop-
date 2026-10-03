@@ -9,9 +9,9 @@ import {
   customerCancelHint,
   isArchivedOrder,
 } from '../../src/utils/orderCancel';
-import { returnStockWithLogs, updateProductSkuStock } from '../../src/utils/inventory';
+import { inStockAfterReturn, inStockAfterStockChange } from '../../src/utils/inventory';
 import { orderReturnMovementId, orderReturnReason } from '../../src/shared/stockMovements';
-import type { CartItem, Order, Product } from '../../src/types';
+import type { Order, Product } from '../../src/types';
 
 const order = (overrides: Partial<Order> = {}): Order => ({
   id: 'WS-1',
@@ -79,28 +79,23 @@ describe('«Архив»', () => {
 });
 
 describe('back to stock', () => {
-  const line = (size: string, quantity: number): CartItem => ({
-    id: `c-${size}`,
-    product: { id: 'p1', title: 'Пальто' } as Product,
-    quantity,
-    selectedColor: '',
-    selectedSize: size,
-  });
   const product = (inStock: boolean, m: number, l: number): Product =>
     ({ id: 'p1', title: 'Пальто', price: 1000, inStock, skus: [{ color: '', size: 'M', stock: m }, { color: '', size: 'L', stock: l }] }) as unknown as Product;
 
+  // the expressions of returnOrderLineStock and applyAdminStockChanges (firebaseSync.ts)
   test('a product taken off sale stays off when goods come back; a sold-out one is on sale again', () => {
-    const hidden = returnStockWithLogs([product(false, 0, 4)], [line('M', 2)], 'WS-1').updatedProducts[0];
-    expect(hidden.inStock).toBe(false);
-    expect(hidden.skus?.[0].stock).toBe(2);
-    const soldOut = returnStockWithLogs([product(false, 0, 0)], [line('M', 2)], 'WS-1').updatedProducts[0];
-    expect(soldOut.inStock).toBe(true);
+    expect(inStockAfterReturn(product(false, 0, 4))).toBe(false);
+    expect(inStockAfterReturn(product(false, 0, 0))).toBe(true);
+    expect(inStockAfterReturn({ ...product(false, 0, 0), hiddenFromSale: true })).toBe(false);
+    expect(inStockAfterReturn(product(true, 1, 0))).toBe(true);
   });
 
   test('a stock edit in «Склад и SKU» does not put a product taken off sale back on sale (audit 02.10, finding 10)', () => {
-    expect(updateProductSkuStock(product(false, 0, 4), '', 'M', 5).inStock).toBe(false);
-    expect(updateProductSkuStock(product(false, 0, 0), '', 'M', 5).inStock).toBe(true);
-    expect(updateProductSkuStock(product(true, 1, 0), '', 'M', 0).inStock).toBe(false);
+    const skus = (m: number, l: number) => product(true, m, l).skus!;
+    expect(inStockAfterStockChange(product(false, 0, 4), skus(5, 4))).toBe(false);
+    expect(inStockAfterStockChange(product(false, 0, 0), skus(5, 0))).toBe(true);
+    expect(inStockAfterStockChange(product(true, 1, 0), skus(0, 0))).toBe(false);
+    expect(inStockAfterStockChange({ ...product(true, 0, 0), hiddenFromSale: true }, skus(5, 0))).toBe(false);
   });
 
   test('the return entry of a line has its own id and the reason the rules expect', () => {

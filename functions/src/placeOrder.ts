@@ -4,7 +4,13 @@
  */
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 import type { CartItem, DeliveryMethod, Order, Product, ProductSKU, PromoCode, StorefrontSettings } from '../../src/types';
-import { initialPaymentStatus, type PlaceOrderItem, type PlaceOrderRequest } from '../../src/shared/orderApi';
+import {
+  initialPaymentStatus,
+  STORE_PAUSED_TEXT,
+  storeAcceptsOrders,
+  type PlaceOrderItem,
+  type PlaceOrderRequest,
+} from '../../src/shared/orderApi';
 import { formatOrderDate } from '../../src/shared/orderDate';
 import { toOrderLineProduct } from '../../src/shared/orderLine';
 import { ADDRESS_PART_KEYS, cleanAddressParts, fullName, type AddressParts } from '../../src/shared/personName';
@@ -18,7 +24,7 @@ import {
 } from '../../src/shared/orderPricing';
 import { extractColorName, extractSizeName, generateDefaultSKUs, isHiddenFromSale, skuCodeForLine } from '../../src/utils/inventory';
 import { orderStockMovements, STOCK_MOVEMENTS_COLLECTION } from '../../src/shared/stockMovements';
-import { deliveryKindOfMethod, initialStatusLog, type DeliveryKind } from '../../src/shared/orderFlow';
+import { deliveryKindOfMethod, estimatedDeliveryOf, initialStatusLog, type DeliveryKind } from '../../src/shared/orderFlow';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages } from '../../src/utils/deliveryStages';
 
 export type OrderErrorCode = 'invalid-argument' | 'failed-precondition' | 'not-found';
@@ -152,6 +158,10 @@ export async function placeOrderCore(
 
     const settingsSnap = await tx.get(db.collection('settings').doc('storefront'));
     const settings = (settingsSnap.exists ? settingsSnap.data() : undefined) as StorefrontSettings | undefined;
+    // «Технические работы» in «Витрина»: no orders, also not from a page opened before the switch
+    if (!storeAcceptsOrders(settings)) {
+      throw new OrderError('failed-precondition', `${STORE_PAUSED_TEXT}. Напишите в чат поддержки.`);
+    }
 
     let promo: { ref: DocumentReference; data: PromoCode } | null = null;
     if (request.promoCode) {
@@ -243,6 +253,7 @@ export async function placeOrderCore(
     let deliveryTitle = QUICK_ORDER_DELIVERY_TITLE;
     let deliveryFee = 0;
     let deliveryKind: DeliveryKind | undefined;
+    let estimatedDelivery: string | undefined;
     if (!isQuickOrder) {
       const subtotal = lines.reduce((acc, l) => acc + l.price * l.quantity, 0);
       const method = getAvailableDeliveryMethods(deliveryMethods, settings, subtotal).find(
@@ -254,6 +265,7 @@ export async function placeOrderCore(
       deliveryTitle = method.title;
       deliveryFee = method.price || 0;
       deliveryKind = deliveryKindOfMethod(method);
+      estimatedDelivery = estimatedDeliveryOf(method);
     }
 
     const totals = calcOrderTotals(lines, promo?.data, deliveryFee);
@@ -283,7 +295,7 @@ export async function placeOrderCore(
       paymentMethod: request.paymentMethod,
       paymentStatus,
       deliveryAddressParts: request.addressParts,
-      estimatedDelivery: 'Через 1-2 дня',
+      estimatedDelivery,
       deliveryKind,
       statusLog: initialStatusLog(now),
       placedVia: 'server',

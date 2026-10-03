@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { X, Phone, User, MapPin, ShieldCheck, ShoppingBag, AlertCircle } from 'lucide-react';
+import { X, Phone, User, MapPin, MessageCircle, ShoppingBag, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CartItem, Product } from '../types';
+import { STORE_PAUSED_TEXT } from '../shared/orderApi';
 import { productImage } from '../utils/productImage';
 import { LegalConsentNote } from './LegalConsentNote';
 import { useDialogA11y } from '../utils/useDialogA11y';
@@ -19,6 +20,8 @@ interface QuickOrderModalProps {
   totalPrice: number;
   /** A promo is applied in the cart: it does not work for a 1-click order */
   promoNotApplied?: boolean;
+  /** «Технические работы» in «Витрина»: the site takes no orders — said here, the button is off */
+  ordersPaused?: boolean;
   onSuccess: (details: { name: string; phone: string; address: string }) => void;
 }
 
@@ -29,6 +32,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
   singleProduct,
   totalPrice,
   promoNotApplied = false,
+  ordersPaused = false,
   onSuccess,
 }) => {
   const dialog = useDialogA11y(isOpen, onClose);
@@ -57,7 +61,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || phone.length < 11) return;
+    if (ordersPaused || !name.trim() || phone.length < 11) return;
 
     const newErrors: { house?: string; entrance?: string; intercom?: string; general?: string } = {};
     if (!house.trim()) {
@@ -338,11 +342,19 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                 </div>
               </div>
 
-              {/* Guarantee Badge */}
-              <div className="p-2 rounded-xl neu-flat flex items-center gap-2 text-[11px] text-success font-semibold">
-                <ShieldCheck className="w-4 h-4 text-success shrink-0" />
-                <span>Оплата при получении после примерки. Бесплатный возврат.</span>
-              </div>
+              {/* The order goes out with «Уточнит менеджер» for delivery and payment: no made-up fitting or free returns
+                  (audit 02.10, finding 44) */}
+              {ordersPaused ? (
+                <div role="status" className="p-2.5 rounded-xl bg-warning-soft border border-warning/40 flex items-start gap-2 text-xs text-[#2D3A4E] font-semibold">
+                  <AlertCircle className="w-4 h-4 text-warning shrink-0 mt-px" aria-hidden="true" />
+                  <span>{STORE_PAUSED_TEXT}. Напишите в чат поддержки — менеджер оформит заказ сам.</span>
+                </div>
+              ) : (
+                <div className="p-2 rounded-xl neu-flat flex items-center gap-2 text-xs text-[#4E5C70] font-semibold">
+                  <MessageCircle className="w-4 h-4 text-accent shrink-0" aria-hidden="true" />
+                  <span>Доставку и оплату менеджер согласует с вами после заказа.</span>
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div className="pt-2 flex items-center justify-end gap-2">
@@ -355,7 +367,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting || !name.trim() || phone.length < 11}
+                  disabled={ordersPaused || isSubmitting || !name.trim() || phone.length < 11}
                   className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-extrabold cursor-pointer transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 btn-confirm-order ${
                     isSubmitting
                       ? 'neu-inset-deep neu-inset-deep-animated text-accent ring-2 ring-accent/40'
