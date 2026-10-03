@@ -32,9 +32,8 @@ import {
   stockProblemText,
   isPreorderVariant,
 } from './utils/inventory';
-import { getDefaultHistorySteps, getSynchronizedDeliveryStages } from './utils/deliveryStages';
-import { deliveryKindOfMethod, initialStatusLog } from './shared/orderFlow';
 import { formatAddress } from './utils/addressFormat';
+import { buildClientOrder } from './utils/clientOrder';
 import { pluralRu } from './utils/pluralize';
 import { ADMIN_EMAIL, useAuth } from './context/AuthContext';
 import {
@@ -110,8 +109,6 @@ import {
 import type { CatalogStatus } from './components/CatalogLoadState';
 import { CART_STORAGE_KEY, loadStoredCart, toStoredCart } from './utils/cartStorage';
 import { validatePromo, toPricingLine, isPromoListed, promoDiscountKind, QUICK_ORDER_DELIVERY_ID } from './shared/orderPricing';
-import { formatOrderDate } from './shared/orderDate';
-import { initialPaymentStatus } from './shared/orderApi';
 import { toOrderLineProduct } from './shared/orderLine';
 import { cleanAddressParts, fullName, hasNameParts, namePartsOf, type AddressParts, type PersonName } from './shared/personName';
 import { extractColorName, extractSizeName } from './utils/inventory';
@@ -1567,7 +1564,6 @@ export default function App() {
     const { customerName, customerPhone, customerEmail, deliveryAddress, deliveryMethod, paymentMethod, nameParts, addressParts } =
       resolveOrderDetails(orderData);
     const totalPrice = orderData.totalPrice ?? 0;
-    const paymentStatus = initialPaymentStatus(paymentMethod);
     // A 1-click order has no promo, as on the server
     const orderPromo = orderData.deliveryMethodId && appliedPromo?.code && orderData.discountAmount !== 0
       ? promos.find((p) => p.code.toUpperCase() === appliedPromo.code.toUpperCase())
@@ -1585,42 +1581,25 @@ export default function App() {
     const orderMethod = orderData.deliveryMethodId
       ? deliveryMethods.find((m) => m.id === orderData.deliveryMethodId)
       : undefined;
-    const newOrderBase = {
+    const newOrder = buildClientOrder({
       id: newOrderId,
-      // the exact moment is createdAt (analytics, sorting); date is its display text
-      createdAt: placedAt.toISOString(),
-      date: formatOrderDate(placedAt),
+      placedAt,
       items: orderItems,
-      status: 'accepted' as const,
       totalPrice,
       deliveryAddress,
       deliveryMethod,
+      method: orderMethod,
       customerName,
-      customerLastName: nameParts?.lastName || undefined,
-      customerFirstName: nameParts?.firstName || undefined,
-      customerMiddleName: nameParts?.middleName || undefined,
+      nameParts,
       customerPhone,
       customerEmail,
       customerUid: orderOwner.uid,
-      deliveryAddressParts: addressParts,
+      addressParts,
       paymentMethod,
-      paymentStatus,
-      // The same breakdown as orders placed by placeOrder: promo analytics and the invoice read it
       deliveryFee: orderData.deliveryFee,
-      discountAmount: orderData.discountAmount || undefined,
+      discountAmount: orderData.discountAmount,
       promoCode: orderPromo?.code,
-      trackingNumber: undefined,
-      estimatedDelivery: 'Через 1-2 дня',
-      // its chain of statuses and the first entry of the history (src/shared/orderFlow.ts, as in placeOrder)
-      deliveryKind: orderMethod ? deliveryKindOfMethod(orderMethod) : undefined,
-      statusLog: initialStatusLog(placedAt),
-    };
-
-    const newOrder: Order = {
-      ...newOrderBase,
-      historySteps: getDefaultHistorySteps(newOrderBase),
-      deliveryStages: getSynchronizedDeliveryStages(newOrderBase as Order),
-    };
+    });
 
     // The order must reach the database before it is shown as placed and stock is taken:
     // a rejected write (rules, network error) used to be reported as a successful order
