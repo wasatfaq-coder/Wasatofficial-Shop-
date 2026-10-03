@@ -9,11 +9,12 @@ test('покупатель видит «не настроено» вместо �
   await expect(page.getByRole('status').filter({ hasText: 'Категории: не настроено' })).toBeVisible();
   await expect(page.locator('a[href^="#/product/"]')).toHaveCount(0);
 
-  // a link to a product that is not there leads to the catalog
+  // a link to a product that is not there leads to the catalog, with a message
   await page.goto('/#/product/nope');
+  await expect(page.getByRole('status').filter({ hasText: 'Товар не найден' })).toBeVisible();
   await expect(page).toHaveURL(/#\/catalog$/);
 
-  await page.goto('/#/cart');
+  await page.getByRole('button', { name: 'Корзина' }).first().click();
   await expect(page.getByRole('heading', { name: 'Ваша корзина пуста' })).toBeVisible();
 });
 
