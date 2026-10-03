@@ -17,6 +17,7 @@ import { productRatingValue } from '../utils/productRating';
 import { pluralRu } from '../utils/pluralize';
 import { NeumorphicSwitch } from './NeumorphicSwitch';
 import { useDialogA11y } from '../utils/useDialogA11y';
+import { buildSizeChips, sizeMatches } from '../utils/sizeScale';
 
 export interface FilterState {
   minPrice: number;
@@ -107,7 +108,8 @@ export function matchesCatalogFilters(p: Product, category: string, f: FilterSta
     p.price >= f.minPrice &&
     p.price <= f.maxPrice &&
     matchesMaterialFilter(p.material, f.selectedMaterials) &&
-    (f.selectedSizes.length === 0 || f.selectedSizes.some((sz) => isProductAvailableInSize(p, sz))) &&
+    (f.selectedSizes.length === 0 ||
+      f.selectedSizes.some((sel) => p.sizes.some((sz) => sizeMatches(sz, sel) && isProductAvailableInSize(p, sz)))) &&
     (!f.onlyInStock || isProductInStock(p)) &&
     (!f.onlyNew || Boolean(p.isNew)) &&
     (!f.onlyDiscount || Boolean(p.originalPrice && p.originalPrice > p.price)) &&
@@ -180,31 +182,8 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
     filteredCount === 0
       ? 'Ничего не найдено'
       : `Показать ${filteredCount} ${pluralRu(filteredCount, ['товар', 'товара', 'товаров'])}`;
-  // Extract all available sizes dynamically from products
-  const allAvailableSizes = useMemo(() => {
-    const sizeSet = new Set<string>();
-    const standardOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '48', '50', '52', '54', '56'];
-    products.forEach((p) => {
-      p.sizes.forEach((s) => sizeSet.add(s));
-    });
-    return Array.from(sizeSet).sort((a, b) => {
-      const idxA = standardOrder.indexOf(a);
-      const idxB = standardOrder.indexOf(b);
-      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-      if (idxA !== -1) return -1;
-      if (idxB !== -1) return 1;
-      return a.localeCompare(b);
-    });
-  }, [products]);
-
-  // Calculate product counts per size based on current products & inventory
-  const sizeCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    allAvailableSizes.forEach((sz) => {
-      counts[sz] = products.filter((p) => isProductAvailableInSize(p, sz)).length;
-    });
-    return counts;
-  }, [allAvailableSizes, products]);
+  // One scale: «M» and «48 (M)» are one chip, counted in products that have the size in stock
+  const sizeChips = useMemo(() => buildSizeChips(products, isProductAvailableInSize), [products]);
 
   // Calculate product counts per material
   const materialCounts = useMemo(() => {
@@ -225,12 +204,14 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
     };
   }, [products]);
 
-  const toggleSize = (sz: string) => {
+  // `selectedSizes` keeps the chip's label («M», «XXL»); a size chosen as «48 (M)» counts as the chip «M»
+  const isSizeSelected = (size: string) => filterState.selectedSizes.some((s) => sizeMatches(s, size));
+  const toggleSize = (size: string) => {
     onChangeFilterState((prev) => ({
       ...prev,
-      selectedSizes: prev.selectedSizes.includes(sz)
-        ? prev.selectedSizes.filter((s) => s !== sz)
-        : [...prev.selectedSizes, sz],
+      selectedSizes: prev.selectedSizes.some((s) => sizeMatches(s, size))
+        ? prev.selectedSizes.filter((s) => !sizeMatches(s, size))
+        : [...prev.selectedSizes, size],
     }));
   };
 
@@ -272,12 +253,12 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
 
       {/* 2. Price Range Filter with Deepened Inset Buttons */}
       <div className="neu-inset rounded-2xl p-3.5 border border-white/60 space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs font-bold text-[#2D3A4E]">
             <Banknote className="w-4 h-4 text-accent" />
             <span>Ценовой диапазон</span>
           </div>
-          <span className="text-xs font-extrabold text-accent text-right">{priceRangeLabel(filterState)}</span>
+          <span className="text-xs font-extrabold text-accent text-right whitespace-nowrap">{priceRangeLabel(filterState)}</span>
         </div>
 
         {/* Price Slider */}
@@ -297,7 +278,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 maxPrice: val >= maxPossiblePrice ? NO_MAX_PRICE : Math.max(val, prev.minPrice),
               }));
             }}
-            className="neu-range py-1 w-full"
+            className="neu-range h-8 w-full"
           />
           <div className="flex justify-between text-[11px] text-[#4E5C70] font-bold px-1">
             <span>{minPossiblePrice.toLocaleString('ru-RU')} ₽</span>
@@ -308,7 +289,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
 
         {/* Quick price presets: raised, the selected one pressed in */}
         {pricePresets.length > 1 && (
-        <div className="flex items-center gap-1.5 flex-wrap pt-1">
+        <div role="radiogroup" aria-label="Быстрый выбор цены" className="flex items-center gap-1.5 flex-wrap pt-1">
           {pricePresets.map((preset) => {
             const isPresetActive =
               filterState.minPrice === preset.min && filterState.maxPrice === preset.max;
@@ -316,6 +297,8 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
               <button
                 key={preset.label}
                 type="button"
+                role="radio"
+                aria-checked={isPresetActive}
                 onClick={() => {
                   onChangeFilterState((prev) => ({
                     ...prev,
@@ -323,7 +306,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                     maxPrice: preset.max,
                   }));
                 }}
-                className={`text-[11px] font-bold px-2.5 py-1.5 rounded-xl transition-all cursor-pointer ${
+                className={`text-[11px] font-bold px-2.5 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
                   isPresetActive
                     ? 'neu-pill-active font-extrabold'
                     : 'neu-button text-[#2D3A4E] hover:text-accent'
@@ -357,7 +340,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
           )}
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
+        <div role="group" aria-label="Материал изделия" className="flex flex-wrap gap-1.5">
           {MATERIAL_CATEGORIES.map((cat) => {
             const isSelected = filterState.selectedMaterials.includes(cat.id);
             const count = materialCounts[cat.id] || 0;
@@ -365,6 +348,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
               <button
                 key={cat.id}
                 type="button"
+                aria-pressed={isSelected}
                 onClick={() => toggleMaterial(cat.id)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                   isSelected
@@ -372,7 +356,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                     : 'neu-button text-[#2D3A4E] hover:text-accent'
                 }`}
               >
-                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                {isSelected && <Check className="w-3 h-3 stroke-[3]" aria-hidden="true" />}
                 <span>{cat.name}</span>
                 <span
                   className={`text-[11px] font-medium px-1.5 py-0.2 rounded-md ${
@@ -407,19 +391,26 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
           )}
         </div>
 
-        <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-          {allAvailableSizes.map((sz) => {
-            const isSelected = filterState.selectedSizes.includes(sz);
-            const count = sizeCounts[sz] || 0;
-            const isOutOfStock = count === 0;
+        {/* One scale: the letter size, the Russian one under it, then how many products (not units) */}
+        <div
+          role="group"
+          aria-label="Размер"
+          className={`grid gap-2 ${
+            variant === 'sidebar' ? 'grid-cols-3' : 'grid-cols-3 min-[360px]:grid-cols-4 sm:grid-cols-5'
+          }`}
+        >
+          {sizeChips.map((chip) => {
+            const isSelected = isSizeSelected(chip.label);
+            const isOutOfStock = chip.count === 0;
 
             return (
               <button
-                key={sz}
+                key={chip.key}
                 type="button"
                 disabled={isOutOfStock}
-                onClick={() => toggleSize(sz)}
-                className={`py-2 px-1.5 rounded-xl text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
+                aria-pressed={isSelected}
+                onClick={() => toggleSize(chip.label)}
+                className={`min-h-12 py-2 px-1 rounded-xl text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
                   isOutOfStock
                     ? 'neu-button-disabled'
                     : isSelected
@@ -427,9 +418,15 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                     : 'neu-button font-bold text-[#2D3A4E] hover:text-accent'
                 }`}
               >
-                <span className="text-xs">{sz}</span>
-                <span className="text-[11px] font-medium text-[#4E5C70]">
-                  {isOutOfStock ? 'нет' : `${count} шт.`}
+                <span className="text-xs break-words max-w-full">{chip.label}</span>
+                {chip.russian && (
+                  <span className="text-[11px] font-bold text-[#4E5C70]">
+                    <span className="sr-only">российский </span>
+                    {chip.russian}
+                  </span>
+                )}
+                <span className="text-[11px] font-medium text-[#4E5C70] whitespace-nowrap">
+                  {isOutOfStock ? 'нет' : `${chip.count} ${pluralRu(chip.count, ['товар', 'товара', 'товаров'])}`}
                 </span>
               </button>
             );
@@ -444,6 +441,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
           onClick={() =>
             onChangeFilterState((prev) => ({ ...prev, onlyNew: !prev.onlyNew }))
           }
+          aria-pressed={filterState.onlyNew}
           className={`p-3 rounded-2xl text-xs flex items-center justify-between transition-all cursor-pointer ${
             filterState.onlyNew
               ? 'neu-pill-active font-extrabold'
@@ -451,7 +449,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
           }`}
         >
           <span>Только новинки</span>
-          {filterState.onlyNew && <Check className="w-4 h-4 text-accent stroke-[3]" />}
+          {filterState.onlyNew && <Check className="w-4 h-4 text-accent stroke-[3]" aria-hidden="true" />}
         </button>
 
         <button
@@ -462,6 +460,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
               onlyDiscount: !prev.onlyDiscount,
             }))
           }
+          aria-pressed={filterState.onlyDiscount}
           className={`p-3 rounded-2xl text-xs flex items-center justify-between transition-all cursor-pointer ${
             filterState.onlyDiscount
               ? 'neu-pill-active font-extrabold'
@@ -469,7 +468,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
           }`}
         >
           <span>Со скидкой</span>
-          {filterState.onlyDiscount && <Check className="w-4 h-4 text-accent stroke-[3]" />}
+          {filterState.onlyDiscount && <Check className="w-4 h-4 text-accent stroke-[3]" aria-hidden="true" />}
         </button>
       </div>
     </div>
