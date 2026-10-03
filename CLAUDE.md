@@ -68,8 +68,11 @@ Wasat Shop — SPA интернет-магазина мужской одежды
 
 ## Устройство
 
-- Всё состояние — в `src/App.tsx`, экраны в `src/views/`, панель администратора
-  в `src/components/admin/` (открывается из `ProfileScreen`).
+- Всё состояние — в `src/App.tsx` и его хуках в `src/app/` (подписки на базу: каталог с отзывами — `useCatalog`,
+  «Витрина», промокоды, баннеры и доставка — `useStorefrontData`, заказы, клиенты и себестоимость по входу —
+  `useAccountData`; гостевые заказы в браузере — `guestOrders.ts`), экраны в `src/views/`, панель администратора
+  в `src/components/admin/` (открывается из `ProfileScreen`). Большие файлы делятся по плану
+  `docs/split-large-files-plan.md`.
 - `src/shared/` — код, общий с Cloud Functions (расчёт цены `orderPricing.ts`, контракт
   `orderApi.ts`). Без браузерных API: этот код выполняется и на сервере. Меняя расчёт цены, меняете его и на сервере.
 - Правила узких разделов — в `.claude/rules/`: заказы и цены, этикетки и склад, аналитика, оферта и политика. Claude Code

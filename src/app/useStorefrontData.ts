@@ -1,0 +1,112 @@
+import React, { useState } from 'react';
+import type { BannerSlide, DeliveryMethod, PickupPoint, PromoCode, StorefrontSettings } from '../types';
+import { loadLocalDeliveryMethods, saveLocalDeliveryMethods, loadLocalPickupPoints, saveLocalPickupPoints } from '../data/deliveryData';
+import { loadStorefrontSettings, saveStorefrontSettings } from '../utils/inventory';
+import {
+  subscribeToBanners,
+  subscribeToDeliveryMethods,
+  subscribeToPickupPoints,
+  subscribeToPromos,
+  subscribeToServerConfig,
+  subscribeToStorefrontSettings,
+} from '../utils/firebaseSync';
+
+// Internal key: the banners cached in customers' browsers (CLAUDE.md, «manstyle_*»)
+export const BANNERS_STORAGE_KEY = 'manstyle_banners';
+
+function loadCachedBanners(): BannerSlide[] {
+  try {
+    const saved = localStorage.getItem(BANNERS_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {}
+  return [];
+}
+
+/**
+ * What every visitor reads about the shop, live from Firestore: «Витрина» settings, promos, banners, delivery methods,
+ * pickup points and the server-orders switch. The browser keeps a copy of settings, banners and delivery, so the
+ * first screen has them before the database answers.
+ */
+export function useStorefrontData() {
+  // Catalog, promos and banners come only from Firestore (Admin panel); no demo data meanwhile
+  const [promos, setPromos] = useState<PromoCode[]>([]);
+  const [bannerSlides, setBannerSlides] = useState<BannerSlide[]>(loadCachedBanners);
+  // When true, orders are placed and validated by the placeOrder Cloud Function
+  const [serverOrdersEnabled, setServerOrdersEnabled] = useState(false);
+  const [storefrontSettings, setStorefrontSettings] = useState<StorefrontSettings>(loadStorefrontSettings);
+  const [deliveryMethods, setDeliveryMethods] = useState<DeliveryMethod[]>(loadLocalDeliveryMethods);
+  const [pickupPoints, setPickupPoints] = useState<PickupPoint[]>(loadLocalPickupPoints);
+
+  // Sync storefront settings on custom update event
+  React.useEffect(() => {
+    const handleStorefrontUpdate = () => {
+      setStorefrontSettings(loadStorefrontSettings());
+    };
+    window.addEventListener('manstyle_storefront_settings_updated', handleStorefrontUpdate);
+    return () => window.removeEventListener('manstyle_storefront_settings_updated', handleStorefrontUpdate);
+  }, []);
+
+  React.useEffect(() => {
+    const unsubPromos = subscribeToPromos((loadedPromos) => {
+      if (loadedPromos) {
+        setPromos(loadedPromos);
+      }
+    });
+
+    const unsubServerConfig = subscribeToServerConfig((config) => {
+      setServerOrdersEnabled(config.serverOrdersEnabled === true);
+    });
+
+    const unsubSettings = subscribeToStorefrontSettings((loadedSettings) => {
+      if (loadedSettings) {
+        setStorefrontSettings(loadedSettings);
+        // Cached copy: components without props read the store name from it (currentStoreName)
+        saveStorefrontSettings(loadedSettings);
+      }
+    });
+
+    // An empty list is a real state (the owner removed everything): always apply it
+    const unsubBanners = subscribeToBanners((loadedBanners) => {
+      setBannerSlides(loadedBanners);
+      try {
+        localStorage.setItem(BANNERS_STORAGE_KEY, JSON.stringify(loadedBanners));
+      } catch {}
+    });
+
+    const unsubDelivery = subscribeToDeliveryMethods((loadedMethods) => {
+      setDeliveryMethods(loadedMethods);
+      saveLocalDeliveryMethods(loadedMethods);
+    });
+
+    const unsubPickup = subscribeToPickupPoints((loadedPoints) => {
+      setPickupPoints(loadedPoints);
+      saveLocalPickupPoints(loadedPoints);
+    });
+
+    return () => {
+      unsubPromos();
+      unsubSettings();
+      unsubServerConfig();
+      unsubBanners();
+      unsubDelivery();
+      unsubPickup();
+    };
+  }, []);
+
+  return {
+    promos,
+    setPromos,
+    bannerSlides,
+    setBannerSlides,
+    serverOrdersEnabled,
+    storefrontSettings,
+    setStorefrontSettings,
+    deliveryMethods,
+    setDeliveryMethods,
+    pickupPoints,
+    setPickupPoints,
+  };
+}
