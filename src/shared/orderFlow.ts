@@ -28,6 +28,15 @@ export function deliveryKindOfMethod(method: { id?: string; type?: string; title
   return 'courier';
 }
 
+/**
+ * Срок доставки нового заказа — срок способа из «Доставка и ПВЗ» («1–2 дня», «3–5 дней»); у способа без срока и у заказа
+ * в 1 клик срока нет. Раньше любой заказ получал «Через 1-2 дня», и Почта «3–5 дней» обещала покупателю 1–2 дня.
+ */
+export function estimatedDeliveryOf(method?: { duration?: string }): string | undefined {
+  const duration = String(method?.duration ?? '').trim();
+  return duration ? duration.slice(0, 80) : undefined;
+}
+
 export type OrderStatus = 'accepted' | 'assembling' | 'in_transit' | 'ready' | 'delivered';
 
 /** Статусы цепочки по порядку: у курьера нет «ready», у самовывоза — «in_transit» */

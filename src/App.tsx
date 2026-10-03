@@ -1712,7 +1712,8 @@ export default function App() {
       );
     }
 
-    setOrders((prev) => [newOrder, ...prev]);
+    // the orders subscription may already hold it (the local write is seen at once): one card, not two
+    setOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);
     if (!currentUser) {
       saveGuestOrder(newOrder);
     }
