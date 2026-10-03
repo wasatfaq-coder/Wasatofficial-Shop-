@@ -3,14 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Сборка (scripts/share-pages.ts) заменяет этот блок: название магазина из «Витрины», а у товара — его описание,
+         фото и цена для превью в мессенджерах. Здесь — то, что видно без сборки. -->
+    <!-- seo:start -->
     <title>Wasat Shop — мужская одежда</title>
-    <meta name="description" content="Мобильное приложение магазина мужской одежды в стиле Neumorphism с фильтрами товаров, интерактивной корзиной, оформлением заказа и личным кабинетом." />
+    <meta name="description" content="Wasat Shop — интернет-магазин мужской одежды: каталог с ценами, размерами и составом ткани, заказ онлайн." />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="ru_RU" />
     <meta property="og:title" content="Wasat Shop — мужская одежда" />
-    <meta property="og:description" content="Мобильное приложение магазина мужской одежды в стиле Neumorphism с фильтрами товаров, интерактивной корзиной, оформлением заказа и личным кабинетом." />
+    <meta property="og:description" content="Wasat Shop — интернет-магазин мужской одежды: каталог с ценами, размерами и составом ткани, заказ онлайн." />
+    <!-- seo:end -->
+    <script>
+      // Ссылка на товар /product/{id} (превью для мессенджеров, docs/seo-plan.md) открывает экран товара #/product/{id}
+      if (!location.hash && /^\/product\/[^/]+\/?$/.test(location.pathname)) {
+        history.replaceState(null, '', '/' + location.search + '#' + location.pathname.replace(/\/$/, ''));
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-
