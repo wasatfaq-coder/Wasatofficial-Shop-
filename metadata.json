@@ -1,6 +1,6 @@
 {
   "name": "Wasat Shop — мужская одежда",
-  "description": "Мобильное приложение магазина мужской одежды в стиле Neumorphism с фильтрами товаров, интерактивной корзиной, оформлением заказа и личным кабинетом.",
+  "description": "Магазин мужской одежды Wasat Shop: каталог с фильтрами по размеру, цвету и цене, подбор размера, заказ онлайн и чат с магазином.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
