@@ -1,5 +1,6 @@
 import { Order } from '../types';
-import { ORDER_STATUS_LABELS, isTransportCompanyDelivery } from './deliveryStages';
+import { isTransportCompanyDelivery } from './deliveryStages';
+import { customerStatusLabel } from './orderFlow';
 import { currentStoreName } from './storeContacts';
 
 /**
@@ -156,8 +157,9 @@ export function getOrderStatusNotification(
     };
   }
 
-  const newLabel = ORDER_STATUS_LABELS[effectiveNewStatus] || effectiveNewStatus;
-  const oldLabel = oldStatus ? ORDER_STATUS_LABELS[oldStatus] || oldStatus : undefined;
+  // the buyer's words for this order's delivery kind («Передан в доставку: СДЭК», «Курьер в пути»)
+  const newLabel = customerStatusLabel(order, effectiveNewStatus);
+  const oldLabel = oldStatus ? customerStatusLabel(order, oldStatus) : undefined;
   const statusTransition = oldLabel ? `${oldLabel} ➔ ${newLabel}` : `Статус: ${newLabel}`;
 
   switch (effectiveNewStatus) {

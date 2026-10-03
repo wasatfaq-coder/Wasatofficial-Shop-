@@ -1,5 +1,5 @@
 import type { Order } from '../types';
-import { ORDER_STATUS_LABELS } from './deliveryStages';
+import { adminStatusLabel } from './orderFlow';
 
 /** Chip of an order status: the same colours and words in «Заказы», «Клиенты» and «Аналитика» */
 const STATUS_CHIP: Record<Order['status'], string> = {
@@ -10,7 +10,7 @@ const STATUS_CHIP: Record<Order['status'], string> = {
   delivered: 'bg-[#D8DFE8] text-[#2D3A4E] border-[#BAC5D5]',
 };
 
-export function orderStatusChip(order: Pick<Order, 'status' | 'isCancelled' | 'cancelledBy'>): { label: string; className: string } {
+export function orderStatusChip(order: Order): { label: string; className: string } {
   if (order.isCancelled) {
     return {
       label: order.cancelledBy === 'customer' ? 'Отменён клиентом' : 'Отменен',
@@ -18,7 +18,7 @@ export function orderStatusChip(order: Pick<Order, 'status' | 'isCancelled' | 'c
     };
   }
   return {
-    label: ORDER_STATUS_LABELS[order.status] ?? String(order.status),
+    label: adminStatusLabel(order),
     className: STATUS_CHIP[order.status] ?? 'bg-[#D8DFE8] text-[#2D3A4E] border-[#BAC5D5]',
   };
 }

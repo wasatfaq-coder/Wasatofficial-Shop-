@@ -35,7 +35,7 @@ import {
   DailyDataPoint,
 } from '../../utils/analyticsEngine';
 import { orderTimestamp } from '../../shared/orderDate';
-import { ORDER_STATUS_LABELS } from '../../utils/deliveryStages';
+import { adminStatusLabel } from '../../utils/orderFlow';
 import { subscribeToAnalyticsResetAt, saveAnalyticsResetAt } from '../../utils/firebaseSync';
 import { AdminDailySalesInspector } from './AdminDailySalesInspector';
 import { triggerChartHapticFeedback } from './AdminChartNeumorphicShapes';
@@ -337,7 +337,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
           id: String(o.id),
           date: String(o.date),
           itemsCount: (o.items || []).reduce((sum, it) => sum + (it.quantity || 1), 0),
-          status: o.isCancelled ? 'Отменен' : ORDER_STATUS_LABELS[o.status] || o.status,
+          status: o.isCancelled ? 'Отменен' : adminStatusLabel(o),
           total: o.totalPrice || 0,
         }));
       await generateAnalyticsPDF({

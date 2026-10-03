@@ -25,6 +25,7 @@ import {
   isPreorderVariant,
 } from './utils/inventory';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages } from './utils/deliveryStages';
+import { deliveryKindOfMethod, initialStatusLog } from './shared/orderFlow';
 import { formatAddress } from './utils/addressFormat';
 import { ADMIN_EMAIL, useAuth } from './context/AuthContext';
 import {
@@ -45,6 +46,7 @@ import {
   saveOrderToFirestore,
   deductOrderLineStock,
   cancelOrderAsCustomer,
+  confirmOrderReceipt,
   returnCancelledOrderStock,
   syncAllProductsToFirestore,
   subscribeToProductCosts,
@@ -770,7 +772,9 @@ export default function App() {
         const isOwnOrder = !isAdmin || currentOrder.customerUid === currentUser?.uid;
         // The buyer cancelled it themselves: the profile already said so
         const ownCancel = cancelChanged && currentOrder.cancelledBy === 'customer';
-        if (isOwnOrder && (statusChanged || (cancelChanged && !ownCancel) || trackingChanged)) {
+        // «Я получил заказ» — the buyer's own step too
+        const ownStep = statusChanged && currentOrder.statusLog?.[currentOrder.statusLog.length - 1]?.by === 'customer';
+        if (isOwnOrder && ((statusChanged && !ownStep) || (cancelChanged && !ownCancel) || trackingChanged)) {
           triggerOrderStatusPushNotification(currentOrder, prev.status, currentOrder.status);
         }
       }
@@ -951,6 +955,19 @@ export default function App() {
       addToast(`Заказ № ${order.id} отменён. Возврат товаров на склад магазин проверит сам.`, 'info');
     }
     return true;
+  };
+
+  /** «Я получил заказ»: a carrier's order becomes «Получен» with the time of the tap (rule isCustomerReceiptConfirm) */
+  const handleConfirmReceipt = async (order: Order): Promise<boolean> => {
+    try {
+      await confirmOrderReceipt(order, new Date());
+      addToast(`Заказ № ${order.id} получен. Спасибо!`, 'success');
+      return true;
+    } catch (err) {
+      console.error('Receipt confirmation was refused:', err);
+      addToast('Не удалось подтвердить получение. Проверьте соединение или напишите в чат магазина.', 'error');
+      return false;
+    }
   };
 
   // A cancellation whose goods did not all get back to stock (network, closed tab): once a session
@@ -1466,6 +1483,9 @@ export default function App() {
       ...(isPreorderVariant(item.product, item.selectedColor, item.selectedSize, preorderMode) ? { isPreorder: true } : {}),
     }));
 
+    const orderMethod = orderData.deliveryMethodId
+      ? deliveryMethods.find((m) => m.id === orderData.deliveryMethodId)
+      : undefined;
     const newOrderBase = {
       id: newOrderId,
       // the exact moment is createdAt (analytics, sorting); date is its display text
@@ -1492,6 +1512,9 @@ export default function App() {
       promoCode: orderPromo?.code,
       trackingNumber: undefined,
       estimatedDelivery: 'Через 1-2 дня',
+      // its chain of statuses and the first entry of the history (src/shared/orderFlow.ts, as in placeOrder)
+      deliveryKind: orderMethod ? deliveryKindOfMethod(orderMethod) : undefined,
+      statusLog: initialStatusLog(placedAt),
     };
 
     const newOrder: Order = {
@@ -1927,6 +1950,7 @@ export default function App() {
               setActiveTab={setActiveTab}
               onRepeatOrder={handleRepeatOrder}
               onCancelOrder={handleCancelOwnOrder}
+              onConfirmReceipt={handleConfirmReceipt}
               onShowToast={addToast}
               onOpenSupportChat={() => setIsSupportChatOpen(true)}
               onUpdateProducts={(updatedWithCosts: Product[]) => {

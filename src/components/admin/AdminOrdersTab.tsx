@@ -29,11 +29,12 @@ import {
   MessageSquare,
   Layers,
   Trash2,
+  KeyRound,
   Archive,
   ArchiveRestore,
   PackageCheck,
 } from 'lucide-react';
-import { Order, Product, OrderAdjustmentLog, OrderStatusHistoryStep, DeliveryStage, PromoCode, StorefrontSettings } from '../../types';
+import { Order, Product, OrderAdjustmentLog, OrderStatusHistoryStep, PromoCode, StorefrontSettings } from '../../types';
 import { exportOrdersToCSV } from '../../utils/csvHelpers';
 import { copyToClipboard } from '../../utils/clipboard';
 import { deductStockWithLogs, returnStockWithLogs, stockShortages, type StockShortage } from '../../utils/inventory';
@@ -42,14 +43,25 @@ import type { StockMovementLog } from '../../types';
 import { AdminActionMenu } from './AdminActionMenu';
 import {
   getDefaultDeliveryStages,
-  getSynchronizedDeliveryStages,
   syncStagesWithOrderStatus,
   getEstimatedDeliveryForStatus,
   isTransportCompanyDelivery,
 } from '../../utils/deliveryStages';
 import { AdminOrderInvoiceModal } from './AdminOrderInvoiceModal';
 import { AdminOrderAdjustmentModal } from './AdminOrderAdjustmentModal';
-import { AdminDeliveryStagesModal } from './AdminDeliveryStagesModal';
+import { AdminHandoverDialog } from './AdminHandoverDialog';
+import { OrderTimeline } from '../OrderTimeline';
+import { useAuth } from '../../context/AuthContext';
+import {
+  adminStatusLabel,
+  canHandOver,
+  flowStatuses,
+  generatePickupCode,
+  orderTimeline,
+  statusChangeBlocker,
+  statusLogEntry,
+  usesPickupCode,
+} from '../../utils/orderFlow';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { SelectCheckbox } from './SelectCheckbox';
 import { ConfirmDialog } from '../ConfirmDialog';
@@ -255,11 +267,13 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     const count = (st: Order['status']) => active.filter((o) => o.status === st).length;
     return [
       { value: 'all' as const, label: 'Все', count: listed.length },
+      // the same chips for every delivery kind: «Переданы» — in a carrier or with the courier, «Ждут получения» —
+      // at the pickup point or waiting for the buyer's «Я получил заказ»
       { value: 'accepted' as const, label: 'Новые', count: count('accepted') },
-      { value: 'assembling' as const, label: 'Сборка', count: count('assembling') },
-      { value: 'in_transit' as const, label: 'В пути', count: count('in_transit') },
-      { value: 'ready' as const, label: 'К выдаче', count: count('ready') },
-      { value: 'delivered' as const, label: 'Доставлены', count: count('delivered') },
+      { value: 'assembling' as const, label: 'Скомплектованы', count: count('assembling') },
+      { value: 'in_transit' as const, label: 'Переданы', count: count('in_transit') },
+      { value: 'ready' as const, label: 'Ждут получения', count: count('ready') },
+      { value: 'delivered' as const, label: 'Получены', count: count('delivered') },
       { value: 'cancelled' as const, label: 'Отменены', count: listed.length - active.length },
       { value: 'archive' as const, label: 'Архив', count: archived.length },
     ];
@@ -286,7 +300,11 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   // Modals & Active Order
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
   const [selectedOrderForAdjustment, setSelectedOrderForAdjustment] = useState<Order | null>(null);
-  const [selectedOrderForDeliveryStages, setSelectedOrderForDeliveryStages] = useState<Order | null>(null);
+  /** «Забрать заказ» — the window with the code; a carrier's order closed by hand — the confirmation */
+  const [handoverOrder, setHandoverOrder] = useState<Order | null>(null);
+  const [orderToCloseManually, setOrderToCloseManually] = useState<Order | null>(null);
+  const { currentUser } = useAuth();
+  const adminUid = currentUser?.uid;
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   /** «Отменить и вернуть на склад»: the window with the reason (audit 02.10, finding 14) */
   const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
@@ -397,9 +415,14 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     });
   };
 
-  const changeOrdersStatus = (orderIds: string[], newStatus: Order['status'], description: string) => {
+  /**
+   * New status of the given orders (one or a bulk selection), with an entry in the order's history: time to the
+   * second, the admin, a note («Доработки 4»). A cancelled order that gets a status again is active: the goods
+   * returned on cancellation are taken from stock again. Handing over by courier or at pickup needs a code: it is
+   * made when the order leaves with the courier or is ready for pickup.
+   */
+  const changeOrdersStatus = (orderIds: string[], newStatus: Order['status'], note?: string) => {
     const ids = new Set(orderIds);
-    const dateNow = historyDateLabel();
 
     const reactivated = orders.filter((ord) => ids.has(ord.id) && ord.isCancelled && ord.items?.length);
     if (reactivated.length > 0 && onUpdateProducts) {
@@ -416,22 +439,13 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
     const updated = orders.map((ord) => {
       if (!ids.has(ord.id)) return ord;
-      const newStep: OrderStatusHistoryStep = {
-        title: STATUS_CONFIG[newStatus].label,
-        date: dateNow,
-        completed: true,
-        description,
-      };
       const updatedStages = syncStagesWithOrderStatus(ord.deliveryStages, ord, newStatus);
       const updatedEst = getEstimatedDeliveryForStatus(newStatus, ord.estimatedDelivery, false);
       const updatedPaymentStatus = newStatus === 'delivered' && ord.paymentStatus === 'paid_on_delivery'
         ? 'paid'
         : ord.paymentStatus;
-
-      // When transitioning to 'accepted', synchronize history steps so only 'Заказ принят' is completed
-      const updatedHistorySteps = newStatus === 'accepted'
-        ? (ord.historySteps || []).map((s, idx) => ({ ...s, completed: idx === 0 || s.title.toLowerCase().includes('принят') }))
-        : [...(ord.historySteps || []), newStep];
+      const needsCode = usesPickupCode(ord) && (newStatus === 'in_transit' || newStatus === 'ready') && !ord.pickupCode;
+      const entryNote = [ord.isCancelled ? 'Восстановлен после отмены' : '', note ?? ''].filter(Boolean).join('. ');
 
       return {
         ...ord,
@@ -440,7 +454,8 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         // a restored order is back in the working list, not in «Архив»
         archived: ord.isCancelled ? undefined : ord.archived,
         paymentStatus: updatedPaymentStatus,
-        historySteps: updatedHistorySteps,
+        statusLog: [...(ord.statusLog ?? []), statusLogEntry(newStatus, 'admin', { byUid: adminUid, note: entryNote || undefined })],
+        ...(needsCode ? { pickupCode: generatePickupCode() } : {}),
         deliveryStages: updatedStages,
         estimatedDelivery: updatedEst,
       };
@@ -464,14 +479,21 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
   const handleBulkStatusChange = (newStatus: Order['status']) => {
     if (selectedOrderIds.length === 0) return;
-    withRestoreCheck(selectedOrderIds, () => applyBulkStatusChange(newStatus));
+    // A carrier's order leaves only with its track number: those are skipped and named
+    const blocked = orders.filter((o) => selectedOrderIds.includes(o.id) && statusChangeBlocker(o, newStatus));
+    const allowed = selectedOrderIds.filter((id) => !blocked.some((o) => o.id === id));
+    if (blocked.length > 0) {
+      onShowToast(`Без трек-номера не переданы в доставку: ${blocked.map((o) => `№ ${o.id}`).join(', ')}`, 'error');
+    }
+    if (allowed.length === 0) return;
+    withRestoreCheck(allowed, () => applyBulkStatusChange(allowed, newStatus));
   };
 
-  const applyBulkStatusChange = (newStatus: Order['status']) => {
+  const applyBulkStatusChange = (ids: string[], newStatus: Order['status']) => {
     const label = STATUS_CONFIG[newStatus].label;
-    const restored = changeOrdersStatus(selectedOrderIds, newStatus, `Пакетное обновление статуса оператором на "${label}"`);
+    const restored = changeOrdersStatus(ids, newStatus, newStatus === 'delivered' ? 'Закрыт администратором (массово)' : undefined);
     onShowToast(
-      `Статус ${selectedOrderIds.length} заказов изменен на "${label}"` +
+      `Статус ${ids.length} заказов изменен на "${label}"` +
         (restored > 0 ? `. Восстановлено отмененных: ${restored}, товары снова списаны со склада` : ''),
       'success'
     );
@@ -537,6 +559,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         estimatedDelivery: 'Заказ отменен',
         // «Возврат средств» only for what was paid
         paymentStatus: ord.paymentStatus === 'paid' ? ('refunded' as const) : ord.paymentStatus,
+        statusLog: [...(ord.statusLog ?? []), statusLogEntry('cancelled', 'admin', { byUid: adminUid, note: 'Массовая отмена' })],
         historySteps: [
           ...(ord.historySteps || []),
           {
@@ -554,15 +577,33 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     setSelectedOrderIds([]);
   };
 
-  // Order Status Change Handler
+  // Order Status Change Handler: the order's own chain (src/shared/orderFlow.ts)
   const handleUpdateOrderStatus = (orderId: string, newStatus: Order['status']) => {
     setOpenStatusDropdownId(null);
+    const order = orders.find((o) => o.id === orderId);
+    if (!order || (order.status === newStatus && !order.isCancelled)) return;
+    const blocker = statusChangeBlocker(order, newStatus);
+    if (blocker) {
+      // the track number first: its editor opens right in the card
+      onShowToast(blocker, 'error');
+      setEditingTrackOrderId(order.id);
+      setTempTrackValue(order.trackingNumber || '');
+      setTempCarrierValue(order.trackingCompany || 'cdek');
+      return;
+    }
+    if (newStatus === 'delivered' && !order.isCancelled) {
+      // courier and pickup — handed over by the code; a carrier's order — closed by hand when the buyer did not confirm
+      if (usesPickupCode(order)) openHandover(order);
+      else setOrderToCloseManually(order);
+      return;
+    }
     withRestoreCheck([orderId], () => applyOrderStatus(orderId, newStatus));
   };
 
-  const applyOrderStatus = (orderId: string, newStatus: Order['status']) => {
-    const label = STATUS_CONFIG[newStatus].label;
-    const restored = changeOrdersStatus([orderId], newStatus, `Статус изменен менеджером магазина на "${label}"`);
+  const applyOrderStatus = (orderId: string, newStatus: Order['status'], note?: string) => {
+    const order = orders.find((o) => o.id === orderId);
+    const label = order ? adminStatusLabel(order, newStatus) : STATUS_CONFIG[newStatus].label;
+    const restored = changeOrdersStatus([orderId], newStatus, note);
     onShowToast(
       restored > 0
         ? `Заказ ${orderId} восстановлен со статусом "${label}", товары снова списаны со склада`
@@ -572,30 +613,25 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     setOpenStatusDropdownId(null);
   };
 
-  // Delivery Stages Save Handler
-  const handleSaveDeliveryStages = (orderId: string, updatedStages: DeliveryStage[]) => {
-    let synchronizedStages = updatedStages;
-    const targetOrder = orders.find((o) => o.id === orderId);
-    if (targetOrder) {
-      synchronizedStages = getSynchronizedDeliveryStages({
-        ...targetOrder,
-        deliveryStages: updatedStages,
-      });
+  /** «Забрать заказ»: only a paid order (or «Оплата при получении»); the code is made now if the order has none */
+  const openHandover = (order: Order) => {
+    if (!canHandOver(order)) {
+      onShowToast(`Выдача невозможна: заказ № ${order.id} не оплачен`, 'error');
+      return;
     }
+    if (order.pickupCode) {
+      setHandoverOrder(order);
+      return;
+    }
+    const withCode = { ...order, pickupCode: generatePickupCode() };
+    onUpdateOrders(orders.map((o) => (o.id === order.id ? withCode : o)));
+    setHandoverOrder(withCode);
+  };
 
-    const updated = orders.map((ord) => {
-      if (ord.id !== orderId) return ord;
-      return {
-        ...ord,
-        deliveryStages: synchronizedStages,
-      };
-    });
-    onUpdateOrders(updated);
-    // If the modal was viewing this order, update local selected state
-    setSelectedOrderForDeliveryStages((prev) =>
-      prev && prev.id === orderId ? { ...prev, deliveryStages: synchronizedStages } : prev
-    );
-    onShowToast(`Этапы доставки для заказа ${orderId} успешно сохранены`, 'success');
+  const confirmHandover = async (order: Order): Promise<boolean> => {
+    changeOrdersStatus([order.id], 'delivered', `Выдан по коду ${order.pickupCode}`);
+    onShowToast(`Заказ № ${order.id} выдан`, 'success');
+    return true;
   };
 
   // Payment Status Change Handler
@@ -700,6 +736,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
             // «Возврат средств» only for what was paid; an unpaid order keeps its payment status
             paymentStatus: o.paymentStatus === 'paid' ? ('refunded' as const) : o.paymentStatus,
             historySteps: [...(o.historySteps || []), cancelStep],
+            statusLog: [...(o.statusLog ?? []), statusLogEntry('cancelled', 'admin', { byUid: adminUid, note: reasonText })],
           }
         : o
     );
@@ -1258,7 +1295,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                         className={`h-8 py-1 px-3 rounded-xl text-xs font-extrabold flex items-center gap-1.5 border cursor-pointer ${statusInfo.bg} ${statusInfo.text} active:scale-95 transition-all`}
                       >
                         <StatusIcon className="w-3.5 h-3.5" />
-                        <span>{statusInfo.label}</span>
+                        <span>{adminStatusLabel(ord)}</span>
                         <ChevronDown className="w-3 h-3 ml-0.5 opacity-70" />
                       </button>
 
@@ -1269,7 +1306,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                             onClick={() => setOpenStatusDropdownId(null)}
                           />
                           <div className="absolute right-0 top-full mt-1.5 z-40 neu-dropdown rounded-2xl p-1.5 space-y-1 min-w-[180px] animate-in fade-in border border-white/80">
-                            {(['accepted', 'assembling', 'in_transit', 'ready', 'delivered'] as Order['status'][]).map(
+                            {flowStatuses(ord).map(
                               (st) => {
                                 const opt = STATUS_CONFIG[st];
                                 const OptIcon = opt.icon;
@@ -1284,7 +1321,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                                     }`}
                                   >
                                     <OptIcon className="w-3.5 h-3.5" />
-                                    <span>{opt.label}</span>
+                                    <span>{adminStatusLabel(ord, st)}</span>
                                   </button>
                                 );
                               }
@@ -1683,12 +1720,6 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                         icon: <SlidersHorizontal className="w-3.5 h-3.5 text-warning" />,
                         onSelect: () => setSelectedOrderForAdjustment(ord),
                       },
-                      {
-                        id: 'stages',
-                        label: 'Этапы доставки',
-                        icon: <Clock className="w-3.5 h-3.5 text-accent" />,
-                        onSelect: () => setSelectedOrderForDeliveryStages(ord),
-                      },
                       // Удаление — только отменённого: сначала отмена с возвратом на склад (задание владельца 02.10)
                       ...(!ord.isCancelled
                         ? [
@@ -1729,8 +1760,25 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                     ]}
                   />
 
-                  {/* Toggle Audit History */}
+                  {/* «Забрать заказ»: courier and pickup orders on their way to the buyer, handed over by the code */}
+                  {usesPickupCode(ord) && !ord.isCancelled && (ord.status === 'in_transit' || ord.status === 'ready') && (
+                    <button
+                      type="button"
+                      onClick={() => openHandover(ord)}
+                      aria-disabled={!canHandOver(ord)}
+                      className={`h-8 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer ${
+                        canHandOver(ord) ? 'neu-button text-success' : 'neu-button-disabled text-[#4E5C70]'
+                      }`}
+                      title={canHandOver(ord) ? 'Сверить код и выдать заказ' : 'Выдача невозможна: заказ не оплачен'}
+                    >
+                      <KeyRound className="w-3.5 h-3.5" aria-hidden="true" />
+                      <span>Забрать заказ</span>
+                    </button>
+                  )}
+
+                  {/* История заказа: every status with its time to the second and who changed it */}
                   <button
+                    type="button"
                     onClick={() =>
                       setExpandedOrderAuditLogId(isAuditExpanded ? null : ord.id)
                     }
@@ -1740,64 +1788,13 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                     }`}
                   >
                     <History className="w-3.5 h-3.5 text-accent" />
-                    <span>
-                      История {ord.adjustmentLogs?.length || ord.historySteps?.length ? `(${((ord.adjustmentLogs?.length || 0) + (ord.historySteps?.length || 0))})` : ''}
-                    </span>
+                    <span>История ({orderTimeline(ord, 'admin').length})</span>
                   </button>
                 </div>
 
-                {/* Expandable Audit Log & Status History Timeline */}
                 {isAuditExpanded && (
-                  <div className="neu-inset rounded-2xl p-3 space-y-2 text-xs animate-in fade-in">
-                    <h5 className="font-extrabold text-[#2D3A4E] flex items-center gap-1.5 uppercase text-[11px] tracking-wider">
-                      <Clock className="w-3.5 h-3.5 text-accent" />
-                      Хронология изменений заказа и складские события
-                    </h5>
-
-                    {/* Status Steps */}
-                    {Array.isArray(ord.historySteps) && ord.historySteps.length > 0 && (
-                      <div className="space-y-1.5">
-                        {ord.historySteps.map((step, sIdx) => (
-                          <div
-                            key={sIdx}
-                            className="flex items-start gap-2 text-[11px] text-[#2D3A4E]"
-                          >
-                            <span className="w-2 h-2 rounded-full bg-success mt-1 shrink-0" />
-                            <div>
-                              <span className="font-bold">{step?.title || `Этап ${sIdx + 1}`}</span>
-                              <span className="text-[#4E5C70] ml-1.5 text-[11px]">({step?.date || ord.date})</span>
-                              {step?.description && (
-                                <p className="text-[#4E5C70] text-xs">{step.description}</p>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Adjustment Audit Logs */}
-                    {ord.adjustmentLogs && ord.adjustmentLogs.length > 0 && (
-                      <div className="pt-2 border-t border-[#BAC5D5]/50 space-y-1.5">
-                        <span className="font-bold text-[11px] text-warning uppercase">
-                          Журнал корректировок состава:
-                        </span>
-                        {ord.adjustmentLogs.map((log) => (
-                          <div
-                            key={log.id}
-                            className="neu-flat p-2 rounded-xl space-y-0.5 text-[11px]"
-                          >
-                            <div className="flex justify-between font-bold text-[#2D3A4E]">
-                              <span>{log.reason}</span>
-                              <span className="text-[#4E5C70] font-mono text-[11px]">{log.date}</span>
-                            </div>
-                            <p className="text-xs text-[#4E5C70]">
-                              Сумма: {log.previousTotal} ₽ ➔ <strong>{log.newTotal} ₽</strong>
-                              {log.refundAmount ? ` (Возврат клиенту: ${log.refundAmount} ₽)` : ''}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                  <div className="neu-inset rounded-2xl p-3 animate-in fade-in">
+                    <OrderTimeline order={ord} audience="admin" />
                   </div>
                 )}
               </div>
@@ -1856,13 +1853,27 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         onShowToast={onShowToast}
       />
 
-      {/* ================= MODAL: DELIVERY STAGES MANAGEMENT ================= */}
-      <AdminDeliveryStagesModal
-        isOpen={!!selectedOrderForDeliveryStages}
-        order={selectedOrderForDeliveryStages}
-        onClose={() => setSelectedOrderForDeliveryStages(null)}
-        onSave={handleSaveDeliveryStages}
-        onShowToast={onShowToast}
+      {/* ================= «ЗАБРАТЬ ЗАКАЗ» и ручное закрытие заказа у перевозчика ================= */}
+      <AdminHandoverDialog order={handoverOrder} onConfirm={confirmHandover} onClose={() => setHandoverOrder(null)} />
+      <ConfirmDialog
+        isOpen={orderToCloseManually !== null}
+        title="Закрыть заказ вручную?"
+        tone="neutral"
+        confirmLabel="Закрыть заказ"
+        cancelLabel="Не закрывать"
+        confirmIcon={<CheckCircle2 className="w-4 h-4" />}
+        message={
+          <>
+            Покупатель ещё не нажал «Я получил заказ». Закрывайте, если знаете, что заказ получен (у гостя этой кнопки
+            нет). В истории заказа будет «Закрыт администратором».
+          </>
+        }
+        onConfirm={() => {
+          const order = orderToCloseManually;
+          if (order) withRestoreCheck([order.id], () => applyOrderStatus(order.id, 'delivered', 'Закрыт администратором: покупатель не подтвердил получение'));
+          setOrderToCloseManually(null);
+        }}
+        onClose={() => setOrderToCloseManually(null)}
       />
 
       <CancelOrderDialog

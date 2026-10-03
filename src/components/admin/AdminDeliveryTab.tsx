@@ -50,8 +50,8 @@ const METHOD_TYPES: { value: DeliveryMethod['type']; label: string; hint: string
   { value: 'courier', label: 'Курьерская доставка', hint: 'До двери: адрес с подъездом и домофоном', icon: 'Bike' },
   { value: 'pickup', label: 'Самовывоз', hint: 'ПВЗ или бутик: покупатель выбирает точку', icon: 'Store' },
   { value: 'express', label: 'Экспресс-доставка', hint: 'Срочная доставка по адресу', icon: 'Zap' },
-  { value: 'post', label: 'Почта России', hint: 'Адрес и индекс', icon: 'Mail' },
-  { value: 'custom', label: 'Транспортная компания', hint: 'СДЭК, Boxberry и другие', icon: 'Truck' },
+  { value: 'post', label: 'Почта России', hint: 'Адрес и индекс; получение подтверждает покупатель', icon: 'Mail' },
+  { value: 'custom', label: 'Транспортная компания', hint: 'СДЭК, Boxberry и другие: трек-номер, получение подтверждает покупатель', icon: 'Truck' },
 ];
 
 export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
@@ -563,6 +563,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               { id: 'pickup', label: 'Самовывоз' },
               { id: 'express', label: 'Экспресс' },
               { id: 'post', label: 'Почта' },
+              { id: 'custom', label: 'ТК' },
             ].map((f) => (
               <button
                 key={f.id}
