@@ -45,6 +45,7 @@ import {
   getProductTotalStock,
   isHiddenFromSale,
   mergeFormStock,
+  recategorizeSkuCode,
   stockMovementId,
   withMissingSkus,
 } from '../../utils/inventory';
@@ -1622,7 +1623,15 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         id="product-form-category"
                         ariaLabel="Категория"
                         value={formCategory}
-                        onChange={(val) => setFormCategory(val)}
+                        onChange={(val) => {
+                          // a new product's variants added before the category was picked got «PR» in their codes
+                          if (!editingProduct) {
+                            setFormSkus((prev) =>
+                              prev.map((sku) => ({ ...sku, skuCode: recategorizeSkuCode(sku.skuCode, formCategory, val) }))
+                            );
+                          }
+                          setFormCategory(val);
+                        }}
                         options={formCategoryOptions}
                         placeholder={categories.length === 0 ? 'Категории не настроены' : 'Выберите категорию'}
                         emptyText="Категории не настроены: добавьте их в разделе «Категории»"
@@ -2173,6 +2182,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                             key={sz}
                             type="button"
                             onClick={() => handleTogglePresetSize(sz)}
+                            aria-pressed={isSelected}
                             className={`h-6 min-w-6 px-2 rounded-lg text-[11px] font-extrabold transition-all active:scale-95 cursor-pointer whitespace-nowrap ${
                               isSelected
                                 ? 'neu-pill-active'
