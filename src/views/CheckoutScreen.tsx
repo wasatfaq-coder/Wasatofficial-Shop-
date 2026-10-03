@@ -35,6 +35,7 @@ import {
   calcSubtotal,
   getAvailableDeliveryMethods,
 } from '../shared/orderPricing';
+import { STORE_PAUSED_TEXT, storeAcceptsOrders } from '../shared/orderApi';
 import { NotConfigured } from '../components/NotConfigured';
 import { productImage } from '../utils/productImage';
 import { promoDiscountText } from '../utils/promoLabel';
@@ -329,8 +330,10 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   const noDeliveryMethods = availableDeliveryMethods.length === 0;
   const noPickupPoints = isPickupSelected && activePickupPoints.length === 0;
   const deliveryUnavailable = noDeliveryMethods || noPickupPoints;
-  // Ordering needs a delivery method (and point) and a payment method from the admin panel
-  const orderBlocked = deliveryUnavailable || noPaymentMethods;
+  // «Технические работы» in Admin → «Витрина»: the site takes no orders now
+  const storePaused = !storeAcceptsOrders(storefrontSettings);
+  // Ordering needs the store open, a delivery method (and point) and a payment method from the admin panel
+  const orderBlocked = storePaused || deliveryUnavailable || noPaymentMethods;
   const deliveryDone = deliveryUnavailable
     ? false
     : isPickupSelected
@@ -356,7 +359,9 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
     if (cartItems.length === 0 || isSubmitting) return;
 
     if (orderBlocked) {
-      const text = noDeliveryMethods
+      const text = storePaused
+        ? `${STORE_PAUSED_TEXT}. Напишите в чат поддержки — менеджер оформит заказ сам.`
+        : noDeliveryMethods
         ? 'Способы доставки пока не настроены. Свяжитесь с магазином через чат поддержки.'
         : noPaymentMethods
         ? 'Способы оплаты пока не настроены. Свяжитесь с магазином через чат поддержки.'
@@ -549,6 +554,18 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           })}
         </div>
       </div>
+
+      {storePaused && (
+        <div role="status" className="rounded-2xl bg-warning-soft border border-warning/40 p-3.5 flex items-start gap-2.5">
+          <AlertCircle className="w-4 h-4 text-warning shrink-0 mt-0.5" aria-hidden="true" />
+          <div className="space-y-0.5">
+            <p className="text-xs font-extrabold text-[#2D3A4E]">{STORE_PAUSED_TEXT}</p>
+            <p className="text-xs text-[#4E5C70]">
+              Корзина сохранится. Напишите в чат поддержки — менеджер оформит заказ сам.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Order Summary Items Accordion */}
       <div className="neu-flat rounded-3xl p-4 space-y-3">

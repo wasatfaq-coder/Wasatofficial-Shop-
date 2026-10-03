@@ -4,7 +4,13 @@
  */
 import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
 import type { CartItem, DeliveryMethod, Order, Product, ProductSKU, PromoCode, StorefrontSettings } from '../../src/types';
-import { initialPaymentStatus, type PlaceOrderItem, type PlaceOrderRequest } from '../../src/shared/orderApi';
+import {
+  initialPaymentStatus,
+  STORE_PAUSED_TEXT,
+  storeAcceptsOrders,
+  type PlaceOrderItem,
+  type PlaceOrderRequest,
+} from '../../src/shared/orderApi';
 import { formatOrderDate } from '../../src/shared/orderDate';
 import { toOrderLineProduct } from '../../src/shared/orderLine';
 import { ADDRESS_PART_KEYS, cleanAddressParts, fullName, type AddressParts } from '../../src/shared/personName';
@@ -152,6 +158,10 @@ export async function placeOrderCore(
 
     const settingsSnap = await tx.get(db.collection('settings').doc('storefront'));
     const settings = (settingsSnap.exists ? settingsSnap.data() : undefined) as StorefrontSettings | undefined;
+    // «Технические работы» in «Витрина»: no orders, also not from a page opened before the switch
+    if (!storeAcceptsOrders(settings)) {
+      throw new OrderError('failed-precondition', `${STORE_PAUSED_TEXT}. Напишите в чат поддержки.`);
+    }
 
     let promo: { ref: DocumentReference; data: PromoCode } | null = null;
     if (request.promoCode) {

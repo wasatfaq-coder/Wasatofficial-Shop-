@@ -302,10 +302,10 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
             <div className="neu-inset rounded-2xl p-3 border border-warning/30 flex items-center gap-2.5 text-warning">
               <AlertCircle className="w-4 h-4 text-warning shrink-0" />
               <div className="text-xs">
-                <span className="font-extrabold block">Режим закрытой примерки</span>
-                <span className="text-[11px] text-[#4E5C70]">
-                  Онлайн-оформление приостановлено. Заказы принимаются через консьержа:{' '}
-                  {localSettings.phone}
+                <span className="font-extrabold block">Приём заказов на сайте остановлен</span>
+                <span className="text-xs text-[#4E5C70]">
+                  Оформление и «Заказ в 1 клик» не работают. Покупатели видят плашку на главной и пишут в чат
+                  {localSettings.phone ? ` или звонят: ${localSettings.phone}` : ''}.
                 </span>
               </div>
             </div>
@@ -2150,7 +2150,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   <span className={`text-[11px] font-bold block truncate ${
                     localSettings.isStoreOnline ? 'text-success' : 'text-warning'
                   }`}>
-                    {localSettings.isStoreOnline ? 'Прием заказов активен' : 'Технические работы'}
+                    {localSettings.isStoreOnline ? 'Приём заказов активен' : 'Приём заказов остановлен'}
                   </span>
                 </div>
               </label>

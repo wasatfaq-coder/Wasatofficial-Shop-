@@ -299,6 +299,14 @@ describe('parsePlaceOrderRequest', () => {
     expect(quick.deliveryKind).toBeUndefined();
   });
 
+  test('«Технические работы» in «Витрина»: no order, no stock taken (UX audit 03.10, finding 21)', async () => {
+    await db.doc('settings/storefront').set({ isStoreOnline: false }, { merge: true });
+    await expectOrderError(placeOrderCore(db, request(), 'alice'), 'failed-precondition');
+    expect((await db.collection('orders').get()).size).toBe(0);
+    await db.doc('settings/storefront').set({ isStoreOnline: true }, { merge: true });
+    expect((await placeOrderCore(db, request(), 'alice')).id).toMatch(/^WS-/);
+  });
+
   test('the delivery time is the method\'s own; a 1-click order has none (UX audit 03.10, stage 1)', async () => {
     const order = await placeOrderCore(db, request(), 'alice');
     expect(order.estimatedDelivery).toBe('1-2 дня');

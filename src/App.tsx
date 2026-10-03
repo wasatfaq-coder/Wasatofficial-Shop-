@@ -114,6 +114,7 @@ import type { CatalogStatus } from './components/CatalogLoadState';
 import { CART_STORAGE_KEY, loadStoredCart, toStoredCart } from './utils/cartStorage';
 import { validatePromo, toPricingLine, isPromoListed, promoDiscountKind, QUICK_ORDER_DELIVERY_ID } from './shared/orderPricing';
 import { toOrderLineProduct } from './shared/orderLine';
+import { STORE_PAUSED_TEXT, storeAcceptsOrders } from './shared/orderApi';
 import { cleanAddressParts, fullName, hasNameParts, namePartsOf, type AddressParts, type PersonName } from './shared/personName';
 import { extractColorName, extractSizeName } from './utils/inventory';
 import { getStoreContacts, getStoreName, publicSetting, withStoreName, withStoreNameFields } from './utils/storeContacts';
@@ -1602,8 +1603,14 @@ export default function App() {
     [activeTab, cartItems, products, preorderMode]
   );
 
-  const handleCompleteOrder = (orderData: CompleteOrderData): Promise<boolean> =>
-    serverOrdersEnabled ? completeOrderOnServer(orderData) : completeOrderLocally(orderData);
+  const handleCompleteOrder = (orderData: CompleteOrderData): Promise<boolean> => {
+    // «Технические работы» in «Витрина»: no orders (the checkout and the 1-click window say so before this)
+    if (!storeAcceptsOrders(storefrontSettings)) {
+      addToast(`${STORE_PAUSED_TEXT}. Напишите в чат поддержки.`, 'error');
+      return Promise.resolve(false);
+    }
+    return serverOrdersEnabled ? completeOrderOnServer(orderData) : completeOrderLocally(orderData);
+  };
 
   // Legacy client-side checkout, used until the Cloud Function is deployed and enabled
   const completeOrderLocally = async (orderData: CompleteOrderData): Promise<boolean> => {
@@ -2014,6 +2021,7 @@ export default function App() {
           {activeTab === 'product-detail' && selectedProduct && (
             <ProductDetailScreen
               preorderMode={preorderMode}
+              ordersPaused={!storeAcceptsOrders(storefrontSettings)}
               product={products.find((p) => p.id === selectedProduct.id) ?? selectedProduct}
               returnPeriodDays={storefrontSettings.returnPeriodDays}
               freeDeliveryThreshold={storefrontSettings.freeDeliveryThreshold}
@@ -2035,6 +2043,7 @@ export default function App() {
             <CartScreen
               hasActivePromos={hasActivePromos}
               preorderMode={preorderMode}
+              ordersPaused={!storeAcceptsOrders(storefrontSettings)}
               cartItems={cartItems}
               favorites={favorites}
               onUpdateQuantity={handleUpdateQuantity}

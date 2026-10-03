@@ -45,6 +45,8 @@ interface ProductDetailScreenProps {
   product: Product;
   /** Admin → «Витрина» → «Предзаказ»: a sold-out variant can be preordered */
   preorderMode?: boolean;
+  /** «Технические работы» in «Витрина»: the 1-click window says the site takes no orders */
+  ordersPaused?: boolean;
   isFavorite: boolean;
   recentlyViewed?: Product[];
   onClearRecentlyViewed?: () => void;
@@ -74,6 +76,7 @@ interface ProductDetailScreenProps {
 
 export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   product,
+  ordersPaused = false,
   isFavorite,
   recentlyViewed = [],
   onClearRecentlyViewed,
@@ -925,6 +928,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           quantity,
         }}
         totalPrice={product.price * quantity}
+        ordersPaused={ordersPaused}
         onSuccess={handleQuickOrderSuccess}
       />
       </LazyMount>

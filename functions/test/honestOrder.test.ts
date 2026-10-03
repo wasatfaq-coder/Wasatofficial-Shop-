@@ -68,3 +68,13 @@ describe('a pickup order', () => {
     }
   });
 });
+
+describe('«Технические работы» (UX audit 03.10, finding 21)', () => {
+  test('only an explicit «off» stops orders: a store without the setting takes them', async () => {
+    const { storeAcceptsOrders } = await import('../../src/shared/orderApi');
+    expect(storeAcceptsOrders({ isStoreOnline: false })).toBe(false);
+    expect(storeAcceptsOrders({ isStoreOnline: true })).toBe(true);
+    expect(storeAcceptsOrders({})).toBe(true);
+    expect(storeAcceptsOrders(undefined)).toBe(true);
+  });
+});
