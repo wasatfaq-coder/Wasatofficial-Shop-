@@ -6,7 +6,17 @@ import type { CartItem, DeliveryMethod, PromoCode, StorefrontSettings } from '..
 
 /** Delivery method id used by the one-click "quick order" flow (no fee, no promo). */
 export const QUICK_ORDER_DELIVERY_ID = 'quick-order';
-export const QUICK_ORDER_DELIVERY_TITLE = 'Экспресс курьер (1 клик)';
+/**
+ * A 1-click order has no delivery choice: the manager agrees delivery and payment with the buyer (the offer, 3.2).
+ * Before the UX audit 03.10 (finding 22) it was saved as «Экспресс курьер (1 клик)» and showed buyers an express
+ * courier the shop may not have.
+ */
+export const QUICK_ORDER_DELIVERY_TITLE = 'Заказ в 1 клик';
+
+/** A 1-click order by its delivery title, the old «Экспресс курьер (1 клик)» too */
+export function isQuickOrderDelivery(deliveryMethod?: string): boolean {
+  return /1 клик/i.test(deliveryMethod ?? '');
+}
 
 export interface PricingLine {
   productId: string;
