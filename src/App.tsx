@@ -436,6 +436,11 @@ export default function App() {
     () => ({ ...withStoreNameFields(storefrontSettings, storeName), storeName }),
     [storefrontSettings, storeName]
   );
+  // Tab title: a product's name on its screen (the browser's history, bookmarks and search results show it)
+  const productTitle = activeTab === 'product-detail' ? selectedProduct?.title : undefined;
+  React.useEffect(() => {
+    document.title = productTitle ? `${productTitle} — ${storeName}` : `${storeName} — мужская одежда`;
+  }, [productTitle, storeName]);
   const customerDeliveryMethods = React.useMemo(
     () => deliveryMethods.map((m) => withStoreNameFields(m, storeName)),
     [deliveryMethods, storeName]

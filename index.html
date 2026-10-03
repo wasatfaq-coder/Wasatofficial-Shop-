@@ -3,16 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Store name in static files (title, og:*, manifest.webmanifest, og-image.png) is seen before JS loads:
-         update them when the name changes in «Витрина» -->
-    <title>Wasat Shop — мужская одежда</title>
-    <meta name="description" content="Магазин мужской одежды Wasat Shop: каталог с фильтрами по размеру, цвету и цене, подбор размера, заказ онлайн и чат с магазином." />
     <meta name="theme-color" content="#E3E8EF" />
-    <link rel="canonical" href="https://ai-studio-applet-webapp-e9574.web.app/" />
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- Сборка (scripts/share-pages.ts) заменяет этот блок: название магазина из «Витрины», а у страницы товара — его
+         название, описание, фото и цена для превью в мессенджерах. Здесь — то, что видно без этого шага сборки.
+         Название в public/manifest.webmanifest и на public/og-image.png — вручную, при смене названия. -->
+    <!-- seo:start -->
+    <title>Wasat Shop — мужская одежда</title>
+    <meta name="description" content="Магазин мужской одежды Wasat Shop: каталог с фильтрами по размеру, цвету и цене, подбор размера, заказ онлайн и чат с магазином." />
+    <link rel="canonical" href="https://ai-studio-applet-webapp-e9574.web.app/" />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="ru_RU" />
     <meta property="og:site_name" content="Wasat Shop" />
@@ -25,6 +27,13 @@
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Wasat Shop — магазин мужской одежды" />
     <meta name="twitter:card" content="summary_large_image" />
+    <!-- seo:end -->
+    <script>
+      // Ссылка на товар /product/{id} (превью для мессенджеров, docs/seo-plan.md) открывает экран товара #/product/{id}
+      if (!location.hash && /^\/product\/[^/]+\/?$/.test(location.pathname)) {
+        history.replaceState(null, '', '/' + location.search + '#' + location.pathname.replace(/\/$/, ''));
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

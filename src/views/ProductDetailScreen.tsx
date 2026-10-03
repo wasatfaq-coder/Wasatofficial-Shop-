@@ -18,6 +18,7 @@ import {
   Info,
   ZoomIn,
   Layers,
+  Share2,
 } from 'lucide-react';
 import { formatDays } from '../utils/pluralize';
 import { Product, UserProfile, BodyMeasurements, CartItem } from '../types';
@@ -40,6 +41,8 @@ import { getProductRating } from '../utils/productRating';
 import { productImage } from '../utils/productImage';
 import { useProductPhotos } from '../utils/useProductPhotos';
 import { QUICK_ORDER_DELIVERY_TITLE } from '../shared/orderPricing';
+import { productShareUrl } from '../utils/navigation';
+import { copyToClipboard } from '../utils/clipboard';
 
 interface ProductDetailScreenProps {
   product: Product;
@@ -93,6 +96,24 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   freeDeliveryThreshold,
 }) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
+  // The link shows the product's photo, name and price in Telegram and WhatsApp (docs/seo-plan.md): the phone's share
+  // sheet on touch screens, a copied link on a computer
+  const shareProduct = async () => {
+    const url = productShareUrl(product.id);
+    const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+    if (coarse && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title: product.title, url });
+        return;
+      } catch (err) {
+        // the buyer closed the share sheet
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+      }
+    }
+    const copied = await copyToClipboard(url);
+    onShowToast?.(copied ? 'Ссылка на товар скопирована' : `Не удалось скопировать ссылку: ${url}`, copied ? 'success' : 'error');
+  };
   // full photos from product_photos replace the catalog previews as they arrive (stage 6)
   const photos = useProductPhotos(product);
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -380,12 +401,23 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             <h1 className="text-xl font-bold text-[#2D3A4E] tracking-tight leading-snug min-w-0 break-words">
               {product.title}
             </h1>
-            <AnimatedFavoriteButton
-              isFavorite={isFavorite}
-              onToggle={(e) => onToggleFavorite(product, e)}
-              size="md"
-              className="neu-button shrink-0"
-            />
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={shareProduct}
+                className="neu-button w-8 h-8 rounded-full flex items-center justify-center text-[#4E5C70]"
+                aria-label="Поделиться ссылкой на товар"
+                title="Поделиться"
+              >
+                <Share2 className="w-4 h-4" aria-hidden="true" />
+              </button>
+              <AnimatedFavoriteButton
+                isFavorite={isFavorite}
+                onToggle={(e) => onToggleFavorite(product, e)}
+                size="md"
+                className="neu-button"
+              />
+            </div>
           </div>
           <RatingBadge
             rating={getProductRating(product)?.rating}

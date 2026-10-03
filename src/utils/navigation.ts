@@ -26,6 +26,14 @@ export function productHref(productId: string): string {
   return `#/product/${encodeURIComponent(productId)}`;
 }
 
+/**
+ * Link for messengers and search engines: Hosting serves /product/{id} as a page with the product's name, photo and
+ * price in <head> (scripts/share-pages.ts), then index.html turns it into #/product/{id} (docs/seo-plan.md, stage 1)
+ */
+export function productShareUrl(productId: string): string {
+  return `${window.location.origin}/product/${encodeURIComponent(productId)}`;
+}
+
 export function routeHash(route: Route): string {
   if (route.tab === 'product-detail') return route.productId ? productHref(route.productId) : '#/catalog';
   return `#/${TAB_PATHS[route.tab]}`;
