@@ -111,7 +111,10 @@ export interface Product {
   weave?: string;
   countryOfOrigin?: string;
   certifications?: string[];
+  /** Previews for cards and lists (or links); full photos are `product_photos/{photoIds[i]}` (stage 6, productPhotos.ts) */
   images: string[];
+  /** Id of the full photo of images[i] in `product_photos`; '' — a link or a light photo kept in the product */
+  photoIds?: string[];
   colors: { name: string; hex: string }[];
   sizes: string[];
   /** «Есть в наличии»: false when sold out (or, in old products without hiddenFromSale, taken off sale with stock left) */

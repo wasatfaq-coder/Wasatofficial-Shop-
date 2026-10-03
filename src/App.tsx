@@ -34,6 +34,7 @@ import {
 } from './utils/inventory';
 import { formatAddress } from './utils/addressFormat';
 import { buildClientOrder } from './utils/clientOrder';
+import { hasHeavyPhotos } from './utils/productPhotos';
 import { pluralRu } from './utils/pluralize';
 import { ADMIN_EMAIL, useAuth } from './context/AuthContext';
 import {
@@ -65,6 +66,7 @@ import {
   subscribeToProductCosts,
   saveProductCosts,
   moveProductCostsToPrivate,
+  moveProductPhotosOut,
   deleteRemovedDocs,
   changedItems,
   recordPromoUsageInFirestore,
@@ -928,6 +930,29 @@ export default function App() {
     costsMovedRef.current = true;
     void persist('себестоимость товаров', moveProductCostsToPrivate(legacy));
   }, [isAdmin, productsLoaded, products]);
+
+  // Photos still inside products (each visitor downloaded them with the catalog): the admin's session moves them to
+  // product_photos and leaves previews in the products (stage 6, finding 18). Once per session, product by product
+  const photosMovedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!isAdmin || !productsLoaded || photosMovedRef.current) return;
+    const heavy = products.filter(hasHeavyPhotos);
+    if (heavy.length === 0) return;
+    photosMovedRef.current = true;
+    void (async () => {
+      let moved = 0;
+      for (const product of heavy) {
+        try {
+          if (await moveProductPhotosOut(product)) moved++;
+        } catch (err) {
+          console.error(`Photos of product ${product.id} were not moved:`, err);
+        }
+      }
+      if (moved > 0) {
+        addToast(`Фото ${moved} ${pluralRu(moved, ['товара', 'товаров', 'товаров'])} вынесены из карточек: каталог у покупателей грузится быстрее`, 'info');
+      }
+    })();
+  }, [isAdmin, productsLoaded, products]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const removeToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));

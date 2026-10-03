@@ -125,6 +125,18 @@ service cloud.firestore {
       return a is string && b is string && a.trim().lower() == b.trim().lower();
     }
 
+    // Полные фото товара — отдельными документами (этап 6 без Storage, находка 18): в товаре лёгкие превью для карточек,
+    // страница товара читает фото по id из product.photoIds. Пишет администратор
+    match /product_photos/{photoId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidId(photoId)
+        && (request.resource == null
+          || (request.resource.data.keys().hasOnly(['productId', 'data'])
+            && request.resource.data.productId is string
+            && request.resource.data.data is string
+            && request.resource.data.data.matches('^data:image/(jpeg|png|webp);base64,.*')));
+    }
+
     // Себестоимость товаров: товар читает любой посетитель, поэтому она отдельно и только для администратора
     match /product_costs/{productId} {
       // Админка подписана на всю коллекцию: условие на id документа не дало бы прочитать её списком

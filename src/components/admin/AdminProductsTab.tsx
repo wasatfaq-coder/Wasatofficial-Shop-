@@ -33,7 +33,7 @@ import {
   Ruler,
 } from 'lucide-react';
 import { Product, ProductSKU, StockMovementLog } from '../../types';
-import { saveStockMovements } from '../../utils/firebaseSync';
+import { deleteProductPhotos, saveProductPhotos, saveStockMovements } from '../../utils/firebaseSync';
 import { formatOrderDate } from '../../shared/orderDate';
 import { SelectCheckbox } from './SelectCheckbox';
 import { exportProductsToCSV, parseProductsFromCSV } from '../../utils/csvHelpers';
@@ -47,6 +47,7 @@ import {
   mergeFormStock,
   stockMovementId,
 } from '../../utils/inventory';
+import { droppedPhotoIds, splitProductPhotos, storedImagesEstimate } from '../../utils/productPhotos';
 import { articleGroupKey, collectBarcodes, unifyArticleBarcodes } from '../../shared/barcode';
 import { AdminBulkOperationsModal } from './AdminBulkOperationsModal';
 import { NeumorphicSelect } from '../NeumorphicSelect';
@@ -176,7 +177,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         ? docSizeBytes({
             title: formTitle,
             description: formDescription,
-            images: formImages,
+            // a heavy photo is stored apart: the product keeps its preview (stage 6)
+            images: storedImagesEstimate(formImages),
             colors: formColors,
             sizes: formSizes,
             skus: formSkus,
@@ -542,8 +544,32 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       catObj?.name ||
       (editingProduct?.category === formCategory ? editingProduct.categoryLabel : undefined) ||
       formCategory;
-    const finalImages = formImages;
     const cardFields = cardStructureToProduct(formCard);
+    // Full photos go to their own documents, the product keeps previews (stage 6, finding 18). A photo that stayed keeps
+    // its document; the photos are written before the product, so the product never points at a missing photo
+    const productId = editingProduct?.id ?? `prod-${Date.now()}`;
+    const storedProduct = editingProduct ? products.find((p) => p.id === editingProduct.id) ?? editingProduct : undefined;
+    const known = new Map<string, string>();
+    for (const source of [editingProduct, storedProduct]) {
+      (source?.images ?? []).forEach((src, i) => {
+        const id = source?.photoIds?.[i];
+        if (id) known.set(src, id);
+      });
+    }
+    setIsSavingProduct(true);
+    let photos: Awaited<ReturnType<typeof splitProductPhotos>>;
+    try {
+      photos = await splitProductPhotos(productId, formImages, known);
+      await saveProductPhotos(photos.newPhotos);
+    } catch (err) {
+      console.error('Product photos were not saved:', err);
+      setSaveError('База не приняла фото товара. Введённое осталось в форме: проверьте соединение и нажмите ещё раз');
+      setIsSavingProduct(false);
+      return;
+    }
+    setIsSavingProduct(false);
+    const finalImages = photos.images;
+    const photoFields = { images: finalImages, photoIds: photos.photoIds };
     // Variations without a barcode get a unique one on save
     // One barcode per colour for the whole size range; missing ones are issued
     const savedId = editingProduct?.id ?? 'form';
@@ -589,7 +615,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         originalPrice: formOldPrice ? Number(formOldPrice) : undefined,
         badge: formBadge.trim() || undefined,
         description: formDescription.trim(),
-        images: finalImages,
+        ...photoFields,
         sizes: formSizes,
         colors: formColors,
         skus: savedSkus,
@@ -599,14 +625,19 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         ...cardFields,
       };
 
-      await finishSave(
+      const saved = await finishSave(
         products.map((p) => (p.id === editingProduct.id ? updated : p)),
         `Товар «${formTitle.trim()}» сохранен`,
         journal(updated.id, updated.title)
       );
+      // photos the product no longer shows: their documents go after the product was saved
+      const dropped = droppedPhotoIds(storedProduct, photos.photoIds);
+      if (saved && dropped.length > 0) {
+        deleteProductPhotos(dropped).catch((err) => console.error('Old product photos were not removed:', err));
+      }
     } else {
       const newProd: Product = {
-        id: `prod-${Date.now()}`,
+        id: productId,
         title: formTitle.trim(),
         category: formCategory,
         categoryLabel: catLabel,
@@ -615,7 +646,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         originalPrice: formOldPrice ? Number(formOldPrice) : undefined,
         badge: formBadge.trim() || undefined,
         description: formDescription.trim(),
-        images: finalImages,
+        ...photoFields,
         sizes: formSizes,
         colors: formColors,
         skus: savedSkus,
@@ -633,12 +664,12 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   };
 
   /** The form closes and says «сохранен» only after the database accepted the product; otherwise the input stays */
-  const finishSave = async (next: Product[], successText: string, movements: StockMovementLog[] = []) => {
+  const finishSave = async (next: Product[], successText: string, movements: StockMovementLog[] = []): Promise<boolean> => {
     setIsSavingProduct(true);
     try {
       if ((await onUpdateProducts(next)) === false) {
         setSaveError('База не приняла товар (ошибка — в сообщении внизу экрана). Введённое осталось в форме: проверьте соединение и нажмите ещё раз');
-        return;
+        return false;
       }
       // every stock change is a journal entry («Склад и SKU» → «Журнал движений»)
       if (movements.length > 0) {
@@ -649,6 +680,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       }
       onShowToast(successText, 'success');
       setIsProductFormOpen(false);
+      return true;
     } finally {
       setIsSavingProduct(false);
     }
