@@ -1292,8 +1292,8 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
               <button
                 type="button"
                 onClick={() => setAuditSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#4E5C70] hover:text-[#2D3A4E]"
-                aria-label="Закрыть"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 inline-flex items-center justify-center rounded-lg text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                aria-label="Очистить поиск"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -1477,8 +1477,8 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                 <button
                   type="button"
                   onClick={() => setLogSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#4E5C70] hover:text-[#2D3A4E]"
-                  aria-label="Закрыть"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 inline-flex items-center justify-center rounded-lg text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                  aria-label="Очистить поиск"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
