@@ -90,6 +90,9 @@ async function notificationWorker(): Promise<ServiceWorkerRegistration | null> {
   }
 }
 
+/** Site icon in the notification; the badge is a white silhouette for the Android status bar (public/) */
+const NOTIFICATION_ICONS = { icon: '/icon-192.png', badge: '/badge-96.png' };
+
 /**
  * A system notification when the browser allows it: through the worker (phones), else `new Notification` (desktop).
  * Resolves to true when it was shown. Works while the site is open in a tab — the store has no push server.
@@ -99,14 +102,14 @@ export async function showSystemNotification(title: string, options?: Notificati
   const worker = await notificationWorker();
   if (worker) {
     try {
-      await worker.showNotification(title, { icon: '/favicon.ico', badge: '/favicon.ico', ...options });
+      await worker.showNotification(title, { ...NOTIFICATION_ICONS, ...options });
       return true;
     } catch (e) {
       console.debug('Worker notification failed:', e);
     }
   }
   try {
-    const notif = new Notification(title, { icon: '/favicon.ico', badge: '/favicon.ico', ...options });
+    const notif = new Notification(title, { ...NOTIFICATION_ICONS, ...options });
     setTimeout(() => notif.close(), 6000);
     return true;
   } catch (e) {

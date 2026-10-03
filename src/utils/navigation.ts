@@ -52,6 +52,8 @@ export interface HistoryEntryState {
   wasat: true;
   idx: number;
   scrollY?: number;
+  /** An entry of an open window over the screen (`windowHistory.ts`): the same screen, «Назад» closes the window */
+  windows?: number;
 }
 
 export function readHistoryState(state: unknown): HistoryEntryState | null {

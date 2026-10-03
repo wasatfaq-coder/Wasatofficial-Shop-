@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef } from 'react';
+import { registerWindow } from './windowHistory';
 
 /**
  * Keyboard and screen-reader behaviour of a window (the panel of a modal, not its backdrop):
@@ -6,7 +7,8 @@ import { useEffect, useId, useRef } from 'react';
  * - focus moves into the window when it opens (`[data-autofocus]`, else the panel itself) and returns
  *   to the element that opened it when it closes;
  * - Tab / Shift+Tab stay inside the window;
- * - Escape closes only the top-most window.
+ * - Escape closes only the top-most window;
+ * - the browser's «Назад» closes the top-most window too and leaves the screen as it is (`windowHistory.ts`).
  * Portaled popups of Base UI (a select's menu) are outside the panel: keys pressed there are theirs.
  *
  * Usage: `const dialog = useDialogA11y(isOpen, onClose);` then
@@ -32,7 +34,7 @@ function inFloatingLayer(target: EventTarget | null): boolean {
 interface DialogA11yOptions {
   /** Name when the window has no visible title */
   label?: string;
-  /** false — do not close on Escape (e.g. while saving) */
+  /** false — do not close on Escape or «Назад» (e.g. while saving) */
   closeOnEscape?: boolean;
 }
 
@@ -43,6 +45,14 @@ export function useDialogA11y(open: boolean, onClose: () => void, options: Dialo
   onCloseRef.current = onClose;
   const closeOnEscapeRef = useRef(options.closeOnEscape !== false);
   closeOnEscapeRef.current = options.closeOnEscape !== false;
+
+  // «Назад» closes the window as Escape does; a window that stays open (unsaved changes ask first) keeps its entry
+  useEffect(() => {
+    if (!open) return;
+    return registerWindow(() => {
+      if (closeOnEscapeRef.current) onCloseRef.current();
+    });
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
