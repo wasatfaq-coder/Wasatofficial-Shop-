@@ -1896,7 +1896,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                               </button>
 
                               {/* Bottom Action Bar for Cover & Reordering */}
-                              <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent p-1.5 flex items-center justify-between text-white">
+                              {/* 24 px buttons (UX audit 03.10, finding 15): on a narrow photo «Обложка» goes to a second row */}
+                              <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent p-1.5 flex flex-wrap items-center justify-between gap-1 text-white">
                                 <div className="flex items-center gap-1">
                                   {idx > 0 && (
                                     <button
@@ -1905,11 +1906,11 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                                         e.stopPropagation();
                                         handleMoveImage(idx, idx - 1);
                                       }}
-                                      className="p-1 rounded bg-white/20 hover:bg-white/40 text-white cursor-pointer"
+                                      className="w-6 h-6 flex items-center justify-center rounded bg-white/20 hover:bg-white/40 text-white cursor-pointer"
                                       title="Переместить левее"
                                       aria-label="Переместить левее"
                                     >
-                                      <ArrowLeft className="w-2.5 h-2.5" />
+                                      <ArrowLeft className="w-3 h-3" />
                                     </button>
                                   )}
                                   {idx < formImages.length - 1 && (
@@ -1919,27 +1920,27 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                                         e.stopPropagation();
                                         handleMoveImage(idx, idx + 1);
                                       }}
-                                      className="p-1 rounded bg-white/20 hover:bg-white/40 text-white cursor-pointer"
+                                      className="w-6 h-6 flex items-center justify-center rounded bg-white/20 hover:bg-white/40 text-white cursor-pointer"
                                       title="Переместить правее"
                                       aria-label="Переместить правее"
                                     >
-                                      <ArrowRight className="w-2.5 h-2.5" />
+                                      <ArrowRight className="w-3 h-3" />
                                     </button>
                                   )}
                                 </div>
 
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1 ml-auto">
                                   <button
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setPreviewZoomImage(imgUrl);
                                     }}
-                                    className="p-1 rounded bg-white/20 hover:bg-white/40 text-white cursor-pointer"
+                                    className="w-6 h-6 flex items-center justify-center rounded bg-white/20 hover:bg-white/40 text-white cursor-pointer"
                                     title="Увеличить фото"
                                     aria-label="Увеличить фото"
                                   >
-                                    <Maximize2 className="w-2.5 h-2.5" />
+                                    <Maximize2 className="w-3 h-3" />
                                   </button>
                                   {idx !== 0 && (
                                     <button
@@ -1948,7 +1949,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                                         e.stopPropagation();
                                         handleSetCoverImage(idx);
                                       }}
-                                      className="text-[11px] font-extrabold bg-accent hover:bg-accent text-white px-1.5 py-0.5 rounded cursor-pointer"
+                                      className="min-h-6 text-[11px] font-extrabold bg-accent hover:bg-accent text-white px-1.5 py-0.5 rounded cursor-pointer"
                                       title="Сделать главной обложкой"
                                     >
                                       Обложка
