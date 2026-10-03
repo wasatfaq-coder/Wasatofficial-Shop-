@@ -162,16 +162,6 @@ export interface SavedAddress {
   isDefault?: boolean;
 }
 
-export interface SavedCard {
-  id: string;
-  bankName: string; // e.g. "Т-Банк", "Сбербанк", "Альфа-Банк"
-  cardNumber: string; // e.g. "•••• 4821"
-  cardHolder: string;
-  expiryDate: string; // e.g. "08/28"
-  cardType: 'mir' | 'visa' | 'mastercard';
-  isDefault?: boolean;
-}
-
 export interface UserProfile {
   /** «Фамилия Имя Отчество» одной строкой — из частей ниже (fullName в src/shared/personName.ts) */
   name: string;
@@ -193,7 +183,6 @@ export interface UserProfile {
     intercom?: string;
   };
   savedAddresses: SavedAddress[];
-  savedCards: SavedCard[];
   notificationsEnabled: boolean;
   bodyMeasurements?: BodyMeasurements;
   bonusPoints?: number;

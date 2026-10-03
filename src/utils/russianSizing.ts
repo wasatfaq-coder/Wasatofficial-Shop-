@@ -77,7 +77,8 @@ export function calculateRussianPattern(
   weight: number,
   chest: number,
   waist: number,
-  hips: number,
+  // Мужской размер брюк — по обхвату талии; бёдра остаются в сигнатуре ради вызовов
+  _hips: number,
   fitPreference: 'tight' | 'regular' | 'loose' = 'regular'
 ): RussianSizingResult {
   // 1. Верхняя одежда (ПОГ = полуобхват груди по ГОСТ РФ)

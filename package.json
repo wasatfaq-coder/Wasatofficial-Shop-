@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "deploy": "bun run build && firebase deploy --only hosting,firestore",
+    "deploy": "bun run lint && bun run test:rules && bun run test:functions && bun run build && firebase deploy --only hosting,firestore",
     "test:rules": "bun scripts/client-order-sample.ts && firebase emulators:exec --only firestore --project demo-manstyle 'node --test tests/firestore.rules.test.mjs tests/audit-attacks.test.mjs'",
     "test:functions": "firebase emulators:exec --only firestore --project demo-manstyle 'cd functions && bun test test/'",
     "build:functions": "cd functions && npm run build"
@@ -26,16 +26,13 @@
     "motion": "^13.4.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "recharts": "^3.10.1",
-    "vite": "^8.3.0"
+    "recharts": "^3.10.1"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",
     "@types/node": "^22.14.0",
     "@types/react": "19",
     "@types/react-dom": "19",
-    "autoprefixer": "^10.6.1",
-    "esbuild": "^0.28.2",
     "firebase-tools": "^15.31.0",
     "tailwindcss": "^4.1.14",
     "typescript": "~5.8.2",

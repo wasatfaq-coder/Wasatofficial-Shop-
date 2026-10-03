@@ -35,7 +35,8 @@ bun run dev        # http://localhost:3000
 ### Локально с эмуляторами Firebase
 
 Чтобы не трогать боевую базу (и проверить оформление заказа через функцию), запустите
-эмуляторы и dev-сервер в режиме эмуляторов (нужна Java):
+эмуляторы и dev-сервер в режиме эмуляторов (нужна Java 21). Команда запускает только эмуляторы (`--only`), сайт
+с `VITE_USE_EMULATORS=true` пишет в них, а не в боевую базу:
 
 ```bash
 npm ci --prefix functions && bun run build:functions
@@ -55,10 +56,10 @@ VITE_USE_EMULATORS=true bun run dev   # во втором терминале
 | `bun run build` | Продакшен-сборка в `dist/` |
 | `bun run preview` | Локальный просмотр собранного `dist/` |
 | `bun run lint` | Проверка типов TypeScript (`tsc --noEmit`) |
-| `bun run test:rules` | Тесты правил Firestore в эмуляторе (нужна Java 11+) |
+| `bun run test:rules` | Тесты правил Firestore в эмуляторе (нужна Java 21) |
 | `bun run test:functions` | Тесты Cloud Functions и расчёта цены в эмуляторе (нужны Java и `npm ci --prefix functions`) |
 | `bun run build:functions` | Сборка Cloud Functions в `functions/lib/` |
-| `bun run deploy` | Сборка и ручной деплой Hosting + правил Firestore |
+| `bun run deploy` | Ручной деплой Hosting + правил Firestore — после тех же проверок, что в CI (lint, правила, функции, сборка). Обычный путь — слияние PR в `main` |
 
 ## Структура
 
@@ -191,8 +192,12 @@ Google, пишет от своего аккаунта. Гость при пер�
 
 ### Ручной деплой
 
+Обычно сайт публикует слияние PR в `main` (`deploy.yml`). Вручную — только если Actions недоступны; `bun run deploy`
+сначала прогоняет lint, тесты правил и функций и сборку:
+
 ```bash
 bunx firebase login
+npm ci --prefix functions
 bun run deploy
 ```
 

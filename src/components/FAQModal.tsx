@@ -25,7 +25,6 @@ interface FAQModalProps {
   /** Store email from Admin → «Витрина»; hidden when empty */
   storeEmail?: string;
   onOpenSupportChat?: () => void;
-  onShowToast?: (msg: string, type?: 'success' | 'info' | 'error') => void;
   /** Questions from Admin → «FAQ»; none → «Вопросы и ответы: не настроено» */
   faqItems?: StoreFaqItem[];
 }
@@ -34,7 +33,6 @@ export const FAQModal: React.FC<FAQModalProps> = ({
   isOpen,
   onClose,
   onOpenSupportChat,
-  onShowToast,
   freeDeliveryThreshold,
   returnPeriodDays,
   storePhone = '',

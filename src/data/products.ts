@@ -11,7 +11,6 @@ export const GUEST_USER_PROFILE: UserProfile = {
   avatar: '',
   address: { street: '', city: '', postalCode: '' },
   savedAddresses: [],
-  savedCards: [],
   notificationsEnabled: true,
   bonusPoints: 0,
 };

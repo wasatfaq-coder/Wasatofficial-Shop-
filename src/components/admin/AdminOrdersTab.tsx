@@ -184,7 +184,7 @@ const PAYMENT_STATUS_CONFIG: Record<
     dot: 'bg-success',
   },
   paid_on_delivery: {
-    label: 'Оплата при вручении',
+    label: 'Оплата при получении',
     bg: 'bg-accent/10 border-accent/30',
     text: 'text-accent',
     dot: 'bg-accent',

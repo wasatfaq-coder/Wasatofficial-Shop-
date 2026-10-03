@@ -163,14 +163,6 @@ function toStoredProduct(product: Product): Product {
   return stored;
 }
 
-async function saveProductToFirestore(product: Product) {
-  try {
-    await setDoc(doc(db, 'products', product.id), sanitizeForFirestore(toStoredProduct(product)));
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, `products/${product.id}`);
-  }
-}
-
 /** Colour and size of an order line and a variant match as in inventory.ts: trimmed, case-insensitive */
 const sameVariantName = (a: unknown, b: unknown) =>
   String(a ?? '').trim().toLowerCase() === String(b ?? '').trim().toLowerCase();
@@ -546,14 +538,21 @@ export async function saveProductCosts(changes: { id: string; costPrice?: number
 
 /** How many newest entries of the stock journal the admin screen loads */
 export const STOCK_MOVEMENTS_LIMIT = 500;
+/** A period of the journal is read whole up to this many entries (a safety cap against an unexpected flood) */
+export const STOCK_MOVEMENTS_PERIOD_LIMIT = 5000;
 
 /** Admin only: the newest entries of the stock journal (`stock_movements`, closed to customers by firestore.rules) */
 export function subscribeToStockMovements(
   onUpdate: (movements: StockMovementLog[]) => void,
-  onError?: (error: Error) => void
+  onError?: (error: Error) => void,
+  /** ISO date: every entry since then (finding 42: the latest 500 hid older ones); none — the latest 500 */
+  since?: string
 ) {
+  const col = collection(db, STOCK_MOVEMENTS_COLLECTION);
   return onSnapshot(
-    query(collection(db, STOCK_MOVEMENTS_COLLECTION), orderBy('createdAt', 'desc'), limit(STOCK_MOVEMENTS_LIMIT)),
+    since
+      ? query(col, where('createdAt', '>=', since), orderBy('createdAt', 'desc'), limit(STOCK_MOVEMENTS_PERIOD_LIMIT))
+      : query(col, orderBy('createdAt', 'desc'), limit(STOCK_MOVEMENTS_LIMIT)),
     (snapshot) => onUpdate(snapshot.docs.map((d) => ({ ...(d.data() as StockMovementLog), id: d.id }))),
     (error) => {
       console.warn('Stock journal subscription warning:', error);
@@ -822,8 +821,9 @@ function normalizeOrderFromFirestore(raw: any, docId?: string): Order {
     isCancelled,
     totalPrice: Number(raw.totalPrice ?? raw.total_price ?? raw.amount ?? raw.total) || 0,
     deliveryAddress: String(raw.deliveryAddress ?? raw.delivery_address ?? raw.address ?? 'Адрес доставки не указан'),
-    deliveryMethod: String(raw.deliveryMethod ?? raw.delivery_method ?? 'Курьерская доставка'),
-    paymentMethod: String(raw.paymentMethod ?? raw.payment_method ?? 'Карта (онлайн)'),
+    // an old order without these fields: said so, not made up (a status change writes the order back — finding 42)
+    deliveryMethod: String(raw.deliveryMethod ?? raw.delivery_method ?? 'Способ доставки не указан'),
+    paymentMethod: String(raw.paymentMethod ?? raw.payment_method ?? 'Способ оплаты не указан'),
     paymentStatus: raw.paymentStatus ?? raw.payment_status ?? 'pending',
     trackingNumber,
     estimatedDelivery,
@@ -1694,6 +1694,26 @@ function toBackupValue(value: unknown): unknown {
     return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, toBackupValue(v)]));
   }
   return value;
+}
+
+/** Admin's quick phrases (`settings/quick_phrases`, admin only — finding 49); null — not saved yet (phrasesSync.ts) */
+export function subscribeToQuickPhrasesDoc<T>(onData: (data: Partial<T> | null) => void, onError?: (error: unknown) => void) {
+  return onSnapshot(
+    doc(db, 'settings', 'quick_phrases'),
+    (snapshot) => onData(snapshot.exists() ? (snapshot.data() as Partial<T>) : null),
+    (error) => {
+      console.warn('Firestore Quick Phrases subscription warning:', error);
+      onError?.(error);
+    }
+  );
+}
+
+export async function saveQuickPhrasesDoc(data: object): Promise<void> {
+  try {
+    await setDoc(doc(db, 'settings', 'quick_phrases'), sanitizeForFirestore(data));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'settings/quick_phrases');
+  }
 }
 
 /** Ids of the documents now in these collections (the «Только недостающие» restore): reads, writes nothing */

@@ -1761,7 +1761,6 @@ export default function App() {
   };
 
   const totalCartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
-  const cartProductIds = cartItems.map((item) => item.product.id);
 
   const handleSaveMeasurements = (measurements: BodyMeasurements) => {
     const updated: UserProfile = {
@@ -1966,7 +1965,6 @@ export default function App() {
               products={products}
               catalogStatus={catalogStatus}
               favorites={favorites}
-              cartItemIds={cartProductIds}
               recentlyViewed={recentlyViewed}
               onClearRecentlyViewed={handleClearRecentlyViewed}
               onRemoveFromRecentlyViewed={handleRemoveFromRecentlyViewed}
@@ -1980,11 +1978,9 @@ export default function App() {
               onSearchChange={setCatalogSearch}
               bannerSlides={customerBannerSlides}
               storefrontSettings={customerStorefront}
-              onOpenSupportChat={openSupportChat}
               onApplyPromo={handleApplyPromo}
               onShowToast={addToast}
               userProfile={userProfile}
-              onOpenMySizes={() => setIsMySizesModalOpen(true)}
               onOpenFilters={() => setIsAdvancedFilterOpen(true)}
               onSaveMeasurements={handleSaveMeasurements}
               onAddToCartWithOptions={handleAddToCartWithOptions}
@@ -1998,7 +1994,6 @@ export default function App() {
               products={products}
               catalogStatus={catalogStatus}
               favorites={favorites}
-              cartItemIds={cartProductIds}
               recentlyViewed={recentlyViewed}
               onClearRecentlyViewed={handleClearRecentlyViewed}
               onRemoveFromRecentlyViewed={handleRemoveFromRecentlyViewed}
@@ -2027,7 +2022,6 @@ export default function App() {
               returnPeriodDays={storefrontSettings.returnPeriodDays}
               freeDeliveryThreshold={storefrontSettings.freeDeliveryThreshold}
               isFavorite={favorites.includes(selectedProduct.id)}
-              cartCount={totalCartCount}
               recentlyViewed={recentlyViewed.filter((p) => p.id !== selectedProduct.id)}
               onClearRecentlyViewed={handleClearRecentlyViewed}
               onRemoveFromRecentlyViewed={handleRemoveFromRecentlyViewed}
@@ -2036,7 +2030,6 @@ export default function App() {
               onToggleFavorite={handleToggleFavorite}
               onAddToCartWithOptions={handleAddToCartWithOptions}
               onSelectProduct={handleSelectProduct}
-              setActiveTab={setActiveTab}
               onCompleteOrder={handleCompleteOrder}
               onShowToast={addToast}
             />
@@ -2094,7 +2087,6 @@ export default function App() {
             <FavoritesScreen
               products={products}
               favorites={favorites}
-              cartItemIds={cartProductIds}
               onSelectProduct={handleSelectProduct}
               onToggleFavorite={handleToggleFavorite}
               onAddToCart={handleAddToCartQuick}
@@ -2109,10 +2101,6 @@ export default function App() {
               orders={orders}
               products={adminProducts}
               favoritesCount={favorites.length}
-              recentlyViewed={recentlyViewed}
-              favorites={favorites}
-              onSelectProduct={handleSelectProduct}
-              onToggleFavorite={handleToggleFavorite}
               onUpdateProfile={handleUpdateProfile}
               setActiveTab={setActiveTab}
               onRepeatOrder={handleRepeatOrder}
