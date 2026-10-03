@@ -1,6 +1,3 @@
-/** Firestore keeps a document up to 1 MiB; photos inside the product (data: URIs) take most of it */
-export const FIRESTORE_DOC_LIMIT_BYTES = 1_048_576;
-
 /**
  * Leave a margin: Firestore counts field names and index overhead a little differently from JSON,
  * so a product close to the limit is refused although its JSON still fits.

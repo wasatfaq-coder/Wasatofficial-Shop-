@@ -20,7 +20,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { formatDays } from '../utils/pluralize';
-import { Product, ActiveTab, UserProfile, BodyMeasurements, CartItem } from '../types';
+import { Product, UserProfile, BodyMeasurements, CartItem } from '../types';
 import { RecentlyViewed } from '../components/RecentlyViewed';
 import { RatingBadge } from '../components/RatingBadge';
 import { NeumorphicImage } from '../components/NeumorphicImage';
@@ -46,7 +46,6 @@ interface ProductDetailScreenProps {
   /** Admin → «Витрина» → «Предзаказ»: a sold-out variant can be preordered */
   preorderMode?: boolean;
   isFavorite: boolean;
-  cartCount: number;
   recentlyViewed?: Product[];
   onClearRecentlyViewed?: () => void;
   onRemoveFromRecentlyViewed?: (productId: string) => void;
@@ -60,7 +59,6 @@ interface ProductDetailScreenProps {
     quantity: number
   ) => boolean | void;
   onSelectProduct?: (product: Product) => void;
-  setActiveTab: (tab: ActiveTab) => void;
   onCompleteOrder?: (orderData: {
     items: CartItem[];
     contact: { name: string; phone: string; email?: string };
@@ -77,7 +75,6 @@ interface ProductDetailScreenProps {
 export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   product,
   isFavorite,
-  cartCount,
   recentlyViewed = [],
   onClearRecentlyViewed,
   onRemoveFromRecentlyViewed,
@@ -87,7 +84,6 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   onAddToCartWithOptions,
   onSelectProduct,
   preorderMode = false,
-  setActiveTab,
   onCompleteOrder,
   onShowToast,
   returnPeriodDays,

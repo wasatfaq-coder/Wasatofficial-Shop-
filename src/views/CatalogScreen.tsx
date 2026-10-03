@@ -36,7 +36,6 @@ interface CatalogScreenProps {
   categories?: StoreCategory[];
   products: Product[];
   favorites: string[];
-  cartItemIds: string[];
   recentlyViewed?: Product[];
   onClearRecentlyViewed?: () => void;
   onRemoveFromRecentlyViewed?: (productId: string) => void;
@@ -67,7 +66,6 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
   categories = [],
   products,
   favorites,
-  cartItemIds,
   userProfile,
   onSaveMeasurements,
   selectedCategory,
@@ -527,7 +525,6 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                   product={product}
                   priority={index < 4}
                   isFavorite={favorites.includes(product.id)}
-                  isInCart={cartItemIds.includes(product.id)}
                   onSelect={onSelectProduct}
                   onToggleFavorite={onToggleFavorite}
                   onAddToCart={onAddToCart}
@@ -562,7 +559,6 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
         product={quickViewProduct}
         isOpen={!!quickViewProduct}
         isFavorite={quickViewProduct ? favorites.includes(quickViewProduct.id) : false}
-        isInCart={quickViewProduct ? cartItemIds.includes(quickViewProduct.id) : false}
         userProfile={userProfile}
         onSaveMeasurements={onSaveMeasurements}
         onClose={() => setQuickViewProduct(null)}

@@ -11,7 +11,6 @@ import { getProductRating } from '../utils/productRating';
 interface ProductCardProps {
   product: Product;
   isFavorite: boolean;
-  isInCart: boolean;
   onSelect: (product: Product) => void;
   onToggleFavorite: (product: Product, e: React.MouseEvent) => void;
   /** false — nothing added yet (the customer is asked for a size) */
@@ -24,7 +23,6 @@ interface ProductCardProps {
 export const ProductCard: React.FC<ProductCardProps> = ({
   product,
   isFavorite,
-  isInCart,
   onSelect,
   onToggleFavorite,
   onAddToCart,

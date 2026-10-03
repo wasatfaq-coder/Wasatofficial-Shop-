@@ -127,10 +127,6 @@ interface ProfileScreenProps {
   orders: Order[];
   products?: Product[];
   favoritesCount: number;
-  recentlyViewed?: Product[];
-  favorites?: string[];
-  onSelectProduct?: (product: Product) => void;
-  onToggleFavorite?: (product: Product, e: React.MouseEvent) => void;
   onUpdateProfile: (updated: UserProfile) => void;
   setActiveTab: (tab: ActiveTab) => void;
   onRepeatOrder?: (items: CartItem[]) => void;
@@ -192,10 +188,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   orders,
   products = [],
   favoritesCount,
-  recentlyViewed = [],
-  favorites = [],
-  onSelectProduct,
-  onToggleFavorite,
   onUpdateProfile,
   setActiveTab,
   onRepeatOrder,
@@ -1581,7 +1573,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         const isPost = isRussianPostDelivery(ord.deliveryMethod, ord.trackingCompany);
                         const isTK = isTransportCompanyDelivery(ord.deliveryMethod, ord.trackingCompany);
                         const isPickup = isPickupDelivery(ord.deliveryMethod);
-                        const isCourier = isCourierDelivery(ord.deliveryMethod, ord.trackingCompany);
                         const isExpress = (ord.deliveryMethod || '').toLowerCase().includes('экспресс') || (ord.deliveryMethod || '').toLowerCase().includes('express');
 
                         return (
@@ -1746,7 +1737,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               const isPost = isRussianPostDelivery(selectedOrderForTracking.deliveryMethod, selectedOrderForTracking.trackingCompany);
               const isTK = isTransportCompanyDelivery(selectedOrderForTracking.deliveryMethod, selectedOrderForTracking.trackingCompany);
               const isPickup = isPickupDelivery(selectedOrderForTracking.deliveryMethod);
-              const isCourier = isCourierDelivery(selectedOrderForTracking.deliveryMethod, selectedOrderForTracking.trackingCompany);
               const isExpress = (selectedOrderForTracking.deliveryMethod || '').toLowerCase().includes('экспресс') || (selectedOrderForTracking.deliveryMethod || '').toLowerCase().includes('express');
 
               if (isPost) {
@@ -2136,7 +2126,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               const isPost = isRussianPostDelivery(selectedOrderForTracking.deliveryMethod, selectedOrderForTracking.trackingCompany);
               const isPickup = isPickupDelivery(selectedOrderForTracking.deliveryMethod);
               const isCourier = isCourierDelivery(selectedOrderForTracking.deliveryMethod, selectedOrderForTracking.trackingCompany);
-              const isExpress = (selectedOrderForTracking.deliveryMethod || '').toLowerCase().includes('экспресс') || (selectedOrderForTracking.deliveryMethod || '').toLowerCase().includes('express');
 
               if (isPost) {
                 return (
@@ -3289,7 +3278,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         faqItems={storefrontSettings?.faqItems}
         onClose={() => setActiveModal(null)}
         onOpenSupportChat={onOpenSupportChat}
-        onShowToast={onShowToast}
       />
 
       {/* ================= MODAL: SUPPORT & HOTLINE ================= */}

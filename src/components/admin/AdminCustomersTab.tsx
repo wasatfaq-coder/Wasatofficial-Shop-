@@ -37,6 +37,7 @@ import { NeumorphicSelect, NeumorphicSelectOption } from '../NeumorphicSelect';
 import { orderStatusChip } from '../../utils/orderStatusStyle';
 import { isRevenueOrder, orderRevenue } from '../../utils/analyticsEngine';
 import { formatAddress } from '../../utils/addressFormat';
+import { ADMIN_EMAIL } from '../../context/AuthContext';
 import { pluralRu } from '../../utils/pluralize';
 import { cancelledByLabel, cancelledShare, cancelReasonText, formatCancelledAt } from '../../utils/orderCancel';
 import { useDialogA11y } from '../../utils/useDialogA11y';
@@ -347,7 +348,6 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
     const totalClients = customerRecords.length;
     const registeredCount = customerRecords.filter((c) => c.isRegisteredUser).length;
     const totalLTV = customerRecords.reduce((sum, c) => sum + c.totalSpent, 0);
-    const totalOrders = customerRecords.reduce((sum, c) => sum + c.ordersCount, 0);
     const paidOrders = customerRecords.reduce((sum, c) => sum + c.paidOrdersCount, 0);
     const avgOrderValue = paidOrders > 0 ? Math.round(totalLTV / paidOrders) : 0;
     const repeatClients = customerRecords.filter((c) => c.paidOrdersCount >= 2).length;
@@ -823,7 +823,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     </button>
                   )}
 
-                  {customer.email !== 'gunh83975@gmail.com' && (
+                  {customer.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase() && (
                     <button
                       type="button"
                       onClick={() => setCustomerToDelete(customer)}
@@ -1332,7 +1332,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
               </div>
 
               {/* Deleting is the last, rare action: below everything, after a line, and confirmed */}
-              {selectedCustomer.email !== 'gunh83975@gmail.com' && (
+              {selectedCustomer.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase() && (
                 <div className="border-t border-[#BAC5D5]/40 pt-3 flex justify-end">
                   <button
                     type="button"

@@ -6,7 +6,6 @@ import { ProductCard } from '../components/ProductCard';
 interface FavoritesScreenProps {
   products: Product[];
   favorites: string[];
-  cartItemIds: string[];
   onSelectProduct: (product: Product) => void;
   onToggleFavorite: (product: Product, e: React.MouseEvent) => void;
   /** false — nothing added yet (the customer is asked for a size) */
@@ -17,7 +16,6 @@ interface FavoritesScreenProps {
 export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({
   products,
   favorites,
-  cartItemIds,
   onSelectProduct,
   onToggleFavorite,
   onAddToCart,
@@ -62,7 +60,6 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({
             key={product.id}
             product={product}
             isFavorite={true}
-            isInCart={cartItemIds.includes(product.id)}
             onSelect={onSelectProduct}
             onToggleFavorite={onToggleFavorite}
             onAddToCart={onAddToCart}

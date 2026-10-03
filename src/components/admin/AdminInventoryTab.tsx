@@ -30,12 +30,10 @@ import { NeumorphicSelect } from '../NeumorphicSelect';
 import { copyToClipboard } from '../../utils/clipboard';
 import {
   generateDefaultSKUs,
-  updateProductSkuStock,
   stockMovementId,
   LEGACY_STOCK_LOGS_STORAGE_KEY,
 } from '../../utils/inventory';
 import { applyAdminStockChanges, saveStockMovements, subscribeToStockMovements } from '../../utils/firebaseSync';
-import { formatOrderDate } from '../../shared/orderDate';
 import { AdminLabelGenerator, type LabelTarget } from './AdminLabelGenerator';
 import { articleCode, skuKey } from '../../shared/barcode';
 import { InventoryGroupedList, type InventoryGrouping, type InventoryRow } from './InventoryGroupedList';
@@ -177,6 +175,8 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
   // Stock journal from the database (`stock_movements`): customer orders, order changes and warehouse operations
   const [movementLogs, setMovementLogs] = useState<StockMovementLog[]>([]);
   const [movementLogsError, setMovementLogsError] = useState(false);
+  /** The journal's period: the latest 500 entries, or every entry of 30 / 90 / 365 days (finding 42) */
+  const [logPeriodDays, setLogPeriodDays] = useState<0 | 30 | 90 | 365>(0);
   useEffect(
     () =>
       subscribeToStockMovements(
@@ -184,18 +184,11 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
           setMovementLogs(logs);
           setMovementLogsError(false);
         },
-        () => setMovementLogsError(true)
+        () => setMovementLogsError(true),
+        logPeriodDays ? new Date(Date.now() - logPeriodDays * 86_400_000).toISOString() : undefined
       ),
-    []
+    [logPeriodDays]
   );
-
-  /** New entries of the journal; the stock itself is already changed, so a refused write only warns */
-  const recordStockMovements = (logs: StockMovementLog[]) => {
-    saveStockMovements(logs).catch((err) => {
-      console.error('Stock journal was not written:', err);
-      onShowToast('Не сохранено: запись в журнале склада. Остатки изменены, проверьте соединение.', 'error');
-    });
-  };
 
   // The journal used to be kept only in this browser: move it to the database once, keeping its order
   useEffect(() => {
@@ -1474,6 +1467,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                 type="text"
                 value={logSearchQuery}
                 onChange={(e) => setLogSearchQuery(e.target.value)}
+                aria-label="Поиск по журналу движений"
                 placeholder="Заказ, артикул, товар или причина"
                 className="w-full pl-8 pr-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E]"
               />
@@ -1487,6 +1481,29 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
+            </div>
+
+            {/* Period: the latest 500 or everything of a period */}
+            <div role="radiogroup" aria-label="Период журнала" className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
+              {([
+                { days: 0, label: 'Последние 500' },
+                { days: 30, label: '30 дней' },
+                { days: 90, label: '90 дней' },
+                { days: 365, label: 'Год' },
+              ] as const).map((p) => (
+                <button
+                  key={p.days}
+                  type="button"
+                  role="radio"
+                  aria-checked={logPeriodDays === p.days}
+                  onClick={() => setLogPeriodDays(p.days)}
+                  className={`py-1.5 px-2.5 rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer transition-all ${
+                    logPeriodDays === p.days ? 'neu-pill-active font-extrabold' : 'neu-button text-[#4E5C70]'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
             </div>
 
             {/* Type selector */}

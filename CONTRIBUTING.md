@@ -9,7 +9,7 @@
    ```bash
    bun run lint     # типы
    bun run build    # сборка
-   bun run test:rules  # если меняли firestore.rules (нужна Java 11+)
+   bun run test:rules  # если меняли firestore.rules (нужна Java 21)
    bun run test:functions  # если меняли functions/ или src/shared/ (нужна Java и npm ci --prefix functions)
    ```
 4. Откройте Pull Request в `main`. CI проверит сборку и правила,

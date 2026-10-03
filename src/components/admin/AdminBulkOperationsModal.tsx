@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { NotConfigured } from '../NotConfigured';
 import { productImage } from '../../utils/productImage';
 import { useDialogA11y } from '../../utils/useDialogA11y';
+import { pluralRu } from '../../utils/pluralize';
 
 interface AdminBulkOperationsModalProps {
   isOpen: boolean;
@@ -15,7 +16,6 @@ interface AdminBulkOperationsModalProps {
   onClose: () => void;
   onApplyBulkChanges?: (updatedProducts: Product[], summaryMessage: string) => void;
   onApplyChanges?: (updatedProducts: Product[], summaryMessage: string) => void;
-  onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
 type BulkTab = 'pricing' | 'discounts' | 'categories';
@@ -42,7 +42,6 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
   onClose,
   onApplyBulkChanges,
   onApplyChanges,
-  onShowToast,
 }) => {
   const dialog = useDialogA11y(isOpen && selectedProducts.length > 0, onClose);
   const [activeTab, setActiveTab] = useState<BulkTab>('pricing');
@@ -135,21 +134,24 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
 
   const handleApply = () => {
     const previewList = getPreviewProducts();
+    const n = selectedProducts.length;
+    // «у 1 товара», «у 3 товаров»
+    const ofProducts = `${n} ${pluralRu(n, ['товара', 'товаров', 'товаров'])}`;
     let summaryMsg = '';
 
     if (activeTab === 'pricing') {
       const sign = priceAdjustmentValue >= 0 ? '+' : '';
       const unit = priceAdjustmentType === 'percent' ? '%' : ' ₽';
-      summaryMsg = `Цены ${selectedProducts.length} товаров изменены на ${sign}${priceAdjustmentValue}${unit}`;
+      summaryMsg = `Цены изменены на ${sign}${priceAdjustmentValue}${unit} у ${ofProducts}`;
     } else if (activeTab === 'discounts') {
       if (isRemoveDiscountMode) {
-        summaryMsg = `Сняты скидки с ${selectedProducts.length} выбранных товаров`;
+        summaryMsg = `Сняты скидки с ${ofProducts}`;
       } else {
-        summaryMsg = `Назначена сезонная скидка ${discountPercent}% для ${selectedProducts.length} товаров`;
+        summaryMsg = `Назначена сезонная скидка ${discountPercent}% для ${ofProducts}`;
       }
     } else if (activeTab === 'categories') {
       const catObj = categories.find((c) => c.id === targetCategory);
-      summaryMsg = `${selectedProducts.length} товаров перемещены в категорию "${catObj?.name || targetCategory}"`;
+      summaryMsg = `${n} ${pluralRu(n, ['товар перемещён', 'товара перемещены', 'товаров перемещены'])} в категорию «${catObj?.name || targetCategory}»`;
     }
 
     const callback = onApplyBulkChanges || onApplyChanges;
@@ -579,7 +581,11 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
             className="w-full sm:w-auto py-2.5 px-5 neu-button-accent rounded-xl text-xs font-extrabold text-white cursor-pointer transition-all flex items-center justify-center gap-2"
           >
             <CheckCheck className="w-4 h-4 stroke-[2.5]" />
-            <span>Применить ко всем {selectedProducts.length} товарам</span>
+            <span>
+              {selectedProducts.length === 1
+                ? 'Применить к 1 товару'
+                : `Применить ко всем ${selectedProducts.length} ${pluralRu(selectedProducts.length, ['товару', 'товарам', 'товарам'])}`}
+            </span>
           </button>
         </div>
       </motion.div>

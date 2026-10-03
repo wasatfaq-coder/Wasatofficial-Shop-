@@ -327,7 +327,7 @@ export function getSynchronizedDeliveryStages(
     return 'Вручение заказа клиенту';
   };
 
-  const getStage5Desc = (status: Order['status']) => {
+  const getStage5Desc = () => {
     if (isPost) {
       return 'Предъявите паспорт или штрихкод из приложения Почты России для получения';
     }
@@ -379,7 +379,7 @@ export function getSynchronizedDeliveryStages(
       {
         id: 'stage-delivered',
         title: getStage5Title('accepted'),
-        desc: getStage5Desc('accepted'),
+        desc: getStage5Desc(),
         status: 'pending',
         time: order.estimatedDelivery || 'Ожидает вручения',
       },
@@ -424,7 +424,7 @@ export function getSynchronizedDeliveryStages(
       {
         id: 'stage-delivered',
         title: getStage5Title('assembling'),
-        desc: getStage5Desc('assembling'),
+        desc: getStage5Desc(),
         status: 'pending',
         time: order.estimatedDelivery || 'Ожидает вручения',
       },
@@ -467,7 +467,7 @@ export function getSynchronizedDeliveryStages(
       {
         id: 'stage-delivered',
         title: getStage5Title('in_transit'),
-        desc: getStage5Desc('in_transit'),
+        desc: getStage5Desc(),
         status: 'pending',
         time: order.estimatedDelivery || 'Ожидает вручения',
       },
@@ -508,7 +508,7 @@ export function getSynchronizedDeliveryStages(
       {
         id: 'stage-delivered',
         title: getStage5Title('ready'),
-        desc: getStage5Desc('ready'),
+        desc: getStage5Desc(),
         status: 'active',
         time: isPost ? 'Ожидает в отделении' : isPickup ? 'Готов к выдаче' : 'Ожидает вручения',
       },
@@ -550,7 +550,7 @@ export function getSynchronizedDeliveryStages(
     {
       id: 'stage-delivered',
       title: getStage5Title('delivered'),
-      desc: getStage5Desc('delivered'),
+      desc: getStage5Desc(),
       status: 'completed',
       time: existingStages[4]?.time && !existingStages[4].time.includes('Ожидает')
         ? existingStages[4].time

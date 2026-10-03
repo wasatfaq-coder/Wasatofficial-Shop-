@@ -16,7 +16,6 @@ interface QuickViewModalProps {
   product: Product | null;
   isOpen: boolean;
   isFavorite: boolean;
-  isInCart: boolean;
   userProfile?: UserProfile;
   onSaveMeasurements?: (measurements: BodyMeasurements) => void;
   onClose: () => void;
@@ -31,7 +30,6 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
   product,
   isOpen,
   isFavorite,
-  isInCart,
   userProfile,
   onSaveMeasurements,
   onClose,

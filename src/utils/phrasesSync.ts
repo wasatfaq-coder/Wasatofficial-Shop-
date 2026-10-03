@@ -1,6 +1,4 @@
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
-import { sanitizeForFirestore } from './firebaseSync';
+import { saveQuickPhrasesDoc, subscribeToQuickPhrasesDoc } from './firebaseSync';
 
 export interface QuickPhrasesData {
   global: string[];
@@ -149,19 +147,15 @@ export function subscribeToQuickPhrases(
   // Immediate trigger with current cache
   onUpdate(cachedPhrases);
 
-  const docRef = doc(db, 'settings', 'quick_phrases');
-
-  const unsubscribe = onSnapshot(
-    docRef,
-    (snapshot) => {
+  const unsubscribe = subscribeToQuickPhrasesDoc<QuickPhrasesData>(
+    (remote) => {
       // Nothing saved yet: the built-in phrases are offered in the admin, but nothing is written to the
       // database until the admin saves their own (no seeding, as with every other setting)
-      if (!snapshot.exists()) {
+      if (!remote) {
         notifyListeners(DEFAULT_QUICK_PHRASES);
         return;
       }
 
-      const remote = snapshot.data() as Partial<QuickPhrasesData>;
       // A list the admin emptied stays empty: the built-in phrases fill only missing fields
       const merged: QuickPhrasesData = {
         global: Array.isArray(remote.global) ? remote.global : DEFAULT_QUICK_PHRASES.global,
@@ -174,10 +168,7 @@ export function subscribeToQuickPhrases(
 
       notifyListeners(merged);
     },
-    (error) => {
-      console.warn('Firestore Quick Phrases subscription warning:', error);
-      if (onError) onError(error);
-    }
+    onError
   );
 
   return () => {
@@ -191,12 +182,7 @@ export function subscribeToQuickPhrases(
  */
 async function saveQuickPhrasesToFirestore(data: QuickPhrasesData): Promise<void> {
   notifyListeners(data);
-  try {
-    const docRef = doc(db, 'settings', 'quick_phrases');
-    await setDoc(docRef, sanitizeForFirestore(data));
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, 'settings/quick_phrases');
-  }
+  await saveQuickPhrasesDoc(data);
 }
 
 /**

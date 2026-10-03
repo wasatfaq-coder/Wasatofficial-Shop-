@@ -2689,12 +2689,13 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         onApplyBulkChanges={(updatedList, summary) => {
           const map = new Map(updatedList.map((p) => [p.id, p]));
           const merged = products.map((p) => (map.has(p.id) ? map.get(p.id)! : p));
-          onUpdateProducts(merged);
-          onShowToast(summary || 'Изменения применены', 'success');
           setIsBulkOperationsModalOpen(false);
           setSelectedProductIds([]);
+          // «applied» only after the database answered; a failure already showed «Не сохранено: …»
+          void Promise.resolve(onUpdateProducts(merged)).then((saved) => {
+            if (saved !== false) onShowToast(summary || 'Изменения применены', 'success');
+          });
         }}
-        onShowToast={onShowToast}
       />
 
       <DiscardChangesDialog {...productFormGuard.dialogProps} what="Изменения товара" />

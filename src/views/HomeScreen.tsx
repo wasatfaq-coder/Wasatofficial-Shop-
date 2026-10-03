@@ -23,7 +23,6 @@ interface HomeScreenProps {
   onSearchChange?: (query: string) => void;
   products: Product[];
   favorites: string[];
-  cartItemIds: string[];
   recentlyViewed?: Product[];
   onClearRecentlyViewed?: () => void;
   onRemoveFromRecentlyViewed?: (productId: string) => void;
@@ -36,11 +35,9 @@ interface HomeScreenProps {
   onOpenDrawer?: () => void;
   bannerSlides?: BannerSlide[];
   storefrontSettings?: StorefrontSettings;
-  onOpenSupportChat?: () => void;
   onApplyPromo?: (code: string) => boolean;
   onShowToast?: (msg: string, type?: 'success' | 'info' | 'error') => void;
   userProfile?: UserProfile;
-  onOpenMySizes?: () => void;
   onOpenFilters?: () => void;
   onSaveMeasurements?: (measurements: BodyMeasurements) => void;
   onAddToCartWithOptions?: (product: Product, color: string, size: string, quantity: number) => boolean | void;
@@ -52,7 +49,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   catalogStatus = 'ready',
   products,
   favorites,
-  cartItemIds,
   recentlyViewed = [],
   onClearRecentlyViewed,
   onRemoveFromRecentlyViewed,
@@ -64,11 +60,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenDrawer,
   bannerSlides = [],
   storefrontSettings,
-  onOpenSupportChat,
   onApplyPromo,
   onShowToast,
   userProfile,
-  onOpenMySizes,
   onOpenFilters,
   onSaveMeasurements,
   onAddToCartWithOptions,
@@ -457,7 +451,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 product={product}
                 priority={index < 4}
                 isFavorite={favorites.includes(product.id)}
-                isInCart={cartItemIds.includes(product.id)}
                 onSelect={onSelectProduct}
                 onToggleFavorite={onToggleFavorite}
                 onAddToCart={onAddToCart}
@@ -485,7 +478,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         product={quickViewProduct}
         isOpen={!!quickViewProduct}
         isFavorite={quickViewProduct ? favorites.includes(quickViewProduct.id) : false}
-        isInCart={quickViewProduct ? cartItemIds.includes(quickViewProduct.id) : false}
         userProfile={userProfile}
         onSaveMeasurements={onSaveMeasurements}
         onClose={() => setQuickViewProduct(null)}

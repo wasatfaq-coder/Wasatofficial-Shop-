@@ -1,4 +1,3 @@
-import React from 'react';
 import type { PaymentKind, PaymentRequisitesByKind } from '../../types';
 import { displayValue, REQUISITE_FIELDS } from '../../utils/paymentDetails';
 
