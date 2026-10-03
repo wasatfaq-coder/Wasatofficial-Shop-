@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { ConfirmDialog } from '../ConfirmDialog';
 import {
   Tag,
@@ -38,7 +38,8 @@ interface AdminPromoConstructorTabProps {
   products?: Product[];
   /** Orders the partner commission is counted from (paid and received only) */
   orders?: Order[];
-  onUpdatePromos: (promos: PromoCode[]) => void;
+  /** Resolves to false when the database refused the write (`persist` in App.tsx has already shown the error) */
+  onUpdatePromos: (promos: PromoCode[]) => Promise<boolean> | void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
@@ -54,6 +55,8 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
   const [promoToDelete, setPromoToDelete] = useState<PromoCode | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isSavingPromo, setIsSavingPromo] = useState(false);
+  const codeInputRef = useRef<HTMLInputElement>(null);
 
   // Form Fields
   const [code, setCode] = useState('');
@@ -197,11 +200,21 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
     );
   }, [products, productSearchQuery]);
 
-  const handleSavePromo = (e: React.FormEvent) => {
+  // Two promo codes with one code: which of them works at checkout is undefined. Checked for a new and an edited one
+  const cleanCode = code.trim().toUpperCase();
+  const codeTakenBy = cleanCode
+    ? promos.find((p) => p.id !== editingId && p.code.trim().toUpperCase() === cleanCode)
+    : undefined;
+
+  const handleSavePromo = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanCode = code.trim().toUpperCase();
+    if (isSavingPromo) return;
     if (!cleanCode) {
       onShowToast('Введите уникальный код купона', 'error');
+      return;
+    }
+    if (codeTakenBy) {
+      codeInputRef.current?.focus();
       return;
     }
     const percent = Number(partnerCommissionPercent);
@@ -219,6 +232,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
     const finalCategories = scopeType === 'categories' && selectedCategories.length > 0 ? selectedCategories : undefined;
     const finalProductIds = scopeType === 'products' && selectedProductIds.length > 0 ? selectedProductIds : undefined;
 
+    let next: PromoCode[];
     if (editingId) {
       const updated = promos.map((p) =>
         p.id === editingId
@@ -244,15 +258,8 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             }
           : p
       );
-      onUpdatePromos(updated);
-      onShowToast(`Промокод ${cleanCode} успешно обновлен`, 'success');
+      next = updated;
     } else {
-      // Check duplicate
-      if (promos.some((p) => p.code.toUpperCase() === cleanCode)) {
-        onShowToast(`Промокод ${cleanCode} уже существует`, 'error');
-        return;
-      }
-
       const newPromo: PromoCode = {
         id: `promo-${Date.now()}`,
         code: cleanCode,
@@ -278,29 +285,35 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
         commissionEarned: 0,
       };
 
-      onUpdatePromos([newPromo, ...promos]);
-      onShowToast(`Промокод ${cleanCode} создан и активирован`, 'success');
+      next = [newPromo, ...promos];
     }
 
+    // «Создан» only after the database answered; on a refusal the form keeps what was typed
+    const wasEditing = Boolean(editingId);
+    setIsSavingPromo(true);
+    const saved = await onUpdatePromos(next);
+    setIsSavingPromo(false);
+    if (saved === false) return;
+    onShowToast(wasEditing ? `Промокод ${cleanCode} обновлен` : `Промокод ${cleanCode} создан и активирован`, 'success');
     resetForm();
   };
 
-  const handleToggleActive = (id: string) => {
+  const handleToggleActive = async (id: string) => {
     const updated = promos.map((p) =>
       p.id === id ? { ...p, active: !p.active } : p
     );
-    onUpdatePromos(updated);
     const target = updated.find((p) => p.id === id);
+    if ((await onUpdatePromos(updated)) === false) return;
     onShowToast(
       `Промокод ${target?.code} ${target?.active ? 'активирован' : 'приостановлен'}`,
       'info'
     );
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     const target = promos.find((p) => p.id === id);
     const updated = promos.filter((p) => p.id !== id);
-    onUpdatePromos(updated);
+    if ((await onUpdatePromos(updated)) === false) return;
     onShowToast(`Промокод ${target?.code || ''} удален`, 'info');
   };
 
@@ -312,7 +325,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
   };
 
   // Generate Batch of Unique Single-Use Codes
-  const handleGenerateBatch = () => {
+  const handleGenerateBatch = async () => {
     const prefix = batchPrefix.trim().toUpperCase() || 'VIP-';
     const count = Math.min(Math.max(1, batchCount), 100);
     const newBatchCodes: PromoCode[] = [];
@@ -355,7 +368,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
       });
     }
 
-    onUpdatePromos([...newBatchCodes, ...promos]);
+    if ((await onUpdatePromos([...newBatchCodes, ...promos])) === false) return;
     setGeneratedBatchPreview(generatedStrings);
     onShowToast(`Сгенерировано ${count} одноразовых промокодов`, 'success');
   };
@@ -720,17 +733,26 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
           {/* Row 1: Code, Discount Type & Discount Value */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+              <label htmlFor="promo-form-code" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
                 Код промокода *
               </label>
               <input
+                ref={codeInputRef}
+                id="promo-form-code"
                 type="text"
                 required
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 placeholder="WASAT20"
+                aria-invalid={codeTakenBy ? true : undefined}
+                aria-describedby={codeTakenBy ? 'promo-form-code-error' : undefined}
                 className="w-full px-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E] uppercase font-extrabold"
               />
+              {codeTakenBy && (
+                <p id="promo-form-code-error" className="mt-1 text-xs font-bold text-danger">
+                  Такой код уже есть{codeTakenBy.title ? ` у промокода «${codeTakenBy.title}»` : ''}. Придумайте другой
+                </p>
+              )}
             </div>
 
             <div>
@@ -1194,10 +1216,11 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             </button>
             <button
               type="submit"
-              className="py-2 px-4.5 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 cursor-pointer"
+              disabled={isSavingPromo}
+              className="py-2 px-4.5 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 cursor-pointer disabled:cursor-wait"
             >
               <Check className="w-3.5 h-3.5 text-white" />
-              <span>{editingId ? 'Сохранить изменения' : 'Создать промокод'}</span>
+              <span>{isSavingPromo ? 'Сохранение…' : editingId ? 'Сохранить изменения' : 'Создать промокод'}</span>
             </button>
           </div>
         </form>

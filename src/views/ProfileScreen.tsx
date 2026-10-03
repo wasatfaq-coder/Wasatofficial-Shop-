@@ -146,7 +146,7 @@ interface ProfileScreenProps {
   onUpdateProducts?: (products: Product[]) => Promise<boolean> | void;
   onUpdateOrders?: (orders: Order[]) => Promise<boolean> | void;
   promos?: PromoCode[];
-  onUpdatePromos?: (promos: PromoCode[]) => void;
+  onUpdatePromos?: (promos: PromoCode[]) => Promise<boolean> | void;
   bannerSlides?: BannerSlide[];
   onUpdateBannerSlides?: (banners: BannerSlide[]) => void;
   chatMessages?: ChatMessage[];
@@ -310,7 +310,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const handleUpdatePromosList = (updated: PromoCode[]) => {
     setLocalPromos(updated);
-    if (onUpdatePromos) onUpdatePromos(updated);
+    return onUpdatePromos?.(updated);
   };
 
   const handleUpdateBannersList = (updated: BannerSlide[]) => {

@@ -2192,12 +2192,17 @@ export default function App() {
               }}
               promos={promos}
               onUpdatePromos={(updatedPromos) => {
-                void persist(
+                const saved = persist(
                   'промокоды',
                   deleteRemovedDocs('promos', promos, updatedPromos),
                   syncAllPromosToFirestore(changedItems(promos, updatedPromos))
                 );
                 setPromos(updatedPromos);
+                // A refused write is not left on screen: the form keeps it, the list shows the database
+                void saved.then((ok) => {
+                  if (!ok) setPromos((current) => (current === updatedPromos ? promos : current));
+                });
+                return saved;
               }}
               bannerSlides={bannerSlides}
               onUpdateBannerSlides={handleUpdateBannerSlides}

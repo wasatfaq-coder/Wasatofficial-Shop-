@@ -184,6 +184,8 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
   const [formatToDelete, setFormatToDelete] = useState<LabelFormat | null>(null);
 
   const format = formats.find((f) => f.id === formatId) ?? formats[0];
+  // Until a format is added the templates are shown on the first common size, not as blank cards (finding 18)
+  const previewFormat = format ?? LABEL_FORMAT_PRESETS[0];
 
   useEffect(() => {
     let alive = true;
@@ -572,6 +574,11 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
             {/* Templates */}
             <section className="space-y-2">
               <h4 className={sectionTitle}>Шаблон</h4>
+              {!format && (
+                <p className="text-xs text-[#4E5C70] leading-snug">
+                  Образцы — на {sizeText(previewFormat)}, пока формат не добавлен
+                </p>
+              )}
               <div className="space-y-3" role="radiogroup" aria-label="Шаблон этикетки">
                 {LABEL_TEMPLATE_GROUPS.map((group) => (
                   <div key={group.id} className="space-y-1.5">
@@ -595,13 +602,13 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                               selected ? 'neu-pill-active' : 'neu-button text-[#2D3A4E]'
                             }`}
                           >
-                            {format && current ? (
+                            {current ? (
                               <LabelCanvas
-                                format={format}
+                                format={previewFormat}
                                 template={t.id}
                                 data={labelData(current.product, current.sku)}
                                 options={previewOptions}
-                                displayWidth={fitBox(format, 84, 64)}
+                                displayWidth={fitBox(previewFormat, 84, 64)}
                                 fontsReady={fontsReady}
                                 className={`rounded-md border border-[#BAC5D5] ${blocked ? 'opacity-40' : ''}`}
                               />
@@ -722,20 +729,27 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                 )}
               </div>
               <div className="neu-inset rounded-2xl p-4 flex flex-col items-center gap-2">
-                {format && current ? (
+                {current ? (
                   <>
                     <LabelCanvas
-                      format={format}
+                      format={previewFormat}
                       template={template}
                       data={labelData(current.product, current.sku)}
                       options={previewOptions}
-                      displayWidth={fitBox(format, Math.min(280, format.widthMm * 5), 260)}
+                      displayWidth={fitBox(previewFormat, Math.min(280, previewFormat.widthMm * 5), 260)}
                       fontsReady={fontsReady}
                       className="rounded-lg border border-[#BAC5D5]"
                     />
-                    <span className="text-[11px] font-bold text-[#4E5C70]">
-                      {sizeText(format)} · {info.name}
-                    </span>
+                    {format ? (
+                      <span className="text-[11px] font-bold text-[#4E5C70]">
+                        {sizeText(format)} · {info.name}
+                      </span>
+                    ) : (
+                      <p className="text-xs font-bold text-[#4E5C70] text-center leading-snug">
+                        Образец на {sizeText(previewFormat)} · {info.name}. Добавьте формат вашего принтера в «Формат
+                        этикетки» — этикетка подстроится под него
+                      </p>
+                    )}
                     {dropped.length > 0 && (
                       <p className="text-xs font-bold text-warning text-center leading-snug">
                         Не поместилось: {dropped.join(', ')}. Выберите формат крупнее или шаблон проще.
@@ -744,7 +758,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                   </>
                 ) : (
                   <p className="text-xs font-bold text-[#4E5C70] py-6 text-center">
-                    {format ? 'Нет вариантов для этикеток' : 'Добавьте формат, чтобы увидеть этикетку'}
+                    Нет вариантов для этикеток
                   </p>
                 )}
               </div>

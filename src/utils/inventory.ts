@@ -95,6 +95,23 @@ export function extractSizeName(size: unknown): string {
   return String(size);
 }
 
+/** The part of a SKU code taken from the category: «SH» for shirts, «PR» without a category */
+const skuCategoryCode = (category?: string) => (category ? category.slice(0, 2).toUpperCase() : 'PR');
+
+/**
+ * A new product's codes follow its category: a variant added before the category was picked («WS-PR01-…»), or
+ * under the category picked before, gets the code of the new one. A code typed or kept from elsewhere stays.
+ */
+export function recategorizeSkuCode(
+  skuCode: string | undefined,
+  fromCategory: string,
+  toCategory: string,
+  prefix: 'WS' | 'MS' = 'WS'
+): string | undefined {
+  const from = `${prefix}-${skuCategoryCode(fromCategory)}`;
+  return skuCode?.startsWith(from) ? `${prefix}-${skuCategoryCode(toCategory)}${skuCode.slice(from.length)}` : skuCode;
+}
+
 /**
  * Generate a standard SKU Code (e.g. WS-SH01-BEI-L).
  * New products get the WS prefix; codes filled in for existing SKUs keep MS, so they don't change.
@@ -105,7 +122,7 @@ export function generateSkuCode(
   size: unknown,
   prefix: 'WS' | 'MS' = 'MS'
 ): string {
-  const catCode = product.category ? product.category.slice(0, 2).toUpperCase() : 'PR';
+  const catCode = skuCategoryCode(product.category);
   const idNum = (product.id ? String(product.id) : '01').replace(/[^0-9]/g, '').slice(0, 2) || '01';
   const colorStr = extractColorName(color);
   const colorCode = colorStr

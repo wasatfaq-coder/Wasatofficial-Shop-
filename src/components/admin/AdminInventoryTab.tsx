@@ -793,7 +793,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
             <button
               type="button"
               onClick={() => handleCopySku(sku.skuCode)}
-              className="inline-flex items-center gap-1 hover:text-accent transition-colors cursor-pointer truncate text-left"
+              className="inline-flex items-center gap-1 min-h-6 hover:text-accent transition-colors cursor-pointer truncate text-left"
               title="Скопировать артикул"
               aria-label={`Скопировать артикул ${sku.skuCode}`}
             >
@@ -926,6 +926,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
               <input
                 type="text"
                 placeholder="Название, артикул, штрихкод или цвет"
+                aria-label="Поиск по складу"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-8 pr-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
@@ -1111,8 +1112,9 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                           <button
                             type="button"
                             onClick={() => handleCopySku(sku.skuCode)}
-                            className="inline-flex items-center gap-1 hover:text-accent transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1 min-h-6 hover:text-accent transition-colors cursor-pointer"
                             title="Скопировать артикул"
+                            aria-label={`Скопировать артикул ${sku.skuCode}`}
                           >
                             <span>{sku.skuCode}</span>
                             {isCopied ? (
@@ -1161,8 +1163,9 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
 
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center gap-1.5 text-xs">
-                  <span className="text-[11px] font-bold text-[#4E5C70]">Инспектор:</span>
+                  <label htmlFor="inventory-audit-operator" className="text-[11px] font-bold text-[#4E5C70]">Инспектор:</label>
                   <input
+                    id="inventory-audit-operator"
                     type="text"
                     value={auditOperator}
                     onChange={(e) => setAuditOperator(e.target.value)}
@@ -1278,6 +1281,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
             <input
               type="text"
               placeholder="Артикул, товар, цвет или штрихкод"
+              aria-label="Поиск по инвентаризации"
               value={auditSearchQuery}
               onChange={(e) => setAuditSearchQuery(e.target.value)}
               className="w-full pl-8 pr-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
@@ -1286,8 +1290,8 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
               <button
                 type="button"
                 onClick={() => setAuditSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#4E5C70] hover:text-[#2D3A4E]"
-                aria-label="Закрыть"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 inline-flex items-center justify-center rounded-lg text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                aria-label="Очистить поиск"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -1471,8 +1475,8 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                 <button
                   type="button"
                   onClick={() => setLogSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#4E5C70] hover:text-[#2D3A4E]"
-                  aria-label="Закрыть"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 inline-flex items-center justify-center rounded-lg text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                  aria-label="Очистить поиск"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -1710,10 +1714,11 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
 
               <div className="grid grid-cols-2 gap-2">
                 <div className="min-w-0">
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1 truncate">
+                  <label htmlFor="inventory-op-quantity" className="block text-[11px] font-bold text-[#4E5C70] mb-1 truncate">
                     Количество (шт.)
                   </label>
                   <input
+                    id="inventory-op-quantity"
                     type="number"
                     min="1"
                     max="500"
@@ -1724,10 +1729,11 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                   />
                 </div>
                 <div className="min-w-0">
-                  <label className="block text-[11px] font-bold text-[#4E5C70] mb-1 truncate">
+                  <label htmlFor="inventory-op-operator" className="block text-[11px] font-bold text-[#4E5C70] mb-1 truncate">
                     Оператор
                   </label>
                   <input
+                    id="inventory-op-operator"
                     type="text"
                     value={opOperator}
                     onChange={(e) => setOpOperator(e.target.value)}
@@ -1737,10 +1743,11 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                <label htmlFor="inventory-op-reason" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
                   Основание / Причина
                 </label>
                 <input
+                  id="inventory-op-reason"
                   type="text"
                   value={opReason}
                   onChange={(e) => setOpReason(e.target.value)}
