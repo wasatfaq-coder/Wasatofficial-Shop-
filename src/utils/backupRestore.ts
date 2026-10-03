@@ -17,6 +17,7 @@ export const RESTORE_SKIPPED: Record<string, string> = {
 /** Human names of the collections in the restore window */
 export const BACKUP_COLLECTION_TITLES: Record<string, string> = {
   products: 'Товары',
+  product_photos: 'Фото товаров',
   product_costs: 'Себестоимость',
   promos: 'Промокоды',
   settings: 'Настройки витрины',

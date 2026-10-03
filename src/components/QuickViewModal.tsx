@@ -7,6 +7,7 @@ import { RatingBadge } from './RatingBadge';
 import { AnimatedFavoriteButton } from './AnimatedFavoriteButton';
 import { getProductRating } from '../utils/productRating';
 import { productImage } from '../utils/productImage';
+import { useProductPhotos } from '../utils/useProductPhotos';
 import { getOrderableStock, getVariantStock } from '../utils/inventory';
 import { colorStock, initialColor, initialSize, maxOrderableForColor, profileSizeFor } from '../utils/variantSelection';
 import { useDialogA11y } from '../utils/useDialogA11y';
@@ -41,6 +42,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
 }) => {
   const dialog = useDialogA11y(isOpen && Boolean(product), onClose);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const photos = useProductPhotos(product);
   const [selectedColor, setSelectedColor] = useState(product?.colors?.[0]?.name || '');
   // No size is preselected unless there is only one (same as the product page)
   const [selectedSize, setSelectedSize] = useState(() => initialSize(product));
@@ -128,7 +130,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
               {/* Main Image Box */}
               <div className="relative w-full aspect-[4/5] rounded-2xl overflow-hidden flex items-center justify-center">
                 <img
-                  src={productImage(product, selectedImageIndex)}
+                  src={photos[selectedImageIndex] || productImage(product, selectedImageIndex)}
                   alt={product.title}
                   loading="lazy"
                   decoding="async"

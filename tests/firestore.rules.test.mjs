@@ -1009,3 +1009,20 @@ describe('users & admins', () => {
     await assertFails(setDoc(doc(owner(), 'admins/alice'), { role: 'admin' }));
   });
 });
+
+// Этап 6 (находка 18): полные фото товара — отдельные документы, читает любой посетитель, пишет администратор
+describe('product photos', () => {
+  const photo = { productId: 'p1', data: 'data:image/jpeg;base64,AAAA' };
+
+  test('anyone reads a photo, only the admin writes it, and only a picture', async () => {
+    await assertSucceeds(setDoc(doc(owner(), 'product_photos/p1_a'), photo));
+    await assertSucceeds(getDoc(doc(guest(), 'product_photos/p1_a')));
+    await assertFails(setDoc(doc(customer(), 'product_photos/p1_b'), photo));
+    await assertFails(setDoc(doc(guest(), 'product_photos/p1_b'), photo));
+    // a link or an extra field is not a photo of the store
+    await assertFails(setDoc(doc(owner(), 'product_photos/p1_c'), { productId: 'p1', data: 'https://attacker.example/x.png' }));
+    await assertFails(setDoc(doc(owner(), 'product_photos/p1_d'), { ...photo, note: 'x' }));
+    await assertFails(deleteDoc(doc(customer(), 'product_photos/p1_a')));
+    await assertSucceeds(deleteDoc(doc(owner(), 'product_photos/p1_a')));
+  });
+});

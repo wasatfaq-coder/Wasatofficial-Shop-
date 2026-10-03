@@ -29,6 +29,7 @@ import { DEFAULT_STOREFRONT_SETTINGS, stockMovementId } from './inventory';
 import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
 import type { LegalDocId, LegalTexts } from './legalDocs';
 import type { RestoreWrite } from './backupRestore';
+import { splitProductPhotos, type PhotoDoc } from './productPhotos';
 import { compressBase64Image } from './imageUpload';
 import { SERVER_CONFIG_DOC_ID, ServerConfig } from '../shared/orderApi';
 import {
@@ -563,6 +564,67 @@ export async function saveStockMovements(movements: StockMovementLog[]) {
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, STOCK_MOVEMENTS_COLLECTION);
   }
+}
+
+/** Full photos already read in this visit: the product page and the zoom do not read them again */
+const productPhotoCache = new Map<string, string>();
+
+/** Full photos of a product by id (stage 6): a missing document is left out — the page shows the preview */
+export async function loadProductPhotos(ids: string[]): Promise<Record<string, string>> {
+  const wanted = [...new Set(ids.filter(Boolean))];
+  await Promise.all(
+    wanted
+      .filter((id) => !productPhotoCache.has(id))
+      .map(async (id) => {
+        try {
+          const snap = await getDoc(doc(db, 'product_photos', id));
+          const data = snap.data()?.data;
+          if (typeof data === 'string') productPhotoCache.set(id, data);
+        } catch (error) {
+          console.warn(`Photo ${id} was not read:`, error);
+        }
+      })
+  );
+  return Object.fromEntries(wanted.filter((id) => productPhotoCache.has(id)).map((id) => [id, productPhotoCache.get(id)!]));
+}
+
+/** Writes full photos (admin), 10 per batch: a photo is up to 400 КБ and a request takes 10 MiB */
+export async function saveProductPhotos(photos: PhotoDoc[]): Promise<void> {
+  for (let i = 0; i < photos.length; i += 10) {
+    const batch = writeBatch(db);
+    for (const photo of photos.slice(i, i + 10)) {
+      batch.set(doc(db, 'product_photos', photo.id), { productId: photo.productId, data: photo.data });
+      productPhotoCache.set(photo.id, photo.data);
+    }
+    await batch.commit();
+  }
+}
+
+/** Removes photo documents the products no longer use (after the product was saved) */
+export async function deleteProductPhotos(ids: string[]): Promise<void> {
+  const list = ids.filter(Boolean);
+  for (let i = 0; i < list.length; i += BATCH_LIMIT) {
+    const batch = writeBatch(db);
+    for (const id of list.slice(i, i + BATCH_LIMIT)) batch.delete(doc(db, 'product_photos', id));
+    await batch.commit();
+  }
+}
+
+/**
+ * A product with photos still inside: they go to `product_photos`, the product keeps previews (admin session, once).
+ * Photos are written first, then only `images` and `photoIds` of the product change — the stock is not touched.
+ */
+export async function moveProductPhotosOut(product: Product): Promise<boolean> {
+  const known = new Map<string, string>();
+  (product.images ?? []).forEach((src, i) => {
+    const id = product.photoIds?.[i];
+    if (id) known.set(src, id);
+  });
+  const { images, photoIds, newPhotos } = await splitProductPhotos(product.id, product.images ?? [], known);
+  if (newPhotos.length === 0) return false;
+  await saveProductPhotos(newPhotos);
+  await updateDoc(doc(db, 'products', product.id), { images, photoIds });
+  return true;
 }
 
 /**
@@ -1540,7 +1602,7 @@ export async function syncAllPickupPointsToFirestore(points: PickupPoint[]) {
  */
 /** Every collection of the store; `test` holds only the connection probe */
 export const BACKUP_COLLECTIONS = [
-  'products', 'product_costs', 'promos', 'settings', 'banners', 'delivery_methods', 'pickup_points',
+  'products', 'product_photos', 'product_costs', 'promos', 'settings', 'banners', 'delivery_methods', 'pickup_points',
   'orders', 'users', 'customer_notes', 'admins', 'reviews', 'review_votes',
   'chat_messages', 'support_threads', 'support_status', STOCK_MOVEMENTS_COLLECTION, 'promo_uses', 'payment_templates',
 ] as const;

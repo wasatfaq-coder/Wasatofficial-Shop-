@@ -39,6 +39,7 @@ import {
 import { photoBadgeClass } from '../utils/productBadge';
 import { getProductRating } from '../utils/productRating';
 import { productImage } from '../utils/productImage';
+import { useProductPhotos } from '../utils/useProductPhotos';
 import { QUICK_ORDER_DELIVERY_TITLE } from '../shared/orderPricing';
 
 interface ProductDetailScreenProps {
@@ -94,6 +95,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   freeDeliveryThreshold,
 }) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  // full photos from product_photos replace the catalog previews as they arrive (stage 6)
+  const photos = useProductPhotos(product);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [selectedColor, setSelectedColor] = useState(product?.colors?.[0]?.name || '');
   // No size is preselected (unless there is only one): a default size put wrong items in the cart
@@ -262,7 +265,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           className="relative w-full aspect-[3/4] sm:aspect-[4/5] lg:max-h-[calc(100vh-11rem)] rounded-2xl overflow-hidden select-none group/detailimg cursor-zoom-in"
         >
           <NeumorphicImage
-            src={productImage(product, selectedImageIndex)}
+            src={photos[selectedImageIndex] || productImage(product, selectedImageIndex)}
             alt={product?.title || ''}
             containerClassName="w-full h-full rounded-2xl"
             className="w-full h-full object-cover object-top transition-transform duration-500 group-hover/detailimg:scale-[1.03]"
@@ -883,7 +886,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
       {/* High Resolution Multi-angle Image Zoom Modal */}
       <ProductImageZoomModal
         isOpen={isZoomModalOpen}
-        images={product.images}
+        images={photos}
         initialIndex={selectedImageIndex}
         productTitle={product.title}
         onClose={() => setIsZoomModalOpen(false)}
