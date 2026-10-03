@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { LazyMount } from '../components/LazyMount';
+import { ProductImageZoomModal, QuickOrderModal, SizeCalculatorModal } from '../components/lazyWindows';
 import {
   Minus,
   Plus,
@@ -19,12 +21,9 @@ import {
 } from 'lucide-react';
 import { formatDays } from '../utils/pluralize';
 import { Product, ActiveTab, UserProfile, BodyMeasurements, CartItem } from '../types';
-import { SizeCalculatorModal } from '../components/SizeCalculatorModal';
 import { RecentlyViewed } from '../components/RecentlyViewed';
 import { RatingBadge } from '../components/RatingBadge';
 import { NeumorphicImage } from '../components/NeumorphicImage';
-import { ProductImageZoomModal } from '../components/ProductImageZoomModal';
-import { QuickOrderModal } from '../components/QuickOrderModal';
 import { AnimatedFavoriteButton } from '../components/AnimatedFavoriteButton';
 import { ProductReviewsSection } from '../components/ProductReviewsSection';
 import { getVariantStock, getProductSKU, getOrderableStock } from '../utils/inventory';
@@ -884,6 +883,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
       )}
 
       {/* High Resolution Multi-angle Image Zoom Modal */}
+      <LazyMount when={isZoomModalOpen}>
       <ProductImageZoomModal
         isOpen={isZoomModalOpen}
         images={photos}
@@ -891,6 +891,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
         productTitle={product.title}
         onClose={() => setIsZoomModalOpen(false)}
       />
+      </LazyMount>
 
       {/* Quick 1-Click Order Modal */}
       {!addButtonInView && orderableStock > 0 && (
@@ -917,6 +918,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
         </div>
       )}
 
+      <LazyMount when={isQuickOrderOpen}>
       <QuickOrderModal
         isOpen={isQuickOrderOpen}
         onClose={() => setIsQuickOrderOpen(false)}
@@ -929,8 +931,10 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
         totalPrice={product.price * quantity}
         onSuccess={handleQuickOrderSuccess}
       />
+      </LazyMount>
 
       {/* Size Calculator Modal */}
+      <LazyMount when={isSizeCalcOpen}>
       <SizeCalculatorModal
         isOpen={isSizeCalcOpen}
         onClose={() => setIsSizeCalcOpen(false)}
@@ -944,6 +948,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
         userProfile={userProfile}
         onSaveMeasurements={onSaveMeasurements}
       />
+      </LazyMount>
     </div>
   );
 };

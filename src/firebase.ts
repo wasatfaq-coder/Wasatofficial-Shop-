@@ -12,7 +12,6 @@ import {
 } from 'firebase/auth';
 import { Firestore, connectFirestoreEmulator, initializeFirestore, getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
-import { connectFunctionsEmulator, getFunctions, httpsCallable } from 'firebase/functions';
 import firebaseConfig from '../firebase-applet-config.json';
 import { FUNCTIONS_REGION, PLACE_ORDER_FUNCTION, PlaceOrderRequest, PlaceOrderResponse } from './shared/orderApi';
 
@@ -62,11 +61,17 @@ export const db = createFirestore(app);
 export const auth = getAuth(app);
 connectEmulators(app, db);
 
-const functions = getFunctions(app, FUNCTIONS_REGION);
-if (USE_EMULATORS) {
-  connectFunctionsEmulator(functions, '127.0.0.1', 5001);
+// The Functions client is loaded only for server orders («Витрина» → «Проверка заказов на сервере»): ≈ 8 КБ gzip off
+// the main bundle (audit 02.10, finding 37)
+let placeOrderCallablePromise: Promise<(request: PlaceOrderRequest) => Promise<{ data: PlaceOrderResponse }>> | null = null;
+function placeOrderCallable(request: PlaceOrderRequest) {
+  placeOrderCallablePromise ??= import('firebase/functions').then(({ connectFunctionsEmulator, getFunctions, httpsCallable }) => {
+    const functions = getFunctions(app, FUNCTIONS_REGION);
+    if (USE_EMULATORS) connectFunctionsEmulator(functions, '127.0.0.1', 5001);
+    return httpsCallable<PlaceOrderRequest, PlaceOrderResponse>(functions, PLACE_ORDER_FUNCTION);
+  });
+  return placeOrderCallablePromise.then((call) => call(request));
 }
-const placeOrderCallable = httpsCallable<PlaceOrderRequest, PlaceOrderResponse>(functions, PLACE_ORDER_FUNCTION);
 
 /**
  * True when the placeOrder function is deployed and answers: an empty request comes back as
