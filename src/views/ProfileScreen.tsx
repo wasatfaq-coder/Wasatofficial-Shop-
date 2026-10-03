@@ -3122,7 +3122,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                   products={productsList}
                   promos={promos}
                   onUpdateOrders={handleUpdateOrders}
-                  onUpdateProducts={handleUpdateProductsList}
                   onShowToast={onShowToast}
                   onReviewReceipt={handleReviewReceipt}
                   onOpenSupportChat={(orderId, customerName) => {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { isPreorderVariant } from '../utils/inventory';
+import { isPreorderVariant, stockProblemText, type OrderStockProblem } from '../utils/inventory';
 import { pluralRu } from '../utils/pluralize';
 import { LegalConsentNote } from '../components/LegalConsentNote';
 import {
@@ -66,6 +66,8 @@ interface CheckoutScreenProps {
   onShowToast?: (text: string, type?: 'success' | 'info' | 'error') => void;
   deliveryMethods?: DeliveryMethod[];
   pickupPoints?: PickupPoint[];
+  /** Cart lines beyond the stock now (finding 4): listed above «Подтвердить», the order is not sent */
+  stockProblems?: OrderStockProblem[];
 }
 
 // Contacts typed on checkout survive «Назад» within the tab session (sessionStorage, per account)
@@ -110,6 +112,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   deliveryMethods,
   pickupPoints,
   hasActivePromos = false,
+  stockProblems = [],
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -360,6 +363,14 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
         : 'Пункты выдачи пока не добавлены. Выберите другой способ доставки.';
       setValidationError(text);
       onShowToast?.(text, 'error');
+      return;
+    }
+
+    // Not enough stock: the list above «Подтвердить» gets the focus — the buyer changes the cart first
+    if (stockProblems.length > 0) {
+      const block = document.getElementById('checkout-stock');
+      block?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      block?.focus({ preventScroll: true });
       return;
     }
 
@@ -1425,6 +1436,33 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
             </span>
           </div>
         </div>
+
+        {/* Cart beyond the stock now: what and how much is left, and the way back to the cart */}
+        {stockProblems.length > 0 && (
+          <div
+            id="checkout-stock"
+            role="alert"
+            tabIndex={-1}
+            className="p-3.5 rounded-2xl bg-danger-soft border border-danger/35 text-xs text-[#2D3A4E] space-y-2"
+          >
+            <p className="font-extrabold text-danger flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
+              Не хватает на складе
+            </p>
+            <ul className="space-y-0.5 list-disc list-inside">
+              {stockProblems.map((p) => (
+                <li key={`${p.productId}-${p.color}-${p.size}`}>{stockProblemText(p)}</li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={() => setActiveTab('cart')}
+              className="h-8 px-3 rounded-xl neu-button text-xs font-bold text-danger cursor-pointer"
+            >
+              Изменить корзину
+            </button>
+          </div>
+        )}
 
         {/* Error notification banner right above submit if validation failed */}
         {validationError && (

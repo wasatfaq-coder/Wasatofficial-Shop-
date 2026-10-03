@@ -32,7 +32,9 @@ import {
   Palette,
   Ruler,
 } from 'lucide-react';
-import { Product, ProductSKU } from '../../types';
+import { Product, ProductSKU, StockMovementLog } from '../../types';
+import { saveStockMovements } from '../../utils/firebaseSync';
+import { formatOrderDate } from '../../shared/orderDate';
 import { SelectCheckbox } from './SelectCheckbox';
 import { exportProductsToCSV, parseProductsFromCSV } from '../../utils/csvHelpers';
 import { processImageFiles } from '../../utils/imageUpload';
@@ -41,6 +43,8 @@ import {
   generateSkuCode,
   generateBarcode,
   getProductTotalStock,
+  mergeFormStock,
+  stockMovementId,
 } from '../../utils/inventory';
 import { articleGroupKey, collectBarcodes, unifyArticleBarcodes } from '../../shared/barcode';
 import { AdminBulkOperationsModal } from './AdminBulkOperationsModal';
@@ -160,6 +164,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   const [formSizes, setFormSizes] = useState<string[]>([]);
   const [formColors, setFormColors] = useState<{ name: string; hex: string }[]>([]);
   const [formSkus, setFormSkus] = useState<ProductSKU[]>([]);
+  /** The variants as the form opened them: a stock not changed in the form is saved as it is in the database now */
+  const [formSkusOpened, setFormSkusOpened] = useState<ProductSKU[]>([]);
   // Card sections (description highlights, composition, characteristics, care)
   const [formCard, setFormCard] = useState<ProductCardStructure>(EMPTY_CARD_STRUCTURE);
   // What the product will take in the database: photos (data: URIs) are almost all of it
@@ -397,18 +403,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     setIsBulkCategoryDropdownOpen(false);
   };
 
-  const handleBulkRestock = () => {
-    const updated = products.map((p) => {
-      if (!selectedProductIds.includes(p.id)) return p;
-      const skus = p.skus && p.skus.length > 0 ? p.skus : generateDefaultSKUs(p);
-      const updatedSkus = skus.map((s) => ({ ...s, stock: s.stock + 5 }));
-      return { ...p, skus: updatedSkus, inStock: true };
-    });
-    onUpdateProducts(updated);
-    onShowToast(`Остатки пополнены (+5 шт на SKU) для ${selectedProductIds.length} товаров`, 'success');
-    setSelectedProductIds([]);
-  };
-
   const handleBulkApplyDiscount = () => {
     if (!bulkDiscountPercent || bulkDiscountPercent <= 0) return;
     const factor = (100 - bulkDiscountPercent) / 100;
@@ -489,6 +483,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     setFormSizes([]);
     setFormColors([]);
     setFormSkus([]);
+    setFormSkusOpened([]);
     setFormCard(EMPTY_CARD_STRUCTURE);
     setShowFormErrors(false);
     setSaveError(null);
@@ -510,9 +505,10 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     setFormSizes([...(prod.sizes ?? [])]);
     setFormColors([...(prod.colors ?? [])]);
     // Without saved variants the stock is unknown: variants start at 0 for the admin to fill in
-    setFormSkus(
-      prod.skus && prod.skus.length > 0 ? prod.skus : generateDefaultSKUs(prod).map((sku) => ({ ...sku, stock: 0 }))
-    );
+    const openedSkus =
+      prod.skus && prod.skus.length > 0 ? prod.skus : generateDefaultSKUs(prod).map((sku) => ({ ...sku, stock: 0 }));
+    setFormSkus(openedSkus);
+    setFormSkusOpened(openedSkus);
     setFormCard(cardStructureFromProduct(prod));
     setShowFormErrors(false);
     setSaveError(null);
@@ -554,7 +550,32 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       [{ id: savedId, skus: formSkus }, ...products.filter((p) => p.id !== savedId)],
       new Set(formSkus.map((s) => articleGroupKey(savedId, s.color)))
     );
-    const savedSkus = savedDraft.skus ?? formSkus;
+    // Stocks the form did not change come from the database now; changed ones go to the journal (findings 5 and 9)
+    const live = editingProduct ? products.find((p) => p.id === editingProduct.id) : undefined;
+    const { skus: savedSkus, changes: stockChanges } = mergeFormStock(
+      savedDraft.skus ?? formSkus,
+      editingProduct ? formSkusOpened : [],
+      live?.skus ?? []
+    );
+    const journal = (productId: string, title: string): StockMovementLog[] => {
+      const at = new Date();
+      return stockChanges.map(({ sku, before, after }) => ({
+        id: stockMovementId(),
+        createdAt: at.toISOString(),
+        date: formatOrderDate(at),
+        type: after > before ? 'receipt' : 'writeoff',
+        productId,
+        productTitle: title,
+        skuCode: sku.skuCode ?? '',
+        color: sku.color,
+        size: sku.size,
+        changeQuantity: after - before,
+        previousStock: before,
+        newStock: after,
+        reason: editingProduct ? 'Правка остатка в форме товара' : 'Остаток при создании товара',
+        operator: 'Администратор',
+      }));
+    };
 
     if (editingProduct) {
       const updated: Product = {
@@ -575,7 +596,11 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         ...cardFields,
       };
 
-      await finishSave(products.map((p) => (p.id === editingProduct.id ? updated : p)), `Товар «${formTitle.trim()}» сохранен`);
+      await finishSave(
+        products.map((p) => (p.id === editingProduct.id ? updated : p)),
+        `Товар «${formTitle.trim()}» сохранен`,
+        journal(updated.id, updated.title)
+      );
     } else {
       const newProd: Product = {
         id: `prod-${Date.now()}`,
@@ -598,17 +623,24 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         isNew: true,
       };
 
-      await finishSave([newProd, ...products], `Товар «${formTitle.trim()}» добавлен в каталог`);
+      await finishSave([newProd, ...products], `Товар «${formTitle.trim()}» добавлен в каталог`, journal(newProd.id, newProd.title));
     }
   };
 
   /** The form closes and says «сохранен» only after the database accepted the product; otherwise the input stays */
-  const finishSave = async (next: Product[], successText: string) => {
+  const finishSave = async (next: Product[], successText: string, movements: StockMovementLog[] = []) => {
     setIsSavingProduct(true);
     try {
       if ((await onUpdateProducts(next)) === false) {
         setSaveError('База не приняла товар (ошибка — в сообщении внизу экрана). Введённое осталось в форме: проверьте соединение и нажмите ещё раз');
         return;
+      }
+      // every stock change is a journal entry («Склад и SKU» → «Журнал движений»)
+      if (movements.length > 0) {
+        saveStockMovements(movements).catch((err) => {
+          console.error('Stock journal was not written:', err);
+          onShowToast('Не сохранено: запись в журнале склада. Остатки изменены, проверьте соединение.', 'error');
+        });
       }
       onShowToast(successText, 'success');
       setIsProductFormOpen(false);
@@ -848,17 +880,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         onShowToast(`Размер «${sizeToRemove}» удален`, 'info');
       },
     });
-  };
-
-  // Bulk SKU stock adjustment helpers
-  const handleBulkChangeAllSkuStock = (delta: number) => {
-    setFormSkus((prev) =>
-      prev.map((s) => ({
-        ...s,
-        stock: Math.max(0, (s.stock || 0) + delta),
-      }))
-    );
-    onShowToast(`Остатки всех вариаций изменены на ${delta > 0 ? `+${delta}` : delta} шт.`, 'info');
   };
 
   const handleResetAllSkuStock = () => {
@@ -1167,15 +1188,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                 </div>
               )}
             </div>
-
-            <button
-              onClick={handleBulkRestock}
-              className="h-8 px-3 neu-button rounded-xl text-[11px] font-extrabold text-[#4E5C70] hover:text-success flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-all"
-              title="Пополнить складские остатки всех выбранных на +5 шт"
-            >
-              <Boxes className="w-3.5 h-3.5 text-success" />
-              +5 шт на SKU
-            </button>
 
             <button
               onClick={() => handleBulkToggleStock(false)}
@@ -2099,22 +2111,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
                       {/* Bulk Adjustments */}
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <button
-                          type="button"
-                          onClick={() => handleBulkChangeAllSkuStock(5)}
-                          className="h-7 px-2.5 rounded-lg neu-button text-[11px] font-bold text-accent transition-all cursor-pointer whitespace-nowrap"
-                          title="Добавить +5 шт. ко всем вариациям"
-                        >
-                          +5
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleBulkChangeAllSkuStock(10)}
-                          className="h-7 px-2.5 rounded-lg neu-button text-[11px] font-bold text-accent transition-all cursor-pointer whitespace-nowrap"
-                          title="Добавить +10 шт. ко всем вариациям"
-                        >
-                          +10
-                        </button>
                         <button
                           type="button"
                           onClick={handleResetAllSkuStock}

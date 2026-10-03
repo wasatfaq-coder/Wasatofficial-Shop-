@@ -13,11 +13,18 @@ import {
   UserCheck,
   Truck,
 } from 'lucide-react';
-import { Order, CartItem, Product, OrderAdjustmentLog, PromoCode, StockMovementLog } from '../../types';
+import { Order, CartItem, Product, OrderAdjustmentLog, PromoCode } from '../../types';
 import { adjustedOrderTotals } from '../../utils/orderAdjustment';
 import { motion, AnimatePresence } from 'motion/react';
 import { NeumorphicSelect } from '../NeumorphicSelect';
-import { deductStockWithLogs, returnStockWithLogs, extractColorName, extractSizeName } from '../../utils/inventory';
+import {
+  extractColorName,
+  extractSizeName,
+  stockShortages,
+  type StockShortage,
+} from '../../utils/inventory';
+import { ConfirmDialog } from '../ConfirmDialog';
+import { applyAdminStockChanges, type AdminStockChange } from '../../utils/firebaseSync';
 import { adminStatusLabel } from '../../utils/orderFlow';
 import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
 import { orderLineImage } from '../../utils/productImage';
@@ -32,11 +39,8 @@ interface AdminOrderAdjustmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaveAdjustment: (updatedOrder: Order, adjustmentLog: OrderAdjustmentLog | null) => void;
-  /** Promo codes: a percent code of the order is recalculated for the new items */
+  /** Promo codes: tells a percent code of the order (it keeps the order's own percent) from a fixed one */
   promos?: PromoCode[];
-  onUpdateProducts?: (updated: Product[]) => void;
-  /** Writes the stock changes of the adjustment to the stock journal */
-  onRecordStockMovements?: (movements: StockMovementLog[]) => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
@@ -56,8 +60,6 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
   onClose,
   onSaveAdjustment,
   promos = [],
-  onUpdateProducts,
-  onRecordStockMovements,
   onShowToast,
 }) => {
   const [items, setItems] = useState<CartItem[]>(() =>
@@ -170,66 +172,8 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
     onShowToast(`Товар "${selectedProductToAdd.title}" добавлен в заказ`, 'success');
   };
 
-  const handleConfirmAdjustment = () => {
-    if (items.length === 0) {
-      onShowToast('Заказ не может быть пустым. Если заказ отменен полностью, измените статус на отменен.', 'error');
-      return;
-    }
-
-    const isTK = isTransportCompanyDelivery(order?.deliveryMethod, order?.trackingCompany);
-    const effectiveTrackingNumber = isTK ? (trackingNumber.trim() || undefined) : undefined;
-
-    // Only the track number changed: the items, the sum and the history stay as they were
-    if (!itemsChanged) {
-      onSaveAdjustment({ ...order, trackingNumber: effectiveTrackingNumber }, null);
-      onClose();
-      return;
-    }
-
-    const now = new Date();
-    const formattedDate = `${now.toLocaleDateString('ru-RU', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    })} в ${now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
-
-    const summaryText = isRefund
-      ? `Частичный возврат: ${delta.toLocaleString('ru-RU')} ₽ (состав изменен: ${items.length} позиций)`
-      : isExtraCharge
-      ? `Добавлены позиции, доплата: ${Math.abs(delta).toLocaleString('ru-RU')} ₽`
-      : `Состав скорректирован (${items.length} позиций, сумма осталась неизменной)`;
-
-    const log: OrderAdjustmentLog = {
-      id: `adj-log-${Date.now()}`,
-      date: formattedDate,
-      reason,
-      previousTotal: initialTotal,
-      newTotal: newItemsTotal,
-      refundAmount: isRefund ? delta : undefined,
-      additionalCharge: isExtraCharge ? Math.abs(delta) : undefined,
-      note: customNote.trim() || undefined,
-      changedItemsSummary: summaryText,
-    };
-
-    const existingLogs = order.adjustmentLogs || [];
-    const updatedLogs = [log, ...existingLogs];
-
-    // Add a step in order tracking history
-    const adjustmentHistoryStep = {
-      title: isRefund ? `Частичный возврат (${delta.toLocaleString('ru-RU')} ₽)` : 'Состав заказа скорректирован',
-      date: formattedDate,
-      completed: true,
-      description: `${reason}. ${customNote ? `Примечание: ${customNote}` : ''}`,
-    };
-
-    const updatedHistorySteps = order.historySteps
-      ? [...order.historySteps, adjustmentHistoryStep]
-      : [
-          { title: 'Заказ принят', date: order.date, completed: true },
-          adjustmentHistoryStep,
-        ];
-
-    // Calculate stock changes between original order items and new adjusted items
+  /** Stock changes between the order's items and the edited ones: what goes back, what is taken */
+  const computeStockDiff = () => {
     const returnedItems: CartItem[] = [];
     const addedItems: CartItem[] = [];
 
@@ -278,38 +222,106 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
         });
       }
     });
+    return { returnedItems, addedItems };
+  };
 
-    let currentProducts = [...products];
-    const movements: StockMovementLog[] = [];
+  /** Added goods that are not in stock: the admin sees the list and decides (audit 02.10, finding 6) */
+  const [pendingShortages, setPendingShortages] = useState<StockShortage[] | null>(null);
 
-    // Apply returns if any
-    if (returnedItems.length > 0) {
-      const resReturn = returnStockWithLogs(
-        currentProducts,
-        returnedItems,
-        order.id,
-        `Корректировка состава заказа: ${reason}`,
-        'Менеджер склада'
-      );
-      currentProducts = resReturn.updatedProducts;
-      movements.push(...resReturn.generatedLogs);
+  const handleConfirmAdjustment = (acceptShortages = false) => {
+    if (items.length === 0) {
+      onShowToast('Заказ не может быть пустым. Если заказ отменен полностью, измените статус на отменен.', 'error');
+      return;
     }
 
-    // Apply deductions if any
-    if (addedItems.length > 0) {
-      const resDeduct = deductStockWithLogs(
-        currentProducts,
-        addedItems,
-        order.id,
-        'Менеджер склада (добавление в заказ)'
-      );
-      currentProducts = resDeduct.updatedProducts;
-      movements.push(...resDeduct.generatedLogs);
+    const isTK = isTransportCompanyDelivery(order?.deliveryMethod, order?.trackingCompany);
+    const effectiveTrackingNumber = isTK ? (trackingNumber.trim() || undefined) : undefined;
+
+    // Only the track number changed: the items, the sum and the history stay as they were
+    if (!itemsChanged) {
+      onSaveAdjustment({ ...order, trackingNumber: effectiveTrackingNumber }, null);
+      onClose();
+      return;
     }
 
-    if (onUpdateProducts && (returnedItems.length > 0 || addedItems.length > 0)) {
-      onUpdateProducts(currentProducts);
-      onRecordStockMovements?.(movements);
+    if (!acceptShortages) {
+      const shortages = stockShortages(products, computeStockDiff().addedItems);
+      if (shortages.length > 0) {
+        setPendingShortages(shortages);
+        return;
+      }
+    }
+
+    const now = new Date();
+    const formattedDate = `${now.toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })} в ${now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+
+    const summaryText = isRefund
+      ? `Частичный возврат: ${delta.toLocaleString('ru-RU')} ₽ (состав изменен: ${items.length} позиций)`
+      : isExtraCharge
+      ? `Добавлены позиции, доплата: ${Math.abs(delta).toLocaleString('ru-RU')} ₽`
+      : `Состав скорректирован (${items.length} позиций, сумма осталась неизменной)`;
+
+    const log: OrderAdjustmentLog = {
+      id: `adj-log-${Date.now()}`,
+      date: formattedDate,
+      reason,
+      previousTotal: initialTotal,
+      newTotal: newItemsTotal,
+      refundAmount: isRefund ? delta : undefined,
+      additionalCharge: isExtraCharge ? Math.abs(delta) : undefined,
+      note: customNote.trim() || undefined,
+      changedItemsSummary: summaryText,
+    };
+
+    const existingLogs = order.adjustmentLogs || [];
+    const updatedLogs = [log, ...existingLogs];
+
+    // Add a step in order tracking history
+    const adjustmentHistoryStep = {
+      title: isRefund ? `Частичный возврат (${delta.toLocaleString('ru-RU')} ₽)` : 'Состав заказа скорректирован',
+      date: formattedDate,
+      completed: true,
+      description: `${reason}. ${customNote ? `Примечание: ${customNote}` : ''}`,
+    };
+
+    const updatedHistorySteps = order.historySteps
+      ? [...order.historySteps, adjustmentHistoryStep]
+      : [
+          { title: 'Заказ принят', date: order.date, completed: true },
+          adjustmentHistoryStep,
+        ];
+
+    const { returnedItems, addedItems } = computeStockDiff();
+
+    // Each change in its own transaction against the stock in the database now (not the browser's copy of the catalog)
+    const toChange = (it: CartItem, sign: 1 | -1): AdminStockChange => ({
+      productId: it.product.id,
+      productTitle: it.product.title,
+      color: extractColorName(it.selectedColor),
+      size: extractSizeName(it.selectedSize),
+      delta: sign * it.quantity,
+    });
+    const stockChanges = [
+      ...returnedItems.filter((it) => !it.isPreorder).map((it) => toChange(it, 1)),
+      ...addedItems.filter((it) => !it.isPreorder).map((it) => toChange(it, -1)),
+    ];
+    if (stockChanges.length > 0) {
+      void applyAdminStockChanges(stockChanges, {
+        orderId: order.id,
+        reason: `Корректировка состава заказа: ${reason}`,
+        operator: 'Администратор',
+      }).then(({ failed }) => {
+        if (failed.length > 0) {
+          onShowToast(
+            `Не изменён остаток: ${failed.map((c) => `${c.productTitle ?? c.productId} (${c.color}, ${c.size})`).join('; ')}. Проверьте «Склад и SKU».`,
+            'error'
+          );
+        }
+      });
     }
 
     const updatedOrder: Order = {
@@ -809,7 +821,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
           </button>
           <button
             type="button"
-            onClick={handleConfirmAdjustment}
+            onClick={() => handleConfirmAdjustment()}
             className="w-full sm:w-auto h-10 sm:h-11 px-4 sm:px-5 neu-button-accent rounded-xl text-xs font-extrabold text-white cursor-pointer transition-all flex items-center justify-center gap-2"
           >
             <Check className="w-4 h-4 stroke-[3]" />
@@ -827,6 +839,29 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
   )}
 </AnimatePresence>
 <DiscardChangesDialog {...guard.dialogProps} what="Изменения заказа" />
+<ConfirmDialog
+  isOpen={pendingShortages !== null}
+  title="Не хватает на складе"
+  tone="neutral"
+  confirmLabel="Сохранить всё равно"
+  cancelLabel="Вернуться к составу"
+  confirmIcon={<Check className="w-4 h-4" />}
+  message="Остаток этих вариантов уйдёт в ноль, недостающее придётся заказать у поставщика."
+  preview={
+    <ul className="text-xs text-[#2D3A4E] space-y-0.5">
+      {(pendingShortages ?? []).map((s) => (
+        <li key={`${s.productTitle}-${s.color}-${s.size}`}>
+          {s.productTitle} ({s.color}, {s.size}): нужно {s.needed}, на складе {s.inStock}
+        </li>
+      ))}
+    </ul>
+  }
+  onConfirm={() => {
+    setPendingShortages(null);
+    handleConfirmAdjustment(true);
+  }}
+  onClose={() => setPendingShortages(null)}
+/>
 </>
 );
 };

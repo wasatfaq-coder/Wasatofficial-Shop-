@@ -1,5 +1,5 @@
 import type { CartItem, Order, PromoCode } from '../types';
-import { calcPromoDiscount, calcSubtotal, toPricingLine } from '../shared/orderPricing';
+import { calcSubtotal, toPricingLine } from '../shared/orderPricing';
 
 export interface AdjustedTotals {
   subtotal: number;
@@ -14,8 +14,8 @@ export interface AdjustedTotals {
  *
  * Orders placed before delivery and discount were stored (`deliveryFee`, `discountAmount`) keep the difference
  * between their total and items as delivery (or, when the total is below the items, as the discount).
- * A percent promo that is still in «Промокоды» is recalculated for the new items; otherwise the discount stays
- * the same sum, but not above the new items.
+ * A percent promo keeps the order's own percent (discount ÷ items when it was placed) for the new items; otherwise the
+ * discount stays the same sum, but not above the new items.
  */
 export function adjustedOrderTotals(
   order: Pick<Order, 'items' | 'totalPrice' | 'deliveryFee' | 'discountAmount' | 'promoCode'>,
@@ -34,10 +34,13 @@ export function adjustedOrderTotals(
   const promo = order.promoCode
     ? promos.find((p) => p.code.toUpperCase() === order.promoCode!.toUpperCase())
     : undefined;
-  // The customer already got the promo: the minimum order amount is not checked again here
-  const discount = promo
-    ? calcPromoDiscount(items.map(toPricingLine), { ...promo, minOrderAmount: 0 })
-    : Math.min(oldDiscount, subtotal);
+  // A percent promo keeps the order's own share (its discount to its items): the code in «Промокоды» may have been
+  // changed since, and the order must not get another percent (audit 02.10, finding 11). A fixed one stays the same sum.
+  const isPercent = promo ? (promo.discountType ?? (promo.discountPercent ? 'percent' : 'fixed')) === 'percent' : false;
+  const discount =
+    isPercent && oldSubtotal > 0
+      ? Math.min(subtotal, Math.round((oldDiscount * subtotal) / oldSubtotal))
+      : Math.min(oldDiscount, subtotal);
 
   return { subtotal, discount, deliveryFee, total: Math.max(0, subtotal - discount + deliveryFee) };
 }
