@@ -1187,7 +1187,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsAddressModalOpen(true)}
-                  className="text-xs font-bold text-accent hover:underline flex items-center gap-1 cursor-pointer"
+                  className="min-h-8 px-1 text-xs font-bold text-accent hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                   <span>Редактировать адрес</span>
