@@ -91,7 +91,9 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   Имя отзыва и диалога не может выдавать себя за магазин (`isHonestName`). Чат администратора в `localStorage` не
   кэшируется; админка берёт последние 500 сообщений по `sentAt`.
 - Резервная копия — «Витрина» → «Скачать копию базы» (`AdminBackupCard`, `exportDatabase` в `firebaseSync.ts`): JSON всех
-  коллекций из `BACKUP_COLLECTIONS` (в том числе `promo_uses`) на устройство владельца, даты — `{ __timestamp }`. Новая коллекция — добавить в список.
+  коллекций из `BACKUP_COLLECTIONS` (в том числе `promo_uses`) на устройство владельца, даты — `{ __timestamp }`. Новая коллекция — добавить
+  в список и в `BACKUP_COLLECTION_TITLES` (`src/utils/backupRestore.ts`). «Восстановить из копии» (`AdminRestoreDialog`): режимы «Только
+  недостающие» и «Как в копии», ничего не удаляет; отзывы, голоса и администраторов браузер не пишет (`RESTORE_SKIPPED`).
 - ID базы Firestore — в `firebase-applet-config.json` (`firestoreDatabaseId`) и `firebase.json`.
 - Ключи `manstyle_*` в `localStorage` и ID базы — внутренние, их не переименовывать: в ключах лежат корзина,
   избранное и гостевые заказы в браузерах покупателей (после переименования они пропадут), а ID базы связывает
