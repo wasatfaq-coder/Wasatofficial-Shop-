@@ -18,3 +18,8 @@ TASKS.md
 
 # образцы заказа для теста правил (scripts/client-order-sample.ts)
 tests/.generated/
+
+# сценарии в браузере (bun run test:e2e): сборка для эмуляторов, отчёт, скриншоты и трейсы падений
+dist-e2e/
+test-results/
+playwright-report/
