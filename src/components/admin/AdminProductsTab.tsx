@@ -1786,6 +1786,10 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
                         )}
                       </div>
                     )}
+                    {/* Product pages for messengers are rebuilt every hour (share-pages.yml, docs/seo-plan.md) */}
+                    <p className="text-xs text-[#4E5C70]">
+                      Превью ссылки на товар в Telegram и WhatsApp обновится в течение часа после сохранения.
+                    </p>
 
                     {/* Hidden Native File Input for Gallery / Device Upload */}
                     <input
