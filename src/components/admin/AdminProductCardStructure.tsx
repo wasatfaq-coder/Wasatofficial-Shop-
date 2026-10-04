@@ -25,6 +25,12 @@ import {
   fabricDensityNumber,
   formatFabricDensity,
 } from '../../utils/productAttributes';
+import {
+  countrySuggestions,
+  fiberSuggestions,
+  weaveSuggestions,
+  withAutoRemainder,
+} from '../../utils/cardSuggestions';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 
@@ -116,6 +122,10 @@ interface AdminProductCardStructureProps {
   /** The description text is edited in its own field below; used to tell whether «Описание» is shown */
   hasDescription: boolean;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
+  /** The shop's products: their fibers, countries and weaves become chips (fast product entry, stage 1) */
+  suggestFrom?: Pick<Product, 'fabricComposition' | 'countryOfOrigin' | 'weave'>[];
+  /** A new product opens the structure with «Состав ткани» expanded: it is filled first, from the label */
+  isNewProduct?: boolean;
 }
 
 const inputClass =
@@ -130,10 +140,14 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
   onChange,
   hasDescription,
   onShowToast,
+  suggestFrom = [],
+  isNewProduct = false,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [openSection, setOpenSection] = useState<SectionId | null>(null);
+  const [isOpen, setIsOpen] = useState(isNewProduct);
+  const [openSection, setOpenSection] = useState<SectionId | null>(isNewProduct ? 'composition' : null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+  /** The fiber row whose share is the rest to 100 % (the last tapped chip); null once its share is typed */
+  const [autoFiber, setAutoFiber] = useState<number | null>(null);
 
   const set = <K extends keyof ProductCardStructure>(key: K, next: ProductCardStructure[K]) =>
     onChange({ ...value, [key]: next });
@@ -155,8 +169,16 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
     name: string,
     detail?: string
   ) => {
-    const remove = () =>
-      set(key, (value[key] as unknown[]).filter((_, i) => i !== index) as ProductCardStructure[K]);
+    const remove = () => {
+      const rest = (value[key] as unknown[]).filter((_, i) => i !== index) as ProductCardStructure[K];
+      if (key !== 'composition') {
+        set(key, rest);
+        return;
+      }
+      const auto = autoFiber === null || autoFiber === index ? null : autoFiber > index ? autoFiber - 1 : autoFiber;
+      setAutoFiber(auto);
+      set('composition', withAutoRemainder(rest as FabricCompositionItem[], auto));
+    };
     // A blank row holds nothing to lose: removed at once, without a question
     if (!name.trim() && !(detail ?? '').replace(/^0%$/, '').trim()) {
       remove();
@@ -252,6 +274,44 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
   const emptyNote = (text: string) => (
     <p className="text-xs font-semibold text-[#4E5C70] leading-snug">{text}</p>
   );
+
+  /** A row of chips under a field: a tap puts the value in, no typing */
+  const chips = (label: string, values: string[], onPick: (value: string) => void, withPlus = false) =>
+    values.length > 0 && (
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label={label}>
+        {values.map((chip) => (
+          <button
+            key={chip}
+            type="button"
+            onClick={() => onPick(chip)}
+            className="min-h-8 px-2.5 py-1 rounded-xl neu-button text-[11px] font-bold text-[#2D3A4E] hover:text-accent flex items-center gap-1 cursor-pointer transition-all"
+          >
+            {withPlus && <Plus className="w-3 h-3 text-accent" aria-hidden="true" />}
+            {chip}
+          </button>
+        ))}
+      </div>
+    );
+
+  /** A tapped fiber fills a blank row or a new one, and its share becomes the rest to 100 % */
+  const addFiber = (fiber: string) => {
+    const blank = value.composition.findIndex((c) => !c.fiber.trim());
+    const index = blank >= 0 ? blank : value.composition.length;
+    const next = [...value.composition];
+    next[index] = { fiber, percentage: 0 };
+    setAutoFiber(index);
+    set('composition', withAutoRemainder(next, index));
+  };
+
+  const setFiberShare = (index: number, percentage: number) => {
+    const next = value.composition.map((c, i) => (i === index ? { ...c, percentage } : c));
+    if (index === autoFiber) {
+      setAutoFiber(null);
+      set('composition', next);
+    } else {
+      set('composition', withAutoRemainder(next, autoFiber));
+    }
+  };
 
   return (
     <div className="neu-flat-sm rounded-2xl border border-white/60">
@@ -377,7 +437,8 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
                                   min={0}
                                   max={100}
                                   value={item.percentage || ''}
-                                  onChange={(e) => updateAt('composition', idx, { percentage: Number(e.target.value) })}
+                                  inputMode="numeric"
+                                  onChange={(e) => setFiberShare(idx, Number(e.target.value))}
                                   placeholder="0"
                                   aria-label="Доля, %"
                                   className={`${inputClass} pr-6 text-right font-bold`}
@@ -399,6 +460,7 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
                               )}
                             </div>
                           ))}
+                          {chips('Добавить волокно', fiberSuggestions(suggestFrom, value.composition), addFiber, true)}
                           {addButton(() => set('composition', [...value.composition, { fiber: '', percentage: 0 }]), 'Волокно')}
                         </div>
 
@@ -451,24 +513,30 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
                           Артикул и штрихкод берутся из вариаций SKU.
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <label className="block space-y-1">
-                            <span className="text-[11px] font-extrabold text-[#2D3A4E]">Тип переплетения</span>
-                            <input
-                              value={value.weave}
-                              onChange={(e) => set('weave', e.target.value)}
-                              placeholder="Например: саржевое"
-                              className={inputClass}
-                            />
-                          </label>
-                          <label className="block space-y-1">
-                            <span className="text-[11px] font-extrabold text-[#2D3A4E]">Страна производства</span>
-                            <input
-                              value={value.country}
-                              onChange={(e) => set('country', e.target.value)}
-                              placeholder="Например: Россия"
-                              className={inputClass}
-                            />
-                          </label>
+                          <div className="space-y-1.5">
+                            <label className="block space-y-1">
+                              <span className="text-[11px] font-extrabold text-[#2D3A4E]">Тип переплетения</span>
+                              <input
+                                value={value.weave}
+                                onChange={(e) => set('weave', e.target.value)}
+                                placeholder="Например: саржевое"
+                                className={inputClass}
+                              />
+                            </label>
+                            {chips('Переплетение из ваших товаров', weaveSuggestions(suggestFrom, value.weave), (v) => set('weave', v))}
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="block space-y-1">
+                              <span className="text-[11px] font-extrabold text-[#2D3A4E]">Страна производства</span>
+                              <input
+                                value={value.country}
+                                onChange={(e) => set('country', e.target.value)}
+                                placeholder="Например: Россия"
+                                className={inputClass}
+                              />
+                            </label>
+                            {chips('Выбрать страну', countrySuggestions(suggestFrom, value.country), (v) => set('country', v))}
+                          </div>
                         </div>
                         <div className="space-y-1">
                           <span className="text-[11px] font-extrabold text-[#2D3A4E]">Покрой / посадка</span>
