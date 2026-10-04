@@ -1,5 +1,5 @@
 // Гость находит рубашку поиском, выбирает размер и оформляет заказ с курьером (аудит UX 03.10, сценарий А)
-import { test, expect, rub } from '../fixtures';
+import { test, expect, chooseSize, rub } from '../fixtures';
 import { queryDocs, readDoc } from '../emulator';
 import { COURIER, PRODUCTS } from '../store';
 
@@ -14,7 +14,7 @@ test('гость находит товар и оформляет заказ с �
 
   // the size is not chosen in advance: «В корзину» without it adds nothing
   await expect(page.getByRole('radio', { checked: true })).toHaveCount(0);
-  await page.getByRole('radio', { name: /^M\b/ }).click();
+  await chooseSize(page, /^M\b/);
   await page.getByRole('button', { name: 'В корзину', exact: true }).first().click();
   await expect(page.getByRole('status').filter({ hasText: 'Добавлено в корзину' })).toBeVisible();
 
