@@ -79,6 +79,7 @@ bunx playwright test --project=phone guest-checkout   # во втором тер
 | `bun run test:rules` | Тесты правил Firestore в эмуляторе (нужна Java 21) |
 | `bun run test:functions` | Тесты Cloud Functions и расчёта цены в эмуляторе (нужны Java и `npm ci --prefix functions`) |
 | `bun run test:e2e` | Сценарии покупателя и владельца в браузере на эмуляторах, 390 и 1280 px (нужна Java 21) |
+| `bun run measure:visit` | Замер визита на эмуляторах при 300 товарах: сколько чтений и КБ базы уходит на главную, каталог, товар, вход владельца и проверку превью ссылок (`docs/catalog-scale-plan.md`, нужна Java 21) |
 | `bun run build:functions` | Сборка Cloud Functions в `functions/lib/` |
 | `bun run deploy` | Ручной деплой Hosting + правил Firestore — после тех же проверок, что в CI (lint, правила, функции, сборка). Обычный путь — слияние PR в `main` |
 

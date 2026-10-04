@@ -23,8 +23,20 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run lint
       - run: bun run build
+      # Full photos for the preview pages between runs: a photo never changes, so the script reads only new ones from the
+      # database (docs/catalog-scale-plan.md, stage 1)
+      - uses: actions/cache/restore@v4
+        with:
+          path: .share-cache
+          key: share-photos-none
+          restore-keys: share-photos-
       # Product preview pages read the catalog as a visitor; without the database they are skipped with a warning
       - run: bun run build:share
+      - if: hashFiles('.share-cache/ids.txt') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .share-cache
+          key: share-photos-${{ hashFiles('.share-cache/ids.txt') }}
 
   rules:
     name: Firestore rules tests
