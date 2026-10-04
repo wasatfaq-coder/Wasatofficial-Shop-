@@ -47,7 +47,7 @@ import {
   isPickupDelivery,
   pickupPlace,
 } from '../../utils/deliveryStages';
-import { orderLineImage } from '../../utils/productImage';
+import { useOrderLinePhotos } from '../../utils/productThumbs';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import type { ProfileScreenProps } from '../ProfileScreen';
 
@@ -96,6 +96,7 @@ export const OrderTrackingModal = ({
     () => (selectedOrderIdForTracking ? orders.find((o) => o.id === selectedOrderIdForTracking) || null : null),
     [orders, selectedOrderIdForTracking]
   );
+  const linePhoto = useOrderLinePhotos(selectedOrderForTracking?.items.map((it) => it.product) ?? [], products);
 
 
 
@@ -462,7 +463,7 @@ export const OrderTrackingModal = ({
                   >
                     <div className="flex items-center gap-2.5">
                       <img
-                        src={orderLineImage(it.product, products)}
+                        src={linePhoto(it.product)}
                         alt=""
                         loading="lazy"
                         decoding="async"

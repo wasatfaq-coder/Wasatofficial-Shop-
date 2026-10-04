@@ -147,3 +147,19 @@ export async function readCatalogIndex(parts: CatalogIndexPart[]): Promise<{ ent
   const chunks = await Promise.all(sorted.map(async (p) => JSON.parse(await gunzipText(p.entries)) as CatalogEntry[]));
   return { entries: chunks.flat(), hash: first.hash };
 }
+
+/**
+ * A catalog product from its index line (stage 3): what the cards, the search, the filters and the cart need. No
+ * photos (the card reads the miniature, productThumbs.ts) and no card sections: the product page reads the document
+ */
+export function productFromEntry(entry: CatalogEntry): Product {
+  const { image, thumb: _thumb, photoCount: _photoCount, reviewRating: _rating, reviewCount: _count, skus, ...fields } = entry;
+  return { ...fields, skus: skus.map((sku) => ({ ...sku })), images: image ? [image] : [], rating: 0, reviewsCount: 0 };
+}
+
+/** Product id → its miniature's key, for the products whose card reads a miniature */
+export const thumbKeysOf = (entries: CatalogEntry[]) =>
+  new Map(entries.flatMap((e) => (e.thumb ? [[e.id, e.thumb] as [string, string]] : [])));
+
+/** The browser can read the index (gzip): without it the catalog is read whole, as before stage 3 */
+export const canReadCatalogIndex = () => typeof DecompressionStream === 'function';

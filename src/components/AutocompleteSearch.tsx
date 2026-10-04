@@ -6,6 +6,7 @@ import { photoBadgeClass } from '../utils/productBadge';
 import { getProductRating } from '../utils/productRating';
 import type { StoreCategory } from '../types';
 import { productImage } from '../utils/productImage';
+import { useProductThumbs } from '../utils/productThumbs';
 
 interface AutocompleteSearchProps {
   /** From Admin → «Категории» */
@@ -105,6 +106,7 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
       matchedProducts,
     };
   }, [products, categories, cleanQuery]);
+  const photoOf = useProductThumbs(searchResults.matchedProducts.slice(0, 5));
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -253,7 +255,7 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
                     {/* Thumbnail */}
                     <div className="w-12 h-12 rounded-xl overflow-hidden neu-inset p-0.5 shrink-0">
                       <img
-                        src={productImage(product)}
+                        src={photoOf(product) || productImage(product)}
                         alt={product.title}
                         loading="lazy"
                         decoding="async"

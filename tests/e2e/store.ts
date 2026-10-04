@@ -1,5 +1,7 @@
 // The shop the scenarios work with: a few products, delivery, payment and requisites. Written to the emulator only
 // (seed.setup.ts); on the real site all of this is set by the owner in the admin panel
+import type { Product } from '../../src/types';
+import { buildCatalogIndex, catalogIndexPartId, catalogIndexParts, CATALOG_INDEX_COLLECTION, PRODUCT_THUMBS_COLLECTION, thumbKey } from '../../src/utils/catalogIndex';
 export const ADMIN = { sub: 'e2e-admin', email: 'gunh83975@gmail.com', name: 'Владелец' };
 
 const sizes = (id: string, colors: string[], list: string[], stock: number) =>
@@ -154,5 +156,24 @@ export function storeDocs(): Record<string, Record<string, unknown>> {
       isActive: true,
       isDefault: true,
     },
+  };
+}
+
+/**
+ * The light catalog index customers read (docs/catalog-scale-plan.md, stage 3), as the owner's session writes it:
+ * the scenarios go the customer's way — the index, and the product documents only on the product page, cart and checkout
+ */
+export async function catalogIndexDocs(): Promise<Record<string, Record<string, unknown>>> {
+  const products = Object.values(PRODUCTS) as unknown as Product[];
+  const { entries, hash } = buildCatalogIndex(products);
+  const parts = await catalogIndexParts(entries, hash);
+  return {
+    ...Object.fromEntries(parts.map((part) => [`${CATALOG_INDEX_COLLECTION}/${catalogIndexPartId(part.part)}`, { ...part }])),
+    ...Object.fromEntries(
+      products.flatMap((p) => {
+        const key = thumbKey(p);
+        return key ? [[`${PRODUCT_THUMBS_COLLECTION}/${p.id}`, { productId: p.id, key, data: p.images[0] }]] : [];
+      })
+    ),
   };
 }
