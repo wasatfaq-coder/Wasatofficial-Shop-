@@ -1,16 +1,7 @@
 import { SizeCalculatorModal } from './components/lazyWindows';
 import React, { Suspense, lazy, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ActiveTab, Product, CartItem, UserProfile, Order, BodyMeasurements, BannerSlide, DeliveryMethod, PickupPoint, PaymentKind } from './types';
-import { GUEST_USER_PROFILE } from './data/products';
-import { saveLocalDeliveryMethods, saveLocalPickupPoints } from './data/deliveryData';
-import {
-  playNotificationChime,
-  sendBrowserNotification,
-  getOrderStatusNotification,
-  getOrderPaymentNotification,
-  type OrderNotificationPayload,
-} from './utils/pushNotifications';
+import { Product } from './types';
 import { DeviceFrameWrapper } from './components/DeviceFrameWrapper';
 import { DesktopTitleRow, Header, screenTitle } from './components/Header';
 import { BottomNav } from './components/BottomNav';
@@ -23,39 +14,19 @@ import {
   DEFAULT_FILTER_STATE,
   matchesCatalogFilters,
 } from './components/CatalogAdvancedFilter';
-import { saveStorefrontSettings, getOrderableStock } from './utils/inventory';
-import { hasHeavyPhotos, removedProductPhotoIds } from './utils/productPhotos';
-import { pluralRu } from './utils/pluralize';
-import { ADMIN_EMAIL, useAuth } from './context/AuthContext';
-import { auth } from './firebase';
-import {
-  cancelOrderAsCustomer,
-  confirmOrderReceipt,
-  submitPaymentReceipt,
-  returnCancelledOrderStock,
-  syncAllProductsToFirestore,
-  saveProductCosts,
-  moveProductCostsToPrivate,
-  moveProductPhotosOut,
-  deleteProductPhotos,
-  deleteRemovedDocs,
-  changedItems,
-  syncAllOrdersToFirestore,
-  syncAllPromosToFirestore,
-  saveStorefrontSettingsToFirestore,
-  saveLegalText,
-  saveUserProfileToFirestore,
-  syncAllBannersToFirestore,
-  syncAllDeliveryMethodsToFirestore,
-  syncAllPickupPointsToFirestore,
-} from './utils/firebaseSync';
+import { useAuth } from './context/AuthContext';
 import { useCatalog } from './app/useCatalog';
-import { BANNERS_STORAGE_KEY, useStorefrontData } from './app/useStorefrontData';
+import { useStorefrontData } from './app/useStorefrontData';
 import { useAccountData } from './app/useAccountData';
 import { useToasts } from './app/useToasts';
 import { useCart } from './app/useCart';
 import { useSupportChat } from './app/useSupportChat';
 import { useCheckout } from './app/useCheckout';
+import { useScreenHistory, useScreenState } from './app/screenHistory';
+import { useProfile } from './app/useProfile';
+import { useOrderNotifications } from './app/useOrderNotifications';
+import { useCustomerOrders } from './app/useCustomerOrders';
+import { useAdminActions } from './app/useAdminActions';
 
 import { HomeScreen } from './views/HomeScreen';
 import { CatalogScreen } from './views/CatalogScreen';
@@ -79,8 +50,6 @@ import { storeAcceptsOrders } from './shared/orderApi';
 import { getStoreContacts, getStoreName, publicSetting, withStoreName, withStoreNameFields } from './utils/storeContacts';
 import { getCategories } from './utils/categories';
 import { VariantPickerSheet } from './components/VariantPickerSheet';
-import { currentRoutePath, parseRoute, readHistoryState, routePath, type HistoryEntryState } from './utils/navigation';
-import { afterWindowHistory, isWindowHistoryBusy, windowDepth } from './utils/windowHistory';
 
 // Legal documents: a separate chunk with the templates, loaded when a document is opened
 const LegalDocumentScreen = lazy(() => import('./views/LegalDocumentScreen'));
@@ -100,42 +69,13 @@ const SupportChatModal = lazy(() => loadSupportChatModal().then((m) => ({ defaul
 const PromoModal = lazy(() => loadPromoModal().then((m) => ({ default: m.PromoModal })));
 const BrandRequisitesModal = lazy(() => loadBrandRequisitesModal().then((m) => ({ default: m.BrandRequisitesModal })));
 
-// Default profile of earlier versions (the shop admin's name, email, phone and office address)
-function isLegacyDemoProfile(profile: Partial<UserProfile>): boolean {
-  return (
-    profile.name === 'Администратор MANSTYLE' ||
-    (profile.email || '').trim().toLowerCase() === ADMIN_EMAIL.toLowerCase() ||
-    (profile.savedAddresses || []).some((a) => a.id === 'addr-1' && a.title === 'Офис MANSTYLE')
-  );
-}
-
 export default function App() {
   const { currentUser, isAdmin, loading: authLoading } = useAuth();
   // Toasts and `persist` for writes that must not fail silently (useToasts.ts)
   const { toasts, setToasts, addToast, removeToast, persist } = useToasts();
-  // The screen comes from the address (/catalog, /product/{id}, an old #/…): reload, a shared link and «Назад» work
-  const [initialRoute] = useState(() => parseRoute(window.location));
-  const [activeTab, setActiveTabState] = useState<ActiveTab>(() =>
-    // The confirmation needs the order just placed: after a reload there is none
-    !initialRoute || initialRoute.tab === 'order-success' ? 'home' : initialRoute.tab
-  );
-
-  // Browser history for the screens (see the sync effect below the product state)
-  const historyIdx = React.useRef(0);
-  const leavingScroll = React.useRef(0);
-  const pendingScroll = React.useRef<number | null>(null);
-  const replaceNextRoute = React.useRef(false);
-  const isFirstRouteSync = React.useRef(true);
-  // The address of the screen on show: a popstate to it with the same idx only closed a window (windowHistory.ts)
-  const shownPath = React.useRef('');
-  // A screen change waited for a window to take its history entry back: sync the address again
-  const [routeRetry, setRouteRetry] = useState(0);
-  /** Every screen change goes through here: remembers the scroll of the screen being left */
-  const setActiveTab = React.useCallback((tab: ActiveTab) => {
-    leavingScroll.current = window.scrollY;
-    setActiveTabState(tab);
-  }, []);
-
+  // The screen on show; the address follows it below (screenHistory.ts)
+  const screen = useScreenState();
+  const { activeTab, setActiveTab, pendingScroll, pendingSelectedProductId } = screen;
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   // Catalog search: the same text in the computer's top bar, on the home screen and in the catalog
   const [catalogSearch, setCatalogSearch] = useState('');
@@ -154,15 +94,6 @@ export default function App() {
     setPickupPoints,
   } = useStorefrontData();
 
-  const handleUpdateBannerSlides = (newBanners: BannerSlide[]) => {
-    const removed = deleteRemovedDocs('banners', bannerSlides, newBanners);
-    setBannerSlides(newBanners);
-    try {
-      localStorage.setItem(BANNERS_STORAGE_KEY, JSON.stringify(newBanners));
-    } catch {}
-    return persist('баннеры', removed, syncAllBannersToFirestore(newBanners));
-  };
-
   // The removed local admin password was kept here in plain text: erase it
   React.useEffect(() => {
     try {
@@ -175,8 +106,6 @@ export default function App() {
   // Admin → «Витрина» → «Предзаказ»: sold-out variants can still be ordered
   const preorderMode = storefrontSettings?.isPreorderMode === true;
 
-  // A product from the address is restored once the catalog loads (see the products subscription)
-  const pendingSelectedProductId = React.useRef<string | null>(initialRoute?.productId ?? null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   // Filled as the visitor opens products; no made-up history
   const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([]);
@@ -235,84 +164,14 @@ export default function App() {
   // Orders, profiles and cost prices: whose depends on the sign-in (useAccountData.ts)
   const { allUsers, orders, setOrders, productCosts, setProductCosts } = useAccountData({ authLoading, isAdmin, currentUser });
 
-  // Screen → address. A new screen is a new history entry (so «Назад» returns to it) and opens
-  // at the top; the confirmation replaces the checkout entry, «Назад» does not return to paying.
-  // Open windows have entries of their own over the screen's (windowHistory.ts)
-  const routeProductId =
-    activeTab === 'product-detail' ? selectedProduct?.id ?? pendingSelectedProductId.current ?? undefined : undefined;
-  React.useEffect(() => {
-    // A product that is not resolved yet (catalog loading) or is gone: wait, see the not-found effect
-    if (activeTab === 'product-detail' && !routeProductId) return;
-    const path = routePath({ tab: activeTab, productId: routeProductId });
-    if (isFirstRouteSync.current) {
-      isFirstRouteSync.current = false;
-      replaceNextRoute.current = false;
-      window.history.scrollRestoration = 'manual';
-      // An old #/… link becomes the screen's path; the query (ad tags) stays
-      window.history.replaceState({ wasat: true, idx: 0 } satisfies HistoryEntryState, '', path + window.location.search);
-      shownPath.current = path;
-      return;
-    }
-    // Already there: a Back/Forward the popstate handler applied
-    if (currentRoutePath() === path) return;
-    // A window has just closed and is taking its history entry back: the new address goes after it
-    if (isWindowHistoryBusy()) {
-      afterWindowHistory(() => setRouteRetry((n) => n + 1));
-      return;
-    }
-    // The confirmation replaces only the checkout; after «Заказ в 1 клик» «Назад» returns to the product or the cart
-    const replace =
-      replaceNextRoute.current || (activeTab === 'order-success' && shownPath.current === routePath({ tab: 'checkout' }));
-    replaceNextRoute.current = false;
-    shownPath.current = path;
-    pendingScroll.current = 0;
-    if (windowDepth(window.history.state) > 0) {
-      // Left the screen from a window: the window's entry becomes the new screen's, «Назад» returns to the screen
-      // under the window (its scroll was saved when the window opened)
-      historyIdx.current += 1;
-      window.history.replaceState({ wasat: true, idx: historyIdx.current } satisfies HistoryEntryState, '', path);
-      return;
-    }
-    window.history.replaceState(
-      { ...readHistoryState(window.history.state), wasat: true, idx: historyIdx.current, scrollY: leavingScroll.current } satisfies HistoryEntryState,
-      ''
-    );
-    if (replace) {
-      window.history.replaceState({ wasat: true, idx: historyIdx.current } satisfies HistoryEntryState, '', path);
-    } else {
-      historyIdx.current += 1;
-      window.history.pushState({ wasat: true, idx: historyIdx.current } satisfies HistoryEntryState, '', path);
-    }
-  }, [activeTab, routeProductId, routeRetry]);
-  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
-    try {
-      const saved = localStorage.getItem('manstyle_user_profile');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // Older versions shipped the shop admin's personal data as the default profile and
-        // cached it in every visitor's browser. Drop such a cache; the admin's own profile
-        // is restored from Firebase Auth after sign-in.
-        if (parsed && typeof parsed === 'object' && !isLegacyDemoProfile(parsed)) {
-          return { ...GUEST_USER_PROFILE, ...parsed };
-        }
-        localStorage.removeItem('manstyle_user_profile');
-      }
-    } catch {}
-    return GUEST_USER_PROFILE;
+  // The visitor's profile (useProfile.ts)
+  const { userProfile, handleUpdateProfile, handleSaveMeasurements } = useProfile({
+    authLoading,
+    currentUser,
+    allUsers,
+    persist,
+    addToast,
   });
-
-  const handleUpdateProfile = (updated: UserProfile) => {
-    setUserProfile(updated);
-    try {
-      localStorage.setItem('manstyle_user_profile', JSON.stringify(updated));
-    } catch {}
-    // Only into the account that is signed in right now: right after «Выйти» this closure still holds the previous
-    // user, and the guest profile used to overwrite their addresses and measurements (audit 02.10, finding 23)
-    if (currentUser?.uid && auth.currentUser?.uid === currentUser.uid) {
-      // The profile (addresses, measurements) must not be lost silently: a refused write says so
-      void persist('профиль', saveUserProfileToFirestore(currentUser.uid, updated));
-    }
-  };
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
   const [isSupportChatOpen, setIsSupportChatOpen] = useState(false);
@@ -352,20 +211,6 @@ export default function App() {
     [pickupPoints, storeName]
   );
 
-  const handleUpdateDeliveryMethods = (updated: DeliveryMethod[]) => {
-    const removed = deleteRemovedDocs('delivery_methods', deliveryMethods, updated);
-    setDeliveryMethods(updated);
-    saveLocalDeliveryMethods(updated);
-    return persist('способы доставки', removed, syncAllDeliveryMethodsToFirestore(updated));
-  };
-
-  const handleUpdatePickupPoints = (updated: PickupPoint[]) => {
-    const removed = deleteRemovedDocs('pickup_points', pickupPoints, updated);
-    setPickupPoints(updated);
-    saveLocalPickupPoints(updated);
-    return persist('пункты выдачи', removed, syncAllPickupPointsToFirestore(updated));
-  };
-
   // Global Filter Match Counter for modal
   const filteredProductsCount = React.useMemo(() => {
     return products.filter((p) => matchesCatalogFilters(p, selectedCategory, catalogFilterState)).length;
@@ -375,21 +220,6 @@ export default function App() {
     setSelectedCategory('all');
     setCatalogFilterState(DEFAULT_FILTER_STATE);
   };
-
-  // Signed out: the profile of that account leaves this browser (only locally — nothing is written); the chat
-  // clears itself (useSupportChat.ts)
-  const signedInUidRef = React.useRef<string | null>(null);
-  React.useEffect(() => {
-    if (authLoading) return;
-    const uid = currentUser?.uid ?? null;
-    if (signedInUidRef.current && !uid) {
-      setUserProfile(GUEST_USER_PROFILE);
-      try {
-        localStorage.removeItem('manstyle_user_profile');
-      } catch {}
-    }
-    signedInUidRef.current = uid;
-  }, [authLoading, currentUser]);
 
   // The support chat (useSupportChat.ts)
   const {
@@ -407,33 +237,6 @@ export default function App() {
     handleSendMessageAsAdmin,
     handleClearChat,
   } = useSupportChat({ authLoading, isAdmin, currentUser, userProfile, promos, setPromos, addToast, persist });
-
-  // 2. Sync profile from Firebase Auth user & users collection
-  React.useEffect(() => {
-    if (currentUser) {
-      const existing = allUsers.find(
-        (u) =>
-          (u.uid && u.uid === currentUser.uid) ||
-          (u.email && u.email.toLowerCase() === (currentUser.email || '').toLowerCase())
-      );
-      setUserProfile((prev) => {
-        const merged: UserProfile = {
-          ...prev,
-          ...(existing || {}),
-          // The name the buyer saved (Фамилия Имя Отчество) wins over the Google account's name
-          name: existing?.name || currentUser.displayName || prev.name,
-          email: currentUser.email || existing?.email || prev.email,
-          avatar: currentUser.photoURL || existing?.avatar || prev.avatar,
-          bonusPoints: existing?.bonusPoints ?? prev.bonusPoints ?? 0,
-        };
-        try {
-          localStorage.setItem('manstyle_user_profile', JSON.stringify(merged));
-        } catch {}
-        return merged;
-      });
-    }
-  }, [currentUser, allUsers]);
-
 
   // Placing an order and the confirmation screen (useCheckout.ts)
   const { latestOrder, checkoutStockProblems, handleCompleteOrder } = useCheckout({
@@ -460,80 +263,15 @@ export default function App() {
     addToast,
   });
 
-  // Browser «Назад» / «Вперед»: show the screen from the address and restore its scroll
-  const productsRef = React.useRef(products);
-  productsRef.current = products;
-  const productsLoadedRef = React.useRef(productsLoaded);
-  productsLoadedRef.current = productsLoaded;
-  const latestOrderRef = React.useRef(latestOrder);
-  latestOrderRef.current = latestOrder;
-  React.useEffect(() => {
-    const onPopState = (e: PopStateEvent) => {
-      const entry = readHistoryState(e.state);
-      // The same entry of the screen: «Назад» closed a window over it (windowHistory.ts), the screen stays
-      if (entry && entry.idx === historyIdx.current && currentRoutePath() === shownPath.current) return;
-      const route = parseRoute(window.location) ?? { tab: 'home' as ActiveTab };
-      if (entry) {
-        historyIdx.current = entry.idx;
-      } else {
-        // A link or an edited address (an old #/… too): a new entry of the shop's history, at the screen's path
-        historyIdx.current += 1;
-        window.history.replaceState({ wasat: true, idx: historyIdx.current } satisfies HistoryEntryState, '', routePath(route));
-      }
-      shownPath.current = currentRoutePath();
-      pendingScroll.current = entry?.scrollY ?? 0;
-      if (route.tab === 'product-detail' && route.productId) {
-        const product = productsRef.current.find((p) => p.id === route.productId);
-        // Not in the loaded catalog: gone (the not-found effect leads to the catalog); else wait for it
-        pendingSelectedProductId.current = product || productsLoadedRef.current ? null : route.productId;
-        setSelectedProduct(product ?? null);
-      }
-      if (route.tab === 'order-success' && !latestOrderRef.current) {
-        replaceNextRoute.current = true;
-        setActiveTabState('home');
-      } else {
-        setActiveTabState(route.tab);
-      }
-    };
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
-  }, []);
-
-  // A link to a screen of the shop (the other document under the offer, an old #/… in a text) opens the screen without
-  // reloading the page and the catalog; product links (ProductCard) open their product themselves
-  React.useEffect(() => {
-    const onClick = (e: MouseEvent) => {
-      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-      const link = e.target instanceof Element ? e.target.closest('a[href]') : null;
-      if (!(link instanceof HTMLAnchorElement) || (link.target && link.target !== '_self') || link.hasAttribute('download')) return;
-      const url = new URL(link.href);
-      if (url.origin !== window.location.origin) return;
-      const route = parseRoute(url) ?? (url.pathname === '/' && !url.hash ? { tab: 'home' as ActiveTab } : null);
-      if (!route || route.tab === 'product-detail' || route.tab === 'order-success') return;
-      e.preventDefault();
-      setActiveTab(route.tab);
-    };
-    document.addEventListener('click', onClick);
-    return () => document.removeEventListener('click', onClick);
-  }, [setActiveTab]);
-
-  // A product link to a product that no longer exists: back to the catalog instead of an empty page
-  React.useEffect(() => {
-    if (productsLoaded && activeTab === 'product-detail' && !selectedProduct && !pendingSelectedProductId.current) {
-      replaceNextRoute.current = true;
-      setActiveTab('catalog');
-      addToast('Товар не найден: возможно, его сняли с продажи', 'info');
-    }
-  }, [productsLoaded, activeTab, selectedProduct]);
-
-  /** «Назад» in the header: the previous screen of this visit, else the parent screen */
-  const handleHeaderBack = () => {
-    if ((readHistoryState(window.history.state)?.idx ?? 0) > 0) {
-      window.history.back();
-      return;
-    }
-    setActiveTab(activeTab === 'checkout' ? 'cart' : activeTab === 'product-detail' ? 'catalog' : 'home');
-  };
+  // Screen ↔ address, «Назад» and «Вперед» (screenHistory.ts)
+  const { handleHeaderBack } = useScreenHistory(screen, {
+    selectedProduct,
+    setSelectedProduct,
+    products,
+    productsLoaded,
+    latestOrder,
+    addToast,
+  });
 
   // Global tactile feedback on button click/tap
   React.useEffect(() => {
@@ -553,295 +291,58 @@ export default function App() {
     return () => window.removeEventListener('pointerdown', handleGlobalClick);
   }, []);
 
-  // Order status changes push notification watcher
-  const previousOrdersMapRef = React.useRef<
-    Map<string, { status: Order['status']; isCancelled?: boolean; trackingNumber?: string; paymentStatus?: Order['paymentStatus'] }>
-  >(new Map());
-  const isInitialOrdersLoadRef = React.useRef(true);
+  // A change of the customer's order while the site is open (useOrderNotifications.ts)
+  useOrderNotifications({ orders, isAdmin, currentUser, userProfile, setToasts, setActiveTab });
 
-  // Trigger push notification on order status change
-  const triggerOrderStatusPushNotification = (
-    order: Order,
-    oldStatus?: Order['status'],
-    newStatus?: Order['status'],
-    payload?: OrderNotificationPayload
-  ) => {
-    const notif = payload ?? getOrderStatusNotification(order, oldStatus, newStatus);
+  // Cancel, «Я получил заказ», a receipt and «Повторить заказ» in the profile (useCustomerOrders.ts)
+  const { handleCancelOwnOrder, handleConfirmReceipt, handleSubmitPaymentReceipt, handleRepeatOrder } = useCustomerOrders({
+    authLoading,
+    currentUser,
+    userProfile,
+    orders,
+    products,
+    preorderMode,
+    setCartItems,
+    setChatMessages,
+    addToast,
+    setActiveTab,
+  });
 
-    // Sound and a system notification only when the customer left notifications on in the profile
-    if (userProfile.notificationsEnabled !== false) {
-      playNotificationChime();
-      sendBrowserNotification(notif.title, {
-        body: `${notif.subtitle}\n${notif.text}`,
-      });
-    }
-
-    // 3. Trigger In-App Rich Push Toast
-    const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [
-      ...prev,
-      {
-        id,
-        type: 'order_status',
-        title: notif.title,
-        subtitle: notif.subtitle,
-        text: notif.text,
-        badgeText: notif.badgeText,
-        badgeBg: notif.badgeBg,
-        icon: notif.icon,
-        orderId: order.id,
-        oldStatus,
-        newStatus,
-        duration: 7000,
-        action: {
-          label: 'Смотреть статус',
-          onClick: () => {
-            setActiveTab('profile');
-            setTimeout(() => {
-              window.dispatchEvent(
-                new CustomEvent('manstyle_open_order_tracking', {
-                  detail: { orderId: order.id },
-                })
-              );
-            }, 100);
-          },
-        },
-      },
-    ]);
-  };
-
-  React.useEffect(() => {
-    if (!orders || orders.length === 0) return;
-
-    if (isInitialOrdersLoadRef.current) {
-      orders.forEach((o) => {
-        previousOrdersMapRef.current.set(o.id, {
-          status: o.status,
-          isCancelled: o.isCancelled,
-          trackingNumber: o.trackingNumber,
-          paymentStatus: o.paymentStatus,
-        });
-      });
-      isInitialOrdersLoadRef.current = false;
-      return;
-    }
-
-    // Compare with previous status snapshot
-    orders.forEach((currentOrder) => {
-      const prev = previousOrdersMapRef.current.get(currentOrder.id);
-      if (prev) {
-        const statusChanged = prev.status !== currentOrder.status;
-        const cancelChanged = !prev.isCancelled && Boolean(currentOrder.isCancelled);
-        const trackingChanged = !prev.trackingNumber && Boolean(currentOrder.trackingNumber);
-
-        // An admin loads every customer's orders: «ваш заказ» is only about their own
-        const isOwnOrder = !isAdmin || currentOrder.customerUid === currentUser?.uid;
-        // The buyer cancelled it themselves: the profile already said so
-        const ownCancel = cancelChanged && currentOrder.cancelledBy === 'customer';
-        // «Я получил заказ» — the buyer's own step too
-        const ownStep = statusChanged && currentOrder.statusLog?.[currentOrder.statusLog.length - 1]?.by === 'customer';
-        if (isOwnOrder && ((statusChanged && !ownStep) || (cancelChanged && !ownCancel) || trackingChanged)) {
-          triggerOrderStatusPushNotification(currentOrder, prev.status, currentOrder.status);
-        }
-        // the store checked the receipt («Доработки 5»): confirmed or rejected
-        const paymentNotif =
-          isOwnOrder && prev.paymentStatus === 'receipt_review'
-            ? getOrderPaymentNotification(currentOrder, currentOrder.paymentStatus)
-            : null;
-        if (paymentNotif) triggerOrderStatusPushNotification(currentOrder, prev.status, currentOrder.status, paymentNotif);
-      }
-
-      // Update reference
-      previousOrdersMapRef.current.set(currentOrder.id, {
-        status: currentOrder.status,
-        isCancelled: currentOrder.isCancelled,
-        trackingNumber: currentOrder.trackingNumber,
-        paymentStatus: currentOrder.paymentStatus,
-      });
-    });
-  }, [orders]);
-
-  // The admin panel sees products with their cost price; everything else keeps the public products
-  const adminProducts = React.useMemo(
-    () =>
-      isAdmin
-        ? products.map((p) => {
-            const cost = productCosts[p.id];
-            return cost !== undefined && cost !== p.costPrice ? { ...p, costPrice: cost } : p;
-          })
-        : products,
-    [isAdmin, products, productCosts]
-  );
-
-  // Cost prices once saved inside products are readable by every visitor: the admin's session moves them
-  // to `product_costs` (copy and removal in one batch)
-  const costsMovedRef = React.useRef(false);
-  React.useEffect(() => {
-    if (!isAdmin || !productsLoaded || costsMovedRef.current) return;
-    const legacy = products.filter((p) => typeof p.costPrice === 'number');
-    if (legacy.length === 0) return;
-    costsMovedRef.current = true;
-    void persist('себестоимость товаров', moveProductCostsToPrivate(legacy));
-  }, [isAdmin, productsLoaded, products]);
-
-  // Photos still inside products (each visitor downloaded them with the catalog): the admin's session moves them to
-  // product_photos and leaves previews in the products (stage 6, finding 18). Once per session, product by product
-  const photosMovedRef = React.useRef(false);
-  React.useEffect(() => {
-    if (!isAdmin || !productsLoaded || photosMovedRef.current) return;
-    const heavy = products.filter(hasHeavyPhotos);
-    if (heavy.length === 0) return;
-    photosMovedRef.current = true;
-    void (async () => {
-      let moved = 0;
-      for (const product of heavy) {
-        try {
-          if (await moveProductPhotosOut(product)) moved++;
-        } catch (err) {
-          console.error(`Photos of product ${product.id} were not moved:`, err);
-        }
-      }
-      if (moved > 0) {
-        addToast(`Фото ${moved} ${pluralRu(moved, ['товара', 'товаров', 'товаров'])} вынесены из карточек: каталог у покупателей грузится быстрее`, 'info');
-      }
-    })();
-  }, [isAdmin, productsLoaded, products]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  /**
-   * The buyer cancels their order in the profile («Доработки 3»): the cancellation first (the rules check it), then
-   * the goods back to stock line by line. A return cut off by the network is repeated next time (effect below);
-   * meanwhile «Заказы» offers the admin «Вернуть на склад».
-   */
-  const stockReturnTriedRef = React.useRef(new Set<string>());
-  const handleCancelOwnOrder = async (order: Order, reason: string, comment: string): Promise<boolean> => {
-    // Before the write: its local snapshot would start the repeat below alongside this return
-    stockReturnTriedRef.current.add(order.id);
-    try {
-      await cancelOrderAsCustomer(order.id, reason, comment, new Date());
-    } catch (err) {
-      stockReturnTriedRef.current.delete(order.id);
-      console.error('Order cancellation was refused:', err);
-      addToast('Не удалось отменить заказ. Проверьте соединение или напишите в чат магазина.', 'error');
-      return false;
-    }
-    try {
-      await returnCancelledOrderStock(order);
-      addToast(`Заказ № ${order.id} отменён`, 'success');
-    } catch (err) {
-      console.error(`Stock of the cancelled order ${order.id} was not returned:`, err);
-      addToast(`Заказ № ${order.id} отменён. Возврат товаров на склад магазин проверит сам.`, 'info');
-    }
-    return true;
-  };
-
-  /** «Я получил заказ»: a carrier's order becomes «Получен» with the time of the tap (rule isCustomerReceiptConfirm) */
-  const handleConfirmReceipt = async (order: Order): Promise<boolean> => {
-    try {
-      await confirmOrderReceipt(order, new Date());
-      addToast(`Заказ № ${order.id} получен. Спасибо!`, 'success');
-      return true;
-    } catch (err) {
-      console.error('Receipt confirmation was refused:', err);
-      addToast('Не удалось подтвердить получение. Проверьте соединение или напишите в чат магазина.', 'error');
-      return false;
-    }
-  };
-
-  /**
-   * «Оплачено» с фото чека («Доработки 5»): фото с подписью уходит в чат магазина, заказ — «Чек на проверке»
-   * (правило isCustomerReceiptSubmit). Только вошедший покупатель: гость получает реквизиты в чате.
-   */
-  const handleSubmitPaymentReceipt = async (order: Order, kind: PaymentKind, imageUrl: string): Promise<boolean> => {
-    if (!currentUser || currentUser.isAnonymous) return false;
-    try {
-      const message = await submitPaymentReceipt(
-        order,
-        kind,
-        imageUrl,
-        { threadId: currentUser.uid, threadName: userProfile.name || currentUser.email || 'Покупатель' },
-        new Date()
-      );
-      setChatMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]));
-      addToast(`Чек отправлен. Магазин проверит оплату заказа № ${order.id}`, 'success');
-      return true;
-    } catch (err) {
-      console.error('Payment receipt was not sent:', err);
-      addToast('Чек не отправлен. Проверьте соединение и попробуйте ещё раз — или отправьте фото в чат магазина.', 'error');
-      return false;
-    }
-  };
-
-  // A cancellation whose goods did not all get back to stock (network, closed tab): once a session
-  React.useEffect(() => {
-    if (!currentUser || authLoading) return;
-    for (const order of orders) {
-      if (
-        order.customerUid !== currentUser.uid ||
-        !order.isCancelled ||
-        order.cancelledBy !== 'customer' ||
-        order.stockReturned !== false ||
-        stockReturnTriedRef.current.has(order.id)
-      ) {
-        continue;
-      }
-      stockReturnTriedRef.current.add(order.id);
-      returnCancelledOrderStock(order).catch((err) =>
-        console.error(`Stock of the cancelled order ${order.id} was not returned again:`, err)
-      );
-    }
-  }, [orders, currentUser, authLoading]);
-
-  // Repeat a past order: current product data and stock, unavailable items are skipped
-  const handleRepeatOrder = (items: CartItem[]) => {
-    const toAdd: CartItem[] = [];
-    let skipped = 0;
-    items.forEach((item, idx) => {
-      const product = products.find((p) => p.id === item.product?.id);
-      const stock = product ? getOrderableStock(product, item.selectedColor, item.selectedSize, preorderMode) : 0;
-      if (!product || stock <= 0) {
-        skipped += 1;
-        return;
-      }
-      toAdd.push({
-        id: `cart-${Date.now()}-${idx}`,
-        product,
-        selectedColor: item.selectedColor,
-        selectedSize: item.selectedSize,
-        quantity: Math.min(item.quantity, stock),
-      });
-    });
-
-    if (toAdd.length === 0) {
-      addToast('Товаров из этого заказа сейчас нет в наличии', 'error');
-      return;
-    }
-
-    setCartItems((prev) => {
-      const next = [...prev];
-      for (const add of toAdd) {
-        const i = next.findIndex(
-          (c) =>
-            c.product.id === add.product.id &&
-            c.selectedColor === add.selectedColor &&
-            c.selectedSize === add.selectedSize
-        );
-        if (i > -1) {
-          const stock = getOrderableStock(add.product, add.selectedColor, add.selectedSize, preorderMode);
-          next[i] = { ...next[i], quantity: Math.min(next[i].quantity + add.quantity, stock) };
-        } else {
-          next.push(add);
-        }
-      }
-      return next;
-    });
-    addToast(
-      skipped > 0
-        ? `Товары добавлены в корзину. Нет в наличии: ${skipped}`
-        : 'Товары заказа добавлены в корзину',
-      skipped > 0 ? 'info' : 'success'
-    );
-    setActiveTab('cart');
-  };
+  // The admin panel's writes (useAdminActions.ts)
+  const {
+    adminProducts,
+    handleUpdateProducts,
+    handleUpdateOrders,
+    handleUpdatePromos,
+    handleUpdateBannerSlides,
+    handleUpdateDeliveryMethods,
+    handleUpdatePickupPoints,
+    handleUpdateStorefrontSettings,
+    handleSaveLegalText,
+  } = useAdminActions({
+    isAdmin,
+    products,
+    setProducts,
+    productsLoaded,
+    productCosts,
+    setProductCosts,
+    selectedProduct,
+    setSelectedProduct,
+    setCartItems,
+    orders,
+    setOrders,
+    promos,
+    setPromos,
+    bannerSlides,
+    setBannerSlides,
+    deliveryMethods,
+    setDeliveryMethods,
+    pickupPoints,
+    setPickupPoints,
+    setStorefrontSettings,
+    persist,
+    addToast,
+  });
 
   const hasActivePromos = promos.some((p) => isPromoListed(p));
   const catalogStatus: CatalogStatus = productsLoaded ? 'ready' : productsError ? 'error' : 'loading';
@@ -860,20 +361,6 @@ export default function App() {
 
   const handleRemoveFromRecentlyViewed = (productId: string) => {
     setRecentlyViewed((prev) => prev.filter((p) => p.id !== productId));
-  };
-
-  const handleSaveMeasurements = (measurements: BodyMeasurements) => {
-    const updated: UserProfile = {
-      ...userProfile,
-      bodyMeasurements: measurements,
-    };
-    handleUpdateProfile(updated);
-    addToast(
-      measurements.preferredSize
-        ? `Параметры и размер ${measurements.preferredSize} сохранены в профиле`
-        : 'Параметры фигуры сохранены в профиле',
-      'success'
-    );
   };
 
   return (
@@ -1212,72 +699,10 @@ export default function App() {
               onSubmitPaymentReceipt={handleSubmitPaymentReceipt}
               onShowToast={addToast}
               onOpenSupportChat={openSupportChat}
-              onUpdateProducts={(updatedWithCosts: Product[]) => {
-                const changed = changedItems(adminProducts, updatedWithCosts);
-                const kept = new Set(updatedWithCosts.map((p) => p.id));
-                const costChanges: { id: string; costPrice?: number }[] = [
-                  ...changed
-                    .filter((p) => p.costPrice !== productCosts[p.id])
-                    .map((p) => ({ id: p.id, costPrice: p.costPrice })),
-                  ...Object.keys(productCosts).filter((id) => !kept.has(id)).map((id) => ({ id })),
-                ];
-                const saved = persist(
-                  'товары',
-                  deleteRemovedDocs('products', adminProducts, updatedWithCosts),
-                  syncAllProductsToFirestore(changed),
-                  saveProductCosts(costChanges)
-                );
-                // a removed product's photos go after it: a product never points at a missing photo
-                const orphanPhotos = removedProductPhotoIds(adminProducts, updatedWithCosts);
-                if (orphanPhotos.length > 0) {
-                  void saved.then((ok) => ok && deleteProductPhotos(orphanPhotos).catch((err) => console.error('Photos of removed products stayed:', err)));
-                }
-                setProductCosts((prev) => {
-                  const next = { ...prev };
-                  for (const { id, costPrice } of costChanges) {
-                    if (typeof costPrice === 'number') next[id] = costPrice;
-                    else delete next[id];
-                  }
-                  return next;
-                });
-                // The cost price stays in the admin panel: products in the cart and in orders go without it
-                const updatedProds = updatedWithCosts.map(({ costPrice: _cost, ...p }) => p);
-                setProducts(updatedProds);
-                // Synchronize cart with updated products & remove deleted items
-                setCartItems((prevCart) =>
-                  prevCart
-                    .filter((ci) => updatedProds.some((p) => p.id === ci.product.id))
-                    .map((ci) => {
-                      const freshProd = updatedProds.find((p) => p.id === ci.product.id);
-                      return freshProd ? { ...ci, product: freshProd } : ci;
-                    })
-                );
-                if (selectedProduct) {
-                  const matched = updatedProds.find((p) => p.id === selectedProduct.id);
-                  if (matched) {
-                    setSelectedProduct(matched);
-                  } else {
-                    // the admin is in the profile here: the product page is not open
-                    setSelectedProduct(null);
-                  }
-                }
-                return saved;
-              }}
-              onUpdateOrders={(updatedOrders) => {
-                setOrders(updatedOrders);
-                return persist('заказы', syncAllOrdersToFirestore(changedItems(orders, updatedOrders)));
-              }}
+              onUpdateProducts={handleUpdateProducts}
+              onUpdateOrders={handleUpdateOrders}
               promos={promos}
-              onUpdatePromos={(updatedPromos) => {
-                const saved = persist(
-                  'промокоды',
-                  deleteRemovedDocs('promos', promos, updatedPromos),
-                  syncAllPromosToFirestore(changedItems(promos, updatedPromos))
-                );
-                setPromos(updatedPromos);
-                // «Промокоды» say «создан/обновлен» and close the form only after the database answered (UX audit 03.10, finding 5)
-                return saved;
-              }}
+              onUpdatePromos={handleUpdatePromos}
               bannerSlides={bannerSlides}
               onUpdateBannerSlides={handleUpdateBannerSlides}
               chatMessages={chatMessages}
@@ -1285,12 +710,8 @@ export default function App() {
               onClearChat={handleClearChat}
               onChangeChatMessage={(change) => handleChangeChatMessage(change, true)}
               storefrontSettings={storefrontSettings}
-              onUpdateStorefrontSettings={(upd) => {
-                setStorefrontSettings(upd);
-                saveStorefrontSettings(upd);
-                return persist('настройки витрины', saveStorefrontSettingsToFirestore(upd));
-              }}
-              onSaveLegalText={(id, text) => persist('документ', saveLegalText(id, text))}
+              onUpdateStorefrontSettings={handleUpdateStorefrontSettings}
+              onSaveLegalText={handleSaveLegalText}
               deliveryMethods={deliveryMethods}
               onUpdateDeliveryMethods={handleUpdateDeliveryMethods}
               pickupPoints={pickupPoints}
