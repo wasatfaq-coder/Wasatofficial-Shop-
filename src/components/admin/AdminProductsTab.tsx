@@ -2,24 +2,14 @@ import React, { useState, useMemo, useRef } from 'react';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { pluralRu } from '../../utils/pluralize';
 import {
-  Search,
   Plus,
   Trash2,
-  Edit2,
   Tag,
   Check,
   X,
-  SlidersHorizontal,
-  Download,
-  Upload,
   Layers,
   AlertTriangle,
-  Sparkles,
-  Eye,
-  Copy,
-  ChevronDown,
   Boxes,
-  FileSpreadsheet,
   Image as ImageIcon,
   ImagePlus,
   DollarSign,
@@ -35,14 +25,11 @@ import {
 import { Product, ProductSKU, StockMovementLog } from '../../types';
 import { deleteProductPhotos, loadProductPhotos, saveProductPhotos, saveStockMovements } from '../../utils/firebaseSync';
 import { formatOrderDate } from '../../shared/orderDate';
-import { SelectCheckbox } from './SelectCheckbox';
-import { exportProductsToCSV, parseProductsFromCSV } from '../../utils/csvHelpers';
 import { processImageFiles } from '../../utils/imageUpload';
 import {
   generateDefaultSKUs,
   generateSkuCode,
   generateBarcode,
-  getProductTotalStock,
   isHiddenFromSale,
   mergeFormStock,
   recategorizeSkuCode,
@@ -62,7 +49,6 @@ import { AdminBulkOperationsModal } from './AdminBulkOperationsModal';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { ModalPortal } from '../ModalPortal';
 import { TextEditModal } from './TextEditModal';
-import { NotConfigured } from '../NotConfigured';
 import {
   AdminProductCardStructure,
   EMPTY_CARD_STRUCTURE,
@@ -72,13 +58,18 @@ import {
 } from './AdminProductCardStructure';
 import { categoryIcon } from '../../utils/categories';
 import type { StoreCategory } from '../../types';
-import { productImage } from '../../utils/productImage';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
 import { docSizeBytes, formatMegabytes, PRODUCT_SIZE_BUDGET_BYTES } from '../../utils/productSize';
 import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
+import { useProductList } from './products/useProductList';
+import { ProductListToolbar } from './products/ProductListToolbar';
+import { ProductListGrid } from './products/ProductListGrid';
+import { ProductCsvImportModal } from './products/ProductCsvImportModal';
+import { ProductInspectModal } from './products/ProductInspectModal';
+import { ProductListDialogs } from './products/ProductListDialogs';
 
-interface AdminProductsTabProps {
+export interface AdminProductsTabProps {
   /** Admin → «Категории»: the only category list for products */
   categories?: StoreCategory[];
   products: Product[];
@@ -87,6 +78,9 @@ interface AdminProductsTabProps {
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
+
+/** «Все категории» and the categories from Admin → «Категории» */
+export type ProductCategoryOption = { id: string; name: string };
 
 const PRESET_BADGES = ['ХИТ', 'NEW', 'SALE', '-20%', 'PREMIUM', 'LIMITED', 'ECO', 'EXCLUSIVE'];
 
@@ -100,19 +94,16 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 }) => {
   // «Все категории» for the filter + the categories from Admin → «Категории»
   const CATEGORY_OPTIONS = useMemo(() => [{ id: 'all', name: 'Все категории' }, ...categories], [categories]);
-  // Filters & Search
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [stockFilter, setStockFilter] = useState<'all' | 'in_stock' | 'out_of_stock'>('all');
-
-  // Selection & Bulk
-  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
-  const [isBulkOperationsModalOpen, setIsBulkOperationsModalOpen] = useState(false);
-  const [isBulkDiscountModalOpen, setIsBulkDiscountModalOpen] = useState(false);
-  const bulkDiscountDialog = useDialogA11y(isBulkDiscountModalOpen, () => setIsBulkDiscountModalOpen(false));
-  const [bulkDiscountPercent, setBulkDiscountPercent] = useState<number>(15);
-  const [isBulkCategoryDropdownOpen, setIsBulkCategoryDropdownOpen] = useState(false);
+  const list = useProductList(products, onUpdateProducts, onShowToast, CATEGORY_OPTIONS);
+  const {
+    isBulkDeleteConfirmOpen,
+    setIsBulkDeleteConfirmOpen,
+    selectedProductIds,
+    setSelectedProductIds,
+    isBulkOperationsModalOpen,
+    setIsBulkOperationsModalOpen,
+    handleBulkDelete,
+  } = list;
 
   // Modals
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
@@ -124,13 +115,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const formErrorsRef = useRef<HTMLDivElement>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
-  const deleteProductDialog = useDialogA11y(Boolean(productToDelete), () => setProductToDelete(null));
-  const [productToInspect, setProductToInspect] = useState<Product | null>(null);
-  const inspectDialog = useDialogA11y(Boolean(productToInspect), () => setProductToInspect(null));
-  const [isCSVImportModalOpen, setIsCSVImportModalOpen] = useState(false);
-  const csvDialog = useDialogA11y(isCSVImportModalOpen, () => setIsCSVImportModalOpen(false));
-  const [csvInputText, setCsvInputText] = useState('');
 
   // Product Form Fields State
   const [formTitle, setFormTitle] = useState('');
@@ -267,63 +251,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   const productFormGuard = useDiscardGuard(isProductFormDirty, () => setIsProductFormOpen(false));
   const productFormDialog = useDialogA11y(isProductFormOpen, productFormGuard.requestClose);
 
-  // Filtered Products
-  const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      const q = searchQuery.toLowerCase().trim();
-      const matchesSearch =
-        !q ||
-        p.title.toLowerCase().includes(q) ||
-        p.description?.toLowerCase().includes(q) ||
-        p.skus?.some((s) => s.skuCode?.toLowerCase().includes(q) || s.barcode?.includes(q));
-
-      const matchesCat = categoryFilter === 'all' || p.category === categoryFilter;
-      const matchesStock =
-        stockFilter === 'all'
-          ? true
-          : stockFilter === 'in_stock'
-          ? !isHiddenFromSale(p)
-          : isHiddenFromSale(p);
-
-      return matchesSearch && matchesCat && matchesStock;
-    });
-  }, [products, searchQuery, categoryFilter, stockFilter]);
-
-  const isAllFilteredSelected =
-    filteredProducts.length > 0 &&
-    filteredProducts.every((p) => selectedProductIds.includes(p.id));
-
-  // Category select options with counts for Neumorphic dropdown
-  const categorySelectOptions = useMemo(() => {
-    const knownIds = new Set(CATEGORY_OPTIONS.map((c) => c.id));
-    const extraCategories: { id: string; name: string }[] = [];
-    products.forEach((p) => {
-      if (p.category && !knownIds.has(p.category)) {
-        knownIds.add(p.category);
-        extraCategories.push({
-          id: p.category,
-          name: p.categoryLabel || p.category,
-        });
-      }
-    });
-
-    const allOptions = [...CATEGORY_OPTIONS, ...extraCategories];
-
-    return allOptions.map((cat) => {
-      const count =
-        cat.id === 'all'
-          ? products.length
-          : products.filter((p) => p.category === cat.id).length;
-
-      return {
-        value: cat.id,
-        label: cat.name,
-        badge: `${count}`,
-        icon: <Tag className="w-3.5 h-3.5 text-accent" />,
-      };
-    });
-  }, [products]);
-
   // SKU Uniqueness checker across catalog
   const skuConflictInfo = useMemo(() => {
     if (!isProductFormOpen) return { hasConflicts: false, duplicateCodes: [] };
@@ -378,87 +305,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   const barcodeForColor = (color: string, taken: Set<string>, skus: ProductSKU[] = formSkus) =>
     skus.find((s) => s.color.trim().toLowerCase() === color.trim().toLowerCase() && s.barcode?.trim())?.barcode ??
     generateBarcode(taken);
-
-  // Selection Handlers
-  const handleToggleSelectAll = () => {
-    if (isAllFilteredSelected) {
-      const remaining = selectedProductIds.filter(
-        (id) => !filteredProducts.some((p) => p.id === id)
-      );
-      setSelectedProductIds(remaining);
-    } else {
-      const combined = Array.from(
-        new Set([...selectedProductIds, ...filteredProducts.map((p) => p.id)])
-      );
-      setSelectedProductIds(combined);
-    }
-  };
-
-  const handleToggleSelectOne = (id: string) => {
-    setSelectedProductIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  };
-
-  // Bulk Operations
-  const handleBulkToggleStock = (inStock: boolean) => {
-    const updated = products.map((p) =>
-      selectedProductIds.includes(p.id) ? { ...p, inStock, hiddenFromSale: !inStock } : p
-    );
-    onUpdateProducts(updated);
-    onShowToast(
-      inStock
-        ? `Товары (${selectedProductIds.length}) возвращены в продажу`
-        : `Товары (${selectedProductIds.length}) сняты с продажи`,
-      'info'
-    );
-    setSelectedProductIds([]);
-  };
-
-  const handleBulkChangeCategory = (newCat: string) => {
-    const catObj = CATEGORY_OPTIONS.find((c) => c.id === newCat);
-    const updated = products.map((p) =>
-      selectedProductIds.includes(p.id)
-        ? { ...p, category: newCat, categoryLabel: catObj?.name || p.categoryLabel || newCat }
-        : p
-    );
-    onUpdateProducts(updated);
-    onShowToast(`Категория обновлена для ${selectedProductIds.length} товаров на "${catObj?.name || newCat}"`, 'success');
-    setSelectedProductIds([]);
-    setIsBulkCategoryDropdownOpen(false);
-  };
-
-  const handleBulkApplyDiscount = () => {
-    if (!bulkDiscountPercent || bulkDiscountPercent <= 0) return;
-    const factor = (100 - bulkDiscountPercent) / 100;
-    const updated = products.map((p) => {
-      if (!selectedProductIds.includes(p.id)) return p;
-      const orig = p.originalPrice || p.price;
-      const newPrice = Math.round(orig * factor);
-      return {
-        ...p,
-        originalPrice: orig,
-        price: newPrice,
-        badge: `-${bulkDiscountPercent}%`,
-      };
-    });
-    onUpdateProducts(updated);
-    onShowToast(`Скидка ${bulkDiscountPercent}% применена к ${selectedProductIds.length} товарам`, 'success');
-    setIsBulkDiscountModalOpen(false);
-    setSelectedProductIds([]);
-  };
-
-  const handleBulkDelete = () => {
-    if (selectedProductIds.length === 0) return;
-    const count = selectedProductIds.length;
-    const updated = products.filter((p) => !selectedProductIds.includes(p.id));
-    if (productToInspect && selectedProductIds.includes(productToInspect.id)) {
-      setProductToInspect(null);
-    }
-    onUpdateProducts(updated);
-    onShowToast(`Удалено товаров: ${count}`, 'info');
-    setSelectedProductIds([]);
-  };
 
   // Duplicate Product Handler
   const handleDuplicateProduct = async (prod: Product) => {
@@ -1025,464 +871,25 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     return totalFormStock * (Number(formPrice) || 0);
   }, [totalFormStock, formPrice]);
 
-  // CSV Import execution
-  const handleExecuteCSVImport = async () => {
-    if (!csvInputText.trim()) {
-      onShowToast('Вставьте текст CSV или загрузите файл', 'error');
-      return;
-    }
-
-    try {
-      const { products: parsed, skipped } = parseProductsFromCSV(csvInputText, products);
-      if (parsed.length === 0) {
-        onShowToast(
-          skipped > 0
-            ? `Нет подходящих строк: у каждого товара нужны название, цена и ссылка на фото (пропущено ${skipped})`
-            : 'Не удалось распознать строки CSV',
-          'error'
-        );
-        return;
-      }
-
-      // A row with the ID of an existing product updates it (a re-imported export does not duplicate the catalog)
-      const byId = new Map<string, Product>(products.map((p): [string, Product] => [p.id, p]));
-      let updatedCount = 0;
-      const newProducts: Product[] = [];
-      for (const [idx, p] of parsed.entries()) {
-        const existing = p.id ? byId.get(p.id) : undefined;
-        if (existing) {
-          const updated: Product = {
-            ...existing,
-            ...p,
-            id: existing.id,
-            categoryLabel: categories.find((c) => c.id === p.category)?.name || existing.categoryLabel,
-          };
-          // a colour or size new in the file gets its variations (stock 0); the existing ones keep their stock
-          updated.skus = withMissingSkus(updated);
-          byId.set(existing.id, updated);
-          updatedCount++;
-          continue;
-        }
-        const fullProd: Product = {
-          id: p.id || `prod-imp-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 7)}`,
-          title: p.title!,
-          category: p.category || '',
-          categoryLabel: categories.find((c) => c.id === p.category)?.name || p.category || '',
-          price: p.price!,
-          originalPrice: p.originalPrice,
-          inStock: p.inStock !== false,
-          description: p.description || '',
-          material: '',
-          images: p.images || [],
-          sizes: p.sizes || [],
-          colors: p.colors || [],
-          skus: [],
-          rating: 0,
-          reviewsCount: 0,
-        };
-        fullProd.skus = generateDefaultSKUs(fullProd);
-        newProducts.push(fullProd);
-      }
-
-      // «Добавлено» only after the database answered; a failure already showed «Не сохранено: …»
-      const saved = await onUpdateProducts([...newProducts, ...products.map((p) => byId.get(p.id) ?? p)]);
-      if (saved === false) return;
-      onShowToast(
-        [
-          `Добавлено: ${newProducts.length}`,
-          updatedCount ? `обновлено: ${updatedCount}` : '',
-          skipped ? `пропущено без названия, цены или фото: ${skipped}` : '',
-        ]
-          .filter(Boolean)
-          .join(', '),
-        'success'
-      );
-      setIsCSVImportModalOpen(false);
-      setCsvInputText('');
-    } catch (err) {
-      onShowToast('Ошибка обработки CSV файла', 'error');
-    }
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      setCsvInputText(text);
-      onShowToast(`Файл "${file.name}" загружен`, 'info');
-    };
-    reader.readAsText(file);
-  };
-
   return (
     <div className="space-y-3.5">
-      {/* Top Search & Actions Toolbar */}
-      <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#4E5C70]" />
-          <input
-            type="text"
-            aria-label="Поиск товаров"
-            placeholder="Название, артикул или штрихкод"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
-          />
-        </div>
+      <ProductListToolbar
+        list={list}
+        products={products}
+        categories={categories}
+        CATEGORY_OPTIONS={CATEGORY_OPTIONS}
+        handleOpenAddProduct={handleOpenAddProduct}
+        setTextEditModal={setTextEditModal}
+      />
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            onClick={() => exportProductsToCSV(products)}
-            className="py-2 px-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-accent flex items-center gap-1 cursor-pointer transition-colors"
-            title="Экспортировать весь каталог в файл CSV для Excel"
-          >
-            <Download className="w-3.5 h-3.5 text-accent" />
-            <span className="hidden sm:inline">Экспорт CSV</span>
-          </button>
-
-          <button
-            onClick={() => setIsCSVImportModalOpen(true)}
-            className="py-2 px-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-accent flex items-center gap-1 cursor-pointer transition-colors"
-            title="Импортировать товары из CSV"
-          >
-            <Upload className="w-3.5 h-3.5 text-accent" />
-            <span className="hidden sm:inline">Импорт</span>
-          </button>
-
-          <button
-            onClick={() =>
-              setTextEditModal({
-                isOpen: true,
-                category: categoryFilter !== 'all' ? categoryFilter : 'global',
-                title: 'Быстрые фразы и акценты',
-                subtitle: 'Управление фразами и синхронизация для всех категорий одежды',
-                value: '',
-              })
-            }
-            className="py-2 px-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-accent flex items-center gap-1 cursor-pointer transition-colors"
-            title="Управление быстрыми фразами и акцентами для всех категорий одежды"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-accent" />
-            <span className="hidden sm:inline">Быстрые фразы</span>
-          </button>
-
-          <button
-            onClick={handleOpenAddProduct}
-            disabled={categories.length === 0}
-            title={categories.length === 0 ? 'Сначала добавьте категории в разделе «Категории»' : undefined}
-            className="py-2 px-3.5 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 shrink-0 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Plus className="w-4 h-4 text-white" />
-            <span>Добавить товар</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Filters Toolbar: Stock Filter & Neumorphic Category Dropdown */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {/* Stock Filter Segmented Control */}
-        <div className="neu-flat-sm rounded-xl p-1 flex gap-1 items-center h-10">
-          {[
-            { id: 'all', label: `Все (${products.length})` },
-            {
-              id: 'in_stock',
-              label: `В продаже (${products.filter((p) => !isHiddenFromSale(p)).length})`,
-            },
-            {
-              id: 'out_of_stock',
-              label: `Сняты (${products.filter((p) => isHiddenFromSale(p)).length})`,
-            },
-          ].map((sf) => (
-            <button
-              key={sf.id}
-              onClick={() => setStockFilter(sf.id as any)}
-              className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] transition-all cursor-pointer text-center ${
-                stockFilter === sf.id
-                  ? 'neu-pill-active font-extrabold'
-                  : 'text-[#4E5C70] font-bold hover:text-[#2D3A4E]'
-              }`}
-            >
-              {sf.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Category Neumorphic Dropdown */}
-        <div className="relative">
-          <NeumorphicSelect
-            value={categoryFilter}
-            onChange={(val) => setCategoryFilter(val)}
-            variant="inset"
-            triggerClassName="rounded-2xl"
-            prefix="Категория:"
-            options={categorySelectOptions}
-            placeholder="Выберите категорию..."
-          />
-        </div>
-      </div>
-
-      {/* Selection & Bulk Actions Toolbar (nothing to select in an empty catalog) */}
-      {products.length > 0 && (
-      <div className="neu-inset rounded-2xl p-3 space-y-2">
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            role="checkbox"
-            aria-checked={isAllFilteredSelected}
-            onClick={handleToggleSelectAll}
-            className="flex items-center gap-2.5 py-1.5 cursor-pointer select-none group rounded-xl"
-          >
-            <span
-              aria-hidden="true"
-              className={`w-5 h-5 rounded-lg flex items-center justify-center transition-all ${
-                isAllFilteredSelected
-                  ? 'neu-pill-active text-accent'
-                  : 'neu-button text-transparent group-hover:text-accent/40'
-              }`}
-            >
-              <Check className="w-3 h-3 stroke-[3]" />
-            </span>
-            <span className="text-xs font-extrabold text-[#2D3A4E] group-hover:text-accent transition-colors">
-              {isAllFilteredSelected ? 'Снять выделение со всех' : 'Выбрать все отфильтрованные'}
-            </span>
-          </button>
-
-          <span className="text-xs font-bold text-[#4E5C70]">
-            Выбрано: <strong className="text-accent">{selectedProductIds.length}</strong>
-          </span>
-        </div>
-
-        {selectedProductIds.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 pt-1.5 animate-in fade-in duration-150">
-            <button
-              onClick={() => setIsBulkOperationsModalOpen(true)}
-              className="h-8 px-3 neu-button rounded-xl text-[11px] font-extrabold text-accent flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-all"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              Массовые операции
-            </button>
-
-            <button
-              onClick={() => setIsBulkDiscountModalOpen(true)}
-              className="h-8 px-3 neu-button rounded-xl text-[11px] font-extrabold text-[#4E5C70] hover:text-accent flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-all"
-            >
-              <Tag className="w-3.5 h-3.5 text-accent" />
-              Скидка
-            </button>
-
-            <div className="relative">
-              <button
-                onClick={() => setIsBulkCategoryDropdownOpen(!isBulkCategoryDropdownOpen)}
-                className="h-8 px-3 neu-button rounded-xl text-[11px] font-extrabold text-[#4E5C70] hover:text-[#2D3A4E] flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-all"
-              >
-                <Layers className="w-3.5 h-3.5 text-accent" />
-                Сменить категорию
-                <ChevronDown className="w-3 h-3 ml-0.5" />
-              </button>
-
-              {isBulkCategoryDropdownOpen && (
-                <div className="absolute left-0 top-full mt-1.5 z-40 neu-dropdown rounded-2xl p-1.5 space-y-1 min-w-[160px] animate-in fade-in border border-white/80">
-                  {CATEGORY_OPTIONS.filter((c) => c.id !== 'all').map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => handleBulkChangeCategory(cat.id)}
-                      className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-[#2D3A4E] hover:bg-white/40 cursor-pointer transition-colors"
-                    >
-                      {cat.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={() => handleBulkToggleStock(false)}
-              className="h-8 px-3 neu-button rounded-xl text-[11px] font-extrabold text-[#4E5C70] hover:text-warning flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-all"
-            >
-              <X className="w-3.5 h-3.5 text-warning" />
-              Снять с продажи
-            </button>
-
-            <button
-              onClick={() => handleBulkToggleStock(true)}
-              className="h-8 px-3 neu-button rounded-xl text-[11px] font-extrabold text-[#4E5C70] hover:text-success flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-all"
-            >
-              <Check className="w-3.5 h-3.5 text-success" />
-              В продажу
-            </button>
-
-            <button
-              onClick={() => setIsBulkDeleteConfirmOpen(true)}
-              className="h-8 px-3 neu-button-danger rounded-xl text-[11px] font-extrabold flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-all"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              Удалить
-            </button>
-          </div>
-        )}
-      </div>
-      )}
-
-      {/* Products List Grid */}
-      <div className="space-y-2">
-        {products.length === 0 ? (
-          <NotConfigured
-            title="Каталог"
-            hint={
-              categories.length === 0
-                ? 'Сначала добавьте категории во вкладке «Категории», затем — первый товар. Покупатели пока видят «Каталог: не настроено».'
-                : 'Добавьте первый товар кнопкой «Добавить товар». Покупатели пока видят «Каталог: не настроено».'
-            }
-          />
-        ) : filteredProducts.length === 0 ? (
-          <div className="neu-inset rounded-2xl p-8 text-center space-y-1 text-[#4E5C70]">
-            <p className="text-xs font-bold text-[#2D3A4E]">Товары не найдены</p>
-            <p className="text-xs">Попробуйте изменить поисковый запрос или фильтры</p>
-          </div>
-        ) : (
-          filteredProducts.map((prod, pIdx) => {
-            const isSelected = selectedProductIds.includes(prod.id);
-            const totalStock = getProductTotalStock(prod);
-            const primarySku = prod.skus?.[0]?.skuCode || `WS-CAT-${prod.id.slice(-4)}`;
-
-            return (
-              <div
-                key={`admin-product-${prod.id}-${pIdx}`}
-                className={`neu-inset rounded-2xl p-3 sm:p-3.5 transition-all border ${
-                  isSelected ? 'border-accent ring-1 ring-accent/40' : 'border-transparent'
-                } flex flex-col sm:flex-row sm:items-center justify-between gap-3`}
-              >
-                {/* Product Main Content */}
-                <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-                  {/* Selection Checkbox */}
-                  <SelectCheckbox
-                    checked={isSelected}
-                    onToggle={() => handleToggleSelectOne(prod.id)}
-                    label={`Выбрать товар «${prod.title}»`}
-                    className="mt-1 sm:mt-0"
-                  />
-
-                  {/* Product Thumbnail */}
-                  <div className="relative w-12 h-14 sm:w-14 sm:h-14 rounded-xl overflow-hidden neu-inset shrink-0">
-                    <img
-                      src={productImage(prod)}
-                      alt={prod.title}
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                  </div>
-
-                  {/* Main Product Info */}
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h4
-                        className="text-xs sm:text-sm font-extrabold text-[#2D3A4E] leading-snug line-clamp-1 sm:truncate"
-                        title={prod.title}
-                      >
-                        {prod.title}
-                      </h4>
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg neu-flat-sm text-accent shrink-0 whitespace-nowrap">
-                        {prod.categoryLabel || prod.category}
-                      </span>
-                      {prod.badge && (
-                        <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-md neu-fill-accent text-white shrink-0 leading-tight whitespace-nowrap">
-                          {prod.badge}
-                        </span>
-                      )}
-                      {isHiddenFromSale(prod) ? (
-                        <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-md neu-inset text-danger shrink-0 border border-danger/25 whitespace-nowrap">
-                          Снят с витрины
-                        </span>
-                      ) : prod.inStock === false ? (
-                        <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-md neu-inset text-[#4E5C70] shrink-0 whitespace-nowrap">
-                          Распродан
-                        </span>
-                      ) : null}
-                    </div>
-
-                    <div className="flex items-center gap-2 text-[11px] text-[#4E5C70] font-semibold flex-wrap">
-                      <span className="font-mono text-accent font-bold text-[11px] bg-[#D8DFE8] px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
-                        {primarySku}
-                      </span>
-                      <span className="font-extrabold text-[#2D3A4E] text-xs shrink-0 whitespace-nowrap">
-                        {prod.price.toLocaleString('ru-RU')} ₽
-                      </span>
-                      {prod.originalPrice && (
-                        <span className="line-through text-[#4E5C70] text-[11px] shrink-0 whitespace-nowrap">
-                          {prod.originalPrice.toLocaleString('ru-RU')} ₽
-                        </span>
-                      )}
-                      <span
-                        className={`font-extrabold text-[11px] px-2 py-0.5 rounded-lg shrink-0 whitespace-nowrap ${
-                          totalStock === 0
-                            ? 'text-danger bg-danger-soft border border-danger/25'
-                            : totalStock < 3
-                            ? 'text-warning bg-warning-soft border border-warning/25'
-                            : 'text-success bg-success-soft border border-success/25'
-                        }`}
-                      >
-                        Остаток: {totalStock} шт.
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons Toolbar with Clear Visual Hierarchy */}
-                <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-2 sm:pt-0 border-t border-[#BAC5D5]/30 sm:border-t-0">
-                  {/* Secondary & Destructive Tools */}
-                  <div className="flex items-center gap-1.5">
-                    {/* Secondary: Preview */}
-                    <button
-                      onClick={() => setProductToInspect(prod)}
-                      className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-accent transition-all cursor-pointer shrink-0"
-                      title="Быстрый просмотр карточки"
-                      aria-label="Быстрый просмотр карточки"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                    </button>
-
-                    {/* Secondary: Duplicate */}
-                    <button
-                      onClick={() => void handleDuplicateProduct(prod)}
-                      disabled={duplicatingId !== null}
-                      aria-busy={duplicatingId === prod.id}
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center text-[#4E5C70] transition-all shrink-0 ${
-                        duplicatingId === null ? 'neu-button hover:text-success cursor-pointer' : 'neu-button-disabled'
-                      }`}
-                      title="Дублировать товар (копировать)"
-                      aria-label="Дублировать товар (копировать)"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </button>
-
-                    {/* Danger / Destructive: Delete */}
-                    <button
-                      onClick={() => setProductToDelete(prod)}
-                      className="w-8 h-8 rounded-xl neu-button-danger flex items-center justify-center transition-all cursor-pointer shrink-0"
-                      title="Удалить товар"
-                      aria-label="Удалить товар"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  {/* Primary Action: Edit */}
-                  <button
-                    onClick={() => handleOpenEditProduct(prod)}
-                    className="h-8 px-3.5 neu-button rounded-xl text-xs font-extrabold text-accent flex items-center gap-1.5 cursor-pointer transition-all shrink-0"
-                    title="Редактировать товар"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                    <span>Редактировать</span>
-                  </button>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
+      <ProductListGrid
+        list={list}
+        products={products}
+        categories={categories}
+        duplicatingId={duplicatingId}
+        handleDuplicateProduct={handleDuplicateProduct}
+        handleOpenEditProduct={handleOpenEditProduct}
+      />
 
       {/* ================= MODAL: CREATE / EDIT PRODUCT ================= */}
       {isProductFormOpen && (
@@ -2454,311 +1861,19 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       )}
 
       {/* ================= MODAL: CSV IMPORT ================= */}
-      {isCSVImportModalOpen && (
-        <ModalPortal><div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div ref={csvDialog.ref} {...csvDialog.props} className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-5 sm:p-6 max-w-xl w-full space-y-4 text-[#2D3A4E] border border-white/80 max-h-[90vh] overflow-y-auto my-auto">
-            <div className="flex items-start sm:items-center justify-between pb-2 border-b border-[#BAC5D5]/50 gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
-                  <FileSpreadsheet className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <h3 id={csvDialog.titleId} className="text-sm sm:text-base font-extrabold uppercase tracking-wider text-[#2D3A4E] truncate">
-                    Импорт каталога из CSV
-                  </h3>
-                  <p className="text-xs text-[#4E5C70] font-medium truncate sm:whitespace-normal leading-tight">
-                    Загрузите файл или вставьте строки CSV для пакетного добавления
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsCSVImportModalOpen(false)}
-                className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer shrink-0"
-                aria-label="Закрыть"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
-                  1. Выберите файл на диске (.csv)
-                </label>
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleFileUpload}
-                  className="w-full text-xs text-[#2D3A4E] file:py-2 file:px-3 file:rounded-xl file:border-0 file:bg-accent file:text-white file:font-bold file:mr-3 file:cursor-pointer cursor-pointer neu-inset p-2 rounded-xl"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
-                  2. Либо вставьте текст CSV в поле ниже
-                </label>
-                <textarea
-                  rows={6}
-                  value={csvInputText}
-                  onChange={(e) => setCsvInputText(e.target.value)}
-                  placeholder={`ID,Название,Категория,Цена (₽),Старая цена (₽),В наличии,Остаток,Размеры,Цвета,Картинка,Описание
-"prod-1","Рубашка льняная","linen",2990,3500,"Да",12,"S; M; L","Бежевый; Синий","https://images.unsplash.com/...","Премиальный лен"`}
-                  className="w-full p-3 neu-inset rounded-xl font-mono text-[11px] text-[#2D3A4E] leading-relaxed"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2.5 pt-2 border-t border-[#BAC5D5]/50">
-              <button
-                type="button"
-                onClick={() => setIsCSVImportModalOpen(false)}
-                className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer"
-              >
-                Отмена
-              </button>
-              <button
-                type="button"
-                onClick={handleExecuteCSVImport}
-                className="flex-1 py-2.5 neu-button-accent rounded-xl text-xs font-extrabold text-white cursor-pointer transition-all"
-              >
-                Импортировать в каталог
-              </button>
-            </div>
-          </div>
-        </div></ModalPortal>
-      )}
+      <ProductCsvImportModal
+        list={list}
+        products={products}
+        categories={categories}
+        onUpdateProducts={onUpdateProducts}
+        onShowToast={onShowToast}
+      />
 
       {/* ================= MODAL: QUICK PRODUCT INSPECT ================= */}
-      {productToInspect && (
-        <ModalPortal><div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div ref={inspectDialog.ref} {...inspectDialog.props} className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-5 sm:p-6 max-w-lg w-full space-y-4 text-[#2D3A4E] border border-white/80 max-h-[90vh] overflow-y-auto my-auto">
-            {/* Header */}
-            <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center text-accent">
-                  <Eye className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 id={inspectDialog.titleId} className="text-sm font-extrabold uppercase text-[#2D3A4E]">
-                    Карточка товара
-                  </h3>
-                  <span className="text-[11px] font-mono text-[#4E5C70]">{productToInspect.id}</span>
-                </div>
-              </div>
-              <button
-                onClick={() => setProductToInspect(null)}
-                className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer"
-                aria-label="Закрыть"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <ProductInspectModal list={list} handleOpenEditProduct={handleOpenEditProduct} />
 
-            {/* Gallery Thumbnail */}
-            <div className="aspect-[16/9] rounded-2xl overflow-hidden neu-inset relative">
-              <img
-                src={productToInspect.images?.[0]}
-                alt={productToInspect.title}
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-              {productToInspect.badge && (
-                <span className="absolute top-2.5 left-2.5 neu-fill-accent text-white text-[11px] font-extrabold px-2 py-0.5 rounded-lg">
-                  {productToInspect.badge}
-                </span>
-              )}
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div className="flex justify-between items-baseline gap-2">
-                <h4 className="text-base font-extrabold text-[#2D3A4E] leading-tight">
-                  {productToInspect.title}
-                </h4>
-                <div className="text-right shrink-0">
-                  <div className="text-base font-extrabold text-accent">
-                    {productToInspect.price.toLocaleString('ru-RU')} ₽
-                  </div>
-                  {productToInspect.originalPrice && (
-                    <div className="text-[11px] text-[#4E5C70] line-through">
-                      {productToInspect.originalPrice.toLocaleString('ru-RU')} ₽
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {productToInspect.description && (
-                <p className="text-[#4E5C70] text-xs leading-relaxed">
-                  {productToInspect.description}
-                </p>
-              )}
-
-              <div className="grid grid-cols-2 gap-2 text-[11px]">
-                <div className="neu-inset rounded-xl p-2.5">
-                  <span className="text-[#4E5C70] block">Категория:</span>
-                  <strong className="text-[#2D3A4E]">
-                    {productToInspect.categoryLabel || productToInspect.category}
-                  </strong>
-                </div>
-                {productToInspect.material?.trim() && (
-                  <div className="neu-inset rounded-xl p-2.5">
-                    <span className="text-[#4E5C70] block">Состав:</span>
-                    <strong className="text-[#2D3A4E]">{productToInspect.material}</strong>
-                  </div>
-                )}
-              </div>
-
-              {/* SKU Breakdown in inspect modal */}
-              {productToInspect.skus && productToInspect.skus.length > 0 && (
-                <div className="space-y-1.5 pt-1">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-[#4E5C70]">
-                    <span>Вариации SKU ({productToInspect.skus.length})</span>
-                    <span className="text-accent font-extrabold">
-                      Всего: {getProductTotalStock(productToInspect)} шт.
-                    </span>
-                  </div>
-                  <div className="neu-inset rounded-xl p-2 max-h-36 overflow-y-auto space-y-1 text-[11px]">
-                    {productToInspect.skus.map((sku, sIdx) => (
-                      <div
-                        key={`inspect-sku-${sku.color}-${sku.size}-${sku.id || sIdx}-${sIdx}`}
-                        className="flex items-center justify-between py-1 px-2 neu-flat rounded-lg"
-                      >
-                        <span className="font-bold text-[#2D3A4E]">
-                          {sku.color} • {sku.size}
-                        </span>
-                        <div className="flex items-center gap-2 font-mono text-[11px] text-[#4E5C70]">
-                          <span>{sku.skuCode}</span>
-                          <span className="font-extrabold text-accent">{sku.stock} шт.</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Inspect Actions */}
-            <div className="flex gap-2.5 pt-2 border-t border-[#BAC5D5]/50">
-              <button
-                type="button"
-                onClick={() => setProductToInspect(null)}
-                className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer"
-              >
-                Закрыть
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const targetProd = productToInspect;
-                  setProductToInspect(null);
-                  handleOpenEditProduct(targetProd);
-                }}
-                className="flex-1 py-2.5 neu-button-accent rounded-xl text-xs font-extrabold text-white cursor-pointer transition-all flex items-center justify-center gap-2"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-                <span>Редактировать товар</span>
-              </button>
-            </div>
-          </div>
-        </div></ModalPortal>
-      )}
-
-      {/* ================= MODAL: DELETE PRODUCT CONFIRMATION ================= */}
-      {productToDelete && (
-        <ModalPortal><div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div ref={deleteProductDialog.ref} {...deleteProductDialog.props} className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-5 sm:p-6 max-w-sm w-full space-y-3.5 text-[#2D3A4E] border border-white/80 my-auto text-center">
-            <div className="w-12 h-12 rounded-2xl neu-inset mx-auto flex items-center justify-center text-danger">
-              <Trash2 className="w-6 h-6" />
-            </div>
-            <div className="space-y-1">
-              <h3 id={deleteProductDialog.titleId} className="text-sm sm:text-base font-extrabold text-[#2D3A4E]">Удалить товар?</h3>
-              <p className="text-xs text-[#4E5C70] leading-relaxed">
-                Вы действительно хотите безвозвратно удалить{' '}
-                <strong className="text-[#2D3A4E]">«{productToDelete.title}»</strong> из каталога?
-              </p>
-            </div>
-            <div className="flex gap-2.5 pt-2 border-t border-[#BAC5D5]/50">
-              <button
-                type="button"
-                onClick={() => setProductToDelete(null)}
-                className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer"
-              >
-                Отмена
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (productToInspect?.id === productToDelete.id) {
-                    setProductToInspect(null);
-                  }
-                  onUpdateProducts(products.filter((p) => p.id !== productToDelete.id));
-                  setSelectedProductIds((prev) => prev.filter((id) => id !== productToDelete.id));
-                  onShowToast(`Товар «${productToDelete.title}» удален`, 'info');
-                  setProductToDelete(null);
-                }}
-                className="flex-1 py-2.5 neu-button-danger rounded-xl text-xs font-extrabold transition-all cursor-pointer"
-              >
-                Удалить
-              </button>
-            </div>
-          </div>
-        </div></ModalPortal>
-      )}
-
-      {/* Bulk Discount Modal */}
-      {isBulkDiscountModalOpen && (
-        <ModalPortal><div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div ref={bulkDiscountDialog.ref} {...bulkDiscountDialog.props} className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-6 max-w-sm w-full space-y-4 text-[#2D3A4E] border border-white/80 my-auto">
-            <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
-              <h3 id={bulkDiscountDialog.titleId} className="text-sm font-extrabold uppercase text-[#2D3A4E]">Скидка на товары</h3>
-              <button
-                onClick={() => setIsBulkDiscountModalOpen(false)}
-                className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all"
-                aria-label="Закрыть"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <p className="text-xs text-[#4E5C70] font-bold">
-              Применить процент скидки к <strong className="text-accent">{selectedProductIds.length}</strong> товарам:
-            </p>
-
-            <div className="grid grid-cols-3 gap-2">
-              {[10, 15, 20, 25, 30, 50].map((pct) => (
-                <button
-                  key={pct}
-                  type="button"
-                  onClick={() => setBulkDiscountPercent(pct)}
-                  className={`py-2 rounded-xl text-xs font-extrabold transition-all active:scale-95 cursor-pointer ${
-                    bulkDiscountPercent === pct
-                      ? 'neu-pill-active'
-                      : 'neu-button text-[#2D3A4E] hover:text-accent'
-                  }`}
-                >
-                  -{pct}%
-                </button>
-              ))}
-            </div>
-
-            <div className="flex gap-2.5 pt-2 border-t border-[#BAC5D5]/50">
-              <button
-                type="button"
-                onClick={() => setIsBulkDiscountModalOpen(false)}
-                className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] transition-all"
-              >
-                Отмена
-              </button>
-              <button
-                type="button"
-                onClick={handleBulkApplyDiscount}
-                className="flex-1 py-2.5 neu-button-accent rounded-xl text-xs font-extrabold text-white transition-all"
-              >
-                Применить
-              </button>
-            </div>
-          </div>
-        </div></ModalPortal>
-      )}
+      {/* ================= MODAL: DELETE PRODUCT CONFIRMATION, BULK DISCOUNT ================= */}
+      <ProductListDialogs list={list} products={products} onUpdateProducts={onUpdateProducts} onShowToast={onShowToast} />
 
       {/* Photo Zoom Modal */}
       {previewZoomImage && (
