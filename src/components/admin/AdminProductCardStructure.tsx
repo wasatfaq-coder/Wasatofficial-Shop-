@@ -31,6 +31,8 @@ import {
   weaveSuggestions,
   withAutoRemainder,
 } from '../../utils/cardSuggestions';
+import { CARE_SYMBOLS, careSymbolOf, toggleCareSymbol, type CareSymbol } from '../../utils/careSymbols';
+import { CareSymbolIcon } from './CareSymbolIcon';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 
@@ -301,6 +303,16 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
     next[index] = { fiber, percentage: 0 };
     setAutoFiber(index);
     set('composition', withAutoRemainder(next, index));
+  };
+
+  /** A care symbol tapped as seen on the label; a rule with an explanation typed into it is taken away after a question */
+  const tapCareSymbol = (symbol: CareSymbol) => {
+    const index = value.care.findIndex((c) => careSymbolOf(c)?.id === symbol.id);
+    if (index >= 0 && value.care[index].desc.trim()) {
+      askDelete('care', index, 'Удалить правило ухода?', value.care[index].label, value.care[index].desc);
+      return;
+    }
+    set('care', toggleCareSymbol(value.care, symbol));
   };
 
   const setFiberShare = (index: number, percentage: number) => {
@@ -591,6 +603,30 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
 
                     {section.id === 'care' && (
                       <>
+                        <div className="space-y-1.5">
+                          <span className="text-[11px] font-extrabold text-[#2D3A4E]">Значки с бирки</span>
+                          <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5" role="group" aria-label="Значки ухода">
+                            {CARE_SYMBOLS.map((symbol) => {
+                              const picked = value.care.some((c) => careSymbolOf(c)?.id === symbol.id);
+                              return (
+                                <button
+                                  key={symbol.id}
+                                  type="button"
+                                  onClick={() => tapCareSymbol(symbol)}
+                                  aria-pressed={picked}
+                                  aria-label={symbol.label}
+                                  title={symbol.label}
+                                  className={`min-h-16 px-1 py-1.5 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${
+                                    picked ? 'neu-pill-active text-accent' : 'neu-button text-[#2D3A4E] hover:text-accent'
+                                  }`}
+                                >
+                                  <CareSymbolIcon symbol={symbol} />
+                                  <span className="text-[11px] font-bold leading-tight text-center">{symbol.short}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                         {value.care.length === 0 && emptyNote('Правил ухода нет — вкладка «Уход и стирка» скрыта.')}
                         {value.care.map((care, idx) => (
                           <div key={idx} className="neu-flat-sm rounded-2xl p-2.5 space-y-2">

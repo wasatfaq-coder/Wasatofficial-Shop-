@@ -1,10 +1,10 @@
-// Владелец заводит товар на телефоне: состав и страна — нажатием на чипы, без набора текста
-// (быстрое заведение товара, этап 1, docs/fast-product-entry-spec.md)
+// Владелец заводит товар на телефоне: состав и страна — нажатием на чипы, уход — значками с бирки, без набора текста
+// (быстрое заведение товара, этапы 1–2, docs/fast-product-entry-spec.md)
 import { test, expect } from '../fixtures';
 import { queryDocs } from '../emulator';
 import { ADMIN } from '../store';
 
-test('новый товар: состав и страна чипами', async ({ page, phone, signIn }) => {
+test('новый товар: состав и страна чипами, уход значками', async ({ page, phone, signIn }) => {
   // phone and desktop run at the same time: each creates its own product
   const title = `Футболка базовая ${phone ? '390' : '1280'}`;
 
@@ -33,6 +33,17 @@ test('новый товар: состав и страна чипами', async (
   await form.getByRole('group', { name: 'Выбрать страну' }).getByRole('button', { name: 'Турция' }).click();
   await expect(form.getByRole('textbox', { name: 'Страна производства' })).toHaveValue('Турция');
 
+  await form.getByRole('button', { name: /^Уход и стирка/ }).click();
+  const care = form.getByRole('group', { name: 'Значки ухода' });
+  await care.getByRole('button', { name: 'Стирка при 30 °C' }).click();
+  await care.getByRole('button', { name: 'Не отбеливать' }).click();
+  await care.getByRole('button', { name: 'Гладить при температуре до 110 °C' }).click();
+  await care.getByRole('button', { name: 'Не подвергать химчистке' }).click();
+  // one wash symbol, as on a label: 40 °C replaces 30 °C
+  await care.getByRole('button', { name: 'Стирка при 40 °C' }).click();
+  await expect(care.getByRole('button', { name: 'Стирка при 30 °C' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(form.getByRole('textbox', { name: 'Правило ухода' })).toHaveCount(4);
+
   await form.getByRole('textbox', { name: /^Название товара/ }).fill(title);
   await form.getByRole('combobox', { name: 'Категория' }).click();
   await page.getByRole('option', { name: 'Рубашка' }).click();
@@ -53,4 +64,10 @@ test('новый товар: состав и страна чипами', async (
   ]);
   expect(saved.material).toBe('95% хлопок, 5% эластан');
   expect(saved.countryOfOrigin).toBe('Турция');
+  expect((saved.careInstructions as { label: string }[]).map((c) => c.label)).toEqual([
+    'Стирка при 40 °C',
+    'Не отбеливать',
+    'Гладить при температуре до 110 °C',
+    'Не подвергать химчистке',
+  ]);
 });
