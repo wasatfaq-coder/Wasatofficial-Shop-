@@ -91,11 +91,11 @@ export function useLiveProducts(ids: (string | null | undefined)[]) {
 
 /**
  * A window that keeps its own copy of a product (quick view, variant picker): the product's document once it is read,
- * with the reviews the copy had (they come from their own collection)
+ * with the reviews and the index rating the copy had (they come from their own collection)
  */
 export function useLiveProduct<T extends Product | null>(product: T): T {
   useLiveProducts([product?.id]);
   useLiveProductsVersion();
   const live = product ? docs.get(product.id) : undefined;
-  return React.useMemo(() => (live && product ? { ...live, reviews: product.reviews } : product), [live, product]) as T;
+  return React.useMemo(() => (live && product ? { ...live, reviews: product.reviews, catalogRating: product.catalogRating } : product), [live, product]) as T;
 }

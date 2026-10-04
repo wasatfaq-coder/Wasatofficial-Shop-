@@ -40,6 +40,7 @@ import { photoBadgeClass } from '../utils/productBadge';
 import { getProductRating } from '../utils/productRating';
 import { productImage } from '../utils/productImage';
 import { useProductPhotos } from '../utils/useProductPhotos';
+import { useLiveReviews } from '../utils/liveReviews';
 import { QUICK_ORDER_DELIVERY_TITLE } from '../shared/orderPricing';
 import { productShareUrl } from '../utils/navigation';
 import { copyToClipboard } from '../utils/clipboard';
@@ -119,9 +120,12 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   // the catalog gives the index line of the product: its document brings the photos, sections and stock
   // (docs/catalog-scale-plan.md, stage 3); meanwhile the card's miniature is shown
   useLiveProducts([product?.id]);
+  // its reviews and votes too: the catalog cards show the rating from the index (stage 4)
+  useLiveReviews(product?.id);
   const thumb = useProductThumb(product);
-  // full photos from product_photos replace the catalog previews as they arrive (stage 6)
-  const photos = useProductPhotos(product);
+  // full photos from product_photos replace the catalog previews as they arrive (stage 6): the slide on screen
+  // and those the zoom shows (docs/catalog-scale-plan.md, stage 4)
+  const { photos, show: showPhoto } = useProductPhotos(product, selectedImageIndex);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [selectedColor, setSelectedColor] = useState(product?.colors?.[0]?.name || '');
   // No size is preselected (unless there is only one): a default size put wrong items in the cart
@@ -920,6 +924,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
         isOpen={isZoomModalOpen}
         images={photos}
         initialIndex={selectedImageIndex}
+        onIndexChange={showPhoto}
         productTitle={product.title}
         onClose={() => setIsZoomModalOpen(false)}
       />

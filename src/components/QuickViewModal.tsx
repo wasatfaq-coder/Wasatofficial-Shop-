@@ -44,7 +44,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
   const product = useLiveProduct(shownProduct);
   const dialog = useDialogA11y(isOpen && Boolean(product), onClose);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const photos = useProductPhotos(product);
+  const { photos } = useProductPhotos(product, selectedImageIndex);
   const thumb = useProductThumb(product);
   const [selectedColor, setSelectedColor] = useState(product?.colors?.[0]?.name || '');
   // No size is preselected unless there is only one (same as the product page)

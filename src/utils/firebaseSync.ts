@@ -167,7 +167,7 @@ export function subscribeToProducts(
  * (it lives in the admin-only `product_costs`).
  */
 function toStoredProduct(product: Product): Product {
-  const { costPrice: _cost, ...stored } = withoutCollectionReviews(product);
+  const { costPrice: _cost, catalogRating: _rating, ...stored } = withoutCollectionReviews(product);
   return stored;
 }
 
@@ -586,6 +586,7 @@ export async function saveStockMovements(movements: StockMovementLog[]) {
 
 /** Full photos already read in this visit: the product page and the zoom do not read them again */
 const productPhotoCache = new Map<string, string>();
+const productPhotoRequests = new Map<string, Promise<void>>();
 
 /** Full photos of a product by id (stage 6): a missing document is left out — the page shows the preview */
 export async function loadProductPhotos(ids: string[]): Promise<Record<string, string>> {
@@ -593,14 +594,20 @@ export async function loadProductPhotos(ids: string[]): Promise<Record<string, s
   await Promise.all(
     wanted
       .filter((id) => !productPhotoCache.has(id))
-      .map(async (id) => {
-        try {
-          const snap = await getDoc(doc(db, 'product_photos', id));
-          const data = snap.data()?.data;
-          if (typeof data === 'string') productPhotoCache.set(id, data);
-        } catch (error) {
-          console.warn(`Photo ${id} was not read:`, error);
+      .map((id) => {
+        // the next slide asks while the previous request is on its way: one read per photo
+        let pending = productPhotoRequests.get(id);
+        if (!pending) {
+          pending = getDoc(doc(db, 'product_photos', id))
+            .then((snap) => {
+              const data = snap.data()?.data;
+              if (typeof data === 'string') productPhotoCache.set(id, data);
+            })
+            .catch((error) => console.warn(`Photo ${id} was not read:`, error))
+            .finally(() => productPhotoRequests.delete(id));
+          productPhotoRequests.set(id, pending);
         }
+        return pending;
       })
   );
   return Object.fromEntries(wanted.filter((id) => productPhotoCache.has(id)).map((id) => [id, productPhotoCache.get(id)!]));
@@ -1261,17 +1268,20 @@ export async function saveServerConfigToFirestore(config: ServerConfig) {
  * 4b. REVIEWS: `reviews/{productId}_{uid}` (the author edits only their own) and
  * `review_votes/{reviewId}_{uid}` (one «Полезно» per person). Not stored inside products.
  */
-export function subscribeToReviews(onUpdate: (reviews: StoredReview[]) => void) {
+/** Every review, or one product's (`productId`: the customer reads only the reviews of the product page, stage 4) */
+export function subscribeToReviews(onUpdate: (reviews: StoredReview[]) => void, productId?: string) {
+  const ref = collection(db, 'reviews');
   return onSnapshot(
-    collection(db, 'reviews'),
+    productId ? query(ref, where('productId', '==', productId)) : ref,
     (snap) => onUpdate(snap.docs.map((d) => ({ ...(d.data() as StoredReview), id: d.id }))),
     (error) => console.warn('Reviews subscription warning:', error)
   );
 }
 
-export function subscribeToReviewVotes(onUpdate: (votes: ReviewVote[]) => void) {
+export function subscribeToReviewVotes(onUpdate: (votes: ReviewVote[]) => void, productId?: string) {
+  const ref = collection(db, 'review_votes');
   return onSnapshot(
-    collection(db, 'review_votes'),
+    productId ? query(ref, where('productId', '==', productId)) : ref,
     (snap) => onUpdate(snap.docs.map((d) => d.data() as ReviewVote)),
     (error) => console.warn('Review votes subscription warning:', error)
   );

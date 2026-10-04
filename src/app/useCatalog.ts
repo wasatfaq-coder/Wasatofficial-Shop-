@@ -9,6 +9,7 @@ import {
 } from '../utils/firebaseSync';
 import { canReadCatalogIndex, productFromEntry, readCatalogIndex, thumbKeysOf } from '../utils/catalogIndex';
 import { liveProducts, setLiveProductsEnabled, useLiveProductsVersion } from '../utils/liveProducts';
+import { liveReviews, setLiveReviewsEnabled, useLiveReviewsVersion } from '../utils/liveReviews';
 import { setThumbKeys } from '../utils/productThumbs';
 import { mergeProductReviews } from '../utils/reviews';
 import { useCatalogIndexSync } from './useCatalogIndexSync';
@@ -23,7 +24,8 @@ type Source = 'index' | 'full';
  * A customer reads the light index (one document for hundreds of products) and the full documents of only the
  * products a screen shows (`useLiveProducts`). The admin reads every product: the panel edits them, and its session
  * keeps the index in step (`useCatalogIndexSync`). No index yet, a broken one or a browser without gzip — every
- * product, as before.
+ * product, as before. Reviews and votes the same way: from the index the cards take the rating of their line, and only
+ * the open product page reads its reviews (`useLiveReviews`, stage 4); the whole catalog comes with every review.
  */
 export function useCatalog(onCatalog: (products: Product[]) => void) {
   const { isAdmin } = useAuth();
@@ -36,9 +38,11 @@ export function useCatalog(onCatalog: (products: Product[]) => void) {
   // The catalog subscription failed (rules, network): the screens say so instead of «Товары появятся здесь»
   const [productsError, setProductsError] = useState(false);
   const liveVersion = useLiveProductsVersion();
+  const reviewsVersion = useLiveReviewsVersion();
 
   React.useEffect(() => {
     setLiveProductsEnabled(source === 'index');
+    setLiveReviewsEnabled(source === 'index');
     if (source === 'full') {
       return subscribeToProducts((products) => {
         setLoaded({ source, products });
@@ -74,13 +78,16 @@ export function useCatalog(onCatalog: (products: Product[]) => void) {
   }, [source]);
 
   React.useEffect(() => {
+    if (source !== 'full') return;
     const unsubReviews = subscribeToReviews(setStoredReviews);
     const unsubReviewVotes = subscribeToReviewVotes(setReviewVotes);
     return () => {
       unsubReviews();
       unsubReviewVotes();
+      setStoredReviews([]);
+      setReviewVotes([]);
     };
-  }, []);
+  }, [source]);
 
   // Index lines give way to the documents a screen reads; a product whose document is gone leaves the catalog
   const catalogProducts = React.useMemo(() => {
@@ -91,14 +98,22 @@ export function useCatalog(onCatalog: (products: Product[]) => void) {
     return loaded.products.flatMap((p) => {
       if (!docs.has(p.id)) return [p];
       const full = docs.get(p.id);
-      return full ? [full] : [];
+      // the document has no rating of its own: until its reviews are read, the line's stands
+      return full ? [{ ...full, catalogRating: p.catalogRating }] : [];
     });
   }, [loaded, liveVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const products = React.useMemo(
-    () => mergeProductReviews(catalogProducts, storedReviews, reviewVotes),
-    [catalogProducts, storedReviews, reviewVotes]
-  );
+  const products = React.useMemo(() => {
+    if (loaded?.source !== 'index') return mergeProductReviews(catalogProducts, storedReviews, reviewVotes);
+    const read = liveReviews();
+    if (read.size === 0) return catalogProducts;
+    return catalogProducts.map((p) => {
+      const own = read.get(p.id);
+      if (!own) return p;
+      const { catalogRating: _line, ...product } = p;
+      return mergeProductReviews([product], own.reviews, own.votes)[0];
+    });
+  }, [loaded?.source, catalogProducts, storedReviews, reviewVotes, reviewsVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The latest callback is read when the catalog changes. The catalog counts as loaded only once App has it: the open
   // product is restored from it in the same render, so a link is not taken for a product that is gone

@@ -26,13 +26,20 @@ function loadCachedBanners(): BannerSlide[] {
 }
 
 /**
- * What every visitor reads about the shop, live from Firestore: «Витрина» settings, promos, banners, delivery methods,
+ * What every visitor reads about the shop, live from Firestore: «Витрина» settings, banners, delivery methods,
  * pickup points and the server-orders switch. The browser keeps a copy of settings, banners and delivery, so the
  * first screen has them before the database answers.
+ *
+ * Promos — only once they are needed (docs/catalog-scale-plan.md, stage 4): `wantPromos` (the cart, the checkout, the
+ * admin) or `requestPromos()` (a code applied from a banner or the chat). Most visits never open the cart; once read,
+ * the promos stay subscribed for the rest of the visit.
  */
-export function useStorefrontData() {
+export function useStorefrontData(wantPromos: boolean) {
   // Catalog, promos and banners come only from Firestore (Admin panel); no demo data meanwhile
   const [promos, setPromos] = useState<PromoCode[]>([]);
+  const [promosLoaded, setPromosLoaded] = useState(false);
+  const [promosRequested, setPromosRequested] = useState(false);
+  const readPromos = wantPromos || promosRequested;
   const [bannerSlides, setBannerSlides] = useState<BannerSlide[]>(loadCachedBanners);
   // When true, orders are placed and validated by the placeOrder Cloud Function
   const [serverOrdersEnabled, setServerOrdersEnabled] = useState(false);
@@ -50,12 +57,22 @@ export function useStorefrontData() {
   }, []);
 
   React.useEffect(() => {
-    const unsubPromos = subscribeToPromos((loadedPromos) => {
+    if (wantPromos) setPromosRequested(true);
+  }, [wantPromos]);
+
+  React.useEffect(() => {
+    if (!readPromos) return;
+    return subscribeToPromos((loadedPromos) => {
       if (loadedPromos) {
         setPromos(loadedPromos);
+        setPromosLoaded(true);
       }
     });
+  }, [readPromos]);
 
+  const requestPromos = React.useCallback(() => setPromosRequested(true), []);
+
+  React.useEffect(() => {
     const unsubServerConfig = subscribeToServerConfig((config) => {
       setServerOrdersEnabled(config.serverOrdersEnabled === true);
     });
@@ -87,7 +104,6 @@ export function useStorefrontData() {
     });
 
     return () => {
-      unsubPromos();
       unsubSettings();
       unsubServerConfig();
       unsubBanners();
@@ -99,6 +115,8 @@ export function useStorefrontData() {
   return {
     promos,
     setPromos,
+    promosLoaded,
+    requestPromos,
     bannerSlides,
     setBannerSlides,
     serverOrdersEnabled,
