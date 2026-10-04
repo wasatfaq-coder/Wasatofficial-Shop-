@@ -15,6 +15,8 @@ paths:
   - "src/views/CartScreen.tsx"
   - "src/views/CheckoutScreen.tsx"
   - "src/views/ProfileScreen.tsx"
+  - "src/views/profile/ProfileOrdersModal.tsx"
+  - "src/views/profile/OrderTrackingModal.tsx"
   - "src/components/QuickOrderModal.tsx"
   - "src/components/PaymentRequisitesModal.tsx"
   - "src/components/CancelOrderDialog.tsx"
