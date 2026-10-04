@@ -4,6 +4,7 @@ paths:
   - "src/components/admin/AdminInventoryTab.tsx"
   - "src/components/admin/InventoryGroupedList.tsx"
   - "src/components/admin/AdminProductsTab.tsx"
+  - "src/components/admin/products/**"
   - "src/utils/labels.ts"
   - "src/utils/inventory.ts"
   - "src/shared/barcode.ts"
