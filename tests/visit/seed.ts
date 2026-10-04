@@ -1,11 +1,12 @@
 // Fills the emulator with the 300-product shop (catalog300.ts). Emulator only: emulator.ts talks to 127.0.0.1
 import { assertEmulatorsRunning, clearEmulators, writeDocs } from '../e2e/emulator';
-import { catalogBatches } from './catalog300';
+import { catalogBatches, drawPreviews } from './catalog300';
 
 await assertEmulatorsRunning();
 await clearEmulators();
 let n = 0;
-for (const batch of catalogBatches()) {
+const previews = await drawPreviews();
+for (const batch of catalogBatches(previews)) {
   await writeDocs(batch);
   n += Object.keys(batch).length;
 }
