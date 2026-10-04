@@ -18,6 +18,7 @@ import { QUICK_ORDER_DELIVERY_ID } from '../shared/orderPricing';
 import { toOrderLineProduct } from '../shared/orderLine';
 import { STORE_PAUSED_TEXT, storeAcceptsOrders } from '../shared/orderApi';
 import { cleanAddressParts, fullName, hasNameParts, namePartsOf, type AddressParts, type PersonName } from '../shared/personName';
+import { useLiveProducts } from '../utils/liveProducts';
 import { saveGuestOrder } from './guestOrders';
 import type { AddToast } from './useToasts';
 
@@ -193,6 +194,9 @@ export function useCheckout({
       return false;
     }
   };
+
+  // The cart and the checkout check the stock and show the photos of the products themselves, not their index lines
+  useLiveProducts(activeTab === 'cart' || activeTab === 'checkout' ? cartItems.map((ci) => ci.product.id) : []);
 
   /** What the cart has beyond the stock now: the checkout lists it and does not send the order */
   const checkoutStockProblems = React.useMemo(

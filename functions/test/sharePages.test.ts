@@ -8,11 +8,14 @@ import {
   productMeta,
   productSummary,
   robotsTxt,
+  shareProductFromEntry,
   shortText,
   sitemapXml,
   withMeta,
   type ShareProduct,
 } from '../../scripts/share-pages';
+import { catalogEntry } from '../../src/utils/catalogIndex';
+import type { Product } from '../../src/types';
 
 const SITE = 'https://shop.example';
 const product: ShareProduct = {
@@ -122,5 +125,23 @@ describe('превью товара', () => {
     expect(catalogFingerprint({ ...base, products: [{ ...product, image: '', imageKey: 'photo:linen_a1' }] })).toBe(fp);
     // новое фото получает новый id — превью надо опубликовать заново
     expect(catalogFingerprint({ ...base, products: [{ ...product, imageKey: 'photo:linen_b2' }] })).not.toBe(fp);
+  });
+
+  test('проверка раз в час сверяет индекс каталога: отпечаток от остатка не меняется, от цены и нового фото — меняется', () => {
+    const p = {
+      id: 'linen-shirt-01', title: 'Рубашка', category: 'shirts', categoryLabel: 'Рубашка', price: 2990, description: 'Лён',
+      material: 'Лён', images: ['data:image/jpeg;base64,AAAA'], photoIds: ['linen_a1'], colors: [], sizes: ['M'], inStock: true,
+      skus: [{ id: 'm', color: '', size: 'M', stock: 3 }], rating: 0, reviewsCount: 0,
+    } as Product;
+    const share = (x: Product) => shareProductFromEntry(catalogEntry(x), 'Wasat Shop')!;
+    expect(share(p)).toMatchObject({ title: 'Рубашка', price: 2990, available: true, imageKey: 'photo:linen_a1' });
+    const fp = (x: Product) => catalogFingerprint({ storeName: 'Wasat Shop', slogan: '', products: [], indexed: [share(x)] });
+    expect(fp({ ...p, skus: [{ id: 'm', color: '', size: 'M', stock: 1 }] })).toBe(fp(p));
+    expect(fp({ ...p, price: 2490 })).not.toBe(fp(p));
+    expect(fp({ ...p, photoIds: ['linen_b2'] })).not.toBe(fp(p));
+    // снятый с витрины товар в превью не попадает, как и при чтении товаров
+    expect(shareProductFromEntry(catalogEntry({ ...p, hiddenFromSale: true }), 'Wasat Shop')).toBeNull();
+    // отпечаток по индексу не совпадает с отпечатком по товарам: смена источника публикует превью один раз
+    expect(fp(p)).not.toBe(catalogFingerprint({ storeName: 'Wasat Shop', slogan: '', products: [share(p)] }));
   });
 });

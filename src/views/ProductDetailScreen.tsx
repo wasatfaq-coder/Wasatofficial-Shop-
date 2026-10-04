@@ -43,6 +43,8 @@ import { useProductPhotos } from '../utils/useProductPhotos';
 import { QUICK_ORDER_DELIVERY_TITLE } from '../shared/orderPricing';
 import { productShareUrl } from '../utils/navigation';
 import { copyToClipboard } from '../utils/clipboard';
+import { useLiveProducts } from '../utils/liveProducts';
+import { useProductThumb } from '../utils/productThumbs';
 
 interface ProductDetailScreenProps {
   product: Product;
@@ -114,6 +116,10 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     const copied = await copyToClipboard(url);
     onShowToast?.(copied ? 'Ссылка на товар скопирована' : `Не удалось скопировать ссылку: ${url}`, copied ? 'success' : 'error');
   };
+  // the catalog gives the index line of the product: its document brings the photos, sections and stock
+  // (docs/catalog-scale-plan.md, stage 3); meanwhile the card's miniature is shown
+  useLiveProducts([product?.id]);
+  const thumb = useProductThumb(product);
   // full photos from product_photos replace the catalog previews as they arrive (stage 6)
   const photos = useProductPhotos(product);
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -285,7 +291,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           className="relative w-full aspect-[3/4] sm:aspect-[4/5] lg:max-h-[calc(100vh-11rem)] rounded-2xl overflow-hidden select-none group/detailimg cursor-zoom-in"
         >
           <NeumorphicImage
-            src={photos[selectedImageIndex] || productImage(product, selectedImageIndex)}
+            src={photos[selectedImageIndex] || (product.images.length ? productImage(product, selectedImageIndex) : thumb || productImage(product))}
             alt={product?.title || ''}
             containerClassName="w-full h-full rounded-2xl"
             className="w-full h-full object-cover object-top transition-transform duration-500 group-hover/detailimg:scale-[1.03]"

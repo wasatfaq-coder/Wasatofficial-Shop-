@@ -162,6 +162,26 @@ test.afterAll(() => {
 
 test.describe.configure({ mode: 'serial', timeout: 300_000 });
 
+/** Signs in as the owner on the site the page has open */
+async function signInOwner(page: Page) {
+  await page.waitForFunction(() => 'e2eSignIn' in window);
+  await page.evaluate((u) => (window as unknown as { e2eSignIn: (x: typeof u) => Promise<unknown> }).e2eSignIn(u), ADMIN);
+}
+
+// Customers read the index the owner's session writes (stages 2–3): the shop gets it before the visits are measured,
+// as the real one gets it the first time the owner opens the site
+test('сессия владельца пишет индекс каталога и миниатюры', async ({ page }) => {
+  await page.goto('/');
+  await signInOwner(page);
+  let report: string | null = null;
+  for (let i = 0; i < 180; i++) {
+    await page.waitForTimeout(1000);
+    report = await indexReport();
+    if (report?.includes('миниатюр 300')) break;
+  }
+  notes.push(report ?? 'индекс каталога не записан за 3 минуты');
+});
+
 test('главная → каталог, две порции «Показать ещё» → товар', async ({ page }) => {
   const c = await watchFirestore(page);
   const points: Point[] = (results['Главная → каталог → товар'] = []);
@@ -196,18 +216,10 @@ test('владелец открывает сайт и панель админи�
   await page.goto('/');
   await page.waitForFunction(() => 'e2eSignIn' in window);
   const before = await point(page, c, 'сайт до входа');
-  await page.evaluate((u) => (window as unknown as { e2eSignIn: (x: typeof u) => Promise<unknown> }).e2eSignIn(u), ADMIN);
+  await signInOwner(page);
   points.push(before, await point(page, c, 'вошёл как владелец'));
 
   await openTab(page, 'Профиль');
   await page.getByRole('button', { name: /^Панель администратора/ }).click();
   points.push(await point(page, c, 'панель (первый раздел)'));
-
-  // stage 2: the session writes the index and the miniatures once it has the catalog
-  let report: string | null = null;
-  for (let i = 0; i < 120 && !report; i++) {
-    await page.waitForTimeout(1000);
-    report = await indexReport();
-  }
-  notes.push(report ?? 'индекс каталога не записан за 2 минуты');
 });

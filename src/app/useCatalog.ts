@@ -1,47 +1,126 @@
 import React, { useState } from 'react';
 import type { Product, ReviewVote, StoredReview } from '../types';
-import { subscribeToProducts, subscribeToReviewVotes, subscribeToReviews } from '../utils/firebaseSync';
+import { useAuth } from '../context/AuthContext';
+import {
+  subscribeToCatalogIndex,
+  subscribeToProducts,
+  subscribeToReviewVotes,
+  subscribeToReviews,
+} from '../utils/firebaseSync';
+import { canReadCatalogIndex, productFromEntry, readCatalogIndex, thumbKeysOf } from '../utils/catalogIndex';
+import { liveProducts, setLiveProductsEnabled, useLiveProductsVersion } from '../utils/liveProducts';
+import { setThumbKeys } from '../utils/productThumbs';
 import { mergeProductReviews } from '../utils/reviews';
 import { useCatalogIndexSync } from './useCatalogIndexSync';
+
+/** Where the catalog comes from: the light index (customers, stage 3 of docs/catalog-scale-plan.md) or every product */
+type Source = 'index' | 'full';
 
 /**
  * The catalog from Firestore (no demo data meanwhile) with the reviews and «Полезно» votes of their own collections
  * merged in for display. `onCatalog` gets every catalog snapshot: App refreshes the cart and the open product from it.
+ *
+ * A customer reads the light index (one document for hundreds of products) and the full documents of only the
+ * products a screen shows (`useLiveProducts`). The admin reads every product: the panel edits them, and its session
+ * keeps the index in step (`useCatalogIndexSync`). No index yet, a broken one or a browser without gzip — every
+ * product, as before.
  */
 export function useCatalog(onCatalog: (products: Product[]) => void) {
-  const [catalogProducts, setProducts] = useState<Product[]>([]);
+  const { isAdmin } = useAuth();
+  const [indexFailed, setIndexFailed] = useState(() => !canReadCatalogIndex());
+  const source: Source = isAdmin || indexFailed ? 'full' : 'index';
+  const [loaded, setLoaded] = useState<{ source: Source; products: Product[] } | null>(null);
   // Reviews live in their own collections and are merged into the products for display
   const [storedReviews, setStoredReviews] = useState<StoredReview[]>([]);
   const [reviewVotes, setReviewVotes] = useState<ReviewVote[]>([]);
-  const [productsLoaded, setProductsLoaded] = useState(false);
   // The catalog subscription failed (rules, network): the screens say so instead of «Товары появятся здесь»
   const [productsError, setProductsError] = useState(false);
-  const products = React.useMemo(
-    () => mergeProductReviews(catalogProducts, storedReviews, reviewVotes),
-    [catalogProducts, storedReviews, reviewVotes]
-  );
+  const liveVersion = useLiveProductsVersion();
 
-  // The subscription starts once; the latest callback is read when a snapshot comes
-  const onCatalogRef = React.useRef(onCatalog);
-  onCatalogRef.current = onCatalog;
   React.useEffect(() => {
-    const unsubProds = subscribeToProducts((loadedProds) => {
-      setProducts(loadedProds);
-      setProductsLoaded(true);
-      onCatalogRef.current(loadedProds);
-      setProductsError(false);
-    }, () => setProductsError(true));
+    setLiveProductsEnabled(source === 'index');
+    if (source === 'full') {
+      return subscribeToProducts((products) => {
+        setLoaded({ source, products });
+        setProductsError(false);
+      }, () => setProductsError(true));
+    }
+    let alive = true;
+    // unpacking is async: a later snapshot that unpacked sooner is not overwritten by an earlier one
+    let latest = 0;
+    const unsub = subscribeToCatalogIndex(
+      async (parts) => {
+        const seq = ++latest;
+        const index = parts.length > 0 ? await readCatalogIndex(parts).catch(() => null) : null;
+        if (!alive || seq !== latest) return;
+        if (!index) {
+          // no index (an empty shop, or the owner has not opened the site since stage 2) or a broken one
+          if (parts.length > 0) console.warn('Catalog index is unreadable: reading every product');
+          setIndexFailed(true);
+          return;
+        }
+        setThumbKeys(thumbKeysOf(index.entries));
+        setLoaded({ source, products: index.entries.map(productFromEntry) });
+        setProductsError(false);
+      },
+      () => {
+        if (alive) setIndexFailed(true);
+      }
+    );
+    return () => {
+      alive = false;
+      unsub();
+    };
+  }, [source]);
+
+  React.useEffect(() => {
     const unsubReviews = subscribeToReviews(setStoredReviews);
     const unsubReviewVotes = subscribeToReviewVotes(setReviewVotes);
     return () => {
-      unsubProds();
       unsubReviews();
       unsubReviewVotes();
     };
   }, []);
 
-  // the admin's session writes the light index customers will read (docs/catalog-scale-plan.md, stage 2)
-  useCatalogIndexSync(products, productsLoaded);
+  // Index lines give way to the documents a screen reads; a product whose document is gone leaves the catalog
+  const catalogProducts = React.useMemo(() => {
+    if (!loaded) return [];
+    if (loaded.source === 'full') return loaded.products;
+    const docs = liveProducts();
+    if (docs.size === 0) return loaded.products;
+    return loaded.products.flatMap((p) => {
+      if (!docs.has(p.id)) return [p];
+      const full = docs.get(p.id);
+      return full ? [full] : [];
+    });
+  }, [loaded, liveVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { products, setProducts, productsLoaded, productsError };
+  const products = React.useMemo(
+    () => mergeProductReviews(catalogProducts, storedReviews, reviewVotes),
+    [catalogProducts, storedReviews, reviewVotes]
+  );
+
+  // The latest callback is read when the catalog changes. The catalog counts as loaded only once App has it: the open
+  // product is restored from it in the same render, so a link is not taken for a product that is gone
+  const onCatalogRef = React.useRef(onCatalog);
+  onCatalogRef.current = onCatalog;
+  const [delivered, setDelivered] = useState(false);
+  React.useEffect(() => {
+    if (!loaded) return;
+    onCatalogRef.current(catalogProducts);
+    setDelivered(true);
+  }, [loaded, catalogProducts]);
+
+  const setProducts = React.useCallback((next: React.SetStateAction<Product[]>) => {
+    setLoaded((prev) => {
+      const current = prev?.products ?? [];
+      return { source: prev?.source ?? 'full', products: typeof next === 'function' ? next(current) : next };
+    });
+  }, []);
+
+  // the admin's session writes the light index customers read (docs/catalog-scale-plan.md, stage 2); never from
+  // index lines — they have no photos, and the index made of them would lose its miniatures
+  useCatalogIndexSync(products, loaded?.source === 'full');
+
+  return { products, setProducts, productsLoaded: delivered, productsError };
 }

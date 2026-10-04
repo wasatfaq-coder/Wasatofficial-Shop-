@@ -22,7 +22,7 @@ import {
   isCourierDelivery,
   isPickupDelivery,
 } from '../../utils/deliveryStages';
-import { orderLineImage } from '../../utils/productImage';
+import { useOrderLinePhotos } from '../../utils/productThumbs';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import type { ProfileScreenProps } from '../ProfileScreen';
 
@@ -51,6 +51,7 @@ export const ProfileOrdersModal = ({
   const [orderFilter, setOrderFilter] = useState<'all' | 'active' | 'completed'>('all');
 
   const ordersDialog = useDialogA11y(isOpen, onCloseModals);
+  const linePhoto = useOrderLinePhotos(isOpen ? orders.flatMap((o) => o.items.slice(0, 4).map((it) => it.product)) : [], products);
 
   const filteredOrders = orders.filter((ord) => {
     if (orderFilter === 'active') return !ord.isCancelled && ord.status !== 'delivered';
@@ -253,7 +254,7 @@ export const ProfileOrdersModal = ({
                           {ord.items.slice(0, 4).map((it, idx) => (
                             <img
                               key={idx}
-                              src={orderLineImage(it.product, products)}
+                              src={linePhoto(it.product)}
                               alt=""
                               className="w-10 h-10 rounded-xl object-cover neu-flat p-0.5 shrink-0"
                             />

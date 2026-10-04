@@ -11,6 +11,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import path from 'node:path';
 import firebaseConfig from '../firebase-applet-config.json';
 import type { Product, StorefrontSettings } from '../src/types';
+import { CATALOG_INDEX_COLLECTION, readCatalogIndex, type CatalogEntry, type CatalogIndexPart } from '../src/utils/catalogIndex';
 import { isHiddenFromSale } from '../src/utils/inventory';
 import { getStoreName, withStoreName, withStoreNameFields } from '../src/utils/storeContacts';
 
@@ -285,6 +286,52 @@ async function readFields(paths: string[], fields: string[]): Promise<Map<string
   return out;
 }
 
+/**
+ * The light catalog index (`catalog_index`, docs/catalog-scale-plan.md): one document for hundreds of products, so the
+ * hourly check reads it instead of the products (stage 3). null — no index yet (the owner's session writes it) or a
+ * broken one: the check reads the products, as before
+ */
+async function readIndex(): Promise<CatalogEntry[] | null> {
+  const rows = (await restJson(`${DOCUMENTS}:runQuery`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ structuredQuery: { from: [{ collectionId: CATALOG_INDEX_COLLECTION }] } }),
+  })) as { document?: RestDocument }[];
+  const parts = rows.flatMap((row) => {
+    if (!row.document?.fields) return [];
+    usage.documents += 1;
+    const { entries, ...fields } = row.document.fields;
+    const bytes = typeof entries?.bytesValue === 'string' ? Buffer.from(entries.bytesValue, 'base64') : Buffer.alloc(0);
+    return [{ ...fromRestFields(fields), entries: new Uint8Array(bytes) } as CatalogIndexPart];
+  });
+  return (await readCatalogIndex(parts).catch(() => null))?.entries ?? null;
+}
+
+/** What the preview of an index line shows, as `toShareProduct` for a product; the photo by its miniature's key */
+export function shareProductFromEntry(entry: CatalogEntry, storeName: string): ShareProduct | null {
+  if (!SAFE_ID.test(entry.id) || !entry.title || typeof entry.price !== 'number') return null;
+  if (isHiddenFromSale(entry as unknown as Product)) return null;
+  const p = withStoreNameFields(entry, storeName);
+  const photoId = entry.thumb?.startsWith('p:') ? entry.thumb.slice(2) : '';
+  const imageKey = photoId && SAFE_ID.test(photoId)
+    ? `photo:${photoId}`
+    : entry.thumb
+      ? `thumb:${entry.thumb}`
+      : entry.image
+        ? `src:${createHash('sha256').update(entry.image).digest('hex').slice(0, 16)}`
+        : '';
+  return {
+    id: entry.id,
+    title: p.title,
+    description: p.description ?? '',
+    price: entry.price,
+    originalPrice: entry.originalPrice,
+    available: entry.inStock !== false,
+    image: '',
+    imageKey,
+  };
+}
+
 async function readDoc(docPath: string): Promise<Record<string, unknown> | null> {
   const doc = (await restJson(`${DOCUMENTS}/${docPath}`)) as { fields?: Record<string, RestValue> } | null;
   if (doc) usage.documents += 1;
@@ -370,25 +417,39 @@ interface Catalog {
   storeName: string;
   slogan: string;
   products: ShareProduct[];
+  /** The products as the index shows them: the fingerprint is taken from these when there is an index */
+  indexed: ShareProduct[] | null;
   /** false — the database did not answer: the pages keep the common preview */
   read: boolean;
 }
 
-async function readCatalog(site: string, dist: string | null): Promise<Catalog> {
+/**
+ * `pages: false` (the hourly check) needs only the fingerprint: with an index the products are not read at all
+ */
+async function readCatalog(site: string, dist: string | null, pages = true): Promise<Catalog> {
   try {
     const settings = (await readDoc('settings/storefront')) as Partial<StorefrontSettings> | null;
     const storeName = getStoreName(settings);
     const slogan = withStoreName(typeof settings?.storeSlogan === 'string' ? settings.storeSlogan.trim() : '', storeName);
+    const entries = await readIndex().catch((err) => {
+      console.warn(`::warning::Индекс каталога не прочитан, сверяю по товарам: ${String(err)}`);
+      return null;
+    });
+    const indexed = entries
+      ? entries.map((e) => shareProductFromEntry(e, storeName)).filter((p): p is ShareProduct => p !== null)
+      : null;
+    indexed?.sort((a, b) => a.id.localeCompare(b.id));
+    if (indexed && !pages) return { storeName, slogan, products: [], indexed, read: true };
     const rows = await readProducts();
     const products = (await Promise.all(rows.map((row) => toShareProduct(row, storeName, site, dist)))).filter(
       (p): p is ShareProduct => p !== null
     );
     products.sort((a, b) => a.id.localeCompare(b.id));
     if (dist) prunePhotoCache(new Set(products.flatMap((p) => (p.imageKey?.startsWith('photo:') ? [p.imageKey.slice(6)] : []))));
-    return { storeName, slogan, products, read: true };
+    return { storeName, slogan, products, indexed, read: true };
   } catch (err) {
     console.warn(`::warning::Каталог не прочитан, страницы товаров не созданы (общее превью магазина): ${String(err)}`);
-    return { storeName: getStoreName(null), slogan: '', products: [], read: false };
+    return { storeName: getStoreName(null), slogan: '', products: [], indexed: null, read: false };
   }
 }
 
@@ -397,9 +458,11 @@ async function readCatalog(site: string, dist: string | null): Promise<Catalog> 
  * changes. Without the edit date: a sale changes the product's stock and its date, not its preview. The photo is
  * compared by its key: the hourly check does not download photos (docs/catalog-scale-plan.md, stage 1)
  */
-export function catalogFingerprint(c: Pick<Catalog, 'storeName' | 'slogan' | 'products'>): string {
-  const products = c.products.map(({ updatedAt: _updatedAt, image: _image, ...shown }) => shown);
-  return createHash('sha256').update(JSON.stringify({ storeName: c.storeName, slogan: c.slogan, products })).digest('hex');
+export function catalogFingerprint(c: Pick<Catalog, 'storeName' | 'slogan' | 'products'> & { indexed?: ShareProduct[] | null }): string {
+  // the index (stage 3) when there is one: the check reads one document; the build compares the same thing
+  const products = (c.indexed ?? c.products).map(({ updatedAt: _updatedAt, image: _image, ...shown }) => shown);
+  const shown = c.indexed ? { source: 'index', storeName: c.storeName, slogan: c.slogan, products } : { storeName: c.storeName, slogan: c.slogan, products };
+  return createHash('sha256').update(JSON.stringify(shown)).digest('hex');
 }
 
 export const MANIFEST_FILE = 'share-manifest.json';
@@ -414,7 +477,7 @@ async function main() {
   const site = siteUrl();
   // `--fingerprint`: print what the previews would show, write nothing (share-pages.yml compares it with the site's)
   if (process.argv.includes('--fingerprint')) {
-    const catalog = await readCatalog(site, null);
+    const catalog = await readCatalog(site, null, false);
     if (!catalog.read) process.exit(1);
     console.log(catalogFingerprint(catalog));
     // stdout is the fingerprint (share-pages.yml reads it): the usage goes to stderr

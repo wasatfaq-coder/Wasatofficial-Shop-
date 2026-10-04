@@ -5,6 +5,7 @@ import { RatingBadge } from './RatingBadge';
 import { NeumorphicImage } from './NeumorphicImage';
 import { photoBadgeClass } from '../utils/productBadge';
 import { getProductRating } from '../utils/productRating';
+import { useProductThumbs } from '../utils/productThumbs';
 
 interface RecentlyViewedProps {
   recentlyViewed: Product[];
@@ -27,6 +28,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
   title = 'Вы недавно смотрели',
   className = '',
 }) => {
+  const photoOf = useProductThumbs(recentlyViewed ?? []);
   if (!recentlyViewed || recentlyViewed.length === 0) {
     return null;
   }
@@ -59,7 +61,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
       <div className="flex items-stretch gap-3.5 overflow-x-auto no-scrollbar pb-3 pt-1 px-1">
         {recentlyViewed.map((product, idx) => {
           const isFav = favorites.includes(product.id);
-          const thumbImage = product.images && product.images.length > 0 ? product.images[0] : '';
+          const thumbImage = photoOf(product);
 
           return (
             <div

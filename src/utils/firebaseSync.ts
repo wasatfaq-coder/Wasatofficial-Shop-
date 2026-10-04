@@ -682,6 +682,32 @@ export async function saveProductThumbs(thumbs: ProductThumb[], removedProductId
   }
 }
 
+/** Miniatures of a few products (a catalog page): one read each, up to 30 ids per query */
+export async function loadProductThumbs(productIds: string[]): Promise<ProductThumb[]> {
+  const out: ProductThumb[] = [];
+  for (let i = 0; i < productIds.length; i += 30) {
+    const snap = await getDocs(query(collection(db, PRODUCT_THUMBS_COLLECTION), where(documentId(), 'in', productIds.slice(i, i + 30))));
+    snap.forEach((d) => out.push(d.data() as ProductThumb));
+  }
+  return out;
+}
+
+/**
+ * One product document (stage 3 of docs/catalog-scale-plan.md): the customer reads the catalog from the index and the
+ * full product only where it is shown or ordered — the product page, the quick view, the cart and the checkout.
+ * `null` — the product is gone
+ */
+export function subscribeToProductDoc(productId: string, onUpdate: (product: Product | null) => void) {
+  return onSnapshot(
+    doc(db, 'products', productId),
+    (snap) => {
+      if (snap.metadata.fromCache && !snap.exists()) return;
+      onUpdate(snap.exists() ? ({ ...(snap.data() as Product), id: snap.id }) : null);
+    },
+    (error) => console.warn('Product subscription warning:', error)
+  );
+}
+
 /**
  * A product with photos still inside: they go to `product_photos`, the product keeps previews (admin session, once).
  * Photos are written first, then only `images` and `photoIds` of the product change — the stock is not touched.

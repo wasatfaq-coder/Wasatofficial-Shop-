@@ -18,6 +18,7 @@ type Value = Record<string, unknown>;
 function toValue(v: unknown): Value {
   if (v === null || v === undefined) return { nullValue: null };
   if (v instanceof Date) return { timestampValue: v.toISOString() };
+  if (v instanceof Uint8Array) return { bytesValue: Buffer.from(v).toString('base64') };
   if (Array.isArray(v)) return { arrayValue: { values: v.map(toValue) } };
   switch (typeof v) {
     case 'string':
