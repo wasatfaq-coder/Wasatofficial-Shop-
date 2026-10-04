@@ -1,6 +1,8 @@
 ---
 paths:
   - "src/App.tsx"
+  - "src/app/useCheckout.ts"
+  - "src/app/useCart.ts"
   - "src/shared/**"
   - "src/utils/order*.ts"
   - "src/utils/clientOrder.ts"
@@ -33,7 +35,7 @@ paths:
 когда открыт файл заказов, цен, склада или правил; прежде чем планировать работу с заказами, прочитай его целиком.
 
 - При `settings/server.serverOrdersEnabled == true` заказ оформляет функция `placeOrder`
-  (`functions/src/placeOrder.ts`), иначе — клиент (`completeOrderLocally` в `App.tsx`: сначала дожидается записи
+  (`functions/src/placeOrder.ts`), иначе — клиент (`completeOrderLocally` в `src/app/useCheckout.ts`: сначала дожидается записи
   заказа, потом списывает склад по строкам — `deductOrderLineStock` в `firebaseSync.ts`: транзакция на строку, в ней
   запись журнала и только `skus`, `inStock`, `lastStockMovement` товара). Режим серверных заказов включается
   в «Витрине» (`AdminServerOrdersCard`) только после ответа функции `placeOrder`.
@@ -100,7 +102,7 @@ paths:
   - срок `expiresAt` — «YYYY-MM-DD» из поля-даты, последний день включительно по Москве (`promoExpiryTime`);
     старые текстовые сроки («31 августа 2026 г.») читает `promoExpiryDate`;
   - ниже `minOrderAmount` скидка 0 в `calcPromoDiscount`, а применённый код перепроверяется при каждом изменении корзины
-    и кодов и снимается с тостом-причиной (`App.tsx`);
+    и кодов и снимается с тостом-причиной (`useCart` в `src/app/`);
   - код уникален без учёта регистра: оформление берёт первый промокод с таким кодом, поэтому форма «Промокоды»
     не сохраняет повтор ни при создании, ни при правке (аудит UX 03.10, находка 5);
   - покупателю в «Промокодах» — только `isPromoListed`: партнёрские, одноразовые из рассылки и из чата не показываются,
@@ -166,7 +168,7 @@ paths:
   показывают как «Товар не списан со склада» с кнопкой «Списать со склада» (`findUntakenOrderLines`, заказы с
   `ORDER_JOURNAL_SINCE`).
 - Предзаказ (`isPreorderMode`): распроданный вариант можно заказать (`getOrderableStock`), позиция получает
-  `isPreorder` и не списывается/не возвращается на склад. Логика — и в `App.tsx`, и в `placeOrder`.
+  `isPreorder` и не списывается/не возвращается на склад. Логика — и в браузере (`useCart`, `useCheckout` в `src/app/`), и в `placeOrder`.
 - Срок доставки заказа (`estimatedDelivery`) — `duration` способа из «Доставка и ПВЗ» (`estimatedDeliveryOf` в
   `src/shared/orderFlow.ts`, клиент и `placeOrder`); у заказа в 1 клик и способа без срока его нет, смена статуса сроков
   не выдумывает (`getEstimatedDeliveryForStatus`). Тексты деталей и этапов заказа — без «бутика», «консьержа», «примерки»
