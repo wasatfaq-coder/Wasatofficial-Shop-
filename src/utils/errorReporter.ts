@@ -25,15 +25,25 @@ const sent = new Set<string>();
 let sending = false;
 let started = false;
 
-/** Picks a free slot of this hour: a taken one is refused by the rules, then another is tried once */
+/**
+ * Writes the report into a free slot of this hour. A taken slot is refused by the rules (no overwrite): then the next
+ * one, in random order, until a slot is free. Trying only a couple lost real reports once a few were in that hour
+ * (a flaky scenario in CI, 04.10). Any other refusal (the hour's clock, no access) ends the attempts.
+ */
 async function send(report: ClientErrorReport) {
-  const first = Math.floor(Math.random() * CLIENT_ERROR_SLOTS);
-  for (const slot of [first, (first + 1 + Math.floor(Math.random() * (CLIENT_ERROR_SLOTS - 1))) % CLIENT_ERROR_SLOTS]) {
+  const slots = Array.from({ length: CLIENT_ERROR_SLOTS }, (_, i) => i);
+  for (let i = slots.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [slots[i], slots[j]] = [slots[j], slots[i]];
+  }
+  const hourStart = Date.now();
+  for (const slot of slots) {
     try {
-      await saveClientError(clientErrorDocId(Date.now(), slot), report);
+      await saveClientError(clientErrorDocId(hourStart, slot), report);
       return;
-    } catch {
-      // taken slot, the hour's limit, no network: the report is lost, the visit goes on
+    } catch (err) {
+      // taken slot → the next one; the report is lost only when all 30 of the hour are taken
+      if ((err as { code?: string }).code !== 'permission-denied') return;
     }
   }
 }

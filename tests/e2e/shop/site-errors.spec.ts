@@ -14,7 +14,11 @@ test('владелец видит ошибку покупателя в «Оши�
   await page.evaluate((text) => console.error(text, new Error('Missing or insufficient permissions.')), failure);
   // the report is in the database before the page changes, and without the e-mail
   await expect
-    .poll(async () => (await queryDocs('client_errors', 'page', '/catalog')).map((r) => String(r.message)).find((m) => m.includes(tag)))
+    .poll(
+      async () => (await queryDocs('client_errors', 'page', '/catalog')).map((r) => String(r.message)).find((m) => m.includes(tag)),
+      // the write waits for the page's connection to the database, which is slow when the whole suite runs at once
+      { timeout: 20_000 }
+    )
     .toBe(`Order was not saved: ${tag} для [почта] Missing or insufficient permissions.`);
 
   await page.goto('/profile');
