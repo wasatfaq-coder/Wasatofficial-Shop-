@@ -59,8 +59,21 @@ jobs:
         run: bun run build
         env:
           VITE_RECAPTCHA_SITE_KEY: ${{ vars.RECAPTCHA_SITE_KEY }}
+      # Full photos for the preview pages between runs: a photo never changes, so the script reads only new ones from the
+      # database (docs/catalog-scale-plan.md, stage 1)
+      - if: steps.deployed.outputs.ok == 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: .share-cache
+          key: share-photos-none
+          restore-keys: share-photos-
       - if: steps.deployed.outputs.ok == 'true'
         run: bun run build:share
+      - if: steps.deployed.outputs.ok == 'true' && hashFiles('.share-cache/ids.txt') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .share-cache
+          key: share-photos-${{ hashFiles('.share-cache/ids.txt') }}
       - if: steps.deployed.outputs.ok == 'true' && env.HAS_FIREBASE_SECRET != 'true'
         run: echo "::warning::FIREBASE_SERVICE_ACCOUNT secret is not set — previews not published"
       - if: steps.deployed.outputs.ok == 'true' && env.HAS_FIREBASE_SECRET == 'true'

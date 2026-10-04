@@ -6,4 +6,6 @@ interface ImportMetaEnv {
   readonly VITE_PREVIEW_BUILD?: string;
   /** reCAPTCHA v3 site key of App Check (deploy.yml, GitHub variable RECAPTCHA_SITE_KEY); empty — App Check is off */
   readonly VITE_RECAPTCHA_SITE_KEY?: string;
+  /** Commit of the build (vite.config.ts, from GITHUB_SHA in Actions): the error log says which version failed */
+  readonly VITE_RELEASE?: string;
 }

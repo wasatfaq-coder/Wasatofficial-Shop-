@@ -44,6 +44,7 @@ import { formatOrderDate } from '../shared/orderDate';
 import { cancelReasonText, formatCancelledAt } from './orderCancel';
 import type { OrderStatusLogEntry } from '../shared/orderFlow';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages, isTransportCompanyDelivery } from './deliveryStages';
+import { CLIENT_ERRORS_COLLECTION, type ClientErrorReport, type StoredClientError } from './clientErrors';
 
 /**
  * An empty collection means the owner has not added anything yet (or removed it all).
@@ -1669,6 +1670,48 @@ export async function syncAllPickupPointsToFirestore(points: PickupPoint[]) {
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'pickup_points');
   }
+}
+
+/**
+ * 10a. ERRORS ON CUSTOMERS' SCREENS (docs/ops-plan.md, stage 2): any visitor creates a report, only the admin reads
+ * and removes them (firestore.rules, isClientErrorReport)
+ */
+/** Creates the report; fails when the slot is taken (the rules allow no overwrite) — the caller tries another slot */
+export async function saveClientError(id: string, report: ClientErrorReport): Promise<void> {
+  await setDoc(doc(db, CLIENT_ERRORS_COLLECTION, id), { ...report, createdAt: serverTimestamp() });
+}
+
+export function subscribeToClientErrors(
+  onUpdate: (errors: StoredClientError[]) => void,
+  onError: (error: unknown) => void,
+  max = 300
+) {
+  return onSnapshot(
+    query(collection(db, CLIENT_ERRORS_COLLECTION), orderBy('createdAt', 'desc'), limit(max)),
+    (snapshot) => {
+      const list: StoredClientError[] = [];
+      snapshot.forEach((snap) => {
+        const data = snap.data() as ClientErrorReport & { createdAt?: Timestamp | null };
+        if (!data || typeof data.message !== 'string') return;
+        list.push({ ...data, id: snap.id, createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toMillis() : 0 });
+      });
+      onUpdate(list);
+    },
+    onError
+  );
+}
+
+export async function deleteClientErrors(ids: string[]): Promise<void> {
+  await commitInChunks(ids, (batch, id) => batch.delete(doc(db, CLIENT_ERRORS_COLLECTION, id)));
+}
+
+/** Reports older than `beforeMs` (at most 400 per call: the card calls it each time it opens) */
+export async function deleteClientErrorsBefore(beforeMs: number): Promise<number> {
+  const old = await getDocs(
+    query(collection(db, CLIENT_ERRORS_COLLECTION), where('createdAt', '<', Timestamp.fromMillis(beforeMs)), limit(400))
+  );
+  await deleteClientErrors(old.docs.map((d) => d.id));
+  return old.size;
 }
 
 /**

@@ -1,0 +1,95 @@
+name: Site alerts
+
+# The owner learns about a failed publish or a broken site from GitHub, not from customers (docs/ops-plan.md, stage 1).
+# When the deploy of main, the hourly product previews or the site check fails, this opens an issue «Сбой сайта: …»
+# assigned to the owner: GitHub sends it by e-mail and to the GitHub app. The next failure of the same commit adds
+# nothing (the hourly runs would flood the mail); a new commit that fails adds a comment. The first successful run
+# closes the issue with «Починилось». Only links and step names go to the issue: no data from the store's database.
+on:
+  workflow_run:
+    workflows: ['Deploy to Firebase', 'Refresh product previews', 'Site check']
+    types: [completed]
+    branches: [main]
+
+permissions:
+  issues: write
+  actions: read
+
+jobs:
+  alert:
+    name: Issue for the owner
+    # Preview deploys of PRs fail in the PR itself, where the owner already looks
+    if: github.event.workflow_run.event != 'pull_request' && contains(fromJSON('["success","failure","timed_out","startup_failure"]'), github.event.workflow_run.conclusion)
+    runs-on: ubuntu-latest
+    concurrency:
+      group: site-alerts-${{ github.event.workflow_run.name }}
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      OWNER: ${{ github.repository_owner }}
+      WORKFLOW: ${{ github.event.workflow_run.name }}
+      CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+      RUN_ID: ${{ github.event.workflow_run.id }}
+      RUN_URL: ${{ github.event.workflow_run.html_url }}
+      SHA: ${{ github.event.workflow_run.head_sha }}
+      COMMIT_TITLE: ${{ github.event.workflow_run.display_title }}
+      SITE: https://ai-studio-applet-webapp-e9574.web.app
+      SITE_URL: ${{ vars.SITE_URL }}
+    steps:
+      - name: Open, update or close the issue
+        run: |
+          set -euo pipefail
+          label="сбой сайта"
+          case "$WORKFLOW" in
+            "Deploy to Firebase")
+              title="Сбой сайта: публикация не прошла"
+              what="Публикация новой версии сайта (\`deploy.yml\`) завершилась с ошибкой. Если не прошли проверки до шага «Publish to Firebase», покупатели видят прошлую версию сайта. Если не прошёл шаг «Сайт открывается после публикации», новая версия уже опубликована, но не открылась: проверьте сайт сами." ;;
+            "Refresh product previews")
+              title="Сбой сайта: превью товаров не обновились"
+              what="Ежечасное обновление превью товаров для мессенджеров (\`share-pages.yml\`) завершилось с ошибкой. Сайт работает, но ссылка на новый или изменённый товар в Telegram и ВКонтакте может показывать старое фото и цену." ;;
+            *)
+              title="Сбой сайта: сайт не открывается"
+              what="Проверка «сайт открывается» (\`site-check.yml\`, раз в 3 часа) не прошла: главная страница или код приложения не отвечают. Покупатели, вероятно, не могут открыть магазин. Частая причина на бесплатном тарифе — исчерпан дневной лимит трафика Hosting (Firebase Console → Hosting → Usage)." ;;
+          esac
+          site="${SITE_URL:-$SITE}"
+          number=$(gh issue list --label "$label" --state open --limit 50 --json number,title \
+            --jq "map(select(.title == \"$title\")) | .[0].number // empty")
+
+          if [ "$CONCLUSION" = "success" ]; then
+            if [ -n "$number" ]; then
+              gh issue close "$number" --reason completed --comment "Починилось: [запуск $RUN_ID]($RUN_URL) прошёл успешно (коммит ${SHA:0:7})."
+              echo "Closed issue #$number"
+            fi
+            exit 0
+          fi
+
+          failed_steps=$(gh api "repos/$GH_REPO/actions/runs/$RUN_ID/jobs" \
+            --jq '[.jobs[] | select(.conclusion == "failure") | .steps[]? | select(.conclusion == "failure") | "«" + .name + "»"] | join(", ")' || true)
+          marker="<!-- site-alert:$SHA -->"
+          details="**Запуск:** $RUN_URL
+          **Коммит:** \`${SHA:0:7}\` $COMMIT_TITLE
+          **Не прошёл шаг:** ${failed_steps:-не определён (откройте запуск)}
+          **Сайт:** $site"
+          details=$(echo "$details" | sed 's/^ *//')
+
+          if [ -z "$number" ]; then
+            gh label create "$label" --color B60205 --description "Оповещения alerts.yml: публикация или сайт не работают" 2>/dev/null || true
+            body="@$OWNER, $what
+
+          $details
+
+          Что делать: напишите Claude в проекте «Разбери сбой сайта» и вставьте ссылку на эту задачу. Задача закроется сама, когда следующий запуск пройдёт.
+
+          $marker"
+            gh issue create --title "$title" --label "$label" --assignee "$OWNER" --body "$(echo "$body" | sed 's/^ *//')"
+            exit 0
+          fi
+
+          # The same commit failing again (hourly previews, the 3-hour check): the issue already says it
+          if gh api "repos/$GH_REPO/issues/$number/comments" --paginate --jq '.[].body' | grep -qF "$marker" \
+            || gh issue view "$number" --json body --jq .body | grep -qF "$marker"; then
+            echo "Issue #$number already reports commit $SHA"
+            exit 0
+          fi
+          gh issue comment "$number" --body "$(printf '@%s, снова ошибка.\n\n%s\n\n%s' "$OWNER" "$details" "$marker")"
