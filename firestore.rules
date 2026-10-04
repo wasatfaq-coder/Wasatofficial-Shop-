@@ -788,6 +788,38 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ------------------------------------------------------------------
+    // Журнал ошибок у покупателей (docs/ops-plan.md, этап 2, src/utils/errorReporter.ts): отчёт создаёт любой
+    // посетитель — он может быть и не вошедшим. Ограничить по покупателю нельзя (анонимных входов посторонний заведёт
+    // сколько угодно), поэтому ограничено на весь сайт: id — «{час}_{ячейка}» с часом по часам сервера (±1 на
+    // неточные часы телефона) и ячейкой 0–29, перезаписи нет — не больше 30 отчётов в час и ≈ 3 КБ на отчёт.
+    // Читает и удаляет только администратор («Аналитика» → «Ошибки на сайте»). В резервную копию журнал не входит.
+    // ------------------------------------------------------------------
+
+    match /client_errors/{errorId} {
+      allow read, delete: if isAdmin();
+      allow create: if isClientErrorReport(errorId);
+    }
+
+    function isClientErrorReport(errorId) {
+      let parts = errorId.split('_');
+      let hour = math.floor(request.time.toMillis() / 3600000);
+      let data = request.resource.data;
+      return parts.size() == 2
+        && parts[0].matches('^[0-9]{6,8}$') && parts[1].matches('^[0-9]{1,2}$')
+        && int(parts[0]) >= hour - 1 && int(parts[0]) <= hour + 1
+        && int(parts[1]) < 30
+        && data.keys().hasAll(['kind', 'message', 'page', 'createdAt'])
+        && data.keys().hasOnly(['kind', 'message', 'stack', 'page', 'release', 'browser', 'createdAt'])
+        && data.kind in ['error', 'rejection', 'render', 'console', 'update']
+        && data.message is string && data.message.size() > 0 && data.message.size() <= 500
+        && data.get('stack', '') is string && data.get('stack', '').size() <= 2000
+        && data.page is string && data.page.size() <= 200
+        && data.get('release', '') is string && data.get('release', '').size() <= 40
+        && data.get('browser', '') is string && data.get('browser', '').size() <= 300
+        && data.createdAt == request.time;
+    }
+
     // Проверка соединения при старте приложения (только чтение)
     match /test/{testId} {
       allow read: if true;

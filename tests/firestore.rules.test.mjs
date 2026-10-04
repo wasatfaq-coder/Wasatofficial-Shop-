@@ -1122,3 +1122,56 @@ describe('chat photos apart from messages', () => {
     await assertFails(getDoc(doc(customer('alice'), 'chat_images/n1')));
   });
 });
+
+// Журнал ошибок у покупателей (docs/ops-plan.md, этап 2): отчёт создаёт любой посетитель, но только в одной из 30 ячеек
+// текущего часа, без перезаписи и с полями ограниченной длины; читает и удаляет только администратор
+describe('errors on customers\' screens', () => {
+  const hour = () => Math.floor(Date.now() / 3_600_000);
+  const report = (overrides = {}) => ({
+    kind: 'error',
+    message: 'TypeError: Cannot read properties of undefined',
+    stack: 'at /assets/index-abc.js:1:2',
+    page: '/product/p1',
+    release: 'abc1234',
+    browser: 'Mozilla/5.0 (Linux; Android 14) Chrome/129',
+    createdAt: serverTimestamp(),
+    ...overrides,
+  });
+
+  test('a visitor without sign-in sends a report; only the admin reads and removes it', async () => {
+    const id = `${hour()}_0`;
+    await assertSucceeds(setDoc(doc(guest(), 'client_errors', id), report()));
+    await assertSucceeds(setDoc(doc(customer(), 'client_errors', `${hour()}_1`), { kind: 'console', message: 'Order was not saved: FirebaseError', page: '/checkout', createdAt: serverTimestamp() }));
+    await assertFails(getDoc(doc(guest(), 'client_errors', id)));
+    await assertFails(getDocs(collection(customer(), 'client_errors')));
+    await assertSucceeds(getDocs(query(collection(owner(), 'client_errors'), orderBy('createdAt', 'desc'), limit(10))));
+    await assertFails(deleteDoc(doc(customer(), 'client_errors', id)));
+    await assertSucceeds(deleteDoc(doc(owner(), 'client_errors', id)));
+  });
+
+  test('at most 30 reports an hour: no overwrite, no other slots or hours', async () => {
+    await assertSucceeds(setDoc(doc(guest(), 'client_errors', `${hour()}_29`), report()));
+    // the slot is taken: a second report there (or an attacker wiping a real one) is refused
+    await assertFails(setDoc(doc(guest(), 'client_errors', `${hour()}_29`), report({ message: 'x' })));
+    await assertFails(setDoc(doc(guest(), 'client_errors', `${hour()}_30`), report()));
+    await assertFails(setDoc(doc(guest(), 'client_errors', `${hour() + 5}_1`), report()));
+    await assertFails(setDoc(doc(guest(), 'client_errors', `${hour() - 5}_1`), report()));
+    await assertFails(setDoc(doc(guest(), 'client_errors', 'random-id'), report()));
+    await assertFails(setDoc(doc(guest(), 'client_errors', `${hour()}_1_2`), report()));
+    // a phone with its clock an hour off still reports
+    await assertSucceeds(setDoc(doc(guest(), 'client_errors', `${hour() - 1}_2`), report()));
+  });
+
+  test('only the report\'s fields, of limited size, with the server\'s time', async () => {
+    const id = (slot) => `${hour()}_${slot}`;
+    await assertFails(setDoc(doc(guest(), 'client_errors', id(3)), report({ customerPhone: '+79990000000' })));
+    await assertFails(setDoc(doc(guest(), 'client_errors', id(4)), report({ message: 'x'.repeat(501) })));
+    await assertFails(setDoc(doc(guest(), 'client_errors', id(5)), report({ message: '' })));
+    await assertFails(setDoc(doc(guest(), 'client_errors', id(6)), report({ stack: 'x'.repeat(2001) })));
+    await assertFails(setDoc(doc(guest(), 'client_errors', id(7)), report({ page: 'x'.repeat(201) })));
+    await assertFails(setDoc(doc(guest(), 'client_errors', id(8)), report({ browser: 'x'.repeat(301) })));
+    await assertFails(setDoc(doc(guest(), 'client_errors', id(9)), report({ kind: 'spam' })));
+    await assertFails(setDoc(doc(guest(), 'client_errors', id(10)), report({ createdAt: Timestamp.fromMillis(0) })));
+    await assertFails(setDoc(doc(guest(), 'client_errors', id(11)), report({ message: { text: 'x' } })));
+  });
+});
