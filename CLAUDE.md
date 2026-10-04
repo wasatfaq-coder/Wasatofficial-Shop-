@@ -78,7 +78,7 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   в адресе и история — `screenHistory.ts`, уведомления о заказе — `useOrderNotifications`, действия покупателя с заказом —
   `useCustomerOrders`, записи админки — `useAdminActions`. Экраны — в `src/views/`, панель администратора
   в `src/components/admin/` (открывается из `ProfileScreen`, окно панели — `src/views/profile/ProfileAdminPanel.tsx`), окна и секции
-  профиля — в `src/views/profile/`. Большие файлы делятся по плану
+  профиля — в `src/views/profile/`, список и форма товаров админки — в `src/components/admin/products/`. Большие файлы делятся по плану
   `docs/split-large-files-plan.md`.
 - `src/shared/` — код, общий с Cloud Functions (расчёт цены `orderPricing.ts`, контракт
   `orderApi.ts`). Без браузерных API: этот код выполняется и на сервере. Меняя расчёт цены, меняете его и на сервере.
