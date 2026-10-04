@@ -33,7 +33,7 @@ import {
 } from './utils/inventory';
 import { formatAddress } from './utils/addressFormat';
 import { buildClientOrder } from './utils/clientOrder';
-import { hasHeavyPhotos } from './utils/productPhotos';
+import { hasHeavyPhotos, removedProductPhotoIds } from './utils/productPhotos';
 import { pluralRu } from './utils/pluralize';
 import { ADMIN_EMAIL, useAuth } from './context/AuthContext';
 import {
@@ -59,6 +59,7 @@ import {
   saveProductCosts,
   moveProductCostsToPrivate,
   moveProductPhotosOut,
+  deleteProductPhotos,
   deleteRemovedDocs,
   changedItems,
   recordPromoUsageInFirestore,
@@ -2012,6 +2013,11 @@ export default function App() {
                   syncAllProductsToFirestore(changed),
                   saveProductCosts(costChanges)
                 );
+                // a removed product's photos go after it: a product never points at a missing photo
+                const orphanPhotos = removedProductPhotoIds(adminProducts, updatedWithCosts);
+                if (orphanPhotos.length > 0) {
+                  void saved.then((ok) => ok && deleteProductPhotos(orphanPhotos).catch((err) => console.error('Photos of removed products stayed:', err)));
+                }
                 setProductCosts((prev) => {
                   const next = { ...prev };
                   for (const { id, costPrice } of costChanges) {

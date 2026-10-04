@@ -33,7 +33,7 @@ import {
   Ruler,
 } from 'lucide-react';
 import { Product, ProductSKU, StockMovementLog } from '../../types';
-import { deleteProductPhotos, saveProductPhotos, saveStockMovements } from '../../utils/firebaseSync';
+import { deleteProductPhotos, loadProductPhotos, saveProductPhotos, saveStockMovements } from '../../utils/firebaseSync';
 import { formatOrderDate } from '../../shared/orderDate';
 import { SelectCheckbox } from './SelectCheckbox';
 import { exportProductsToCSV, parseProductsFromCSV } from '../../utils/csvHelpers';
@@ -50,7 +50,13 @@ import {
   withMissingSkus,
 } from '../../utils/inventory';
 import { colorHexForName, normalizeColorName, normalizeProductColors, readColorCode, splitColorEntry } from '../../utils/colorCode';
-import { droppedPhotoIds, splitProductPhotos, storedImagesEstimate } from '../../utils/productPhotos';
+import {
+  copyProductPhotos,
+  droppedPhotoIds,
+  splitProductPhotos,
+  storedImagesEstimate,
+  unusedPhotoIds,
+} from '../../utils/productPhotos';
 import { articleGroupKey, collectBarcodes, unifyArticleBarcodes } from '../../shared/barcode';
 import { AdminBulkOperationsModal } from './AdminBulkOperationsModal';
 import { NeumorphicSelect } from '../NeumorphicSelect';
@@ -114,6 +120,8 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   const [showFormErrors, setShowFormErrors] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
+  /** The product whose copy is being made (its photos are read and written first) */
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const formErrorsRef = useRef<HTMLDivElement>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
@@ -453,7 +461,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   };
 
   // Duplicate Product Handler
-  const handleDuplicateProduct = (prod: Product) => {
+  const handleDuplicateProduct = async (prod: Product) => {
     const newId = `prod-${Date.now()}`;
     const baseSkus = withMissingSkus(prod);
     const taken = collectBarcodes(products);
@@ -470,16 +478,35 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       };
     });
 
+    // The copy gets its own photo documents: with shared ones, removing a photo from the copy deleted the original's
+    let photos: ReturnType<typeof copyProductPhotos>;
+    setDuplicatingId(prod.id);
+    try {
+      photos = copyProductPhotos(newId, prod.photoIds, await loadProductPhotos(prod.photoIds ?? []));
+      await saveProductPhotos(photos.newPhotos);
+    } catch (err) {
+      console.error('Photos of the copy were not saved:', err);
+      onShowToast(`Копия «${prod.title}» не создана: база не приняла фото. Проверьте соединение`, 'error');
+      setDuplicatingId(null);
+      return;
+    }
+
     const cloned: Product = {
       ...prod,
       id: newId,
       title: `${prod.title} (Копия)`,
       skus: clonedSkus,
+      photoIds: photos.photoIds,
       isNew: true,
       badge: prod.badge || 'NEW',
     };
 
-    onUpdateProducts([cloned, ...products]);
+    const saved = await onUpdateProducts([cloned, ...products]);
+    setDuplicatingId(null);
+    if (saved === false) {
+      deleteProductPhotos(photos.newPhotos.map((p) => p.id)).catch((err) => console.error('Photos of the copy were not removed:', err));
+      return;
+    }
     onShowToast(`Создана копия товара "${prod.title}"`, 'success');
   };
 
@@ -650,7 +677,11 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         journal(updated.id, updated.title)
       );
       // photos the product no longer shows: their documents go after the product was saved
-      const dropped = droppedPhotoIds(storedProduct, photos.photoIds);
+      // a copy made before 04.10.2026 shares documents with its original: those stay
+      const dropped = unusedPhotoIds(
+        droppedPhotoIds(storedProduct, photos.photoIds),
+        products.filter((p) => p.id !== editingProduct.id)
+      );
       if (saved && dropped.length > 0) {
         deleteProductPhotos(dropped).catch((err) => console.error('Old product photos were not removed:', err));
       }
@@ -1414,8 +1445,12 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
                     {/* Secondary: Duplicate */}
                     <button
-                      onClick={() => handleDuplicateProduct(prod)}
-                      className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-success transition-all cursor-pointer shrink-0"
+                      onClick={() => void handleDuplicateProduct(prod)}
+                      disabled={duplicatingId !== null}
+                      aria-busy={duplicatingId === prod.id}
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center text-[#4E5C70] transition-all shrink-0 ${
+                        duplicatingId === null ? 'neu-button hover:text-success cursor-pointer' : 'neu-button-disabled'
+                      }`}
                       title="Дублировать товар (копировать)"
                       aria-label="Дублировать товар (копировать)"
                     >
