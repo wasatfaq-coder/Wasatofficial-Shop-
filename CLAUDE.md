@@ -77,7 +77,8 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   и промокод — `useCart`, чат поддержки — `useSupportChat`, оформление заказа — `useCheckout`, профиль — `useProfile`, экран
   в адресе и история — `screenHistory.ts`, уведомления о заказе — `useOrderNotifications`, действия покупателя с заказом —
   `useCustomerOrders`, записи админки — `useAdminActions`. Экраны — в `src/views/`, панель администратора
-  в `src/components/admin/` (открывается из `ProfileScreen`). Большие файлы делятся по плану
+  в `src/components/admin/` (открывается из `ProfileScreen`, окно панели — `src/views/profile/ProfileAdminPanel.tsx`), окна и секции
+  профиля — в `src/views/profile/`. Большие файлы делятся по плану
   `docs/split-large-files-plan.md`.
 - `src/shared/` — код, общий с Cloud Functions (расчёт цены `orderPricing.ts`, контракт
   `orderApi.ts`). Без браузерных API: этот код выполняется и на сервере. Меняя расчёт цены, меняете его и на сервере.
@@ -281,7 +282,7 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   импорт вернёт их в главный бандл. Клиент Cloud Functions грузится только для серверного заказа (`placeOrderCallable`
   в `firebase.ts`), пакет `re2js` (регулярные выражения pipelines Firestore, магазину не нужны) заменён заглушкой
   `src/vendor/re2js-stub.ts` (`resolve.alias` в `vite.config.ts`). Главный чанк — 267 КБ gzip (этап 8, было 325).
-- Админка — отдельный чанк: разделы и `AdminNav` в `ProfileScreen` подключены через `lazy`, id и типы разделов лежат
+- Админка — отдельный чанк: разделы и `AdminNav` в `ProfileAdminPanel` (`src/views/profile/`) подключены через `lazy`, id и типы разделов лежат
   в `adminSections.ts`. Компоненты админки (и `NeumorphicSelect`) не импортировать статически в код покупателя:
   Base UI и графики вернутся в главный бандл (раздельная загрузка сократила начальную с ~682 до ~386 КБ gzip).
   Библиотеки PDF (`html2canvas`, `jspdf`) тоже грузятся по требованию: в аналитике — `preloadPdfLibraries` при
