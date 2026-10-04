@@ -1,0 +1,25 @@
+name: Site check
+
+# Every 3 hours: does the shop open for a customer (scripts/site-check.ts, docs/ops-plan.md, stage 1)? A failed check
+# makes alerts.yml open an issue for the owner. It only downloads the page and the app's code: no database reads.
+# «Run workflow» on the Actions tab checks at once.
+on:
+  schedule:
+    - cron: '41 */3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: The shop opens
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+      - name: Сайт открывается
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: bun scripts/site-check.ts

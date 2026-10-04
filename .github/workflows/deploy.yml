@@ -148,8 +148,16 @@ jobs:
         uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-      - if: env.HAS_FIREBASE_SECRET == 'true'
+      - name: Publish to Firebase
+        if: env.HAS_FIREBASE_SECRET == 'true'
         run: |
           targets="hosting,firestore"
           if [ "$DEPLOY_FUNCTIONS" = "true" ]; then targets="$targets,functions"; fi
           bunx firebase deploy --only "$targets" --project "$FIREBASE_PROJECT" --non-interactive
+      # The published site opens for a customer: the new build is served, and in Chrome at 390 px the page draws without
+      # JS errors (scripts/site-check.ts). A failure here makes alerts.yml open an issue for the owner (docs/ops-plan.md)
+      - name: Сайт открывается после публикации
+        if: env.HAS_FIREBASE_SECRET == 'true'
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: bun scripts/site-check.ts --expect dist/index.html --browser
