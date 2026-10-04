@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Product, ReviewVote, StoredReview } from '../types';
 import { subscribeToProducts, subscribeToReviewVotes, subscribeToReviews } from '../utils/firebaseSync';
 import { mergeProductReviews } from '../utils/reviews';
+import { useCatalogIndexSync } from './useCatalogIndexSync';
 
 /**
  * The catalog from Firestore (no demo data meanwhile) with the reviews and «Полезно» votes of their own collections
@@ -38,6 +39,9 @@ export function useCatalog(onCatalog: (products: Product[]) => void) {
       unsubReviewVotes();
     };
   }, []);
+
+  // the admin's session writes the light index customers will read (docs/catalog-scale-plan.md, stage 2)
+  useCatalogIndexSync(products, productsLoaded);
 
   return { products, setProducts, productsLoaded, productsError };
 }

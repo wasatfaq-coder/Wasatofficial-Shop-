@@ -21,6 +21,7 @@ import {
   deleteField,
   runTransaction,
   documentId,
+  Bytes,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { CartItem, Product, ProductSKU, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog, PaymentKind, PaymentTemplate } from '../types';
@@ -45,6 +46,12 @@ import { cancelReasonText, formatCancelledAt } from './orderCancel';
 import type { OrderStatusLogEntry } from '../shared/orderFlow';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages, isTransportCompanyDelivery } from './deliveryStages';
 import { CLIENT_ERRORS_COLLECTION, type ClientErrorReport, type StoredClientError } from './clientErrors';
+import {
+  CATALOG_INDEX_COLLECTION,
+  PRODUCT_THUMBS_COLLECTION,
+  catalogIndexPartId,
+  type CatalogIndexPart,
+} from './catalogIndex';
 
 /**
  * An empty collection means the owner has not added anything yet (or removed it all).
@@ -617,6 +624,60 @@ export async function deleteProductPhotos(ids: string[]): Promise<void> {
   for (let i = 0; i < list.length; i += BATCH_LIMIT) {
     const batch = writeBatch(db);
     for (const id of list.slice(i, i + BATCH_LIMIT)) batch.delete(doc(db, 'product_photos', id));
+    await batch.commit();
+  }
+}
+
+/**
+ * The light catalog index (docs/catalog-scale-plan.md, stage 2): every part of `catalog_index`. A write puts all parts
+ * in one batch, so a snapshot never mixes two versions (readCatalogIndex checks it anyway)
+ */
+export function subscribeToCatalogIndex(onUpdate: (parts: CatalogIndexPart[]) => void, onError?: (error: unknown) => void) {
+  return onSnapshot(
+    collection(db, CATALOG_INDEX_COLLECTION),
+    (snap) => {
+      if (snap.metadata.fromCache && snap.empty) return;
+      onUpdate(
+        snap.docs.map((d) => {
+          const data = d.data();
+          return { ...(data as CatalogIndexPart), entries: data.entries instanceof Bytes ? data.entries.toUint8Array() : new Uint8Array() };
+        })
+      );
+    },
+    (error) => {
+      console.warn('Catalog index subscription warning:', error);
+      if (onError) onError(error);
+    }
+  );
+}
+
+/** Writes the index (admin): the new parts and the removal of parts it no longer has, in one batch */
+export async function saveCatalogIndex(parts: CatalogIndexPart[], previousPartCount: number): Promise<void> {
+  const batch = writeBatch(db);
+  for (const part of parts) {
+    batch.set(doc(db, CATALOG_INDEX_COLLECTION, catalogIndexPartId(part.part)), { ...part, entries: Bytes.fromUint8Array(part.entries) });
+  }
+  for (let i = parts.length; i < previousPartCount; i++) batch.delete(doc(db, CATALOG_INDEX_COLLECTION, catalogIndexPartId(i)));
+  await batch.commit();
+}
+
+export interface ProductThumb {
+  productId: string;
+  /** thumbKey of the photo it was made from */
+  key: string;
+  data: string;
+}
+
+/** Miniatures of products for the catalog cards (admin), 50 per batch: one is ≈ 10–20 КБ */
+export async function saveProductThumbs(thumbs: ProductThumb[], removedProductIds: string[] = []): Promise<void> {
+  for (let i = 0; i < thumbs.length; i += 50) {
+    const batch = writeBatch(db);
+    for (const thumb of thumbs.slice(i, i + 50)) batch.set(doc(db, PRODUCT_THUMBS_COLLECTION, thumb.productId), thumb);
+    await batch.commit();
+  }
+  for (let i = 0; i < removedProductIds.length; i += BATCH_LIMIT) {
+    const batch = writeBatch(db);
+    for (const id of removedProductIds.slice(i, i + BATCH_LIMIT)) batch.delete(doc(db, PRODUCT_THUMBS_COLLECTION, id));
     await batch.commit();
   }
 }

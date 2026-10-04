@@ -24,6 +24,7 @@ import {
   where,
   writeBatch,
   increment,
+  Bytes,
 } from 'firebase/firestore';
 
 const ADMIN_EMAIL = 'gunh83975@gmail.com';
@@ -1024,6 +1025,35 @@ describe('product photos', () => {
     await assertFails(setDoc(doc(owner(), 'product_photos/p1_d'), { ...photo, note: 'x' }));
     await assertFails(deleteDoc(doc(customer(), 'product_photos/p1_a')));
     await assertSucceeds(deleteDoc(doc(owner(), 'product_photos/p1_a')));
+  });
+});
+
+// Каталог частями, этап 2: индекс каталога и миниатюры выводятся из товаров — читает любой, пишет администратор
+describe('catalog index and product thumbs', () => {
+  const part = { format: 1, part: 0, parts: 1, hash: '1-abc', entries: Bytes.fromUint8Array(new Uint8Array([31, 139])), updatedAt: '2026-10-04T00:00:00.000Z' };
+  const thumb = { productId: 'p1', key: 'p:p1_a', data: 'data:image/jpeg;base64,AAAA' };
+
+  test('anyone reads the index, only the admin writes it, and only its own fields', async () => {
+    await assertSucceeds(setDoc(doc(owner(), 'catalog_index/p0'), part));
+    await assertSucceeds(getDocs(collection(guest(), 'catalog_index')));
+    await assertFails(setDoc(doc(customer(), 'catalog_index/p0'), part));
+    await assertFails(setDoc(doc(guest(), 'catalog_index/p1'), part));
+    await assertFails(setDoc(doc(owner(), 'catalog_index/p0'), { ...part, note: 'x' }));
+    await assertFails(setDoc(doc(owner(), 'catalog_index/p0'), { ...part, entries: '[]' }));
+    await assertFails(setDoc(doc(owner(), 'catalog_index/main'), part));
+    await assertFails(deleteDoc(doc(customer(), 'catalog_index/p0')));
+    await assertSucceeds(deleteDoc(doc(owner(), 'catalog_index/p0')));
+  });
+
+  test('anyone reads a miniature, only the admin writes it, and only a picture of that product', async () => {
+    await assertSucceeds(setDoc(doc(owner(), 'product_thumbs/p1'), thumb));
+    await assertSucceeds(getDoc(doc(guest(), 'product_thumbs/p1')));
+    await assertFails(setDoc(doc(customer(), 'product_thumbs/p2'), { ...thumb, productId: 'p2' }));
+    await assertFails(setDoc(doc(owner(), 'product_thumbs/p2'), thumb));
+    await assertFails(setDoc(doc(owner(), 'product_thumbs/p1'), { ...thumb, data: 'https://attacker.example/x.png' }));
+    await assertFails(setDoc(doc(owner(), 'product_thumbs/p1'), { ...thumb, data: `data:image/jpeg;base64,${'A'.repeat(100_000)}` }));
+    await assertFails(deleteDoc(doc(guest(), 'product_thumbs/p1')));
+    await assertSucceeds(deleteDoc(doc(owner(), 'product_thumbs/p1')));
   });
 });
 
