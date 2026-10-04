@@ -107,6 +107,14 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   коллекций из `BACKUP_COLLECTIONS` (в том числе `promo_uses`) на устройство владельца, даты — `{ __timestamp }`. Новая коллекция — добавить
   в список и в `BACKUP_COLLECTION_TITLES` (`src/utils/backupRestore.ts`). «Восстановить из копии» (`AdminRestoreDialog`): режимы «Только
   недостающие» и «Как в копии», ничего не удаляет; отзывы, голоса и администраторов браузер не пишет (`RESTORE_SKIPPED`).
+  Журнал ошибок `client_errors` в копию не входит: он временный.
+- Ошибки у покупателей (`docs/ops-plan.md`, этап 2): `startErrorReporter` (`src/utils/errorReporter.ts`, запуск в `main.tsx`)
+  пишет в `client_errors` необработанные ошибки, экраны, которые не нарисовались, и `console.error` — поэтому сбой, о котором
+  должен знать владелец, логируется `console.error`, а ожидаемое (нет сети, отказ покупателя) — `console.warn`. Текст —
+  только через `buildReport` (`src/utils/clientErrors.ts`: без почты и телефонов, объекты не сериализуются). Правило
+  `isClientErrorReport`: id «{час}_{ячейка 0–29}», без перезаписи — не больше 30 отчётов в час на весь сайт. Владелец
+  видит их в «Аналитика» → «Ошибки на сайте» (`AdminSiteErrorsCard`). Ошибка отрисовки показывает `AppErrorBoundary`
+  с «Обновить страницу», а не белый экран.
 - ID базы Firestore — в `firebase-applet-config.json` (`firestoreDatabaseId`) и `firebase.json`.
 - Ключи `manstyle_*` в `localStorage` и ID базы — внутренние, их не переименовывать: в ключах лежат корзина,
   избранное и гостевые заказы в браузерах покупателей (после переименования они пропадут), а ID базы связывает

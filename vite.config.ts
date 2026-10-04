@@ -17,6 +17,10 @@ export default defineConfig(() => {
         },
       },
     ],
+    // The error log (src/utils/errorReporter.ts) shows which build failed: the commit in Actions, «local» otherwise
+    define: {
+      'import.meta.env.VITE_RELEASE': JSON.stringify(process.env.GITHUB_SHA?.slice(0, 7) || 'local'),
+    },
     resolve: {
       alias: {
         '@': path.resolve(import.meta.dirname, '.'),
