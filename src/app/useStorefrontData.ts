@@ -41,6 +41,8 @@ export function useStorefrontData(wantPromos: boolean) {
   const [promosRequested, setPromosRequested] = useState(false);
   const readPromos = wantPromos || promosRequested;
   const [bannerSlides, setBannerSlides] = useState<BannerSlide[]>(loadCachedBanners);
+  // false while the banners are the browser's copy: the admin's session moves pictures only from the database's
+  const [bannersLoaded, setBannersLoaded] = useState(false);
   // When true, orders are placed and validated by the placeOrder Cloud Function
   const [serverOrdersEnabled, setServerOrdersEnabled] = useState(false);
   const [storefrontSettings, setStorefrontSettings] = useState<StorefrontSettings>(loadStorefrontSettings);
@@ -88,6 +90,7 @@ export function useStorefrontData(wantPromos: boolean) {
     // An empty list is a real state (the owner removed everything): always apply it
     const unsubBanners = subscribeToBanners((loadedBanners) => {
       setBannerSlides(loadedBanners);
+      setBannersLoaded(true);
       try {
         localStorage.setItem(BANNERS_STORAGE_KEY, JSON.stringify(loadedBanners));
       } catch {}
@@ -118,6 +121,7 @@ export function useStorefrontData(wantPromos: boolean) {
     promosLoaded,
     requestPromos,
     bannerSlides,
+    bannersLoaded,
     setBannerSlides,
     serverOrdersEnabled,
     storefrontSettings,
