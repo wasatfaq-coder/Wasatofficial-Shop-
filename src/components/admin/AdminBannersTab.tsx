@@ -25,6 +25,7 @@ import { NeumorphicSelect } from '../NeumorphicSelect';
 import { processImageFiles } from '../../utils/imageUpload';
 import { NotConfigured } from '../NotConfigured';
 import { useDialogA11y } from '../../utils/useDialogA11y';
+import { useBannersWithImages } from '../../utils/useBannerImage';
 import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
 
 interface AdminBannersTabProps {
@@ -38,13 +39,15 @@ interface AdminBannersTabProps {
 }
 
 export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
-  banners,
+  banners: storedBanners,
   categories = [],
   products = [],
   promos = [],
   onUpdateBanners,
   onShowToast,
 }) => {
+  // pictures live in banner_images (docs/catalog-scale-plan.md, stage 5): the list and the editor show them in place
+  const banners = useBannersWithImages(storedBanners);
   // Where the banner button leads, by name (not the internal category id)
   const bannerTargetLabel = (slide: BannerSlide): string => {
     if (slide.actionType === 'product') {

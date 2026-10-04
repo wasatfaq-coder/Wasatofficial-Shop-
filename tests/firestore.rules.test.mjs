@@ -1028,6 +1028,23 @@ describe('product photos', () => {
   });
 });
 
+// Каталог частями, этап 5: картинки баннера — отдельный документ, читает любой посетитель, пишет администратор
+describe('banner pictures', () => {
+  const pictures = { bannerId: 'b1', image: 'data:image/jpeg;base64,AAAA', desktopImage: 'data:image/webp;base64,BBBB' };
+
+  test('anyone reads the pictures, only the admin writes them, and only pictures of their banner', async () => {
+    await assertSucceeds(setDoc(doc(owner(), 'banner_images/b1'), pictures));
+    await assertSucceeds(getDoc(doc(guest(), 'banner_images/b1')));
+    await assertFails(setDoc(doc(customer(), 'banner_images/b2'), { ...pictures, bannerId: 'b2' }));
+    await assertFails(setDoc(doc(guest(), 'banner_images/b2'), { ...pictures, bannerId: 'b2' }));
+    await assertFails(setDoc(doc(owner(), 'banner_images/b3'), pictures));
+    await assertFails(setDoc(doc(owner(), 'banner_images/b1'), { ...pictures, image: 'https://attacker.example/x.png' }));
+    await assertFails(setDoc(doc(owner(), 'banner_images/b1'), { ...pictures, note: 'x' }));
+    await assertFails(deleteDoc(doc(customer(), 'banner_images/b1')));
+    await assertSucceeds(deleteDoc(doc(owner(), 'banner_images/b1')));
+  });
+});
+
 // Каталог частями, этап 2: индекс каталога и миниатюры выводятся из товаров — читает любой, пишет администратор
 describe('catalog index and product thumbs', () => {
   const part = { format: 1, part: 0, parts: 1, hash: '1-abc', entries: Bytes.fromUint8Array(new Uint8Array([31, 139])), updatedAt: '2026-10-04T00:00:00.000Z' };

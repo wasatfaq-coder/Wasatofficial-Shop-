@@ -4,6 +4,7 @@ import type { LegalDocId } from '../utils/legalDocs';
 import { saveLocalDeliveryMethods, saveLocalPickupPoints } from '../data/deliveryData';
 import { saveStorefrontSettings } from '../utils/inventory';
 import { hasHeavyPhotos, removedProductPhotoIds } from '../utils/productPhotos';
+import { hasInlineBannerImage } from '../utils/bannerImages';
 import { pluralRu } from '../utils/pluralize';
 import {
   syncAllProductsToFirestore,
@@ -41,6 +42,8 @@ type AdminActionOptions = {
   promos: PromoCode[];
   setPromos: SetState<PromoCode[]>;
   bannerSlides: BannerSlide[];
+  /** The banners came from the database (not only the browser's copy) */
+  bannersLoaded: boolean;
   setBannerSlides: SetState<BannerSlide[]>;
   deliveryMethods: DeliveryMethod[];
   setDeliveryMethods: SetState<DeliveryMethod[]>;
@@ -71,6 +74,7 @@ export function useAdminActions({
   promos,
   setPromos,
   bannerSlides,
+  bannersLoaded,
   setBannerSlides,
   deliveryMethods,
   setDeliveryMethods,
@@ -126,8 +130,20 @@ export function useAdminActions({
     })();
   }, [isAdmin, productsLoaded, products]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Pictures still inside banners (every visitor downloaded them on any screen): the admin's session moves them to
+  // banner_images (docs/catalog-scale-plan.md, stage 5). Checked once, on the banners from the database
+  const bannersCheckedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!isAdmin || !bannersLoaded || bannersCheckedRef.current) return;
+    bannersCheckedRef.current = true;
+    if (bannerSlides.some(hasInlineBannerImage)) void persist('картинки баннеров', syncAllBannersToFirestore(bannerSlides));
+  }, [isAdmin, bannersLoaded, bannerSlides]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleUpdateBannerSlides = (newBanners: BannerSlide[]) => {
-    const removed = deleteRemovedDocs('banners', bannerSlides, newBanners);
+    const removed = Promise.all([
+      deleteRemovedDocs('banners', bannerSlides, newBanners),
+      deleteRemovedDocs('banner_images', bannerSlides, newBanners),
+    ]).then(() => undefined);
     setBannerSlides(newBanners);
     try {
       localStorage.setItem(BANNERS_STORAGE_KEY, JSON.stringify(newBanners));
