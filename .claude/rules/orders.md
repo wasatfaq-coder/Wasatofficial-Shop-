@@ -3,6 +3,8 @@ paths:
   - "src/App.tsx"
   - "src/app/useCheckout.ts"
   - "src/app/useCart.ts"
+  - "src/app/useCustomerOrders.ts"
+  - "src/app/useAdminActions.ts"
   - "src/shared/**"
   - "src/utils/order*.ts"
   - "src/utils/clientOrder.ts"
