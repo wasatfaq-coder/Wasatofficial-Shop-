@@ -40,6 +40,7 @@ import {
   orderLineMovement,
   orderMovementId,
   orderReturnMovementId,
+  lineReturnQuantity,
   orderReturnReason,
   STOCK_MOVEMENTS_COLLECTION,
 } from '../shared/stockMovements';
@@ -424,16 +425,16 @@ export type LineReturn = 'returned' | 'already' | 'nothing' | 'unknown';
  * Returns one line of a cancelled order to stock — exactly what its write-off entry `{заказ}_{строка}` took (stock
  * could be short at the order) — together with the entry `{заказ}_{строка}_return`, in one transaction. The entry is
  * created once, so a repeated call (another tab, a retry, the admin) returns nothing twice. A product «Снят с
- * витрины» stays off sale; a sold-out one is on sale again. Without a write-off entry (preorder line, an order older
- * than the journal) the buyer returns nothing ('unknown'); the admin passes `fallbackToOrdered` and returns the
- * ordered quantity. Throws when the write is refused.
+ * витрины» stays off sale; a sold-out one is on sale again. Without a write-off entry nothing was taken
+ * (`lineReturnQuantity`): the buyer's browser leaves the line 'unknown' and tries again at the next visit, the admin
+ * passes `missingIsNothing` and the line counts as back. Throws when the write is refused.
  */
 export async function returnOrderLineStock(
   orderId: string,
   line: CartItem,
   lineIndex: number,
   at: Date,
-  options: { operator?: string; fallbackToOrdered?: boolean } = {}
+  options: { operator?: string; missingIsNothing?: boolean } = {}
 ): Promise<LineReturn> {
   if (line.isPreorder) return 'nothing';
   const productRef = doc(db, 'products', line.product.id);
@@ -442,10 +443,8 @@ export async function returnOrderLineStock(
   return runTransaction(db, async (tx) => {
     const [returnSnap, takenSnap, productSnap] = await Promise.all([tx.get(returnRef), tx.get(takenRef), tx.get(productRef)]);
     if (returnSnap.exists()) return 'already';
-    let quantity: number;
-    if (takenSnap.exists()) quantity = -(Number(takenSnap.data().changeQuantity) || 0);
-    else if (options.fallbackToOrdered) quantity = line.quantity;
-    else return 'unknown';
+    if (!takenSnap.exists()) return options.missingIsNothing ? 'nothing' : 'unknown';
+    const quantity = lineReturnQuantity({ changeQuantity: Number(takenSnap.data().changeQuantity) || 0 }, line);
     if (!(quantity > 0) || !productSnap.exists()) return 'nothing';
 
     const data = productSnap.data();
@@ -492,7 +491,7 @@ export async function returnOrderLineStock(
  */
 export async function returnCancelledOrderStock(
   order: Pick<Order, 'id' | 'items'>,
-  options: { operator?: string; fallbackToOrdered?: boolean } = {}
+  options: { operator?: string; missingIsNothing?: boolean } = {}
 ): Promise<boolean> {
   const at = new Date();
   let complete = true;
