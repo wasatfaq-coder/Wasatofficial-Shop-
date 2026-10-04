@@ -27,30 +27,28 @@ const product = (over: Partial<Product> = {}): Product => ({
 });
 
 describe('индекс каталога', () => {
-  test('строка товара: размеры в наличии, рейтинг только по настоящим отзывам, без фото и вариантов', () => {
-    const entry = catalogEntry(product());
-    expect(entry.availableSizes).toEqual(['M', 'L']);
-    expect(entry.available).toBe(true);
-    expect(entry.hidden).toBe(false);
+  test('строка товара: варианты с остатком, рейтинг только по настоящим отзывам, без фото и текстов карточки', () => {
+    const entry = catalogEntry(product({ fabricComposition: [{ fiber: 'Лён', percentage: 100 }] }));
+    expect(entry.skus.map((s) => [s.size, s.stock])).toEqual([['S', 0], ['M', 2], ['L', 1]]);
+    expect(entry.inStock).toBe(true);
     // 4.9 и 42 в товаре — не отзывы: рейтинга нет
-    expect(entry.rating).toBeUndefined();
+    expect(entry.reviewRating).toBeUndefined();
     expect(entry.thumb).toBe('p:p1_a');
     expect(entry.photoCount).toBe(2);
     expect(JSON.stringify(entry)).not.toContain('base64');
-    expect('skus' in entry).toBe(false);
+    expect('fabricComposition' in entry).toBe(false);
+    expect('images' in entry).toBe(false);
 
     const review = (id: string, rating: number) => ({ id, authorName: id, rating, date: '', comment: '' });
     const reviewed = catalogEntry(product({ reviews: [review('r1', 4), review('r2', 5)] }));
-    expect(reviewed.rating).toBe(4.5);
-    expect(reviewed.reviewsCount).toBe(2);
+    expect(reviewed.reviewRating).toBe(4.5);
+    expect(reviewed.reviewCount).toBe(2);
   });
 
-  test('снятый с витрины и распроданный товар: в наличии ни одного размера', () => {
-    expect(catalogEntry(product({ hiddenFromSale: true })).availableSizes).toEqual([]);
-    expect(catalogEntry(product({ hiddenFromSale: true })).hidden).toBe(true);
-    const soldOut = catalogEntry(product({ skus: product().skus!.map((s) => ({ ...s, stock: 0 })) }));
-    expect(soldOut.available).toBe(false);
-    expect(soldOut.availableSizes).toEqual([]);
+  test('снятый с витрины товар остаётся снятым, у старого товара без поля — как было', () => {
+    expect(catalogEntry(product({ hiddenFromSale: true })).hiddenFromSale).toBe(true);
+    expect('hiddenFromSale' in catalogEntry(product())).toBe(false);
+    expect(catalogEntry(product({ inStock: false })).inStock).toBe(false);
   });
 
   test('миниатюра: по id полного фото, по хэшу лёгкого фото, ссылка — без миниатюры', () => {

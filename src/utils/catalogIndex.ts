@@ -1,10 +1,9 @@
-import type { Product } from '../types';
-import { isHiddenFromSale, isProductInStock } from './inventory';
+import type { Product, ProductSKU } from '../types';
 import { getProductRating } from './productRating';
 
 /**
  * Лёгкий индекс каталога (docs/catalog-scale-plan.md, этап 2): строка на товар — всё, что нужно поиску, фильтрам,
- * сортировкам и карточке, без фото и вариантов. Покупатель читает индекс одним-двумя документами вместо всех товаров;
+ * сортировкам, карточке и корзине, без фото и текстов карточки. Покупатель читает индекс одним-двумя документами вместо всех товаров;
  * пишет его сессия администратора (`useCatalogIndexSync`), пока нет Cloud Functions. Код без браузерных API, кроме
  * сжатия (`CompressionStream` есть и в браузерах, и в Bun).
  */
@@ -16,36 +15,25 @@ export const PRODUCT_THUMBS_COLLECTION = 'product_thumbs';
 /** One part's compressed entries; a document holds up to 1 MiB, the rest is the other fields and a margin */
 const PART_MAX_BYTES = 700_000;
 
-export interface CatalogEntry {
-  id: string;
-  title: string;
-  category: string;
-  categoryLabel: string;
-  price: number;
-  originalPrice?: number;
-  badge?: string;
-  material: string;
-  description: string;
-  sizes: string[];
-  /** Sizes with stock left (the size filter counts only these) */
-  availableSizes: string[];
-  colors: { name: string; hex: string }[];
-  /** isProductInStock: «Только в наличии» */
-  available: boolean;
-  /** isHiddenFromSale: not shown to customers */
-  hidden: boolean;
-  isNew?: boolean;
-  isPopular?: boolean;
-  fit?: Product['fit'];
-  /** From real reviews only (getProductRating) */
-  rating?: number;
-  reviewsCount?: number;
+/**
+ * A product without what a card, the search and the filters do not need: no photos (only the miniature's key or a photo
+ * link), no card sections. Variants stay (colour, size, stock): the size and «в наличии» filters and the cart use them
+ */
+export type CatalogEntry = Pick<
+  Product,
+  'id' | 'title' | 'category' | 'categoryLabel' | 'price' | 'originalPrice' | 'badge' | 'material' | 'description' |
+  'sizes' | 'colors' | 'inStock' | 'hiddenFromSale' | 'isPopular' | 'isNew' | 'fit'
+> & {
+  skus: Pick<ProductSKU, 'id' | 'color' | 'size' | 'stock' | 'skuCode'>[];
+  /** From real reviews only (getProductRating): the product's own `rating` may be a template number */
+  reviewRating?: number;
+  reviewCount?: number;
   /** The first photo as a link (a photo from the internet): the card shows it as it is */
   image?: string;
-  /** The first photo was a data: photo — its miniature is `product_thumbs/{id}`, made from this photo (thumbKey) */
+  /** The first photo is a data: photo — its miniature is `product_thumbs/{id}`, made from this photo (thumbKey) */
   thumb?: string;
   photoCount: number;
-}
+};
 
 export interface CatalogIndexPart {
   format: number;
@@ -81,15 +69,6 @@ export function thumbKey(product: Pick<Product, 'images' | 'photoIds'>): string 
   return photoId ? `p:${photoId}` : `h:${shortHash(first)}`;
 }
 
-const availableSizes = (product: Product): string[] => {
-  if (product.inStock === false || isHiddenFromSale(product)) return [];
-  const skus = product.skus ?? [];
-  return (product.sizes ?? []).filter((size) => {
-    const ofSize = skus.filter((sku) => sku.size === size);
-    return ofSize.length === 0 || ofSize.some((sku) => sku.stock > 0);
-  });
-};
-
 /** The index line of a product; `product.reviews` are the merged real reviews (mergeProductReviews) */
 export function catalogEntry(product: Product): CatalogEntry {
   const rating = getProductRating(product);
@@ -104,20 +83,24 @@ export function catalogEntry(product: Product): CatalogEntry {
     material: product.material ?? '',
     description: product.description ?? '',
     sizes: product.sizes ?? [],
-    availableSizes: availableSizes(product),
     colors: (product.colors ?? []).map((c) => ({ name: c.name, hex: c.hex })),
-    available: isProductInStock(product),
-    hidden: isHiddenFromSale(product),
+    inStock: product.inStock !== false,
+    skus: (product.skus ?? []).map((sku) => {
+      const light: CatalogEntry['skus'][number] = { id: sku.id, color: sku.color, size: sku.size, stock: Number(sku.stock) || 0 };
+      if (sku.skuCode) light.skuCode = sku.skuCode;
+      return light;
+    }),
     photoCount: product.images?.length ?? 0,
   };
   if (typeof product.originalPrice === 'number') entry.originalPrice = product.originalPrice;
   if (product.badge) entry.badge = product.badge;
+  if (typeof product.hiddenFromSale === 'boolean') entry.hiddenFromSale = product.hiddenFromSale;
   if (product.isNew) entry.isNew = true;
   if (product.isPopular) entry.isPopular = true;
   if (product.fit) entry.fit = product.fit;
   if (rating) {
-    entry.rating = rating.rating;
-    entry.reviewsCount = rating.count;
+    entry.reviewRating = rating.rating;
+    entry.reviewCount = rating.count;
   }
   if (thumb) entry.thumb = thumb;
   else if (/^https:\/\//.test(first)) entry.image = first;
