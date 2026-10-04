@@ -73,6 +73,7 @@ Wasat Shop — SPA интернет-магазина мужской одежды
 
 - Всё состояние — в `src/App.tsx` и его хуках в `src/app/`: подписки на базу (каталог с отзывами — `useCatalog`,
   «Витрина», промокоды (по требованию: корзина, оформление, админка, код из баннера или чата — `requestPromos`), баннеры
+  (картинки — `banner_images/{id}`, главная читает показанный слайд: `useBannerImage`, `src/utils/bannerImages.ts`)
   и доставка — `useStorefrontData`, заказы, клиенты и себестоимость по входу —
   `useAccountData`; гостевые заказы в браузере — `guestOrders.ts`), тосты и `persist` — `useToasts`, избранное, корзина
   и промокод — `useCart`, чат поддержки — `useSupportChat`, оформление заказа — `useCheckout`, профиль — `useProfile`, экран

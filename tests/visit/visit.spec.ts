@@ -135,7 +135,10 @@ async function indexReport(): Promise<string | null> {
   const thumbs = await storedDocs('product_thumbs');
   const thumbChars = thumbs.map((t) => t.fields.data.stringValue.length);
   const avg = thumbChars.length ? Math.round(thumbChars.reduce((a, b) => a + b, 0) / thumbChars.length / 1024) : 0;
-  return `индекс: ${parts.length} ч., ${entries} товаров, ${Math.round(packed / 1024)} КБ сжатых строк; миниатюр ${thumbs.length}, в среднем ${avg} КБ (макс. ${Math.round(Math.max(0, ...thumbChars) / 1024)} КБ)`;
+  // stage 5: the session moves banner pictures out of the banners
+  const banners = await storedDocs('banners');
+  const moved = banners.filter((b) => !b.fields.image?.stringValue).length;
+  return `индекс: ${parts.length} ч., ${entries} товаров, ${Math.round(packed / 1024)} КБ сжатых строк; миниатюр ${thumbs.length}, в среднем ${avg} КБ (макс. ${Math.round(Math.max(0, ...thumbChars) / 1024)} КБ); баннеров без картинки внутри ${moved} из ${banners.length}`;
 }
 
 /** A screen from the bottom menu (phone width) */
@@ -168,8 +171,8 @@ async function signInOwner(page: Page) {
   await page.evaluate((u) => (window as unknown as { e2eSignIn: (x: typeof u) => Promise<unknown> }).e2eSignIn(u), ADMIN);
 }
 
-// Customers read the index the owner's session writes (stages 2–3): the shop gets it before the visits are measured,
-// as the real one gets it the first time the owner opens the site
+// Customers read the index the owner's session writes (stages 2–3) and the banners it moves pictures out of (stage 5):
+// the shop gets them before the visits are measured, as the real one does the first time the owner opens the site
 test('сессия владельца пишет индекс каталога и миниатюры', async ({ page }) => {
   await page.goto('/');
   await signInOwner(page);
@@ -177,7 +180,7 @@ test('сессия владельца пишет индекс каталога �
   for (let i = 0; i < 180; i++) {
     await page.waitForTimeout(1000);
     report = await indexReport();
-    if (report?.includes('миниатюр 300')) break;
+    if (report?.includes('миниатюр 300') && /внутри (\d+) из \1$/.test(report)) break;
   }
   notes.push(report ?? 'индекс каталога не записан за 3 минуты');
 });

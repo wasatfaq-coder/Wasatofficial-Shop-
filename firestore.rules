@@ -24,6 +24,12 @@ service cloud.firestore {
       return id is string && id.size() > 0 && id.size() <= 128;
     }
 
+    // Поле картинки баннера: нет поля или картинка data: (не ссылка — её открыл бы браузер каждого посетителя)
+    function isBannerPicture(data, field) {
+      return !(field in data)
+        || (data[field] is string && data[field].matches('^data:image/(jpeg|png|webp|gif);base64,.*'));
+    }
+
     // Изменены только перечисленные поля существующего документа
     function onlyChanges(fields) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
@@ -289,6 +295,18 @@ service cloud.firestore {
     match /banners/{bannerId} {
       allow read: if true;
       allow write: if isAdmin() && isValidId(bannerId);
+    }
+
+    // Картинки баннера (docs/catalog-scale-plan.md, этап 5): только картинки data:, баннер хранит их хэш (imageKey)
+    match /banner_images/{bannerId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidId(bannerId)
+        && (request.resource == null
+          || (request.resource.data.keys().hasOnly(['bannerId', 'image', 'mobileImage', 'desktopImage'])
+            && request.resource.data.bannerId == bannerId
+            && isBannerPicture(request.resource.data, 'image')
+            && isBannerPicture(request.resource.data, 'mobileImage')
+            && isBannerPicture(request.resource.data, 'desktopImage')));
     }
 
     match /settings/{settingId} {

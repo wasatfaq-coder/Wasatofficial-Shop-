@@ -28,6 +28,7 @@ import { CartItem, Product, ProductSKU, ReviewVote, StoredReview, Order, OrderSt
 import { paymentLogEntry, receiptMessageText } from './paymentDetails';
 import { DEFAULT_STOREFRONT_SETTINGS, generateDefaultSKUs, inStockAfterReturn, inStockAfterStockChange, stockMovementId } from './inventory';
 import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
+import { splitBannerImages, type BannerImagesDoc } from './bannerImages';
 import type { LegalDocId, LegalTexts } from './legalDocs';
 import type { RestoreWrite } from './backupRestore';
 import { splitProductPhotos, type PhotoDoc } from './productPhotos';
@@ -1236,9 +1237,18 @@ export function subscribeToBanners(
   );
 }
 
+/**
+ * Banners without their data: pictures inside (stage 5, bannerImages.ts): the pictures go to `banner_images/{id}` first
+ * (a banner never points to pictures that are not there yet), and only the ones that changed — a banner the admin did
+ * not touch keeps its `imageKey`
+ */
 export async function syncAllBannersToFirestore(banners: BannerSlide[]) {
   try {
-    await setDocs('banners', banners.map((banner, i) => ({ ...banner, order: i })));
+    const split = banners.map(splitBannerImages);
+    for (const [i, { stored, images }] of split.entries()) {
+      if (images && stored.imageKey !== banners[i].imageKey) await setDoc(doc(db, 'banner_images', images.bannerId), images);
+    }
+    await setDocs('banners', split.map(({ stored }, i) => ({ ...stored, order: i })));
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'banners');
   }
@@ -1285,6 +1295,25 @@ export function subscribeToReviewVotes(onUpdate: (votes: ReviewVote[]) => void, 
     (snap) => onUpdate(snap.docs.map((d) => d.data() as ReviewVote)),
     (error) => console.warn('Review votes subscription warning:', error)
   );
+}
+
+/** Pictures of a banner (null — none); read once per picture version in a visit */
+const bannerImageRequests = new Map<string, Promise<BannerImagesDoc | null>>();
+export function loadBannerImages(banner: Pick<BannerSlide, 'id' | 'imageKey'>): Promise<BannerImagesDoc | null> {
+  const key = `${banner.id}:${banner.imageKey ?? ''}`;
+  let pending = bannerImageRequests.get(key);
+  if (!pending) {
+    pending = getDoc(doc(db, 'banner_images', banner.id))
+      .then((snap) => (snap.exists() ? (snap.data() as BannerImagesDoc) : null))
+      .catch((error) => {
+        // the slide keeps its placeholder; the next time it is shown it asks again
+        bannerImageRequests.delete(key);
+        console.warn(`Banner picture ${banner.id} was not read:`, error);
+        return null;
+      });
+    bannerImageRequests.set(key, pending);
+  }
+  return pending;
 }
 
 export async function saveReviewToFirestore(review: StoredReview) {
@@ -1816,7 +1845,7 @@ export async function deleteClientErrorsBefore(beforeMs: number): Promise<number
  */
 /** Every collection of the store; `test` holds only the connection probe */
 export const BACKUP_COLLECTIONS = [
-  'products', 'product_photos', 'product_costs', 'promos', 'settings', 'banners', 'delivery_methods', 'pickup_points',
+  'products', 'product_photos', 'product_costs', 'promos', 'settings', 'banners', 'banner_images', 'delivery_methods', 'pickup_points',
   'orders', 'users', 'customer_notes', 'admins', 'reviews', 'review_votes',
   'chat_messages', 'chat_images', 'support_threads', 'support_status', STOCK_MOVEMENTS_COLLECTION, 'promo_uses', 'payment_templates',
 ] as const;
