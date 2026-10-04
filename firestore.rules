@@ -186,9 +186,33 @@ service cloud.firestore {
         && isOptionalText(data, 'colorPurchased', 60);
     }
 
+    // Перенос в бесплатную базу (default) (docs/firestore-free-tier-plan.md, этап 2): отзывы и голоса покупателей
+    // администратор переносит из старой базы как есть. Только создание (поменять чужой отзыв нельзя), только в (default)
+    // и только до 1 января 2027 — после переноса правило не нужно
+    function isMoveCopy() {
+      return database == '(default)' && isAdmin() && request.time < timestamp.date(2027, 1, 1);
+    }
+
+    function isMovedReview(data, reviewId) {
+      return data.keys().hasOnly(['id', 'productId', 'uid', 'authorName', 'rating', 'comment', 'pros', 'cons',
+          'sizePurchased', 'colorPurchased', 'date', 'createdAt'])
+        && data.id == reviewId
+        && data.uid is string
+        && data.productId is string
+        && reviewId == data.productId + '_' + data.uid;
+    }
+
+    function isMovedVote(data, voteId) {
+      return data.keys().hasOnly(['reviewId', 'productId', 'uid'])
+        && data.uid is string
+        && data.reviewId is string
+        && voteId == data.reviewId + '_' + data.uid;
+    }
+
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if isCustomer() && isValidReview(request.resource.data, reviewId);
+      allow create: if (isCustomer() && isValidReview(request.resource.data, reviewId))
+        || (isMoveCopy() && isMovedReview(request.resource.data, reviewId));
       allow update: if isCustomer()
         && resource.data.uid == request.auth.uid
         && isValidReview(request.resource.data, reviewId)
@@ -198,7 +222,7 @@ service cloud.firestore {
 
     match /review_votes/{voteId} {
       allow read: if true;
-      allow create: if isCustomer()
+      allow create: if (isMoveCopy() && isMovedVote(request.resource.data, voteId)) || (isCustomer()
         && request.resource.data.keys().hasOnly(['reviewId', 'productId', 'uid'])
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.reviewId is string
@@ -207,7 +231,7 @@ service cloud.firestore {
         // только к существующему отзыву: голоса скачивает каждый посетитель (аудит 02.10, находка 16)
         && exists(/databases/$(database)/documents/reviews/$(request.resource.data.reviewId))
         // Не за свой отзыв (его id заканчивается на uid автора)
-        && !request.resource.data.reviewId.matches('.*_' + request.auth.uid);
+        && !request.resource.data.reviewId.matches('.*_' + request.auth.uid));
       allow delete: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
     }
 

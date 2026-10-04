@@ -12,6 +12,7 @@ import {
   BACKUP_COLLECTION_TITLES,
   chunkWrites,
   planRestore,
+  RESTORE_CREATE_ONLY,
   RESTORE_SKIPPED,
   type ParsedBackup,
   type RestoreMode,
@@ -79,7 +80,11 @@ export const AdminRestoreDialog: React.FC<AdminRestoreDialogProps> = ({ backup, 
   const prepare = async () => {
     setBusy('checking');
     try {
-      const existing = mode === 'missing' ? await readExistingIds([...chosen, ...(chosen.includes('products') ? ['product_costs'] : [])]) : {};
+      const existing = await readExistingIds(
+        mode === 'missing'
+          ? [...chosen, ...(chosen.includes('products') ? ['product_costs'] : [])]
+          : chosen.filter((name) => RESTORE_CREATE_ONLY.includes(name))
+      );
       const writes = planRestore(backup, chosen, mode, existing, toTimestamp);
       if (writes.length === 0) {
         onShowToast('Всё выбранное из копии уже есть в базе — записывать нечего', 'info');

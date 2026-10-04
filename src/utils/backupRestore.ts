@@ -41,6 +41,12 @@ export const BACKUP_COLLECTION_TITLES: Record<string, string> = {
 
 export type RestoreMode = 'missing' | 'overwrite';
 
+/**
+ * Collections the rules let the admin create but not change: the photo of a chat message stays as it was sent. «Как
+ * в копии» writes only the ones absent now, or the batch would be refused (`existing` must hold their ids)
+ */
+export const RESTORE_CREATE_ONLY = ['chat_images'];
+
 export interface BackupDoc {
   id: string;
   data: Record<string, unknown>;
@@ -120,14 +126,16 @@ export function planRestore(
   chosen: string[],
   mode: RestoreMode,
   existing: Record<string, Set<string>>,
-  toDate: (iso: string) => unknown
+  toDate: (iso: string) => unknown,
+  skipped: Record<string, string> = RESTORE_SKIPPED
 ): RestoreWrite[] {
   const writes: RestoreWrite[] = [];
   const costIds = new Set((backup.collections.product_costs ?? []).map((d) => d.id));
-  const takes = (collection: string, id: string) => mode === 'overwrite' || !existing[collection]?.has(id);
+  const takes = (collection: string, id: string) =>
+    (mode === 'overwrite' && !RESTORE_CREATE_ONLY.includes(collection)) || !existing[collection]?.has(id);
 
   for (const collection of chosen) {
-    if (RESTORE_SKIPPED[collection]) continue;
+    if (skipped[collection]) continue;
     for (const doc of backup.collections[collection] ?? []) {
       const data = fromBackupValue(doc.data, toDate) as Record<string, unknown>;
       if (collection === 'products' && 'costPrice' in data) {
@@ -142,6 +150,30 @@ export function planRestore(
     }
   }
   return writes;
+}
+
+/**
+ * Перенос в бесплатную базу `(default)` (docs/firestore-free-tier-plan.md, этап 2): те же записи, что у восстановления,
+ * из старой базы в новую. Отзывы и голоса правила дают администратору только создать, и только в `(default)`
+ * (`isMoveCopy`), фото из чата — только создать: они пишутся, если их там ещё нет. Администраторов добавляют
+ * в Firebase Console.
+ */
+export const MOVE_SKIPPED: Record<string, string> = { admins: RESTORE_SKIPPED.admins };
+export const MOVE_CREATE_ONLY = ['reviews', 'review_votes', ...RESTORE_CREATE_ONLY];
+
+/**
+ * «overwrite» — новая база получает документы как в старой; «missing» — только тех, которых в новой нет (уже
+ * перенесённое не трогается). `existing` — id документов новой базы: в «overwrite» нужны только `MOVE_CREATE_ONLY`
+ */
+export function planMove(
+  source: ParsedBackup,
+  mode: RestoreMode,
+  existing: Record<string, Set<string>>,
+  toDate: (iso: string) => unknown
+): RestoreWrite[] {
+  return planRestore(source, Object.keys(source.collections), mode, existing, toDate, MOVE_SKIPPED).filter(
+    (write) => !(MOVE_CREATE_ONLY.includes(write.collection) && existing[write.collection]?.has(write.id))
+  );
 }
 
 /**

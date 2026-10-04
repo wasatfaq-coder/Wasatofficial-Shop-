@@ -105,6 +105,10 @@
     {
       "database": "ai-studio-manstyle-2b22f2fb-6b7b-4e97-90a0-bda904528869",
       "rules": "firestore.rules"
+    },
+    {
+      "database": "(default)",
+      "rules": "firestore.rules"
     }
   ],
   "emulators": {

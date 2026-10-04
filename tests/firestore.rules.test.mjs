@@ -7,7 +7,10 @@ import {
   assertSucceeds,
   initializeTestEnvironment,
 } from '@firebase/rules-unit-testing';
+import { deleteApp, initializeApp } from 'firebase/app';
 import {
+  connectFirestoreEmulator,
+  getFirestore,
   deleteDoc,
   deleteField,
   doc,
@@ -779,6 +782,55 @@ describe('reviews', () => {
     await assertSucceeds(deleteDoc(doc(customer('bob'), 'review_votes/p1_alice_bob')));
     // Not for one's own review
     await assertFails(setDoc(doc(customer('alice'), 'review_votes/p1_alice_alice'), vote('alice')));
+  });
+});
+
+// The move to the free (default) database (docs/firestore-free-tier-plan.md, stage 2): the admin copies customers'
+// reviews and votes as they are — only creating them, only in (default) and only until 2027. These tests run in the
+// emulator's (default) database; the shop's named database is checked through its own client below
+describe('move to the free database', () => {
+  const moveOpen = Date.now() < Date.UTC(2027, 0, 1);
+  const expectMove = (promise) => (moveOpen ? assertSucceeds(promise) : assertFails(promise));
+
+  test('the owner copies a customer\'s review and vote into (default), but changes neither', async () => {
+    await expectMove(setDoc(doc(owner(), 'reviews/p1_alice'), review('alice', { pros: 'Тёплое' })));
+    await expectMove(setDoc(doc(owner(), 'review_votes/p1_alice_bob'), { reviewId: 'p1_alice', productId: 'p1', uid: 'bob' }));
+    // a review of a product that is not moved yet is copied too: the database is filled in batches
+    await expectMove(setDoc(doc(owner(), 'reviews/p9_carol'), review('carol', { id: 'p9_carol', productId: 'p9' })));
+    if (!moveOpen) return;
+    await assertFails(setDoc(doc(owner(), 'reviews/p1_alice'), review('alice', { comment: 'Переписано' })));
+    await assertFails(updateDoc(doc(owner(), 'review_votes/p1_alice_bob'), { productId: 'p2' }));
+  });
+
+  test('a copy keeps its shape: the id names the author, no extra fields', async () => {
+    await assertFails(setDoc(doc(owner(), 'reviews/p1_alice'), review('bob', { id: 'p1_alice' })));
+    await assertFails(setDoc(doc(owner(), 'reviews/p1_alice'), review('alice', { rating: 5, isVerified: true })));
+    await assertFails(setDoc(doc(owner(), 'review_votes/p1_alice_bob'), { reviewId: 'p1_alice', productId: 'p1', uid: 'carol' }));
+  });
+
+  test('only the admin copies: a customer cannot write a review in someone else\'s name', async () => {
+    await assertFails(setDoc(doc(customer('bob'), 'reviews/p1_alice'), review('alice')));
+    await assertFails(setDoc(doc(customer('bob'), 'review_votes/p1_alice_carol'), { reviewId: 'p1_alice', productId: 'p1', uid: 'carol' }));
+  });
+
+  test('in the shop\'s named database the owner cannot create a review', async () => {
+    const [host, port] = (process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8080').split(':');
+    // the test environment loads the rules into (default) only: the named database gets them by its own address
+    const rules = { rules: { files: [{ name: 'firestore.rules', content: readFileSync('firestore.rules', 'utf8') }] } };
+    const loaded = await fetch(`http://${host}:${port}/emulator/v1/projects/demo-manstyle/databases/shop-named:securityRules`, {
+      method: 'PUT', body: JSON.stringify(rules), headers: { 'Content-Type': 'application/json' },
+    });
+    if (!loaded.ok) throw new Error(`rules for the named database: ${loaded.status} ${await loaded.text()}`);
+    const app = initializeApp({ projectId: 'demo-manstyle' }, 'named-database');
+    try {
+      const named = getFirestore(app, 'shop-named');
+      connectFirestoreEmulator(named, host, Number(port), { mockUserToken: { sub: 'owner', email: ADMIN_EMAIL, email_verified: true } });
+      await assertFails(setDoc(doc(named, 'reviews/p1_alice'), review('alice')));
+      // the same rules hold there: the owner still writes the catalog
+      await assertSucceeds(setDoc(doc(named, 'banners/b1'), { title: 'Баннер' }));
+    } finally {
+      await deleteApp(app);
+    }
   });
 });
 

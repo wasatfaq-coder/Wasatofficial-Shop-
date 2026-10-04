@@ -9,6 +9,8 @@ const DATABASE = firebaseConfig.firestoreDatabaseId;
 const FIRESTORE = 'http://127.0.0.1:8080';
 const AUTH = 'http://127.0.0.1:9099';
 const DOCUMENTS = `${FIRESTORE}/v1/projects/${PROJECT}/databases/${DATABASE}/documents`;
+/** The free database the shop moves to (docs/firestore-free-tier-plan.md) */
+export const FREE_DATABASE = '(default)';
 // «owner» is the emulator's admin token: writes skip firestore.rules, as with the Admin SDK
 const OWNER = { Authorization: 'Bearer owner' };
 
@@ -70,17 +72,48 @@ export async function assertEmulatorsRunning(): Promise<void> {
   }
 }
 
-/** Empties the emulator's database and accounts */
+/**
+ * firebase.json lists two databases (the shop's and the free one), and with more than one the emulator loads no rules
+ * and allows everything. The scenarios load firestore.rules into each database themselves
+ */
+export async function loadRules(): Promise<void> {
+  const content = fs.readFileSync(new URL('../../firestore.rules', import.meta.url), 'utf8');
+  const body = JSON.stringify({ rules: { files: [{ name: 'firestore.rules', content }] } });
+  for (const database of [DATABASE, FREE_DATABASE]) {
+    await call(`${FIRESTORE}/emulator/v1/projects/${PROJECT}/databases/${database}:securityRules`, { method: 'PUT', body });
+  }
+}
+
+/** Empties one database of the emulator */
+export async function clearDatabase(database = DATABASE): Promise<void> {
+  await call(`${FIRESTORE}/emulator/v1/projects/${PROJECT}/databases/${database}/documents`, { method: 'DELETE' });
+}
+
+/** Empties the emulator's databases and accounts */
 export async function clearEmulators(): Promise<void> {
-  await call(`${FIRESTORE}/emulator/v1/projects/${PROJECT}/databases/${DATABASE}/documents`, { method: 'DELETE' });
+  await clearDatabase(DATABASE);
+  await clearDatabase(FREE_DATABASE);
   await call(`${AUTH}/emulator/v1/projects/${PROJECT}/accounts`, { method: 'DELETE' });
 }
 
 /** Writes documents as { 'collection/id': data } in one commit */
-export async function writeDocs(docs: Record<string, Record<string, unknown>>): Promise<void> {
-  const name = (path: string) => `projects/${PROJECT}/databases/${DATABASE}/documents/${path}`;
+export async function writeDocs(docs: Record<string, Record<string, unknown>>, database = DATABASE): Promise<void> {
+  const name = (path: string) => `projects/${PROJECT}/databases/${database}/documents/${path}`;
   const writes = Object.entries(docs).map(([path, data]) => ({ update: { name: name(path), fields: toFields(data) } }));
-  await call(`${DOCUMENTS}:commit`, { method: 'POST', body: JSON.stringify({ writes }) });
+  await call(`${FIRESTORE}/v1/projects/${PROJECT}/databases/${database}/documents:commit`, { method: 'POST', body: JSON.stringify({ writes }) });
+}
+
+/** Every document of a collection as { id: data } */
+export async function listDocs(collection: string, database = DATABASE): Promise<Record<string, Record<string, unknown>>> {
+  const docs: Record<string, Record<string, unknown>> = {};
+  let pageToken = '';
+  do {
+    const url = `${FIRESTORE}/v1/projects/${PROJECT}/databases/${database}/documents/${collection}?pageSize=300${pageToken ? `&pageToken=${pageToken}` : ''}`;
+    const page = (await (await call(url)).json()) as { documents?: { name: string; fields?: Record<string, Value> }[]; nextPageToken?: string };
+    for (const d of page.documents ?? []) docs[d.name.split('/').pop()!] = fromFields(d.fields ?? {});
+    pageToken = page.nextPageToken ?? '';
+  } while (pageToken);
+  return docs;
 }
 
 /** Reads one document, or null when there is none */

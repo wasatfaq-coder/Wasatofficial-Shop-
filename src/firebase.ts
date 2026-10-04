@@ -62,6 +62,23 @@ export const db = createFirestore(app);
 export const auth = getAuth(app);
 connectEmulators(app, db);
 
+const otherDatabases = new Map<string, Firestore>();
+
+/**
+ * Another database of the same project by its id, under the same sign-in: the move to the free `(default)` database
+ * (docs/firestore-free-tier-plan.md). Only the admin panel's move card asks for it
+ */
+export function firestoreDatabase(databaseId: string): Firestore {
+  if (databaseId === firebaseConfig.firestoreDatabaseId) return db;
+  let other = otherDatabases.get(databaseId);
+  if (!other) {
+    other = initializeFirestore(app, { experimentalAutoDetectLongPolling: true }, databaseId);
+    if (USE_EMULATORS) connectFirestoreEmulator(other, '127.0.0.1', 8080);
+    otherDatabases.set(databaseId, other);
+  }
+  return other;
+}
+
 // Scenario tests (tests/e2e) sign in to the Auth emulator without Google's popup. Only in the emulator build:
 // the production build drops this block
 if (USE_EMULATORS) {
