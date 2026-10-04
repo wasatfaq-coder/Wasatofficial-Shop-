@@ -137,6 +137,29 @@ service cloud.firestore {
             && request.resource.data.data.matches('^data:image/(jpeg|png|webp);base64,.*')));
     }
 
+    // Лёгкий индекс каталога и миниатюры карточек (docs/catalog-scale-plan.md, этап 2): выводятся из товаров, пишет
+    // сессия администратора, читает любой посетитель. Индекс — части p0, p1, … со сжатыми строками товаров
+    match /catalog_index/{partId} {
+      allow read: if true;
+      allow write: if isAdmin() && partId.matches('^p[0-9]{1,3}$')
+        && (request.resource == null
+          || (request.resource.data.keys().hasOnly(['format', 'part', 'parts', 'hash', 'entries', 'updatedAt'])
+            && request.resource.data.entries is bytes
+            && request.resource.data.part is int && request.resource.data.parts is int
+            && request.resource.data.hash is string && request.resource.data.hash.size() <= 64));
+    }
+
+    match /product_thumbs/{productId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidId(productId)
+        && (request.resource == null
+          || (request.resource.data.keys().hasOnly(['productId', 'key', 'data'])
+            && request.resource.data.productId == productId
+            && request.resource.data.key is string && request.resource.data.key.size() <= 200
+            && request.resource.data.data is string && request.resource.data.data.size() <= 100000
+            && request.resource.data.data.matches('^data:image/(jpeg|png|webp);base64,.*')));
+    }
+
     // Себестоимость товаров: товар читает любой посетитель, поэтому она отдельно и только для администратора
     match /product_costs/{productId} {
       // Админка подписана на всю коллекцию: условие на id документа не дало бы прочитать её списком

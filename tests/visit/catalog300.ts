@@ -1,12 +1,11 @@
 // A shop of the size the roadmap plans for half a year after launch (docs/roadmap.md): 300 products with 3–4 photos,
 // reviews, votes, promos and banners. Written to the emulator only (`bun run measure:visit`): the real database cannot
-// be restored from the repository. Photos are random base64 of the measured size — bytes matter here, not pictures
+// be restored from the repository. Previews are real JPEGs of the measured size drawn by Chromium (the admin session makes
+// miniatures from them); full photos and banners are random base64 of their size — only their bytes matter
 import { randomBytes } from 'node:crypto';
 import { storeDocs } from '../e2e/store';
 
 export const PRODUCT_COUNT = 300;
-/** A preview inside the product (480 px, q 0.7): 45–46 KB measured in stage 6 of the 02.10 audit */
-export const PREVIEW_CHARS = 45_000;
 /** A full photo in `product_photos` (processImageFiles before the preview) */
 export const FULL_PHOTO_CHARS = 250_000;
 /** Every product has its full photos: the preview pages read the first one of each (scripts/share-pages.ts) */
@@ -36,11 +35,66 @@ const SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
 let seed = 7;
 const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
 const pick = <T,>(list: readonly T[]) => list[Math.floor(rnd() * list.length)];
-const photo = (chars: number) => `data:image/jpeg;base64,${randomBytes(Math.ceil((chars * 3) / 4)).toString('base64').slice(0, chars)}`;
+const randomPhoto = (chars: number) => `data:image/jpeg;base64,${randomBytes(Math.ceil((chars * 3) / 4)).toString('base64').slice(0, chars)}`;
+
+// Descriptions differ like real ones (≈ 350 characters of varied words): the index is compressed, and identical texts
+// would compress far better than the shop's own
+const WORDS = (
+  'свободный крой плотная ткань держит форму после стирки подходит к джинсам брюкам носится круглый год шов усилен ' +
+  'плечах пуговицы пришиты вручную модель садится по размеру мягкий хлопок лён дышит летом тёплый зимой воротник ' +
+  'манжеты карман на груди прямой силуэт удлинённая спинка не мнётся легко гладить цвет не выгорает подкладка ' +
+  'застёжка молния петли обработаны вискоза эластан тянется по фигуре офис прогулка выходные вечер классика'
+).split(' ');
+const describe = () => {
+  const out: string[] = [];
+  while (out.join(' ').length < 350) out.push(pick(WORDS));
+  return `${out.join(' ')}.`;
+};
 
 export const productId = (i: number) => `p${String(i).padStart(3, '0')}`;
 
-function product(i: number) {
+/** Real previews (480 px long side, JPEG 0.7): a canvas with a gradient, shapes and grain, ≈ 47 000 characters each */
+export async function drawPreviews(count = 8): Promise<string[]> {
+  const { chromium } = await import('@playwright/test');
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    return await page.evaluate((n) => {
+      const out: string[] = [];
+      for (let k = 0; k < n; k++) {
+        const c = document.createElement('canvas');
+        c.width = 360;
+        c.height = 480;
+        const g = c.getContext('2d')!;
+        const grad = g.createLinearGradient(0, 0, 360, 480);
+        grad.addColorStop(0, `hsl(${k * 45},30%,80%)`);
+        grad.addColorStop(1, `hsl(${k * 45 + 40},40%,35%)`);
+        g.fillStyle = grad;
+        g.fillRect(0, 0, 360, 480);
+        for (let i = 0; i < 400; i++) {
+          g.fillStyle = `hsla(${Math.random() * 360},40%,${30 + Math.random() * 50}%,0.35)`;
+          g.beginPath();
+          g.arc(Math.random() * 360, Math.random() * 480, 2 + Math.random() * 30, 0, 7);
+          g.fill();
+        }
+        const img = g.getImageData(0, 0, 360, 480);
+        for (let i = 0; i < img.data.length; i += 4) {
+          const noise = (Math.random() - 0.5) * 40;
+          img.data[i] += noise;
+          img.data[i + 1] += noise;
+          img.data[i + 2] += noise;
+        }
+        g.putImageData(img, 0, 0);
+        out.push(c.toDataURL('image/jpeg', 0.7));
+      }
+      return out;
+    }, count);
+  } finally {
+    await browser.close();
+  }
+}
+
+function product(i: number, previews: string[]) {
   const id = productId(i);
   const [category, categoryLabel, single] = CATEGORIES[i % CATEGORIES.length];
   const colors = [0, 1, 2].map((k) => COLORS[(i + k) % COLORS.length]);
@@ -54,9 +108,7 @@ function product(i: number) {
     categoryLabel,
     price,
     ...(i % 5 === 0 ? { originalPrice: price + 1000 } : {}),
-    description:
-      'Свободный крой, плотная ткань, которая держит форму после стирки. Подходит к джинсам и брюкам, носится круглый год. ' +
-      'Шов усилен в плечах, пуговицы пришиты вручную. Модель садится по размеру — смотрите таблицу размеров ниже.',
+    description: describe(),
     material: 'Хлопок',
     fabricComposition: [
       { fiber: 'Хлопок', percentage: 95 },
@@ -73,7 +125,7 @@ function product(i: number) {
     ],
     specs: [{ label: 'Застежка', value: 'Пуговицы' }],
     countryOfOrigin: 'Россия',
-    images: photoIds.map(() => photo(PREVIEW_CHARS)),
+    images: photoIds.map((_, k) => previews[(i + k) % previews.length]),
     photoIds,
     colors,
     sizes: SIZES,
@@ -90,7 +142,7 @@ function product(i: number) {
 }
 
 /** Batches of documents for writeDocs: a few products per commit keeps each request small */
-export function* catalogBatches(): Generator<Record<string, Record<string, unknown>>> {
+export function* catalogBatches(previews: string[]): Generator<Record<string, Record<string, unknown>>> {
   const base = storeDocs();
   // the scenario products of the e2e store are not part of this shop
   for (const key of Object.keys(base)) if (key.startsWith('products/')) delete base[key];
@@ -101,11 +153,11 @@ export function* catalogBatches(): Generator<Record<string, Record<string, unkno
   for (let i = 0; i < PRODUCT_COUNT; i += 10) {
     const batch: Record<string, Record<string, unknown>> = {};
     for (let k = i; k < Math.min(i + 10, PRODUCT_COUNT); k++) {
-      const p = product(k);
+      const p = product(k, previews);
       batch[`products/${p.id}`] = p;
       if (k < PRODUCTS_WITH_FULL_PHOTOS) {
         // full photos are big: a commit of their own per product
-        yield Object.fromEntries(p.photoIds.map((pid) => [`product_photos/${pid}`, { id: pid, productId: p.id, data: photo(FULL_PHOTO_CHARS) }]));
+        yield Object.fromEntries(p.photoIds.map((pid) => [`product_photos/${pid}`, { id: pid, productId: p.id, data: randomPhoto(FULL_PHOTO_CHARS) }]));
       }
     }
     yield batch;
@@ -145,7 +197,7 @@ export function* catalogBatches(): Generator<Record<string, Record<string, unkno
         title: `Новая коллекция ${b + 1}`,
         subtitle: 'Лён и хлопок на лето',
         btnText: 'Смотреть',
-        image: photo(120_000),
+        image: randomPhoto(120_000),
         actionType: 'catalog',
         active: true,
         order: b,
