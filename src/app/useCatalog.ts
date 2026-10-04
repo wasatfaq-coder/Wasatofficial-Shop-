@@ -7,7 +7,7 @@ import {
   subscribeToReviewVotes,
   subscribeToReviews,
 } from '../utils/firebaseSync';
-import { canReadCatalogIndex, productFromEntry, readCatalogIndex, thumbKeysOf } from '../utils/catalogIndex';
+import { canReadCatalogIndex, productFromEntry, readCatalogIndex, thumbKey, thumbKeysOf } from '../utils/catalogIndex';
 import { liveProducts, setLiveProductsEnabled, useLiveProductsVersion } from '../utils/liveProducts';
 import { liveReviews, setLiveReviewsEnabled, useLiveReviewsVersion } from '../utils/liveReviews';
 import { setThumbKeys } from '../utils/productThumbs';
@@ -45,6 +45,8 @@ export function useCatalog(onCatalog: (products: Product[]) => void) {
     setLiveReviewsEnabled(source === 'index');
     if (source === 'full') {
       return subscribeToProducts((products) => {
+        // products keep no previews inside (stage 6): the lists show their miniatures, as the customer's cards do
+        setThumbKeys(new Map(products.flatMap((p) => (thumbKey(p) ? [[p.id, thumbKey(p)] as [string, string]] : []))));
         setLoaded({ source, products });
         setProductsError(false);
       }, () => setProductsError(true));

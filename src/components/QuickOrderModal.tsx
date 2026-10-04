@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { CartItem, Product } from '../types';
 import { STORE_PAUSED_TEXT } from '../shared/orderApi';
 import { productImage } from '../utils/productImage';
+import { useProductThumbs } from '../utils/productThumbs';
 import { LegalConsentNote } from './LegalConsentNote';
 import { useDialogA11y } from '../utils/useDialogA11y';
 
@@ -79,11 +80,13 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
     if (placed !== false) onClose();
   };
 
+  // products keep no previews inside (docs/catalog-scale-plan.md, stage 6): the lines show their miniatures
+  const photoOf = useProductThumbs(singleProduct ? [singleProduct.product] : cartItems.map((item) => item.product));
   const displayItems = singleProduct
     ? [
         {
           title: singleProduct.product?.title || '',
-          image: productImage(singleProduct.product),
+          image: photoOf(singleProduct.product) || productImage(singleProduct.product),
           variant: `${singleProduct.color} • ${singleProduct.size}`,
           qty: singleProduct.quantity,
           price: (singleProduct.product?.price || 0) * singleProduct.quantity,
@@ -91,7 +94,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
       ]
     : cartItems.map((item) => ({
         title: item.product?.title || '',
-        image: productImage(item.product),
+        image: photoOf(item.product) || productImage(item.product),
         variant: `${item.selectedColor} • ${item.selectedSize}`,
         qty: item.quantity,
         price: (item.product?.price || 0) * item.quantity,

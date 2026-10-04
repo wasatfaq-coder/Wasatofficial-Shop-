@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
+import { ProductThumbImage } from '../ProductThumbImage';
 import { AlertTriangle, Check, ChevronDown, FolderOpen, Printer, XCircle } from 'lucide-react';
 import type { Product, ProductSKU, StoreCategory } from '../../types';
 import { articleCode, articleGroupKey, skuKey } from '../../shared/barcode';
 import { categoryIcon } from '../../utils/categories';
-import { productImage } from '../../utils/productImage';
 import { pluralRu } from '../../utils/pluralize';
 import type { LabelTarget } from './AdminLabelGenerator';
 
@@ -211,7 +211,7 @@ export const InventoryGroupedList: React.FC<InventoryGroupedListProps> = ({
             className="flex-1 min-w-0 flex items-center gap-2.5 text-left cursor-pointer rounded-xl"
           >
             <span className="w-10 h-12 rounded-xl overflow-hidden neu-flat-sm shrink-0">
-              <img src={productImage(model.product)} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              <ProductThumbImage product={model.product} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             </span>
             <span className="min-w-0 flex-1 space-y-0.5">
               <span className="block text-xs font-extrabold text-[#2D3A4E] truncate">{model.product.title}</span>

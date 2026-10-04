@@ -295,7 +295,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           className="relative w-full aspect-[3/4] sm:aspect-[4/5] lg:max-h-[calc(100vh-11rem)] rounded-2xl overflow-hidden select-none group/detailimg cursor-zoom-in"
         >
           <NeumorphicImage
-            src={photos[selectedImageIndex] || (product.images.length ? productImage(product, selectedImageIndex) : thumb || productImage(product))}
+            src={photos[selectedImageIndex] || (selectedImageIndex === 0 && thumb) || productImage(product, selectedImageIndex)}
             alt={product?.title || ''}
             containerClassName="w-full h-full rounded-2xl"
             className="w-full h-full object-cover object-top transition-transform duration-500 group-hover/detailimg:scale-[1.03]"
@@ -381,7 +381,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
         {product.images.length > 1 && (
           <div className="space-y-1">
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 px-0.5">
-              {product.images.map((imgUrl, idx) => (
+              {photos.map((imgUrl, idx) => (
                 <button
                   key={idx}
                   onClick={() => setSelectedImageIndex(idx)}
@@ -392,7 +392,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                   aria-current={selectedImageIndex === idx}
                 >
                   <img
-                    src={imgUrl}
+                    src={imgUrl || productImage(product, idx)}
                     alt=""
                     className="w-14 h-14 sm:w-16 sm:h-16 object-cover object-top rounded-xl"
                   />
@@ -922,7 +922,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
       <LazyMount when={isZoomModalOpen}>
       <ProductImageZoomModal
         isOpen={isZoomModalOpen}
-        images={photos}
+        images={photos.map((src, i) => src || productImage(product, i))}
         initialIndex={selectedImageIndex}
         onIndexChange={showPhoto}
         productTitle={product.title}

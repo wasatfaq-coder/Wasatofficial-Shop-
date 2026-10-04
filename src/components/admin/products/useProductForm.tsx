@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { Product, ProductSKU, StockMovementLog } from '../../../types';
-import { deleteProductPhotos, saveProductPhotos, saveStockMovements } from '../../../utils/firebaseSync';
+import { deleteProductPhotos, productWithPreviews, saveProductPhotos, saveStockMovements } from '../../../utils/firebaseSync';
+import { previewsMoved } from '../../../utils/productPreviews';
 import { formatOrderDate } from '../../../shared/orderDate';
 import {
   generateDefaultSKUs,
@@ -270,7 +271,20 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setIsProductFormOpen(true);
   };
 
-  const handleOpenEditProduct = (prod: Product) => {
+  // the form edits the previews: a product keeps them in product_previews (docs/catalog-scale-plan.md, stage 6) and is
+  // opened once they are read — a save without them would lose the photos that were not read
+  const handleOpenEditProduct = (product: Product) => {
+    if (!previewsMoved(product)) return openEditProduct(product);
+    void productWithPreviews(product).then((prod) => {
+      if (previewsMoved(prod)) {
+        onShowToast(`Фото товара «${product.title}» не загрузились. Проверьте соединение и откройте товар ещё раз`, 'error');
+        return;
+      }
+      openEditProduct(prod);
+    });
+  };
+
+  const openEditProduct = (prod: Product) => {
     setEditingProduct(prod);
     setFormTitle(prod.title);
     // a product without a category does not get the first one silently: «Выберите категорию» on save
@@ -334,7 +348,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     for (const source of [editingProduct, storedProduct]) {
       (source?.images ?? []).forEach((src, i) => {
         const id = source?.photoIds?.[i];
-        if (id) known.set(src, id);
+        if (id && src) known.set(src, id);
       });
     }
     setIsSavingProduct(true);
