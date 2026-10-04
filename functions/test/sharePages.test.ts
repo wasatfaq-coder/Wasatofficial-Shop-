@@ -114,4 +114,13 @@ describe('превью товара', () => {
     expect(catalogFingerprint({ ...base, products: [{ ...product, price: 2490 }] })).not.toBe(fp);
     expect(catalogFingerprint({ ...base, storeName: 'Другое имя' })).not.toBe(fp);
   });
+
+  test('отпечаток сравнивает фото по ключу: проверка раз в час не скачивает фото', () => {
+    const base = { storeName: 'Wasat Shop', slogan: '', products: [{ ...product, imageKey: 'photo:linen_a1' }] };
+    const fp = catalogFingerprint(base);
+    // проверка без фото (image пустой) и сборка с адресом фото дают один отпечаток
+    expect(catalogFingerprint({ ...base, products: [{ ...product, image: '', imageKey: 'photo:linen_a1' }] })).toBe(fp);
+    // новое фото получает новый id — превью надо опубликовать заново
+    expect(catalogFingerprint({ ...base, products: [{ ...product, imageKey: 'photo:linen_b2' }] })).not.toBe(fp);
+  });
 });
