@@ -5,7 +5,9 @@ import type { Product } from '../types';
  * may hold template numbers (e.g. 4.9 and 42 without a single review), so they are not shown.
  * `null` means no reviews yet: the rating is hidden.
  */
-export function getProductRating(product: Pick<Product, 'reviews'>): { rating: number; count: number } | null {
+export function getProductRating(product: Pick<Product, 'reviews' | 'catalogRating'>): { rating: number; count: number } | null {
+  // a product from the catalog index: its reviews are read only on its page, the rating comes with the index line
+  if (product.catalogRating !== undefined) return product.catalogRating;
   const reviews = (product.reviews ?? []).filter((r) => typeof r.rating === 'number' && r.rating > 0);
   if (reviews.length === 0) return null;
   const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
@@ -13,6 +15,6 @@ export function getProductRating(product: Pick<Product, 'reviews'>): { rating: n
 }
 
 /** Numeric rating for sorting and filters: 0 without reviews */
-export function productRatingValue(product: Pick<Product, 'reviews'>): number {
+export function productRatingValue(product: Pick<Product, 'reviews' | 'catalogRating'>): number {
   return getProductRating(product)?.rating ?? 0;
 }

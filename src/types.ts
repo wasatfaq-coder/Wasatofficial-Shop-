@@ -131,6 +131,11 @@ export interface Product {
   reviewsCount: number;
   fit?: 'slim' | 'regular' | 'oversize';
   reviews?: ProductReview[];
+  /**
+   * Rating from the catalog index while the product's reviews are not read (docs/catalog-scale-plan.md, stage 4):
+   * null — no reviews. Only in the browser, never stored
+   */
+  catalogRating?: { rating: number; count: number } | null;
 }
 
 export interface CartItem {
