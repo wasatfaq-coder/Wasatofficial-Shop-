@@ -1,4 +1,4 @@
-import { test as base, expect } from '@playwright/test';
+import { test as base, expect, type Page } from '@playwright/test';
 
 export { expect };
 
@@ -28,6 +28,18 @@ export const test = base.extend<{ phone: boolean; signIn: (user: { sub: string; 
       await page.evaluate((u) => (window as unknown as { e2eSignIn: (x: typeof u) => Promise<unknown> }).e2eSignIn(u), user);
     }),
 });
+
+/**
+ * Picks a size on the product page and checks that it is chosen. On a phone the bar «цена · В корзину» at the bottom
+ * of the screen can still be sliding away when a click scrolls the size to the screen's edge: the tap then lands on
+ * the bar's «Выберите размер» and no size is chosen. So the size is brought to the middle of the screen first
+ */
+export async function chooseSize(page: Page, name: RegExp): Promise<void> {
+  const size = page.getByRole('radio', { name });
+  await size.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+  await size.click();
+  await expect(size).toBeChecked();
+}
 
 /** A price as the site prints it, «3 340 ₽» (with a no-break space between thousands) */
 export function rub(n: number): RegExp {
