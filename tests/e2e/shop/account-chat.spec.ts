@@ -1,6 +1,6 @@
 // Покупатель с входом оформляет заказ в пункт выдачи, находит его в профиле и пишет о нём в чат
 // (аудит UX 03.10, сценарий Б)
-import { test, expect } from '../fixtures';
+import { test, expect, chooseSize } from '../fixtures';
 import { queryDocs } from '../emulator';
 import { PICKUP, PRODUCTS } from '../store';
 
@@ -13,7 +13,7 @@ test('покупатель оформляет заказ и пишет о нём
   await expect(page.getByRole('heading', { name: buyer.name })).toBeVisible();
 
   await page.goto(`/product/${chinos.id}`);
-  await page.getByRole('radio', { name: /^50\b/ }).click();
+  await chooseSize(page, /^50\b/);
   await page.getByRole('button', { name: 'В корзину', exact: true }).first().click();
   await page.goto('/cart');
   await page.getByRole('button', { name: 'Оформить заказ' }).first().click();
