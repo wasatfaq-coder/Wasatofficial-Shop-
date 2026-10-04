@@ -1,9 +1,9 @@
 import { SizeCalculatorModal } from './components/lazyWindows';
 import React, { Suspense, lazy, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ActiveTab, Product, CartItem, UserProfile, Order, BodyMeasurements, PromoCode, BannerSlide, ChatMessage, SupportStatus, AppliedPromoInfo, StorefrontSettings, DeliveryMethod, PickupPoint, ReviewVote, StoredReview, PaymentKind } from './types';
+import { ActiveTab, Product, CartItem, UserProfile, Order, BodyMeasurements, PromoCode, BannerSlide, ChatMessage, SupportStatus, AppliedPromoInfo, DeliveryMethod, PickupPoint, PaymentKind } from './types';
 import { GUEST_USER_PROFILE } from './data/products';
-import { loadLocalDeliveryMethods, saveLocalDeliveryMethods, loadLocalPickupPoints, saveLocalPickupPoints } from './data/deliveryData';
+import { saveLocalDeliveryMethods, saveLocalPickupPoints } from './data/deliveryData';
 import {
   playNotificationChime,
   sendBrowserNotification,
@@ -25,7 +25,6 @@ import {
 } from './components/CatalogAdvancedFilter';
 import {
   withOrderDeducted,
-  loadStorefrontSettings,
   saveStorefrontSettings,
   getOrderableStock,
   orderStockProblems,
@@ -34,7 +33,7 @@ import {
 } from './utils/inventory';
 import { formatAddress } from './utils/addressFormat';
 import { buildClientOrder } from './utils/clientOrder';
-import { hasHeavyPhotos } from './utils/productPhotos';
+import { hasHeavyPhotos, removedProductPhotoIds } from './utils/productPhotos';
 import { pluralRu } from './utils/pluralize';
 import { ADMIN_EMAIL, useAuth } from './context/AuthContext';
 import {
@@ -47,13 +46,7 @@ import {
   restoreGuestChatIdentity,
 } from './firebase';
 import {
-  subscribeToProducts,
-  subscribeToOrders,
-  subscribeToPromos,
-  subscribeToStorefrontSettings,
   subscribeToChatMessages,
-  subscribeToUsers,
-  subscribeToOwnUserProfile,
   placeClientOrder,
   orderRateWaitSeconds,
   handOverGuestData,
@@ -63,10 +56,10 @@ import {
   submitPaymentReceipt,
   returnCancelledOrderStock,
   syncAllProductsToFirestore,
-  subscribeToProductCosts,
   saveProductCosts,
   moveProductCostsToPrivate,
   moveProductPhotosOut,
+  deleteProductPhotos,
   deleteRemovedDocs,
   changedItems,
   recordPromoUsageInFirestore,
@@ -77,22 +70,19 @@ import {
   saveChatMessageToFirestore,
   clearChatMessagesInFirestore,
   saveUserProfileToFirestore,
-  subscribeToBanners,
   syncAllBannersToFirestore,
-  subscribeToDeliveryMethods,
   syncAllDeliveryMethodsToFirestore,
-  subscribeToPickupPoints,
-  subscribeToServerConfig,
   syncAllPickupPointsToFirestore,
-  subscribeToReviews,
-  subscribeToReviewVotes,
   chatMessageOrder,
   applyChatMessageChange,
   applyChatMessageChangeLocally,
   ChatMessageChange,
   subscribeToSupportStatus,
 } from './utils/firebaseSync';
-import { mergeProductReviews } from './utils/reviews';
+import { useCatalog } from './app/useCatalog';
+import { BANNERS_STORAGE_KEY, useStorefrontData } from './app/useStorefrontData';
+import { useAccountData } from './app/useAccountData';
+import { forgetGuestOrders, saveGuestOrder } from './app/guestOrders';
 
 import { HomeScreen } from './views/HomeScreen';
 import { CatalogScreen } from './views/CatalogScreen';
@@ -157,37 +147,11 @@ function isLegacyDemoProfile(profile: Partial<UserProfile>): boolean {
   );
 }
 
-const GUEST_ORDERS_STORAGE_KEY = 'manstyle_guest_orders';
 // v2: the chat is per customer now; don't show the old shared-chat cache
 const CHAT_CACHE_STORAGE_KEY = 'manstyle_chat_messages_v2';
 
-// Guests cannot read orders back from Firestore, so their history lives in this browser
-function loadGuestOrders(): Order[] {
-  try {
-    const raw = localStorage.getItem(GUEST_ORDERS_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveGuestOrder(order: Order) {
-  try {
-    localStorage.setItem(GUEST_ORDERS_STORAGE_KEY, JSON.stringify([order, ...loadGuestOrders()]));
-  } catch {}
-}
-
-/** Guest orders that moved to the account: the account's subscription shows them now */
-function forgetGuestOrders(ids: string[]) {
-  if (ids.length === 0) return;
-  try {
-    const moved = new Set(ids);
-    localStorage.setItem(GUEST_ORDERS_STORAGE_KEY, JSON.stringify(loadGuestOrders().filter((o) => !moved.has(o.id))));
-  } catch {}
-}
-
 export default function App() {
+  const { currentUser, isAdmin, loading: authLoading } = useAuth();
   // The screen comes from the address (/catalog, /product/{id}, an old #/…): reload, a shared link and «Назад» work
   const [initialRoute] = useState(() => parseRoute(window.location));
   const [activeTab, setActiveTabState] = useState<ActiveTab>(() =>
@@ -214,15 +178,6 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   // Catalog search: the same text in the computer's top bar, on the home screen and in the catalog
   const [catalogSearch, setCatalogSearch] = useState('');
-  // Catalog, promos and banners come only from Firestore (Admin panel); no demo data meanwhile
-  const [catalogProducts, setProducts] = useState<Product[]>([]);
-  // Reviews live in their own collections and are merged into the products for display
-  const [storedReviews, setStoredReviews] = useState<StoredReview[]>([]);
-  const [reviewVotes, setReviewVotes] = useState<ReviewVote[]>([]);
-  const products = React.useMemo(
-    () => mergeProductReviews(catalogProducts, storedReviews, reviewVotes),
-    [catalogProducts, storedReviews, reviewVotes]
-  );
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('manstyle_favorites');
@@ -240,24 +195,26 @@ export default function App() {
     } catch {}
   }, [favorites]);
 
-  // Dynamic Marketing & Support States
-  const [promos, setPromos] = useState<PromoCode[]>([]);
-  const [bannerSlides, setBannerSlides] = useState<BannerSlide[]>(() => {
-    try {
-      const saved = localStorage.getItem('manstyle_banners');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch {}
-    return [];
-  });
+  // Settings, promos, banners and delivery: live from Firestore, cached in the browser (useStorefrontData.ts)
+  const {
+    promos,
+    setPromos,
+    bannerSlides,
+    setBannerSlides,
+    serverOrdersEnabled,
+    storefrontSettings,
+    setStorefrontSettings,
+    deliveryMethods,
+    setDeliveryMethods,
+    pickupPoints,
+    setPickupPoints,
+  } = useStorefrontData();
 
   const handleUpdateBannerSlides = (newBanners: BannerSlide[]) => {
     const removed = deleteRemovedDocs('banners', bannerSlides, newBanners);
     setBannerSlides(newBanners);
     try {
-      localStorage.setItem('manstyle_banners', JSON.stringify(newBanners));
+      localStorage.setItem(BANNERS_STORAGE_KEY, JSON.stringify(newBanners));
     } catch {}
     return persist('баннеры', removed, syncAllBannersToFirestore(newBanners));
   };
@@ -286,20 +243,8 @@ export default function App() {
   const [pendingChatIds, setPendingChatIds] = useState<ReadonlySet<string>>(() => new Set());
   const [failedChatMessages, setFailedChatMessages] = useState<ChatMessage[]>([]);
   const [chatIdentity, setChatIdentity] = useState<ChatIdentity | null>(null);
-  // When true, orders are placed and validated by the placeOrder Cloud Function
-  const [serverOrdersEnabled, setServerOrdersEnabled] = useState(false);
-  const [storefrontSettings, setStorefrontSettings] = useState<StorefrontSettings>(loadStorefrontSettings);
   // Admin → «Витрина» → «Предзаказ»: sold-out variants can still be ordered
   const preorderMode = storefrontSettings?.isPreorderMode === true;
-
-  // Sync storefront settings on custom update event
-  React.useEffect(() => {
-    const handleStorefrontUpdate = () => {
-      setStorefrontSettings(loadStorefrontSettings());
-    };
-    window.addEventListener('manstyle_storefront_settings_updated', handleStorefrontUpdate);
-    return () => window.removeEventListener('manstyle_storefront_settings_updated', handleStorefrontUpdate);
-  }, []);
 
   // Saved cart (light lines, cartStorage.ts); the full products come from the catalog subscription
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
@@ -321,11 +266,29 @@ export default function App() {
   // A product from the address is restored once the catalog loads (see the products subscription)
   const pendingSelectedProductId = React.useRef<string | null>(initialRoute?.productId ?? null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [productsLoaded, setProductsLoaded] = useState(false);
-  // The catalog subscription failed (rules, network): the screens say so instead of «Товары появятся здесь»
-  const [productsError, setProductsError] = useState(false);
-  // Admin only: cost prices from `product_costs` (a product document is readable by every visitor)
-  const [productCosts, setProductCosts] = useState<Record<string, number>>({});
+  // Catalog with its reviews (useCatalog.ts). Every snapshot brings the cart's stock and prices up to date and
+  // refreshes the open product
+  const { products, setProducts, productsLoaded, productsError } = useCatalog((loadedProds) => {
+    setCartItems((prevCart) =>
+      prevCart
+        .filter((ci) => loadedProds.some((p) => p.id === ci.product.id))
+        .map((ci) => {
+          const fresh = loadedProds.find((p) => p.id === ci.product.id);
+          return fresh ? { ...ci, product: fresh } : ci;
+        })
+    );
+    // Read the pending id outside the updater: React may call updaters twice (StrictMode),
+    // and a ref cleared inside it would lose the product from the address on the second call
+    const pendingId = pendingSelectedProductId.current;
+    pendingSelectedProductId.current = null;
+    setSelectedProduct((prev) => {
+      const wantedId = prev?.id ?? pendingId;
+      if (!wantedId) return null;
+      return loadedProds.find((p) => p.id === wantedId) || null;
+    });
+  });
+  // Orders, profiles and cost prices: whose depends on the sign-in (useAccountData.ts)
+  const { allUsers, orders, setOrders, productCosts, setProductCosts } = useAccountData({ authLoading, isAdmin, currentUser });
 
   // Screen → address. A new screen is a new history entry (so «Назад» returns to it) and opens
   // at the top; the confirmation replaces the checkout entry, «Назад» does not return to paying.
@@ -407,8 +370,6 @@ export default function App() {
       void persist('профиль', saveUserProfileToFirestore(currentUser.uid, updated));
     }
   };
-  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
   const [isSupportChatOpen, setIsSupportChatOpen] = useState(false);
@@ -425,10 +386,6 @@ export default function App() {
   const [catalogFilterState, setCatalogFilterState] = useState<FilterState>(DEFAULT_FILTER_STATE);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [appliedPromo, setAppliedPromo] = useState<AppliedPromoInfo | null>(null);
-
-  // Delivery Methods and Pickup Points State
-  const [deliveryMethods, setDeliveryMethods] = useState<DeliveryMethod[]>(loadLocalDeliveryMethods);
-  const [pickupPoints, setPickupPoints] = useState<PickupPoint[]>(loadLocalPickupPoints);
 
   // Customers see the current store name even while Firestore still holds the template brand.
   // The admin panel gets the raw data, so the rename in «Витрина» can find and fix it.
@@ -478,129 +435,6 @@ export default function App() {
     setSelectedCategory('all');
     setCatalogFilterState(DEFAULT_FILTER_STATE);
   };
-
-  const { currentUser, isAdmin, loading: authLoading } = useAuth();
-
-  // 1. Real-time Firestore Subscriptions
-  React.useEffect(() => {
-    const unsubProds = subscribeToProducts((loadedProds) => {
-      setProducts(loadedProds);
-      setProductsLoaded(true);
-      // Synchronize cart with latest stock & prices from cloud
-      setCartItems((prevCart) =>
-        prevCart
-          .filter((ci) => loadedProds.some((p) => p.id === ci.product.id))
-          .map((ci) => {
-            const fresh = loadedProds.find((p) => p.id === ci.product.id);
-            return fresh ? { ...ci, product: fresh } : ci;
-          })
-      );
-      // Refresh selected product if currently open
-      // Read the pending id outside the updater: React may call updaters twice (StrictMode),
-      // and a ref cleared inside it would lose the product from the address on the second call
-      const pendingId = pendingSelectedProductId.current;
-      pendingSelectedProductId.current = null;
-      setSelectedProduct((prev) => {
-        const wantedId = prev?.id ?? pendingId;
-        if (!wantedId) return null;
-        return loadedProds.find((p) => p.id === wantedId) || null;
-      });
-      setProductsError(false);
-    }, () => setProductsError(true));
-
-    const unsubReviews = subscribeToReviews(setStoredReviews);
-    const unsubReviewVotes = subscribeToReviewVotes(setReviewVotes);
-
-    const unsubPromos = subscribeToPromos((loadedPromos) => {
-      if (loadedPromos) {
-        setPromos(loadedPromos);
-      }
-    });
-
-    const unsubServerConfig = subscribeToServerConfig((config) => {
-      setServerOrdersEnabled(config.serverOrdersEnabled === true);
-    });
-
-    const unsubSettings = subscribeToStorefrontSettings((loadedSettings) => {
-      if (loadedSettings) {
-        setStorefrontSettings(loadedSettings);
-        // Cached copy: components without props read the store name from it (currentStoreName)
-        saveStorefrontSettings(loadedSettings);
-      }
-    });
-
-    // An empty list is a real state (the owner removed everything): always apply it
-    const unsubBanners = subscribeToBanners((loadedBanners) => {
-      setBannerSlides(loadedBanners);
-      try {
-        localStorage.setItem('manstyle_banners', JSON.stringify(loadedBanners));
-      } catch {}
-    });
-
-    const unsubDelivery = subscribeToDeliveryMethods((loadedMethods) => {
-      setDeliveryMethods(loadedMethods);
-      saveLocalDeliveryMethods(loadedMethods);
-    });
-
-    const unsubPickup = subscribeToPickupPoints((loadedPoints) => {
-      setPickupPoints(loadedPoints);
-      saveLocalPickupPoints(loadedPoints);
-    });
-
-    return () => {
-      unsubProds();
-      unsubReviews();
-      unsubReviewVotes();
-      unsubPromos();
-      unsubSettings();
-      unsubServerConfig();
-      unsubBanners();
-      unsubDelivery();
-      unsubPickup();
-    };
-  }, []);
-
-  // 1b. Orders & customer profiles are private (see firestore.rules):
-  // admins see everything, signed-in customers only their own data,
-  // guests keep their orders in this browser only.
-  React.useEffect(() => {
-    if (authLoading) return;
-
-    if (isAdmin) {
-      const unsubOrders = subscribeToOrders((loadedOrders) => setOrders(loadedOrders));
-      const unsubUsers = subscribeToUsers((loadedUsers) => setAllUsers(loadedUsers));
-      const unsubCosts = subscribeToProductCosts(setProductCosts);
-      return () => {
-        unsubOrders();
-        unsubUsers();
-        unsubCosts();
-        setProductCosts({});
-      };
-    }
-
-    if (currentUser) {
-      // plus guest orders of this browser that the account does not hold (placed before the move or without a sign-in
-      // of the guest, finding 26): they stay visible after signing in
-      const unsubOrders = subscribeToOrders(
-        (loadedOrders) => {
-          const own = new Set(loadedOrders.map((o) => o.id));
-          setOrders([...loadedOrders, ...loadGuestOrders().filter((o) => !own.has(o.id))]);
-        },
-        undefined,
-        currentUser.uid
-      );
-      const unsubUsers = subscribeToOwnUserProfile(currentUser.uid, (loadedUsers) =>
-        setAllUsers(loadedUsers)
-      );
-      return () => {
-        unsubOrders();
-        unsubUsers();
-      };
-    }
-
-    setOrders(loadGuestOrders());
-    setAllUsers([]);
-  }, [authLoading, isAdmin, currentUser]);
 
   // Only a customer's own thread is cached (it opens at once next time). The admin's chat — every customer's
   // messages and staff notes — never stays in this browser (audit 02.10, finding 24)
@@ -2179,6 +2013,11 @@ export default function App() {
                   syncAllProductsToFirestore(changed),
                   saveProductCosts(costChanges)
                 );
+                // a removed product's photos go after it: a product never points at a missing photo
+                const orphanPhotos = removedProductPhotoIds(adminProducts, updatedWithCosts);
+                if (orphanPhotos.length > 0) {
+                  void saved.then((ok) => ok && deleteProductPhotos(orphanPhotos).catch((err) => console.error('Photos of removed products stayed:', err)));
+                }
                 setProductCosts((prev) => {
                   const next = { ...prev };
                   for (const { id, costPrice } of costChanges) {

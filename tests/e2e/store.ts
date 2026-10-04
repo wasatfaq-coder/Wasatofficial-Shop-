@@ -85,7 +85,29 @@ export const PRODUCTS = {
     colors: [{ name: 'Серый', hex: '#8A8F98' }],
     sizes: ['Единый'],
   }),
+  // the owner copies and deletes these (with their photo documents): one per screen size
+  scarf: { ...product({
+    id: 'e2e-scarf',
+    title: 'Шарф шерстяной',
+    category: 'accessories',
+    categoryLabel: 'Аксессуары',
+    price: 1790,
+    colors: [{ name: 'Серый', hex: '#8A8F98' }],
+    sizes: ['Единый'],
+  }), isPopular: false, photoIds: ['e2e-scarf_full'] },
+  tie: { ...product({
+    id: 'e2e-tie',
+    title: 'Галстук шёлковый',
+    category: 'accessories',
+    categoryLabel: 'Аксессуары',
+    price: 1590,
+    colors: [{ name: 'Темно-синий', hex: '#1F2A44' }],
+    sizes: ['Единый'],
+  }), isPopular: false, photoIds: ['e2e-tie_full'] },
 };
+
+/** A full photo of a product as `product_photos` keeps it (the product holds a preview) */
+export const fullPhoto = (productId: string) => ({ productId, data: 'data:image/jpeg;base64,' + 'A'.repeat(400) });
 
 export const COURIER = { id: 'courier', title: 'Курьером до двери', type: 'courier', price: 350, duration: '1–2 дня', icon: 'truck' };
 export const PICKUP = { id: 'pickup', title: 'Пункт выдачи', type: 'pickup', price: 0, duration: 'завтра', icon: 'store' };
@@ -94,6 +116,9 @@ export function storeDocs(): Record<string, Record<string, unknown>> {
   const categories = [...new Map(Object.values(PRODUCTS).map((p) => [p.category, { id: p.category, name: p.categoryLabel, icon: 'shirt' }])).values()];
   return {
     ...Object.fromEntries(Object.values(PRODUCTS).map((p) => [`products/${p.id}`, p])),
+    ...Object.fromEntries(
+      Object.values(PRODUCTS).flatMap((p) => ('photoIds' in p ? p.photoIds.map((id) => [`product_photos/${id}`, fullPhoto(p.id)]) : []))
+    ),
     'settings/storefront': {
       storeName: 'Wasat Shop',
       phone: '+7 (495) 111-22-33',
