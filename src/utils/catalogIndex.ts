@@ -150,11 +150,19 @@ export async function readCatalogIndex(parts: CatalogIndexPart[]): Promise<{ ent
 
 /**
  * A catalog product from its index line (stage 3): what the cards, the search, the filters and the cart need. No
- * photos (the card reads the miniature, productThumbs.ts) and no card sections: the product page reads the document
+ * photos (the card reads the miniature, productThumbs.ts), no card sections (the product page reads the document) and
+ * no reviews: the rating of the line stands for them until the product page reads them (stage 4)
  */
 export function productFromEntry(entry: CatalogEntry): Product {
-  const { image, thumb: _thumb, photoCount: _photoCount, reviewRating: _rating, reviewCount: _count, skus, ...fields } = entry;
-  return { ...fields, skus: skus.map((sku) => ({ ...sku })), images: image ? [image] : [], rating: 0, reviewsCount: 0 };
+  const { image, thumb: _thumb, photoCount: _photoCount, reviewRating, reviewCount, skus, ...fields } = entry;
+  return {
+    ...fields,
+    skus: skus.map((sku) => ({ ...sku })),
+    images: image ? [image] : [],
+    rating: 0,
+    reviewsCount: 0,
+    catalogRating: reviewCount ? { rating: reviewRating ?? 0, count: reviewCount } : null,
+  };
 }
 
 /** Product id → its miniature's key, for the products whose card reads a miniature */

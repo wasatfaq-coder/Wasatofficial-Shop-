@@ -7,6 +7,8 @@ interface ProductImageZoomModalProps {
   isOpen: boolean;
   images: string[];
   initialIndex?: number;
+  /** The photo on screen: its full version is read only now (docs/catalog-scale-plan.md, stage 4) */
+  onIndexChange?: (index: number) => void;
   productTitle: string;
   onClose: () => void;
 }
@@ -15,6 +17,7 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
   isOpen,
   images,
   initialIndex = 0,
+  onIndexChange,
   productTitle,
   onClose,
 }) => {
@@ -31,6 +34,10 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
     setZoomLevel(1);
     setPanOffset({ x: 0, y: 0 });
   }, [initialIndex, isOpen]);
+
+  React.useEffect(() => {
+    if (isOpen) onIndexChange?.(currentIndex);
+  }, [isOpen, currentIndex, onIndexChange]);
 
   const handleNext = (e?: React.MouseEvent) => {
     e?.stopPropagation();

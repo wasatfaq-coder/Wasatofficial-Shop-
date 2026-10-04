@@ -83,6 +83,8 @@ export default function App() {
   const {
     promos,
     setPromos,
+    promosLoaded,
+    requestPromos,
     bannerSlides,
     setBannerSlides,
     serverOrdersEnabled,
@@ -92,7 +94,7 @@ export default function App() {
     setDeliveryMethods,
     pickupPoints,
     setPickupPoints,
-  } = useStorefrontData();
+  } = useStorefrontData(isAdmin || activeTab === 'cart' || activeTab === 'checkout');
 
   // The removed local admin password was kept here in plain text: erase it
   React.useEffect(() => {
@@ -139,7 +141,7 @@ export default function App() {
     handleClearCart,
     handleApplyPromo,
     handleRemovePromo,
-  } = useCart({ promos, preorderMode, addToast, setActiveTab, onOpenProduct: handleSelectProduct });
+  } = useCart({ promos, promosLoaded, requestPromos, preorderMode, addToast, setActiveTab, onOpenProduct: handleSelectProduct });
   // Catalog with its reviews (useCatalog.ts). Every snapshot brings the cart's stock and prices up to date and
   // refreshes the open product
   const { products, setProducts, productsLoaded, productsError } = useCatalog((loadedProds) => {

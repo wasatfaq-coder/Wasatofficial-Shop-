@@ -1,7 +1,8 @@
 // Лёгкий индекс каталога (docs/catalog-scale-plan.md, этап 2): src/utils/catalogIndex.ts
 import { describe, expect, test } from 'bun:test';
 import type { Product } from '../../src/types';
-import { buildCatalogIndex, catalogEntry, catalogIndexParts, readCatalogIndex, thumbKey } from '../../src/utils/catalogIndex';
+import { buildCatalogIndex, catalogEntry, catalogIndexParts, productFromEntry, readCatalogIndex, thumbKey } from '../../src/utils/catalogIndex';
+import { getProductRating } from '../../src/utils/productRating';
 
 const product = (over: Partial<Product> = {}): Product => ({
   id: 'p1',
@@ -43,6 +44,18 @@ describe('индекс каталога', () => {
     const reviewed = catalogEntry(product({ reviews: [review('r1', 4), review('r2', 5)] }));
     expect(reviewed.reviewRating).toBe(4.5);
     expect(reviewed.reviewCount).toBe(2);
+  });
+
+  test('товар из строки индекса несёт рейтинг строки, пока отзывы не прочитаны (этап 4)', () => {
+    const review = (id: string, rating: number) => ({ id, authorName: id, rating, date: '', comment: '' });
+    const line = productFromEntry(catalogEntry(product({ reviews: [review('r1', 4), review('r2', 5)] })));
+    expect(line.reviews).toBeUndefined();
+    expect(getProductRating(line)).toEqual({ rating: 4.5, count: 2 });
+    // без отзывов рейтинга нет, а не 4.9 из товара
+    expect(getProductRating(productFromEntry(catalogEntry(product())))).toBeNull();
+    // отзывы прочитаны (страница товара): рейтинг — по ним
+    const { catalogRating: _line, ...read } = line;
+    expect(getProductRating({ ...read, reviews: [review('r3', 3)] })).toEqual({ rating: 3, count: 1 });
   });
 
   test('снятый с витрины товар остаётся снятым, у старого товара без поля — как было', () => {

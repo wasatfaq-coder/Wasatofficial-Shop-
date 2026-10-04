@@ -9,6 +9,9 @@ import type { AddToast } from './useToasts';
 
 type CartOptions = {
   promos: PromoCode[];
+  /** The promos are read only on demand (useStorefrontData): until they come no code is checked */
+  promosLoaded: boolean;
+  requestPromos: () => void;
   preorderMode: boolean;
   addToast: AddToast;
   setActiveTab: (tab: ActiveTab) => void;
@@ -20,7 +23,7 @@ type CartOptions = {
  * Favorites, the cart and the applied promo, kept in this browser (`manstyle_favorites`, `manstyle_cart`).
  * The catalog subscription refreshes the products in the cart through `setCartItems` (App.tsx).
  */
-export function useCart({ promos, preorderMode, addToast, setActiveTab, onOpenProduct }: CartOptions) {
+export function useCart({ promos, promosLoaded, requestPromos, preorderMode, addToast, setActiveTab, onOpenProduct }: CartOptions) {
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('manstyle_favorites');
@@ -208,8 +211,17 @@ export function useCart({ promos, preorderMode, addToast, setActiveTab, onOpenPr
   };
 
   // Apply Promo with full rule validation
+  // A code applied before the promos are read (a banner, the chat): applied as soon as they come
+  const [pendingPromoCode, setPendingPromoCode] = useState<string | null>(null);
+
   const handleApplyPromo = (code: string): boolean => {
     const cleanCode = code.trim().toUpperCase();
+    if (!promosLoaded) {
+      requestPromos();
+      setPendingPromoCode(cleanCode);
+      addToast('Проверяем промокод…', 'info');
+      return false;
+    }
     const foundPromo = promos.find((p) => p.code.toUpperCase() === cleanCode);
 
     if (!foundPromo) {
@@ -253,7 +265,14 @@ export function useCart({ promos, preorderMode, addToast, setActiveTab, onOpenPr
   // An applied promo is checked again whenever the cart or the code changes: a shrunk cart, an expired or
   // switched-off code must not reach the order with the discount
   React.useEffect(() => {
-    if (!appliedPromo) return;
+    if (!promosLoaded || !pendingPromoCode) return;
+    setPendingPromoCode(null);
+    handleApplyPromo(pendingPromoCode);
+    // handleApplyPromo is recreated on every render; it runs once, when the promos come
+  }, [promosLoaded, pendingPromoCode]);
+
+  React.useEffect(() => {
+    if (!appliedPromo || !promosLoaded) return;
     if (cartItems.length === 0) {
       setAppliedPromo(null);
       return;
@@ -265,7 +284,7 @@ export function useCart({ promos, preorderMode, addToast, setActiveTab, onOpenPr
       addToast(`Промокод ${appliedPromo.code} снят. ${problem}`, 'info');
     }
     // addToast is recreated on every render; the check depends only on the cart and the codes
-  }, [cartItems, promos, appliedPromo]);
+  }, [cartItems, promos, promosLoaded, appliedPromo]);
 
   const handleRemovePromo = () => {
     setAppliedPromo(null);
