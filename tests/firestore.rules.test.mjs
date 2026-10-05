@@ -38,10 +38,12 @@ const owner = () =>
   env.authenticatedContext('owner', { email: ADMIN_EMAIL, email_verified: true }).firestore();
 // A guest's anonymous sign-in (the 'guest-chat' app in the browser): orders and promo uses come from it (audit stage 5)
 const buyer = (uid) => env.authenticatedContext(uid, { firebase: { sign_in_provider: 'anonymous' } }).firestore();
-// An order as placeClientOrder (firebaseSync.ts) writes it: the order with the buyer's uid and its rate mark in one batch
+// An order as placeClientOrder (firebaseSync.ts) writes it: the order with the buyer's uid and the server's time of the
+// write (orders-scale-plan, stages 2–3), and its rate mark in one batch
 const placeOrder = (db, uid, data, rate = { lastOrderAt: serverTimestamp(), orderId: data.id }) => {
   const batch = writeBatch(db);
-  batch.set(doc(db, 'orders', data.id), 'customerUid' in data ? data : { ...data, customerUid: uid });
+  const stamped = 'updatedAt' in data ? data : { ...data, updatedAt: serverTimestamp() };
+  batch.set(doc(db, 'orders', data.id), 'customerUid' in data ? stamped : { ...stamped, customerUid: uid });
   batch.set(doc(db, 'order_rate', uid), rate);
   return batch.commit();
 };
@@ -408,10 +410,15 @@ describe('orders', () => {
     }
   });
 
-  // docs/orders-scale-plan.md, этап 2: каждая запись заказа ставит время сервера, админка читает только изменённые заказы.
-  // Поле пока не обязательно (этап 3), но выдумать своё время покупатель не может
+  // docs/orders-scale-plan.md, этапы 2–3: каждая запись заказа ставит время сервера, админка читает только изменённые
+  // заказы. Без отметки или со своим временем запись отклоняется
   test('an order from the browser carries the server\'s time of the write, never one of its own', async () => {
     await assertSucceeds(guestOrder(order({ id: 'WS-STAMP-1', updatedAt: serverTimestamp() })));
+    const db = buyer('anon-unstamped');
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'orders/WS-STAMP-0'), { ...order({ id: 'WS-STAMP-0' }), customerUid: 'anon-unstamped' });
+    batch.set(doc(db, 'order_rate/anon-unstamped'), { lastOrderAt: serverTimestamp(), orderId: 'WS-STAMP-0' });
+    await assertFails(batch.commit());
     await assertFails(guestOrder(order({ id: 'WS-STAMP-2', updatedAt: Timestamp.fromMillis(Date.now() + 86_400_000) })));
     await assertFails(guestOrder(order({ id: 'WS-STAMP-3', updatedAt: Timestamp.fromMillis(0) })));
     await assertFails(guestOrder(order({ id: 'WS-STAMP-4', updatedAt: 'вчера' })));
@@ -497,6 +504,7 @@ describe('order cancellation by the buyer', () => {
     cancelledAt: '2026-10-02T18:00:00.000Z',
     estimatedDelivery: 'Заказ отменен',
     stockReturned: false,
+    updatedAt: serverTimestamp(),
     ...overrides,
   });
   const cancel = (db, overrides = {}, id = 'WS-20') => updateDoc(doc(db, 'orders', id), cancelFields(overrides));
@@ -546,7 +554,9 @@ describe('order cancellation by the buyer', () => {
     await assertFails(cancel(customer('alice'), { cancelReason: 'Другая причина' }));
   });
 
-  test('the cancellation stamps the server\'s time of the write (orders-scale-plan, stage 2)', async () => {
+  test('the cancellation stamps the server\'s time of the write (orders-scale-plan, stages 2–3)', async () => {
+    const { updatedAt: _stamp, ...unstamped } = cancelFields();
+    await assertFails(updateDoc(doc(customer('alice'), 'orders/WS-20'), unstamped));
     await assertFails(cancel(customer('alice'), { updatedAt: Timestamp.fromMillis(Date.now() + 86_400_000) }));
     await assertSucceeds(cancel(customer('alice'), { updatedAt: serverTimestamp() }));
   });
@@ -623,7 +633,7 @@ describe('receipt confirmation by the buyer', () => {
   ];
   const mine = { status: 'delivered', at: '2026-10-03T08:00:00.000Z', by: 'customer' };
   const confirm = (db, fields = {}) =>
-    updateDoc(doc(db, 'orders/WS-30'), { status: 'delivered', statusLog: [...log, mine], ...fields });
+    updateDoc(doc(db, 'orders/WS-30'), { status: 'delivered', statusLog: [...log, mine], updatedAt: serverTimestamp(), ...fields });
 
   beforeEach(async () => {
     await env.withSecurityRulesDisabled((ctx) =>
@@ -646,6 +656,7 @@ describe('receipt confirmation by the buyer', () => {
   });
 
   test('«Я получил заказ» stamps only the server\'s time of the write (orders-scale-plan, stage 2)', async () => {
+    await assertFails(updateDoc(doc(customer('alice'), 'orders/WS-30'), { status: 'delivered', statusLog: [...log, mine] }));
     await assertFails(updateDoc(doc(customer('alice'), 'orders/WS-30'), { status: 'delivered', statusLog: [...log, mine], updatedAt: Timestamp.fromMillis(1) }));
     await assertSucceeds(updateDoc(doc(customer('alice'), 'orders/WS-30'), { status: 'delivered', statusLog: [...log, mine], updatedAt: serverTimestamp() }));
   });
@@ -667,7 +678,7 @@ describe('payment receipt from the buyer', () => {
   const receipt = { method: 'sbp', at, messageId: 'msg-receipt-WS-40' };
   const entry = { event: 'receipt', at, by: 'customer' };
   const submit = (db, fields = {}) =>
-    updateDoc(doc(db, 'orders/WS-40'), { paymentStatus: 'receipt_review', paymentReceipt: receipt, paymentLog: [entry], ...fields });
+    updateDoc(doc(db, 'orders/WS-40'), { paymentStatus: 'receipt_review', paymentReceipt: receipt, paymentLog: [entry], updatedAt: serverTimestamp(), ...fields });
   const message = (uid, fields = {}) => ({
     id: 'msg-receipt-WS-40', sender: 'user', text: 'Клиент прикрепил подтверждение оплаты к заказу № WS-40',
     imageId: 'msg-receipt-WS-40', threadId: uid, isInternalNote: false, receiptOrderId: 'WS-40', ...fields,
@@ -698,6 +709,7 @@ describe('payment receipt from the buyer', () => {
     await assertFails(submit(customer('alice'), { paymentReceipt: { ...receipt, method: 'card' } }));
     await assertFails(submit(customer('alice'), { paymentLog: [{ ...entry, by: 'admin' }] }));
     await assertFails(submit(customer('alice'), { paymentLog: [{ ...entry, event: 'confirmed' }] }));
+    await assertFails(updateDoc(doc(customer('alice'), 'orders/WS-40'), { paymentStatus: 'receipt_review', paymentReceipt: receipt, paymentLog: [entry] }));
     await assertFails(submit(customer('alice'), { updatedAt: Timestamp.fromMillis(1) }));
     await assertSucceeds(submit(customer('alice'), { updatedAt: serverTimestamp() }));
   });
@@ -1143,7 +1155,7 @@ describe('guest data goes to the account after sign-in', () => {
   test('with both halves of the link the guest moves its orders and the whole chat it sees, in batches', async () => {
     await linkBoth();
     const db = buyer('anon-g');
-    await assertSucceeds(updateDoc(doc(db, 'orders/WS-G1'), { customerUid: 'alice' }));
+    await assertSucceeds(updateDoc(doc(db, 'orders/WS-G1'), { customerUid: 'alice', updatedAt: serverTimestamp() }));
     const batch = writeBatch(db);
     for (let i = 0; i < 30; i++) batch.update(doc(db, `chat_messages/g${i}`), { threadId: 'alice' });
     await assertSucceeds(batch.commit());
@@ -1153,9 +1165,10 @@ describe('guest data goes to the account after sign-in', () => {
     await assertFails(updateDoc(doc(db, 'chat_messages/gn'), { threadId: 'alice' }));
   });
 
-  test('the hand-over stamps the server\'s time of the write (orders-scale-plan, stage 2)', async () => {
+  test('the hand-over stamps the server\'s time of the write (orders-scale-plan, stages 2–3)', async () => {
     await linkBoth();
     const db = buyer('anon-g');
+    await assertFails(updateDoc(doc(db, 'orders/WS-G1'), { customerUid: 'alice' }));
     await assertFails(updateDoc(doc(db, 'orders/WS-G1'), { customerUid: 'alice', updatedAt: Timestamp.fromMillis(1) }));
     await assertSucceeds(updateDoc(doc(db, 'orders/WS-G1'), { customerUid: 'alice', updatedAt: serverTimestamp() }));
   });
