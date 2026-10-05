@@ -186,12 +186,19 @@ const sameVariantName = (a: unknown, b: unknown) =>
  * line's colour and size — by exactly the entry's quantity, once per line (audit 02.10, findings 1 and 8). The
  * product is read inside the transaction, so two orders at once do not overwrite each other's write-off.
  * Takes what is left when the stock is short (the entry says how much). Preorder lines are not taken.
- * Resolves to the quantity taken; throws when the write is refused.
+ * `targetDb` is the order owner's sign-in (a guest's anonymous app). Resolves to the quantity taken; throws when the
+ * write is refused.
  */
-export async function deductOrderLineStock(orderId: string, line: CartItem, lineIndex: number, at: Date): Promise<number> {
+export async function deductOrderLineStock(
+  orderId: string,
+  line: CartItem,
+  lineIndex: number,
+  at: Date,
+  targetDb: Firestore = db
+): Promise<number> {
   if (line.isPreorder) return 0;
-  const productRef = doc(db, 'products', line.product.id);
-  return runTransaction(db, async (tx) => {
+  const productRef = doc(targetDb, 'products', line.product.id);
+  return runTransaction(targetDb, async (tx) => {
     const snap = await tx.get(productRef);
     if (!snap.exists()) return 0;
     const data = snap.data();
@@ -209,7 +216,7 @@ export async function deductOrderLineStock(orderId: string, line: CartItem, line
       size: String(sku.size ?? '').slice(0, 30),
       skuIndex,
     };
-    tx.set(doc(db, STOCK_MOVEMENTS_COLLECTION, movement.id), sanitizeForFirestore(movement));
+    tx.set(doc(targetDb, STOCK_MOVEMENTS_COLLECTION, movement.id), sanitizeForFirestore(movement));
     if (taken > 0) {
       // The other variants are written back exactly as read: the rules compare them with the stored ones
       const nextSkus = skus.map((s, i) => (i === skuIndex ? { ...s, stock: stockBefore - taken } : s));
