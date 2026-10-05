@@ -8,7 +8,10 @@ await assertEmulatorsRunning();
 await clearEmulators();
 let n = 0;
 const previews = await drawPreviews();
-for (const batch of catalogBatches(previews)) {
+const banners = await drawPreviews(3, 1000, 500);
+// full photos as processImageFiles keeps them: 1 000 px long side, JPEG 0.8, ≈ 260 000 characters
+const photos = await drawPreviews(4, 750, 1000, 0.8);
+for (const batch of catalogBatches(previews, banners, photos)) {
   await writeDocs(batch);
   n += Object.keys(batch).length;
 }
