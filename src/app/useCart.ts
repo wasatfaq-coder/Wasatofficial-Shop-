@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { ActiveTab, AppliedPromoInfo, CartItem, Product, PromoCode } from '../types';
 import { CART_STORAGE_KEY, loadStoredCart, toStoredCart } from '../utils/cartStorage';
 import { getOrderableStock, isPreorderVariant } from '../utils/inventory';
-import { validatePromo, toPricingLine, promoDiscountKind } from '../shared/orderPricing';
+import { validatePromo, toPricingLine, appliedPromoFrom, currentAppliedPromo } from '../shared/orderPricing';
 import { promoDiscountText } from '../utils/promoLabel';
 import { hasOrderableVariant, needsVariantChoice } from '../utils/variantSelection';
 import type { AddToast } from './useToasts';
@@ -236,27 +236,10 @@ export function useCart({ promos, promosLoaded, requestPromos, preorderMode, add
     }
 
     // usedCount grows only when an order with the promo is placed (not on applying it)
-    const isFixed = promoDiscountKind(foundPromo) === 'fixed';
-    const discValue = foundPromo.discountValue !== undefined ? foundPromo.discountValue : foundPromo.discountPercent;
+    const applied = appliedPromoFrom(foundPromo);
+    setAppliedPromo(applied);
 
-    setAppliedPromo({
-      code: foundPromo.code,
-      discountPercent: foundPromo.discountPercent,
-      discountType: isFixed ? 'fixed' : 'percent',
-      discountValue: discValue,
-      minOrderAmount: foundPromo.minOrderAmount,
-      isReferral: foundPromo.isReferral,
-      partnerName: foundPromo.partnerName,
-      partnerCommissionPercent: foundPromo.partnerCommissionPercent,
-      applicableCategories: foundPromo.applicableCategories,
-      applicableProductIds: foundPromo.applicableProductIds,
-    });
-
-    const discountText = promoDiscountText({
-      discountType: isFixed ? 'fixed' : 'percent',
-      discountValue: discValue,
-      discountPercent: foundPromo.discountPercent,
-    });
+    const discountText = promoDiscountText(applied);
 
     addToast(`Промокод ${foundPromo.code} применен: скидка ${discountText}`, 'success');
     return true;
@@ -282,7 +265,14 @@ export function useCart({ promos, promosLoaded, requestPromos, preorderMode, add
     if (problem) {
       setAppliedPromo(null);
       addToast(`Промокод ${appliedPromo.code} снят. ${problem}`, 'info');
+      return;
     }
+    // the owner changed the code's discount in «Промокоды»: the cart and the order count by the new one (finding 11)
+    const now = currentAppliedPromo(appliedPromo, promos);
+    if (!now || JSON.stringify(now) === JSON.stringify(appliedPromo)) return;
+    setAppliedPromo(now);
+    const discount = promoDiscountText(now);
+    if (discount !== promoDiscountText(appliedPromo)) addToast(`Скидка по промокоду ${now.code} теперь ${discount}`, 'info');
     // addToast is recreated on every render; the check depends only on the cart and the codes
   }, [cartItems, promos, promosLoaded, appliedPromo]);
 
