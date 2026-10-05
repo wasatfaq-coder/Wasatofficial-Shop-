@@ -49,6 +49,7 @@ import { formatOrderDate } from '../shared/orderDate';
 import { cancelReasonText, formatCancelledAt } from './orderCancel';
 import type { OrderStatusLogEntry } from '../shared/orderFlow';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages, isTransportCompanyDelivery } from './deliveryStages';
+import { ORDERS_INDEX_COLLECTION, ordersIndexPartId, type OrderIndexRow, type OrdersIndexPart } from './ordersIndex';
 import { CLIENT_ERRORS_COLLECTION, type ClientErrorReport, type StoredClientError } from './clientErrors';
 import { trackRead } from './pendingReads';
 import {
@@ -737,6 +738,39 @@ export async function saveCatalogIndex(parts: CatalogIndexPart[], previousPartCo
   await batch.commit();
 }
 
+/**
+ * The orders index (docs/orders-scale-plan.md, stage 4), admin only: every part of `orders_index`. A write puts all
+ * parts in one batch, so a snapshot never mixes two versions (isWholeOrdersIndex checks it anyway)
+ */
+export function subscribeToOrdersIndex(onUpdate: (parts: OrdersIndexPart[]) => void, onError?: (error: unknown) => void) {
+  return onSnapshot(
+    collection(db, ORDERS_INDEX_COLLECTION),
+    (snap) => {
+      if (snap.metadata.fromCache && snap.empty) return;
+      onUpdate(
+        snap.docs.map((d) => {
+          const data = d.data();
+          return { ...(data as OrdersIndexPart), orders: data.orders instanceof Bytes ? data.orders.toUint8Array() : new Uint8Array() };
+        })
+      );
+    },
+    (error) => {
+      console.warn('Orders index subscription warning:', error);
+      if (onError) onError(error);
+    }
+  );
+}
+
+/** Writes the orders index (admin): the new parts and the removal of parts it no longer has, in one batch */
+export async function saveOrdersIndex(parts: OrdersIndexPart[], previousPartCount: number): Promise<void> {
+  const batch = writeBatch(db);
+  for (const part of parts) {
+    batch.set(doc(db, ORDERS_INDEX_COLLECTION, ordersIndexPartId(part.part)), { ...part, orders: Bytes.fromUint8Array(part.orders) });
+  }
+  for (let i = parts.length; i < previousPartCount; i++) batch.delete(doc(db, ORDERS_INDEX_COLLECTION, ordersIndexPartId(i)));
+  await batch.commit();
+}
+
 export interface ProductThumb {
   productId: string;
   /** thumbKey of the photo it was made from */
@@ -1050,12 +1084,19 @@ function storedOrder(order: Order) {
   return { ...sanitizeForFirestore(order), updatedAt: serverTimestamp() };
 }
 
+/** What the admin's subscription hands to the orders index (docs/orders-scale-plan.md, stage 4) */
+export interface StoredOrders {
+  rows: OrderIndexRow[];
+  /** A write of this browser is not confirmed yet: its `updatedAt` is still empty */
+  pending: boolean;
+}
+
 /**
- * Subscribes to orders. Admins receive every order; customers pass their uid
- * and only receive their own orders (required by firestore.rules).
+ * Subscribes to orders. Admins receive every order, and the documents as stored for the orders index; customers pass
+ * their uid and only receive their own orders (required by firestore.rules).
  */
 export function subscribeToOrders(
-  onUpdate: (orders: Order[]) => void,
+  onUpdate: (orders: Order[], stored?: StoredOrders) => void,
   onError?: (error: unknown) => void,
   customerUid?: string
 ) {
@@ -1064,8 +1105,18 @@ export function subscribeToOrders(
   return onSnapshot(
     source,
     async (snapshot) => {
+      const stored = customerUid
+        ? undefined
+        : {
+            rows: snapshot.docs.map((d) => {
+              const data = d.data();
+              const updatedAt = data.updatedAt instanceof Timestamp ? data.updatedAt.toMillis() : undefined;
+              return { id: d.id, data: toBackupValue(data) as Record<string, unknown>, ...(updatedAt ? { updatedAt } : {}) };
+            }),
+            pending: snapshot.metadata.hasPendingWrites,
+          };
       if (snapshot.empty) {
-        onUpdate([]);
+        onUpdate([], stored);
         return;
       }
       const loaded: Order[] = [];
@@ -1084,7 +1135,7 @@ export function subscribeToOrders(
         if (timeA !== timeB) return timeB - timeA;
         return b.id.localeCompare(a.id);
       });
-      onUpdate(loaded);
+      onUpdate(loaded, stored);
     },
     (error) => {
       console.warn('Orders subscription warning:', error);

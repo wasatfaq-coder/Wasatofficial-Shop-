@@ -1132,6 +1132,28 @@ describe('catalog index and product thumbs', () => {
   });
 });
 
+// Постраничные «Заказы», этап 4: индекс заказов — имена, телефоны и адреса покупателей, только администратор
+describe('orders index', () => {
+  const part = {
+    format: 1, part: 0, parts: 1, hash: '1-abc', syncedUpTo: 1_790_000_000_000,
+    orders: Bytes.fromUint8Array(new Uint8Array([31, 139])), updatedAt: '2026-10-05T00:00:00.000Z',
+  };
+
+  test('only the admin reads and writes the orders index, and only its own fields', async () => {
+    await assertSucceeds(setDoc(doc(owner(), 'orders_index/p0'), part));
+    await assertSucceeds(getDocs(collection(owner(), 'orders_index')));
+    await assertFails(getDocs(collection(customer(), 'orders_index')));
+    await assertFails(getDoc(doc(guest(), 'orders_index/p0')));
+    await assertFails(setDoc(doc(customer(), 'orders_index/p0'), part));
+    await assertFails(setDoc(doc(owner(), 'orders_index/p0'), { ...part, note: 'x' }));
+    await assertFails(setDoc(doc(owner(), 'orders_index/p0'), { ...part, orders: '[]' }));
+    await assertFails(setDoc(doc(owner(), 'orders_index/p0'), { ...part, syncedUpTo: '2026-10-05' }));
+    await assertFails(setDoc(doc(owner(), 'orders_index/main'), part));
+    await assertFails(deleteDoc(doc(customer(), 'orders_index/p0')));
+    await assertSucceeds(deleteDoc(doc(owner(), 'orders_index/p0')));
+  });
+});
+
 // Находка 26 (аудит 02.10): гость вошёл через Google — заказы и переписка анонимного входа переходят в аккаунт.
 // Обе стороны подтверждают связь: guest_links/{гость} пишет гость, account_guests/{аккаунт}_{гость} — аккаунт
 describe('guest data goes to the account after sign-in', () => {
