@@ -29,9 +29,10 @@ import { paymentLogEntry, receiptMessageText } from './paymentDetails';
 import { DEFAULT_STOREFRONT_SETTINGS, generateDefaultSKUs, inStockAfterReturn, inStockAfterStockChange, stockMovementId } from './inventory';
 import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
 import { splitBannerImages, type BannerImagesDoc } from './bannerImages';
+import { previewsMoved, splitProductPreviews, withProductPreviews, type ProductPreviewsDoc } from './productPreviews';
 import type { LegalDocId, LegalTexts } from './legalDocs';
 import type { RestoreWrite } from './backupRestore';
-import { splitProductPhotos, type PhotoDoc } from './productPhotos';
+import { hasHeavyPhotos, splitProductPhotos, type PhotoDoc } from './productPhotos';
 import { compressBase64Image } from './imageUpload';
 import { SERVER_CONFIG_DOC_ID, ServerConfig } from '../shared/orderApi';
 import {
@@ -512,9 +513,18 @@ export async function returnCancelledOrderStock(
 }
 
 
+/**
+ * Products without their previews inside (stage 6 of docs/catalog-scale-plan.md, productPreviews.ts): the previews go to
+ * `product_previews` first (a product never points to previews that are not there yet), and only changed ones — a
+ * product the admin changed without its photos keeps its `previewKey`
+ */
 export async function syncAllProductsToFirestore(products: Product[]) {
   try {
-    await setDocs('products', products.map(toStoredProduct));
+    const split = products.map(splitProductPreviews);
+    await saveProductPreviews(
+      split.flatMap(({ stored, previews }, i) => (previews && stored.previewKey !== products[i].previewKey ? [previews] : []))
+    );
+    await setDocs('products', split.map(({ stored }) => toStoredProduct(stored)));
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'products');
   }
@@ -612,6 +622,39 @@ export async function loadProductPhotos(ids: string[]): Promise<Record<string, s
       })
   );
   return Object.fromEntries(wanted.filter((id) => productPhotoCache.has(id)).map((id) => [id, productPhotoCache.get(id)!]));
+}
+
+/** Previews of a product (null — none or not read); read once per previews version in a visit */
+const productPreviewRequests = new Map<string, Promise<ProductPreviewsDoc | null>>();
+export function loadProductPreviews(product: Pick<Product, 'id' | 'previewKey'>): Promise<ProductPreviewsDoc | null> {
+  const key = `${product.id}:${product.previewKey ?? ''}`;
+  let pending = productPreviewRequests.get(key);
+  if (!pending) {
+    pending = getDoc(doc(db, 'product_previews', product.id))
+      .then((snap) => (snap.exists() ? (snap.data() as ProductPreviewsDoc) : null))
+      .catch((error) => {
+        // the photo keeps its placeholder; the next time it is shown it asks again
+        productPreviewRequests.delete(key);
+        console.warn(`Previews of product ${product.id} were not read:`, error);
+        return null;
+      });
+    productPreviewRequests.set(key, pending);
+  }
+  return pending;
+}
+
+/** The product with its previews in place (the product form, a copy of a product); unchanged when they are not read */
+export async function productWithPreviews<T extends Product>(product: T): Promise<T> {
+  return previewsMoved(product) ? withProductPreviews(product, await loadProductPreviews(product)) : product;
+}
+
+/** Writes previews (admin), 5 per batch: a document is up to 1 MiB and a request takes 10 MiB */
+async function saveProductPreviews(docs: ProductPreviewsDoc[]): Promise<void> {
+  for (let i = 0; i < docs.length; i += 5) {
+    const batch = writeBatch(db);
+    for (const d of docs.slice(i, i + 5)) batch.set(doc(db, 'product_previews', d.productId), d);
+    await batch.commit();
+  }
 }
 
 /** Writes full photos (admin), 10 per batch: a photo is up to 400 КБ and a request takes 10 MiB */
@@ -717,19 +760,32 @@ export function subscribeToProductDoc(productId: string, onUpdate: (product: Pro
 }
 
 /**
- * A product with photos still inside: they go to `product_photos`, the product keeps previews (admin session, once).
- * Photos are written first, then only `images` and `photoIds` of the product change — the stock is not touched.
+ * A product with photos still inside (admin session, once): full photos go to `product_photos` (stage 6 of the audit
+ * 02.10), then previews to `product_previews` (stage 6 of docs/catalog-scale-plan.md). Photos and previews are written
+ * first, then only `images`, `photoIds` and `previewKey` of the product change — the stock is not touched.
  */
 export async function moveProductPhotosOut(product: Product): Promise<boolean> {
-  const known = new Map<string, string>();
-  (product.images ?? []).forEach((src, i) => {
-    const id = product.photoIds?.[i];
-    if (id) known.set(src, id);
+  let images = product.images ?? [];
+  let photoIds = product.photoIds;
+  if (hasHeavyPhotos(product)) {
+    const known = new Map<string, string>();
+    images.forEach((src, i) => {
+      const id = product.photoIds?.[i];
+      if (id && src) known.set(src, id);
+    });
+    const split = await splitProductPhotos(product.id, images, known);
+    await saveProductPhotos(split.newPhotos);
+    images = split.images;
+    photoIds = split.photoIds;
+  }
+  const { stored, previews } = splitProductPreviews({ ...product, images, photoIds });
+  if (!previews && images === product.images) return false;
+  if (previews) await saveProductPreviews([previews]);
+  await updateDoc(doc(db, 'products', product.id), {
+    images: stored.images,
+    ...(photoIds ? { photoIds } : {}),
+    ...(stored.previewKey ? { previewKey: stored.previewKey } : {}),
   });
-  const { images, photoIds, newPhotos } = await splitProductPhotos(product.id, product.images ?? [], known);
-  if (newPhotos.length === 0) return false;
-  await saveProductPhotos(newPhotos);
-  await updateDoc(doc(db, 'products', product.id), { images, photoIds });
   return true;
 }
 
@@ -1845,7 +1901,7 @@ export async function deleteClientErrorsBefore(beforeMs: number): Promise<number
  */
 /** Every collection of the store; `test` holds only the connection probe */
 export const BACKUP_COLLECTIONS = [
-  'products', 'product_photos', 'product_costs', 'promos', 'settings', 'banners', 'banner_images', 'delivery_methods', 'pickup_points',
+  'products', 'product_previews', 'product_photos', 'product_costs', 'promos', 'settings', 'banners', 'banner_images', 'delivery_methods', 'pickup_points',
   'orders', 'users', 'customer_notes', 'admins', 'reviews', 'review_votes',
   'chat_messages', 'chat_images', 'support_threads', 'support_status', STOCK_MOVEMENTS_COLLECTION, 'promo_uses', 'payment_templates',
 ] as const;

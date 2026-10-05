@@ -1045,6 +1045,24 @@ describe('banner pictures', () => {
   });
 });
 
+// Каталог частями, этап 6: превью фото товара — читает любой, пишет администратор
+describe('product previews', () => {
+  const previews = { productId: 'p1', images: ['data:image/jpeg;base64,AAAA', '', 'data:image/webp;base64,BBBB'] };
+
+  test('anyone reads the previews, only the admin writes them, and only a list for that product', async () => {
+    await assertSucceeds(setDoc(doc(owner(), 'product_previews/p1'), previews));
+    await assertSucceeds(getDoc(doc(guest(), 'product_previews/p1')));
+    await assertFails(setDoc(doc(customer(), 'product_previews/p2'), { ...previews, productId: 'p2' }));
+    await assertFails(setDoc(doc(guest(), 'product_previews/p2'), { ...previews, productId: 'p2' }));
+    await assertFails(setDoc(doc(owner(), 'product_previews/p2'), previews));
+    await assertFails(setDoc(doc(owner(), 'product_previews/p1'), { ...previews, images: 'data:image/jpeg;base64,AAAA' }));
+    await assertFails(setDoc(doc(owner(), 'product_previews/p1'), { ...previews, images: Array(31).fill('') }));
+    await assertFails(setDoc(doc(owner(), 'product_previews/p1'), { ...previews, note: 'x' }));
+    await assertFails(deleteDoc(doc(customer(), 'product_previews/p1')));
+    await assertSucceeds(deleteDoc(doc(owner(), 'product_previews/p1')));
+  });
+});
+
 // Каталог частями, этап 2: индекс каталога и миниатюры выводятся из товаров — читает любой, пишет администратор
 describe('catalog index and product thumbs', () => {
   const part = { format: 1, part: 0, parts: 1, hash: '1-abc', entries: Bytes.fromUint8Array(new Uint8Array([31, 139])), updatedAt: '2026-10-04T00:00:00.000Z' };

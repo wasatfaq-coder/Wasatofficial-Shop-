@@ -27,7 +27,7 @@ import { ConfirmDialog } from '../ConfirmDialog';
 import { applyAdminStockChanges, type AdminStockChange } from '../../utils/firebaseSync';
 import { adminStatusLabel } from '../../utils/orderFlow';
 import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
-import { orderLineImage } from '../../utils/productImage';
+import { OrderLineThumbImage } from '../ProductThumbImage';
 import { toOrderLineProduct } from '../../shared/orderLine';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { sameValue, useUnsavedChanges } from '../../utils/unsavedChanges';
@@ -547,8 +547,9 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                     {/* Top Row: Thumbnail + Title & Tags + Remove Button */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <img
-                          src={orderLineImage(item.product, products)}
+                        <OrderLineThumbImage
+                          line={item.product}
+                          catalog={products}
                           alt={item.product.title}
                           className="w-12 h-12 rounded-xl object-cover shrink-0 neu-inset"
                         />

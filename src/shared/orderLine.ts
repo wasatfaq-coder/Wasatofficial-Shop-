@@ -18,8 +18,8 @@ export function toOrderLineProduct(product: Product): Product {
     material: product.material,
     colors: product.colors ?? [],
     sizes: product.sizes ?? [],
-    // Links to photos are small; photos embedded in the document are not copied
-    images: (product.images ?? []).filter((src) => !src.startsWith('data:')),
+    // Links to photos are small; photos embedded in the document (or moved out of it, '') are not copied
+    images: (product.images ?? []).filter((src) => src && !src.startsWith('data:')),
   };
   return line as Product;
 }

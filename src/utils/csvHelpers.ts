@@ -123,7 +123,10 @@ export function parseProductsFromCSV(
     const cells = splitCsvLine(line, separator);
     const [id, title, category, priceCell, oldPriceCell, inStockCell, , sizesCell, colorsCell, image, description] = cells;
     const price = Number(String(priceCell ?? '').replace(/\s/g, '').replace(',', '.'));
-    if (!title || !(price > 0) || !image) {
+    // an existing product may come without a photo: its previews live in product_previews (catalog-scale-plan, stage 6),
+    // and the export leaves the cell empty
+    const known = id ? catalog.find((p) => p.id === id) : undefined;
+    if (!title || !(price > 0) || (!image && !known)) {
       skipped++;
       continue;
     }
@@ -132,7 +135,7 @@ export function parseProductsFromCSV(
     const sizes = listCells(sizesCell || '');
     // «Хаки #556B2F», «Navy (1F2A44)» or just «Хаки»: the code from the file, otherwise the shade the product already
     // has for this colour, otherwise a shade by the name
-    const knownColors = id ? catalog.find((p) => p.id === id)?.colors ?? [] : [];
+    const knownColors = known?.colors ?? [];
     const colors = listCells(colorsCell || '').map((cell) => {
       const { name, hex } = splitColorEntry(cell);
       const colorName = name || hex || cell;
@@ -154,7 +157,7 @@ export function parseProductsFromCSV(
       // an empty cell leaves the sizes and colours of an existing product as they are
       ...(sizes.length ? { sizes } : {}),
       ...(colors.length ? { colors } : {}),
-      images: [image],
+      ...(image ? { images: [image] } : {}),
       description: description || '',
     });
   }
