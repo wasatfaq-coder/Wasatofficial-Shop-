@@ -264,6 +264,13 @@ async function readProducts(): Promise<{ product: Product; updatedAt?: string }[
   const withoutPhoto = safe.filter((p) => !p.photoIds?.[0]);
   const images = await readFields(withoutPhoto.map((p) => `products/${p.id}`), ['images']);
   for (const p of withoutPhoto) p.images = (images.get(`products/${p.id}`)?.images as string[] | undefined) ?? [];
+  // …and when the product keeps its previews in product_previews (stage 6), from there
+  const moved = withoutPhoto.filter((p) => p.images[0] === '');
+  const previews = await readFields(moved.map((p) => `product_previews/${p.id}`), ['images']);
+  for (const p of moved) {
+    const first = (previews.get(`product_previews/${p.id}`)?.images as string[] | undefined)?.[0];
+    if (first) p.images = [first, ...p.images.slice(1)];
+  }
   return products;
 }
 

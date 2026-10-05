@@ -143,6 +143,18 @@ service cloud.firestore {
             && request.resource.data.data.matches('^data:image/(jpeg|png|webp);base64,.*')));
     }
 
+    // Превью фото товара (docs/catalog-scale-plan.md, этап 6): лёгкие копии фото из `images`, в товаре на их месте ''.
+    // Читает любой посетитель (страница товара), пишет администратор; список не длиннее галереи формы
+    match /product_previews/{productId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidId(productId)
+        && (request.resource == null
+          || (request.resource.data.keys().hasOnly(['productId', 'images'])
+            && request.resource.data.productId == productId
+            && request.resource.data.images is list
+            && request.resource.data.images.size() <= 30));
+    }
+
     // Лёгкий индекс каталога и миниатюры карточек (docs/catalog-scale-plan.md, этап 2): выводятся из товаров, пишет
     // сессия администратора, читает любой посетитель. Индекс — части p0, p1, … со сжатыми строками товаров
     match /catalog_index/{partId} {

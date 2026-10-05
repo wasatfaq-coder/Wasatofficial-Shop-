@@ -60,13 +60,15 @@ export function shortHash(text: string): string {
 
 /**
  * Which photo the miniature is made from: the full photo's id (a photo document never changes), else a hash of the
- * data: photo. '' — no miniature (no photo, or a link that the card shows itself)
+ * data: photo — or of the previews, when they are in `product_previews` (stage 6). '' — no miniature (no photo, or a link
+ * that the card shows itself)
  */
-export function thumbKey(product: Pick<Product, 'images' | 'photoIds'>): string {
-  const first = product.images?.[0] ?? '';
-  if (!first.startsWith('data:image/')) return '';
+export function thumbKey(product: Pick<Product, 'images' | 'photoIds' | 'previewKey'>): string {
+  const first = product.images?.[0];
   const photoId = product.photoIds?.[0];
-  return photoId ? `p:${photoId}` : `h:${shortHash(first)}`;
+  if (first?.startsWith('data:image/')) return photoId ? `p:${photoId}` : `h:${shortHash(first)}`;
+  if (first === '' && product.previewKey) return photoId ? `p:${photoId}` : `v:${product.previewKey}`;
+  return '';
 }
 
 /** The index line of a product; `product.reviews` are the merged real reviews (mergeProductReviews) */

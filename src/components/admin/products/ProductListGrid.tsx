@@ -1,10 +1,10 @@
 import { Trash2, Edit2, Eye, Copy } from 'lucide-react';
+import { ProductThumbImage } from '../../ProductThumbImage';
 import { Product } from '../../../types';
 import { SelectCheckbox } from '../SelectCheckbox';
 import { getProductTotalStock, isHiddenFromSale } from '../../../utils/inventory';
 import { NotConfigured } from '../../NotConfigured';
 import type { StoreCategory } from '../../../types';
-import { productImage } from '../../../utils/productImage';
 
 import type { ProductList } from './useProductList';
 
@@ -68,8 +68,8 @@ export function ProductListGrid({ list, products, categories, duplicatingId, han
 
                   {/* Product Thumbnail */}
                   <div className="relative w-12 h-14 sm:w-14 sm:h-14 rounded-xl overflow-hidden neu-inset shrink-0">
-                    <img
-                      src={productImage(prod)}
+                    <ProductThumbImage
+                      product={prod}
                       alt={prod.title}
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"

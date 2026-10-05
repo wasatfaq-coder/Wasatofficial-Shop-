@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { ProductThumbImage } from './ProductThumbImage';
 import { X, ShoppingBag, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { Product } from '../types';
 import { ModalPortal } from './ModalPortal';
 import { getOrderableStock, getVariantStock } from '../utils/inventory';
 import { initialColor, initialSize } from '../utils/variantSelection';
-import { productImage } from '../utils/productImage';
 import { useDialogA11y } from '../utils/useDialogA11y';
 import { useLiveProduct } from '../utils/liveProducts';
 
@@ -87,8 +87,8 @@ export const VariantPickerSheet: React.FC<VariantPickerSheetProps> = ({
             >
               {/* Product */}
               <div className="flex items-start gap-3">
-                <img
-                  src={productImage(product)}
+                <ProductThumbImage
+                  product={product}
                   alt=""
                   className="w-14 h-[72px] rounded-xl object-cover shrink-0"
                 />
