@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
+import { ProductThumbImage } from '../ProductThumbImage';
 import { ModalPortal } from '../ModalPortal';
 import { X, Tag, DollarSign, Layers, Sparkles, Check, ArrowRight, RotateCcw, CheckCheck } from 'lucide-react';
 import { Product, StoreCategory } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { NotConfigured } from '../NotConfigured';
-import { productImage } from '../../utils/productImage';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { pluralRu } from '../../utils/pluralize';
 
@@ -498,8 +498,8 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                   className="neu-inset rounded-xl p-2 sm:p-2.5 flex items-center justify-between gap-2 text-xs"
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <img
-                      src={productImage(p)}
+                    <ProductThumbImage
+                      product={p}
                       alt={p.title}
                       className="w-8 h-8 rounded-lg object-cover shrink-0 neu-flat"
                     />

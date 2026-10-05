@@ -5,6 +5,7 @@ import { saveLocalDeliveryMethods, saveLocalPickupPoints } from '../data/deliver
 import { saveStorefrontSettings } from '../utils/inventory';
 import { hasHeavyPhotos, removedProductPhotoIds } from '../utils/productPhotos';
 import { hasInlineBannerImage } from '../utils/bannerImages';
+import { hasInlinePreviews } from '../utils/productPreviews';
 import { pluralRu } from '../utils/pluralize';
 import {
   syncAllProductsToFirestore,
@@ -108,11 +109,13 @@ export function useAdminActions({
   }, [isAdmin, productsLoaded, products]);
 
   // Photos still inside products (each visitor downloaded them with the catalog): the admin's session moves them to
-  // product_photos and leaves previews in the products (stage 6, finding 18). Once per session, product by product
+  // product_photos (stage 6 of the audit 02.10, finding 18) and the previews to product_previews (stage 6 of
+  // docs/catalog-scale-plan.md). Once per session, product by product; a product just saved from the form (previews in
+  // place, `previewKey` set) is already stored without them
   const photosMovedRef = React.useRef(false);
   React.useEffect(() => {
     if (!isAdmin || !productsLoaded || photosMovedRef.current) return;
-    const heavy = products.filter(hasHeavyPhotos);
+    const heavy = products.filter((p) => hasHeavyPhotos(p) || (hasInlinePreviews(p) && !p.previewKey));
     if (heavy.length === 0) return;
     photosMovedRef.current = true;
     void (async () => {
@@ -177,6 +180,7 @@ export function useAdminActions({
     const saved = persist(
       'товары',
       deleteRemovedDocs('products', adminProducts, updatedWithCosts),
+      deleteRemovedDocs('product_previews', adminProducts, updatedWithCosts),
       syncAllProductsToFirestore(changed),
       saveProductCosts(costChanges)
     );

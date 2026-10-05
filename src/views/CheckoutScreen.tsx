@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ProductThumbImage } from '../components/ProductThumbImage';
 import { isPreorderVariant, stockProblemText, type OrderStockProblem } from '../utils/inventory';
 import { pluralRu } from '../utils/pluralize';
 import { LegalConsentNote } from '../components/LegalConsentNote';
@@ -37,7 +38,6 @@ import {
 } from '../shared/orderPricing';
 import { STORE_PAUSED_TEXT, storeAcceptsOrders } from '../shared/orderApi';
 import { NotConfigured } from '../components/NotConfigured';
-import { productImage } from '../utils/productImage';
 import { promoDiscountText } from '../utils/promoLabel';
 import { cleanAddressParts, fullName, namePartsOf, requiresFullName, type AddressParts, type PersonName } from '../shared/personName';
 import { deliveryKindOfMethod } from '../shared/orderFlow';
@@ -574,8 +574,8 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           {cartItems.map((item) => (
             <div key={item.id} className="flex items-center gap-3">
               <div className="w-12 h-12 aspect-square rounded-2xl overflow-hidden neu-inset p-1 shrink-0 flex items-center justify-center">
-                <img
-                  src={productImage(item.product)}
+                <ProductThumbImage
+                  product={item.product}
                   alt={item.product?.title || ''}
                   className="w-full h-full object-cover rounded-xl"
                 />
