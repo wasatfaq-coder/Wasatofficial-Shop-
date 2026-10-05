@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import type { User } from 'firebase/auth';
 import type { Order, UserProfile } from '../types';
-import { subscribeToOrders, subscribeToOwnUserProfile, subscribeToProductCosts, subscribeToUsers } from '../utils/firebaseSync';
+import { subscribeToOrders, subscribeToOwnUserProfile, subscribeToProductCosts } from '../utils/firebaseSync';
 import { loadGuestOrders } from './guestOrders';
 
 type AuthState = { authLoading: boolean; isAdmin: boolean; currentUser: User | null };
 
 /**
- * Orders and customer profiles are private (see firestore.rules): admins see everything (and the cost prices of
- * `product_costs`), signed-in customers only their own data, guests keep their orders in this browser only.
+ * Orders and customer profiles are private (see firestore.rules): admins see every order (and the cost prices of
+ * `product_costs`), signed-in customers only their own, guests keep their orders in this browser only. The profile is
+ * always the visitor's own: the admin reads customers' profiles only while «Клиенты» are open (useCustomerProfiles,
+ * docs/orders-scale-plan.md, stage 1).
  */
 export function useAccountData({ authLoading, isAdmin, currentUser }: AuthState) {
-  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [ownProfiles, setOwnProfiles] = useState<UserProfile[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   // Admin only: cost prices from `product_costs` (a product document is readable by every visitor)
   const [productCosts, setProductCosts] = useState<Record<string, number>>({});
@@ -19,13 +21,13 @@ export function useAccountData({ authLoading, isAdmin, currentUser }: AuthState)
   React.useEffect(() => {
     if (authLoading) return;
 
-    if (isAdmin) {
+    if (isAdmin && currentUser) {
       const unsubOrders = subscribeToOrders((loadedOrders) => setOrders(loadedOrders));
-      const unsubUsers = subscribeToUsers((loadedUsers) => setAllUsers(loadedUsers));
+      const unsubProfile = subscribeToOwnUserProfile(currentUser.uid, setOwnProfiles);
       const unsubCosts = subscribeToProductCosts(setProductCosts);
       return () => {
         unsubOrders();
-        unsubUsers();
+        unsubProfile();
         unsubCosts();
         setProductCosts({});
       };
@@ -42,9 +44,7 @@ export function useAccountData({ authLoading, isAdmin, currentUser }: AuthState)
         undefined,
         currentUser.uid
       );
-      const unsubUsers = subscribeToOwnUserProfile(currentUser.uid, (loadedUsers) =>
-        setAllUsers(loadedUsers)
-      );
+      const unsubUsers = subscribeToOwnUserProfile(currentUser.uid, setOwnProfiles);
       return () => {
         unsubOrders();
         unsubUsers();
@@ -52,8 +52,8 @@ export function useAccountData({ authLoading, isAdmin, currentUser }: AuthState)
     }
 
     setOrders(loadGuestOrders());
-    setAllUsers([]);
+    setOwnProfiles([]);
   }, [authLoading, isAdmin, currentUser]);
 
-  return { allUsers, orders, setOrders, productCosts, setProductCosts };
+  return { ownProfiles, orders, setOrders, productCosts, setProductCosts };
 }
