@@ -1,5 +1,6 @@
 // Атаки на firestore.rules из обзоров рисков 30.09 и 02.10.2026 (docs/audit-2026-09-30-plan.md,
-// docs/audit-2026-10-02-plan.md; пробы 02.10 — docs/audit-2026-10-02/probes/).
+// docs/audit-2026-10-02-plan.md; пробы 02.10 — docs/audit-2026-10-02/probes/) и проверки перед запуском 04.10
+// (docs/audit-2026-10-04-plan.md, тесты D1–D5).
 // Запуск вместе с остальными тестами правил: bun run test:rules.
 //
 // Каждый тест записан так, как должно быть: запрос злоумышленника отклонён. Пока уязвимость открыта, тест помечен
@@ -10,7 +11,8 @@ import { readFileSync } from 'node:fs';
 import { after, before, beforeEach, describe, test } from 'node:test';
 import { assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing';
 import {
-  collection, doc, getDoc, getDocs, increment, limit, query, serverTimestamp, setDoc, updateDoc, where, writeBatch,
+  collection, deleteDoc, doc, getDoc, getDocs, increment, limit, query, serverTimestamp, setDoc, Timestamp, updateDoc, where,
+  writeBatch,
 } from 'firebase/firestore';
 
 const ADMIN_EMAIL = 'gunh83975@gmail.com';
@@ -248,4 +250,80 @@ describe('Оба режима', () => {
       where('threadId', '==', 'anon1'), where('isInternalNote', '==', false))));
     await assertFails(getDocs(query(collection(guestChat('anon1'), 'chat_messages'), limit(5))));
   });
+});
+
+describe('Проверка перед запуском 04.10 (docs/audit-2026-10-04-plan.md)', () => {
+  beforeEach(() => seed(undefined));
+
+  const realOrder = (id) => ({
+    id, status: 'accepted', totalPrice: 10000, paymentStatus: 'pending', paymentMethod: 'Перевод', deliveryMethod: 'Курьер',
+    items: [{ product: { id: 'p1', title: 'Пальто', price: 10000 }, quantity: 1, selectedColor: 'Черный', selectedSize: 'M' }],
+    customerName: 'Алиса', customerPhone: '+70000000000', deliveryAddress: 'Москва',
+  });
+  const lineMovement = (orderId, changeQuantity) => ({
+    id: `${orderId}_0`, createdAt: 'x', date: 'x', type: 'order', orderId, lineIndex: 0, skuIndex: 0, productId: 'p1',
+    productTitle: 'Пальто', skuCode: '', color: 'Черный', size: 'M', changeQuantity, reason: `Заказ #${orderId}`, operator: 'Покупатель',
+  });
+  const deductLine = (db, orderId) => {
+    const batch = writeBatch(db);
+    batch.set(doc(db, `stock_movements/${orderId}_0`), lineMovement(orderId, -1));
+    batch.update(doc(db, 'products/p1'), {
+      skus: [{ id: 'p1-m', color: 'Черный', size: 'M', stock: 0 }], inStock: false, lastStockMovement: `${orderId}_0`,
+    });
+    return batch.commit();
+  };
+
+  test('D1 гость не пишет фото внутрь сообщения: админка скачивает 500 последних сообщений с фото (находка 4)',
+    { todo: 'находка 4 (04.10): этап 3 — фото сообщения только отдельным документом chat_images' }, async () => {
+      await assertFails(setDoc(doc(guestChat('anon-d1'), 'chat_messages/d1'), {
+        id: 'd1', sender: 'user', text: '', threadId: 'anon-d1', isInternalNote: false,
+        imageUrl: 'data:image/png;base64,' + 'A'.repeat(410_000), sentAt: serverTimestamp(),
+      }));
+    });
+
+  test('D2 профиль пишет только вход через Google и без ~900 КБ во вложенных полях (админка грузит профили всех, находка 5)',
+    { todo: 'находка 5 (04.10): этап 3 — профиль только при входе через Google, адреса и мерки ограничены' }, async () => {
+      const big = 'x'.repeat(90_000);
+      const addresses = Array.from({ length: 10 }, (_, i) => ({ id: String(i), title: big }));
+      await assertFails(setDoc(doc(guestChat('anon-d2'), 'users/anon-d2'), { uid: 'anon-d2', name: 'Гость' }));
+      await assertFails(setDoc(doc(customer('mallory'), 'users/mallory'), { uid: 'mallory', savedAddresses: addresses }));
+      await assertFails(setDoc(doc(customer('mallory'), 'users/mallory'), { uid: 'mallory', bodyMeasurements: { height: big } }));
+    });
+
+  test('D3 списание и запись журнала по строке заказа пишет только владелец заказа и не после отмены (находка 6)',
+    { todo: 'находка 6 (04.10): этап 3 — гость списывает под своим входом; этап 4 — правило требует владельца заказа' }, async () => {
+      await assertSucceeds(signedOrder(customer('alice'), 'alice', realOrder('WS-D3')));
+      // посторонний без входа заранее пишет нулевую запись — настоящее списание по этой строке уже не пройдёт
+      await assertFails(setDoc(doc(anon(), 'stock_movements/WS-D3_0'), lineMovement('WS-D3', 0)));
+      await assertFails(deductLine(anon(), 'WS-D3'));
+      await assertFails(deductLine(customer('mallory'), 'WS-D3'));
+      await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), 'orders/WS-D3'), { isCancelled: true }));
+      await assertFails(deductLine(customer('alice'), 'WS-D3'));
+    });
+
+  test('D4 фото в чате покупатель удаляет только своё и только 15 минут — как само сообщение (находка 8)',
+    { todo: 'находка 8 (04.10): этап 3 — удаление фото по правилу сообщения' }, async () => {
+      const hourAgo = Timestamp.fromMillis(Date.now() - 3_600_000);
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        const db = ctx.firestore();
+        await setDoc(doc(db, 'chat_messages/staff-d4'), {
+          id: 'staff-d4', sender: 'support', text: 'Реквизиты', threadId: 'anon-d4', isInternalNote: false, imageId: 'staff-d4', sentAt: hourAgo,
+        });
+        await setDoc(doc(db, 'chat_images/staff-d4'), { data: 'data:image/png;base64,AAA' });
+        await setDoc(doc(db, 'chat_messages/receipt-d4'), {
+          id: 'receipt-d4', sender: 'user', text: 'Чек', threadId: 'anon-d4', isInternalNote: false, imageId: 'receipt-d4',
+          receiptOrderId: 'WS-1', sentAt: hourAgo,
+        });
+        await setDoc(doc(db, 'chat_images/receipt-d4'), { data: 'data:image/png;base64,AAA' });
+      });
+      await assertFails(deleteDoc(doc(guestChat('anon-d4'), 'chat_images/staff-d4')));
+      await assertFails(deleteDoc(doc(guestChat('anon-d4'), 'chat_images/receipt-d4')));
+    });
+
+  test('D5 номера банковских карт в профиль не пишутся: поле сайт не использует (находка 9)',
+    { todo: 'находка 9 (04.10): этап 3 — savedCards убрать из полей профиля' }, async () => {
+      await assertFails(setDoc(doc(customer('mallory'), 'users/mallory'), {
+        uid: 'mallory', savedCards: [{ number: '4111111111111111', cvv: '123' }],
+      }));
+    });
 });
