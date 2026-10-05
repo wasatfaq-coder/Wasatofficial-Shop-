@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ProductThumbImage } from '../components/ProductThumbImage';
 import { LazyMount } from '../components/LazyMount';
 import { QuickOrderModal } from '../components/lazyWindows';
 import {
@@ -24,7 +25,6 @@ import {
   getAvailableDeliveryMethods,
   toPricingLine,
 } from '../shared/orderPricing';
-import { productImage } from '../utils/productImage';
 import { promoDiscountText } from '../utils/promoLabel';
 import { useDialogA11y } from '../utils/useDialogA11y';
 
@@ -226,8 +226,8 @@ export const CartScreen: React.FC<CartScreenProps> = ({
               <div className="flex gap-3.5 items-center">
                 {/* Thumbnail Image */}
                 <div className="relative w-20 h-20 aspect-square rounded-2xl overflow-hidden neu-inset p-1.5 shrink-0 flex items-center justify-center">
-                  <img
-                    src={productImage(item.product)}
+                  <ProductThumbImage
+                    product={item.product}
                     alt={item.product?.title || ''}
                     className="w-full h-full object-cover object-top rounded-xl"
                   />

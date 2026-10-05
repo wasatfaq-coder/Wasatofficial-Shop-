@@ -1,4 +1,5 @@
 import { Edit2, X, Eye } from 'lucide-react';
+import { ProductThumbImage } from '../../ProductThumbImage';
 import { Product } from '../../../types';
 import { getProductTotalStock } from '../../../utils/inventory';
 import { ModalPortal } from '../../ModalPortal';
@@ -44,8 +45,8 @@ export function ProductInspectModal({ list, handleOpenEditProduct }: { list: Pro
 
             {/* Gallery Thumbnail */}
             <div className="aspect-[16/9] rounded-2xl overflow-hidden neu-inset relative">
-              <img
-                src={productToInspect.images?.[0]}
+              <ProductThumbImage
+                product={productToInspect}
                 alt={productToInspect.title}
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"

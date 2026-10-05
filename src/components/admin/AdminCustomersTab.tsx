@@ -28,7 +28,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { UserProfile, Order, CustomerRecord, Product } from '../../types';
-import { orderLineImage } from '../../utils/productImage';
+import { OrderLineThumbImage } from '../ProductThumbImage';
 import { updateCustomerNotesInFirestore, deleteUserFromFirestore } from '../../utils/firebaseSync';
 import { downloadCSV } from '../../utils/csvHelpers';
 import { copyToClipboard } from '../../utils/clipboard';
@@ -1287,8 +1287,9 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                             {ord.items.map((it, idx) => (
                               <div key={idx} className="flex items-center gap-2 text-xs text-[#4E5C70]">
                                 {it.product && (
-                                  <img
-                                    src={orderLineImage(it.product, products)}
+                                  <OrderLineThumbImage
+                                    line={it.product}
+                                    catalog={products}
                                     alt=""
                                     referrerPolicy="no-referrer"
                                     className="w-8 h-8 rounded-lg object-cover neu-flat-sm shrink-0"

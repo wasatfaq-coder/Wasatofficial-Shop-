@@ -1,8 +1,8 @@
 import React from 'react';
+import { ProductThumbImage } from './ProductThumbImage';
 import { Trash2, Heart, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CartItem } from '../types';
-import { productImage } from '../utils/productImage';
 import { useDialogA11y } from '../utils/useDialogA11y';
 
 interface CartRemoveConfirmModalProps {
@@ -65,8 +65,8 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
 
           {/* Item details */}
           <div className="neu-inset rounded-2xl p-2.5 flex items-center gap-3">
-            <img
-              src={productImage(item.product)}
+            <ProductThumbImage
+              product={item.product}
               alt={item.product?.title || ''}
               className="w-12 h-12 rounded-xl object-cover neu-flat shrink-0"
             />

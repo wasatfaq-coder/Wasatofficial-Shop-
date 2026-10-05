@@ -115,6 +115,8 @@ export interface Product {
   images: string[];
   /** Id of the full photo of images[i] in `product_photos`; '' — a link or a light photo kept in the product */
   photoIds?: string[];
+  /** The data: previews of `images` are in `product_previews/{id}` ('' here in their place): a hash of them (stage 6) */
+  previewKey?: string;
   colors: { name: string; hex: string }[];
   sizes: string[];
   /** «Есть в наличии»: false when sold out (or, in old products without hiddenFromSale, taken off sale with stock left) */

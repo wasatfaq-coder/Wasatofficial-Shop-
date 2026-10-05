@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
+import { ProductThumbImage } from '../ProductThumbImage';
 import { ConfirmDialog } from '../ConfirmDialog';
 import {
   Tag,
@@ -26,7 +27,6 @@ import { copyToClipboard } from '../../utils/clipboard';
 import { NotConfigured } from '../NotConfigured';
 import { NeumorphicSwitch } from '../NeumorphicSwitch';
 import { formatPromoExpiry, isPromoListed, promoExpiryDate } from '../../shared/orderPricing';
-import { productImage } from '../../utils/productImage';
 import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
 import { computePartnerCommissions } from '../../utils/partnerCommission';
 import { pluralRu } from '../../utils/pluralize';
@@ -1163,8 +1163,8 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 neu-inset">
-                              <img
-                                src={productImage(prod)}
+                              <ProductThumbImage
+                                product={prod}
                                 alt={prod.title}
                                 className="w-full h-full object-cover"
                                 referrerPolicy="no-referrer"

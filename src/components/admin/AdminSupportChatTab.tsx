@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { OrderLineThumbImage, ProductThumbImage } from '../ProductThumbImage';
+import { thumbOf } from '../../utils/productThumbs';
 import {
   Camera,
   Check,
@@ -62,7 +64,6 @@ import type { ChatMessageChange } from '../../utils/firebaseSync';
 import { formatPromoExpiry, isPromoUsable, promoDiscountKind } from '../../shared/orderPricing';
 import { ChatMessageDeleteDialog, ChatMessageMenu } from '../ChatMessageActions';
 import { NotConfigured } from '../NotConfigured';
-import { orderLineImage } from '../../utils/productImage';
 import { ChatPhoto, hasChatPhoto } from '../ChatPhoto';
 
 /** What an admin sends into a customer's dialog */
@@ -516,7 +517,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
       productId: recommended.id,
       title: recommended.title,
       price: recommended.price,
-      image: recommended.images?.[0] || '',
+      // products keep no previews inside (stage 6 of docs/catalog-scale-plan.md): the card takes the miniature
+      image: recommended.images?.[0] || thumbOf(recommended.id) || '',
       color: recommendColor || undefined,
       size: recommendSize || undefined,
       note: recommendNote.trim() || undefined,
@@ -774,7 +776,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 {(order.items || []).map((item, idx) => (
                   <li key={`${item.id || idx}-${idx}`} className="flex items-center gap-2 min-w-0">
                     {item.product && (
-                      <img src={orderLineImage(item.product, products)} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" />
+                      <OrderLineThumbImage line={item.product} catalog={products} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" />
                     )}
                     <span className="text-[11px] text-[#2D3A4E] min-w-0 flex-1 leading-snug">
                       {item.product?.title || 'Товар'} · {[item.selectedColor, item.selectedSize].filter(Boolean).join(' / ')} ·{' '}
@@ -1240,7 +1242,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                   recommended?.id === p.id ? 'neu-pill-active' : 'neu-button text-[#2D3A4E]'
                 }`}
               >
-                {p.images?.[0] && <img src={p.images[0]} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />}
+                <ProductThumbImage product={p} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
                 <span className="min-w-0">
                   <span className="block text-[11px] font-bold leading-tight line-clamp-2">{p.title}</span>
                   <span className="block text-[11px] opacity-80">{p.price.toLocaleString('ru-RU')} ₽</span>
