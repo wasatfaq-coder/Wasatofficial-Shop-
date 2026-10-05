@@ -39,6 +39,19 @@ export function lineReturnQuantity(
 }
 
 /**
+ * How much of an order line its write-off entry did not take: the stock was short when the buyer's browser wrote it
+ * off — two buyers ordered the last piece, and the second order took 0 (check 04.10, finding 3). No entry — that is
+ * «Товар не списан со склада», not a shortage: 0.
+ */
+export function lineShortfall(
+  line: Pick<CartItem, 'quantity'>,
+  taken: Pick<StockMovementLog, 'changeQuantity'> | undefined
+): number {
+  if (!taken) return 0;
+  return Math.max(0, (Number(line.quantity) || 0) + (Number(taken.changeQuantity) || 0));
+}
+
+/**
  * Author of an order entry. Constant: the customer's name comes from the order form, so a fake order could sign
  * an entry «Администратор» (audit 02.10, finding 8); the order number in `reason` leads to the customer.
  */

@@ -34,12 +34,13 @@ describe('orderPriceIssues', () => {
     expect(issues).toContain('скидка без промокода');
   });
 
-  test('not checked: placed by the server, paid, cancelled; old orders without a fee keep only the price check', () => {
+  test('not checked: placed by the server, paid, cancelled; an order without a fee is checked with the fee 0 (check 04.10)', () => {
     const cheap = { items: [{ id: 'l1', product: { id: 'p1', title: 'Рубашка', price: 1 }, quantity: 1 }] as Order['items'] };
     expect(orderPriceIssues(order({ ...cheap, placedVia: 'server' }), catalog)).toEqual([]);
     expect(orderPriceIssues(order({ ...cheap, paymentStatus: 'paid' }), catalog)).toEqual([]);
     expect(orderPriceIssues(order({ ...cheap, isCancelled: true }), catalog)).toEqual([]);
-    expect(orderPriceIssues(order({ deliveryFee: undefined, totalPrice: 5 }), catalog)).toEqual([]);
+    // no fee field (a 1-click order, or a made-up one) — 0 ₽, the sum is still compared (check 04.10, finding 2)
+    expect(orderPriceIssues(order({ deliveryFee: undefined, totalPrice: 5 }), catalog)).toHaveLength(1);
     // a product deleted from the catalog is not compared
     expect(orderPriceIssues(order({ items: [{ id: 'l1', product: { id: 'gone', title: 'X', price: 4000 }, quantity: 2 }] as Order['items'] }), catalog)).toEqual([]);
   });

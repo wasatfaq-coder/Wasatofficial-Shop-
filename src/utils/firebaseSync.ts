@@ -41,6 +41,7 @@ import {
   orderMovementId,
   orderReturnMovementId,
   lineReturnQuantity,
+  lineShortfall,
   orderReturnReason,
   STOCK_MOVEMENTS_COLLECTION,
 } from '../shared/stockMovements';
@@ -225,32 +226,46 @@ export async function deductOrderLineStock(orderId: string, line: CartItem, line
 /** Orders since this moment write a journal entry per line together with the stock (audit 02.10, stage 1) */
 export const ORDER_JOURNAL_SINCE = '2026-10-02T19:03:19.000Z';
 
+/** Lines of an order the buyer's browser did not take in full, by order id */
+export interface UntakenOrderLines {
+  /** No write-off entry: the buyer's connection broke or the rules refused it (audit 02.10, finding 8) */
+  missing: Record<string, number[]>;
+  /** The entry took less than ordered: the stock ran out — two buyers and the last piece (check 04.10, finding 3) */
+  short: Record<string, { lineIndex: number; taken: number; ordered: number }[]>;
+}
+
 /**
- * Lines of new orders whose stock was never taken: the buyer's browser lost the connection or the rules refused the
- * write-off (audit 02.10, finding 8 — before, only the console knew). An order since stage 1 has an entry
- * `{заказ}_{строка}` for every line that is not a preorder; a missing entry is a line to take. Admin only.
+ * Lines of new orders whose stock was not taken: an order since stage 1 has an entry `{заказ}_{строка}` for every line
+ * that is not a preorder; a missing entry is a line to take, an entry that took less than ordered is goods the shop no
+ * longer has. Before, only the console knew. Admin only.
  */
 export async function findUntakenOrderLines(
   orders: Pick<Order, 'id' | 'items' | 'createdAt'>[]
-): Promise<Record<string, number[]>> {
-  const wanted = new Map<string, { orderId: string; lineIndex: number }>();
+): Promise<UntakenOrderLines> {
+  const wanted = new Map<string, { orderId: string; lineIndex: number; line: CartItem }>();
   for (const order of orders) {
     if (!order.createdAt || order.createdAt < ORDER_JOURNAL_SINCE) continue;
     (order.items ?? []).forEach((line, i) => {
-      if (!line.isPreorder) wanted.set(orderMovementId(order.id, i), { orderId: order.id, lineIndex: i });
+      if (!line.isPreorder) wanted.set(orderMovementId(order.id, i), { orderId: order.id, lineIndex: i, line });
     });
   }
   const ids = [...wanted.keys()];
-  const found = new Set<string>();
+  const found = new Map<string, number>();
   for (let i = 0; i < ids.length; i += 30) {
     const snap = await getDocs(query(collection(db, STOCK_MOVEMENTS_COLLECTION), where(documentId(), 'in', ids.slice(i, i + 30))));
-    snap.forEach((d) => found.add(d.id));
+    snap.forEach((d) => found.set(d.id, Number(d.data().changeQuantity) || 0));
   }
-  const missing: Record<string, number[]> = {};
-  for (const [id, { orderId, lineIndex }] of wanted) {
-    if (!found.has(id)) (missing[orderId] ??= []).push(lineIndex);
+  const result: UntakenOrderLines = { missing: {}, short: {} };
+  for (const [id, { orderId, lineIndex, line }] of wanted) {
+    if (!found.has(id)) {
+      (result.missing[orderId] ??= []).push(lineIndex);
+      continue;
+    }
+    const changeQuantity = found.get(id) ?? 0;
+    const shortBy = lineShortfall(line, { changeQuantity });
+    if (shortBy > 0) (result.short[orderId] ??= []).push({ lineIndex, taken: -changeQuantity, ordered: line.quantity });
   }
-  return missing;
+  return result;
 }
 
 /** One stock change the admin makes by an order: «+» back to stock, «−» taken from it */
