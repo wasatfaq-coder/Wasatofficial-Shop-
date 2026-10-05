@@ -2,11 +2,14 @@ import React from 'react';
 import type { Product } from '../types';
 import { loadProductThumbs } from './firebaseSync';
 import { PRODUCT_IMAGE_PLACEHOLDER } from './productImage';
+import { whenReadsSettle } from './pendingReads';
 
 /**
  * Miniatures of catalog cards (docs/catalog-scale-plan.md, stage 3): `product_thumbs/{id}`, ≈ 17 КБ. A product from the
  * catalog index has no photo of its own; its card asks for the miniature when it is shown, so a visit reads only the
- * miniatures of the cards it showed (8 per «Показать ещё»). Requests of one render go in one query.
+ * miniatures of the cards it showed (8 per «Показать ещё»). Requests of one render go in one query. Cards off the screen
+ * ask after the screen's own photos have come (docs/performance-plan.md, stage 2): on a slow phone the 8 miniatures of
+ * «Популярное» in one query (≈ 136 КБ) came all at once, while only two cards are on the screen.
  */
 
 /** Product id → the miniature's key from the index: only these products have a miniature to read */
@@ -38,6 +41,22 @@ export function setThumbKeys(next: Map<string, string>) {
     changed = true;
   }
   if (changed) notify();
+}
+
+/** Cards below the screen: asked for once the screen's own reads are done */
+const later = new Set<string>();
+let laterScheduled = false;
+
+export function requestThumbsLater(ids: string[]) {
+  for (const id of ids) if (keys.has(id) && !requested.has(id)) later.add(id);
+  if (later.size === 0 || laterScheduled) return;
+  laterScheduled = true;
+  void whenReadsSettle(300).then(() => {
+    laterScheduled = false;
+    const ids = [...later];
+    later.clear();
+    requestThumbs(ids);
+  });
 }
 
 export function requestThumbs(ids: string[]) {
@@ -85,16 +104,19 @@ export const useThumbsVersion = () => React.useSyncExternalStore(subscribe, () =
 
 /**
  * The photo a card shows: the product's own first photo, else its miniature (asked for while the card is shown),
- * else '' — the placeholder
+ * else '' — the placeholder. `onScreen`: true — asked for at once; false — after the screen's own photos; null — not
+ * known yet (the card has not been laid out), nothing is asked for
  */
-export function useProductThumb(product: Pick<Product, 'id' | 'images'> | null | undefined): string {
+export function useProductThumb(product: Pick<Product, 'id' | 'images'> | null | undefined, onScreen: boolean | null = true): string {
   useThumbsVersion();
   const own = product?.images?.[0] ?? '';
   const id = product?.id ?? '';
   const hasThumb = keys.has(id);
   React.useEffect(() => {
-    if (!own && hasThumb) requestThumbs([id]);
-  }, [own, id, hasThumb]);
+    if (own || !hasThumb || onScreen === null) return;
+    if (onScreen) requestThumbs([id]);
+    else requestThumbsLater([id]);
+  }, [own, id, hasThumb, onScreen]);
   return own || (id ? thumbOf(id) ?? '' : '');
 }
 
