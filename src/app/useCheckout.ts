@@ -328,12 +328,13 @@ export function useCheckout({
     
     // Stock line by line, each in one transaction with its journal entry («Склад и SKU» → «Журнал движений»):
     // the rules let a customer take only what the saved order ordered, once per line. The order is already saved:
-    // a refused write must not turn it into a failure for the customer
+    // a refused write must not turn it into a failure for the customer. A guest writes off under their own anonymous
+    // sign-in, like the order itself: the rules can then require the order's owner (check 04.10, finding 6)
     const takenAt = new Date();
     void (async () => {
       for (const [lineIndex, line] of orderItems.entries()) {
         try {
-          await deductOrderLineStock(newOrderId, line, lineIndex, takenAt);
+          await deductOrderLineStock(newOrderId, line, lineIndex, takenAt, orderOwner.db);
         } catch (err) {
           console.error(`Stock for ${newOrderId}, line ${lineIndex} was not written off:`, err);
         }

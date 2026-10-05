@@ -681,8 +681,14 @@ describe('payment receipt from the buyer', () => {
     updateDoc(doc(db, 'orders/WS-40'), { paymentStatus: 'receipt_review', paymentReceipt: receipt, paymentLog: [entry], updatedAt: serverTimestamp(), ...fields });
   const message = (uid, fields = {}) => ({
     id: 'msg-receipt-WS-40', sender: 'user', text: 'Клиент прикрепил подтверждение оплаты к заказу № WS-40',
-    imageUrl: 'data:image/jpeg;base64,AAAA', threadId: uid, isInternalNote: false, receiptOrderId: 'WS-40', ...fields,
+    imageId: 'msg-receipt-WS-40', threadId: uid, isInternalNote: false, receiptOrderId: 'WS-40', ...fields,
   });
+  const sendReceipt = (db, uid) => {
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'chat_images/msg-receipt-WS-40'), { data: 'data:image/jpeg;base64,AAAA' });
+    batch.set(doc(db, 'chat_messages/msg-receipt-WS-40'), message(uid));
+    return batch.commit();
+  };
   const set = (fields) => env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), 'orders/WS-40'), fields));
 
   beforeEach(async () => {
@@ -694,7 +700,7 @@ describe('payment receipt from the buyer', () => {
 
   test('the buyer sends a receipt photo to the chat and the order waits for the check', async () => {
     // the message comes from the buyer's own chat with the receipt field
-    await assertSucceeds(setDoc(doc(customer('alice'), 'chat_messages/msg-receipt-WS-40'), message('alice')));
+    await assertSucceeds(sendReceipt(customer('alice'), 'alice'));
     await assertFails(submit(guest()));
     await assertFails(submit(customer('bob')));
     // never «Оплачен», no other fields, only a filled way, one own entry
@@ -910,8 +916,9 @@ describe('chat', () => {
       setDoc(doc(db, 'chat_messages/m6'), msg('m6', { threadId: 'alice', promoCard: { code: 'FAKE', discountType: 'percent', discountValue: 90, description: '' } }))
     );
     await assertFails(setDoc(doc(db, 'chat_messages/m7'), msg('m7', { threadId: 'alice', hiddenForStaff: true })));
-    await assertSucceeds(setDoc(doc(db, 'chat_messages/m8'), msg('m8', { threadId: 'alice', imageUrl: 'data:image/png;base64,AA', threadName: 'Алиса', timestamp: '12:00' })));
-    // photo only as an uploaded data:image, not a link to someone else's server
+    await assertSucceeds(setDoc(doc(db, 'chat_messages/m8'), msg('m8', { threadId: 'alice', threadName: 'Алиса', timestamp: '12:00' })));
+    // a photo goes only as its own document chat_images (check 04.10, finding 4), never inside the message
+    await assertFails(setDoc(doc(db, 'chat_messages/m13'), msg('m13', { threadId: 'alice', imageUrl: 'data:image/png;base64,AA' })));
     await assertFails(setDoc(doc(db, 'chat_messages/m9'), msg('m9', { threadId: 'alice', imageUrl: 'https://evil.example/pixel.png' })));
     await assertFails(setDoc(doc(db, 'chat_messages/m10'), msg('m10', { threadId: 'alice', imageUrl: 'data:text/html;base64,AA' })));
     await assertFails(setDoc(doc(db, 'chat_messages/m11'), msg('m11', { threadId: 'alice', threadName: 'x'.repeat(201) })));
@@ -1022,7 +1029,7 @@ describe('users & admins', () => {
     await assertFails(setDoc(doc(db, 'users/dave'), { uid: 'dave', email: 'victim@example.com' }));
     await assertSucceeds(setDoc(doc(db, 'users/dave'), {
       uid: 'dave', name: 'Дэйв', email: 'dave@example.com', phone: '+79990000000', avatar: 'https://lh3.googleusercontent.com/a/x',
-      address: { street: '', city: '', postalCode: '' }, savedAddresses: [], savedCards: [], notificationsEnabled: true,
+      address: { street: '', city: '', postalCode: '' }, savedAddresses: [], notificationsEnabled: true,
       bodyMeasurements: { height: 180 }, updatedAt: '2026-10-03T08:00:00.000Z',
     }));
     // an old profile with a field the site no longer writes still saves the editable ones
@@ -1226,6 +1233,23 @@ describe('chat photos apart from messages', () => {
       await setDoc(doc(ctx.firestore(), 'chat_images/n1'), { data: photo });
     });
     await assertFails(getDoc(doc(customer('alice'), 'chat_images/n1')));
+  });
+
+  test('a receipt photo may be larger than a chat photo (check 04.10, finding 13)', async () => {
+    const large = 'data:image/jpeg;base64,' + 'A'.repeat(800_000);
+    await assertFails(sendWithPhoto(customer('alice'), 'm8', 'alice', {}, large));
+    await assertSucceeds(sendWithPhoto(customer('alice'), 'm9', 'alice', { receiptOrderId: 'WS-1' }, large));
+    await assertFails(sendWithPhoto(customer('alice'), 'm10', 'alice', { receiptOrderId: 'WS-1' }, large + 'A'.repeat(100_001)));
+  });
+
+  test('a customer deletes a photo like the message: own and within 15 minutes (check 04.10, finding 8)', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'chat_messages/old1'), { ...message('old1', 'alice'), sentAt: Timestamp.fromMillis(Date.now() - 16 * 60_000) });
+      await setDoc(doc(db, 'chat_images/old1'), { data: photo });
+    });
+    await assertFails(deleteDoc(doc(customer('alice'), 'chat_images/old1')));
+    await assertSucceeds(deleteDoc(doc(owner(), 'chat_images/old1')));
   });
 });
 
