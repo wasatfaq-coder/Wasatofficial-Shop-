@@ -273,21 +273,32 @@ describe('Проверка перед запуском 04.10 (docs/audit-2026-10
     return batch.commit();
   };
 
-  test('D1 гость не пишет фото внутрь сообщения: админка скачивает 500 последних сообщений с фото (находка 4)',
-    { todo: 'находка 4 (04.10): этап 3 — фото сообщения только отдельным документом chat_images' }, async () => {
+  test('D1 гость не пишет фото внутрь сообщения: админка скачивает 500 последних сообщений с фото (находка 4)', async () => {
       await assertFails(setDoc(doc(guestChat('anon-d1'), 'chat_messages/d1'), {
         id: 'd1', sender: 'user', text: '', threadId: 'anon-d1', isInternalNote: false,
         imageUrl: 'data:image/png;base64,' + 'A'.repeat(410_000), sentAt: serverTimestamp(),
       }));
     });
 
-  test('D2 профиль пишет только вход через Google и без ~900 КБ во вложенных полях (админка грузит профили всех, находка 5)',
-    { todo: 'находка 5 (04.10): этап 3 — профиль только при входе через Google, адреса и мерки ограничены' }, async () => {
+  test('D2 профиль пишет только вход через Google и без ~900 КБ во вложенных полях (админка грузит профили всех, находка 5)', async () => {
       const big = 'x'.repeat(90_000);
       const addresses = Array.from({ length: 10 }, (_, i) => ({ id: String(i), title: big }));
       await assertFails(setDoc(doc(guestChat('anon-d2'), 'users/anon-d2'), { uid: 'anon-d2', name: 'Гость' }));
       await assertFails(setDoc(doc(customer('mallory'), 'users/mallory'), { uid: 'mallory', savedAddresses: addresses }));
       await assertFails(setDoc(doc(customer('mallory'), 'users/mallory'), { uid: 'mallory', bodyMeasurements: { height: big } }));
+      await assertFails(setDoc(doc(customer('mallory'), 'users/mallory'), { uid: 'mallory', address: { street: big } }));
+      // профиль, какой пишет сайт, проходит
+      await assertSucceeds(setDoc(doc(customer('mallory'), 'users/mallory'), {
+        uid: 'mallory', name: 'Мэллори', address: { street: '', city: '', postalCode: '' },
+        savedAddresses: Array.from({ length: 10 }, (_, i) => ({
+          id: `addr-${i}`, title: 'Дом', city: 'Москва', street: 'Тверская', house: '1', entrance: '2', floor: '3',
+          apartment: '4', intercom: '5', postalCode: '125009', region: 'Москва', comment: 'к'.repeat(300), isDefault: i === 0,
+        })),
+        bodyMeasurements: {
+          height: 184, weight: 94, chest: 104, waist: 95, hips: 98, fitPreference: 'regular', preferredSize: 'XL',
+          russianSizeTop: '52 (XL)', russianSizeBottom: '52', heightGroup: '4-я ростовка (176–182 см)', bodyType: '4-я (Крепкое / Свободный крой)',
+        },
+      }));
     });
 
   test('D3 списание и запись журнала по строке заказа пишет только владелец заказа и не после отмены (находка 6)',
@@ -301,8 +312,7 @@ describe('Проверка перед запуском 04.10 (docs/audit-2026-10
       await assertFails(deductLine(customer('alice'), 'WS-D3'));
     });
 
-  test('D4 фото в чате покупатель удаляет только своё и только 15 минут — как само сообщение (находка 8)',
-    { todo: 'находка 8 (04.10): этап 3 — удаление фото по правилу сообщения' }, async () => {
+  test('D4 фото в чате покупатель удаляет только своё и только 15 минут — как само сообщение (находка 8)', async () => {
       const hourAgo = Timestamp.fromMillis(Date.now() - 3_600_000);
       await env.withSecurityRulesDisabled(async (ctx) => {
         const db = ctx.firestore();
@@ -320,8 +330,7 @@ describe('Проверка перед запуском 04.10 (docs/audit-2026-10
       await assertFails(deleteDoc(doc(guestChat('anon-d4'), 'chat_images/receipt-d4')));
     });
 
-  test('D5 номера банковских карт в профиль не пишутся: поле сайт не использует (находка 9)',
-    { todo: 'находка 9 (04.10): этап 3 — savedCards убрать из полей профиля' }, async () => {
+  test('D5 номера банковских карт в профиль не пишутся: поле сайт не использует (находка 9)', async () => {
       await assertFails(setDoc(doc(customer('mallory'), 'users/mallory'), {
         uid: 'mallory', savedCards: [{ number: '4111111111111111', cvv: '123' }],
       }));
