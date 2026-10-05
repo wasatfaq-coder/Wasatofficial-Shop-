@@ -388,7 +388,6 @@ service cloud.firestore {
         && (!('statusLog' in data) || (data.statusLog is list && data.statusLog.size() <= 1));
     }
 
-    // Строки заказа из браузера (toOrderLineProduct, без фото): проверка развёрнута на 30 строк — циклов в правилах нет
     match /orders/{orderId} {
       allow read: if isAdmin()
         || (isSignedIn() && resource.data.customerUid == request.auth.uid);
@@ -595,7 +594,9 @@ service cloud.firestore {
         isSignedIn()
         && isValidId(messageId)
         // только поля обычного сообщения: без карточек промокода/заказа и без пометок «скрыто»
-        && request.resource.data.keys().hasOnly(['id', 'sender', 'text', 'imageUrl', 'imageId', 'fileName', 'timestamp',
+        // фото — только отдельным документом (imageId), не внутри сообщения: админка читает 500 последних сообщений,
+        // и фото внутри них скачивались бы целиком (проверка 04.10, находка 4)
+        && request.resource.data.keys().hasOnly(['id', 'sender', 'text', 'imageId', 'fileName', 'timestamp',
             'threadId', 'threadName', 'isInternalNote', 'sentAt', 'receiptOrderId'])
         && request.resource.data.get('threadId', null) == request.auth.uid
         && request.resource.data.sender == 'user'
@@ -603,13 +604,6 @@ service cloud.firestore {
         && request.resource.data.text is string
         && request.resource.data.text.size() <= 5000
         && request.resource.data.id == messageId
-        // фото — только загруженное файлом (data:image), не ссылка на чужой сервер:
-        // внешний адрес открылся бы у сотрудника и выдал бы его IP
-        && (!('imageUrl' in request.resource.data)
-          || (request.resource.data.imageUrl is string
-            // ≈ 400 КБ — потолок сжатия на сайте (imageUpload.ts): картинка в 850 КБ вытесняла обращения в админке
-            && request.resource.data.imageUrl.size() <= 420000
-            && request.resource.data.imageUrl.matches('^data:image/(png|jpe?g|webp|gif);base64,.*')))
         // фото отдельным документом chat_images/{id сообщения} в том же пакете (этап 6, находка 20)
         && (!('imageId' in request.resource.data)
           || (request.resource.data.imageId == messageId
@@ -650,22 +644,34 @@ service cloud.firestore {
     // диалог (после переноса диалога гостя в аккаунт — новый владелец), и администратор
     match /chat_images/{imageId} {
       allow read: if isAdmin() || (isSignedIn() && isOwnVisibleMessage(get(/databases/$(database)/documents/chat_messages/$(imageId))));
+      // только загруженное файлом (data:image), не ссылка на чужой сервер: внешний адрес открылся бы у сотрудника
+      // и выдал бы его IP. ≈ 400 КБ — потолок сжатия фото чата (imageUpload.ts); фото чека крупнее (1400 px), чтобы
+      // читались суммы и счёт, — до 900 000 знаков, как проверяет окно оплаты (проверка 04.10, находка 13)
       allow create: if isAdmin() || (
         isSignedIn()
         && request.resource.data.keys().hasOnly(['data'])
         && request.resource.data.data is string
-        && request.resource.data.data.size() <= 420000
+        && request.resource.data.data.size() <= (
+          getAfter(/databases/$(database)/documents/chat_messages/$(imageId)).data.get('receiptOrderId', '') != ''
+            ? 900000 : 420000)
         && request.resource.data.data.matches('^data:image/(png|jpe?g|webp|gif);base64,.*')
         && isOwnVisibleMessage(getAfter(/databases/$(database)/documents/chat_messages/$(imageId)))
         && getAfter(/databases/$(database)/documents/chat_messages/$(imageId)).data.sender == 'user'
         && getAfter(/databases/$(database)/documents/chat_messages/$(imageId)).data.get('imageId', '') == imageId
       );
-      // вместе с сообщением («удалить у всех»): сообщение ещё на месте, когда проверяется фото
-      allow delete: if isAdmin() || (isSignedIn() && isOwnVisibleMessage(get(/databases/$(database)/documents/chat_messages/$(imageId))));
+      // вместе с сообщением («удалить у всех»): сообщение ещё на месте, когда проверяется фото. Покупатель — как само
+      // сообщение: своё и 15 минут после отправки, не фото магазина и не старый чек (проверка 04.10, находка 8)
+      allow delete: if isAdmin() || isOwnRecentPhotoMessage(get(/databases/$(database)/documents/chat_messages/$(imageId)));
     }
 
     function isOwnVisibleMessage(message) {
       return message != null && message.data.threadId == request.auth.uid && message.data.isInternalNote == false;
+    }
+
+    function isOwnRecentPhotoMessage(message) {
+      return isSignedIn() && isOwnVisibleMessage(message)
+        && message.data.sender == 'user'
+        && request.time < message.data.sentAt + duration.value(15, 'm');
     }
 
     function isOwnRecentChatMessage() {
@@ -701,11 +707,14 @@ service cloud.firestore {
 
     // Профиль покупателя (UserProfile в src/types.ts): только свои поля разумного размера — админка грузит профили всех;
     // почта — та, что в Google-аккаунте: по ней «Клиенты» связывали карточку, и чужая почта подменяла клиента
-    // (аудит 02.10, находка 25). На изменении проверяются только изменённые поля: старые профили не ломаются
+    // (аудит 02.10, находка 25). На изменении проверяются только изменённые поля: старые профили не ломаются.
+    // Пишет только вход Google: анонимных входов у постороннего сколько угодно, а админка скачивает профили всех
+    // (проверка 04.10, находка 5). Номеров карт в профиле нет (находка 9)
     function isOwnProfileWrite(changed) {
       let data = request.resource.data;
-      return changed.hasOnly(['uid', 'name', 'lastName', 'firstName', 'middleName', 'email', 'phone', 'avatar',
-          'address', 'savedAddresses', 'savedCards', 'notificationsEnabled', 'bodyMeasurements', 'updatedAt',
+      return isCustomer()
+        && changed.hasOnly(['uid', 'name', 'lastName', 'firstName', 'middleName', 'email', 'phone', 'avatar',
+          'address', 'savedAddresses', 'notificationsEnabled', 'bodyMeasurements', 'updatedAt',
           'createdAt', 'lastActive'])
         && (!('email' in changed) || data.email == '' || data.email == request.auth.token.email)
         && isOptionalText(data, 'name', 200)
@@ -717,11 +726,47 @@ service cloud.firestore {
         && isOptionalText(data, 'updatedAt', 40)
         && isOptionalText(data, 'createdAt', 40)
         && isOptionalText(data, 'lastActive', 40)
-        && (!('address' in changed) || (data.address is map && data.address.size() <= 15))
-        && (!('savedAddresses' in changed) || (data.savedAddresses is list && data.savedAddresses.size() <= 10))
-        && (!('savedCards' in changed) || (data.savedCards is list && data.savedCards.size() <= 5))
-        && (!('bodyMeasurements' in changed) || (data.bodyMeasurements is map && data.bodyMeasurements.size() <= 30))
+        && (!('address' in changed) || (data.address is map && data.address.size() <= 15 && isShortTexts(data.address)))
+        && (!('savedAddresses' in changed) || isSavedAddressList(data.savedAddresses))
+        && (!('bodyMeasurements' in changed) || isBodyMeasurements(data.bodyMeasurements))
         && (!('notificationsEnabled' in changed) || data.notificationsEnabled is bool);
+    }
+
+    // Тексты адреса вместе — не длиннее 2 000 знаков (комментарий курьеру — до 300), флажок «по умолчанию» не в счёт.
+    // Число или вложенный список вместо текста join не пропустит
+    function isShortTexts(fields) {
+      return fields.values().removeAll([true, false, null]).join('').size() <= 2000;
+    }
+
+    // SavedAddress (src/types.ts): до 10 адресов, у каждого до 15 полей и тексты вместе до 2 000 знаков. Циклов в правилах
+    // нет — по номерам. Названия полей не сверяются: hasOnly на 10 адресов вместе с остальным профилем не укладывается
+    // в лимит правил (1000 выражений на запрос). Длинные названия полей дают до ≈ 220 КБ на профиль, а не мегабайт,
+    // и каждый такой профиль требует отдельного аккаунта Google
+    function isSavedAddress(list, i) {
+      return list.size() <= i || isSmallAddress(list[i]);
+    }
+
+    function isSmallAddress(a) {
+      return a is map && a.size() <= 15 && a.values().removeAll([true, false]).join('').size() <= 2000;
+    }
+
+    function isSavedAddressList(list) {
+      return list is list && list.size() <= 10
+        && isSavedAddress(list, 0) && isSavedAddress(list, 1) && isSavedAddress(list, 2) && isSavedAddress(list, 3)
+        && isSavedAddress(list, 4) && isSavedAddress(list, 5) && isSavedAddress(list, 6) && isSavedAddress(list, 7)
+        && isSavedAddress(list, 8) && isSavedAddress(list, 9);
+    }
+
+    // BodyMeasurements (src/types.ts): мерки — числа, размеры и подписи ГОСТ — короткие строки
+    function isBodyMeasurements(m) {
+      return m is map
+        && m.keys().hasOnly(['height', 'weight', 'chest', 'waist', 'hips', 'fitPreference', 'preferredSize',
+          'russianSizeTop', 'russianSizeBottom', 'heightGroup', 'bodyType'])
+        && m.get('height', 0) is number && m.get('weight', 0) is number && m.get('chest', 0) is number
+        && m.get('waist', 0) is number && m.get('hips', 0) is number
+        // строки одним join: так дешевле для лимита правил (1000 выражений на запрос), а не строку join не пропустит
+        && [m.get('fitPreference', ''), m.get('preferredSize', ''), m.get('russianSizeTop', ''),
+          m.get('russianSizeBottom', ''), m.get('heightGroup', ''), m.get('bodyType', '')].join('').size() <= 400;
     }
 
     match /users/{userId} {
