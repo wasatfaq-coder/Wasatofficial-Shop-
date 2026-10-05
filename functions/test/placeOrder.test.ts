@@ -2,7 +2,7 @@
 // Run from the repo root: bun run test:functions
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
 import { deleteApp, initializeApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { OrderError, parsePlaceOrderRequest, placeOrderCore, type OrderErrorCode } from '../src/placeOrder';
 import type { PlaceOrderRequest } from '../../src/shared/orderApi';
 
@@ -93,6 +93,8 @@ describe('placeOrderCore', () => {
 
     const stored = (await db.doc(`orders/${order.id}`).get()).data()!;
     expect(stored.totalPrice).toBe(3350);
+    // the server's time of the write, as every write of an order (docs/orders-scale-plan.md, stage 2)
+    expect(stored.updatedAt).toBeInstanceOf(Timestamp);
     expect(stored.historySteps.length).toBeGreaterThan(0);
   });
 

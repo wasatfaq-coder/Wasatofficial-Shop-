@@ -2,7 +2,7 @@
  * Server-side order placement: prices, delivery fee, promo discount and stock are
  * taken from Firestore — never from the client — and applied in one transaction.
  */
-import type { DocumentReference, Firestore } from 'firebase-admin/firestore';
+import { FieldValue, type DocumentReference, type Firestore } from 'firebase-admin/firestore';
 import type { CartItem, DeliveryMethod, Order, Product, ProductSKU, PromoCode, StorefrontSettings } from '../../src/types';
 import {
   initialPaymentStatus,
@@ -307,7 +307,8 @@ export async function placeOrderCore(
     });
 
     // ---- Writes ----
-    tx.create(orderRef, order);
+    // updatedAt — the server's time of the write, as every write of an order (docs/orders-scale-plan.md, stage 2)
+    tx.create(orderRef, { ...order, updatedAt: FieldValue.serverTimestamp() });
     for (const { ref, skus } of stockUpdates) {
       tx.update(ref, { skus, inStock: skus.some((s) => s.stock > 0) });
     }
