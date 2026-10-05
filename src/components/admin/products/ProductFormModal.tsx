@@ -13,7 +13,18 @@ import { ProductFormGallery } from './ProductFormGallery';
 import { ProductFormVariants } from './ProductFormVariants';
 
 /** The window of the product form: status, card structure, name, badge, category, description, prices, photos, variants */
-export function ProductFormModal({ form, categories, onShowToast }: { form: ProductForm; categories: StoreCategory[]; onShowToast: AdminProductsTabProps['onShowToast'] }) {
+export function ProductFormModal({
+  form,
+  categories,
+  products,
+  onShowToast,
+}: {
+  form: ProductForm;
+  categories: StoreCategory[];
+  /** The shop's products: their characteristics become chips in «Структура карточки» */
+  products: AdminProductsTabProps['products'];
+  onShowToast: AdminProductsTabProps['onShowToast'];
+}) {
   const {
     isProductFormOpen,
     isSavingProduct,
@@ -126,6 +137,8 @@ export function ProductFormModal({ form, categories, onShowToast }: { form: Prod
               onChange={setFormCard}
               hasDescription={Boolean(formDescription.trim())}
               onShowToast={onShowToast}
+              suggestFrom={products}
+              isNewProduct={!editingProduct}
             />
 
             {/* SKU Uniqueness & Integrity Banner */}
