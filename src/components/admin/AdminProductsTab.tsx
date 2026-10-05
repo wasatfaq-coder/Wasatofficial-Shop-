@@ -151,7 +151,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       />
 
       {/* ================= MODAL: CREATE / EDIT PRODUCT ================= */}
-      <ProductFormModal form={form} categories={categories} onShowToast={onShowToast} />
+      <ProductFormModal form={form} categories={categories} products={products} onShowToast={onShowToast} />
 
       {/* ================= MODAL: CSV IMPORT ================= */}
       <ProductCsvImportModal
