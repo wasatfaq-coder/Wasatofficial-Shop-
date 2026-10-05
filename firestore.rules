@@ -810,12 +810,16 @@ service cloud.firestore {
     // и вариант, что в строке заказа, — не больше одной записи на строку, без изменения и удаления. Списано —
     // фактически (не больше заказанного: остатка могло не хватить); ненулевая запись — только вместе со списанием
     // этого варианта в той же транзакции (аудит 02.10, находка 8). Причина и автор записи — постоянные.
+    // Пишет только владелец заказа (гость — под своим анонимным входом, как и сам заказ) и не после отмены: иначе
+    // посторонний заранее писал нулевую запись, и настоящее списание по строке уже не проходило (проверка 04.10,
+    // находка 6). Списание товара требует этой записи в той же транзакции (isOrderStockDeduction)
     function isOrderStockMovement(movementId) {
       let data = request.resource.data;
       let orderPath = /databases/$(database)/documents/orders/$(data.orderId);
       let line = get(orderPath).data.items[data.lineIndex];
       let productPath = /databases/$(database)/documents/products/$(data.productId);
       return !serverOrdersEnabled()
+        && isSignedIn()
         && data.keys().hasOnly(['id', 'createdAt', 'date', 'type', 'orderId', 'lineIndex', 'productId',
           'productTitle', 'skuCode', 'color', 'size', 'changeQuantity', 'reason', 'operator', 'skuIndex'])
         && data.type == 'order'
@@ -824,6 +828,8 @@ service cloud.firestore {
         && movementId == data.orderId + '_' + string(data.lineIndex)
         && data.id == movementId
         && exists(orderPath)
+        && get(orderPath).data.get('customerUid', null) == request.auth.uid
+        && get(orderPath).data.get('isCancelled', false) == false
         && data.lineIndex < get(orderPath).data.items.size()
         && data.productId == line.product.id
         && line.get('isPreorder', false) == false
