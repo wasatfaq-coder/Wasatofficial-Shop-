@@ -26,3 +26,6 @@ playwright-report/
 
 # полные фото для страниц-превью между запусками (scripts/share-pages.ts, кэш GitHub Actions)
 .share-cache/
+
+# граф кода Graphify (скилл graph-pilot): строится заново командой `graphify update .`
+graphify-out/
