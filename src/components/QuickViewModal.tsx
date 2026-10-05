@@ -134,7 +134,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
               {/* Main Image Box */}
               <div className="relative w-full aspect-[4/5] rounded-2xl overflow-hidden flex items-center justify-center">
                 <img
-                  src={photos[selectedImageIndex] || (product.images.length ? productImage(product, selectedImageIndex) : thumb || productImage(product))}
+                  src={photos[selectedImageIndex] || (selectedImageIndex === 0 && thumb) || productImage(product, selectedImageIndex)}
                   alt={product.title}
                   loading="lazy"
                   decoding="async"
@@ -151,7 +151,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
               {/* Horizontal thumbnails */}
               {product.images.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto no-scrollbar py-0.5">
-                  {product.images.slice(0, 5).map((img, idx) => (
+                  {photos.slice(0, 5).map((img, idx) => (
                     <button
                       key={`quickview-img-${product.id}-${idx}`}
                       onClick={() => setSelectedImageIndex(idx)}
@@ -162,7 +162,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                       aria-current={selectedImageIndex === idx}
                     >
                       <img
-                        src={img}
+                        src={img || productImage(product, idx)}
                         alt=""
                         loading="lazy"
                         decoding="async"

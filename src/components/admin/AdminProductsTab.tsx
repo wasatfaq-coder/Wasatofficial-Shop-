@@ -3,7 +3,8 @@ import { ConfirmDialog } from '../ConfirmDialog';
 import { pluralRu } from '../../utils/pluralize';
 import { X } from 'lucide-react';
 import { Product, ProductSKU } from '../../types';
-import { deleteProductPhotos, loadProductPhotos, saveProductPhotos } from '../../utils/firebaseSync';
+import { deleteProductPhotos, loadProductPhotos, productWithPreviews, saveProductPhotos } from '../../utils/firebaseSync';
+import { previewsMoved } from '../../utils/productPreviews';
 import { generateBarcode, withMissingSkus } from '../../utils/inventory';
 import { copyProductPhotos } from '../../utils/productPhotos';
 import { collectBarcodes } from '../../shared/barcode';
@@ -93,7 +94,12 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     // The copy gets its own photo documents: with shared ones, removing a photo from the copy deleted the original's
     let photos: ReturnType<typeof copyProductPhotos>;
     setDuplicatingId(prod.id);
+    // the copy gets its own previews too (product_previews, stage 6 of docs/catalog-scale-plan.md)
+    let images = prod.images;
     try {
+      const withPreviews = await productWithPreviews(prod);
+      if (previewsMoved(withPreviews)) throw new Error(`Previews of product ${prod.id} were not read`);
+      images = withPreviews.images;
       photos = copyProductPhotos(newId, prod.photoIds, await loadProductPhotos(prod.photoIds ?? []));
       await saveProductPhotos(photos.newPhotos);
     } catch (err) {
@@ -108,7 +114,9 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       id: newId,
       title: `${prod.title} (Копия)`,
       skus: clonedSkus,
+      images,
       photoIds: photos.photoIds,
+      previewKey: undefined,
       isNew: true,
       badge: prod.badge || 'NEW',
     };
@@ -143,7 +151,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       />
 
       {/* ================= MODAL: CREATE / EDIT PRODUCT ================= */}
-      <ProductFormModal form={form} categories={categories} onShowToast={onShowToast} />
+      <ProductFormModal form={form} categories={categories} products={products} onShowToast={onShowToast} />
 
       {/* ================= MODAL: CSV IMPORT ================= */}
       <ProductCsvImportModal

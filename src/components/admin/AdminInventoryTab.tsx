@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { ProductThumbImage } from '../ProductThumbImage';
 import {
   Boxes,
   Search,
@@ -39,7 +40,6 @@ import { articleCode, skuKey } from '../../shared/barcode';
 import { InventoryGroupedList, type InventoryGrouping, type InventoryRow } from './InventoryGroupedList';
 import { getCategories } from '../../utils/categories';
 import { downloadCSV } from '../../utils/csvHelpers';
-import { productImage } from '../../utils/productImage';
 import { pluralRu } from '../../utils/pluralize';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
@@ -1085,10 +1085,8 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                         label={`Выбрать для этикеток: ${product.title}, ${sku.color} / ${sku.size}`}
                       />
                       <div className="w-11 h-13 rounded-xl overflow-hidden neu-inset shrink-0">
-                        <img
-                          src={
-                            productImage(product)
-                          }
+                        <ProductThumbImage
+                          product={product}
                           alt={product.title}
                           className="w-full h-full object-cover"
                           referrerPolicy="no-referrer"
@@ -1335,10 +1333,8 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                     {/* Left: Product & SKU details */}
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-11 h-13 rounded-xl overflow-hidden neu-inset shrink-0">
-                        <img
-                          src={
-                            productImage(product)
-                          }
+                        <ProductThumbImage
+                          product={product}
                           alt={product.title}
                           className="w-full h-full object-cover"
                           referrerPolicy="no-referrer"
