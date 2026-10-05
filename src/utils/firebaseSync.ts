@@ -50,6 +50,7 @@ import { cancelReasonText, formatCancelledAt } from './orderCancel';
 import type { OrderStatusLogEntry } from '../shared/orderFlow';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages, isTransportCompanyDelivery } from './deliveryStages';
 import { CLIENT_ERRORS_COLLECTION, type ClientErrorReport, type StoredClientError } from './clientErrors';
+import { trackRead } from './pendingReads';
 import {
   CATALOG_INDEX_COLLECTION,
   PRODUCT_THUMBS_COLLECTION,
@@ -633,7 +634,7 @@ export async function loadProductPhotos(ids: string[]): Promise<Record<string, s
         // the next slide asks while the previous request is on its way: one read per photo
         let pending = productPhotoRequests.get(id);
         if (!pending) {
-          pending = getDoc(doc(db, 'product_photos', id))
+          pending = trackRead(getDoc(doc(db, 'product_photos', id)))
             .then((snap) => {
               const data = snap.data()?.data;
               if (typeof data === 'string') productPhotoCache.set(id, data);
@@ -654,7 +655,7 @@ export function loadProductPreviews(product: Pick<Product, 'id' | 'previewKey'>)
   const key = `${product.id}:${product.previewKey ?? ''}`;
   let pending = productPreviewRequests.get(key);
   if (!pending) {
-    pending = getDoc(doc(db, 'product_previews', product.id))
+    pending = trackRead(getDoc(doc(db, 'product_previews', product.id)))
       .then((snap) => (snap.exists() ? (snap.data() as ProductPreviewsDoc) : null))
       .catch((error) => {
         // the photo keeps its placeholder; the next time it is shown it asks again
@@ -761,7 +762,9 @@ export async function saveProductThumbs(thumbs: ProductThumb[], removedProductId
 export async function loadProductThumbs(productIds: string[]): Promise<ProductThumb[]> {
   const out: ProductThumb[] = [];
   for (let i = 0; i < productIds.length; i += 30) {
-    const snap = await getDocs(query(collection(db, PRODUCT_THUMBS_COLLECTION), where(documentId(), 'in', productIds.slice(i, i + 30))));
+    const snap = await trackRead(
+      getDocs(query(collection(db, PRODUCT_THUMBS_COLLECTION), where(documentId(), 'in', productIds.slice(i, i + 30))))
+    );
     snap.forEach((d) => out.push(d.data() as ProductThumb));
   }
   return out;
@@ -773,14 +776,25 @@ export async function loadProductThumbs(productIds: string[]): Promise<ProductTh
  * `null` — the product is gone
  */
 export function subscribeToProductDoc(productId: string, onUpdate: (product: Product | null) => void) {
-  return onSnapshot(
+  // the first answer is a read the screen waits for (pendingReads.ts)
+  let answered: () => void = () => {};
+  trackRead(new Promise<void>((resolve) => (answered = resolve)));
+  const unsub = onSnapshot(
     doc(db, 'products', productId),
     (snap) => {
       if (snap.metadata.fromCache && !snap.exists()) return;
+      answered();
       onUpdate(snap.exists() ? ({ ...(snap.data() as Product), id: snap.id }) : null);
     },
-    (error) => console.warn('Product subscription warning:', error)
+    (error) => {
+      answered();
+      console.warn('Product subscription warning:', error);
+    }
   );
+  return () => {
+    answered();
+    unsub();
+  };
 }
 
 /**
@@ -1394,7 +1408,7 @@ export function loadBannerImages(banner: Pick<BannerSlide, 'id' | 'imageKey'>): 
   const key = `${banner.id}:${banner.imageKey ?? ''}`;
   let pending = bannerImageRequests.get(key);
   if (!pending) {
-    pending = getDoc(doc(db, 'banner_images', banner.id))
+    pending = trackRead(getDoc(doc(db, 'banner_images', banner.id)))
       .then((snap) => (snap.exists() ? (snap.data() as BannerImagesDoc) : null))
       .catch((error) => {
         // the slide keeps its placeholder; the next time it is shown it asks again
