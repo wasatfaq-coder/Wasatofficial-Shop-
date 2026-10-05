@@ -346,6 +346,7 @@ export async function cancelOrderAsCustomer(orderId: string, reason: string, com
     cancelledAt: at.toISOString(),
     estimatedDelivery: 'Заказ отменен',
     stockReturned: false,
+    updatedAt: serverTimestamp(),
   });
 }
 
@@ -358,6 +359,7 @@ export async function confirmOrderReceipt(order: Pick<Order, 'id' | 'statusLog'>
   await updateDoc(doc(db, 'orders', order.id), {
     status: 'delivered',
     statusLog: [...(order.statusLog ?? []), entry],
+    updatedAt: serverTimestamp(),
   });
 }
 
@@ -388,6 +390,7 @@ export async function submitPaymentReceipt(
     paymentStatus: 'receipt_review',
     paymentReceipt: { method: kind, at: at.toISOString(), messageId: message.id },
     paymentLog: [...(order.paymentLog ?? []), paymentLogEntry('receipt', 'customer', { at })],
+    updatedAt: serverTimestamp(),
   });
   return message;
 }
@@ -508,7 +511,7 @@ export async function returnCancelledOrderStock(
     }
     if (result === 'unknown') complete = false;
   }
-  if (complete) await updateDoc(doc(db, 'orders', order.id), { stockReturned: true });
+  if (complete) await updateDoc(doc(db, 'orders', order.id), { stockReturned: true, updatedAt: serverTimestamp() });
   return complete;
 }
 
@@ -982,6 +985,8 @@ function normalizeOrderFromFirestore(raw: any, docId?: string): Order {
     deliveryMethod: String(raw.deliveryMethod ?? raw.delivery_method ?? 'Способ доставки не указан'),
     paymentMethod: String(raw.paymentMethod ?? raw.payment_method ?? 'Способ оплаты не указан'),
     paymentStatus: raw.paymentStatus ?? raw.payment_status ?? 'pending',
+    // a Timestamp in the database (stage 2 of docs/orders-scale-plan.md); null while the write is pending
+    updatedAt: raw.updatedAt instanceof Timestamp ? raw.updatedAt.toMillis() : undefined,
     trackingNumber,
     estimatedDelivery,
     historySteps,
@@ -999,6 +1004,15 @@ function normalizeOrderFromFirestore(raw: any, docId?: string): Order {
   }
 
   return order;
+}
+
+/**
+ * An order as written: every write of an order stamps `updatedAt` with the server's time (docs/orders-scale-plan.md,
+ * stage 2), so the admin can read only the orders changed since its index was written. The customer's own writes
+ * (cancel, «Я получил заказ», receipt, guest hand-over) stamp it too.
+ */
+function storedOrder(order: Order) {
+  return { ...sanitizeForFirestore(order), updatedAt: serverTimestamp() };
 }
 
 /**
@@ -1046,7 +1060,7 @@ export function subscribeToOrders(
 
 export async function saveOrderToFirestore(order: Order): Promise<void> {
   try {
-    await setDoc(doc(db, 'orders', order.id), sanitizeForFirestore(order));
+    await setDoc(doc(db, 'orders', order.id), storedOrder(order));
   } catch (error) {
     console.error(`Error persisting order "${order.id}":`, error);
     handleFirestoreError(error, OperationType.WRITE, `orders/${order.id}`);
@@ -1060,7 +1074,7 @@ export async function saveOrderToFirestore(order: Order): Promise<void> {
  */
 export async function placeClientOrder(order: Order, uid: string, targetDb: Firestore = db): Promise<void> {
   const batch = writeBatch(targetDb);
-  batch.set(doc(targetDb, 'orders', order.id), sanitizeForFirestore(order));
+  batch.set(doc(targetDb, 'orders', order.id), storedOrder(order));
   batch.set(doc(targetDb, 'order_rate', uid), { lastOrderAt: serverTimestamp(), orderId: order.id });
   await batch.commit();
 }
@@ -1094,7 +1108,7 @@ export async function handOverGuestData(
     query(collection(guest.db, 'chat_messages'), where('threadId', '==', guest.uid), where('isInternalNote', '==', false))
   );
   const refs = [
-    ...orders.docs.map((d) => ({ ref: d.ref, data: { customerUid: accountUid } })),
+    ...orders.docs.map((d) => ({ ref: d.ref, data: { customerUid: accountUid, updatedAt: serverTimestamp() } })),
     ...messages.docs.map((d) => ({ ref: d.ref, data: { threadId: accountUid } })),
   ];
   // 10 per batch: each write checks both halves of the link, and a batch may read at most 20 documents in the rules
@@ -1168,7 +1182,7 @@ export async function saveAnalyticsResetAt(resetAt: number | null) {
 
 export async function syncAllOrdersToFirestore(orders: Order[]) {
   try {
-    await setDocs('orders', orders);
+    await commitInChunks(orders, (batch, order) => batch.set(doc(db, 'orders', order.id), storedOrder(order)));
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, 'orders');
   }
@@ -1967,7 +1981,12 @@ export async function restoreDatabase(
   let written = 0;
   for (const chunk of chunks) {
     const batch = writeBatch(db);
-    for (const write of chunk) batch.set(doc(db, write.collection, write.id), write.data);
+    for (const write of chunk) {
+      // a restored order is a write of an order like any other: its time of change is now, not the copy's
+      // (docs/orders-scale-plan.md, stage 2), so the admin's index takes it in
+      const data = write.collection === 'orders' ? { ...write.data, updatedAt: serverTimestamp() } : write.data;
+      batch.set(doc(db, write.collection, write.id), data);
+    }
     try {
       await batch.commit();
     } catch (error) {
