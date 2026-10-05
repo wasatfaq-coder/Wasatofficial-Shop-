@@ -165,13 +165,13 @@ export default function App() {
     });
   });
   // Orders, profiles and cost prices: whose depends on the sign-in (useAccountData.ts)
-  const { allUsers, orders, setOrders, productCosts, setProductCosts } = useAccountData({ authLoading, isAdmin, currentUser });
+  const { ownProfiles, orders, setOrders, productCosts, setProductCosts } = useAccountData({ authLoading, isAdmin, currentUser });
 
   // The visitor's profile (useProfile.ts)
   const { userProfile, handleUpdateProfile, handleSaveMeasurements } = useProfile({
     authLoading,
     currentUser,
-    allUsers,
+    ownProfiles,
     persist,
     addToast,
   });
@@ -691,7 +691,6 @@ export default function App() {
           {activeTab === 'profile' && (
             <ProfileScreen
               profile={userProfile}
-              allUsers={allUsers}
               orders={orders}
               products={adminProducts}
               favoritesCount={favorites.length}

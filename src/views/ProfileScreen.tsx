@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { isScheduleConfigured } from '../utils/storeSchedule';
 import { AccountDataModal } from '../components/AccountDataModal';
@@ -59,7 +59,7 @@ import { ProfileStoreContacts } from './profile/ProfileStoreContacts';
 
 export interface ProfileScreenProps {
   profile: UserProfile;
-  allUsers?: UserProfile[];
+  /** the visitor's orders; for the admin — every order of the shop (the admin panel and its order tracking) */
   orders: Order[];
   products?: Product[];
   favoritesCount: number;
@@ -113,7 +113,6 @@ const ADMIN_TAB_STORAGE_KEY = 'manstyle_admin_tab';
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   profile,
-  allUsers = [],
   orders,
   products = [],
   favoritesCount,
@@ -170,6 +169,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // Admin Authentication & Credentials State
   const { currentUser, logoutUser, isAdmin: isFirebaseAdmin } = useAuth();
+  // «Мои заказы» of the admin are their own, not every order of the shop the admin panel gets (docs/orders-scale-plan.md,
+  // finding 5)
+  const ownOrders = useMemo(
+    () => (isFirebaseAdmin ? orders.filter((o) => o.customerUid === currentUser?.uid) : orders),
+    [isFirebaseAdmin, orders, currentUser?.uid]
+  );
 
   const handleOpenAdminPanel = () => {
     if (!isFirebaseAdmin) {
@@ -461,13 +466,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-bold text-[#2D3A4E]">Заказы и трекинг</p>
-                  {orders.some((o) => o.status !== 'delivered') && (
+                  {ownOrders.some((o) => o.status !== 'delivered') && (
                     <span className="neu-inset-deep neu-inset-deep-animated text-accent font-extrabold text-[11px] px-2.5 py-0.5 rounded-full border border-accent/30">
                       Активен
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-[#4E5C70]">Отслеживание, статус и детализация ({orders.length})</p>
+                <p className="text-xs text-[#4E5C70]">Отслеживание, статус и детализация ({ownOrders.length})</p>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-[#4E5C70]" />
@@ -704,7 +709,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       <ProfileOrdersModal
         isOpen={activeModal === 'orders'}
         onCloseModals={() => setActiveModal(null)}
-        orders={orders}
+        orders={ownOrders}
         products={products}
         onOpenSupportChat={onOpenSupportChat}
         setSelectedOrderIdForTracking={setSelectedOrderIdForTracking}
@@ -750,7 +755,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         setAdminTab={setAdminTab}
         setSelectedOrderIdForTracking={setSelectedOrderIdForTracking}
         orders={orders}
-        allUsers={allUsers}
         products={products}
         promos={promos}
         bannerSlides={bannerSlides}
@@ -801,7 +805,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         isOpen={activeModal === 'security'}
         onClose={() => setActiveModal(null)}
         profile={profile}
-        orders={orders}
+        orders={ownOrders}
         googleEmail={currentUser?.email}
         onSignOut={handleGoogleLogoutClick}
         onShowToast={onShowToast}

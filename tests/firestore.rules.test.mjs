@@ -408,6 +408,15 @@ describe('orders', () => {
     }
   });
 
+  // docs/orders-scale-plan.md, этап 2: каждая запись заказа ставит время сервера, админка читает только изменённые заказы.
+  // Поле пока не обязательно (этап 3), но выдумать своё время покупатель не может
+  test('an order from the browser carries the server\'s time of the write, never one of its own', async () => {
+    await assertSucceeds(guestOrder(order({ id: 'WS-STAMP-1', updatedAt: serverTimestamp() })));
+    await assertFails(guestOrder(order({ id: 'WS-STAMP-2', updatedAt: Timestamp.fromMillis(Date.now() + 86_400_000) })));
+    await assertFails(guestOrder(order({ id: 'WS-STAMP-3', updatedAt: Timestamp.fromMillis(0) })));
+    await assertFails(guestOrder(order({ id: 'WS-STAMP-4', updatedAt: 'вчера' })));
+  });
+
   test('customer cannot place an order in someone else\'s name', async () => {
     await assertFails(placeOrder(customer('alice'), 'alice', order({ id: 'MS-5', customerUid: 'bob' })));
     await assertSucceeds(placeOrder(customer('alice'), 'alice', order({ id: 'MS-6', customerUid: 'alice' })));
@@ -537,6 +546,11 @@ describe('order cancellation by the buyer', () => {
     await assertFails(cancel(customer('alice'), { cancelReason: 'Другая причина' }));
   });
 
+  test('the cancellation stamps the server\'s time of the write (orders-scale-plan, stage 2)', async () => {
+    await assertFails(cancel(customer('alice'), { updatedAt: Timestamp.fromMillis(Date.now() + 86_400_000) }));
+    await assertSucceeds(cancel(customer('alice'), { updatedAt: serverTimestamp() }));
+  });
+
   test('not after packing started, and not again after the store brought the order back', async () => {
     await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), 'orders/WS-20'), { status: 'assembling' }));
     await assertFails(cancel(customer('alice')));
@@ -596,7 +610,8 @@ describe('order cancellation by the buyer', () => {
     await assertSucceeds(cancel(customer('alice')));
     await assertFails(updateDoc(doc(customer('bob'), 'orders/WS-20'), { stockReturned: true }));
     await assertFails(updateDoc(doc(customer('alice'), 'orders/WS-20'), { stockReturned: true, cancelReason: 'Другое' }));
-    await assertSucceeds(updateDoc(doc(customer('alice'), 'orders/WS-20'), { stockReturned: true }));
+    await assertFails(updateDoc(doc(customer('alice'), 'orders/WS-20'), { stockReturned: true, updatedAt: Timestamp.fromMillis(1) }));
+    await assertSucceeds(updateDoc(doc(customer('alice'), 'orders/WS-20'), { stockReturned: true, updatedAt: serverTimestamp() }));
   });
 });
 
@@ -628,6 +643,11 @@ describe('receipt confirmation by the buyer', () => {
     await assertFails(updateDoc(doc(customer('alice'), 'orders/WS-30'), { status: 'delivered', statusLog: [...log, { ...mine, byUid: 'x' }] }));
     await assertFails(updateDoc(doc(customer('alice'), 'orders/WS-30'), { status: 'ready', statusLog: [...log, { ...mine, status: 'ready' }] }));
     await assertSucceeds(confirm(customer('alice')));
+  });
+
+  test('«Я получил заказ» stamps only the server\'s time of the write (orders-scale-plan, stage 2)', async () => {
+    await assertFails(updateDoc(doc(customer('alice'), 'orders/WS-30'), { status: 'delivered', statusLog: [...log, mine], updatedAt: Timestamp.fromMillis(1) }));
+    await assertSucceeds(updateDoc(doc(customer('alice'), 'orders/WS-30'), { status: 'delivered', statusLog: [...log, mine], updatedAt: serverTimestamp() }));
   });
 
   test('not before it leaves, not a courier or pickup order, not a cancelled one', async () => {
@@ -672,7 +692,8 @@ describe('payment receipt from the buyer', () => {
     await assertFails(submit(customer('alice'), { paymentReceipt: { ...receipt, method: 'card' } }));
     await assertFails(submit(customer('alice'), { paymentLog: [{ ...entry, by: 'admin' }] }));
     await assertFails(submit(customer('alice'), { paymentLog: [{ ...entry, event: 'confirmed' }] }));
-    await assertSucceeds(submit(customer('alice')));
+    await assertFails(submit(customer('alice'), { updatedAt: Timestamp.fromMillis(1) }));
+    await assertSucceeds(submit(customer('alice'), { updatedAt: serverTimestamp() }));
   });
 
   test('not without the photo message, not someone else\'s message, not twice, not without requisites', async () => {
@@ -1123,6 +1144,13 @@ describe('guest data goes to the account after sign-in', () => {
     await assertSucceeds(getDoc(doc(customer('alice'), 'orders/WS-G1')));
     // staff notes stay where they are; only the owner changes in an order
     await assertFails(updateDoc(doc(db, 'chat_messages/gn'), { threadId: 'alice' }));
+  });
+
+  test('the hand-over stamps the server\'s time of the write (orders-scale-plan, stage 2)', async () => {
+    await linkBoth();
+    const db = buyer('anon-g');
+    await assertFails(updateDoc(doc(db, 'orders/WS-G1'), { customerUid: 'alice', updatedAt: Timestamp.fromMillis(1) }));
+    await assertSucceeds(updateDoc(doc(db, 'orders/WS-G1'), { customerUid: 'alice', updatedAt: serverTimestamp() }));
   });
 
   test('without the account\'s half nothing moves: orders cannot be planted on someone else', async () => {

@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { useProgressiveList } from '../../utils/useProgressiveList';
+import { usePagedList } from '../../utils/usePagedList';
+import { AdminShowMore } from './AdminShowMore';
+import { useCustomerProfiles } from './useCustomerProfiles';
 import {
   Users,
   Search,
@@ -27,7 +29,7 @@ import {
   Trash2,
   RefreshCw,
 } from 'lucide-react';
-import { UserProfile, Order, CustomerRecord, Product } from '../../types';
+import { Order, CustomerRecord, Product } from '../../types';
 import { OrderLineThumbImage } from '../ProductThumbImage';
 import { updateCustomerNotesInFirestore, deleteUserFromFirestore } from '../../utils/firebaseSync';
 import { downloadCSV } from '../../utils/csvHelpers';
@@ -45,7 +47,6 @@ import { useUnsavedChanges } from '../../utils/unsavedChanges';
 import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
 
 interface AdminCustomersTabProps {
-  users: UserProfile[];
   orders: Order[];
   /** Catalog: order lines keep no photos, the photo comes from the product */
   products?: Product[];
@@ -110,12 +111,13 @@ function displayDate(value: unknown): string {
 }
 
 export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
-  users = [],
   orders = [],
   products,
   onOpenSupportChat,
   onShowToast,
 }) => {
+  // profiles are read while this section is open (docs/orders-scale-plan.md, stage 1)
+  const { users, loaded: profilesLoaded } = useCustomerProfiles();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'with_orders' | 'repeat' | 'registered' | 'guest'>('all');
   const [sortBy, setSortBy] = useState<'ltv_desc' | 'orders_desc' | 'recent_desc' | 'name_asc'>('ltv_desc');
@@ -164,6 +166,28 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
     // Orders already in a card: each order is counted once
     const attached = new Set<string>();
 
+    // Each order's contacts are normalized once and orders are looked up by uid, email and phone: comparing every order
+    // with every card and every other order froze «Клиенты» for ≈ 18 s at 1 800 orders (docs/orders-scale-plan.md,
+    // finding 1). Lists keep the order of `orders`
+    const position = new Map(orders.map((o, i) => [o.id, i]));
+    const emailOf = (o: Order) => (o.customerEmail || '').toLowerCase().trim();
+    const phoneOf = new Map(orders.map((o) => [o.id, (o.customerPhone || '').replace(/\D/g, '')]));
+    const add = (index: Map<string, Order[]>, key: string, o: Order) => {
+      if (!key) return;
+      const list = index.get(key);
+      if (list) list.push(o);
+      else index.set(key, [o]);
+    };
+    const inOrder = (...lists: (Order[] | undefined)[]) =>
+      [...new Set(lists.flatMap((l) => l ?? []))].sort((a, b) => position.get(a.id)! - position.get(b.id)!);
+    const byUid = new Map<string, Order[]>();
+    // orders without a uid (placed before stage 5 of audit 02.10): joined to a profile by email or phone
+    const withoutUid: Order[] = [];
+    orders.forEach((o) => (o.customerUid ? add(byUid, o.customerUid, o) : withoutUid.push(o)));
+
+    // Digits of each card's phone, in the order the cards were made: a guest order joins the first card with its phone
+    const cardPhones = new Map<string, string>();
+
     // A. Incorporate Registered Users from Firestore. A signed-in buyer's card is their uid, and their orders are those
     // with their uid: by the email a profile could take someone else's card and bonuses (audit 02.10, finding 25). Guest
     // orders (no uid) with the same email or phone are added to the card
@@ -171,14 +195,16 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       const key = u.uid ? `uid:${u.uid}` : (u.email || u.phone || u.name).toLowerCase().trim();
       if (!key) return;
 
-      const userOrders = orders.filter((o) => {
-        if (o.customerUid) return Boolean(u.uid) && o.customerUid === u.uid;
-        const oEmail = (o.customerEmail || '').toLowerCase().trim();
-        const oPhone = (o.customerPhone || '').replace(/\D/g, '');
-        const uPhone = (u.phone || '').replace(/\D/g, '');
-        return (oEmail && oEmail === (u.email || '').toLowerCase().trim()) ||
-               (uPhone && oPhone && uPhone.length >= 7 && oPhone.includes(uPhone.slice(-7)));
-      });
+      const uEmail = (u.email || '').toLowerCase().trim();
+      const uPhone = (u.phone || '').replace(/\D/g, '');
+      const userOrders = inOrder(
+        u.uid ? byUid.get(u.uid) : undefined,
+        withoutUid.filter((o) => {
+          const oEmail = emailOf(o);
+          const oPhone = phoneOf.get(o.id)!;
+          return (oEmail && oEmail === uEmail) || (uPhone && oPhone && uPhone.length >= 7 && oPhone.includes(uPhone.slice(-7)));
+        })
+      );
       userOrders.forEach((o) => attached.add(o.id));
 
       const completedOrders = userOrders.filter((o) => o.status === 'delivered').length;
@@ -211,16 +237,28 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
         managerNotes: u.managerNotes,
         tags: u.tags || (u.uid?.includes('admin') ? ['Администратор'] : ['Покупатель']),
       });
+      cardPhones.set(key, (u.phone || '').replace(/\D/g, ''));
     });
 
     // B. Group Orders for Customers who may have placed guest orders without an explicit /users profile. A guest's order
     // carries the uid of the browser's anonymous session (stage 5): without a profile it is grouped like any guest order
     const profileUids = new Set(users.map((u) => u.uid).filter(Boolean));
     const accountUid = (o: Order) => (o.customerUid && profileUids.has(o.customerUid) ? o.customerUid : undefined);
+    const byAccount = new Map<string, Order[]>();
+    const guestByEmail = new Map<string, Order[]>();
+    const guestByPhone = new Map<string, Order[]>();
+    orders.forEach((o) => {
+      const acc = accountUid(o);
+      if (acc) add(byAccount, acc, o);
+      else {
+        add(guestByEmail, emailOf(o), o);
+        add(guestByPhone, phoneOf.get(o.id)!, o);
+      }
+    });
     orders.forEach((ord) => {
       if (attached.has(ord.id)) return;
-      const email = (ord.customerEmail || '').toLowerCase().trim();
-      const phone = (ord.customerPhone || '').replace(/\D/g, '');
+      const email = emailOf(ord);
+      const phone = phoneOf.get(ord.id)!;
       const ownUid = accountUid(ord);
       const key = ownUid ? `uid:${ownUid}` : email || (phone ? `phone-${phone}` : `order-cust-${ord.id}`);
 
@@ -236,11 +274,12 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
 
       // A guest order joins a card with the same phone; an order with a uid never joins someone else's card
       let existingMatchKey: string | null = null;
-      for (const [k, c] of ownUid ? [] : map.entries()) {
-        const cPhone = c.phone.replace(/\D/g, '');
-        if (phone && cPhone && (phone.includes(cPhone.slice(-7)) || cPhone.includes(phone.slice(-7)))) {
-          existingMatchKey = k;
-          break;
+      if (!ownUid && phone) {
+        for (const [k, cPhone] of cardPhones) {
+          if (cPhone && (phone.includes(cPhone.slice(-7)) || cPhone.includes(phone.slice(-7)))) {
+            existingMatchKey = k;
+            break;
+          }
         }
       }
 
@@ -254,13 +293,9 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       }
 
       // Create new customer record from order data
-      const matchedOrders = orders.filter((o) => {
-        if (attached.has(o.id)) return false;
-        if (ownUid || accountUid(o)) return accountUid(o) === ownUid;
-        const oEmail = (o.customerEmail || '').toLowerCase().trim();
-        const oPhone = (o.customerPhone || '').replace(/\D/g, '');
-        return (email && oEmail === email) || (phone && oPhone && oPhone === phone);
-      });
+      const matchedOrders = (
+        ownUid ? inOrder(byAccount.get(ownUid)) : inOrder(email ? guestByEmail.get(email) : undefined, phone ? guestByPhone.get(phone) : undefined)
+      ).filter((o) => !attached.has(o.id));
       matchedOrders.forEach((o) => attached.add(o.id));
 
       const completedOrders = matchedOrders.filter((o) => o.status === 'delivered').length;
@@ -286,6 +321,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
         primaryAddress: ord.deliveryAddress,
         tags: ['Гость'],
       });
+      cardPhones.set(key, (ord.customerPhone || '').replace(/\D/g, ''));
     });
 
     // Sums of paid orders only (owner's decision 02.10, finding 29): an unpaid order is not a purchase yet
@@ -340,8 +376,9 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       return b.ordersCount - a.ordersCount;
     });
   }, [customerRecords, searchQuery, filterType, sortBy]);
-  // Heavy cards: the first ones render with the section, the rest after paint
-  const visibleCustomers = useProgressiveList<CustomerRecord>(filteredCustomers);
+  // Heavy cards: 20 at a time; a new search, filter or sort starts from the first 20
+  const customerPage = usePagedList<CustomerRecord>(filteredCustomers, `${searchQuery}|${filterType}|${sortBy}`);
+  const visibleCustomers = customerPage.visible;
 
   // 3. Overall CRM KPIs
   const stats = useMemo(() => {
@@ -622,12 +659,19 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       </div>
 
       {/* 4. Customer Cards Grid */}
+      {!profilesLoaded && customerRecords.length > 0 && (
+        <p role="status" className="text-xs text-[#4E5C70] px-1">
+          Загружаем профили клиентов…
+        </p>
+      )}
       {filteredCustomers.length === 0 ? (
         <div className="neu-inset rounded-3xl p-8 text-center space-y-3">
           <div className="w-14 h-14 rounded-2xl neu-inset flex items-center justify-center mx-auto text-[#4E5C70]">
             <Users className="w-7 h-7" />
           </div>
-          {customerRecords.length === 0 ? (
+          {customerRecords.length === 0 && !profilesLoaded ? (
+            <h3 className="text-base font-bold text-[#2D3A4E]">Загружаем клиентов…</h3>
+          ) : customerRecords.length === 0 ? (
             <>
               <h3 className="text-base font-bold text-[#2D3A4E]">Клиентов пока нет</h3>
               <p className="text-xs text-[#4E5C70] max-w-sm mx-auto">
@@ -654,6 +698,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
           )}
         </div>
       ) : (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           {visibleCustomers.map((customer, cIdx) => {
             return (
@@ -839,6 +884,8 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
             );
           })}
         </div>
+        <AdminShowMore shown={visibleCustomers.length} total={filteredCustomers.length} onShowMore={customerPage.showMore} />
+        </>
       )}
 
       {/* ================= 5. CUSTOMER DETAIL & ORDER HISTORY MODAL ================= */}

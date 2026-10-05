@@ -24,6 +24,34 @@ export function orderReturnReason(orderId: string): string {
 }
 
 /**
+ * How much a cancelled order line gives back to stock: exactly what its write-off entry `{заказ}_{строка}` took, never
+ * more than ordered. No entry — nothing was taken (every line but a preorder gets one since 02.10), so nothing comes
+ * back: returning the ordered quantity turned a made-up order for 100 000 pieces into 100 000 pieces of stock the shop
+ * does not have (check 04.10, finding 1).
+ */
+export function lineReturnQuantity(
+  taken: Pick<StockMovementLog, 'changeQuantity'> | undefined,
+  line: Pick<CartItem, 'quantity'>
+): number {
+  if (!taken) return 0;
+  const quantity = -(Number(taken.changeQuantity) || 0);
+  return Math.max(0, Math.min(quantity, Number(line.quantity) || 0));
+}
+
+/**
+ * How much of an order line its write-off entry did not take: the stock was short when the buyer's browser wrote it
+ * off — two buyers ordered the last piece, and the second order took 0 (check 04.10, finding 3). No entry — that is
+ * «Товар не списан со склада», not a shortage: 0.
+ */
+export function lineShortfall(
+  line: Pick<CartItem, 'quantity'>,
+  taken: Pick<StockMovementLog, 'changeQuantity'> | undefined
+): number {
+  if (!taken) return 0;
+  return Math.max(0, (Number(line.quantity) || 0) + (Number(taken.changeQuantity) || 0));
+}
+
+/**
  * Author of an order entry. Constant: the customer's name comes from the order form, so a fake order could sign
  * an entry «Администратор» (audit 02.10, finding 8); the order number in `reason` leads to the customer.
  */

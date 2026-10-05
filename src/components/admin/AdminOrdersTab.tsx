@@ -1,5 +1,6 @@
 import { orderTimestamp } from '../../shared/orderDate';
-import { useProgressiveList } from '../../utils/useProgressiveList';
+import { usePagedList } from '../../utils/usePagedList';
+import { AdminShowMore } from './AdminShowMore';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Package,
@@ -33,7 +34,7 @@ import {
   ArchiveRestore,
   PackageCheck,
 } from 'lucide-react';
-import { Order, Product, OrderAdjustmentLog, PromoCode, StorefrontSettings } from '../../types';
+import { DeliveryMethod, Order, Product, OrderAdjustmentLog, PromoCode, StorefrontSettings } from '../../types';
 import { exportOrdersToCSV } from '../../utils/csvHelpers';
 import { copyToClipboard } from '../../utils/clipboard';
 import { extractColorName, extractSizeName, stockShortages, type StockShortage } from '../../utils/inventory';
@@ -42,6 +43,7 @@ import {
   deductOrderLineStock,
   deleteOrderFromFirestore,
   findUntakenOrderLines,
+  type UntakenOrderLines,
   ORDER_JOURNAL_SINCE,
   returnCancelledOrderStock,
   type AdminStockChange,
@@ -83,7 +85,7 @@ import { usePaymentTemplates } from './usePaymentTemplates';
 import { isReceiptOnReview } from '../../utils/paymentDetails';
 import { AdminOrderPriceWarning } from './AdminOrderPriceWarning';
 import { AdminChoiceMenu } from './AdminChoiceMenu';
-import { orderPriceIssues } from '../../utils/orderPriceCheck';
+import { orderPriceIssues, type OrderCheckContext } from '../../utils/orderPriceCheck';
 import type { OrderPaymentDetails } from '../../types';
 import { cancelledByLabel, cancelReasonText, formatCancelledAt, isArchivedOrder, overdueUnpaidOrders, UNPAID_CANCEL_REASON } from '../../utils/orderCancel';
 
@@ -95,6 +97,8 @@ interface AdminOrdersTabProps {
   onUpdateOrders: (updated: Order[]) => Promise<boolean> | void;
   /** For «Корректировка заказа»: a percent promo of the order is recalculated */
   promos?: PromoCode[];
+  /** «Доставка и ПВЗ»: the order's delivery fee is compared with its method (check 04.10, finding 2) */
+  deliveryMethods?: DeliveryMethod[];
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   onOpenSupportChat?: (orderId: string, customerName?: string) => void;
   /** «Подтвердить оплату» / «Отклонить чек» («Доработки 5»): the order and a message to the buyer's chat */
@@ -268,11 +272,18 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   products = [],
   onUpdateOrders,
   promos = [],
+  deliveryMethods,
   onShowToast,
   onOpenSupportChat,
   onReviewReceipt,
 }) => {
   const paymentTemplates = usePaymentTemplates();
+  // What an order from the browser is compared with besides the catalog. The codes are read on demand: before they come
+  // the list is empty, and every discount would read as «нет в «Промокодах»» — so the code is checked once there are codes
+  const orderCheck = useMemo<OrderCheckContext>(
+    () => ({ promos: promos.length > 0 ? promos : undefined, deliveryMethods, settings: storefrontSettings }),
+    [promos, deliveryMethods, storefrontSettings]
+  );
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'cancelled' | 'archive' | Order['status']>('all');
@@ -358,8 +369,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   useUnsavedChanges(useChangedSince(editingTrackOrderId, [tempTrackValue, tempCarrierValue]), 'Трек-номер заказа');
   useUnsavedChanges(useChangedSince(editingNoteOrderId, [tempNoteValue]), 'Заметка к заказу');
 
-  // Filtered Orders Calculation (the cards are heavy: the first 3 — about a screen — render with the section, the rest
-  // after paint)
+  // Filtered Orders Calculation (the cards are heavy: 20 at a time with «Показать ещё», docs/orders-scale-plan.md, stage 1)
   const filteredOrders = useMemo(() => {
     // «Сегодня» / «Вчера» by the order's real date (createdAt, or the text date of old orders)
     const now = new Date();
@@ -417,11 +427,18 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       return true;
     });
   }, [orders, searchQuery, statusFilter, dateFilter, deliveryFilter, paymentFilter, paymentStatusFilter]);
-  const visibleOrders = useProgressiveList<Order>(filteredOrders, 3);
+  // a new search, chip or filter starts from the first 20
+  const orderPage = usePagedList<Order>(
+    filteredOrders,
+    [searchQuery, statusFilter, dateFilter, deliveryFilter, paymentFilter, paymentStatusFilter].join('|')
+  );
+  const visibleOrders = orderPage.visible;
 
   // Lines whose stock the buyer's browser did not take (finding 8): checked for active orders older than 2 minutes
   // (a fresh order may still be writing off), again when that list changes
   const [untakenLines, setUntakenLines] = useState<Record<string, number[]>>({});
+  // Lines the stock was short for: two buyers ordered the last piece (check 04.10, finding 3)
+  const [shortLines, setShortLines] = useState<UntakenOrderLines['short']>({});
   const [takingStockOrderId, setTakingStockOrderId] = useState<string | null>(null);
   const [untakenCheck, setUntakenCheck] = useState(0);
   const untakenCandidates = useMemo(() => {
@@ -434,11 +451,16 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   useEffect(() => {
     if (!untakenKey) {
       setUntakenLines({});
+      setShortLines({});
       return;
     }
     let alive = true;
     findUntakenOrderLines(untakenCandidates)
-      .then((missing) => alive && setUntakenLines(missing))
+      .then(({ missing, short }) => {
+        if (!alive) return;
+        setUntakenLines(missing);
+        setShortLines(short);
+      })
       .catch((err) => console.warn('Untaken order lines were not checked:', err));
     return () => {
       alive = false;
@@ -676,7 +698,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   const [paidDespitePrices, setPaidDespitePrices] = useState<Order | null>(null);
   const handleUpdatePaymentStatus = (orderId: string, newStatus: NonNullable<Order['paymentStatus']>, checked = false) => {
     const target = orders.find((o) => o.id === orderId);
-    if (!checked && newStatus === 'paid' && target && orderPriceIssues(target, products).length > 0) {
+    if (!checked && newStatus === 'paid' && target && orderPriceIssues(target, products, orderCheck).length > 0) {
       setPaidDespitePrices(target);
       return;
     }
@@ -739,7 +761,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   /**
    * The store's cancellation (one order or a bulk selection), always with a reason (CancelOrderDialog). The goods go
    * back like the buyer's: per line, exactly what the order's journal entry took (`returnCancelledOrderStock`, check
-   * 03.10); a line without an entry (an order older than the journal) — the ordered quantity. An order cancelled once and
+   * 03.10); a line without an entry took nothing and gets nothing back (check 04.10, finding 1). An order cancelled once and
    * restored took its goods again by the ordered quantity, so it returns them the same way. A return that did not go
    * through leaves «Вернуть на склад» in the card.
    */
@@ -784,7 +806,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     for (const ord of active) {
       if (restoredBefore.has(ord.id) || !ord.items?.length) continue;
       try {
-        await returnCancelledOrderStock(ord, { operator: 'Администратор', fallbackToOrdered: true });
+        await returnCancelledOrderStock(ord, { operator: 'Администратор', missingIsNothing: true });
       } catch (err) {
         console.error(`Stock of the cancelled order ${ord.id} was not returned:`, err);
         notReturned.push(ord.id);
@@ -828,12 +850,12 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   /**
    * «Вернуть на склад» for a buyer's cancellation whose goods did not all get back (network, or an order older than
    * the stock journal): the same per-line return as the buyer's, lines already returned are skipped; a line without
-   * a write-off entry gets back the ordered quantity.
+   * a write-off entry took nothing and gets nothing back.
    */
   const handleReturnCancelledStock = async (order: Order) => {
     setReturningStockOrderId(order.id);
     try {
-      await returnCancelledOrderStock(order, { operator: 'Администратор', fallbackToOrdered: true });
+      await returnCancelledOrderStock(order, { operator: 'Администратор', missingIsNothing: true });
       onShowToast(`Товары заказа № ${order.id} возвращены на склад`, 'success');
     } catch (err) {
       console.error('Stock return failed:', err);
@@ -1429,8 +1451,25 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                   </div>
                 )}
 
+                {/* The stock ran out between the order and its write-off: the shop no longer has these goods */}
+                {!ord.isCancelled && (shortLines[ord.id]?.length ?? 0) > 0 && (
+                  <div role="note" className="rounded-xl bg-danger-soft border border-danger/25 p-2.5 text-xs text-[#2D3A4E]">
+                    <p>
+                      <strong className="text-danger">Не хватило на складе:</strong>{' '}
+                      {shortLines[ord.id]
+                        .map(({ lineIndex, taken, ordered }) => {
+                          const line = ord.items[lineIndex];
+                          const variant = [line?.selectedColor, line?.selectedSize].filter(Boolean).join(', ');
+                          return `«${line?.product?.title ?? `строка ${lineIndex + 1}`}»${variant ? ` (${variant})` : ''} — списано ${taken} из ${ordered}`;
+                        })
+                        .join('; ')}
+                      . Товар закончился, пока покупатель оформлял заказ: свяжитесь с ним, прежде чем принимать оплату.
+                    </p>
+                  </div>
+                )}
+
                 {/* Prices of an order from the browser are not checked by the database (stage 5 without Blaze) */}
-                <AdminOrderPriceWarning order={ord} products={products} />
+                <AdminOrderPriceWarning order={ord} products={products} shop={orderCheck} />
 
                 {/* The buyer's receipt: confirm the payment or reject the receipt («Доработки 5») */}
                 {isReceiptOnReview(ord) && onReviewReceipt && (
@@ -1903,6 +1942,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
             );
           })
         )}
+        <AdminShowMore shown={visibleOrders.length} total={filteredOrders.length} onShowMore={orderPage.showMore} />
       </div>
 
       {/* ================= MODAL: PRINTABLE INVOICE ================= */}
@@ -1976,7 +2016,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         message={
           <>
             Цены заказа № {paidDespitePrices?.id} не совпадают с каталогом:{' '}
-            {paidDespitePrices ? orderPriceIssues(paidDespitePrices, products).join('; ') : ''}. Отмечайте, если поступила
+            {paidDespitePrices ? orderPriceIssues(paidDespitePrices, products, orderCheck).join('; ') : ''}. Отмечайте, если поступила
             верная сумма.
           </>
         }

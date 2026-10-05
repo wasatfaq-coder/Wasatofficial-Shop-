@@ -13,6 +13,7 @@ import {
 } from '../../src/shared/orderPricing';
 import { DEFAULT_STOREFRONT_SETTINGS } from '../../src/utils/inventory';
 import { orderPriceIssues } from '../../src/utils/orderPriceCheck';
+import { lineReturnQuantity, lineShortfall } from '../../src/shared/stockMovements';
 import type { AppliedPromoInfo, DeliveryMethod, Order, Product, PromoCode } from '../../src/types';
 
 const lines = (sum: number): PricingLine[] => [{ productId: 'p1', category: 'shirts', price: sum, quantity: 1 }];
@@ -96,37 +97,41 @@ const shop = {
   deliveryMethods: [{ id: 'courier', title: 'Курьер', price: 500, duration: '', icon: '' } as DeliveryMethod],
   settings: { paymentMethods: [{ id: 'card', title: 'Перевод на карту' }, { id: 'cash', title: 'Наличные', onDelivery: true }] },
 };
-const priceIssues = orderPriceIssues as (...args: unknown[]) => string[];
 
-describe('Находка 1 (04.10, P0): отмена заказа без записи списания не добавляет товар на склад', () => {
-  test.todo('строка без записи {заказ}_{строка} возвращает 0, а не заказанное количество (поддельный заказ на 100 000 шт.)', async () => {
-    const { lineReturnQuantity } = await untyped('../../src/shared/stockMovements');
+describe('Находка 1 (04.10, P0): отмена заказа без записи списания не добавляет товар на склад (этап 1, закрыта)', () => {
+  test('строка без записи {заказ}_{строка} возвращает 0, а не заказанное количество (поддельный заказ на 100 000 шт.)', () => {
     expect(lineReturnQuantity(undefined, { quantity: 100_000 })).toBe(0);
     expect(lineReturnQuantity({ changeQuantity: -1 }, { quantity: 100_000 })).toBe(1);
     expect(lineReturnQuantity({ changeQuantity: 0 }, { quantity: 1 })).toBe(0);
   });
 });
 
-describe('Находка 2 (04.10, P1): «Цены не совпадают» видит подделанную скидку, доставку и способ оплаты', () => {
-  test('честный заказ — без замечаний', () => {
-    expect(priceIssues(fakeOrder({ totalPrice: 10500 }), [coat], shop)).toEqual([]);
+describe('Находка 2 (04.10, P1): «Цены не совпадают» видит подделанную скидку, доставку и способ оплаты (этап 2, закрыта)', () => {
+  test('честный заказ — без замечаний: с кодом, в 1 клик без поля доставки, «при получении» из «Оплаты»', () => {
+    expect(orderPriceIssues(fakeOrder({ totalPrice: 10500 }), [coat], shop)).toEqual([]);
+    expect(orderPriceIssues(fakeOrder({ totalPrice: 9500, discountAmount: 1000, promoCode: 'sale' }), [coat], shop)).toEqual([]);
+    const quick = fakeOrder({ totalPrice: 10000, deliveryFee: undefined, deliveryMethod: 'Заказ в 1 клик', paymentMethod: 'Уточнит менеджер' });
+    expect(orderPriceIssues(quick, [coat], shop)).toEqual([]);
+    const cash = fakeOrder({ totalPrice: 10500, paymentMethod: 'Наличные (при получении)', paymentStatus: 'paid_on_delivery' });
+    expect(orderPriceIssues(cash, [coat], shop)).toEqual([]);
+    // коды ещё не прочитаны — скидку по коду не проверяем, а не объявляем код несуществующим
+    expect(orderPriceIssues(fakeOrder({ totalPrice: 9500, discountAmount: 1000, promoCode: 'SALE' }), [coat], { ...shop, promos: undefined })).toEqual([]);
   });
-  test.todo('заказ за 1 ₽: скидка 9 999 ₽ по несуществующему коду, без deliveryFee, «при получении» не из настроек', () => {
+  test('заказ за 1 ₽: скидка 9 999 ₽ по несуществующему коду, без deliveryFee, «при получении» не из настроек', () => {
     const order = fakeOrder({
       totalPrice: 1, discountAmount: 9999, promoCode: 'NOPE', deliveryFee: undefined,
       paymentMethod: 'Наличные курьеру (при получении)', paymentStatus: 'paid_on_delivery',
     });
-    expect(priceIssues(order, [coat], shop).length).toBeGreaterThanOrEqual(2);
+    expect(orderPriceIssues(order, [coat], shop).length).toBeGreaterThanOrEqual(2);
   });
-  test.todo('скидка больше, чем даёт промокод, и доставка дешевле способа', () => {
+  test('скидка больше, чем даёт промокод, и доставка дешевле способа', () => {
     const order = fakeOrder({ totalPrice: 5000, discountAmount: 5000, promoCode: 'SALE', deliveryFee: 0 });
-    expect(priceIssues(order, [coat], shop).length).toBe(2);
+    expect(orderPriceIssues(order, [coat], shop).length).toBe(2);
   });
 });
 
-describe('Находка 3 (04.10, P1): последний товар двум покупателям — админка видит недостачу', () => {
-  test.todo('строка, по которой списано меньше заказанного, — недостача', async () => {
-    const { lineShortfall } = await untyped('../../src/shared/stockMovements');
+describe('Находка 3 (04.10, P1): последний товар двум покупателям — админка видит недостачу (этап 2, закрыта)', () => {
+  test('строка, по которой списано меньше заказанного, — недостача', () => {
     expect(lineShortfall({ quantity: 1 }, { changeQuantity: 0 })).toBe(1);
     expect(lineShortfall({ quantity: 3 }, { changeQuantity: -1 })).toBe(2);
     expect(lineShortfall({ quantity: 1 }, { changeQuantity: -1 })).toBe(0);
