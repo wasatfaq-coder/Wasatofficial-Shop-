@@ -34,7 +34,7 @@ import {
   ArchiveRestore,
   PackageCheck,
 } from 'lucide-react';
-import { Order, Product, OrderAdjustmentLog, PromoCode, StorefrontSettings } from '../../types';
+import { DeliveryMethod, Order, Product, OrderAdjustmentLog, PromoCode, StorefrontSettings } from '../../types';
 import { exportOrdersToCSV } from '../../utils/csvHelpers';
 import { copyToClipboard } from '../../utils/clipboard';
 import { extractColorName, extractSizeName, stockShortages, type StockShortage } from '../../utils/inventory';
@@ -43,6 +43,7 @@ import {
   deductOrderLineStock,
   deleteOrderFromFirestore,
   findUntakenOrderLines,
+  type UntakenOrderLines,
   ORDER_JOURNAL_SINCE,
   returnCancelledOrderStock,
   type AdminStockChange,
@@ -84,7 +85,7 @@ import { usePaymentTemplates } from './usePaymentTemplates';
 import { isReceiptOnReview } from '../../utils/paymentDetails';
 import { AdminOrderPriceWarning } from './AdminOrderPriceWarning';
 import { AdminChoiceMenu } from './AdminChoiceMenu';
-import { orderPriceIssues } from '../../utils/orderPriceCheck';
+import { orderPriceIssues, type OrderCheckContext } from '../../utils/orderPriceCheck';
 import type { OrderPaymentDetails } from '../../types';
 import { cancelledByLabel, cancelReasonText, formatCancelledAt, isArchivedOrder, overdueUnpaidOrders, UNPAID_CANCEL_REASON } from '../../utils/orderCancel';
 
@@ -96,6 +97,8 @@ interface AdminOrdersTabProps {
   onUpdateOrders: (updated: Order[]) => Promise<boolean> | void;
   /** For «Корректировка заказа»: a percent promo of the order is recalculated */
   promos?: PromoCode[];
+  /** «Доставка и ПВЗ»: the order's delivery fee is compared with its method (check 04.10, finding 2) */
+  deliveryMethods?: DeliveryMethod[];
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   onOpenSupportChat?: (orderId: string, customerName?: string) => void;
   /** «Подтвердить оплату» / «Отклонить чек» («Доработки 5»): the order and a message to the buyer's chat */
@@ -269,11 +272,18 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   products = [],
   onUpdateOrders,
   promos = [],
+  deliveryMethods,
   onShowToast,
   onOpenSupportChat,
   onReviewReceipt,
 }) => {
   const paymentTemplates = usePaymentTemplates();
+  // What an order from the browser is compared with besides the catalog. The codes are read on demand: before they come
+  // the list is empty, and every discount would read as «нет в «Промокодах»» — so the code is checked once there are codes
+  const orderCheck = useMemo<OrderCheckContext>(
+    () => ({ promos: promos.length > 0 ? promos : undefined, deliveryMethods, settings: storefrontSettings }),
+    [promos, deliveryMethods, storefrontSettings]
+  );
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'cancelled' | 'archive' | Order['status']>('all');
@@ -427,6 +437,8 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   // Lines whose stock the buyer's browser did not take (finding 8): checked for active orders older than 2 minutes
   // (a fresh order may still be writing off), again when that list changes
   const [untakenLines, setUntakenLines] = useState<Record<string, number[]>>({});
+  // Lines the stock was short for: two buyers ordered the last piece (check 04.10, finding 3)
+  const [shortLines, setShortLines] = useState<UntakenOrderLines['short']>({});
   const [takingStockOrderId, setTakingStockOrderId] = useState<string | null>(null);
   const [untakenCheck, setUntakenCheck] = useState(0);
   const untakenCandidates = useMemo(() => {
@@ -439,11 +451,16 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   useEffect(() => {
     if (!untakenKey) {
       setUntakenLines({});
+      setShortLines({});
       return;
     }
     let alive = true;
     findUntakenOrderLines(untakenCandidates)
-      .then((missing) => alive && setUntakenLines(missing))
+      .then(({ missing, short }) => {
+        if (!alive) return;
+        setUntakenLines(missing);
+        setShortLines(short);
+      })
       .catch((err) => console.warn('Untaken order lines were not checked:', err));
     return () => {
       alive = false;
@@ -681,7 +698,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   const [paidDespitePrices, setPaidDespitePrices] = useState<Order | null>(null);
   const handleUpdatePaymentStatus = (orderId: string, newStatus: NonNullable<Order['paymentStatus']>, checked = false) => {
     const target = orders.find((o) => o.id === orderId);
-    if (!checked && newStatus === 'paid' && target && orderPriceIssues(target, products).length > 0) {
+    if (!checked && newStatus === 'paid' && target && orderPriceIssues(target, products, orderCheck).length > 0) {
       setPaidDespitePrices(target);
       return;
     }
@@ -1434,8 +1451,25 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                   </div>
                 )}
 
+                {/* The stock ran out between the order and its write-off: the shop no longer has these goods */}
+                {!ord.isCancelled && (shortLines[ord.id]?.length ?? 0) > 0 && (
+                  <div role="note" className="rounded-xl bg-danger-soft border border-danger/25 p-2.5 text-xs text-[#2D3A4E]">
+                    <p>
+                      <strong className="text-danger">Не хватило на складе:</strong>{' '}
+                      {shortLines[ord.id]
+                        .map(({ lineIndex, taken, ordered }) => {
+                          const line = ord.items[lineIndex];
+                          const variant = [line?.selectedColor, line?.selectedSize].filter(Boolean).join(', ');
+                          return `«${line?.product?.title ?? `строка ${lineIndex + 1}`}»${variant ? ` (${variant})` : ''} — списано ${taken} из ${ordered}`;
+                        })
+                        .join('; ')}
+                      . Товар закончился, пока покупатель оформлял заказ: свяжитесь с ним, прежде чем принимать оплату.
+                    </p>
+                  </div>
+                )}
+
                 {/* Prices of an order from the browser are not checked by the database (stage 5 without Blaze) */}
-                <AdminOrderPriceWarning order={ord} products={products} />
+                <AdminOrderPriceWarning order={ord} products={products} shop={orderCheck} />
 
                 {/* The buyer's receipt: confirm the payment or reject the receipt («Доработки 5») */}
                 {isReceiptOnReview(ord) && onReviewReceipt && (
@@ -1982,7 +2016,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         message={
           <>
             Цены заказа № {paidDespitePrices?.id} не совпадают с каталогом:{' '}
-            {paidDespitePrices ? orderPriceIssues(paidDespitePrices, products).join('; ') : ''}. Отмечайте, если поступила
+            {paidDespitePrices ? orderPriceIssues(paidDespitePrices, products, orderCheck).join('; ') : ''}. Отмечайте, если поступила
             верная сумма.
           </>
         }

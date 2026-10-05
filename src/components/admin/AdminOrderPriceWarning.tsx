@@ -1,14 +1,19 @@
 import React, { useMemo } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import type { Order, Product } from '../../types';
-import { orderPriceIssues } from '../../utils/orderPriceCheck';
+import { orderPriceIssues, type OrderCheckContext } from '../../utils/orderPriceCheck';
 
 /**
  * «Цены не совпадают с каталогом» before the payment is confirmed (audit 02.10, stage 5 without Blaze): prices of an order
- * from the browser are not checked by the database, so the owner sees what differs from the catalog and the order's sum.
+ * from the browser are not checked by the database, so the owner sees what differs from the catalog, the order's sum,
+ * the promo code, the delivery method and «Оплата» (`shop`, check 04.10).
  */
-export const AdminOrderPriceWarning: React.FC<{ order: Order; products: Product[] }> = ({ order, products }) => {
-  const issues = useMemo(() => orderPriceIssues(order, products), [order, products]);
+export const AdminOrderPriceWarning: React.FC<{ order: Order; products: Product[]; shop?: OrderCheckContext }> = ({
+  order,
+  products,
+  shop,
+}) => {
+  const issues = useMemo(() => orderPriceIssues(order, products, shop), [order, products, shop]);
   if (issues.length === 0) return null;
   return (
     <div role="note" className="rounded-xl bg-danger-soft border border-danger/25 p-2.5 text-xs text-[#2D3A4E] space-y-1">
