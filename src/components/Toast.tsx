@@ -38,9 +38,10 @@ interface ToastProps {
 }
 
 export const ToastContainer: React.FC<ToastProps> = ({ toasts, onDismiss }) => {
-  // Computer: bottom right. Under the header the toast covered the product title and the colour choice
+  // Computer: bottom left. Under the header the toast covered the product title and the colour choice, and at the bottom
+  // right it covered the buying column («Заказать в 1 клик» on 1280×680) and the admin's «Применить»/«Сохранить»
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 lg:top-auto lg:bottom-6 lg:left-auto lg:right-6 lg:translate-x-0 z-[300] flex flex-col gap-2.5 w-11/12 max-w-sm pointer-events-none">
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 lg:top-auto lg:bottom-6 lg:left-6 lg:translate-x-0 z-[300] flex flex-col gap-2.5 w-11/12 max-w-sm pointer-events-none">
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
       ))}
