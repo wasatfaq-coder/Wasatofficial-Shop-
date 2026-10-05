@@ -9,7 +9,13 @@ import {
   type CatalogEntry,
   type CatalogIndexPart,
 } from '../utils/catalogIndex';
-import { saveCatalogIndex, saveProductThumbs, subscribeToCatalogIndex, type ProductThumb } from '../utils/firebaseSync';
+import {
+  loadProductPreviews,
+  saveCatalogIndex,
+  saveProductThumbs,
+  subscribeToCatalogIndex,
+  type ProductThumb,
+} from '../utils/firebaseSync';
 import { compressBase64Image } from '../utils/imageUpload';
 
 /** A card is ≈ 175 px wide on a phone: 360 px stays sharp on a dense screen */
@@ -77,7 +83,10 @@ async function writeIndex(
   for (const product of products) {
     const key = thumbKey(product);
     if (!key || storedThumbs.get(product.id) === key) continue;
-    const data = await compressBase64Image(product.images[0], THUMB_SIDE, THUMB_SIDE, THUMB_QUALITY);
+    // the first preview, from the product or from product_previews (stage 6)
+    const first = product.images[0] || (await loadProductPreviews(product))?.images[0];
+    if (!first) continue;
+    const data = await compressBase64Image(first, THUMB_SIDE, THUMB_SIDE, THUMB_QUALITY);
     if (data.length <= THUMB_MAX_CHARS) thumbs.push({ productId: product.id, key, data });
   }
   const written = new Set(thumbs.map((t) => t.productId));
