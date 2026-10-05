@@ -41,6 +41,7 @@ import {
   orderMovementId,
   orderReturnMovementId,
   lineReturnQuantity,
+  lineShortfall,
   orderReturnReason,
   STOCK_MOVEMENTS_COLLECTION,
 } from '../shared/stockMovements';
@@ -225,32 +226,46 @@ export async function deductOrderLineStock(orderId: string, line: CartItem, line
 /** Orders since this moment write a journal entry per line together with the stock (audit 02.10, stage 1) */
 export const ORDER_JOURNAL_SINCE = '2026-10-02T19:03:19.000Z';
 
+/** Lines of an order the buyer's browser did not take in full, by order id */
+export interface UntakenOrderLines {
+  /** No write-off entry: the buyer's connection broke or the rules refused it (audit 02.10, finding 8) */
+  missing: Record<string, number[]>;
+  /** The entry took less than ordered: the stock ran out — two buyers and the last piece (check 04.10, finding 3) */
+  short: Record<string, { lineIndex: number; taken: number; ordered: number }[]>;
+}
+
 /**
- * Lines of new orders whose stock was never taken: the buyer's browser lost the connection or the rules refused the
- * write-off (audit 02.10, finding 8 — before, only the console knew). An order since stage 1 has an entry
- * `{заказ}_{строка}` for every line that is not a preorder; a missing entry is a line to take. Admin only.
+ * Lines of new orders whose stock was not taken: an order since stage 1 has an entry `{заказ}_{строка}` for every line
+ * that is not a preorder; a missing entry is a line to take, an entry that took less than ordered is goods the shop no
+ * longer has. Before, only the console knew. Admin only.
  */
 export async function findUntakenOrderLines(
   orders: Pick<Order, 'id' | 'items' | 'createdAt'>[]
-): Promise<Record<string, number[]>> {
-  const wanted = new Map<string, { orderId: string; lineIndex: number }>();
+): Promise<UntakenOrderLines> {
+  const wanted = new Map<string, { orderId: string; lineIndex: number; line: CartItem }>();
   for (const order of orders) {
     if (!order.createdAt || order.createdAt < ORDER_JOURNAL_SINCE) continue;
     (order.items ?? []).forEach((line, i) => {
-      if (!line.isPreorder) wanted.set(orderMovementId(order.id, i), { orderId: order.id, lineIndex: i });
+      if (!line.isPreorder) wanted.set(orderMovementId(order.id, i), { orderId: order.id, lineIndex: i, line });
     });
   }
   const ids = [...wanted.keys()];
-  const found = new Set<string>();
+  const found = new Map<string, number>();
   for (let i = 0; i < ids.length; i += 30) {
     const snap = await getDocs(query(collection(db, STOCK_MOVEMENTS_COLLECTION), where(documentId(), 'in', ids.slice(i, i + 30))));
-    snap.forEach((d) => found.add(d.id));
+    snap.forEach((d) => found.set(d.id, Number(d.data().changeQuantity) || 0));
   }
-  const missing: Record<string, number[]> = {};
-  for (const [id, { orderId, lineIndex }] of wanted) {
-    if (!found.has(id)) (missing[orderId] ??= []).push(lineIndex);
+  const result: UntakenOrderLines = { missing: {}, short: {} };
+  for (const [id, { orderId, lineIndex, line }] of wanted) {
+    if (!found.has(id)) {
+      (result.missing[orderId] ??= []).push(lineIndex);
+      continue;
+    }
+    const changeQuantity = found.get(id) ?? 0;
+    const shortBy = lineShortfall(line, { changeQuantity });
+    if (shortBy > 0) (result.short[orderId] ??= []).push({ lineIndex, taken: -changeQuantity, ordered: line.quantity });
   }
-  return missing;
+  return result;
 }
 
 /** One stock change the admin makes by an order: «+» back to stock, «−» taken from it */
@@ -347,6 +362,7 @@ export async function cancelOrderAsCustomer(orderId: string, reason: string, com
     cancelledAt: at.toISOString(),
     estimatedDelivery: 'Заказ отменен',
     stockReturned: false,
+    updatedAt: serverTimestamp(),
   });
 }
 
@@ -359,6 +375,7 @@ export async function confirmOrderReceipt(order: Pick<Order, 'id' | 'statusLog'>
   await updateDoc(doc(db, 'orders', order.id), {
     status: 'delivered',
     statusLog: [...(order.statusLog ?? []), entry],
+    updatedAt: serverTimestamp(),
   });
 }
 
@@ -389,6 +406,7 @@ export async function submitPaymentReceipt(
     paymentStatus: 'receipt_review',
     paymentReceipt: { method: kind, at: at.toISOString(), messageId: message.id },
     paymentLog: [...(order.paymentLog ?? []), paymentLogEntry('receipt', 'customer', { at })],
+    updatedAt: serverTimestamp(),
   });
   return message;
 }
@@ -507,7 +525,7 @@ export async function returnCancelledOrderStock(
     }
     if (result === 'unknown') complete = false;
   }
-  if (complete) await updateDoc(doc(db, 'orders', order.id), { stockReturned: true });
+  if (complete) await updateDoc(doc(db, 'orders', order.id), { stockReturned: true, updatedAt: serverTimestamp() });
   return complete;
 }
 
@@ -981,6 +999,8 @@ function normalizeOrderFromFirestore(raw: any, docId?: string): Order {
     deliveryMethod: String(raw.deliveryMethod ?? raw.delivery_method ?? 'Способ доставки не указан'),
     paymentMethod: String(raw.paymentMethod ?? raw.payment_method ?? 'Способ оплаты не указан'),
     paymentStatus: raw.paymentStatus ?? raw.payment_status ?? 'pending',
+    // a Timestamp in the database (stage 2 of docs/orders-scale-plan.md); null while the write is pending
+    updatedAt: raw.updatedAt instanceof Timestamp ? raw.updatedAt.toMillis() : undefined,
     trackingNumber,
     estimatedDelivery,
     historySteps,
@@ -998,6 +1018,15 @@ function normalizeOrderFromFirestore(raw: any, docId?: string): Order {
   }
 
   return order;
+}
+
+/**
+ * An order as written: every write of an order stamps `updatedAt` with the server's time (docs/orders-scale-plan.md,
+ * stage 2), so the admin can read only the orders changed since its index was written. The customer's own writes
+ * (cancel, «Я получил заказ», receipt, guest hand-over) stamp it too.
+ */
+function storedOrder(order: Order) {
+  return { ...sanitizeForFirestore(order), updatedAt: serverTimestamp() };
 }
 
 /**
@@ -1045,7 +1074,7 @@ export function subscribeToOrders(
 
 export async function saveOrderToFirestore(order: Order): Promise<void> {
   try {
-    await setDoc(doc(db, 'orders', order.id), sanitizeForFirestore(order));
+    await setDoc(doc(db, 'orders', order.id), storedOrder(order));
   } catch (error) {
     console.error(`Error persisting order "${order.id}":`, error);
     handleFirestoreError(error, OperationType.WRITE, `orders/${order.id}`);
@@ -1059,7 +1088,7 @@ export async function saveOrderToFirestore(order: Order): Promise<void> {
  */
 export async function placeClientOrder(order: Order, uid: string, targetDb: Firestore = db): Promise<void> {
   const batch = writeBatch(targetDb);
-  batch.set(doc(targetDb, 'orders', order.id), sanitizeForFirestore(order));
+  batch.set(doc(targetDb, 'orders', order.id), storedOrder(order));
   batch.set(doc(targetDb, 'order_rate', uid), { lastOrderAt: serverTimestamp(), orderId: order.id });
   await batch.commit();
 }
@@ -1093,7 +1122,7 @@ export async function handOverGuestData(
     query(collection(guest.db, 'chat_messages'), where('threadId', '==', guest.uid), where('isInternalNote', '==', false))
   );
   const refs = [
-    ...orders.docs.map((d) => ({ ref: d.ref, data: { customerUid: accountUid } })),
+    ...orders.docs.map((d) => ({ ref: d.ref, data: { customerUid: accountUid, updatedAt: serverTimestamp() } })),
     ...messages.docs.map((d) => ({ ref: d.ref, data: { threadId: accountUid } })),
   ];
   // 10 per batch: each write checks both halves of the link, and a batch may read at most 20 documents in the rules
@@ -1167,7 +1196,7 @@ export async function saveAnalyticsResetAt(resetAt: number | null) {
 
 export async function syncAllOrdersToFirestore(orders: Order[]) {
   try {
-    await setDocs('orders', orders);
+    await commitInChunks(orders, (batch, order) => batch.set(doc(db, 'orders', order.id), storedOrder(order)));
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, 'orders');
   }
@@ -1966,7 +1995,12 @@ export async function restoreDatabase(
   let written = 0;
   for (const chunk of chunks) {
     const batch = writeBatch(db);
-    for (const write of chunk) batch.set(doc(db, write.collection, write.id), write.data);
+    for (const write of chunk) {
+      // a restored order is a write of an order like any other: its time of change is now, not the copy's
+      // (docs/orders-scale-plan.md, stage 2), so the admin's index takes it in
+      const data = write.collection === 'orders' ? { ...write.data, updatedAt: serverTimestamp() } : write.data;
+      batch.set(doc(db, write.collection, write.id), data);
+    }
     try {
       await batch.commit();
     } catch (error) {

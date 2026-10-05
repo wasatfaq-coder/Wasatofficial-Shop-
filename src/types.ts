@@ -386,6 +386,12 @@ export interface Order {
   // Set by the placeOrder Cloud Function (server-validated orders)
   placedVia?: 'server';
   createdAt?: string; // ISO timestamp
+  /**
+   * Last write of the order, server time in ms (docs/orders-scale-plan.md, stage 2): every write sets it
+   * (`serverTimestamp()` in firebaseSync.ts, `placeOrder`), so the admin can read only orders changed since a moment.
+   * In the database it is a Timestamp; `normalizeOrderFromFirestore` turns it into ms
+   */
+  updatedAt?: number;
   promoCode?: string;
   discountAmount?: number;
   deliveryFee?: number;

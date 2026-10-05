@@ -35,6 +35,14 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
     }
 
+    // Время последней записи заказа (docs/orders-scale-plan.md, этап 2): сайт ставит его каждой записью заказа, админка
+    // читает только заказы, изменённые после записи своего индекса. Покупатель может только поставить время сервера;
+    // требовать поле от каждой записи будет этап 3 — после того как сайт, который его пишет, опубликован
+    function isOrderStampFresh() {
+      return !request.resource.data.diff(resource == null ? {} : resource.data).affectedKeys().hasAny(['updatedAt'])
+        || request.resource.data.updatedAt == request.time;
+    }
+
     // Себестоимость живёт в закрытой product_costs: в товар её не добавить и не поменять, старое значение — только удалить
     function keepsCostPriceOut() {
       return !('costPrice' in request.resource.data)
@@ -359,7 +367,9 @@ service cloud.firestore {
       return data.keys().hasOnly(['id', 'createdAt', 'date', 'items', 'status', 'totalPrice', 'deliveryAddress',
           'deliveryMethod', 'customerName', 'customerPhone', 'customerEmail', 'customerUid', 'paymentMethod',
           'paymentStatus', 'deliveryFee', 'discountAmount', 'promoCode', 'estimatedDelivery', 'historySteps',
-          'deliveryStages', 'customerLastName', 'customerFirstName', 'customerMiddleName', 'deliveryAddressParts', 'deliveryKind', 'statusLog'])
+          'deliveryStages', 'customerLastName', 'customerFirstName', 'customerMiddleName', 'deliveryAddressParts', 'deliveryKind', 'statusLog',
+          'updatedAt'])
+        && isOrderStampFresh()
         && data.items.size() <= 30
         && data.customerName is string && data.customerName.size() > 0 && data.customerName.size() <= 100
         && data.customerPhone is string && data.customerPhone.size() > 0 && data.customerPhone.size() <= 40
@@ -465,7 +475,8 @@ service cloud.firestore {
     // Гость передаёт свой заказ своему аккаунту: меняется только владелец
     function isGuestOrderHandover() {
       return isAnonymousSelf(resource.data.get('customerUid', ''))
-        && onlyChanges(['customerUid'])
+        && onlyChanges(['customerUid', 'updatedAt'])
+        && isOrderStampFresh()
         && isLinkedAccount(request.auth.uid, request.resource.data.customerUid);
     }
 
@@ -494,7 +505,8 @@ service cloud.firestore {
         && resource.data.get('isCancelled', false) == false
         && !('cancelledAt' in resource.data)
         && onlyChanges(['isCancelled', 'cancelledBy', 'cancelReason', 'cancelComment', 'cancelledAt',
-          'estimatedDelivery', 'stockReturned'])
+          'estimatedDelivery', 'stockReturned', 'updatedAt'])
+        && isOrderStampFresh()
         && data.isCancelled == true
         && data.cancelledBy == 'customer'
         && data.cancelReason is string && data.cancelReason.size() > 0 && data.cancelReason.size() <= 100
@@ -516,7 +528,8 @@ service cloud.firestore {
         && resource.data.get('isCancelled', false) == false
         && resource.data.status in ['in_transit', 'ready']
         && resource.data.get('deliveryKind', 'carrier') == 'carrier'
-        && onlyChanges(['status', 'statusLog'])
+        && onlyChanges(['status', 'statusLog', 'updatedAt'])
+        && isOrderStampFresh()
         && data.status == 'delivered'
         && data.statusLog is list && data.statusLog.size() == n + 1
         && (n == 0 || data.statusLog[0:n] == before)
@@ -540,7 +553,8 @@ service cloud.firestore {
         && resource.data.get('isCancelled', false) == false
         && resource.data.get('paymentStatus', 'pending') == 'pending'
         && resource.data.get('paymentDetails', null) is map
-        && onlyChanges(['paymentStatus', 'paymentReceipt', 'paymentLog'])
+        && onlyChanges(['paymentStatus', 'paymentReceipt', 'paymentLog', 'updatedAt'])
+        && isOrderStampFresh()
         && data.paymentStatus == 'receipt_review'
         && receipt.keys().hasOnly(['method', 'at', 'messageId'])
         && receipt.method in ['sbp', 'card', 'account']
@@ -571,7 +585,8 @@ service cloud.firestore {
         && resource.data.get('customerUid', null) == request.auth.uid
         && resource.data.get('isCancelled', false) == true
         && resource.data.get('cancelledBy', '') == 'customer'
-        && onlyChanges(['stockReturned'])
+        && onlyChanges(['stockReturned', 'updatedAt'])
+        && isOrderStampFresh()
         && request.resource.data.stockReturned == true;
     }
 
