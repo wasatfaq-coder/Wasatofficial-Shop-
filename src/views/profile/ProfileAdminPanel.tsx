@@ -447,6 +447,7 @@ export const ProfileAdminPanel = ({
                   storefrontSettings={storefrontSettings}
                   products={productsList}
                   promos={promos}
+                  deliveryMethods={localDeliveryMethods}
                   onUpdateOrders={handleUpdateOrders}
                   onShowToast={onShowToast}
                   onReviewReceipt={handleReviewReceipt}
