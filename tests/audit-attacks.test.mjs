@@ -26,7 +26,8 @@ const guestChat = (uid = 'anon1') =>
 // и пишет поддельный заказ — с анонимного входа, который Firebase даёт любому посетителю
 const signedOrder = (db, uid, data) => {
   const batch = writeBatch(db);
-  batch.set(doc(db, 'orders', data.id), { ...data, customerUid: uid });
+  // as placeClientOrder: with the server's time of the write (docs/orders-scale-plan.md, stage 3)
+  batch.set(doc(db, 'orders', data.id), { ...data, customerUid: uid, updatedAt: serverTimestamp() });
   batch.set(doc(db, 'order_rate', uid), { lastOrderAt: serverTimestamp(), orderId: data.id });
   return batch.commit();
 };

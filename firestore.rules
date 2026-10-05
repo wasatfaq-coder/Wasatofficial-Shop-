@@ -35,12 +35,11 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
     }
 
-    // Время последней записи заказа (docs/orders-scale-plan.md, этап 2): сайт ставит его каждой записью заказа, админка
-    // читает только заказы, изменённые после записи своего индекса. Покупатель может только поставить время сервера;
-    // требовать поле от каждой записи будет этап 3 — после того как сайт, который его пишет, опубликован
+    // Время последней записи заказа (docs/orders-scale-plan.md, этапы 2–3): каждая запись заказа покупателем ставит
+    // время сервера — админка читает только заказы, изменённые после записи своего индекса, и запись без отметки
+    // осталась бы ей не видна
     function isOrderStampFresh() {
-      return !request.resource.data.diff(resource == null ? {} : resource.data).affectedKeys().hasAny(['updatedAt'])
-        || request.resource.data.updatedAt == request.time;
+      return request.resource.data.updatedAt == request.time;
     }
 
     // Себестоимость живёт в закрытой product_costs: в товар её не добавить и не поменять, старое значение — только удалить
