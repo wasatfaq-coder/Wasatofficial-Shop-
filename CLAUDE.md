@@ -131,7 +131,8 @@ Wasat Shop — SPA интернет-магазина мужской одежды
 - ID базы Firestore — в `firebase-applet-config.json` (`firestoreDatabaseId`) и `firebase.json`.
 - Перенос в бесплатную базу `(default)` (`docs/firestore-free-tier-plan.md`): правила публикуются в обе базы (`firebase.json`),
   «Витрина» → «Бесплатная база данных» (`AdminDatabaseMoveCard`, `src/utils/databaseMove.ts`) копирует все коллекции
-  `BACKUP_COLLECTIONS` из базы сайта в `(default)` и показывает таблицу «в старой — в новой». Отзывы и голоса администратор
+  `BACKUP_COLLECTIONS` (и индекс каталога с миниатюрами) из базы сайта в `(default)` и показывает таблицу «в старой — в новой»
+  и uid администраторов, которых нужно добавить в Console. Отзывы и голоса администратор
   может только создать и только в `(default)` до 01.01.2027 (`isMoveCopy` в правилах), фото из чата правила не дают
   переписать (`RESTORE_CREATE_ONLY` — и для «Как в копии»), администраторов добавляют в Console. С двумя базами в
   `firebase.json` эмулятор не загружает правила: сценарии загружают их в обе базы сами (`loadRules` в `tests/e2e/emulator.ts`).

@@ -134,7 +134,7 @@ export const AdminDatabaseMoveCard: React.FC<AdminDatabaseMoveCardProps> = ({ on
                     <th scope="row" className="text-left font-normal py-1">
                       {row.title}
                       {bad && row.name === 'admins' && (
-                        <span className="block text-[11px]">добавьте в Firebase Console, как в старой базе</span>
+                        <span className="block text-[11px]">добавьте в Firebase Console — список под таблицей</span>
                       )}
                       {bad && row.name !== 'admins' && <span className="sr-only"> — не совпадает</span>}
                     </th>
@@ -145,6 +145,23 @@ export const AdminDatabaseMoveCard: React.FC<AdminDatabaseMoveCardProps> = ({ on
               })}
             </tbody>
           </table>
+          {result.missingAdmins.length > 0 && (
+            <div className="text-xs text-[#4E5C70] space-y-1">
+              <p className="font-bold text-danger">
+                {pluralRu(result.missingAdmins.length, ['Администратора', 'Администраторов', 'Администраторов'])} нет в новой
+                базе — без этого после переключения войдёт в панель только аккаунт владельца:
+              </p>
+              <ul className="list-disc pl-4 break-all font-mono">
+                {result.missingAdmins.map((uid) => (
+                  <li key={uid}>{uid}</li>
+                ))}
+              </ul>
+              <p>
+                Firebase Console → Firestore → база «(default)» → коллекция admins → «Добавить документ»: ID документа — строка
+                из списка, поле role со значением admin. Потом нажмите перенос снова, чтобы сверить таблицу.
+              </p>
+            </div>
+          )}
           {result.failed.length > 0 && (
             <div className="text-xs text-[#4E5C70] space-y-1">
               <p className="font-bold text-danger">Не записано в новую базу:</p>

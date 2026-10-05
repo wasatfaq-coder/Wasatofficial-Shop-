@@ -5,11 +5,12 @@ import { test, expect } from '../fixtures';
 import { clearDatabase, FREE_DATABASE, listDocs, writeDocs } from '../emulator';
 import { ADMIN, PRODUCTS } from '../store';
 
-// The collections of BACKUP_COLLECTIONS (src/utils/firebaseSync.ts)
+// The collections of BACKUP_COLLECTIONS (src/utils/firebaseSync.ts) and the catalog index with its miniatures
 const COLLECTIONS = [
-  'products', 'product_photos', 'product_costs', 'promos', 'settings', 'banners', 'delivery_methods', 'pickup_points',
+  'products', 'product_photos', 'product_costs', 'promos', 'settings', 'banners', 'banner_images', 'delivery_methods', 'pickup_points',
   'orders', 'users', 'customer_notes', 'admins', 'reviews', 'review_votes',
   'chat_messages', 'chat_images', 'support_threads', 'support_status', 'stock_movements', 'promo_uses', 'payment_templates',
+  'catalog_index', 'product_thumbs',
 ];
 
 const PHOTO = 'data:image/jpeg;base64,/9j/4AAQSkZJRg==';
@@ -22,6 +23,8 @@ const oldShopDocs = {
   [`product_costs/${product}`]: { costPrice: 1200 },
   'promos/move-promo': { id: 'move-promo', code: 'MOVE10', discountPercent: 10, usedCount: 1, generatedRevenue: 0 },
   'banners/move-banner': { id: 'move-banner', title: 'Осень', image: 'https://img.test/banner.jpg' },
+  'banner_images/move-banner': { bannerId: 'move-banner', image: PHOTO },
+  [`product_thumbs/${product}`]: { productId: product, key: 'move-thumb', data: PHOTO },
   'orders/WS-MOVE-1': { id: 'WS-MOVE-1', customerUid: 'move-buyer', totalPrice: 2990, status: 'accepted', createdAt: at.toISOString() },
   'users/move-buyer': { uid: 'move-buyer', name: 'Покупатель Переноса', email: 'move@example.com' },
   'customer_notes/move-buyer': { notes: 'Звонить после 18:00', tags: ['постоянный'] },
@@ -65,6 +68,8 @@ test('владелец переносит данные в бесплатную �
     await move.click();
     await expect(panel.getByText(/Не сошлось: 1 строка таблицы/)).toBeVisible({ timeout: 20_000 });
     await expect(table.getByRole('row', { name: /Администраторы.*Firebase Console/ })).toBeVisible();
+    // the owner sees which administrator to add
+    await expect(panel.getByRole('listitem').filter({ hasText: /^move-staff$/ })).toBeVisible();
     await writeDocs({ 'admins/move-staff': { role: 'admin' } }, FREE_DATABASE);
   }
 
@@ -72,6 +77,8 @@ test('владелец переносит данные в бесплатную �
   await expect(panel.getByText(/Таблица сошлась/)).toBeVisible({ timeout: 20_000 });
   await expect(table.getByRole('row', { name: /^Фото из чата 1 1$/ })).toBeVisible();
   await expect(table.getByRole('row', { name: /^Использования промокодов 1 1$/ })).toBeVisible();
+  // without the index the catalog of the new database would be empty until the owner opens the site
+  await expect(table.getByRole('row', { name: /^Индекс каталога [1-9]\d* [1-9]\d*$/ })).toBeVisible();
 
   // every document of every collection is in the new database as it is in the old one, dates included
   for (const name of COLLECTIONS) {

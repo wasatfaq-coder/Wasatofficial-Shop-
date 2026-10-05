@@ -5,7 +5,7 @@
  * админки (карточка в «Витрине»). Документы новой базы считаются чтением (`readExistingIds`), а не запросом подсчёта:
  * `getCountFromServer` добавил бы ≈ 0,6 КБ gzip в главный бандл покупателя (код Firestore общий для всех чанков).
  */
-import { doc, Firestore, setDoc, Timestamp, writeBatch } from 'firebase/firestore';
+import { collection, doc, Firestore, getDocs, setDoc, Timestamp, writeBatch } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { db, firestoreDatabase } from '../firebase';
 import { BACKUP_COLLECTIONS, exportDatabase, readExistingIds } from './firebaseSync';
@@ -18,8 +18,21 @@ import {
   type RestoreMode,
   type RestoreWrite,
 } from './backupRestore';
+import { CATALOG_INDEX_COLLECTION, PRODUCT_THUMBS_COLLECTION } from './catalogIndex';
 
 export const FREE_DATABASE_ID = '(default)';
+
+/**
+ * Collections outside the backup that the new database needs from its first visitor: the light catalog index and
+ * the card miniatures. They are derived from the products (the admin's session rebuilds them), but without a copy the
+ * catalog would be empty until the owner opens the site. Copied as they are (the index holds bytes, which the backup
+ * format does not keep). The error log (`client_errors`) is not moved: the rules let only the browser that hit the
+ * error write it, and the new database starts a fresh log.
+ */
+const DERIVED_COLLECTIONS: Record<string, string> = {
+  [CATALOG_INDEX_COLLECTION]: 'Индекс каталога',
+  [PRODUCT_THUMBS_COLLECTION]: 'Миниатюры карточек',
+};
 
 export interface CopyFailure {
   collection: string;
@@ -69,6 +82,8 @@ export interface MoveRow {
 
 export interface MoveResult {
   rows: MoveRow[];
+  /** Administrators (`admins/{uid}`) of the old database missing in the new one: the owner adds them in the Console */
+  missingAdmins: string[];
   written: number;
   failed: CopyFailure[];
   /** Collections of the old database the session could not read */
@@ -95,7 +110,8 @@ export async function moveToFreeDatabase(
   onProgress: (written: number, total: number) => void
 ): Promise<MoveResult> {
   const target = firestoreDatabase(FREE_DATABASE_ID);
-  const existing = await readExistingIds(mode === 'missing' ? [...BACKUP_COLLECTIONS] : MOVE_CREATE_ONLY, target);
+  const derived = Object.keys(DERIVED_COLLECTIONS);
+  const existing = await readExistingIds(mode === 'missing' ? [...BACKUP_COLLECTIONS, ...derived] : MOVE_CREATE_ONLY, target);
   const copy = await exportDatabase(firebaseConfig.firestoreDatabaseId, db);
   const writes = planMove(
     { createdAt: copy.createdAt, databaseId: copy.databaseId, collections: copy.collections as Record<string, BackupDoc[]> },
@@ -103,17 +119,33 @@ export async function moveToFreeDatabase(
     existing,
     (iso) => Timestamp.fromDate(new Date(iso))
   );
+  const derivedCounts: Record<string, number | null> = {};
+  for (const name of derived) {
+    try {
+      const snapshot = await getDocs(collection(db, name));
+      derivedCounts[name] = snapshot.size;
+      for (const d of snapshot.docs) {
+        if (mode === 'overwrite' || !existing[name]?.has(d.id)) writes.push({ collection: name, id: d.id, data: d.data() });
+      }
+    } catch (error) {
+      console.warn(`Collection ${name} was not read:`, error);
+      derivedCounts[name] = null;
+      copy.failed[name] = error instanceof Error ? error.message : String(error);
+    }
+  }
   onProgress(0, writes.length);
   const { written, failed } = await copyIntoDatabase(chunkWrites(writes), target, (n) => onProgress(n, writes.length));
   // «В старой» — что прочитано из старой базы для переноса, «в новой» — что в ней после записи
-  const moved = await readExistingIds([...BACKUP_COLLECTIONS], target);
+  const moved = await readExistingIds([...BACKUP_COLLECTIONS, ...derived], target);
+  const titles: Record<string, string> = { ...BACKUP_COLLECTION_TITLES, ...DERIVED_COLLECTIONS };
   return {
-    rows: BACKUP_COLLECTIONS.map((name) => ({
+    rows: [...BACKUP_COLLECTIONS, ...derived].map((name) => ({
       name,
-      title: BACKUP_COLLECTION_TITLES[name] ?? name,
-      source: copy.collections[name]?.length ?? null,
+      title: titles[name] ?? name,
+      source: name in derivedCounts ? derivedCounts[name] : copy.collections[name]?.length ?? null,
       target: moved[name]?.size ?? null,
     })),
+    missingAdmins: (copy.collections.admins ?? []).map((d) => d.id).filter((id) => !moved.admins?.has(id)),
     written,
     failed,
     unread: Object.keys(copy.failed),

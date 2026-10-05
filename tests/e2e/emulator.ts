@@ -46,6 +46,7 @@ function fromValue(v: Value): unknown {
   if ('integerValue' in v) return Number(v.integerValue);
   if ('doubleValue' in v) return v.doubleValue;
   if ('timestampValue' in v) return v.timestampValue;
+  if ('bytesValue' in v) return v.bytesValue;
   if ('nullValue' in v) return null;
   if ('arrayValue' in v) return ((v.arrayValue as { values?: Value[] }).values ?? []).map(fromValue);
   if ('mapValue' in v) return fromFields((v.mapValue as { fields?: Record<string, Value> }).fields ?? {});
