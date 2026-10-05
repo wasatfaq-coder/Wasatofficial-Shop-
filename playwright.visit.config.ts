@@ -5,6 +5,8 @@ const PORT = 4175;
 
 export default defineConfig({
   testDir: 'tests/visit',
+  // the speed measure has its own config (playwright.speed.config.ts): throttled, long
+  testIgnore: 'speed.spec.ts',
   timeout: 300_000,
   workers: 1,
   retries: 0,

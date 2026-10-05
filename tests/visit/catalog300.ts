@@ -1,13 +1,10 @@
 // A shop of the size the roadmap plans for half a year after launch (docs/roadmap.md): 300 products with 3–4 photos,
 // reviews, votes, promos and banners. Written to the emulator only (`bun run measure:visit`): the real database cannot
-// be restored from the repository. Previews are real JPEGs of the measured size drawn by Chromium (the admin session makes
-// miniatures from them); full photos and banners are random base64 of their size — only their bytes matter
-import { randomBytes } from 'node:crypto';
+// be restored from the repository. Previews, full photos and banners are real JPEGs of the measured size drawn by Chromium:
+// the admin session makes miniatures from the previews, and the speed measure (speed.spec.ts) waits for the photos to paint
 import { storeDocs } from '../e2e/store';
 
 export const PRODUCT_COUNT = 300;
-/** A full photo in `product_photos` (processImageFiles before the preview) */
-export const FULL_PHOTO_CHARS = 250_000;
 /** Every product has its full photos: the preview pages read the first one of each (scripts/share-pages.ts) */
 export const PRODUCTS_WITH_FULL_PHOTOS = PRODUCT_COUNT;
 
@@ -35,7 +32,6 @@ const SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
 let seed = 7;
 const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
 const pick = <T,>(list: readonly T[]) => list[Math.floor(rnd() * list.length)];
-const randomPhoto = (chars: number) => `data:image/jpeg;base64,${randomBytes(Math.ceil((chars * 3) / 4)).toString('base64').slice(0, chars)}`;
 
 // Descriptions differ like real ones (≈ 350 characters of varied words): the index is compressed, and identical texts
 // would compress far better than the shop's own
@@ -53,31 +49,34 @@ const describe = () => {
 
 export const productId = (i: number) => `p${String(i).padStart(3, '0')}`;
 
-/** Real previews (480 px long side, JPEG 0.7): a canvas with a gradient, shapes and grain, ≈ 47 000 characters each */
-export async function drawPreviews(count = 8): Promise<string[]> {
+/**
+ * Real previews (480 px long side, JPEG 0.7): a canvas with a gradient, shapes and grain, ≈ 47 000 characters each.
+ * With a size — banner pictures (processImageFiles keeps 1 000 px), so the home page paints its slide as the real one
+ */
+export async function drawPreviews(count = 8, width = 360, height = 480, quality = 0.7): Promise<string[]> {
   const { chromium } = await import('@playwright/test');
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage();
-    return await page.evaluate((n) => {
+    return await page.evaluate(([n, w, h, q]) => {
       const out: string[] = [];
       for (let k = 0; k < n; k++) {
         const c = document.createElement('canvas');
-        c.width = 360;
-        c.height = 480;
+        c.width = w;
+        c.height = h;
         const g = c.getContext('2d')!;
-        const grad = g.createLinearGradient(0, 0, 360, 480);
+        const grad = g.createLinearGradient(0, 0, w, h);
         grad.addColorStop(0, `hsl(${k * 45},30%,80%)`);
         grad.addColorStop(1, `hsl(${k * 45 + 40},40%,35%)`);
         g.fillStyle = grad;
-        g.fillRect(0, 0, 360, 480);
+        g.fillRect(0, 0, w, h);
         for (let i = 0; i < 400; i++) {
           g.fillStyle = `hsla(${Math.random() * 360},40%,${30 + Math.random() * 50}%,0.35)`;
           g.beginPath();
-          g.arc(Math.random() * 360, Math.random() * 480, 2 + Math.random() * 30, 0, 7);
+          g.arc(Math.random() * w, Math.random() * h, 2 + Math.random() * 30, 0, 7);
           g.fill();
         }
-        const img = g.getImageData(0, 0, 360, 480);
+        const img = g.getImageData(0, 0, w, h);
         for (let i = 0; i < img.data.length; i += 4) {
           const noise = (Math.random() - 0.5) * 40;
           img.data[i] += noise;
@@ -85,10 +84,10 @@ export async function drawPreviews(count = 8): Promise<string[]> {
           img.data[i + 2] += noise;
         }
         g.putImageData(img, 0, 0);
-        out.push(c.toDataURL('image/jpeg', 0.7));
+        out.push(c.toDataURL('image/jpeg', q));
       }
       return out;
-    }, count);
+    }, [count, width, height, quality] as const);
   } finally {
     await browser.close();
   }
@@ -142,7 +141,11 @@ function product(i: number, previews: string[]) {
 }
 
 /** Batches of documents for writeDocs: a few products per commit keeps each request small */
-export function* catalogBatches(previews: string[]): Generator<Record<string, Record<string, unknown>>> {
+export function* catalogBatches(
+  previews: string[],
+  bannerPictures: string[],
+  fullPhotos: string[]
+): Generator<Record<string, Record<string, unknown>>> {
   const base = storeDocs();
   // the scenario products of the e2e store are not part of this shop
   for (const key of Object.keys(base)) if (key.startsWith('products/')) delete base[key];
@@ -157,13 +160,15 @@ export function* catalogBatches(previews: string[]): Generator<Record<string, Re
       batch[`products/${p.id}`] = p;
       if (k < PRODUCTS_WITH_FULL_PHOTOS) {
         // full photos are big: a commit of their own per product
-        yield Object.fromEntries(p.photoIds.map((pid) => [`product_photos/${pid}`, { id: pid, productId: p.id, data: randomPhoto(FULL_PHOTO_CHARS) }]));
+        yield Object.fromEntries(
+          p.photoIds.map((pid, n) => [`product_photos/${pid}`, { id: pid, productId: p.id, data: fullPhotos[(k + n) % fullPhotos.length] }])
+        );
       }
     }
     yield batch;
   }
 
-  // ≈ half a year of a small shop: 150 reviews, 300 «Полезно», 10 promos, 3 banners
+  // ≈ half a year of a small shop: 150 reviews, 300 «Полезно», 10 promos, 3 banners (1 000 × 500, ≈ 127 000 characters)
   const extra: Record<string, Record<string, unknown>> = {};
   for (let r = 0; r < 150; r++) {
     const pid = productId((r * 7) % PRODUCT_COUNT);
@@ -197,7 +202,7 @@ export function* catalogBatches(previews: string[]): Generator<Record<string, Re
         title: `Новая коллекция ${b + 1}`,
         subtitle: 'Лён и хлопок на лето',
         btnText: 'Смотреть',
-        image: randomPhoto(120_000),
+        image: bannerPictures[b % bannerPictures.length],
         actionType: 'catalog',
         active: true,
         order: b,
