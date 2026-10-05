@@ -13,6 +13,7 @@ import {
 } from '../../src/shared/orderPricing';
 import { DEFAULT_STOREFRONT_SETTINGS } from '../../src/utils/inventory';
 import { orderPriceIssues } from '../../src/utils/orderPriceCheck';
+import { lineReturnQuantity } from '../../src/shared/stockMovements';
 import type { AppliedPromoInfo, DeliveryMethod, Order, Product, PromoCode } from '../../src/types';
 
 const lines = (sum: number): PricingLine[] => [{ productId: 'p1', category: 'shirts', price: sum, quantity: 1 }];
@@ -98,9 +99,8 @@ const shop = {
 };
 const priceIssues = orderPriceIssues as (...args: unknown[]) => string[];
 
-describe('Находка 1 (04.10, P0): отмена заказа без записи списания не добавляет товар на склад', () => {
-  test.todo('строка без записи {заказ}_{строка} возвращает 0, а не заказанное количество (поддельный заказ на 100 000 шт.)', async () => {
-    const { lineReturnQuantity } = await untyped('../../src/shared/stockMovements');
+describe('Находка 1 (04.10, P0): отмена заказа без записи списания не добавляет товар на склад (этап 1, закрыта)', () => {
+  test('строка без записи {заказ}_{строка} возвращает 0, а не заказанное количество (поддельный заказ на 100 000 шт.)', () => {
     expect(lineReturnQuantity(undefined, { quantity: 100_000 })).toBe(0);
     expect(lineReturnQuantity({ changeQuantity: -1 }, { quantity: 100_000 })).toBe(1);
     expect(lineReturnQuantity({ changeQuantity: 0 }, { quantity: 1 })).toBe(0);

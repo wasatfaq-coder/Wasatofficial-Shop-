@@ -20,7 +20,8 @@ type ProfileOptions = {
   authLoading: boolean;
   currentUser: User | null;
   /** The signed-in customer's own profile document (every profile for the admin) */
-  allUsers: UserProfile[];
+  /** the visitor's own profile document (useAccountData): one or none */
+  ownProfiles: UserProfile[];
   persist: Persist;
   addToast: AddToast;
 };
@@ -29,7 +30,7 @@ type ProfileOptions = {
  * The visitor's profile: cached in this browser (`manstyle_user_profile`), filled from the account and its document
  * after a sign-in, written to Firestore only for the account signed in now, dropped from the browser on sign-out.
  */
-export function useProfile({ authLoading, currentUser, allUsers, persist, addToast }: ProfileOptions) {
+export function useProfile({ authLoading, currentUser, ownProfiles, persist, addToast }: ProfileOptions) {
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     try {
       const saved = localStorage.getItem('manstyle_user_profile');
@@ -78,7 +79,7 @@ export function useProfile({ authLoading, currentUser, allUsers, persist, addToa
   // Sync profile from Firebase Auth user & users collection
   React.useEffect(() => {
     if (currentUser) {
-      const existing = allUsers.find(
+      const existing = ownProfiles.find(
         (u) =>
           (u.uid && u.uid === currentUser.uid) ||
           (u.email && u.email.toLowerCase() === (currentUser.email || '').toLowerCase())
@@ -99,7 +100,7 @@ export function useProfile({ authLoading, currentUser, allUsers, persist, addToa
         return merged;
       });
     }
-  }, [currentUser, allUsers]);
+  }, [currentUser, ownProfiles]);
 
 
   const handleSaveMeasurements = (measurements: BodyMeasurements) => {

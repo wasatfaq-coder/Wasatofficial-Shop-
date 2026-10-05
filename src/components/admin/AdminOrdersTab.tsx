@@ -1,5 +1,6 @@
 import { orderTimestamp } from '../../shared/orderDate';
-import { useProgressiveList } from '../../utils/useProgressiveList';
+import { usePagedList } from '../../utils/usePagedList';
+import { AdminShowMore } from './AdminShowMore';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Package,
@@ -358,8 +359,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   useUnsavedChanges(useChangedSince(editingTrackOrderId, [tempTrackValue, tempCarrierValue]), 'Трек-номер заказа');
   useUnsavedChanges(useChangedSince(editingNoteOrderId, [tempNoteValue]), 'Заметка к заказу');
 
-  // Filtered Orders Calculation (the cards are heavy: the first 3 — about a screen — render with the section, the rest
-  // after paint)
+  // Filtered Orders Calculation (the cards are heavy: 20 at a time with «Показать ещё», docs/orders-scale-plan.md, stage 1)
   const filteredOrders = useMemo(() => {
     // «Сегодня» / «Вчера» by the order's real date (createdAt, or the text date of old orders)
     const now = new Date();
@@ -417,7 +417,12 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       return true;
     });
   }, [orders, searchQuery, statusFilter, dateFilter, deliveryFilter, paymentFilter, paymentStatusFilter]);
-  const visibleOrders = useProgressiveList<Order>(filteredOrders, 3);
+  // a new search, chip or filter starts from the first 20
+  const orderPage = usePagedList<Order>(
+    filteredOrders,
+    [searchQuery, statusFilter, dateFilter, deliveryFilter, paymentFilter, paymentStatusFilter].join('|')
+  );
+  const visibleOrders = orderPage.visible;
 
   // Lines whose stock the buyer's browser did not take (finding 8): checked for active orders older than 2 minutes
   // (a fresh order may still be writing off), again when that list changes
@@ -739,7 +744,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   /**
    * The store's cancellation (one order or a bulk selection), always with a reason (CancelOrderDialog). The goods go
    * back like the buyer's: per line, exactly what the order's journal entry took (`returnCancelledOrderStock`, check
-   * 03.10); a line without an entry (an order older than the journal) — the ordered quantity. An order cancelled once and
+   * 03.10); a line without an entry took nothing and gets nothing back (check 04.10, finding 1). An order cancelled once and
    * restored took its goods again by the ordered quantity, so it returns them the same way. A return that did not go
    * through leaves «Вернуть на склад» in the card.
    */
@@ -784,7 +789,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     for (const ord of active) {
       if (restoredBefore.has(ord.id) || !ord.items?.length) continue;
       try {
-        await returnCancelledOrderStock(ord, { operator: 'Администратор', fallbackToOrdered: true });
+        await returnCancelledOrderStock(ord, { operator: 'Администратор', missingIsNothing: true });
       } catch (err) {
         console.error(`Stock of the cancelled order ${ord.id} was not returned:`, err);
         notReturned.push(ord.id);
@@ -828,12 +833,12 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   /**
    * «Вернуть на склад» for a buyer's cancellation whose goods did not all get back (network, or an order older than
    * the stock journal): the same per-line return as the buyer's, lines already returned are skipped; a line without
-   * a write-off entry gets back the ordered quantity.
+   * a write-off entry took nothing and gets nothing back.
    */
   const handleReturnCancelledStock = async (order: Order) => {
     setReturningStockOrderId(order.id);
     try {
-      await returnCancelledOrderStock(order, { operator: 'Администратор', fallbackToOrdered: true });
+      await returnCancelledOrderStock(order, { operator: 'Администратор', missingIsNothing: true });
       onShowToast(`Товары заказа № ${order.id} возвращены на склад`, 'success');
     } catch (err) {
       console.error('Stock return failed:', err);
@@ -1903,6 +1908,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
             );
           })
         )}
+        <AdminShowMore shown={visibleOrders.length} total={filteredOrders.length} onShowMore={orderPage.showMore} />
       </div>
 
       {/* ================= MODAL: PRINTABLE INVOICE ================= */}
