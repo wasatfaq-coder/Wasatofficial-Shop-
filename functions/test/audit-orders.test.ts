@@ -7,6 +7,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   calcOrderTotals,
   calcPromoDiscount,
+  currentAppliedPromo,
   getAvailableDeliveryMethods,
   validatePromo,
   type PricingLine,
@@ -77,12 +78,8 @@ describe('Старый промокод без discountType (этап 3, зак�
 // после перехода на placeOrder (этап 1) склад списывает сервер.
 
 // ---------------------------------------------------------------------------------------------------------------------
-// Проверка перед запуском 04.10 (docs/audit-2026-10-04-plan.md). Функций, которые закроют находки, пока нет: модуль
-// читается без типов, чтобы проверка типов `functions` не падала. Этап, который закрывает находку, снимает `todo`
-// и переводит тест на обычный импорт.
+// Проверка перед запуском 04.10 (docs/audit-2026-10-04-plan.md): находки 1, 2, 3 и 11 закрыты этапами 1, 2 и 5.
 // ---------------------------------------------------------------------------------------------------------------------
-
-const untyped = (path: string): Promise<Record<string, any>> => import(path);
 
 const coat = { id: 'p1', title: 'Пальто', price: 10000, category: 'coats' } as Product;
 const fakeOrder = (over: Partial<Order>): Order =>
@@ -141,8 +138,7 @@ describe('Находка 3 (04.10, P1): последний товар двум �
 });
 
 describe('Находка 11 (04.10, P3): применённый промокод берёт значение из «Промокодов», а не из снимка', () => {
-  test.todo('владелец снизил скидку с 50 % до 10 % — в корзине уже 10 %', async () => {
-    const { currentAppliedPromo } = await untyped('../../src/shared/orderPricing');
+  test('владелец снизил скидку с 50 % до 10 % — в корзине уже 10 %', () => {
     const applied: AppliedPromoInfo = { code: 'SALE', discountType: 'percent', discountValue: 50, discountPercent: 50 };
     const now = currentAppliedPromo(applied, [promo({ code: 'sale', discountValue: 10, discountPercent: 10 })]);
     expect(calcPromoDiscount(lines(1000), now)).toBe(100);
