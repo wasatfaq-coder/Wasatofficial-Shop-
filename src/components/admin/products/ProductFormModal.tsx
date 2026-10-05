@@ -1,4 +1,5 @@
-import { Tag, Check, X, Layers, AlertTriangle, DollarSign, Maximize2 } from 'lucide-react';
+import { Tag, Check, X, Layers, AlertTriangle, DollarSign, Maximize2, Wand2 } from 'lucide-react';
+import { descriptionDraft, withDescriptionDraft } from '../../../utils/descriptionDraft';
 import { recategorizeSkuCode } from '../../../utils/inventory';
 import { NeumorphicSelect } from '../../NeumorphicSelect';
 import { ModalPortal } from '../../ModalPortal';
@@ -293,6 +294,33 @@ export function ProductFormModal({
                         className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] resize-y leading-relaxed"
                       />
                     </div>
+                    {/* The description repeats the characteristics: the form writes those sentences (fast entry, stage 3) */}
+                    {(() => {
+                      const draft = descriptionDraft(formCard);
+                      const added = Boolean(draft) && formDescription.includes(draft);
+                      return (
+                        <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => setFormDescription(withDescriptionDraft(formDescription, draft))}
+                            disabled={!draft || added}
+                            className={`min-h-8 px-3 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all ${
+                              draft && !added ? 'neu-button text-accent cursor-pointer' : 'neu-button-disabled text-[#4E5C70]'
+                            }`}
+                          >
+                            <Wand2 className="w-3.5 h-3.5" aria-hidden="true" />
+                            Черновик из характеристик
+                          </button>
+                          <span className="text-[11px] text-[#4E5C70] leading-snug">
+                            {!draft
+                              ? 'Заполните состав, покрой или страну в «Структуре карточки»'
+                              : added
+                              ? 'Характеристики уже в описании'
+                              : 'Допишет состав, покрой и страну после вашего текста'}
+                          </span>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Pricing Matrix: Price, CostPrice & OldPrice */}
