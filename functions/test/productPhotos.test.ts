@@ -1,6 +1,15 @@
 // Этап 6 (находка 18): в товаре — превью, полные фото — документы product_photos
 import { describe, expect, test } from 'bun:test';
-import { droppedPhotoIds, hasHeavyPhotos, isHeavyPhoto, splitProductPhotos, storedImagesEstimate } from '../../src/utils/productPhotos';
+import {
+  copyProductPhotos,
+  droppedPhotoIds,
+  hasHeavyPhotos,
+  isHeavyPhoto,
+  removedProductPhotoIds,
+  splitProductPhotos,
+  storedImagesEstimate,
+  unusedPhotoIds,
+} from '../../src/utils/productPhotos';
 
 const heavy = 'data:image/jpeg;base64,' + 'A'.repeat(200_000);
 const light = 'data:image/jpeg;base64,' + 'A'.repeat(10_000);
@@ -27,5 +36,28 @@ describe('productPhotos', () => {
     const sized = storedImagesEstimate([heavy, link]);
     expect(sized[0].length).toBe(45_000);
     expect(sized[1]).toBe(link);
+  });
+
+  // Дорожная карта, «Риски»: копия товара делила документы фото с оригиналом, удалённый товар оставлял свои фото
+  test('a copy gets its own photo documents; a photo that was not read stays a preview', () => {
+    const copy = copyProductPhotos('p2', ['p1_a', '', 'p1_gone'], { p1_a: heavy });
+    expect(copy.newPhotos).toHaveLength(1);
+    expect(copy.newPhotos[0]).toEqual({ id: copy.photoIds[0], productId: 'p2', data: heavy });
+    expect(copy.photoIds[0].startsWith('p2_')).toBe(true);
+    expect(copy.photoIds.slice(1)).toEqual(['', '']);
+    // removing the photo from the copy drops only the copy's document
+    expect(droppedPhotoIds({ photoIds: copy.photoIds }, [])).toEqual([copy.photoIds[0]]);
+    expect(copyProductPhotos('p2', undefined, {})).toEqual({ photoIds: [], newPhotos: [] });
+  });
+
+  test("a removed product's photos are deleted, unless another product still shows them", () => {
+    const original = { id: 'p1', photoIds: ['p1_a', 'p1_b'] };
+    const oldCopy = { id: 'p2', photoIds: ['p1_a', ''] }; // made before the fix: shares p1_a
+    expect(removedProductPhotoIds([original, oldCopy], [oldCopy])).toEqual(['p1_b']);
+    expect(removedProductPhotoIds([original, oldCopy], [])).toEqual(['p1_a', 'p1_b']);
+    expect(removedProductPhotoIds([original], [original])).toEqual([]);
+    expect(removedProductPhotoIds([{ id: 'p3' }], [])).toEqual([]);
+    // editing the original keeps a photo the old copy shows
+    expect(unusedPhotoIds(droppedPhotoIds(original, ['p1_b']), [oldCopy])).toEqual([]);
   });
 });

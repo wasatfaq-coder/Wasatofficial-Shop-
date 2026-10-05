@@ -131,6 +131,11 @@ export interface Product {
   reviewsCount: number;
   fit?: 'slim' | 'regular' | 'oversize';
   reviews?: ProductReview[];
+  /**
+   * Rating from the catalog index while the product's reviews are not read (docs/catalog-scale-plan.md, stage 4):
+   * null — no reviews. Only in the browser, never stored
+   */
+  catalogRating?: { rating: number; count: number } | null;
 }
 
 export interface CartItem {
@@ -455,6 +460,8 @@ export interface BannerSlide {
   scheduleEnabled?: boolean;
   startDate?: string; // ISO or "2026-08-18T00:00"
   endDate?: string; // ISO or "2026-08-31T23:59"
+  /** The pictures are in `banner_images/{id}` (stage 5 of docs/catalog-scale-plan.md): a hash of them, '' fields here */
+  imageKey?: string;
 }
 
 export interface ChatQuickTemplate {

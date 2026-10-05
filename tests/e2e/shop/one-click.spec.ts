@@ -1,5 +1,5 @@
 // Заказ в 1 клик со страницы товара: нужны только имя и телефон, адрес и оплату менеджер уточнит по телефону
-import { test, expect } from '../fixtures';
+import { test, expect, chooseSize } from '../fixtures';
 import { queryDocs } from '../emulator';
 import { PRODUCTS } from '../store';
 
@@ -8,7 +8,7 @@ test('заказ в 1 клик со страницы товара', async ({ pag
   const polo = PRODUCTS.polo;
 
   await page.goto(`/product/${polo.id}`);
-  await page.getByRole('radio', { name: /^L\b/ }).click();
+  await chooseSize(page, /^L\b/);
   await page.getByRole('button', { name: 'Заказать в 1 клик' }).first().click();
 
   const form = page.getByRole('dialog', { name: 'Заказ в 1 клик' });

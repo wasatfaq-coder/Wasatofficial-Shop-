@@ -24,6 +24,12 @@ service cloud.firestore {
       return id is string && id.size() > 0 && id.size() <= 128;
     }
 
+    // Поле картинки баннера: нет поля или картинка data: (не ссылка — её открыл бы браузер каждого посетителя)
+    function isBannerPicture(data, field) {
+      return !(field in data)
+        || (data[field] is string && data[field].matches('^data:image/(jpeg|png|webp|gif);base64,.*'));
+    }
+
     // Изменены только перечисленные поля существующего документа
     function onlyChanges(fields) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
@@ -134,6 +140,29 @@ service cloud.firestore {
           || (request.resource.data.keys().hasOnly(['productId', 'data'])
             && request.resource.data.productId is string
             && request.resource.data.data is string
+            && request.resource.data.data.matches('^data:image/(jpeg|png|webp);base64,.*')));
+    }
+
+    // Лёгкий индекс каталога и миниатюры карточек (docs/catalog-scale-plan.md, этап 2): выводятся из товаров, пишет
+    // сессия администратора, читает любой посетитель. Индекс — части p0, p1, … со сжатыми строками товаров
+    match /catalog_index/{partId} {
+      allow read: if true;
+      allow write: if isAdmin() && partId.matches('^p[0-9]{1,3}$')
+        && (request.resource == null
+          || (request.resource.data.keys().hasOnly(['format', 'part', 'parts', 'hash', 'entries', 'updatedAt'])
+            && request.resource.data.entries is bytes
+            && request.resource.data.part is int && request.resource.data.parts is int
+            && request.resource.data.hash is string && request.resource.data.hash.size() <= 64));
+    }
+
+    match /product_thumbs/{productId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidId(productId)
+        && (request.resource == null
+          || (request.resource.data.keys().hasOnly(['productId', 'key', 'data'])
+            && request.resource.data.productId == productId
+            && request.resource.data.key is string && request.resource.data.key.size() <= 200
+            && request.resource.data.data is string && request.resource.data.data.size() <= 100000
             && request.resource.data.data.matches('^data:image/(jpeg|png|webp);base64,.*')));
     }
 
@@ -290,6 +319,18 @@ service cloud.firestore {
     match /banners/{bannerId} {
       allow read: if true;
       allow write: if isAdmin() && isValidId(bannerId);
+    }
+
+    // Картинки баннера (docs/catalog-scale-plan.md, этап 5): только картинки data:, баннер хранит их хэш (imageKey)
+    match /banner_images/{bannerId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidId(bannerId)
+        && (request.resource == null
+          || (request.resource.data.keys().hasOnly(['bannerId', 'image', 'mobileImage', 'desktopImage'])
+            && request.resource.data.bannerId == bannerId
+            && isBannerPicture(request.resource.data, 'image')
+            && isBannerPicture(request.resource.data, 'mobileImage')
+            && isBannerPicture(request.resource.data, 'desktopImage')));
     }
 
     match /settings/{settingId} {
@@ -810,6 +851,38 @@ service cloud.firestore {
     match /admins/{adminId} {
       allow read: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
       allow write: if false;
+    }
+
+    // ------------------------------------------------------------------
+    // Журнал ошибок у покупателей (docs/ops-plan.md, этап 2, src/utils/errorReporter.ts): отчёт создаёт любой
+    // посетитель — он может быть и не вошедшим. Ограничить по покупателю нельзя (анонимных входов посторонний заведёт
+    // сколько угодно), поэтому ограничено на весь сайт: id — «{час}_{ячейка}» с часом по часам сервера (±1 на
+    // неточные часы телефона) и ячейкой 0–29, перезаписи нет — не больше 30 отчётов в час и ≈ 3 КБ на отчёт.
+    // Читает и удаляет только администратор («Аналитика» → «Ошибки на сайте»). В резервную копию журнал не входит.
+    // ------------------------------------------------------------------
+
+    match /client_errors/{errorId} {
+      allow read, delete: if isAdmin();
+      allow create: if isClientErrorReport(errorId);
+    }
+
+    function isClientErrorReport(errorId) {
+      let parts = errorId.split('_');
+      let hour = math.floor(request.time.toMillis() / 3600000);
+      let data = request.resource.data;
+      return parts.size() == 2
+        && parts[0].matches('^[0-9]{6,8}$') && parts[1].matches('^[0-9]{1,2}$')
+        && int(parts[0]) >= hour - 1 && int(parts[0]) <= hour + 1
+        && int(parts[1]) < 30
+        && data.keys().hasAll(['kind', 'message', 'page', 'createdAt'])
+        && data.keys().hasOnly(['kind', 'message', 'stack', 'page', 'release', 'browser', 'createdAt'])
+        && data.kind in ['error', 'rejection', 'render', 'console', 'update']
+        && data.message is string && data.message.size() > 0 && data.message.size() <= 500
+        && data.get('stack', '') is string && data.get('stack', '').size() <= 2000
+        && data.page is string && data.page.size() <= 200
+        && data.get('release', '') is string && data.get('release', '').size() <= 40
+        && data.get('browser', '') is string && data.get('browser', '').size() <= 300
+        && data.createdAt == request.time;
     }
 
     // Проверка соединения при старте приложения (только чтение)

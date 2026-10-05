@@ -11,6 +11,8 @@ import { useProductPhotos } from '../utils/useProductPhotos';
 import { getOrderableStock, getVariantStock } from '../utils/inventory';
 import { colorStock, initialColor, initialSize, maxOrderableForColor, profileSizeFor } from '../utils/variantSelection';
 import { useDialogA11y } from '../utils/useDialogA11y';
+import { useLiveProduct } from '../utils/liveProducts';
+import { useProductThumb } from '../utils/productThumbs';
 
 interface QuickViewModalProps {
   product: Product | null;
@@ -27,7 +29,7 @@ interface QuickViewModalProps {
 }
 
 export const QuickViewModal: React.FC<QuickViewModalProps> = ({
-  product,
+  product: shownProduct,
   isOpen,
   isFavorite,
   userProfile,
@@ -38,9 +40,12 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
   onAddToCartWithOptions,
   preorderMode = false,
 }) => {
+  // the card's copy is an index line: photos, sections and the stock come with the product's document
+  const product = useLiveProduct(shownProduct);
   const dialog = useDialogA11y(isOpen && Boolean(product), onClose);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const photos = useProductPhotos(product);
+  const { photos } = useProductPhotos(product, selectedImageIndex);
+  const thumb = useProductThumb(product);
   const [selectedColor, setSelectedColor] = useState(product?.colors?.[0]?.name || '');
   // No size is preselected unless there is only one (same as the product page)
   const [selectedSize, setSelectedSize] = useState(() => initialSize(product));
@@ -57,7 +62,8 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
       setSizeError(false);
       setSelectedImageIndex(0);
     }
-  }, [product]);
+    // only another product resets the choice: its document coming does not
+  }, [product?.id]);
 
   const sizeChosen = !product?.sizes?.length || Boolean(selectedSize);
   // Stock of the chosen size; before a size is chosen — of the whole colour
@@ -128,7 +134,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
               {/* Main Image Box */}
               <div className="relative w-full aspect-[4/5] rounded-2xl overflow-hidden flex items-center justify-center">
                 <img
-                  src={photos[selectedImageIndex] || productImage(product, selectedImageIndex)}
+                  src={photos[selectedImageIndex] || (product.images.length ? productImage(product, selectedImageIndex) : thumb || productImage(product))}
                   alt={product.title}
                   loading="lazy"
                   decoding="async"

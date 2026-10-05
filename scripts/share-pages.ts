@@ -7,10 +7,11 @@
 // index.html), только превью у ссылки общее.
 // Без сети или при ошибке базы сборка не падает: остаются общие описание, sitemap и robots.
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import firebaseConfig from '../firebase-applet-config.json';
 import type { Product, StorefrontSettings } from '../src/types';
+import { CATALOG_INDEX_COLLECTION, readCatalogIndex, type CatalogEntry, type CatalogIndexPart } from '../src/utils/catalogIndex';
 import { isHiddenFromSale } from '../src/utils/inventory';
 import { getStoreName, withStoreName, withStoreNameFields } from '../src/utils/storeContacts';
 
@@ -25,8 +26,13 @@ export interface ShareProduct {
   price: number;
   originalPrice?: number;
   available: boolean;
-  /** Absolute URL of the photo for og:image, '' — no photo */
+  /** Absolute URL of the photo for og:image, '' — no photo (or not computed: the fingerprint run) */
   image: string;
+  /**
+   * Which photo the preview shows, without its bytes: `photo:{id}` for a full photo (a photo document never changes —
+   * a new photo gets a new id), else a hash of the photo's source. The fingerprint compares this, not the photo
+   */
+  imageKey?: string;
   updatedAt?: string;
 }
 
@@ -213,31 +219,146 @@ function fromRestFields(fields: Record<string, RestValue> | undefined): Record<s
 
 const DOCUMENTS = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/${firebaseConfig.firestoreDatabaseId}/documents`;
 
+/** What the run took from the database (the free quota counts documents and bytes): printed at the end */
+const usage = { documents: 0, bytes: 0 };
+
 async function restJson(url: string, init?: RequestInit): Promise<unknown> {
   const sep = url.includes('?') ? '&' : '?';
   const res = await fetch(`${url}${sep}key=${firebaseConfig.apiKey}`, { ...init, signal: AbortSignal.timeout(20_000) });
   if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`${res.status} ${(await res.text()).slice(0, 200)}`);
-  return res.json();
+  const text = await res.text();
+  if (!res.ok) throw new Error(`${res.status} ${text.slice(0, 200)}`);
+  usage.bytes += Buffer.byteLength(text);
+  return JSON.parse(text);
 }
+
+type RestDocument = { name: string; fields?: Record<string, RestValue>; updateTime?: string };
+
+/**
+ * The fields of a product that its preview and the hidden-from-sale check use. Photos and variants are not among them:
+ * the previews inside a product are ≈ 45 КБ each, and the run reads every product (docs/catalog-scale-plan.md, finding 3)
+ */
+const PREVIEW_FIELDS = ['title', 'price', 'originalPrice', 'description', 'inStock', 'hiddenFromSale', 'photoIds'];
 
 async function readProducts(): Promise<{ product: Product; updatedAt?: string }[]> {
   // runQuery, not a collection GET: the REST list endpoint is refused to anonymous visitors even with «allow read: if true»
   const rows = (await restJson(`${DOCUMENTS}:runQuery`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'products' }] } }),
-  })) as { document?: { name: string; fields?: Record<string, RestValue>; updateTime?: string } }[];
-  return rows.flatMap((row) => {
+    body: JSON.stringify({
+      structuredQuery: { from: [{ collectionId: 'products' }], select: { fields: PREVIEW_FIELDS.map((fieldPath) => ({ fieldPath })) } },
+    }),
+  })) as { document?: RestDocument }[];
+  const products = rows.flatMap((row) => {
     if (!row.document) return [];
+    usage.documents += 1;
     const id = row.document.name.split('/').pop()!;
     return [{ product: { ...fromRestFields(row.document.fields), id } as unknown as Product, updatedAt: row.document.updateTime }];
   });
+  const safe = products.map(({ product }) => product).filter((p) => SAFE_ID.test(p.id));
+  // An old product without `hiddenFromSale` and with «нет в наличии» is hidden when it has stock left (isHiddenFromSale)
+  const legacy = safe.filter((p) => typeof p.hiddenFromSale !== 'boolean' && p.inStock === false);
+  const skus = await readFields(legacy.map((p) => `products/${p.id}`), ['skus']);
+  for (const p of legacy) p.skus = (skus.get(`products/${p.id}`)?.skus as Product['skus']) ?? [];
+  // A product whose first photo is a link or a light photo (no full photo document) shows it from `images`
+  const withoutPhoto = safe.filter((p) => !p.photoIds?.[0]);
+  const images = await readFields(withoutPhoto.map((p) => `products/${p.id}`), ['images']);
+  for (const p of withoutPhoto) p.images = (images.get(`products/${p.id}`)?.images as string[] | undefined) ?? [];
+  return products;
+}
+
+/** Some fields of a few documents in one request (batchGet), by path */
+async function readFields(paths: string[], fields: string[]): Promise<Map<string, Record<string, unknown>>> {
+  const out = new Map<string, Record<string, unknown>>();
+  const root = DOCUMENTS.replace(/^https?:\/\/[^/]+\/v1\//, '');
+  for (let i = 0; i < paths.length; i += 100) {
+    const rows = (await restJson(`${DOCUMENTS}:batchGet`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ documents: paths.slice(i, i + 100).map((p) => `${root}/${p}`), mask: { fieldPaths: fields } }),
+    })) as { found?: RestDocument }[];
+    for (const row of rows) {
+      if (!row.found) continue;
+      usage.documents += 1;
+      out.set(row.found.name.slice(root.length + 1), fromRestFields(row.found.fields));
+    }
+  }
+  return out;
+}
+
+/**
+ * The light catalog index (`catalog_index`, docs/catalog-scale-plan.md): one document for hundreds of products, so the
+ * hourly check reads it instead of the products (stage 3). null — no index yet (the owner's session writes it) or a
+ * broken one: the check reads the products, as before
+ */
+async function readIndex(): Promise<CatalogEntry[] | null> {
+  const rows = (await restJson(`${DOCUMENTS}:runQuery`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ structuredQuery: { from: [{ collectionId: CATALOG_INDEX_COLLECTION }] } }),
+  })) as { document?: RestDocument }[];
+  const parts = rows.flatMap((row) => {
+    if (!row.document?.fields) return [];
+    usage.documents += 1;
+    const { entries, ...fields } = row.document.fields;
+    const bytes = typeof entries?.bytesValue === 'string' ? Buffer.from(entries.bytesValue, 'base64') : Buffer.alloc(0);
+    return [{ ...fromRestFields(fields), entries: new Uint8Array(bytes) } as CatalogIndexPart];
+  });
+  return (await readCatalogIndex(parts).catch(() => null))?.entries ?? null;
+}
+
+/** What the preview of an index line shows, as `toShareProduct` for a product; the photo by its miniature's key */
+export function shareProductFromEntry(entry: CatalogEntry, storeName: string): ShareProduct | null {
+  if (!SAFE_ID.test(entry.id) || !entry.title || typeof entry.price !== 'number') return null;
+  if (isHiddenFromSale(entry as unknown as Product)) return null;
+  const p = withStoreNameFields(entry, storeName);
+  const photoId = entry.thumb?.startsWith('p:') ? entry.thumb.slice(2) : '';
+  const imageKey = photoId && SAFE_ID.test(photoId)
+    ? `photo:${photoId}`
+    : entry.thumb
+      ? `thumb:${entry.thumb}`
+      : entry.image
+        ? `src:${createHash('sha256').update(entry.image).digest('hex').slice(0, 16)}`
+        : '';
+  return {
+    id: entry.id,
+    title: p.title,
+    description: p.description ?? '',
+    price: entry.price,
+    originalPrice: entry.originalPrice,
+    available: entry.inStock !== false,
+    image: '',
+    imageKey,
+  };
 }
 
 async function readDoc(docPath: string): Promise<Record<string, unknown> | null> {
   const doc = (await restJson(`${DOCUMENTS}/${docPath}`)) as { fields?: Record<string, RestValue> } | null;
+  if (doc) usage.documents += 1;
   return doc ? fromRestFields(doc.fields) : null;
+}
+
+/**
+ * Full photos kept between runs (GitHub Actions cache, `.share-cache/` in the workflows): a photo document never changes,
+ * so the build reads only photos it has not seen. `ids.txt` lists the photos in use — the workflows key the cache by it
+ */
+const PHOTO_CACHE = path.resolve(import.meta.dirname, '..', '.share-cache', 'photos');
+
+async function fullPhoto(photoId: string): Promise<string | null> {
+  const file = path.join(PHOTO_CACHE, photoId);
+  if (existsSync(file)) return readFileSync(file, 'utf8');
+  const doc = await readDoc(`product_photos/${encodeURIComponent(photoId)}`).catch(() => null);
+  if (typeof doc?.data !== 'string') return null;
+  mkdirSync(PHOTO_CACHE, { recursive: true });
+  writeFileSync(file, doc.data);
+  return doc.data;
+}
+
+/** Drops photos no product uses any more and writes the list of those in use */
+function prunePhotoCache(inUse: Set<string>) {
+  if (!existsSync(PHOTO_CACHE)) return;
+  for (const name of readdirSync(PHOTO_CACHE)) if (!inUse.has(name)) rmSync(path.join(PHOTO_CACHE, name));
+  writeFileSync(path.join(PHOTO_CACHE, '..', 'ids.txt'), `${[...inUse].sort().join('\n')}\n`);
 }
 
 const IMAGE_TYPES: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
@@ -269,10 +390,16 @@ async function toShareProduct(
   if (!SAFE_ID.test(product.id) || !product.title || typeof product.price !== 'number') return null;
   if (isHiddenFromSale(product)) return null;
   const p = withStoreNameFields(product, storeName);
-  // the full photo (product_photos) is sharper in a large preview than the catalog's light copy
-  const photoId = product.photoIds?.[0];
-  const fullPhoto = photoId ? await readDoc(`product_photos/${encodeURIComponent(photoId)}`).catch(() => null) : null;
-  const source = typeof fullPhoto?.data === 'string' ? fullPhoto.data : product.images?.[0] ?? '';
+  // the full photo (product_photos) is sharper in a large preview than the catalog's light copy; the fingerprint run
+  // (no `dist`) does not read photos at all — the key says which one the preview shows
+  const photoId = product.photoIds?.[0] && SAFE_ID.test(product.photoIds[0]) ? product.photoIds[0] : '';
+  const preview = product.images?.[0] ?? '';
+  const imageKey = photoId ? `photo:${photoId}` : preview ? `src:${createHash('sha256').update(preview).digest('hex').slice(0, 16)}` : '';
+  let image = '';
+  if (dist) {
+    const source = (photoId ? await fullPhoto(photoId) : null) ?? preview;
+    image = source ? imageUrl(source, product.id, site, dist) : '';
+  }
   return {
     id: product.id,
     title: p.title,
@@ -280,7 +407,8 @@ async function toShareProduct(
     price: product.price,
     originalPrice: product.originalPrice,
     available: product.inStock !== false,
-    image: source ? imageUrl(source, product.id, site, dist) : '',
+    image,
+    imageKey,
     updatedAt,
   };
 }
@@ -289,37 +417,57 @@ interface Catalog {
   storeName: string;
   slogan: string;
   products: ShareProduct[];
+  /** The products as the index shows them: the fingerprint is taken from these when there is an index */
+  indexed: ShareProduct[] | null;
   /** false — the database did not answer: the pages keep the common preview */
   read: boolean;
 }
 
-async function readCatalog(site: string, dist: string | null): Promise<Catalog> {
+/**
+ * `pages: false` (the hourly check) needs only the fingerprint: with an index the products are not read at all
+ */
+async function readCatalog(site: string, dist: string | null, pages = true): Promise<Catalog> {
   try {
     const settings = (await readDoc('settings/storefront')) as Partial<StorefrontSettings> | null;
     const storeName = getStoreName(settings);
     const slogan = withStoreName(typeof settings?.storeSlogan === 'string' ? settings.storeSlogan.trim() : '', storeName);
+    const entries = await readIndex().catch((err) => {
+      console.warn(`::warning::Индекс каталога не прочитан, сверяю по товарам: ${String(err)}`);
+      return null;
+    });
+    const indexed = entries
+      ? entries.map((e) => shareProductFromEntry(e, storeName)).filter((p): p is ShareProduct => p !== null)
+      : null;
+    indexed?.sort((a, b) => a.id.localeCompare(b.id));
+    if (indexed && !pages) return { storeName, slogan, products: [], indexed, read: true };
     const rows = await readProducts();
     const products = (await Promise.all(rows.map((row) => toShareProduct(row, storeName, site, dist)))).filter(
       (p): p is ShareProduct => p !== null
     );
     products.sort((a, b) => a.id.localeCompare(b.id));
-    return { storeName, slogan, products, read: true };
+    if (dist) prunePhotoCache(new Set(products.flatMap((p) => (p.imageKey?.startsWith('photo:') ? [p.imageKey.slice(6)] : []))));
+    return { storeName, slogan, products, indexed, read: true };
   } catch (err) {
     console.warn(`::warning::Каталог не прочитан, страницы товаров не созданы (общее превью магазина): ${String(err)}`);
-    return { storeName: getStoreName(null), slogan: '', products: [], read: false };
+    return { storeName: getStoreName(null), slogan: '', products: [], indexed: null, read: false };
   }
 }
 
 /**
  * What the previews show (docs/seo-plan.md, stage 3): the scheduled workflow publishes Hosting again only when it
- * changes. Without the edit date: a sale changes the product's stock and its date, not its preview
+ * changes. Without the edit date: a sale changes the product's stock and its date, not its preview. The photo is
+ * compared by its key: the hourly check does not download photos (docs/catalog-scale-plan.md, stage 1)
  */
-export function catalogFingerprint(c: Pick<Catalog, 'storeName' | 'slogan' | 'products'>): string {
-  const products = c.products.map(({ updatedAt: _updatedAt, ...shown }) => shown);
-  return createHash('sha256').update(JSON.stringify({ storeName: c.storeName, slogan: c.slogan, products })).digest('hex');
+export function catalogFingerprint(c: Pick<Catalog, 'storeName' | 'slogan' | 'products'> & { indexed?: ShareProduct[] | null }): string {
+  // the index (stage 3) when there is one: the check reads one document; the build compares the same thing
+  const products = (c.indexed ?? c.products).map(({ updatedAt: _updatedAt, image: _image, ...shown }) => shown);
+  const shown = c.indexed ? { source: 'index', storeName: c.storeName, slogan: c.slogan, products } : { storeName: c.storeName, slogan: c.slogan, products };
+  return createHash('sha256').update(JSON.stringify(shown)).digest('hex');
 }
 
 export const MANIFEST_FILE = 'share-manifest.json';
+
+const usageLine = () => `Firestore: ${usage.documents} документов, ${Math.round(usage.bytes / 1024)} КБ`;
 
 function siteUrl(): string {
   return (process.env.SITE_URL || `https://${firebaseConfig.projectId}.web.app`).replace(/\/+$/, '');
@@ -329,9 +477,11 @@ async function main() {
   const site = siteUrl();
   // `--fingerprint`: print what the previews would show, write nothing (share-pages.yml compares it with the site's)
   if (process.argv.includes('--fingerprint')) {
-    const catalog = await readCatalog(site, null);
+    const catalog = await readCatalog(site, null, false);
     if (!catalog.read) process.exit(1);
     console.log(catalogFingerprint(catalog));
+    // stdout is the fingerprint (share-pages.yml reads it): the usage goes to stderr
+    console.error(usageLine());
     return;
   }
   const dist = path.resolve(import.meta.dirname, '..', 'dist');
@@ -366,6 +516,7 @@ async function main() {
     `${JSON.stringify({ fingerprint: catalog.read ? catalogFingerprint(catalog) : null, products: products.length })}\n`
   );
   console.log(`share pages: ${products.length} товаров, адрес ${site}${noindex ? ' (проверочная версия, noindex)' : ''}`);
+  console.log(usageLine());
 }
 
 if (import.meta.main) await main();

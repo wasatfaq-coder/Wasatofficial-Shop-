@@ -27,6 +27,7 @@ import {
   where,
   writeBatch,
   increment,
+  Bytes,
 } from 'firebase/firestore';
 
 const ADMIN_EMAIL = 'gunh83975@gmail.com';
@@ -1079,6 +1080,52 @@ describe('product photos', () => {
   });
 });
 
+// Каталог частями, этап 5: картинки баннера — отдельный документ, читает любой посетитель, пишет администратор
+describe('banner pictures', () => {
+  const pictures = { bannerId: 'b1', image: 'data:image/jpeg;base64,AAAA', desktopImage: 'data:image/webp;base64,BBBB' };
+
+  test('anyone reads the pictures, only the admin writes them, and only pictures of their banner', async () => {
+    await assertSucceeds(setDoc(doc(owner(), 'banner_images/b1'), pictures));
+    await assertSucceeds(getDoc(doc(guest(), 'banner_images/b1')));
+    await assertFails(setDoc(doc(customer(), 'banner_images/b2'), { ...pictures, bannerId: 'b2' }));
+    await assertFails(setDoc(doc(guest(), 'banner_images/b2'), { ...pictures, bannerId: 'b2' }));
+    await assertFails(setDoc(doc(owner(), 'banner_images/b3'), pictures));
+    await assertFails(setDoc(doc(owner(), 'banner_images/b1'), { ...pictures, image: 'https://attacker.example/x.png' }));
+    await assertFails(setDoc(doc(owner(), 'banner_images/b1'), { ...pictures, note: 'x' }));
+    await assertFails(deleteDoc(doc(customer(), 'banner_images/b1')));
+    await assertSucceeds(deleteDoc(doc(owner(), 'banner_images/b1')));
+  });
+});
+
+// Каталог частями, этап 2: индекс каталога и миниатюры выводятся из товаров — читает любой, пишет администратор
+describe('catalog index and product thumbs', () => {
+  const part = { format: 1, part: 0, parts: 1, hash: '1-abc', entries: Bytes.fromUint8Array(new Uint8Array([31, 139])), updatedAt: '2026-10-04T00:00:00.000Z' };
+  const thumb = { productId: 'p1', key: 'p:p1_a', data: 'data:image/jpeg;base64,AAAA' };
+
+  test('anyone reads the index, only the admin writes it, and only its own fields', async () => {
+    await assertSucceeds(setDoc(doc(owner(), 'catalog_index/p0'), part));
+    await assertSucceeds(getDocs(collection(guest(), 'catalog_index')));
+    await assertFails(setDoc(doc(customer(), 'catalog_index/p0'), part));
+    await assertFails(setDoc(doc(guest(), 'catalog_index/p1'), part));
+    await assertFails(setDoc(doc(owner(), 'catalog_index/p0'), { ...part, note: 'x' }));
+    await assertFails(setDoc(doc(owner(), 'catalog_index/p0'), { ...part, entries: '[]' }));
+    await assertFails(setDoc(doc(owner(), 'catalog_index/main'), part));
+    await assertFails(deleteDoc(doc(customer(), 'catalog_index/p0')));
+    await assertSucceeds(deleteDoc(doc(owner(), 'catalog_index/p0')));
+  });
+
+  test('anyone reads a miniature, only the admin writes it, and only a picture of that product', async () => {
+    await assertSucceeds(setDoc(doc(owner(), 'product_thumbs/p1'), thumb));
+    await assertSucceeds(getDoc(doc(guest(), 'product_thumbs/p1')));
+    await assertFails(setDoc(doc(customer(), 'product_thumbs/p2'), { ...thumb, productId: 'p2' }));
+    await assertFails(setDoc(doc(owner(), 'product_thumbs/p2'), thumb));
+    await assertFails(setDoc(doc(owner(), 'product_thumbs/p1'), { ...thumb, data: 'https://attacker.example/x.png' }));
+    await assertFails(setDoc(doc(owner(), 'product_thumbs/p1'), { ...thumb, data: `data:image/jpeg;base64,${'A'.repeat(100_000)}` }));
+    await assertFails(deleteDoc(doc(guest(), 'product_thumbs/p1')));
+    await assertSucceeds(deleteDoc(doc(owner(), 'product_thumbs/p1')));
+  });
+});
+
 // Находка 26 (аудит 02.10): гость вошёл через Google — заказы и переписка анонимного входа переходят в аккаунт.
 // Обе стороны подтверждают связь: guest_links/{гость} пишет гость, account_guests/{аккаунт}_{гость} — аккаунт
 describe('guest data goes to the account after sign-in', () => {
@@ -1172,5 +1219,58 @@ describe('chat photos apart from messages', () => {
       await setDoc(doc(ctx.firestore(), 'chat_images/n1'), { data: photo });
     });
     await assertFails(getDoc(doc(customer('alice'), 'chat_images/n1')));
+  });
+});
+
+// Журнал ошибок у покупателей (docs/ops-plan.md, этап 2): отчёт создаёт любой посетитель, но только в одной из 30 ячеек
+// текущего часа, без перезаписи и с полями ограниченной длины; читает и удаляет только администратор
+describe('errors on customers\' screens', () => {
+  const hour = () => Math.floor(Date.now() / 3_600_000);
+  const report = (overrides = {}) => ({
+    kind: 'error',
+    message: 'TypeError: Cannot read properties of undefined',
+    stack: 'at /assets/index-abc.js:1:2',
+    page: '/product/p1',
+    release: 'abc1234',
+    browser: 'Mozilla/5.0 (Linux; Android 14) Chrome/129',
+    createdAt: serverTimestamp(),
+    ...overrides,
+  });
+
+  test('a visitor without sign-in sends a report; only the admin reads and removes it', async () => {
+    const id = `${hour()}_0`;
+    await assertSucceeds(setDoc(doc(guest(), 'client_errors', id), report()));
+    await assertSucceeds(setDoc(doc(customer(), 'client_errors', `${hour()}_1`), { kind: 'console', message: 'Order was not saved: FirebaseError', page: '/checkout', createdAt: serverTimestamp() }));
+    await assertFails(getDoc(doc(guest(), 'client_errors', id)));
+    await assertFails(getDocs(collection(customer(), 'client_errors')));
+    await assertSucceeds(getDocs(query(collection(owner(), 'client_errors'), orderBy('createdAt', 'desc'), limit(10))));
+    await assertFails(deleteDoc(doc(customer(), 'client_errors', id)));
+    await assertSucceeds(deleteDoc(doc(owner(), 'client_errors', id)));
+  });
+
+  test('at most 30 reports an hour: no overwrite, no other slots or hours', async () => {
+    await assertSucceeds(setDoc(doc(guest(), 'client_errors', `${hour()}_29`), report()));
+    // the slot is taken: a second report there (or an attacker wiping a real one) is refused
+    await assertFails(setDoc(doc(guest(), 'client_errors', `${hour()}_29`), report({ message: 'x' })));
+    await assertFails(setDoc(doc(guest(), 'client_errors', `${hour()}_30`), report()));
+    await assertFails(setDoc(doc(guest(), 'client_errors', `${hour() + 5}_1`), report()));
+    await assertFails(setDoc(doc(guest(), 'client_errors', `${hour() - 5}_1`), report()));
+    await assertFails(setDoc(doc(guest(), 'client_errors', 'random-id'), report()));
+    await assertFails(setDoc(doc(guest(), 'client_errors', `${hour()}_1_2`), report()));
+    // a phone with its clock an hour off still reports
+    await assertSucceeds(setDoc(doc(guest(), 'client_errors', `${hour() - 1}_2`), report()));
+  });
+
+  test('only the report\'s fields, of limited size, with the server\'s time', async () => {
+    const id = (slot) => `${hour()}_${slot}`;
+    await assertFails(setDoc(doc(guest(), 'client_errors', id(3)), report({ customerPhone: '+79990000000' })));
+    await assertFails(setDoc(doc(guest(), 'client_errors', id(4)), report({ message: 'x'.repeat(501) })));
+    await assertFails(setDoc(doc(guest(), 'client_errors', id(5)), report({ message: '' })));
+    await assertFails(setDoc(doc(guest(), 'client_errors', id(6)), report({ stack: 'x'.repeat(2001) })));
+    await assertFails(setDoc(doc(guest(), 'client_errors', id(7)), report({ page: 'x'.repeat(201) })));
+    await assertFails(setDoc(doc(guest(), 'client_errors', id(8)), report({ browser: 'x'.repeat(301) })));
+    await assertFails(setDoc(doc(guest(), 'client_errors', id(9)), report({ kind: 'spam' })));
+    await assertFails(setDoc(doc(guest(), 'client_errors', id(10)), report({ createdAt: Timestamp.fromMillis(0) })));
+    await assertFails(setDoc(doc(guest(), 'client_errors', id(11)), report({ message: { text: 'x' } })));
   });
 });

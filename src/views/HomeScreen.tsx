@@ -9,6 +9,7 @@ import { ProductCard } from '../components/ProductCard';
 import { AutocompleteSearch } from '../components/AutocompleteSearch';
 import { RecentlyViewed } from '../components/RecentlyViewed';
 import { NeumorphicImage } from '../components/NeumorphicImage';
+import { useBannerImage } from '../utils/useBannerImage';
 import { NotConfigured } from '../components/NotConfigured';
 import { categoryIcon, getCategories } from '../utils/categories';
 import { formatDays } from '../utils/pluralize';
@@ -184,6 +185,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const categories = getCategories(storefrontSettings);
 
   const currentSlide = displaySlides[activeBannerSlide] || displaySlides[0];
+  // the picture of the slide on screen only (docs/catalog-scale-plan.md, stage 5)
+  const currentSlideImage = useBannerImage(currentSlide);
 
   // Settings values with defaults
   const isOnline = storeAcceptsOrders(storefrontSettings);
@@ -314,7 +317,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {/* Narrower photo on 320 px: at full width it left the subtitle a column too thin to read */}
             <div className="w-40 h-44 max-[359px]:w-28 max-[359px]:h-36 lg:w-[400px] lg:h-[260px] shrink-0">
               <NeumorphicImage
-                src={currentSlide.image}
+                src={currentSlideImage}
                 alt={currentSlide.title}
                 priority={true}
                 containerClassName="w-40 h-44 max-[359px]:w-28 max-[359px]:h-36 lg:w-[400px] lg:h-[260px] rounded-2xl"

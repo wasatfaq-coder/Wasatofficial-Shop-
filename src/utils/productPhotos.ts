@@ -70,6 +70,40 @@ export function droppedPhotoIds(before: Pick<Product, 'photoIds'> | undefined, a
   return (before?.photoIds ?? []).filter((id) => id && !kept.has(id));
 }
 
+/**
+ * Photo documents of a copy of a product: every full photo that was read gets its own document under the copy's id, so
+ * removing a photo from the copy or the original never deletes the other's. A photo that was not read stays a preview
+ * in the copy (id '').
+ */
+export function copyProductPhotos(
+  productId: string,
+  photoIds: string[] | undefined,
+  fullPhotos: Record<string, string>
+): { photoIds: string[]; newPhotos: PhotoDoc[] } {
+  const newPhotos: PhotoDoc[] = [];
+  const ids = (photoIds ?? []).map((id) => {
+    const data = id ? fullPhotos[id] : undefined;
+    if (!data) return '';
+    const copyId = newPhotoId(productId);
+    newPhotos.push({ id: copyId, productId, data });
+    return copyId;
+  });
+  return { photoIds: ids, newPhotos };
+}
+
+/** Of these photo ids, the ones no product uses (a copy made before 04.10.2026 shares documents with its original) */
+export function unusedPhotoIds(ids: string[], products: Pick<Product, 'photoIds'>[]): string[] {
+  const used = new Set(products.flatMap((p) => p.photoIds ?? []));
+  return [...new Set(ids.filter((id) => id && !used.has(id)))];
+}
+
+/** Photo documents of the products removed between two versions of the catalog (deleted after the products) */
+export function removedProductPhotoIds(before: Pick<Product, 'id' | 'photoIds'>[], after: Pick<Product, 'id' | 'photoIds'>[]): string[] {
+  const kept = new Set(after.map((p) => p.id));
+  const removed = before.filter((p) => !kept.has(p.id)).flatMap((p) => p.photoIds ?? []);
+  return unusedPhotoIds(removed, after);
+}
+
 /** The stored size of a heavy photo is counted as its preview's (≈ 45 КБ): the full one lives in its own document */
 export function storedImagesEstimate(images: string[]): string[] {
   return images.map((src) => (isHeavyPhoto(src) ? 'x'.repeat(45_000) : src));

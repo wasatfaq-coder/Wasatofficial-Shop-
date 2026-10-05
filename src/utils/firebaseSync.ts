@@ -21,12 +21,14 @@ import {
   deleteField,
   runTransaction,
   documentId,
+  Bytes,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { CartItem, Product, ProductSKU, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog, PaymentKind, PaymentTemplate } from '../types';
 import { paymentLogEntry, receiptMessageText } from './paymentDetails';
 import { DEFAULT_STOREFRONT_SETTINGS, generateDefaultSKUs, inStockAfterReturn, inStockAfterStockChange, stockMovementId } from './inventory';
 import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
+import { splitBannerImages, type BannerImagesDoc } from './bannerImages';
 import type { LegalDocId, LegalTexts } from './legalDocs';
 import type { RestoreWrite } from './backupRestore';
 import { splitProductPhotos, type PhotoDoc } from './productPhotos';
@@ -44,6 +46,13 @@ import { formatOrderDate } from '../shared/orderDate';
 import { cancelReasonText, formatCancelledAt } from './orderCancel';
 import type { OrderStatusLogEntry } from '../shared/orderFlow';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages, isTransportCompanyDelivery } from './deliveryStages';
+import { CLIENT_ERRORS_COLLECTION, type ClientErrorReport, type StoredClientError } from './clientErrors';
+import {
+  CATALOG_INDEX_COLLECTION,
+  PRODUCT_THUMBS_COLLECTION,
+  catalogIndexPartId,
+  type CatalogIndexPart,
+} from './catalogIndex';
 
 /**
  * An empty collection means the owner has not added anything yet (or removed it all).
@@ -159,7 +168,7 @@ export function subscribeToProducts(
  * (it lives in the admin-only `product_costs`).
  */
 function toStoredProduct(product: Product): Product {
-  const { costPrice: _cost, ...stored } = withoutCollectionReviews(product);
+  const { costPrice: _cost, catalogRating: _rating, ...stored } = withoutCollectionReviews(product);
   return stored;
 }
 
@@ -578,6 +587,7 @@ export async function saveStockMovements(movements: StockMovementLog[]) {
 
 /** Full photos already read in this visit: the product page and the zoom do not read them again */
 const productPhotoCache = new Map<string, string>();
+const productPhotoRequests = new Map<string, Promise<void>>();
 
 /** Full photos of a product by id (stage 6): a missing document is left out — the page shows the preview */
 export async function loadProductPhotos(ids: string[]): Promise<Record<string, string>> {
@@ -585,14 +595,20 @@ export async function loadProductPhotos(ids: string[]): Promise<Record<string, s
   await Promise.all(
     wanted
       .filter((id) => !productPhotoCache.has(id))
-      .map(async (id) => {
-        try {
-          const snap = await getDoc(doc(db, 'product_photos', id));
-          const data = snap.data()?.data;
-          if (typeof data === 'string') productPhotoCache.set(id, data);
-        } catch (error) {
-          console.warn(`Photo ${id} was not read:`, error);
+      .map((id) => {
+        // the next slide asks while the previous request is on its way: one read per photo
+        let pending = productPhotoRequests.get(id);
+        if (!pending) {
+          pending = getDoc(doc(db, 'product_photos', id))
+            .then((snap) => {
+              const data = snap.data()?.data;
+              if (typeof data === 'string') productPhotoCache.set(id, data);
+            })
+            .catch((error) => console.warn(`Photo ${id} was not read:`, error))
+            .finally(() => productPhotoRequests.delete(id));
+          productPhotoRequests.set(id, pending);
         }
+        return pending;
       })
   );
   return Object.fromEntries(wanted.filter((id) => productPhotoCache.has(id)).map((id) => [id, productPhotoCache.get(id)!]));
@@ -618,6 +634,86 @@ export async function deleteProductPhotos(ids: string[]): Promise<void> {
     for (const id of list.slice(i, i + BATCH_LIMIT)) batch.delete(doc(db, 'product_photos', id));
     await batch.commit();
   }
+}
+
+/**
+ * The light catalog index (docs/catalog-scale-plan.md, stage 2): every part of `catalog_index`. A write puts all parts
+ * in one batch, so a snapshot never mixes two versions (readCatalogIndex checks it anyway)
+ */
+export function subscribeToCatalogIndex(onUpdate: (parts: CatalogIndexPart[]) => void, onError?: (error: unknown) => void) {
+  return onSnapshot(
+    collection(db, CATALOG_INDEX_COLLECTION),
+    (snap) => {
+      if (snap.metadata.fromCache && snap.empty) return;
+      onUpdate(
+        snap.docs.map((d) => {
+          const data = d.data();
+          return { ...(data as CatalogIndexPart), entries: data.entries instanceof Bytes ? data.entries.toUint8Array() : new Uint8Array() };
+        })
+      );
+    },
+    (error) => {
+      console.warn('Catalog index subscription warning:', error);
+      if (onError) onError(error);
+    }
+  );
+}
+
+/** Writes the index (admin): the new parts and the removal of parts it no longer has, in one batch */
+export async function saveCatalogIndex(parts: CatalogIndexPart[], previousPartCount: number): Promise<void> {
+  const batch = writeBatch(db);
+  for (const part of parts) {
+    batch.set(doc(db, CATALOG_INDEX_COLLECTION, catalogIndexPartId(part.part)), { ...part, entries: Bytes.fromUint8Array(part.entries) });
+  }
+  for (let i = parts.length; i < previousPartCount; i++) batch.delete(doc(db, CATALOG_INDEX_COLLECTION, catalogIndexPartId(i)));
+  await batch.commit();
+}
+
+export interface ProductThumb {
+  productId: string;
+  /** thumbKey of the photo it was made from */
+  key: string;
+  data: string;
+}
+
+/** Miniatures of products for the catalog cards (admin), 50 per batch: one is ≈ 10–20 КБ */
+export async function saveProductThumbs(thumbs: ProductThumb[], removedProductIds: string[] = []): Promise<void> {
+  for (let i = 0; i < thumbs.length; i += 50) {
+    const batch = writeBatch(db);
+    for (const thumb of thumbs.slice(i, i + 50)) batch.set(doc(db, PRODUCT_THUMBS_COLLECTION, thumb.productId), thumb);
+    await batch.commit();
+  }
+  for (let i = 0; i < removedProductIds.length; i += BATCH_LIMIT) {
+    const batch = writeBatch(db);
+    for (const id of removedProductIds.slice(i, i + BATCH_LIMIT)) batch.delete(doc(db, PRODUCT_THUMBS_COLLECTION, id));
+    await batch.commit();
+  }
+}
+
+/** Miniatures of a few products (a catalog page): one read each, up to 30 ids per query */
+export async function loadProductThumbs(productIds: string[]): Promise<ProductThumb[]> {
+  const out: ProductThumb[] = [];
+  for (let i = 0; i < productIds.length; i += 30) {
+    const snap = await getDocs(query(collection(db, PRODUCT_THUMBS_COLLECTION), where(documentId(), 'in', productIds.slice(i, i + 30))));
+    snap.forEach((d) => out.push(d.data() as ProductThumb));
+  }
+  return out;
+}
+
+/**
+ * One product document (stage 3 of docs/catalog-scale-plan.md): the customer reads the catalog from the index and the
+ * full product only where it is shown or ordered — the product page, the quick view, the cart and the checkout.
+ * `null` — the product is gone
+ */
+export function subscribeToProductDoc(productId: string, onUpdate: (product: Product | null) => void) {
+  return onSnapshot(
+    doc(db, 'products', productId),
+    (snap) => {
+      if (snap.metadata.fromCache && !snap.exists()) return;
+      onUpdate(snap.exists() ? ({ ...(snap.data() as Product), id: snap.id }) : null);
+    },
+    (error) => console.warn('Product subscription warning:', error)
+  );
 }
 
 /**
@@ -1141,9 +1237,18 @@ export function subscribeToBanners(
   );
 }
 
+/**
+ * Banners without their data: pictures inside (stage 5, bannerImages.ts): the pictures go to `banner_images/{id}` first
+ * (a banner never points to pictures that are not there yet), and only the ones that changed — a banner the admin did
+ * not touch keeps its `imageKey`
+ */
 export async function syncAllBannersToFirestore(banners: BannerSlide[]) {
   try {
-    await setDocs('banners', banners.map((banner, i) => ({ ...banner, order: i })));
+    const split = banners.map(splitBannerImages);
+    for (const [i, { stored, images }] of split.entries()) {
+      if (images && stored.imageKey !== banners[i].imageKey) await setDoc(doc(db, 'banner_images', images.bannerId), images);
+    }
+    await setDocs('banners', split.map(({ stored }, i) => ({ ...stored, order: i })));
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'banners');
   }
@@ -1173,20 +1278,42 @@ export async function saveServerConfigToFirestore(config: ServerConfig) {
  * 4b. REVIEWS: `reviews/{productId}_{uid}` (the author edits only their own) and
  * `review_votes/{reviewId}_{uid}` (one «Полезно» per person). Not stored inside products.
  */
-export function subscribeToReviews(onUpdate: (reviews: StoredReview[]) => void) {
+/** Every review, or one product's (`productId`: the customer reads only the reviews of the product page, stage 4) */
+export function subscribeToReviews(onUpdate: (reviews: StoredReview[]) => void, productId?: string) {
+  const ref = collection(db, 'reviews');
   return onSnapshot(
-    collection(db, 'reviews'),
+    productId ? query(ref, where('productId', '==', productId)) : ref,
     (snap) => onUpdate(snap.docs.map((d) => ({ ...(d.data() as StoredReview), id: d.id }))),
     (error) => console.warn('Reviews subscription warning:', error)
   );
 }
 
-export function subscribeToReviewVotes(onUpdate: (votes: ReviewVote[]) => void) {
+export function subscribeToReviewVotes(onUpdate: (votes: ReviewVote[]) => void, productId?: string) {
+  const ref = collection(db, 'review_votes');
   return onSnapshot(
-    collection(db, 'review_votes'),
+    productId ? query(ref, where('productId', '==', productId)) : ref,
     (snap) => onUpdate(snap.docs.map((d) => d.data() as ReviewVote)),
     (error) => console.warn('Review votes subscription warning:', error)
   );
+}
+
+/** Pictures of a banner (null — none); read once per picture version in a visit */
+const bannerImageRequests = new Map<string, Promise<BannerImagesDoc | null>>();
+export function loadBannerImages(banner: Pick<BannerSlide, 'id' | 'imageKey'>): Promise<BannerImagesDoc | null> {
+  const key = `${banner.id}:${banner.imageKey ?? ''}`;
+  let pending = bannerImageRequests.get(key);
+  if (!pending) {
+    pending = getDoc(doc(db, 'banner_images', banner.id))
+      .then((snap) => (snap.exists() ? (snap.data() as BannerImagesDoc) : null))
+      .catch((error) => {
+        // the slide keeps its placeholder; the next time it is shown it asks again
+        bannerImageRequests.delete(key);
+        console.warn(`Banner picture ${banner.id} was not read:`, error);
+        return null;
+      });
+    bannerImageRequests.set(key, pending);
+  }
+  return pending;
 }
 
 export async function saveReviewToFirestore(review: StoredReview) {
@@ -1672,11 +1799,53 @@ export async function syncAllPickupPointsToFirestore(points: PickupPoint[]) {
 }
 
 /**
+ * 10a. ERRORS ON CUSTOMERS' SCREENS (docs/ops-plan.md, stage 2): any visitor creates a report, only the admin reads
+ * and removes them (firestore.rules, isClientErrorReport)
+ */
+/** Creates the report; fails when the slot is taken (the rules allow no overwrite) — the caller tries another slot */
+export async function saveClientError(id: string, report: ClientErrorReport): Promise<void> {
+  await setDoc(doc(db, CLIENT_ERRORS_COLLECTION, id), { ...report, createdAt: serverTimestamp() });
+}
+
+export function subscribeToClientErrors(
+  onUpdate: (errors: StoredClientError[]) => void,
+  onError: (error: unknown) => void,
+  max = 300
+) {
+  return onSnapshot(
+    query(collection(db, CLIENT_ERRORS_COLLECTION), orderBy('createdAt', 'desc'), limit(max)),
+    (snapshot) => {
+      const list: StoredClientError[] = [];
+      snapshot.forEach((snap) => {
+        const data = snap.data() as ClientErrorReport & { createdAt?: Timestamp | null };
+        if (!data || typeof data.message !== 'string') return;
+        list.push({ ...data, id: snap.id, createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toMillis() : 0 });
+      });
+      onUpdate(list);
+    },
+    onError
+  );
+}
+
+export async function deleteClientErrors(ids: string[]): Promise<void> {
+  await commitInChunks(ids, (batch, id) => batch.delete(doc(db, CLIENT_ERRORS_COLLECTION, id)));
+}
+
+/** Reports older than `beforeMs` (at most 400 per call: the card calls it each time it opens) */
+export async function deleteClientErrorsBefore(beforeMs: number): Promise<number> {
+  const old = await getDocs(
+    query(collection(db, CLIENT_ERRORS_COLLECTION), where('createdAt', '<', Timestamp.fromMillis(beforeMs)), limit(400))
+  );
+  await deleteClientErrors(old.docs.map((d) => d.id));
+  return old.size;
+}
+
+/**
  * 11. DATABASE BACKUP (admin only)
  */
 /** Every collection of the store; `test` holds only the connection probe */
 export const BACKUP_COLLECTIONS = [
-  'products', 'product_photos', 'product_costs', 'promos', 'settings', 'banners', 'delivery_methods', 'pickup_points',
+  'products', 'product_photos', 'product_costs', 'promos', 'settings', 'banners', 'banner_images', 'delivery_methods', 'pickup_points',
   'orders', 'users', 'customer_notes', 'admins', 'reviews', 'review_votes',
   'chat_messages', 'chat_images', 'support_threads', 'support_status', STOCK_MOVEMENTS_COLLECTION, 'promo_uses', 'payment_templates',
 ] as const;

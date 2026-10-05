@@ -1,6 +1,7 @@
 import { pluralRu } from '../../utils/pluralize';
 import React, { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminLaunchChecklist } from './AdminLaunchChecklist';
+import { AdminSiteErrorsCard } from './AdminSiteErrorsCard';
 import type { LaunchStep } from '../../utils/launchChecklist';
 import type { AdminTab } from './adminSections';
 import {
@@ -427,6 +428,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
   return (
     <div className="space-y-4 sm:space-y-5 text-[#2D3A4E]">
       {launchSteps && onOpenTab && <AdminLaunchChecklist steps={launchSteps} onOpenTab={onOpenTab} />}
+      <AdminSiteErrorsCard onShowToast={onShowToast} />
       {/* 1. Header: title, period, reset state */}
       <section className="neu-flat rounded-3xl p-4 space-y-3">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">

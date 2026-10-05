@@ -22,6 +22,7 @@ export const BACKUP_COLLECTION_TITLES: Record<string, string> = {
   promos: 'Промокоды',
   settings: 'Настройки витрины',
   banners: 'Баннеры',
+  banner_images: 'Картинки баннеров',
   delivery_methods: 'Способы доставки',
   pickup_points: 'Пункты выдачи',
   orders: 'Заказы',

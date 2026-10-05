@@ -14,7 +14,9 @@
     "test:rules": "bun scripts/client-order-sample.ts && firebase emulators:exec --only firestore --project demo-manstyle 'node --test tests/firestore.rules.test.mjs tests/audit-attacks.test.mjs'",
     "test:functions": "firebase emulators:exec --only firestore --project demo-manstyle 'cd functions && bun test test/'",
     "test:e2e": "VITE_USE_EMULATORS=true vite build --outDir dist-e2e --emptyOutDir && firebase emulators:exec --only auth,firestore --project ai-studio-applet-webapp-e9574 'playwright test'",
-    "build:functions": "cd functions && npm run build"
+    "build:functions": "cd functions && npm run build",
+    "measure:visit": "VITE_USE_EMULATORS=true vite build --outDir dist-e2e --emptyOutDir && JAVA_TOOL_OPTIONS=\"$JAVA_TOOL_OPTIONS -Xmx4g\" firebase emulators:exec --only auth,firestore --project ai-studio-applet-webapp-e9574 'bun tests/visit/seed.ts && playwright test -c playwright.visit.config.ts && bun --preload ./tests/visit/share-preload.ts scripts/share-pages.ts --fingerprint > /dev/null'",
+    "measure:admin": "VITE_USE_EMULATORS=true vite build --outDir dist-e2e --emptyOutDir && JAVA_TOOL_OPTIONS=\"$JAVA_TOOL_OPTIONS -Xmx4g\" firebase emulators:exec --only auth,firestore --project ai-studio-applet-webapp-e9574 'VISIT_ORDERS=1 bun tests/visit/seed.ts && VISIT_ORDERS=1 playwright test -c playwright.visit.config.ts tests/visit/admin.spec.ts'"
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",

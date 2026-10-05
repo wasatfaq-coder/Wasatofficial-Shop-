@@ -7,6 +7,7 @@ import { getOrderableStock, getVariantStock } from '../utils/inventory';
 import { initialColor, initialSize } from '../utils/variantSelection';
 import { productImage } from '../utils/productImage';
 import { useDialogA11y } from '../utils/useDialogA11y';
+import { useLiveProduct } from '../utils/liveProducts';
 
 interface VariantPickerSheetProps {
   /** Product whose «+» was pressed; null — closed */
@@ -23,12 +24,14 @@ interface VariantPickerSheetProps {
  * Bottom sheet on the phone, a window on the desktop; Escape and the backdrop close it (useDialogA11y).
  */
 export const VariantPickerSheet: React.FC<VariantPickerSheetProps> = ({
-  product,
+  product: shownProduct,
   preorderMode,
   onClose,
   onAdd,
   onOpenProduct,
 }) => {
+  // the stock of the variants as in the database, not as in the catalog index
+  const product = useLiveProduct(shownProduct);
   const [color, setColor] = useState('');
   const [size, setSize] = useState('');
   const [sizeError, setSizeError] = useState(false);

@@ -7,6 +7,7 @@ import { NeumorphicImage } from './NeumorphicImage';
 import { AnimatedFavoriteButton } from './AnimatedFavoriteButton';
 import { photoBadgeClass } from '../utils/productBadge';
 import { getProductRating } from '../utils/productRating';
+import { useProductThumb } from '../utils/productThumbs';
 
 interface ProductCardProps {
   product: Product;
@@ -43,7 +44,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   const needsChoice = needsVariantChoice(product);
-  const mainImage = product.images && product.images.length > 0 ? product.images[0] : '';
+  // a product from the catalog index has no photo of its own: the card reads its miniature while it is shown
+  const mainImage = useProductThumb(product);
   // From real reviews only; hidden until the product has any
   const ratingInfo = getProductRating(product);
 

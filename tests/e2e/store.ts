@@ -1,5 +1,7 @@
 // The shop the scenarios work with: a few products, delivery, payment and requisites. Written to the emulator only
 // (seed.setup.ts); on the real site all of this is set by the owner in the admin panel
+import type { Product } from '../../src/types';
+import { buildCatalogIndex, catalogIndexPartId, catalogIndexParts, CATALOG_INDEX_COLLECTION, PRODUCT_THUMBS_COLLECTION, thumbKey } from '../../src/utils/catalogIndex';
 export const ADMIN = { sub: 'e2e-admin', email: 'gunh83975@gmail.com', name: 'Владелец' };
 
 const sizes = (id: string, colors: string[], list: string[], stock: number) =>
@@ -85,7 +87,29 @@ export const PRODUCTS = {
     colors: [{ name: 'Серый', hex: '#8A8F98' }],
     sizes: ['Единый'],
   }),
+  // the owner copies and deletes these (with their photo documents): one per screen size
+  scarf: { ...product({
+    id: 'e2e-scarf',
+    title: 'Шарф шерстяной',
+    category: 'accessories',
+    categoryLabel: 'Аксессуары',
+    price: 1790,
+    colors: [{ name: 'Серый', hex: '#8A8F98' }],
+    sizes: ['Единый'],
+  }), isPopular: false, photoIds: ['e2e-scarf_full'] },
+  tie: { ...product({
+    id: 'e2e-tie',
+    title: 'Галстук шёлковый',
+    category: 'accessories',
+    categoryLabel: 'Аксессуары',
+    price: 1590,
+    colors: [{ name: 'Темно-синий', hex: '#1F2A44' }],
+    sizes: ['Единый'],
+  }), isPopular: false, photoIds: ['e2e-tie_full'] },
 };
+
+/** A full photo of a product as `product_photos` keeps it (the product holds a preview) */
+export const fullPhoto = (productId: string) => ({ productId, data: 'data:image/jpeg;base64,' + 'A'.repeat(400) });
 
 export const COURIER = { id: 'courier', title: 'Курьером до двери', type: 'courier', price: 350, duration: '1–2 дня', icon: 'truck' };
 export const PICKUP = { id: 'pickup', title: 'Пункт выдачи', type: 'pickup', price: 0, duration: 'завтра', icon: 'store' };
@@ -94,6 +118,9 @@ export function storeDocs(): Record<string, Record<string, unknown>> {
   const categories = [...new Map(Object.values(PRODUCTS).map((p) => [p.category, { id: p.category, name: p.categoryLabel, icon: 'shirt' }])).values()];
   return {
     ...Object.fromEntries(Object.values(PRODUCTS).map((p) => [`products/${p.id}`, p])),
+    ...Object.fromEntries(
+      Object.values(PRODUCTS).flatMap((p) => ('photoIds' in p ? p.photoIds.map((id) => [`product_photos/${id}`, fullPhoto(p.id)]) : []))
+    ),
     'settings/storefront': {
       storeName: 'Wasat Shop',
       phone: '+7 (495) 111-22-33',
@@ -129,5 +156,24 @@ export function storeDocs(): Record<string, Record<string, unknown>> {
       isActive: true,
       isDefault: true,
     },
+  };
+}
+
+/**
+ * The light catalog index customers read (docs/catalog-scale-plan.md, stage 3), as the owner's session writes it:
+ * the scenarios go the customer's way — the index, and the product documents only on the product page, cart and checkout
+ */
+export async function catalogIndexDocs(): Promise<Record<string, Record<string, unknown>>> {
+  const products = Object.values(PRODUCTS) as unknown as Product[];
+  const { entries, hash } = buildCatalogIndex(products);
+  const parts = await catalogIndexParts(entries, hash);
+  return {
+    ...Object.fromEntries(parts.map((part) => [`${CATALOG_INDEX_COLLECTION}/${catalogIndexPartId(part.part)}`, { ...part }])),
+    ...Object.fromEntries(
+      products.flatMap((p) => {
+        const key = thumbKey(p);
+        return key ? [[`${PRODUCT_THUMBS_COLLECTION}/${p.id}`, { productId: p.id, key, data: p.images[0] }]] : [];
+      })
+    ),
   };
 }
