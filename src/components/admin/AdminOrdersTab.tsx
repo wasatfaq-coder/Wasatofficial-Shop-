@@ -1,5 +1,6 @@
 import { orderTimestamp } from '../../shared/orderDate';
-import { useProgressiveList } from '../../utils/useProgressiveList';
+import { usePagedList } from '../../utils/usePagedList';
+import { AdminShowMore } from './AdminShowMore';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Package,
@@ -358,8 +359,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   useUnsavedChanges(useChangedSince(editingTrackOrderId, [tempTrackValue, tempCarrierValue]), 'Трек-номер заказа');
   useUnsavedChanges(useChangedSince(editingNoteOrderId, [tempNoteValue]), 'Заметка к заказу');
 
-  // Filtered Orders Calculation (the cards are heavy: the first 3 — about a screen — render with the section, the rest
-  // after paint)
+  // Filtered Orders Calculation (the cards are heavy: 20 at a time with «Показать ещё», docs/orders-scale-plan.md, stage 1)
   const filteredOrders = useMemo(() => {
     // «Сегодня» / «Вчера» by the order's real date (createdAt, or the text date of old orders)
     const now = new Date();
@@ -417,7 +417,12 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       return true;
     });
   }, [orders, searchQuery, statusFilter, dateFilter, deliveryFilter, paymentFilter, paymentStatusFilter]);
-  const visibleOrders = useProgressiveList<Order>(filteredOrders, 3);
+  // a new search, chip or filter starts from the first 20
+  const orderPage = usePagedList<Order>(
+    filteredOrders,
+    [searchQuery, statusFilter, dateFilter, deliveryFilter, paymentFilter, paymentStatusFilter].join('|')
+  );
+  const visibleOrders = orderPage.visible;
 
   // Lines whose stock the buyer's browser did not take (finding 8): checked for active orders older than 2 minutes
   // (a fresh order may still be writing off), again when that list changes
@@ -1903,6 +1908,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
             );
           })
         )}
+        <AdminShowMore shown={visibleOrders.length} total={filteredOrders.length} onShowMore={orderPage.showMore} />
       </div>
 
       {/* ================= MODAL: PRINTABLE INVOICE ================= */}
