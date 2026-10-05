@@ -12,7 +12,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, ShieldCheck, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
-  UserProfile,
   Order,
   Product,
   PromoCode,
@@ -88,7 +87,6 @@ type ProfileAdminPanelProps = Pick<
   setAdminTab: (tab: AdminTab) => void;
   /** An order from the panel opens the order's window over it */
   setSelectedOrderIdForTracking: (orderId: string | null) => void;
-  allUsers: UserProfile[];
   products: Product[];
   promos: PromoCode[];
   bannerSlides: BannerSlide[];
@@ -106,7 +104,6 @@ export const ProfileAdminPanel = ({
   setAdminTab,
   setSelectedOrderIdForTracking,
   orders,
-  allUsers,
   products,
   promos,
   bannerSlides,
@@ -477,7 +474,6 @@ export const ProfileAdminPanel = ({
               {/* --- TAB: CUSTOMERS & CRM --- */}
               {adminTab === 'customers' && (
                 <AdminCustomersTab
-                  users={allUsers}
                   products={productsList}
                   orders={orders}
                   onOpenSupportChat={(orderId, customerName) => {
