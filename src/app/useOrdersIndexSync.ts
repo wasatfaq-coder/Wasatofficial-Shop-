@@ -29,12 +29,14 @@ export function useOrdersIndexSync(stored: StoredOrders | null) {
     };
   }, [enabled]);
 
-  const built = React.useMemo(() => (stored && !stored.pending ? buildOrdersIndex(stored.rows) : null), [stored]);
-
   React.useEffect(() => {
-    if (!built || !index || built.hash === index.hash) return;
+    if (!stored || stored.pending || !index) return;
+    // Built only after the snapshots settle: building serializes and hashes every order, and one status change brings
+    // several snapshots in a row — building on each of them repeated that work for nothing
     const timer = window.setTimeout(() => {
       if (running.current) return;
+      const built = buildOrdersIndex(stored.rows);
+      if (built.hash === index.hash) return;
       running.current = true;
       void ordersIndexParts(built.rows, built.hash, built.syncedUpTo)
         .then((parts) => saveOrdersIndex(parts, index.parts))
@@ -44,5 +46,5 @@ export function useOrdersIndexSync(stored: StoredOrders | null) {
         });
     }, SETTLE_MS);
     return () => window.clearTimeout(timer);
-  }, [built, index]);
+  }, [stored, index]);
 }
