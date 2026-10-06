@@ -1,0 +1,34 @@
+# Скиллы и команды ECC, которые Claude видит в списке скиллов и вызывает сам (по одному имени без ecc: в строке).
+# Остальные ECC помечаются «только ручной вызов» (.claude/hooks/ecc-skill-fixes.py): они работают командой /ecc:имя,
+# но не занимают место в списке. Список скиллов ограничен ~30 000 знаков: без этого описания не влезали у 300+ скиллов,
+# в том числе у всех скиллов Anthropic (docx, pdf, xlsx…). Добавляя имя, проверь замер (docs/skills.md, «Список скиллов»).
+
+security-review
+react-patterns
+react-performance
+react-testing
+e2e-testing
+frontend-a11y
+accessibility
+vite-patterns
+browser-qa
+seo
+code-review
+review-pr
+react-review
+security-scan
+verification-loop
+search-first
+documentation-lookup
+deep-research
+frontend-patterns
+error-handling
+make-interfaces-feel-better
+design-system
+click-path-audit
+production-audit
+react-build
+build-fix
+plan
+tdd-workflow
+react-test

@@ -8,7 +8,11 @@ ECC ставится в каждой облачной сессии заново 
   2. путь ~/.claude/skills/<скилл>/… к файлу плагина — ${CLAUDE_SKILL_DIR}/…: плагин лежит не в ~/.claude/skills;
   3. скрипт скилла в команде — ${CLAUDE_SKILL_DIR}/…: команды выполняются из папки проекта, а не скилла;
   4. файл скилла, о котором SKILL.md молчит, — ссылка из SKILL.md;
-  5. файл длиннее 100 строк — оглавление «## Contents» в начале.
+  5. файл длиннее 100 строк — оглавление «## Contents» в начале;
+  6. скиллы и команды ECC не из .claude/ecc-visible.txt — «только ручной вызов» (disable-model-invocation: true с пометкой
+     # wasat): список скиллов, который видит Claude, ограничен ~30 000 знаков, и без этого описания не влезали у 300+
+     скиллов, в том числе у всех скиллов Anthropic. Скрытые работают командой /ecc:имя. skillOverrides в настройках
+     для скиллов плагинов Claude Code не читает — поэтому правка в файлах.
 Имена скиллов, тексты правил, команды и флаги, скрипты и хуки ECC не меняются. Повторный запуск ничего не меняет.
 
 Запуск: python3 -I ecc-skill-fixes.py [папка skills …] — без аргументов берёт плагин ecc@ecc из
@@ -210,6 +214,46 @@ def add_tocs(skill):
     return files
 
 
+VISIBLE_LIST = Path(__file__).resolve().parent.parent / 'ecc-visible.txt'
+HIDE_MARK = '# wasat: скрыт от модели, вызов /ecc:имя; видимые — .claude/ecc-visible.txt'
+
+
+def visible_names():
+    try:
+        lines = VISIBLE_LIST.read_text(encoding='utf-8').splitlines()
+    except OSError:
+        return None  # нет списка — ничего не скрываем
+    return {line.strip() for line in lines if line.strip() and not line.startswith('#')}
+
+
+def set_model_visibility(path, visible):
+    """6. Пометка «только ручной вызов» в заголовке файла скилла или команды; снимается, если имя стало видимым."""
+    text = path.read_text(encoding='utf-8')
+    m = re.match(r'---\n(.*?)\n---', text, re.S)
+    if not m:
+        return 0
+    lines = m.group(1).split('\n')
+    if HIDE_MARK in lines:
+        if not visible:
+            return 0
+        i = lines.index(HIDE_MARK)
+        del lines[i:i + 2]
+    elif visible or any(line.startswith('disable-model-invocation:') for line in lines):
+        return 0  # видимый или автор сам решил, вызывается ли он моделью
+    else:
+        lines += [HIDE_MARK, 'disable-model-invocation: true']
+    return write(path, text, '---\n' + '\n'.join(lines) + '\n---' + text[m.end():])
+
+
+def fix_visibility(root):
+    names = visible_names()
+    if names is None:
+        return 0
+    files = [d / 'SKILL.md' for d in root.iterdir() if (d / 'SKILL.md').is_file()]
+    files += sorted((root.parent / 'commands').glob('*.md'))
+    return sum(set_model_visibility(f, (f.parent.name if f.name == 'SKILL.md' else f.stem) in names) for f in files)
+
+
 def fix_skill(skill, root):
     # Порядок важен: сначала вынос разделов (пути в вынесенном тексте ${CLAUDE_SKILL_DIR} не получат —
     # Claude Code подставляет его только в SKILL.md), потом пути, ссылки и оглавления, в том числе новых файлов.
@@ -237,6 +281,10 @@ def main():
                 changed += fix_skill(skill, root)
             except (OSError, UnicodeError) as error:
                 print(f'ecc-skill-fixes: {skill.name} пропущен: {error}', file=sys.stderr)
+        try:
+            changed += fix_visibility(root)
+        except (OSError, UnicodeError) as error:
+            print(f'ecc-skill-fixes: видимость не изменена: {error}', file=sys.stderr)
     print(f'ecc-skill-fixes: изменено файлов {changed}', file=sys.stderr)
     print(changed)
 
