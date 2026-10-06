@@ -11,6 +11,7 @@ TAG=v2.2.3
 COMMIT=c05b2d6614f62f6db0047669aa4eefb223d478f9
 INSTALLED="$HOME/.claude/plugins/installed_plugins.json"
 SETTINGS="${CLAUDE_PROJECT_DIR:-$(pwd)}/.claude/settings.json"
+FIXES="$(dirname "$0")/ecc-skill-fixes.py"
 
 if [ "${1:-}" != "--now" ]; then
   [ "${CLAUDE_CODE_REMOTE:-}" = "true" ] || exit 0
@@ -26,7 +27,17 @@ installed_commit() {
   ' "$INSTALLED"
 }
 
+# Форма скиллов ECC по руководству Anthropic (docs/skills.md): плагин ставится заново в каждой сессии, поэтому правка
+# повторяется после установки. В stdout — число изменённых файлов; сбой правки ECC не ломает — скиллы останутся как в $TAG.
+fix_skills() {
+  python3 -I "$FIXES" || { echo "ecc-skill-fixes.py упал — скиллы ECC остались как в версии $TAG." >&2; echo 0; }
+}
+
 if installed_commit | grep -qx "$COMMIT"; then
+  # Плагин уже стоит (контейнер не новый): правим и перечитываем скиллы, только если что-то изменилось.
+  if [ "$(fix_skills)" != "0" ]; then
+    echo '{"hookSpecificOutput": {"hookEventName": "SessionStart", "reloadSkills": true}}'
+  fi
   exit 0
 fi
 
@@ -44,4 +55,5 @@ if ! installed_commit | grep -qx "$COMMIT"; then
   exit 1
 fi
 
+fix_skills >/dev/null
 echo '{"hookSpecificOutput": {"hookEventName": "SessionStart", "reloadSkills": true}}'
