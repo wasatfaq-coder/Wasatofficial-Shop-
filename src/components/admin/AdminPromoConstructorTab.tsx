@@ -46,6 +46,13 @@ interface AdminPromoConstructorTabProps {
 /** A code as the checkout compares it: case and outer spaces do not matter */
 const normalizedCode = (code: string | undefined) => (code ?? '').trim().toUpperCase();
 
+/** «A, B, C и ещё 97»: a batch of single-use codes expires at once, and its codes would fill the phone screen */
+function expiredCodesPreview(promos: PromoCode[]): string {
+  const shown = promos.slice(0, 3).map((p) => p.code).join(', ');
+  const rest = promos.length - 3;
+  return rest > 0 ? `${shown} и ещё ${rest}` : shown;
+}
+
 export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> = ({
   promos,
   categories = [],
@@ -344,7 +351,8 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
   };
 
   // Active codes whose last day has passed: customers no longer see or apply them, but they stay «активные» here
-  const expiredActivePromos = useMemo(() => promos.filter((p) => p.active && isPromoExpired(p)), [promos]);
+  // computed on every render, not memoized by `promos`: a code expires at midnight while the list stays the same
+  const expiredActivePromos = promos.filter((p) => p.active && isPromoExpired(p));
   const [isDisablingExpired, setIsDisablingExpired] = useState(false);
 
   const handleDisableExpired = async () => {
@@ -1308,7 +1316,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 {expiredActivePromos.length} {pluralRu(expiredActivePromos.length, ['промокод', 'промокода', 'промокодов'])}{' '}
                 с прошедшим сроком
               </strong>{' '}
-              ({expiredActivePromos.map((p) => p.code).join(', ')}) ещё включены. Покупатель их уже не видит и не применит;
+              ({expiredCodesPreview(expiredActivePromos)}) ещё включены. Покупатель их уже не видит и не применит;
               выключите, чтобы список совпадал с тем, что действует.
             </p>
             <button
