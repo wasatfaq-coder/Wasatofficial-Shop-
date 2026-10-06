@@ -2,7 +2,7 @@
  * Order pricing shared by the storefront (checkout UI) and Cloud Functions
  * (server-side order validation). Keep this module free of browser APIs.
  */
-import type { CartItem, DeliveryMethod, PromoCode, StorefrontSettings } from '../types';
+import type { AppliedPromoInfo, CartItem, DeliveryMethod, PromoCode, StorefrontSettings } from '../types';
 
 /** Delivery method id used by the one-click "quick order" flow (no fee, no promo). */
 export const QUICK_ORDER_DELIVERY_ID = 'quick-order';
@@ -173,6 +173,33 @@ export function validatePromo(promo: PromoCode, lines: PricingLine[], now: numbe
       : `Промокод ${promo.code} действует только на выбранные категории (рубашки, пиджаки и др.)`;
   }
   return null;
+}
+
+/** The applied promo as the cart keeps it: the code's values from «Промокоды» */
+export function appliedPromoFrom(promo: PromoCode): AppliedPromoInfo {
+  return {
+    code: promo.code,
+    discountPercent: promo.discountPercent,
+    discountType: promoDiscountKind(promo),
+    discountValue: promo.discountValue !== undefined ? promo.discountValue : promo.discountPercent,
+    minOrderAmount: promo.minOrderAmount,
+    isReferral: promo.isReferral,
+    partnerName: promo.partnerName,
+    partnerCommissionPercent: promo.partnerCommissionPercent,
+    applicableCategories: promo.applicableCategories,
+    applicableProductIds: promo.applicableProductIds,
+  };
+}
+
+/**
+ * What an applied promo gives now: the owner may change the discount after the buyer applied the code, and the cart
+ * and the order count by «Промокоды», not by the values at the moment of applying (check 04.10, finding 11).
+ * null — the code is no longer in «Промокоды».
+ */
+export function currentAppliedPromo(applied: Pick<AppliedPromoInfo, 'code'>, promos: PromoCode[]): AppliedPromoInfo | null {
+  const code = applied.code.toUpperCase();
+  const promo = promos.find((p) => p.code.toUpperCase() === code);
+  return promo ? appliedPromoFrom(promo) : null;
 }
 
 /**

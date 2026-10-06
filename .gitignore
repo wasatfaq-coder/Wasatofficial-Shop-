@@ -29,3 +29,6 @@ playwright-report/
 
 # граф кода Graphify (скилл graph-pilot): строится заново командой `graphify update .`
 graphify-out/
+
+# байт-код Python (phone_view.py скилла graph-pilot и другие скрипты)
+__pycache__/
