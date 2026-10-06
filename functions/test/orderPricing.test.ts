@@ -4,6 +4,7 @@ import {
   calcPromoDiscount,
   formatPromoExpiry,
   getAvailableDeliveryMethods,
+  isPromoExpired,
   isPromoListed,
   promoExpiryDate,
   promoExpiryTime,
@@ -100,6 +101,14 @@ describe('promo expiry', () => {
     const p = promo({ discountPercent: 10, expiresAt: '2026-09-30' });
     expect(validatePromo(p, lines, new Date('2026-09-30T23:59:00+03:00').getTime())).toBeNull();
     expect(validatePromo(p, lines, new Date('2026-10-01T00:00:00+03:00').getTime())).toMatch(/истек/);
+  });
+
+  test('expired only after the last day; a code without a date never expires', () => {
+    expect(isPromoExpired({ expiresAt: '2026-09-30' }, new Date('2026-09-30T23:59:00+03:00').getTime())).toBe(false);
+    expect(isPromoExpired({ expiresAt: '2026-09-30' }, new Date('2026-10-01T00:00:00+03:00').getTime())).toBe(true);
+    expect(isPromoExpired({ expiresAt: '15 сентября 2026 г.' }, new Date('2026-10-06T12:00:00+03:00').getTime())).toBe(true);
+    expect(isPromoExpired({ expiresAt: undefined })).toBe(false);
+    expect(isPromoExpired({ expiresAt: 'Бессрочно' })).toBe(false);
   });
 
   test('shown as a date, text that is not a date as written', () => {
