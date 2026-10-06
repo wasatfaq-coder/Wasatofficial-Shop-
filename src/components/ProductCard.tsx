@@ -15,7 +15,9 @@ function useOnScreen(ref: React.RefObject<HTMLElement | null>): boolean | null {
   useEffect(() => {
     const el = ref.current;
     if (!el || typeof IntersectionObserver === 'undefined') return;
-    const observer = new IntersectionObserver(([entry]) => {
+    const observer = new IntersectionObserver((entries) => {
+      // a card scrolled out and back quickly comes as two entries in one call: the last one is where it is now
+      const entry = entries[entries.length - 1];
       setOnScreen(entry.isIntersecting);
       if (entry.isIntersecting) observer.disconnect();
     });
