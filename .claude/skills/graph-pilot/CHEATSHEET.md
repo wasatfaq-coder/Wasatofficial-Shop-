@@ -28,7 +28,7 @@
 
 | Хочу | Команда |
 |---|---|
-| Граф на телефоне | `python3 .claude/skills/graph-pilot/phone_view.py --seed "<узел>" --title "<название>" --out <файл>.html` → опубликовать как Artifact 🆓 |
+| Граф на телефоне | `python3 <папка скилла>/phone_view.py --seed "<узел>" --title "<название>" --out <файл>.html` → опубликовать как Artifact 🆓 (папка скилла — та, где лежит этот файл; полная команда — SKILL.md, шаг Д) |
 | Весь граф на компьютере | `graphify-out/graph.html` (2500 узлов, тяжёлый) |
 | Вики по проекту | `graphify export wiki` → `graphify-out/wiki/index.md` 🆓 |
 
