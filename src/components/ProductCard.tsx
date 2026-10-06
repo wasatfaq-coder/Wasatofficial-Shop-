@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Plus, Eye, Check, Star } from 'lucide-react';
 import { Product } from '../types';
 import { needsVariantChoice } from '../utils/variantSelection';
@@ -8,6 +8,24 @@ import { AnimatedFavoriteButton } from './AnimatedFavoriteButton';
 import { photoBadgeClass } from '../utils/productBadge';
 import { getProductRating } from '../utils/productRating';
 import { useProductThumb } from '../utils/productThumbs';
+
+/** Whether the element is on the screen: null until it is laid out, then true once it has been seen */
+function useOnScreen(ref: React.RefObject<HTMLElement | null>): boolean | null {
+  const [onScreen, setOnScreen] = useState<boolean | null>(() => (typeof IntersectionObserver === 'undefined' ? true : null));
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver((entries) => {
+      // a card scrolled out and back quickly comes as two entries in one call: the last one is where it is now
+      const entry = entries[entries.length - 1];
+      setOnScreen(entry.isIntersecting);
+      if (entry.isIntersecting) observer.disconnect();
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref]);
+  return onScreen;
+}
 
 interface ProductCardProps {
   product: Product;
@@ -44,8 +62,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   const needsChoice = needsVariantChoice(product);
-  // a product from the catalog index has no photo of its own: the card reads its miniature while it is shown
-  const mainImage = useProductThumb(product);
+  // a product from the catalog index has no photo of its own: the card reads its miniature while it is shown — at once
+  // when the card is on the screen, after the screen's photos when it is below (docs/performance-plan.md, stage 2)
+  const cardRef = useRef<HTMLDivElement>(null);
+  const onScreen = useOnScreen(cardRef);
+  const mainImage = useProductThumb(product, onScreen);
   // From real reviews only; hidden until the product has any
   const ratingInfo = getProductRating(product);
 
@@ -59,6 +80,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     // The title link is stretched over the card (after:inset-0): one Tab stop and Enter opens the product;
     // quick view, favorite and «+» sit above it (z-10) and stay separate buttons
     <div
+      ref={cardRef}
       className={`group relative neu-flat-sm neu-product-card rounded-3xl overflow-hidden flex flex-col justify-between cursor-pointer select-none h-full ${className}`}
     >
       {/* Product Image Box: Strictly 3:4 aspect ratio */}
