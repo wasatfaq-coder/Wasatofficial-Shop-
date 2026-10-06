@@ -1996,10 +1996,10 @@ export async function saveQuickPhrasesDoc(data: object): Promise<void> {
 }
 
 /** Ids of the documents now in these collections (the «Только недостающие» restore): reads, writes nothing */
-export async function readExistingIds(names: string[]): Promise<Record<string, Set<string>>> {
+export async function readExistingIds(names: string[], targetDb: Firestore = db): Promise<Record<string, Set<string>>> {
   const result: Record<string, Set<string>> = {};
   for (const name of names) {
-    const snapshot = await getDocs(collection(db, name));
+    const snapshot = await getDocs(collection(targetDb, name));
     result[name] = new Set(snapshot.docs.map((d) => d.id));
   }
   return result;
@@ -2035,13 +2035,13 @@ export async function restoreDatabase(
 }
 
 /** Reads every collection of the store (admin session). Reads only: nothing is written to the database. */
-export async function exportDatabase(databaseId: string): Promise<DatabaseBackup> {
+export async function exportDatabase(databaseId: string, sourceDb: Firestore = db): Promise<DatabaseBackup> {
   const backup: DatabaseBackup = {
     format: 'wasat-shop-backup', version: 1, createdAt: new Date().toISOString(), databaseId, collections: {}, failed: {},
   };
   for (const name of BACKUP_COLLECTIONS) {
     try {
-      const snapshot = await getDocs(collection(db, name));
+      const snapshot = await getDocs(collection(sourceDb, name));
       backup.collections[name] = snapshot.docs.map((d) => ({ id: d.id, data: toBackupValue(d.data()) }));
     } catch (error) {
       backup.failed[name] = error instanceof Error ? error.message : String(error);

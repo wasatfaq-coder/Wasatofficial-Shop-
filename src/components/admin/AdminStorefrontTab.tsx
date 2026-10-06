@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { AdminServerOrdersCard } from './AdminServerOrdersCard';
 import { AdminBackupCard } from './AdminBackupCard';
+import { AdminDatabaseMoveCard } from './AdminDatabaseMoveCard';
 import { SaveStorefrontSettings, StorefrontSettings } from '../../types';
 import {
   loadStorefrontSettings,
@@ -2236,6 +2237,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
         {/* Free backup: a JSON copy of the database on the owner's device */}
         <AdminBackupCard onShowToast={onShowToast} />
+
+        {/* The move to the free (default) database (docs/firestore-free-tier-plan.md, stage 2) */}
+        <AdminDatabaseMoveCard onShowToast={onShowToast} />
 
         {/* Submit Button */}
         <div className="flex items-center justify-between pt-2 gap-3 flex-wrap sm:flex-nowrap">

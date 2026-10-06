@@ -27,8 +27,11 @@ export default defineConfig({
     { name: 'seed', testMatch: 'setup/seed.setup.ts' },
     { name: 'phone', testDir: 'tests/e2e/shop', use: phone, dependencies: ['seed'] },
     { name: 'desktop', testDir: 'tests/e2e/shop', use: desktop, dependencies: ['seed'] },
+    // the move to the free database reads the whole database: after the shop scenarios, phone and desktop in turn
+    { name: 'move-phone', testDir: 'tests/e2e/move', use: phone, dependencies: ['phone', 'desktop'] },
+    { name: 'move-desktop', testDir: 'tests/e2e/move', use: desktop, dependencies: ['move-phone'] },
     // the empty shop runs after the rest: it clears the same database
-    { name: 'clear', testMatch: 'setup/clear.setup.ts', dependencies: ['phone', 'desktop'] },
+    { name: 'clear', testMatch: 'setup/clear.setup.ts', dependencies: ['move-desktop'] },
     { name: 'empty-phone', testDir: 'tests/e2e/empty', use: phone, dependencies: ['clear'] },
     { name: 'empty-desktop', testDir: 'tests/e2e/empty', use: desktop, dependencies: ['clear'] },
   ],
