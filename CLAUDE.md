@@ -75,9 +75,10 @@ Wasat Shop — SPA интернет-магазина мужской одежды
 Правила ECC (`rules/` в его репозитории) не ставятся: они противоречат этому файлу. Советы скиллов и агентов ECC общие:
 где они расходятся с этим файлом или `.claude/rules/` (conventional commits, TDD с покрытием 80 %, английские названия PR),
 верен этот файл. Сервер chrome-devtools из ECC ищет Google Chrome, которого в облаке нет: `.claude/hooks/chromium-for-ecc.sh`
-кладёт на его место Chromium Playwright без песочницы и экрана (как в e2e). Скрипты части скиллов ECC названы путём
-`~/.claude/skills/<скилл>/…`, а плагин лежит в `~/.claude/plugins/cache/ecc/ecc/<версия>/skills/` — запускай их оттуда
-(замер скиллов ECC — `docs/skills.md`).
+кладёт на его место Chromium Playwright без песочницы и экрана (как в e2e). После установки хук правит форму скиллов ECC по
+руководству Anthropic (`.claude/hooks/ecc-skill-fixes.py`): длинные SKILL.md — разделами дословно в `reference/`, оглавления,
+ссылки на все файлы скилла, пути к скриптам — `${CLAUDE_SKILL_DIR}` (плагин лежит не в `~/.claude/skills/`); тексты правил,
+имена, скрипты и хуки ECC не меняются. Новая версия ECC — снова замер `python3 -I scripts/skill-check.py` (`docs/skills.md`).
 
 ## Когда готово
 
