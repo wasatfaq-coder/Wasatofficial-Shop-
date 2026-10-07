@@ -126,6 +126,12 @@ export function promoExpiryTime(expiresAt: string | undefined | null): number | 
   return Date.UTC(y, m - 1, d + 1) - MSK_OFFSET_MS - 1;
 }
 
+/** The code's last day (Moscow time) has passed; a code without a date never expires */
+export function isPromoExpired(promo: Pick<PromoCode, 'expiresAt'>, now: number = Date.now()): boolean {
+  const end = promoExpiryTime(promo.expiresAt);
+  return end !== null && now > end;
+}
+
 /** «до 31.08.2026» for the customer and admin lists; text that is not a date is shown as written */
 export function formatPromoExpiry(expiresAt: string | undefined | null): string {
   const date = promoExpiryDate(expiresAt);

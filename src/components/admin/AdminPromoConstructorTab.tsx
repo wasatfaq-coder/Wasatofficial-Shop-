@@ -26,7 +26,7 @@ import { Order, PromoCode, Product, StoreCategory } from '../../types';
 import { copyToClipboard } from '../../utils/clipboard';
 import { NotConfigured } from '../NotConfigured';
 import { NeumorphicSwitch } from '../NeumorphicSwitch';
-import { formatPromoExpiry, isPromoListed, promoExpiryDate } from '../../shared/orderPricing';
+import { formatPromoExpiry, isPromoExpired, isPromoListed, promoExpiryDate } from '../../shared/orderPricing';
 import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
 import { computePartnerCommissions } from '../../utils/partnerCommission';
 import { pluralRu } from '../../utils/pluralize';
@@ -45,6 +45,13 @@ interface AdminPromoConstructorTabProps {
 
 /** A code as the checkout compares it: case and outer spaces do not matter */
 const normalizedCode = (code: string | undefined) => (code ?? '').trim().toUpperCase();
+
+/** «A, B, C и ещё 97»: a batch of single-use codes expires at once, and its codes would fill the phone screen */
+function expiredCodesPreview(promos: PromoCode[]): string {
+  const shown = promos.slice(0, 3).map((p) => p.code).join(', ');
+  const rest = promos.length - 3;
+  return rest > 0 ? `${shown} и ещё ${rest}` : shown;
+}
 
 export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> = ({
   promos,
@@ -340,6 +347,25 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
     onShowToast(
       `Промокод ${target?.code} ${target?.active ? 'активирован' : 'приостановлен'}`,
       'info'
+    );
+  };
+
+  // Active codes whose last day has passed: customers no longer see or apply them, but they stay «активные» here
+  // computed on every render, not memoized by `promos`: a code expires at midnight while the list stays the same
+  const expiredActivePromos = promos.filter((p) => p.active && isPromoExpired(p));
+  const [isDisablingExpired, setIsDisablingExpired] = useState(false);
+
+  const handleDisableExpired = async () => {
+    const ids = new Set(expiredActivePromos.map((p) => p.id));
+    if (ids.size === 0) return;
+    setIsDisablingExpired(true);
+    const updated = promos.map((p) => (ids.has(p.id) ? { ...p, active: false } : p));
+    const saved = await onUpdatePromos(updated);
+    setIsDisablingExpired(false);
+    if (saved === false) return;
+    onShowToast(
+      `Выключено ${ids.size} ${pluralRu(ids.size, ['промокод', 'промокода', 'промокодов'])} с прошедшим сроком`,
+      'success'
     );
   };
 
@@ -1283,6 +1309,28 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
 
       {/* Promos List */}
       <div className="space-y-3 w-full min-w-0">
+        {expiredActivePromos.length > 0 && (
+          <div className="bg-warning-soft border border-warning/30 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center gap-2.5">
+            <p className="text-xs text-[#2D3A4E] flex-1 min-w-0">
+              <strong>
+                {expiredActivePromos.length} {pluralRu(expiredActivePromos.length, ['промокод', 'промокода', 'промокодов'])}{' '}
+                с прошедшим сроком
+              </strong>{' '}
+              ({expiredCodesPreview(expiredActivePromos)}) ещё включены. Покупатель их уже не видит и не применит;
+              выключите, чтобы список совпадал с тем, что действует.
+            </p>
+            <button
+              type="button"
+              onClick={handleDisableExpired}
+              disabled={isDisablingExpired}
+              className={`h-9 px-4 rounded-xl text-xs font-extrabold shrink-0 self-start sm:self-auto ${
+                isDisablingExpired ? 'neu-button-disabled' : 'neu-button text-[#2D3A4E] cursor-pointer'
+              }`}
+            >
+              {isDisablingExpired ? 'Выключение…' : `Выключить ${expiredActivePromos.length}`}
+            </button>
+          </div>
+        )}
         <div className="flex items-center justify-between px-0.5">
           <p className="text-xs font-bold text-[#4E5C70]">
             Отображается: <strong className="text-[#2D3A4E]">{filteredPromos.length}</strong> (активных:{' '}
@@ -1326,6 +1374,12 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                       <span className="text-[11px] font-bold neu-flat-sm text-accent px-2 py-0.5 rounded-full flex items-center gap-1">
                         <Share2 className="w-3 h-3" />
                         Партнер: {promo.partnerName}
+                      </span>
+                    )}
+
+                    {isPromoExpired(promo) && (
+                      <span className="text-[11px] font-bold bg-warning-soft text-warning border border-warning/30 px-2 py-0.5 rounded-full">
+                        Срок истёк
                       </span>
                     )}
 
