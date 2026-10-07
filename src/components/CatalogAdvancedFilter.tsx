@@ -227,10 +227,11 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
   const pricePresets = useMemo(() => buildPricePresets(products.map((p) => p.price)), [products]);
 
   // Filter content is rendered inline and in the modal: ids get a prefix so they stay unique
+  // sections are divided by a line, not cards inside the filter card (design pass 07.10)
   const renderFilterContent = (idPrefix: string) => (
     <div className="space-y-4">
       {/* 1. In-stock switch: the whole row is its label */}
-      <div className="neu-inset rounded-2xl p-3.5 border border-white/60 flex items-center justify-between gap-3">
+      <div className="pt-4 border-t border-[#BAC5D5]/50 first:border-t-0 first:pt-0 flex items-center justify-between gap-3">
         <label htmlFor={`${idPrefix}-in-stock`} className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer select-none">
           <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0 border border-white/40">
             <PackageCheck className="w-4 h-4 stroke-[2.2]" aria-hidden="true" />
@@ -252,7 +253,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
       </div>
 
       {/* 2. Price Range Filter with Deepened Inset Buttons */}
-      <div className="neu-inset rounded-2xl p-3.5 border border-white/60 space-y-3">
+      <div className="pt-4 border-t border-[#BAC5D5]/50 first:border-t-0 first:pt-0 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs font-bold text-[#2D3A4E]">
             <Banknote className="w-4 h-4 text-accent" />
@@ -321,7 +322,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
       </div>
 
       {/* 3. Material & Fabric Composition Filter with Deepened Inset Buttons */}
-      <div className="neu-inset rounded-2xl p-3.5 border border-white/60 space-y-2.5">
+      <div className="pt-4 border-t border-[#BAC5D5]/50 first:border-t-0 first:pt-0 space-y-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-bold text-[#2D3A4E]">
             <Layers className="w-4 h-4 text-accent" />
@@ -372,7 +373,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
       </div>
 
       {/* 4. Size & Availability Filter with Deepened Inset Buttons */}
-      <div className="neu-inset rounded-2xl p-3.5 border border-white/60 space-y-2.5">
+      <div className="pt-4 border-t border-[#BAC5D5]/50 first:border-t-0 first:pt-0 space-y-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-bold text-[#2D3A4E]">
             <Sparkles className="w-4 h-4 text-accent" />

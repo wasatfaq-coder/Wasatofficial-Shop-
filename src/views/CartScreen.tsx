@@ -140,12 +140,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         <div className="w-24 h-24 rounded-full neu-flat flex items-center justify-center mx-auto text-[#4E5C70]">
           <ShoppingBag className="w-10 h-10 stroke-[1.5]" />
         </div>
-        <div className="space-y-1">
-          <h2 className="text-xl font-bold text-[#2D3A4E]">Ваша корзина пуста</h2>
-          <p className="text-xs text-[#4E5C70] max-w-xs mx-auto">
-            Выберите стильные новинки из нашего каталога мужской одежды
-          </p>
-        </div>
+        <h2 className="text-xl font-bold text-[#2D3A4E]">Ваша корзина пуста</h2>
         <button
           onClick={() => setActiveTab('catalog')}
           className="neu-button-accent rounded-full px-6 py-3 font-bold text-xs inline-flex items-center gap-2 cursor-pointer"
