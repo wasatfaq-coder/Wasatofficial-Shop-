@@ -24,19 +24,19 @@ export function screenTitle(
 ): { main: string; sub: string } {
   switch (activeTab) {
     case 'catalog':
-      return { main: 'Каталог', sub: 'Поиск и фильтры' };
+      return { main: 'Каталог', sub: '' };
     case 'cart':
       return { main: 'Корзина', sub: `${cartCount} ${pluralRu(cartCount, ['товар', 'товара', 'товаров'])}` };
     case 'favorites':
-      return { main: 'Избранное', sub: 'Ваши сохраненные товары' };
+      return { main: 'Избранное', sub: '' };
     case 'profile':
-      return { main: 'Профиль', sub: 'Личный кабинет' };
+      return { main: 'Профиль', sub: '' };
     case 'product-detail':
-      return { main: selectedProductTitle || 'Товар', sub: 'Детали товара' };
+      return { main: selectedProductTitle || 'Товар', sub: '' };
     case 'checkout':
       return { main: 'Оформление заказа', sub: `${cartCount} ${pluralRu(cartCount, ['товар', 'товара', 'товаров'])}` };
     case 'order-success':
-      return { main: 'Заказ оформлен', sub: 'Успешно' };
+      return { main: 'Заказ оформлен', sub: '' };
     case 'offer':
       return { main: 'Оферта', sub: 'Условия продажи' };
     case 'privacy':

@@ -189,7 +189,6 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
               {reviews.length}
             </span>
           </h3>
-          <p className="text-xs text-[#4E5C70]">Реальный опыт и честные оценки покупателей</p>
         </div>
 
         <button
@@ -203,7 +202,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
       </div>
 
       {!ratingInfo && (
-        <p className="neu-inset rounded-2xl p-3 text-xs font-bold text-[#4E5C70] text-center">
+        <p className="py-2 text-xs font-bold text-[#4E5C70] text-center">
           Отзывов пока нет. Станьте первым, кто оценит этот товар.
         </p>
       )}

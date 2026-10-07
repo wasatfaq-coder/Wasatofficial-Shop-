@@ -712,7 +712,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
         </div>
 
         {/* Active Tab Content Panel */}
-        <div className="neu-flat-sm rounded-2xl p-3.5 border border-white/80 space-y-3 text-xs text-[#2D3A4E] transition-all duration-200">
+        {/* panel without its own card: the block is already one (design pass 07.10 — no card inside a card) */}
+        <div className="px-1.5 pt-1 space-y-3 text-xs text-[#2D3A4E]">
           {activeDetailTab === 'description' && (
             <div className="space-y-3 leading-relaxed text-[#4E5C70]">
               {product.description?.trim() && <p className="whitespace-pre-line">{product.description.trim()}</p>}
