@@ -86,9 +86,12 @@ chrome-devtools из ECC ищет Google Chrome, которого в облак�
 06.10): список ограничен ~30 000 знаков, иначе скиллы Anthropic и проекта остаются без описаний (`skillOverrides` для плагинов
 не действует). Остальные ≈ 350 правка убирает в каталог (файл `….md.catalog`, Claude Code его не грузит): скилл
 `finding-skills` по `catalog.md` подбирает их по просьбе и выполняет, к нему же — «Unknown skill» на имя ECC (решение
-владельца 07.10); чтение папки плагина хук разрешает в `~/.claude/settings.json` (правило проекта на `~/.claude` Claude Code
-не применяет). Новая версия ECC — снова замер
-`python3 -I scripts/skill-check.py` и списка у свежего процесса на окне 1M (`docs/skills.md`).
+владельца 07.10). Бюджет списка — 30 000 знаков для любой модели (`SLASH_COMMAND_TOOL_CHAR_BUDGET` в `env`): без него Haiku
+с окном 200K получал 8 000 и терял описания. Серверы MCP для агентов и скиллов ECC — `.mcp.json`: Playwright (агент
+`gan-evaluator`, Chromium из `/opt/pw-browsers`), memory, Context7 (заработает, когда сеть окружения пустит `context7.com`).
+Разрешения для ECC — чтение папки плагина и эти серверы — хук пишет в `~/.claude/settings.json`: разрешения из настроек
+проекта в облачной сессии не действуют. Новая версия ECC — снова замер `python3 -I scripts/skill-check.py`, списка у свежего
+процесса и проверки самого ECC `scripts/ecc-validate.sh` (`docs/skills.md`).
 
 ## Когда готово
 

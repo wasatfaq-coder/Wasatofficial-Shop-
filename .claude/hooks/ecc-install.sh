@@ -62,20 +62,23 @@ sync_rules() {
   cmp -s "$root/LICENSE" "$RULES_DIR/LICENSE" || cp "$root/LICENSE" "$RULES_DIR/LICENSE"
 }
 
-# Каталог скиллов (finding-skills): Claude читает файлы скиллов из папки плагина. Правило на ~/.claude из настроек проекта
-# Claude Code не применяет (папка в списке чувствительных) — только из настроек пользователя, поэтому правило — туда.
+# Разрешения для ECC — в настройки пользователя: разрешения из .claude/settings.json проекта в облачной сессии не действуют
+# (проект не отмечен доверенным; правило на ~/.claude к тому же в списке чувствительных путей). Чтение папки плагина — для
+# каталога скиллов (finding-skills); серверы MCP из .mcp.json — для агентов и скиллов ECC (gan-evaluator, knowledge-ops, docs-lookup).
 allow_catalog_reads() {
-  python3 -I - "$HOME/.claude/settings.json" "Read(/$HOME/.claude/plugins/cache/ecc/**)" <<'PY'
+  python3 -I - "$HOME/.claude/settings.json" "Read(/$HOME/.claude/plugins/cache/ecc/**)" \
+    mcp__playwright mcp__memory mcp__context7 <<'PY'
 import json, sys
 from pathlib import Path
-path, rule = Path(sys.argv[1]), sys.argv[2]
+path, rules = Path(sys.argv[1]), sys.argv[2:]
 try:
     data = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
 except (OSError, ValueError):
-    sys.exit(f'{path} не читается — правило чтения каталога ECC не добавлено.')
+    sys.exit(f'{path} не читается — разрешения для ECC не добавлены.')
 allow = data.setdefault('permissions', {}).setdefault('allow', [])
-if rule not in allow:
-    allow.append(rule)
+missing = [rule for rule in rules if rule not in allow]
+if missing:
+    allow.extend(missing)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 PY
 }
