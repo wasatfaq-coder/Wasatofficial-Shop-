@@ -3,8 +3,8 @@
 # .claude/hooks/ecc-skill-fixes.py. Правка убирает скиллы и команды в каталог (….md.catalog), и проверки ECC на месте
 # видят «Missing SKILL.md» и ссылки на «несуществующие» команды. Поэтому проверяется копия во временной папке, где файлам
 # каталога возвращены прежние имена: так проверяется сам ECC с правками формы. Отдельно — что у каждой записи каталога
-# (.claude/skills/finding-skills/catalog.md) есть файл. Зависимости проверок (js-yaml, ajv — версии из package.json ECC)
-# ставятся в ту же временную папку. Код выхода 0 — всё прошло.
+# (.claude/skills/finding-skills/catalog.md) есть файл, и тесты ECC (ECC_VALIDATE_TESTS=0 — без них). Зависимости
+# проверок (js-yaml, ajv — версии из package.json ECC) ставятся в ту же временную папку. Код выхода 0 — всё прошло.
 set -uo pipefail
 
 ROOT="$(node -e '
@@ -67,6 +67,28 @@ for check in "$TMP"/ecc/scripts/ci/validate-*.js "$TMP"/ecc/scripts/ci/check-*.j
     failed=1
   fi
 done
+
+# Тесты ECC (tests/run-all.js — как `npm test` в его CI) на копии с правкой и на чистом клоне той же версии. Часть
+# тестов падает и на чистом ECC — от окружения (выключенный GateGuard, нет git-пользователя), поэтому ошибка — только тест,
+# который падает с правкой и проходит без неё. ≈ 7 минут: копии проверяются одновременно.
+fails() {  # «файл: тест» каждой упавшей проверки из журнала run-all
+  awk '/^━━━ Running /{f=$3} /^  ✗ /{sub(/^  ✗ /,""); print f": "$0} /^✗ /{print $2": (файл)"}' "$1" | sort -u
+}
+if [ "${ECC_VALIDATE_TESTS:-1}" = 1 ]; then
+  cp -R "$MARKET" "$TMP/pristine" && rm -rf "$TMP/pristine/.git"  # копия плагина тоже без .git: иначе git-тесты ECC расходятся
+  for tree in ecc pristine; do
+    (cd "$TMP/$tree" && env -u ECC_DISABLED_HOOKS -u ECC_SKIP_LLM_SUMMARY CLAUDE_PLUGIN_ROOT="$TMP/$tree" \
+      NODE_PATH="$TMP/deps/node_modules" node tests/run-all.js >"$TMP/$tree.log" 2>&1) &
+  done
+  wait
+  new="$(comm -23 <(fails "$TMP/ecc.log") <(fails "$TMP/pristine.log"))"
+  if [ -z "$new" ]; then
+    echo "ок      тесты ECC: с правкой не падает ничего сверх чистого ECC ($(fails "$TMP/pristine.log" | wc -l) падают и там — окружение)"
+  else
+    echo "ОШИБКА  тесты ECC падают только с правкой:"; echo "$new" | head -20 | sed 's/^/        /'
+    failed=1
+  fi
+fi
 
 missing=0
 if [ -f "$CATALOG" ]; then

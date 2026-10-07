@@ -2,10 +2,13 @@
 """Правит форму скиллов плагина ECC по руководству Anthropic по скиллам (docs/skills.md, «Скиллы не из репозитория»).
 
 ECC ставится в каждой облачной сессии заново (.claude/hooks/ecc-install.sh), поэтому правка хранится здесь и
-повторяется после установки. Меняется только оформление — то, что руководство разрешает без решения владельца:
-  1. SKILL.md длиннее 500 строк — крупные разделы дословно в reference/<раздел>.md, на месте раздела — ссылка
-     (первый раздел, обычно «When to use», остаётся);
-  2. путь ~/.claude/skills/<скилл>/… к файлу плагина — ${CLAUDE_SKILL_DIR}/…: плагин лежит не в ~/.claude/skills;
+повторяется после установки. Меняется только оформление — то, что руководство разрешает без решения владельца, и так,
+как велит для своих скиллов сам ECC (CONTRIBUTING.md, docs/SKILL-DEVELOPMENT-GUIDE.md; решение владельца 07.10):
+  1. SKILL.md длиннее 800 строк (предел ECC; 500 у Anthropic — желательный, и до 800 ECC оставляет скилл целым: его
+     тесты читают текст SKILL.md) — крупные разделы дословно в references/<раздел>.md (папка как у ECC), пока не
+     станет меньше 500, на месте раздела — ссылка (первый раздел, обычно «When to use», остаётся);
+  2. путь ~/.claude/skills/<скилл>/… к файлу плагина — ${CLAUDE_SKILL_DIR}/…: плагин лежит не в ~/.claude/skills.
+     Кроме блоков JSON: это настройки settings.json для ручной установки, там ${CLAUDE_SKILL_DIR} не подставляется;
   3. скрипт скилла в команде — ${CLAUDE_SKILL_DIR}/…: команды выполняются из папки проекта, а не скилла;
   4. файл скилла, о котором SKILL.md молчит, — ссылка из SKILL.md;
   5. файл длиннее 100 строк — оглавление «## Contents» в начале;
@@ -16,18 +19,25 @@ ECC ставится в каждой облачной сессии заново 
      07.10). skillOverrides в настройках для скиллов плагинов Claude Code не читает — поэтому правка в файлах. Команды,
      которые автор ECC сам сделал ручными (disable-model-invocation), остаются на месте и в каталоге помечены.
 Имена скиллов, тексты правил, команды и флаги, скрипты и хуки ECC не меняются. Повторный запуск ничего не меняет.
+Поменялась сама правка (этот файл) — скиллы и команды плагина сначала берутся заново из чистого клона ECC той же версии
+(~/.claude/plugins/marketplaces/ecc): иначе в старом контейнере осталась бы прошлая правка.
 
 Запуск: python3 -I ecc-skill-fixes.py [папка skills …] — без аргументов берёт плагин ecc@ecc из
 ~/.claude/plugins/installed_plugins.json и пишет каталог; с папкой (проверка на копии) каталог не пишет.
 В stdout — число изменённых файлов, сообщения — в stderr.
 """
+import hashlib
 import json
 import re
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
-LIMIT = 500    # строк тела SKILL.md — предел из руководства
-TARGET = 480   # выносить, пока не станет меньше: запас под строки-ссылки
+LIMIT = 800    # строк тела SKILL.md — предел ECC (CONTRIBUTING.md: «Under 500 lines (800 max)»)
+TARGET = 480   # выносить, пока не станет меньше 500 — обычного размера по ECC и Anthropic; запас под строки-ссылки
+REFDIR = 'references'  # папка частей скилла у ECC (docs/SKILL-DEVELOPMENT-GUIDE.md)
+JSON_LANGS = {'json', 'jsonc', 'json5'}
 TOC_MIN = 100  # файл длиннее — нужно оглавление
 FENCE = re.compile(r'^\s*(```|~~~)')
 TOC_HEAD = re.compile(r'^#+\s*(Contents|Содержание|Оглавление)', re.I)
@@ -82,15 +92,14 @@ def split_long(skill):
     mask = code_mask(lines)
     starts = [i for i, line in enumerate(lines) if line.startswith('## ') and not mask[i]]
     sections = [(s, starts[k + 1] if k + 1 < len(starts) else len(lines)) for k, s in enumerate(starts)]
-    refdir = 'references' if (skill / 'references').is_dir() else 'reference'
     total, moved, taken = len(lines), {}, set()
     for start, end in sorted(sections[1:], key=lambda s: s[1] - s[0], reverse=True):
         if total <= TARGET or end - start < 10:
             break
         name = slugify(lines[start][3:].strip(), start)
-        rel, k = f'{refdir}/{name}.md', 2
+        rel, k = f'{REFDIR}/{name}.md', 2
         while (skill / rel).exists() or rel in taken:
-            rel, k = f'{refdir}/{name}-{k}.md', k + 1
+            rel, k = f'{REFDIR}/{name}-{k}.md', k + 1
         taken.add(rel)
         moved[start] = (end, rel)
         total -= end - start - 4
@@ -113,7 +122,8 @@ def split_long(skill):
         (skill / rel).write_text('\n'.join(part).rstrip('\n') + '\n', encoding='utf-8')
         files += 1
         out += [lines[i], '',
-                f'Moved verbatim to [{rel}]({rel}) to keep SKILL.md under {LIMIT} lines; read it when this part is needed.',
+                f'Moved verbatim to [{rel}]({rel}) to keep SKILL.md within ECC\'s {LIMIT}-line maximum; '
+                'read it when this part is needed.',
                 '']
         i = end
     return files + write(path, text, head + '\n'.join(out))
@@ -136,8 +146,17 @@ def fix_skill_paths(skill, root):
             return '${CLAUDE_SKILL_DIR}/../' + name + '/' + rest
         return m.group(0)
 
-    new = re.sub(r'(?:~|\$HOME)/\.claude/skills/([\w.-]+)/([\w./-]*)', repl, text)
-    return write(path, text, new)
+    out, in_code, lang = [], False, ''
+    for line in text.split('\n'):
+        if FENCE.match(line):
+            if not in_code:
+                info = line.strip()[3:].strip().lower()
+                lang = info.split()[0] if info else ''
+            in_code = not in_code
+        elif not (in_code and lang in JSON_LANGS):
+            line = re.sub(r'(?:~|\$HOME)/\.claude/skills/([\w.-]+)/([\w./-]*)', repl, line)
+        out.append(line)
+    return write(path, text, '\n'.join(out))
 
 
 def fix_script_paths(skill):
@@ -366,22 +385,58 @@ def fix_skill(skill, root):
             + link_unmentioned(skill) + add_tocs(skill))
 
 
-def plugin_roots():
+def plugin_entries():
+    """(папка skills плагина, коммит ECC) каждой установки ecc@ecc."""
     try:
         data = json.loads((Path.home() / '.claude/plugins/installed_plugins.json').read_text(encoding='utf-8'))
     except (OSError, ValueError):
         return []
-    return [Path(e['installPath']) / 'skills' for e in data.get('plugins', {}).get('ecc@ecc', []) if e.get('installPath')]
+    return [(Path(e['installPath']) / 'skills', e.get('gitCommitSha', ''))
+            for e in data.get('plugins', {}).get('ecc@ecc', []) if e.get('installPath')]
+
+
+STAMP = '.wasat-skill-fixes'  # в папке плагина: отпечаток правки, которой он правлен
+PRISTINE = Path.home() / '.claude/plugins/marketplaces/ecc'
+
+
+def fixes_stamp():
+    return hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+
+
+def restore_pristine(plugin, commit):
+    """Плагин правлен другой версией правки — скиллы и команды заново из чистого клона ECC того же коммита.
+    True — плагин чистый или уже правлен этой версией; False — чистого клона нет, правка ляжет поверх прежней."""
+    stamp = plugin / STAMP
+    if stamp.is_file() and stamp.read_text(encoding='utf-8').strip() == fixes_stamp():
+        return True
+
+    def git(*args):
+        return subprocess.run(['git', '-C', str(PRISTINE), *args], capture_output=True, text=True).stdout.strip()
+
+    if not commit or git('rev-parse', 'HEAD') != commit or git('status', '--porcelain', '--', 'skills', 'commands'):
+        print(f'ecc-skill-fixes: нет чистого ECC {commit[:7]} в {PRISTINE} — правка поверх прежней', file=sys.stderr)
+        return False
+    for part in ('skills', 'commands'):
+        shutil.rmtree(plugin / part, ignore_errors=True)
+        shutil.copytree(PRISTINE / part, plugin / part)
+    print('ecc-skill-fixes: скиллы и команды ECC взяты заново из чистого клона', file=sys.stderr)
+    return True
 
 
 def main():
     installed = not sys.argv[1:]
-    roots = [Path(a) for a in sys.argv[1:]] or plugin_roots()
+    roots = [(Path(a), '') for a in sys.argv[1:]] or plugin_entries()
     changed = 0
-    for root in roots:
+    for root, commit in roots:
         if not root.is_dir():
             print(f'ecc-skill-fixes: нет папки {root}', file=sys.stderr)
             continue
+        fresh = False
+        if installed:
+            stamp = root.parent / STAMP
+            old = stamp.read_text(encoding='utf-8').strip() if stamp.is_file() else ''
+            fresh = restore_pristine(root.parent, commit)
+            changed += old != fixes_stamp()
         for skill in sorted(d for d in root.iterdir() if (d / 'SKILL.md').is_file()):
             try:
                 changed += fix_skill(skill, root)
@@ -394,6 +449,8 @@ def main():
                 changed += write_catalog(rows, root)
         except (OSError, UnicodeError) as error:
             print(f'ecc-skill-fixes: каталог не обновлён: {error}', file=sys.stderr)
+        if fresh:
+            (root.parent / STAMP).write_text(fixes_stamp() + '\n', encoding='utf-8')
     print(f'ecc-skill-fixes: изменено файлов {changed}', file=sys.stderr)
     print(changed)
 
