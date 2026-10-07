@@ -28,7 +28,7 @@ import { NeumorphicImage } from '../components/NeumorphicImage';
 import { AnimatedFavoriteButton } from '../components/AnimatedFavoriteButton';
 import { ProductReviewsSection } from '../components/ProductReviewsSection';
 import { getVariantStock, getProductSKU, getOrderableStock } from '../utils/inventory';
-import { colorStock, initialSize, maxOrderableForColor, profileSizeFor } from '../utils/variantSelection';
+import { colorStock, initialColor, initialSize, maxOrderableForColor, profileSizeFor } from '../utils/variantSelection';
 import {
   getProductFabricComposition,
   getProductCareInstructions,
@@ -127,7 +127,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   // and those the zoom shows (docs/catalog-scale-plan.md, stage 4)
   const { photos, show: showPhoto } = useProductPhotos(product, selectedImageIndex);
   const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [selectedColor, setSelectedColor] = useState(product?.colors?.[0]?.name || '');
+  // The first colour that can be ordered, as in the quick view: not a sold-out one when others are left (finding 24)
+  const [selectedColor, setSelectedColor] = useState(() => initialColor(product, preorderMode));
   // No size is preselected (unless there is only one): a default size put wrong items in the cart
   const [selectedSize, setSelectedSize] = useState(() => initialSize(product));
   const mySize = profileSizeFor(product?.sizes, userProfile?.bodyMeasurements);
@@ -154,7 +155,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   // Reset product state when a new product is loaded
   useEffect(() => {
     setSelectedImageIndex(0);
-    setSelectedColor(product?.colors?.[0]?.name || '');
+    setSelectedColor(initialColor(product, preorderMode));
     setSelectedSize(initialSize(product));
     setSizeError(false);
     setQuantity(1);

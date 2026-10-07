@@ -17,6 +17,11 @@ const queue = new Set<string>();
 const listeners = new Set<() => void>();
 let version = 0;
 let flushing = false;
+/** Failed loads in a row: the next try waits longer (5 s, 10 s, … up to a minute), so no request loop offline */
+let failures = 0;
+let retryTimer: number | undefined;
+const RETRY_FIRST_MS = 5_000;
+const RETRY_MAX_MS = 60_000;
 
 function notify() {
   version += 1;
@@ -59,12 +64,17 @@ async function flush() {
   queue.clear();
   try {
     const loaded = await loadProductThumbs(ids);
+    failures = 0;
     for (const t of loaded) if (keys.has(t.productId)) thumbs.set(t.productId, t.data);
     if (loaded.length > 0) notify();
   } catch (err) {
-    // the card keeps the placeholder; the next time it is shown it asks again
+    // the card keeps the placeholder for now: a little later the cards on screen ask again (finding 27; before, only a
+    // card shown anew did)
     ids.forEach((id) => requested.delete(id));
     console.warn('Product miniatures were not loaded:', err);
+    failures += 1;
+    window.clearTimeout(retryTimer);
+    retryTimer = window.setTimeout(notify, Math.min(RETRY_FIRST_MS * 2 ** (failures - 1), RETRY_MAX_MS));
   } finally {
     flushing = false;
     if (queue.size > 0) requestThumbs([]);
@@ -88,13 +98,15 @@ export const useThumbsVersion = () => React.useSyncExternalStore(subscribe, () =
  * else '' — the placeholder
  */
 export function useProductThumb(product: Pick<Product, 'id' | 'images'> | null | undefined): string {
-  useThumbsVersion();
+  // the version too: a new photo (another key) and a retry after a failed load ask again while the card stays on
+  // screen (finding 27); asking for a miniature already asked for does nothing
+  const v = useThumbsVersion();
   const own = product?.images?.[0] ?? '';
   const id = product?.id ?? '';
   const hasThumb = keys.has(id);
   React.useEffect(() => {
     if (!own && hasThumb) requestThumbs([id]);
-  }, [own, id, hasThumb]);
+  }, [own, id, hasThumb, v]);
   return own || (id ? thumbOf(id) ?? '' : '');
 }
 

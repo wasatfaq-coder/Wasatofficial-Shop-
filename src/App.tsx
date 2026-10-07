@@ -50,6 +50,7 @@ import { storeAcceptsOrders } from './shared/orderApi';
 import { getStoreContacts, getStoreName, publicSetting, withStoreName, withStoreNameFields } from './utils/storeContacts';
 import { getCategories } from './utils/categories';
 import { VariantPickerSheet } from './components/VariantPickerSheet';
+import { DEFAULT_CATALOG_VIEW, type CatalogView } from './utils/productListing';
 
 // Legal documents: a separate chunk with the templates, loaded when a document is opened
 const LegalDocumentScreen = lazy(() => import('./views/LegalDocumentScreen'));
@@ -212,6 +213,8 @@ export default function App() {
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
   const [catalogFilterState, setCatalogFilterState] = useState<FilterState>(DEFAULT_FILTER_STATE);
+  // The catalog's sort and «Показать ещё» outlive the screen: «Назад» from a product returns to the same list (finding 22)
+  const [catalogView, setCatalogView] = useState<CatalogView>(DEFAULT_CATALOG_VIEW);
   // Customers see the current store name even while Firestore still holds the template brand.
   // The admin panel gets the raw data, so the rename in «Витрина» can find and fix it.
   const storeName = getStoreName(storefrontSettings);
@@ -316,8 +319,14 @@ export default function App() {
     return () => window.removeEventListener('pointerdown', handleGlobalClick);
   }, []);
 
-  // A change of the customer's order while the site is open (useOrderNotifications.ts)
-  useOrderNotifications({ orders, isAdmin, currentUser, userProfile, setToasts, setActiveTab });
+  // A change of the customer's order while the site is open (useOrderNotifications.ts). «Смотреть статус» opens the
+  // profile, and the profile opens the order once it is on screen (finding 23)
+  const [orderToOpen, setOrderToOpen] = useState<string | null>(null);
+  const openOrderStatus = (orderId: string) => {
+    setOrderToOpen(orderId);
+    setActiveTab('profile');
+  };
+  useOrderNotifications({ orders, isAdmin, currentUser, userProfile, setToasts, onOpenOrder: openOrderStatus });
 
   // Cancel, «Я получил заказ», a receipt and «Повторить заказ» in the profile (useCustomerOrders.ts)
   const { handleCancelOwnOrder, handleConfirmReceipt, handleSubmitPaymentReceipt, handleRepeatOrder } = useCustomerOrders({
@@ -626,6 +635,8 @@ export default function App() {
               onOpenFilters={() => setIsAdvancedFilterOpen(true)}
               searchQuery={catalogSearch}
               onSearchChange={setCatalogSearch}
+              view={catalogView}
+              onViewChange={setCatalogView}
             />
           )}
 
@@ -741,6 +752,8 @@ export default function App() {
               onUpdateDeliveryMethods={handleUpdateDeliveryMethods}
               pickupPoints={pickupPoints}
               onUpdatePickupPoints={handleUpdatePickupPoints}
+              openOrderId={orderToOpen}
+              onOrderOpened={() => setOrderToOpen(null)}
             />
           )}
 

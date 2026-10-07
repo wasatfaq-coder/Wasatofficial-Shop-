@@ -74,6 +74,9 @@ export function useSupportChat({
   const [pendingChatIds, setPendingChatIds] = useState<ReadonlySet<string>>(() => new Set());
   const [failedChatMessages, setFailedChatMessages] = useState<ChatMessage[]>([]);
   const [chatIdentity, setChatIdentity] = useState<ChatIdentity | null>(null);
+  // The chat's sign-in is known: a signed-in customer's at once, a guest's once the earlier anonymous session is
+  // restored or found missing. Until then the cached thread stays on screen (audit 07.10, finding 26)
+  const [chatIdentityKnown, setChatIdentityKnown] = useState(false);
 
   // Only a customer's own thread is cached (it opens at once next time). The admin's chat — every customer's
   // messages and staff notes — never stays in this browser (audit 02.10, finding 24)
@@ -104,12 +107,16 @@ export function useSupportChat({
     if (authLoading) return;
     if (currentUser) {
       setChatIdentity({ uid: currentUser.uid, db, isGuest: false });
+      setChatIdentityKnown(true);
       return;
     }
     let cancelled = false;
     setChatIdentity(null);
+    setChatIdentityKnown(false);
     restoreGuestChatIdentity().then((identity) => {
-      if (!cancelled) setChatIdentity(identity);
+      if (cancelled) return;
+      setChatIdentity(identity);
+      setChatIdentityKnown(true);
     });
     return () => {
       cancelled = true;
@@ -142,7 +149,8 @@ export function useSupportChat({
     };
   }, [authLoading, currentUser, isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 1d. Chat messages: admins see every thread, customers only their own
+  // 1d. Chat messages: admins see every thread, customers only their own. The cache is cleared only when there is
+  // surely no thread (a guest who never wrote): before, it was erased on every load and showed «Диалог пуст»
   React.useEffect(() => {
     if (authLoading) return;
     if (isAdmin) {
@@ -154,8 +162,8 @@ export function useSupportChat({
         db: chatIdentity.db,
       });
     }
-    setChatMessages([]);
-  }, [authLoading, isAdmin, chatIdentity]);
+    if (chatIdentityKnown) setChatMessages([]);
+  }, [authLoading, isAdmin, chatIdentity, chatIdentityKnown]);
 
   // 1e. Status of the customer's own dialog, set by the staff (shown in «Служба заботы»)
   const [supportStatus, setSupportStatus] = useState<SupportStatus | null>(null);
@@ -326,13 +334,16 @@ export function useSupportChat({
     addToast(threadId === undefined ? 'История чата поддержки очищена' : 'Диалог очищен', 'info');
   };
 
-  // Admins load every thread; in the storefront chat they only see their own
-  const ownThread = isAdmin ? chatMessages.filter((m) => m.threadId === currentUser?.uid) : chatMessages;
-  // Failed messages are not in Firestore: keep them on screen (in send order) until they are retried
-  const customerChatMessages = [
-    ...ownThread.filter((m) => !failedChatMessages.some((f) => f.id === m.id)),
-    ...failedChatMessages,
-  ].sort((a, b) => chatMessageOrder(a) - chatMessageOrder(b));
+  // Admins load every thread; in the storefront chat they only see their own. Failed messages are not in Firestore:
+  // keep them on screen (in send order) until they are retried. The same list until the messages change: the chat
+  // window does not take every render of App for a new message (finding 25)
+  const ownUid = currentUser?.uid;
+  const customerChatMessages = React.useMemo(() => {
+    const ownThread = isAdmin ? chatMessages.filter((m) => m.threadId === ownUid) : chatMessages;
+    return [...ownThread.filter((m) => !failedChatMessages.some((f) => f.id === m.id)), ...failedChatMessages].sort(
+      (a, b) => chatMessageOrder(a) - chatMessageOrder(b)
+    );
+  }, [chatMessages, failedChatMessages, isAdmin, ownUid]);
 
 
   return {

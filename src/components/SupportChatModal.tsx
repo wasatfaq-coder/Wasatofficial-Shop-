@@ -185,9 +185,12 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
   // After the customer writes, say honestly who answers and where
   const awaitingReply = lastMessage?.sender === 'user' && !failedIds?.has(lastMessage.id);
 
+  // To the end on opening and when a message comes or is sent — not on every render while the customer reads the
+  // history above (audit 07.10, finding 25)
+  const lastMessageId = lastMessage?.id;
   useEffect(() => {
     if (isOpen) messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isOpen]);
+  }, [lastMessageId, isOpen]);
 
   const attachImageFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
