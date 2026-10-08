@@ -5,6 +5,7 @@ import { GUEST_USER_PROFILE } from '../data/products';
 import { ADMIN_EMAIL } from '../context/AuthContext';
 import { auth } from '../firebase';
 import { saveUserProfileToFirestore } from '../utils/firebaseSync';
+import { googleAvatarUrl } from '../utils/googleAvatar';
 import { isBrowserOffline } from '../utils/network';
 import type { AddToast, Persist } from './useToasts';
 
@@ -41,7 +42,9 @@ export function useProfile({ authLoading, currentUser, ownProfiles, persist, add
         // cached it in every visitor's browser. Drop such a cache; the admin's own profile
         // is restored from Firebase Auth after sign-in.
         if (parsed && typeof parsed === 'object' && !isLegacyDemoProfile(parsed)) {
-          return { ...GUEST_USER_PROFILE, ...parsed };
+          // The site of 25.09 cached a guest with a stock photo (images.unsplash.com): only a Google photo is shown
+          // (audit 07.10, finding 57)
+          return { ...GUEST_USER_PROFILE, ...parsed, avatar: googleAvatarUrl(parsed.avatar) };
         }
         localStorage.removeItem('manstyle_user_profile');
       }
@@ -117,7 +120,8 @@ export function useProfile({ authLoading, currentUser, ownProfiles, persist, add
           // The name the buyer saved (Фамилия Имя Отчество) wins over the Google account's name
           name: existing?.name || currentUser.displayName || prev.name,
           email: currentUser.email || existing?.email || prev.email,
-          avatar: currentUser.photoURL || existing?.avatar || prev.avatar,
+          // the first Google account photo, never a link from an old cache (finding 57) — the rule refuses it
+          avatar: [currentUser.photoURL, existing?.avatar, prev.avatar].map(googleAvatarUrl).find(Boolean) || '',
           bonusPoints: existing?.bonusPoints ?? prev.bonusPoints ?? 0,
         };
         try {
