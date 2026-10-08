@@ -24,6 +24,7 @@ import {
   Bytes,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
+import { needsOwnerAttention } from './firestoreErrors';
 import { CartItem, Product, ProductSKU, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog, PaymentKind, PaymentTemplate } from '../types';
 import { paymentLogEntry, receiptMessageText } from './paymentDetails';
 import { DEFAULT_STOREFRONT_SETTINGS, generateDefaultSKUs, inStockAfterReturn, inStockAfterStockChange, stockMovementId } from './inventory';
@@ -82,6 +83,15 @@ async function setDocs<T extends { id: string }>(collectionName: string, items: 
   await commitInChunks(items, (batch, item) =>
     batch.set(doc(db, collectionName, item.id), sanitizeForFirestore(item))
   );
+}
+
+/**
+ * A subscription the database ended with an error (audit 07.10, finding 15). A refusal — the rules, the quota, a missing
+ * index — is for the owner: `console.error` reaches «Ошибки на сайте». Anything else stays a warning.
+ */
+function logSubscriptionError(what: string, error: unknown) {
+  if (needsOwnerAttention(error)) console.error(`${what} subscription failed:`, error);
+  else console.warn(`${what} subscription warning:`, error);
 }
 
 /**
@@ -163,7 +173,7 @@ export function subscribeToProducts(
       onUpdate(loaded);
     },
     (error) => {
-      console.warn('Products subscription warning:', error);
+      logSubscriptionError('Products', error);
       if (onError) onError(error);
     }
   );
@@ -512,7 +522,7 @@ export function subscribeToPaymentTemplates(onUpdate: (templates: PaymentTemplat
       list.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
       onUpdate(list);
     },
-    (error) => console.warn('Payment templates subscription warning:', error)
+    (error) => logSubscriptionError('Payment templates', error)
   );
 }
 
@@ -655,7 +665,7 @@ export function subscribeToProductCosts(onUpdate: (costs: Record<string, number>
       });
       onUpdate(costs);
     },
-    (error) => console.warn('Product costs subscription warning:', error)
+    (error) => logSubscriptionError('Product costs', error)
   );
 }
 
@@ -692,7 +702,7 @@ export function subscribeToStockMovements(
       : query(col, orderBy('createdAt', 'desc'), limit(STOCK_MOVEMENTS_LIMIT)),
     (snapshot) => onUpdate(snapshot.docs.map((d) => ({ ...(d.data() as StockMovementLog), id: d.id }))),
     (error) => {
-      console.warn('Stock journal subscription warning:', error);
+      logSubscriptionError('Stock journal', error);
       onError?.(error);
     }
   );
@@ -809,7 +819,7 @@ export function subscribeToCatalogIndex(onUpdate: (parts: CatalogIndexPart[]) =>
       );
     },
     (error) => {
-      console.warn('Catalog index subscription warning:', error);
+      logSubscriptionError('Catalog index', error);
       if (onError) onError(error);
     }
   );
@@ -876,7 +886,7 @@ export function subscribeToProductDoc(productId: string, onUpdate: (product: Pro
     },
     (error) => {
       answered();
-      console.warn('Product subscription warning:', error);
+      logSubscriptionError('Product', error);
     }
   );
   return () => {
@@ -1181,7 +1191,7 @@ export function subscribeToOrders(
       onUpdate(loaded);
     },
     (error) => {
-      console.warn('Orders subscription warning:', error);
+      logSubscriptionError('Orders', error);
       if (onError) onError(error);
     }
   );
@@ -1191,7 +1201,6 @@ export async function saveOrderToFirestore(order: Order): Promise<void> {
   try {
     await setDoc(doc(db, 'orders', order.id), storedOrder(order));
   } catch (error) {
-    console.error(`Error persisting order "${order.id}":`, error);
     handleFirestoreError(error, OperationType.WRITE, `orders/${order.id}`);
   }
 }
@@ -1267,7 +1276,7 @@ export function subscribeToAnalyticsResetAt(onUpdate: (resetAt: number | null) =
       const value = snap.data()?.resetAt;
       onUpdate(typeof value === 'number' && value > 0 ? value : null);
     },
-    (error) => console.warn('Analytics settings subscription warning:', error)
+    (error) => logSubscriptionError('Analytics settings', error)
   );
 }
 
@@ -1286,7 +1295,7 @@ export function subscribeToLegalTexts(onUpdate: (texts: LegalTexts) => void) {
       }
       onUpdate(texts);
     },
-    (error) => console.warn('Legal texts subscription warning:', error)
+    (error) => logSubscriptionError('Legal texts', error)
   );
 }
 
@@ -1341,7 +1350,7 @@ export function subscribeToPromos(
       onUpdate(loaded);
     },
     (error) => {
-      console.warn('Promos subscription warning:', error);
+      logSubscriptionError('Promos', error);
       if (onError) onError(error);
     }
   );
@@ -1431,7 +1440,7 @@ export function subscribeToStorefrontSettings(
       onUpdate({ ...DEFAULT_STOREFRONT_SETTINGS, ...(snapshot.data() as StorefrontSettings) });
     },
     (error) => {
-      console.warn('Storefront settings subscription warning:', error);
+      logSubscriptionError('Storefront settings', error);
       if (onError) onError(error);
     }
   );
@@ -1468,7 +1477,7 @@ export function subscribeToBanners(
       onUpdate(loaded);
     },
     (error) => {
-      console.warn('Banners subscription warning:', error);
+      logSubscriptionError('Banners', error);
       if (onError) onError(error);
     }
   );
@@ -1500,7 +1509,7 @@ export function subscribeToServerConfig(onUpdate: (config: ServerConfig) => void
     doc(db, 'settings', SERVER_CONFIG_DOC_ID),
     (snap) => onUpdate(snap.exists() ? (snap.data() as ServerConfig) : {}),
     (error) => {
-      console.warn('Server config subscription warning:', error);
+      logSubscriptionError('Server config', error);
       onUpdate({});
     }
   );
@@ -1521,7 +1530,7 @@ export function subscribeToReviews(onUpdate: (reviews: StoredReview[]) => void, 
   return onSnapshot(
     productId ? query(ref, where('productId', '==', productId)) : ref,
     (snap) => onUpdate(snap.docs.map((d) => ({ ...(d.data() as StoredReview), id: d.id }))),
-    (error) => console.warn('Reviews subscription warning:', error)
+    (error) => logSubscriptionError('Reviews', error)
   );
 }
 
@@ -1530,7 +1539,7 @@ export function subscribeToReviewVotes(onUpdate: (votes: ReviewVote[]) => void, 
   return onSnapshot(
     productId ? query(ref, where('productId', '==', productId)) : ref,
     (snap) => onUpdate(snap.docs.map((d) => d.data() as ReviewVote)),
-    (error) => console.warn('Review votes subscription warning:', error)
+    (error) => logSubscriptionError('Review votes', error)
   );
 }
 
@@ -1630,7 +1639,7 @@ export function subscribeToChatMessages(
         onUpdate(loaded);
       },
       (error) => {
-        console.warn('Chat thread subscription warning:', error);
+        logSubscriptionError('Chat thread', error);
         if (onError) onError(error);
       }
     );
@@ -1653,7 +1662,7 @@ export function subscribeToChatMessages(
       onUpdate(loaded);
     },
     (error) => {
-      console.warn('Chat messages subscription warning:', error);
+      logSubscriptionError('Chat messages', error);
       if (onError) onError(error);
     }
   );
@@ -1793,7 +1802,7 @@ export function subscribeToSupportStatus(
       const data = snap.data() as Partial<SupportStatus> | undefined;
       onUpdate(data?.status ? { status: data.status, updatedAt: Number(data.updatedAt) || 0 } : null);
     },
-    (error) => console.warn('Support status subscription warning:', error)
+    (error) => logSubscriptionError('Support status', error)
   );
 }
 
@@ -1808,7 +1817,7 @@ export function subscribeToSupportThreads(onUpdate: (meta: Record<string, Suppor
       });
       onUpdate(byThread);
     },
-    (error) => console.warn('Support threads subscription warning:', error)
+    (error) => logSubscriptionError('Support threads', error)
   );
 }
 
@@ -1858,7 +1867,7 @@ export function subscribeToUsers(
       notes = new Map(snapshot.docs.map((d) => [d.id, d.data() as Pick<UserProfile, 'managerNotes' | 'tags'>]));
       emit();
     },
-    (error) => console.warn('Customer notes subscription warning:', error)
+    (error) => logSubscriptionError('Customer notes', error)
   );
 
   const colRef = collection(db, 'users');
@@ -1874,7 +1883,7 @@ export function subscribeToUsers(
       emit();
     },
     (error) => {
-      console.warn('Users subscription warning:', error);
+      logSubscriptionError('Users', error);
       if (onError) onError(error);
     }
   );
@@ -1899,7 +1908,7 @@ export function subscribeToOwnUserProfile(
       onUpdate(snap.exists() ? [snap.data() as UserProfile] : []);
     },
     (error) => {
-      console.warn('User profile subscription warning:', error);
+      logSubscriptionError('User profile', error);
       if (onError) onError(error);
     }
   );
@@ -1979,7 +1988,7 @@ export function subscribeToDeliveryMethods(
       onUpdate(loaded);
     },
     (error) => {
-      console.warn('Delivery methods subscription warning:', error);
+      logSubscriptionError('Delivery methods', error);
       if (onError) onError(error);
     }
   );
@@ -2019,7 +2028,7 @@ export function subscribeToPickupPoints(
       onUpdate(loaded);
     },
     (error) => {
-      console.warn('Pickup points subscription warning:', error);
+      logSubscriptionError('Pickup points', error);
       if (onError) onError(error);
     }
   );
@@ -2113,7 +2122,7 @@ export function subscribeToQuickPhrasesDoc<T>(onData: (data: Partial<T> | null) 
     doc(db, 'settings', 'quick_phrases'),
     (snapshot) => onData(snapshot.exists() ? (snapshot.data() as Partial<T>) : null),
     (error) => {
-      console.warn('Firestore Quick Phrases subscription warning:', error);
+      logSubscriptionError('Firestore Quick Phrases', error);
       onError?.(error);
     }
   );

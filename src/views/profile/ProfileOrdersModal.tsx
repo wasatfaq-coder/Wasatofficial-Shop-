@@ -24,6 +24,8 @@ import {
 import { isCarrierOrder } from '../../utils/orderFlow';
 import { useOrderLinePhotos } from '../../utils/productThumbs';
 import { useDialogA11y } from '../../utils/useDialogA11y';
+import { useLoadFailed } from '../../utils/loadFailures';
+import { LoadFailedNotice } from '../../components/LoadFailedNotice';
 import type { ProfileScreenProps } from '../ProfileScreen';
 
 import { getOrderStatusProgress } from './orderProgress';
@@ -51,6 +53,8 @@ export const ProfileOrdersModal = ({
   const [orderFilter, setOrderFilter] = useState<'all' | 'active' | 'completed'>('all');
 
   const ordersDialog = useDialogA11y(isOpen, onCloseModals);
+  // the orders subscription failed (finding 15): said instead of «Заказов не найдено»
+  const ordersLoadFailed = useLoadFailed('orders');
   const linePhoto = useOrderLinePhotos(isOpen ? orders.flatMap((o) => o.items.slice(0, 4).map((it) => it.product)) : [], products);
 
   const filteredOrders = orders.filter((ord) => {
@@ -112,8 +116,9 @@ export const ProfileOrdersModal = ({
 
             {/* Smooth Scrollable Order List Container */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 no-scrollbar overscroll-contain transform-gpu">
+              {ordersLoadFailed && <LoadFailedNotice title="Не удалось загрузить заказы" />}
               {filteredOrders.length === 0 ? (
-                <div className="text-center py-10 space-y-2 neu-inset rounded-2xl p-6">
+                ordersLoadFailed ? null : <div className="text-center py-10 space-y-2 neu-inset rounded-2xl p-6">
                   <ShoppingBag className="w-10 h-10 text-[#4E5C70] mx-auto opacity-50" />
                   <p className="text-xs font-extrabold text-[#2D3A4E]">Заказов не найдено</p>
                   <p className="text-xs text-[#4E5C70]">Сделайте первый заказ в нашем каталоге!</p>

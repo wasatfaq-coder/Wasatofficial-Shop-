@@ -23,6 +23,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { LoadFailedNotice } from '../components/LoadFailedNotice';
 import {
   UserProfile,
   Order,
@@ -63,7 +64,8 @@ export interface ProfileScreenProps {
   orders: Order[];
   products?: Product[];
   favoritesCount: number;
-  onUpdateProfile: (updated: UserProfile) => void;
+  /** true once saved (finding 13): the forms close and say «Сохранено» only then */
+  onUpdateProfile: (updated: UserProfile) => Promise<boolean>;
   setActiveTab: (tab: ActiveTab) => void;
   onRepeatOrder?: (items: CartItem[]) => void;
   /** The buyer cancels their own order (App.tsx: cancellation, then the goods back to stock) */
@@ -143,6 +145,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onUpdatePickupPoints,
 }) => {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   // Фамилия, имя, отчество (owner's request 02.10); an old single name is split into parts for the buyer to check
   const [lastName, setLastName] = useState(() => namePartsOf(profile).lastName || '');
   const [firstName, setFirstName] = useState(() => namePartsOf(profile).firstName || '');
@@ -156,8 +159,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     'orders' | 'addresses' | 'support' | 'faq' | 'admin' | 'security' | null
   >(null);
 
-  // Keep local state in sync if prop changes
+  // Keep local state in sync if prop changes — not while the form is open: a refused save puts the profile back, and
+  // the form keeps what was typed (finding 13)
   React.useEffect(() => {
+    if (isEditingProfile) return;
     const parts = namePartsOf(profile);
     setLastName(parts.lastName || '');
     setFirstName(parts.firstName || '');
@@ -165,10 +170,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     setEmail(profile.email);
     setPhone(profile.phone);
     setNotifications(profile.notificationsEnabled);
-  }, [profile.name, profile.lastName, profile.firstName, profile.middleName, profile.email, profile.phone, profile.notificationsEnabled]);
+  }, [isEditingProfile, profile.name, profile.lastName, profile.firstName, profile.middleName, profile.email, profile.phone, profile.notificationsEnabled]);
 
   // Admin Authentication & Credentials State
-  const { currentUser, logoutUser, isAdmin: isFirebaseAdmin } = useAuth();
+  const { currentUser, logoutUser, isAdmin: isFirebaseAdmin, adminCheckFailed } = useAuth();
   // «Мои заказы» of the admin are their own, not every order of the shop the admin panel gets (docs/orders-scale-plan.md,
   // finding 5)
   const ownOrders = useMemo(
@@ -241,10 +246,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const measurementsForm = useMeasurementsForm(profile, onUpdateProfile, onShowToast);
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSavingProfile) return;
     const parts = { lastName: lastName.trim(), firstName: firstName.trim(), middleName: middleName.trim() };
-    onUpdateProfile({
+    setIsSavingProfile(true);
+    const saved = await onUpdateProfile({
       ...profile,
       ...parts,
       // The full name stays in `name`: «Клиенты», the chat and older screens read it
@@ -253,6 +260,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       phone,
       notificationsEnabled: notifications,
     });
+    setIsSavingProfile(false);
+    // not saved: the form stays with what was typed (the toast said why)
+    if (!saved) return;
     setIsEditingProfile(false);
     onShowToast('Профиль успешно обновлен', 'success');
   };
@@ -268,26 +278,29 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const notificationsOn =
     notifications !== false && (notificationPermission === 'granted' || notificationPermission === 'unsupported');
 
-  const saveNotifications = (enabled: boolean) => {
+  /** false — the profile did not save it: the switch goes back */
+  const saveNotifications = async (enabled: boolean): Promise<boolean> => {
+    const before = notifications;
     setNotifications(enabled);
-    onUpdateProfile({ ...profile, notificationsEnabled: enabled });
+    const saved = await onUpdateProfile({ ...profile, notificationsEnabled: enabled });
+    if (!saved) setNotifications(before);
+    return saved;
   };
 
   const toggleNotifications = async () => {
     if (notificationsOn) {
-      saveNotifications(false);
-      onShowToast('Уведомления о заказах выключены', 'info');
+      if (await saveNotifications(false)) onShowToast('Уведомления о заказах выключены', 'info');
       return;
     }
     if (!isNotificationSupported()) {
-      saveNotifications(true);
+      if (!(await saveNotifications(true))) return;
       onShowToast('Этот браузер не показывает системные уведомления: смена статуса будет видна на сайте, пока он открыт', 'info');
       return;
     }
     const perm = await requestNotificationPermission();
     setNotificationPermission(perm);
     if (perm === 'granted') {
-      saveNotifications(true);
+      if (!(await saveNotifications(true))) return;
       const shown = await showSystemNotification(currentStoreName(), { body: 'Уведомления о статусе заказов включены' });
       onShowToast(
         shown
@@ -414,14 +427,23 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
             <button
               type="submit"
-              className="w-full neu-button-accent text-white rounded-xl py-2.5 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+              disabled={isSavingProfile}
+              className="w-full neu-button-accent text-white rounded-xl py-2.5 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-wait"
             >
               <Check className="w-4 h-4" />
-              <span>Сохранить</span>
+              <span>{isSavingProfile ? 'Сохранение…' : 'Сохранить'}</span>
             </button>
           </form>
         )}
       </div>
+
+      {/* The rights were not read (finding 20): said here, where the admin entry would be; it appears once they are */}
+      {!isFirebaseAdmin && adminCheckFailed && (
+        <LoadFailedNotice
+          title="Не удалось проверить права доступа"
+          text="Если это аккаунт администратора, кнопка панели появится, когда база ответит. Проверьте соединение или обновите страницу."
+        />
+      )}
 
       {/* Admin entry at the top of the profile (it was at the very bottom); only for verified admins */}
       {isFirebaseAdmin && (

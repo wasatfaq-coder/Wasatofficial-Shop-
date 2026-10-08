@@ -27,7 +27,8 @@ interface SizeCalculatorModalProps {
   productFit?: 'slim' | 'regular' | 'oversize';
   productCategory?: string;
   userProfile?: UserProfile;
-  onSaveMeasurements?: (measurements: BodyMeasurements) => void;
+  /** Saves to the profile; `false` — not saved (finding 13: «сохранено» only after the answer) */
+  onSaveMeasurements?: (measurements: BodyMeasurements) => Promise<boolean> | boolean | void;
   /** 'profile' (menu «Мои размеры»): no product to pick a size for, the button saves to the profile */
   purpose?: 'product' | 'profile';
 }
@@ -53,6 +54,9 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
   const [fitPreference, setFitPreference] = useState<'tight' | 'regular' | 'loose'>('regular');
   const [saveToProfile, setSaveToProfile] = useState<boolean>(true);
   const [applied, setApplied] = useState(false);
+  const [saving, setSaving] = useState(false);
+  // the label says «сохранен» only when the profile took it
+  const [savedToProfile, setSavedToProfile] = useState(false);
   const [showSizeTable, setShowSizeTable] = useState(false);
 
   // Sync state from userProfile if available
@@ -165,7 +169,8 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
 
   const willSave = (isProfile || saveToProfile) && !!onSaveMeasurements;
 
-  const handleApply = () => {
+  const handleApply = async () => {
+    if (saving || applied) return;
     // The recommended sizes go to the profile too: the product page marks «Ваш размер» by them
     const measurements: BodyMeasurements = {
       height,
@@ -179,11 +184,17 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
       russianSizeBottom: String(russianPattern.bottomRussianSize),
     };
 
+    let saved = false;
     if (willSave) {
-      onSaveMeasurements?.(measurements);
+      setSaving(true);
+      saved = (await onSaveMeasurements?.(measurements)) !== false;
+      setSaving(false);
+      // «Мои размеры»: saving is the whole point — not saved, the window stays (the toast said why)
+      if (isProfile && !saved) return;
     }
 
     if (!isProfile) onSelectSize(rawSizeValue);
+    setSavedToProfile(saved);
     setApplied(true);
     setTimeout(() => {
       setApplied(false);
@@ -570,8 +581,8 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
               </button>
               <button
                 type="button"
-                onClick={handleApply}
-                disabled={isProfile && !onSaveMeasurements}
+                onClick={() => void handleApply()}
+                disabled={(isProfile && !onSaveMeasurements) || saving}
                 className={`flex-1 py-3.5 px-4 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all ${
                   applied
                     ? 'neu-button-success text-white'
@@ -584,11 +595,13 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                     <span>
                       {isProfile
                         ? 'Сохранено в профиле'
-                        : willSave
+                        : savedToProfile
                           ? `Размер ${recommendedSizeLabel} выбран и сохранен`
                           : `Размер ${recommendedSizeLabel} выбран`}
                     </span>
                   </>
+                ) : saving ? (
+                  <span>Сохранение…</span>
                 ) : (
                   <span>{isProfile ? `Сохранить размер ${recommendedSizeLabel}` : `Выбрать ${recommendedSizeLabel}`}</span>
                 )}

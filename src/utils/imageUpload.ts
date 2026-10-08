@@ -30,11 +30,24 @@ async function compressImageFile(
   });
 }
 
+/** What firestore.rules take as a chat photo (`chat_images`): an uploaded picture of these formats, of this length */
+export const CHAT_PHOTO_MAX_LENGTH = 420_000;
+const STORABLE_PHOTO = /^data:image\/(png|jpe?g|webp|gif);base64,/;
+
+export function isStorablePhoto(dataUrl: string, maxLength: number): boolean {
+  return STORABLE_PHOTO.test(dataUrl) && dataUrl.length <= maxLength;
+}
+
 /**
  * Specifically optimized for chat messages to keep Firestore documents very light (< 200KB).
+ * A photo the browser could not compress (HEIC, a broken file) comes back as the original: it is refused here, and the
+ * chat says «не удалось обработать фото» — before, it went out, the rules refused it, and the buyer was told to check
+ * the connection and retry forever (audit 07.10, finding 14).
  */
 export async function compressChatImageFile(file: File): Promise<string> {
-  return compressImageFile(file, 800, 800, 0.72);
+  const dataUrl = await compressImageFile(file, 800, 800, 0.72);
+  if (!isStorablePhoto(dataUrl, CHAT_PHOTO_MAX_LENGTH)) throw new Error('Не удалось подготовить фото для чата');
+  return dataUrl;
 }
 
 /** Photo of a payment receipt («Доработки 5»): larger than a chat photo so the sums and the account stay legible */

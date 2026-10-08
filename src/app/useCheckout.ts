@@ -19,6 +19,7 @@ import { toOrderLineProduct } from '../shared/orderLine';
 import { STORE_PAUSED_TEXT, storeAcceptsOrders } from '../shared/orderApi';
 import { cleanAddressParts, fullName, hasNameParts, namePartsOf, type AddressParts, type PersonName } from '../shared/personName';
 import { useLiveProducts } from '../utils/liveProducts';
+import { isBrowserOffline, ORDER_SAVE_TIMEOUT_MS, settleWithin, type Settled } from '../utils/network';
 import { saveGuestOrder } from './guestOrders';
 import type { AddToast } from './useToasts';
 
@@ -48,7 +49,6 @@ type CheckoutOptions = {
   userProfile: UserProfile;
   products: Product[];
   setProducts: SetState<Product[]>;
-  selectedProduct: Product | null;
   setSelectedProduct: SetState<Product | null>;
   cartItems: CartItem[];
   setCartItems: SetState<CartItem[]>;
@@ -76,7 +76,6 @@ export function useCheckout({
   userProfile,
   products,
   setProducts,
-  selectedProduct,
   setSelectedProduct,
   cartItems,
   setCartItems,
@@ -99,6 +98,8 @@ export function useCheckout({
     deliveryMethod: string;
     deliveryAddress: string;
     paymentMethod?: string;
+    /** A guest's order the browser did not keep: the screen asks to write the number down (finding 19) */
+    notSavedInBrowser?: boolean;
   } | null>(null);
 
   const resolveOrderDetails = (orderData: CompleteOrderData) => {
@@ -135,7 +136,8 @@ export function useCheckout({
 
   const finishOrder = (
     order: Pick<Order, 'id' | 'totalPrice' | 'deliveryMethod' | 'deliveryAddress'> & { paymentMethod?: string },
-    orderData: CompleteOrderData
+    orderData: CompleteOrderData,
+    notSavedInBrowser = false
   ) => {
     // A 1-click order from the product page is not the cart: only the ordered lines leave it
     const orderedLineIds = new Set(orderData.items.map((item) => item.id));
@@ -148,6 +150,7 @@ export function useCheckout({
       deliveryMethod: order.deliveryMethod,
       deliveryAddress: order.deliveryAddress,
       paymentMethod: order.paymentMethod,
+      ...(notSavedInBrowser ? { notSavedInBrowser } : {}),
     });
     addToast(`Заказ № ${order.id} успешно оформлен!`, 'success');
     setActiveTab('order-success');
@@ -178,10 +181,8 @@ export function useCheckout({
         addressParts: details.addressParts,
       });
       setOrders((prev) => [order, ...prev.filter((o) => o.id !== order.id)]);
-      if (!currentUser) {
-        saveGuestOrder(order);
-      }
-      finishOrder(order, orderData);
+      const keptInBrowser = currentUser ? true : saveGuestOrder(order);
+      finishOrder(order, orderData, !keptInBrowser);
       return true;
     } catch (err) {
       console.error('placeOrder failed:', err);
@@ -208,6 +209,13 @@ export function useCheckout({
     // «Технические работы» in «Витрина»: no orders (the checkout and the 1-click window say so before this)
     if (!storeAcceptsOrders(storefrontSettings)) {
       addToast(`${STORE_PAUSED_TEXT}. Напишите в чат поддержки.`, 'error');
+      return Promise.resolve(false);
+    }
+    // Without a network the order would wait in this tab with a spinner: a closed tab lost it, a second attempt made
+    // a duplicate (audit 07.10, finding 12). The buyer's network, not the site's failure — a warning
+    if (isBrowserOffline()) {
+      console.warn('Checkout without a network: the order was not sent');
+      addToast('Нет соединения с интернетом: заказ не отправлен. Проверьте сеть и нажмите «Подтвердить» ещё раз.', 'error');
       return Promise.resolve(false);
     }
     return serverOrdersEnabled ? completeOrderOnServer(orderData) : completeOrderLocally(orderData);
@@ -283,11 +291,8 @@ export function useCheckout({
       promoCode: orderPromo?.code,
     });
 
-    // The order must reach the database before it is shown as placed and stock is taken:
-    // a rejected write (rules, network error) used to be reported as a successful order
-    try {
-      await placeClientOrder(newOrder, orderOwner.uid, orderOwner.db);
-    } catch (err) {
+    // A refused order (rules, the 30 s limit): the buyer is told why and can try again
+    const reportNotSaved = async (err: unknown) => {
       console.error('Order was not saved:', err);
       // the rules take one order in 30 s from a sign-in: say how long to wait instead of «check the connection»
       const wait = await orderRateWaitSeconds(orderOwner.uid, orderOwner.db);
@@ -297,51 +302,69 @@ export function useCheckout({
           : 'Не удалось оформить заказ. Проверьте соединение и попробуйте еще раз.',
         'error'
       );
+    };
+
+    // What follows a saved order: the stock, the promo's use, the order in the lists, the confirmation
+    const afterOrderSaved = () => {
+      // The new stock shows at once; the database is changed by the line transactions below
+      setProducts((prev) => withOrderDeducted(prev, orderItems));
+      // If active product was modified, sync selectedProduct
+      setSelectedProduct((prev) => (prev ? withOrderDeducted([prev], orderItems)[0] : prev));
+
+      // One more use of the promo by this order (a 1-click order has no promo, as on the server)
+      if (orderPromo) {
+        // The order is placed either way; a refused counter write is logged with the order number
+        recordPromoUsageInFirestore(orderPromo, newOrderId, orderOwner.db).catch((err) =>
+          console.error(`Promo usage for ${newOrderId} was not recorded:`, err)
+        );
+      }
+
+      // the orders subscription may already hold it (the local write is seen at once): one card, not two
+      setOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);
+      const keptInBrowser = currentUser ? true : saveGuestOrder(newOrder);
+
+      // Stock line by line, each in one transaction with its journal entry («Склад и SKU» → «Журнал движений»):
+      // the rules let a customer take only what the saved order ordered, once per line. The order is already saved:
+      // a refused write must not turn it into a failure for the customer. A guest writes off under their own anonymous
+      // sign-in, like the order itself: the rules can then require the order's owner (check 04.10, finding 6)
+      const takenAt = new Date();
+      void (async () => {
+        for (const [lineIndex, line] of orderItems.entries()) {
+          try {
+            await deductOrderLineStock(newOrderId, line, lineIndex, takenAt, orderOwner.db);
+          } catch (err) {
+            console.error(`Stock for ${newOrderId}, line ${lineIndex} was not written off:`, err);
+          }
+        }
+      })();
+
+      finishOrder({ id: newOrderId, totalPrice, deliveryMethod, deliveryAddress, paymentMethod }, orderData, !keptInBrowser);
+    };
+
+    // The order must reach the database before it is shown as placed and stock is taken: a rejected write (rules,
+    // network error) used to be reported as a successful order. Without a network the write neither resolves nor fails —
+    // after 20 s the buyer hears that and is asked to check «Мои заказы» before trying again (finding 12)
+    const saving = placeClientOrder(newOrder, orderOwner.uid, orderOwner.db);
+    let settled: Settled<void>;
+    try {
+      settled = await settleWithin(saving, ORDER_SAVE_TIMEOUT_MS);
+    } catch (err) {
+      await reportNotSaved(err);
+      return false;
+    }
+    if (settled.timedOut) {
+      console.warn(`Order ${newOrderId} is not confirmed by the database after ${ORDER_SAVE_TIMEOUT_MS / 1000} s`);
+      addToast(
+        `Магазин не ответил за ${ORDER_SAVE_TIMEOUT_MS / 1000} секунд — похоже, пропала связь. Заказ № ${newOrderId} мог сохраниться: ` +
+          'проверьте «Мои заказы» в профиле, прежде чем оформлять ещё раз. Не закрывайте вкладку, пока связь не вернётся.',
+        'error'
+      );
+      // the write goes on in this tab: when the database answers, the order is finished as usual or reported refused
+      saving.then(afterOrderSaved, (err) => void reportNotSaved(err));
       return false;
     }
 
-    // The new stock shows at once; the database is changed by the line transactions below
-    const updatedProducts = withOrderDeducted(products, orderItems);
-    setProducts(updatedProducts);
-
-    // If active product was modified, sync selectedProduct
-    if (selectedProduct) {
-      const updatedSel = updatedProducts.find((p) => p.id === selectedProduct.id);
-      if (updatedSel) {
-        setSelectedProduct(updatedSel);
-      }
-    }
-
-    // One more use of the promo by this order (a 1-click order has no promo, as on the server)
-    if (orderPromo) {
-      // The order is placed either way; a refused counter write is logged with the order number
-      recordPromoUsageInFirestore(orderPromo, newOrderId, orderOwner.db).catch((err) =>
-        console.error(`Promo usage for ${newOrderId} was not recorded:`, err)
-      );
-    }
-
-    // the orders subscription may already hold it (the local write is seen at once): one card, not two
-    setOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);
-    if (!currentUser) {
-      saveGuestOrder(newOrder);
-    }
-    
-    // Stock line by line, each in one transaction with its journal entry («Склад и SKU» → «Журнал движений»):
-    // the rules let a customer take only what the saved order ordered, once per line. The order is already saved:
-    // a refused write must not turn it into a failure for the customer. A guest writes off under their own anonymous
-    // sign-in, like the order itself: the rules can then require the order's owner (check 04.10, finding 6)
-    const takenAt = new Date();
-    void (async () => {
-      for (const [lineIndex, line] of orderItems.entries()) {
-        try {
-          await deductOrderLineStock(newOrderId, line, lineIndex, takenAt, orderOwner.db);
-        } catch (err) {
-          console.error(`Stock for ${newOrderId}, line ${lineIndex} was not written off:`, err);
-        }
-      }
-    })();
-
-    finishOrder({ id: newOrderId, totalPrice, deliveryMethod, deliveryAddress, paymentMethod }, orderData);
+    afterOrderSaved();
     return true;
   };
 

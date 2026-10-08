@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { User } from 'firebase/auth';
 import type { Order, UserProfile } from '../types';
 import { subscribeToOrders, subscribeToOwnUserProfile, subscribeToProductCosts } from '../utils/firebaseSync';
+import { setLoadFailed } from '../utils/loadFailures';
 import { loadGuestOrders } from './guestOrders';
 
 type AuthState = { authLoading: boolean; isAdmin: boolean; currentUser: User | null };
@@ -20,9 +21,15 @@ export function useAccountData({ authLoading, isAdmin, currentUser }: AuthState)
 
   React.useEffect(() => {
     if (authLoading) return;
+    // a failed subscription is said on «Заказы» and «Мои заказы» (finding 15), not shown as «заказов нет»
+    const ordersFailed = () => setLoadFailed('orders', true);
+    setLoadFailed('orders', false);
 
     if (isAdmin && currentUser) {
-      const unsubOrders = subscribeToOrders((loadedOrders) => setOrders(loadedOrders));
+      const unsubOrders = subscribeToOrders((loadedOrders) => {
+        setOrders(loadedOrders);
+        setLoadFailed('orders', false);
+      }, ordersFailed);
       const unsubProfile = subscribeToOwnUserProfile(currentUser.uid, setOwnProfiles);
       const unsubCosts = subscribeToProductCosts(setProductCosts);
       return () => {
@@ -40,8 +47,9 @@ export function useAccountData({ authLoading, isAdmin, currentUser }: AuthState)
         (loadedOrders) => {
           const own = new Set(loadedOrders.map((o) => o.id));
           setOrders([...loadedOrders, ...loadGuestOrders().filter((o) => !own.has(o.id))]);
+          setLoadFailed('orders', false);
         },
-        undefined,
+        ordersFailed,
         currentUser.uid
       );
       const unsubUsers = subscribeToOwnUserProfile(currentUser.uid, setOwnProfiles);

@@ -26,6 +26,7 @@ export function MeasurementsModal({ form }: { form: MeasurementsForm }) {
     setMeasFit,
     currentRussianPattern,
     handleSaveMeasurements,
+    isSavingMeasurements,
   } = form;
   return (
     <>
@@ -297,10 +298,11 @@ export function MeasurementsModal({ form }: { form: MeasurementsForm }) {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 neu-button-accent rounded-xl font-extrabold text-xs text-white cursor-pointer transition-transform flex items-center justify-center gap-1.5"
+                  disabled={isSavingMeasurements}
+                  className="flex-1 py-3 neu-button-accent rounded-xl font-extrabold text-xs text-white cursor-pointer transition-transform flex items-center justify-center gap-1.5 disabled:cursor-wait"
                 >
                   <Check className="w-4 h-4 stroke-[2.5]" />
-                  <span>Сохранить лекало</span>
+                  <span>{isSavingMeasurements ? 'Сохранение…' : 'Сохранить лекало'}</span>
                 </button>
               </div>
             </form>

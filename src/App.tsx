@@ -84,6 +84,7 @@ export default function App() {
     promos,
     setPromos,
     promosLoaded,
+    promosFailed,
     requestPromos,
     bannerSlides,
     bannersLoaded,
@@ -142,7 +143,7 @@ export default function App() {
     handleClearCart,
     handleApplyPromo,
     handleRemovePromo,
-  } = useCart({ promos, promosLoaded, requestPromos, preorderMode, addToast, setActiveTab, onOpenProduct: handleSelectProduct });
+  } = useCart({ promos, promosLoaded, promosFailed, requestPromos, preorderMode, addToast, setActiveTab, onOpenProduct: handleSelectProduct });
   // Catalog with its reviews (useCatalog.ts). Every snapshot brings the cart's stock and prices up to date and
   // refreshes the open product
   const { products, setProducts, productsLoaded, productsError } = useCatalog((loadedProds) => {
@@ -249,7 +250,6 @@ export default function App() {
     userProfile,
     products,
     setProducts,
-    selectedProduct,
     setSelectedProduct,
     cartItems,
     setCartItems,
@@ -729,6 +729,7 @@ export default function App() {
               deliveryMethod={latestOrder.deliveryMethod}
               deliveryAddress={latestOrder.deliveryAddress}
               paymentMethod={latestOrder.paymentMethod}
+              notSavedInBrowser={latestOrder.notSavedInBrowser}
               paymentInstructions={
                 (storefrontSettings.paymentMethods ?? []).find(
                   (m) => m.title.trim() && latestOrder.paymentMethod?.startsWith(m.title.trim())

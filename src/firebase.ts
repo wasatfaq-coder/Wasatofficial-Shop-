@@ -15,6 +15,7 @@ import { Firestore, connectFirestoreEmulator, initializeFirestore, getFirestore,
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import firebaseConfig from '../firebase-applet-config.json';
 import { FUNCTIONS_REGION, PLACE_ORDER_FUNCTION, PlaceOrderRequest, PlaceOrderResponse } from './shared/orderApi';
+import { firestoreOperationError } from './utils/firestoreErrors';
 
 const app = initializeApp(firebaseConfig);
 
@@ -158,43 +159,13 @@ export enum OperationType {
   WRITE = 'write',
 }
 
-interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId?: string | null;
-    email?: string | null;
-    emailVerified?: boolean | null;
-    isAnonymous?: boolean | null;
-    tenantId?: string | null;
-    providerInfo?: {
-      providerId?: string | null;
-      email?: string | null;
-    }[];
-  };
-}
-
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo:
-        auth.currentUser?.providerData?.map((provider) => ({
-          providerId: provider.providerId,
-          email: provider.email,
-        })) || [],
-    },
-    operationType,
-    path,
-  };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+/**
+ * A failed write of firebaseSync.ts: thrown again as one error that keeps the database's code and the original
+ * (audit 07.10, finding 21). Not logged here: the caller logs it once (`persist`, the chat, the admin's screens) —
+ * before, every failure was logged twice and took two of the five reports a visit sends to «Ошибки на сайте».
+ */
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): never {
+  throw firestoreOperationError(error, operationType, path);
 }
 
 // Test connection probe as required by Firebase skill
