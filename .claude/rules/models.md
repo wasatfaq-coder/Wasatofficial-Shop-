@@ -17,7 +17,7 @@
 | Задача | Модель | Усилие | Агент или скилл |
 |---|---|---|---|
 | Большая задача: план, архитектура, миграция, правка многих файлов | Opus 5.5 | medium | `ecc:planner`, `ecc:architect`; план в `docs/` по шаблону |
-| Ревью перед PR, поиск багов и уязвимостей | Opus 5.5 | medium | `ecc:code-reviewer`, `ecc:security-reviewer`, скилл `shipping-prs` |
+| Ревью после каждой правки кода (решение владельца 08.10), перед PR, поиск багов и уязвимостей | Opus 5.5 | medium | `ecc:code-reviewer`, `ecc:security-reviewer`, скилл `shipping-prs` |
 | Правка, которая касается денег, цен, склада, заказов, правил Firestore | Opus 5.5 | medium | `changing-firestore-data`, `.claude/rules/orders.md` |
 | Обычная разработка: экран, компонент, тест, небольшая фича | Sonnet 5.5 | high | основная сессия или субагент `sonnet` |
 | Сборка или типы сломаны | Sonnet 5.5 | high | `ecc:build-error-resolver` |

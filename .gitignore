@@ -32,3 +32,6 @@ graphify-out/
 
 # байт-код Python (phone_view.py скилла graph-pilot и другие скрипты)
 __pycache__/
+
+# снимки .claude/settings.json хука ecc-install.sh: остаются, только если контейнер убит посреди установки
+.claude/settings.json.ecc-*

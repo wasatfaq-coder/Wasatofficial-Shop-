@@ -106,6 +106,9 @@ chrome-devtools из ECC ищет Google Chrome, которого в облак�
   через MCP GitHub. Строки атрибуции в коммитах — по системным указаниям сессии.
 - `performance.md` (выбор модели): действует `.claude/rules/models.md`, таблица ECC на модели не опирается.
 
+Из `code-review.md` и `agents.md` ECC остаётся (решение владельца 08.10): после каждой правки кода — агент `ecc:code-reviewer`,
+модель — по `.claude/rules/models.md`; найденное CRITICAL и HIGH исправляется до коммита.
+
 ## Когда готово
 
 - Перед коммитом: `bun run lint && bun run build`; при изменении правил — `bun run test:rules`;
