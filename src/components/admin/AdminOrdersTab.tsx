@@ -1823,6 +1823,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                                       type="text"
                                       value={tempTrackValue}
                                       onChange={(e) => setTempTrackValue(e.target.value)}
+                                      aria-label="Трек-номер отправления"
                                       placeholder="Например: 1459203810"
                                       className="w-full px-3 py-2 pr-8 rounded-xl neu-inset text-xs font-mono font-bold text-[#2D3A4E] border border-white/60 focus:ring-2 focus:ring-accent/40 transition-all"
                                       autoFocus

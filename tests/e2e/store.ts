@@ -106,6 +106,35 @@ export const PRODUCTS = {
     colors: [{ name: 'Темно-синий', hex: '#1F2A44' }],
     sizes: ['Единый'],
   }), isPopular: false, photoIds: ['e2e-tie_full'] },
+  // the buyer orders and cancels: the cap on the phone, these on the computer — each run writes off its own product
+  gloves: { ...product({
+    id: 'e2e-gloves',
+    title: 'Перчатки кожаные',
+    category: 'accessories',
+    categoryLabel: 'Аксессуары',
+    price: 2490,
+    colors: [{ name: 'Черный', hex: '#111111' }],
+    sizes: ['Единый'],
+  }), isPopular: false },
+  // the owner takes an order through and cancels it with a return to stock: one product per screen size
+  wallet: { ...product({
+    id: 'e2e-wallet',
+    title: 'Кошелёк кожаный',
+    category: 'accessories',
+    categoryLabel: 'Аксессуары',
+    price: 1890,
+    colors: [{ name: 'Черный', hex: '#111111' }],
+    sizes: ['Единый'],
+  }), isPopular: false },
+  umbrella: { ...product({
+    id: 'e2e-umbrella',
+    title: 'Зонт складной',
+    category: 'accessories',
+    categoryLabel: 'Аксессуары',
+    price: 2190,
+    colors: [{ name: 'Черный', hex: '#111111' }],
+    sizes: ['Единый'],
+  }), isPopular: false },
 };
 
 /** A full photo of a product as `product_photos` keeps it (the product holds a preview) */
