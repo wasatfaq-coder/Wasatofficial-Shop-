@@ -25,7 +25,8 @@ import {
   FileDown,
   X,
 } from 'lucide-react';
-import { Order, PromoCode } from '../../types';
+import type { Order, Product, PromoCode } from '../../types';
+import { OrderLineThumbImage } from '../ProductThumbImage';
 import { computePartnerCommissions } from '../../utils/partnerCommission';
 import { generateAnalyticsPDF, preloadPdfLibraries } from '../../utils/pdfExport';
 import {
@@ -58,6 +59,8 @@ const ChartLoading: React.FC = () => (
 
 interface AdminAnalyticsTabProps {
   orders: Order[];
+  /** The catalog: photos of the top products come only from it, never from the order (audit 07.10, finding 7) */
+  products: Product[];
   promos?: PromoCode[];
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   onSelectOrder?: (order: Order) => void;
@@ -236,7 +239,7 @@ const Segments = <T extends string>({
  * top products, categories and promo codes, the PDF report. Everything is counted from orders (dated by
  * createdAt) placed after the statistics reset; orders themselves are never deleted here.
  */
-export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, promos = [], onShowToast, onSelectOrder, launchSteps, onOpenTab }) => {
+export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, products, promos = [], onShowToast, onSelectOrder, launchSteps, onOpenTab }) => {
   const [period, setPeriod] = useState<AnalyticsPeriod>('7d');
   const [statusFilter, setStatusFilter] = useState<OrderStatusFilter>('all');
   const [activeMetric, setActiveMetric] = useState<ActiveMetric>('revenue');
@@ -607,11 +610,14 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
               {breakdown.topProducts.map((p, idx) => (
                 <li key={p.id} className="neu-inset rounded-2xl p-2.5 flex items-center justify-between gap-2.5">
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    {p.image ? (
-                      <img src={p.image} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" loading="lazy" />
-                    ) : (
-                      <span className="w-10 h-10 rounded-xl bg-[#BAC5D5]/30 shrink-0" aria-hidden="true" />
-                    )}
+                    {/* only the catalog's photo: a link in the order is written by the visitor (finding 7) */}
+                    <OrderLineThumbImage
+                      line={p}
+                      catalog={products}
+                      alt=""
+                      className="w-10 h-10 rounded-xl object-cover shrink-0"
+                      loading="lazy"
+                    />
                     <div className="min-w-0">
                       <p className="text-xs font-bold truncate">
                         <span className="text-accent font-extrabold mr-1">{idx + 1}.</span>

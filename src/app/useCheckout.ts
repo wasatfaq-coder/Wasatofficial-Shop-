@@ -14,7 +14,7 @@ import {
 import { formatAddress } from '../utils/addressFormat';
 import { buildClientOrder } from '../utils/clientOrder';
 import { pluralRu } from '../utils/pluralize';
-import { QUICK_ORDER_DELIVERY_ID } from '../shared/orderPricing';
+import { QUICK_ORDER_DELIVERY_ID, promoSignInProblem } from '../shared/orderPricing';
 import { toOrderLineProduct } from '../shared/orderLine';
 import { STORE_PAUSED_TEXT, storeAcceptsOrders } from '../shared/orderApi';
 import { cleanAddressParts, fullName, hasNameParts, namePartsOf, type AddressParts, type PersonName } from '../shared/personName';
@@ -216,6 +216,18 @@ export function useCheckout({
     if (isBrowserOffline()) {
       console.warn('Checkout without a network: the order was not sent');
       addToast('Нет соединения с интернетом: заказ не отправлен. Проверьте сеть и нажмите «Подтвердить» ещё раз.', 'error');
+      return Promise.resolve(false);
+    }
+    // A code with a usage limit goes only with a Google sign-in (owner's decision 08.10, audit 07.10, finding 9). The
+    // cart drops it on sign-out; this stops an order whose code slipped through: the totals were counted with it, so
+    // the code is removed and the buyer confirms the new sum
+    const promo = orderData.deliveryMethodId && appliedPromo?.code
+      ? promos.find((p) => p.code.toUpperCase() === appliedPromo.code.toUpperCase())
+      : undefined;
+    const promoProblem = promo ? promoSignInProblem(promo, Boolean(currentUser && !currentUser.isAnonymous)) : null;
+    if (promoProblem) {
+      setAppliedPromo(null);
+      addToast(`Промокод ${promo?.code} снят. ${promoProblem}. Проверьте сумму и подтвердите заказ снова.`, 'error');
       return Promise.resolve(false);
     }
     return serverOrdersEnabled ? completeOrderOnServer(orderData) : completeOrderLocally(orderData);

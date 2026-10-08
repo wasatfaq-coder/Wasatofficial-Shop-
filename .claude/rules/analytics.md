@@ -11,7 +11,9 @@ paths:
 
 - `AdminAnalyticsTab` считается по заказам после `settings/analytics.resetAt`; «Сбросить статистику» заказы не
   удаляет, «Вернуть всю историю» снимает сброс. Числа экрана и PDF — `computeFirestoreDailySales`
-  и `computePeriodBreakdown` (`src/utils/analyticsEngine.ts`), по цене и названию из заказа.
+  и `computePeriodBreakdown` (`src/utils/analyticsEngine.ts`), по цене и названию из заказа. Фото «Топа товаров» —
+  только из каталога по id (`OrderLineThumbImage`, проп `products`), не из заказа: строку пишет посетитель, и ссылка
+  выдала бы IP владельца (аудит 07.10, находка 7).
 - Показатель графика выбирают карточки KPI (`role="radio"`: `neu-flat neu-pressable` → выбранная `neu-pill-active`),
   отдельного переключателя нет; «Пик» — чип в шапке графика. Тени модуля — только `neu-*`; SVG-тень столбцов
   (`neu-bar-elevation`) повторяет `--neu-raised-sm`.

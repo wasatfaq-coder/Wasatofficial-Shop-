@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { ActiveTab, AppliedPromoInfo, CartItem, Product, PromoCode } from '../types';
 import { CART_STORAGE_KEY, loadStoredCart, toStoredCart } from '../utils/cartStorage';
 import { getOrderableStock, isPreorderVariant } from '../utils/inventory';
-import { validatePromo, toPricingLine, appliedPromoFrom, currentAppliedPromo } from '../shared/orderPricing';
+import { validatePromo, toPricingLine, appliedPromoFrom, currentAppliedPromo, promoSignInProblem } from '../shared/orderPricing';
 import { promoDiscountText } from '../utils/promoLabel';
 import { hasOrderableVariant, needsVariantChoice } from '../utils/variantSelection';
 import type { AddToast } from './useToasts';
@@ -19,13 +19,20 @@ type CartOptions = {
   setActiveTab: (tab: ActiveTab) => void;
   /** A product without a colour or size to add at once: its card opens */
   onOpenProduct: (product: Product) => void;
+  /** Signed in with Google (not a guest): only then a code with a usage limit applies (finding 9) */
+  signedInWithGoogle: boolean;
+  /** «Войти через Google» from the toast about such a code */
+  onSignIn: () => void;
 };
 
 /**
  * Favorites, the cart and the applied promo, kept in this browser (`manstyle_favorites`, `manstyle_cart`).
  * The catalog subscription refreshes the products in the cart through `setCartItems` (App.tsx).
  */
-export function useCart({ promos, promosLoaded, promosFailed, requestPromos, preorderMode, addToast, setActiveTab, onOpenProduct }: CartOptions) {
+export function useCart({
+  promos, promosLoaded, promosFailed, requestPromos, preorderMode, addToast, setActiveTab, onOpenProduct, signedInWithGoogle,
+  onSignIn,
+}: CartOptions) {
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('manstyle_favorites');
@@ -216,6 +223,8 @@ export function useCart({ promos, promosLoaded, promosFailed, requestPromos, pre
   // A code from a banner or the chat waits: for the promos to be read (`promos`) — applied as soon as they come — or,
   // with an empty cart, for the first product (`cart`): before, it was «applied» and silently dropped (finding 16)
   const [pendingPromo, setPendingPromo] = useState<{ code: string; waitFor: 'promos' | 'cart' } | null>(null);
+  // A code with a limit the guest tried: applied once they sign in with Google
+  const [codeAwaitingSignIn, setCodeAwaitingSignIn] = useState<string | null>(null);
 
   const handleApplyPromo = (code: string): boolean => {
     const cleanCode = code.trim().toUpperCase();
@@ -229,6 +238,15 @@ export function useCart({ promos, promosLoaded, promosFailed, requestPromos, pre
 
     if (!foundPromo) {
       addToast('Промокод не найден', 'error');
+      return false;
+    }
+
+    // A code with a usage limit — only with a Google sign-in (owner's decision 08.10, audit 07.10, finding 9);
+    // before the empty-cart wait: a guest learns it at once, after the sign-in the code waits for the cart as usual
+    const signInProblem = promoSignInProblem(foundPromo, signedInWithGoogle);
+    if (signInProblem) {
+      setCodeAwaitingSignIn(foundPromo.code);
+      addToast(signInProblem, 'info', { label: 'Войти через Google', onClick: onSignIn });
       return false;
     }
 
@@ -279,13 +297,22 @@ export function useCart({ promos, promosLoaded, promosFailed, requestPromos, pre
   }, [promosLoaded, promosFailed, pendingPromo, cartItems.length]);
 
   React.useEffect(() => {
+    if (!signedInWithGoogle || !codeAwaitingSignIn) return;
+    setCodeAwaitingSignIn(null);
+    handleApplyPromo(codeAwaitingSignIn);
+    // handleApplyPromo is recreated on every render; it runs once, after the sign-in
+  }, [signedInWithGoogle, codeAwaitingSignIn]);
+
+  React.useEffect(() => {
     if (!appliedPromo || !promosLoaded) return;
     if (cartItems.length === 0) {
       setAppliedPromo(null);
       return;
     }
     const current = promos.find((p) => p.code.toUpperCase() === appliedPromo.code.toUpperCase());
-    const problem = current ? validatePromo(current, cartItems.map(toPricingLine)) : 'Промокод больше не действует';
+    const problem = current
+      ? validatePromo(current, cartItems.map(toPricingLine)) ?? promoSignInProblem(current, signedInWithGoogle)
+      : 'Промокод больше не действует';
     if (problem) {
       setAppliedPromo(null);
       addToast(`Промокод ${appliedPromo.code} снят. ${problem}`, 'info');
@@ -298,7 +325,7 @@ export function useCart({ promos, promosLoaded, promosFailed, requestPromos, pre
     const discount = promoDiscountText(now);
     if (discount !== promoDiscountText(appliedPromo)) addToast(`Скидка по промокоду ${now.code} теперь ${discount}`, 'info');
     // addToast is recreated on every render; the check depends only on the cart and the codes
-  }, [cartItems, promos, promosLoaded, appliedPromo]);
+  }, [cartItems, promos, promosLoaded, appliedPromo, signedInWithGoogle]);
 
   const handleRemovePromo = () => {
     setAppliedPromo(null);

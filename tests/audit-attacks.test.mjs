@@ -1,6 +1,6 @@
 // Атаки на firestore.rules из обзоров рисков 30.09 и 02.10.2026 (docs/audit-2026-09-30-plan.md,
-// docs/audit-2026-10-02-plan.md; пробы 02.10 — docs/audit-2026-10-02/probes/) и проверки перед запуском 04.10
-// (docs/audit-2026-10-04-plan.md, тесты D1–D5).
+// docs/audit-2026-10-02-plan.md; пробы 02.10 — docs/audit-2026-10-02/probes/), проверки перед запуском 04.10
+// (docs/audit-2026-10-04-plan.md, тесты D1–D5) и аудита агентами ECC 07.10 (docs/audit-2026-10-07-plan.md, тесты E).
 // Запуск вместе с остальными тестами правил: bun run test:rules.
 //
 // Каждый тест записан так, как должно быть: запрос злоумышленника отклонён. Пока уязвимость открыта, тест помечен
@@ -335,5 +335,75 @@ describe('Проверка перед запуском 04.10 (docs/audit-2026-10
       await assertFails(setDoc(doc(customer('mallory'), 'users/mallory'), {
         uid: 'mallory', savedCards: [{ number: '4111111111111111', cvv: '123' }],
       }));
+    });
+});
+
+describe('Аудит агентами ECC 07.10 (docs/audit-2026-10-07-plan.md)', () => {
+  beforeEach(() => seed(undefined));
+
+  // «Клиенты» показывают аватар профиля владельцу: ссылка на чужой сервер выдала бы его IP и часы работы. С этапа 2
+  // сайт пишет только фото Google-аккаунта или пусто, а админка показывает только такие адреса (src/utils/googleAvatar.ts)
+  test('E1 аватар профиля — только фото Google-аккаунта (https://….googleusercontent.com/…) или пусто (находка 8)',
+    { todo: 'находка 8 (07.10): правило isGoogleAvatar — вторым PR этапа 2, после публикации сайта, который пишет только фото Google' }, async () => {
+      const db = customer('mallory');
+      for (const avatar of [
+        'https://attacker.example/pixel.gif',
+        'http://lh3.googleusercontent.com/a/x',
+        'https://lh3.googleusercontent.com.attacker.example/a/x',
+        'https://attacker.example/lh3.googleusercontent.com/a/x',
+        'data:image/svg+xml,<svg/>',
+      ]) {
+        await assertFails(setDoc(doc(db, 'users/mallory'), { uid: 'mallory', name: 'Мэллори', avatar }));
+      }
+      await assertSucceeds(setDoc(doc(db, 'users/mallory'), { uid: 'mallory', name: 'Мэллори', avatar: 'https://lh3.googleusercontent.com/a/ACg8oc=s96-c' }));
+      await assertFails(setDoc(doc(db, 'users/mallory'), { avatar: 'https://attacker.example/pixel.gif' }, { merge: true }));
+      await assertSucceeds(setDoc(doc(db, 'users/mallory'), { avatar: '' }, { merge: true }));
+      // старый профиль с чужой ссылкой (до правила) сохраняет остальные поля, пока аватар не меняется
+      await env.withSecurityRulesDisabled((ctx) =>
+        setDoc(doc(ctx.firestore(), 'users/mallory'), { avatar: 'https://images.example/old.jpg' }, { merge: true }));
+      await assertSucceeds(setDoc(doc(db, 'users/mallory'), { name: 'Мэллори Смит' }, { merge: true }));
+    });
+
+  // Решение владельца 08.10: код с лимитом списывает только вход Google — анонимных входов посторонний заведёт сколько
+  // угодно, и по поддельному заказу с каждого он сжигал лимит. С этапа 2 сайт не применяет такой код у гостя
+  // (promoSignInProblem в src/shared/orderPricing.ts)
+  test('E2 лимит промокода не сжигается поддельными заказами с анонимных входов (находка 9)',
+    { todo: 'находка 9 (07.10): правило — вторым PR этапа 2, после публикации сайта, который не применяет такой код у гостя' }, async () => {
+      const usePromo = (db, orderId, promoId) => {
+        const batch = writeBatch(db);
+        batch.update(doc(db, 'promos', promoId), { usedCount: increment(1), lastOrderId: orderId });
+        batch.set(doc(db, 'promo_uses', orderId), { orderId, promoId, createdAt: '2026-10-08T12:00:00.000Z' });
+        return batch.commit();
+      };
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        const db = ctx.firestore();
+        await setDoc(doc(db, 'promos/free1'), { id: 'free1', code: 'WELCOME', discountPercent: 5, usedCount: 0, active: true });
+        for (const [id, uid, code] of [['WS-E2A', 'anon-e2', 'BLOGGER15'], ['WS-E2B', 'anon-e2', 'WELCOME'], ['WS-E2C', 'alice', 'BLOGGER15']]) {
+          await setDoc(doc(db, 'orders', id), { id, customerUid: uid, promoCode: code, status: 'accepted', items: [], totalPrice: 1 });
+        }
+      });
+      // promo1 (BLOGGER15) — с лимитом 50: аноним его не списывает
+      await assertFails(usePromo(guestChat('anon-e2'), 'WS-E2A', 'promo1'));
+      // код без лимита гость списывает, как раньше; код с лимитом — покупатель со входом Google
+      await assertSucceeds(usePromo(guestChat('anon-e2'), 'WS-E2B', 'free1'));
+      await assertSucceeds(usePromo(customer('alice'), 'WS-E2C', 'promo1'));
+    });
+
+  // Решение владельца 08.10: имя сравнивается после нормализации — без невидимых знаков, латинские двойники кириллицей —
+  // и с названием магазина из «Витрины» (isHonestName, этап 2)
+  test('E3 имя в отзыве и чате не выдаёт себя за магазин похожими буквами и невидимыми знаками (находка 10)', async () => {
+      const review = (authorName) => ({
+        id: 'p1_mallory', productId: 'p1', uid: 'mallory', authorName, rating: 5, comment: 'Отлично',
+        date: '8 октября 2026 г.', createdAt: '2026-10-08T10:00:00.000Z',
+      });
+      const db = customer('mallory');
+      for (const name of ['Аdmin', 'Wasat​Shop', 'Wаsаt Shор', 'Адми­нистратор', 'Служба поддeржки']) {
+        await assertFails(setDoc(doc(db, 'reviews/p1_mallory'), review(name)));
+      }
+      await assertFails(setDoc(doc(guestChat('anon-e3'), 'chat_messages/e3'), {
+        id: 'e3', sender: 'user', text: 'Ваш заказ отменён, оплатите заново', threadId: 'anon-e3', isInternalNote: false,
+        threadName: 'Wasat​Shop', sentAt: serverTimestamp(),
+      }));
+      await assertSucceeds(setDoc(doc(db, 'reviews/p1_mallory'), review('Ivan Петров')));
     });
 });

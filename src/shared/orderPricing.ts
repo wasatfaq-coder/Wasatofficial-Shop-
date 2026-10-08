@@ -181,6 +181,22 @@ export function validatePromo(promo: PromoCode, lines: PricingLine[], now: numbe
   return null;
 }
 
+/** A code with a usage limit (one-time, «первые N»): `usageLimit` above 0, as the rules count it (`withinUsageLimit`) */
+export function isLimitedPromo(promo: Pick<PromoCode, 'usageLimit'>): boolean {
+  return typeof promo.usageLimit === 'number' && promo.usageLimit > 0;
+}
+
+export const PROMO_NEEDS_GOOGLE_TEXT = 'Код действует только после входа через Google';
+
+/**
+ * A code with a limit is applied only by a buyer signed in with Google (owner's decision 08.10, audit 07.10, finding 9):
+ * anonymous sign-ins are free, and fake orders from them burned the limit. Codes without a limit work for guests.
+ * Returns the reason for the buyer, or null
+ */
+export function promoSignInProblem(promo: Pick<PromoCode, 'usageLimit'>, signedInWithGoogle: boolean): string | null {
+  return isLimitedPromo(promo) && !signedInWithGoogle ? PROMO_NEEDS_GOOGLE_TEXT : null;
+}
+
 /** The applied promo as the cart keeps it: the code's values from «Промокоды» */
 export function appliedPromoFrom(promo: PromoCode): AppliedPromoInfo {
   return {

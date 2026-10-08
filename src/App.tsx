@@ -70,7 +70,7 @@ const PromoModal = lazy(() => loadPromoModal().then((m) => ({ default: m.PromoMo
 const BrandRequisitesModal = lazy(() => loadBrandRequisitesModal().then((m) => ({ default: m.BrandRequisitesModal })));
 
 export default function App() {
-  const { currentUser, isAdmin, loading: authLoading } = useAuth();
+  const { currentUser, isAdmin, loading: authLoading, loginWithGoogle } = useAuth();
   // Toasts and `persist` for writes that must not fail silently (useToasts.ts)
   const { toasts, setToasts, addToast, removeToast, persist } = useToasts();
   // The screen on show; the address follows it below (screenHistory.ts)
@@ -123,6 +123,17 @@ export default function App() {
     setActiveTab('product-detail');
   };
 
+  // A code with a usage limit asks for a Google sign-in (finding 9): the toast's button opens the Google window
+  const signInForPromo = () => {
+    loginWithGoogle().catch((err: unknown) => {
+      console.warn('Google sign-in for a promo code did not finish:', err);
+      const code = (err as { code?: string })?.code ?? '';
+      // the buyer closed the Google window: nothing to report
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return;
+      addToast('Не удалось войти через Google. Попробуйте ещё раз или войдите в «Профиле»', 'error');
+    });
+  };
+
   // Favorites, the cart and the applied promo (useCart.ts)
   const {
     favorites,
@@ -143,7 +154,18 @@ export default function App() {
     handleClearCart,
     handleApplyPromo,
     handleRemovePromo,
-  } = useCart({ promos, promosLoaded, promosFailed, requestPromos, preorderMode, addToast, setActiveTab, onOpenProduct: handleSelectProduct });
+  } = useCart({
+    promos,
+    promosLoaded,
+    promosFailed,
+    requestPromos,
+    preorderMode,
+    addToast,
+    setActiveTab,
+    onOpenProduct: handleSelectProduct,
+    signedInWithGoogle: Boolean(currentUser && !currentUser.isAnonymous),
+    onSignIn: signInForPromo,
+  });
   // Catalog with its reviews (useCatalog.ts). Every snapshot brings the cart's stock and prices up to date and
   // refreshes the open product
   const { products, setProducts, productsLoaded, productsError } = useCatalog((loadedProds) => {
