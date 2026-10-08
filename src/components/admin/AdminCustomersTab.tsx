@@ -34,7 +34,7 @@ import { OrderLineThumbImage } from '../ProductThumbImage';
 import { updateCustomerNotesInFirestore, deleteUserFromFirestore } from '../../utils/firebaseSync';
 import { downloadCSV } from '../../utils/csvHelpers';
 import { copyToClipboard } from '../../utils/clipboard';
-import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
+import { isCarrierOrder } from '../../utils/orderFlow';
 import { NeumorphicSelect, NeumorphicSelectOption } from '../NeumorphicSelect';
 import { orderStatusChip } from '../../utils/orderStatusStyle';
 import { isRevenueOrder, orderRevenue } from '../../utils/analyticsEngine';
@@ -1362,7 +1362,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                             <div className="flex items-center gap-2">
                               <Truck className="w-3.5 h-3.5 text-accent" />
                               <span>{ord.deliveryMethod || 'Доставка'}</span>
-                              {isTransportCompanyDelivery(ord.deliveryMethod, ord.trackingCompany) && ord.trackingNumber && (
+                              {isCarrierOrder(ord) && ord.trackingNumber && (
                                 <span className="font-bold text-[#2D3A4E]">Трек (ТК): {ord.trackingNumber}</span>
                               )}
                             </div>

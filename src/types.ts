@@ -371,6 +371,11 @@ export interface Order {
    * is older than the stock journal): «Заказы» then offers «Вернуть на склад».
    */
   stockReturned?: boolean;
+  /**
+   * The promo code use of a cancelled order went back to the code (`usedCount` − 1, `promo_uses/{заказ}` removed by the
+   * admin's session, audit 07.10, finding 6): a one-time code is usable again
+   */
+  promoReleased?: boolean;
   /** «Архив» in «Заказы»: true — moved by the admin, false — taken back (a cancelled order goes there by itself) */
   archived?: boolean;
   /** Delivery kind at order time: its chain of statuses (`src/shared/orderFlow.ts`); older orders — by the method's name */

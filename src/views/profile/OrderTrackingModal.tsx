@@ -7,6 +7,7 @@ import {
   customerStepLabel,
   flowStatuses,
   isAwaitingReceipt,
+  isCarrierOrder,
   orderDeliveryKind,
   showsPickupCode,
 } from '../../utils/orderFlow';
@@ -41,7 +42,6 @@ import { Order, Product } from '../../types';
 import { isQuickOrderDelivery, QUICK_ORDER_DELIVERY_TITLE } from '../../shared/orderPricing';
 import { copyToClipboard } from '../../utils/clipboard';
 import {
-  isTransportCompanyDelivery,
   isRussianPostDelivery,
   isCourierDelivery,
   isPickupDelivery,
@@ -141,7 +141,7 @@ export const OrderTrackingModal = ({
             {/* Tracking Code Banner OR Clean Delivery Info Notice */}
             {(() => {
               const isPost = isRussianPostDelivery(selectedOrderForTracking.deliveryMethod, selectedOrderForTracking.trackingCompany);
-              const isTK = isTransportCompanyDelivery(selectedOrderForTracking.deliveryMethod, selectedOrderForTracking.trackingCompany);
+              const isTK = isCarrierOrder(selectedOrderForTracking);
               const isPickup = isPickupDelivery(selectedOrderForTracking.deliveryMethod);
               const isQuick = isQuickOrderDelivery(selectedOrderForTracking.deliveryMethod);
               const isExpress = !isQuick && ((selectedOrderForTracking.deliveryMethod || '').toLowerCase().includes('экспресс') || (selectedOrderForTracking.deliveryMethod || '').toLowerCase().includes('express'));

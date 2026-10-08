@@ -9,6 +9,7 @@ import {
   customerStatusLabel,
   flowStatuses,
   generatePickupCode,
+  isCarrierOrder,
   orderDeliveryKind,
   orderTimeline,
   showsPickupCode,
@@ -77,6 +78,16 @@ describe('chains and labels', () => {
     expect(statusChangeBlocker(order({ deliveryKind: 'carrier' }), 'in_transit')).toMatch(/трек-номер/);
     expect(statusChangeBlocker(order({ deliveryKind: 'carrier', trackingNumber: '1234' }), 'in_transit')).toBeNull();
     expect(statusChangeBlocker(order({ deliveryKind: 'courier' }), 'in_transit')).toBeNull();
+  });
+
+  // аудит 07.10, находка 1: поле трека было только у ТК из списка слов, а трек требовался у любой ТК
+  test('a carrier with any name gets the track field the blocker asks for', () => {
+    const baikal = order({ deliveryKind: 'carrier', deliveryMethod: 'Байкал Сервис' });
+    expect(statusChangeBlocker(baikal, 'in_transit')).toMatch(/трек-номер/);
+    expect(isCarrierOrder(baikal)).toBe(true);
+    expect(isCarrierOrder(order({ deliveryMethod: 'СДЭК до пункта выдачи' }))).toBe(true);
+    expect(isCarrierOrder(order({ deliveryKind: 'courier', deliveryMethod: 'Курьером до двери' }))).toBe(false);
+    expect(isCarrierOrder(order({ deliveryKind: 'pickup', deliveryMethod: 'Самовывоз' }))).toBe(false);
   });
 });
 

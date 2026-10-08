@@ -24,6 +24,15 @@ export function orderDeliveryKind(order: Pick<Order, 'deliveryKind' | 'deliveryM
   return deliveryKindOfMethod({ title: order.deliveryMethod });
 }
 
+/**
+ * Заказ перевозчика (Почта и ТК) — у него трек-номер. По типу заказа, а не по словам в названии способа: ТК с любым
+ * названием («Байкал Сервис») требует трек в `statusChangeBlocker`, значит, и поле трека у неё должно быть (аудит 07.10,
+ * находка 1).
+ */
+export function isCarrierOrder(order: Pick<Order, 'deliveryKind' | 'deliveryMethod' | 'trackingCompany'>): boolean {
+  return orderDeliveryKind(order) === 'carrier';
+}
+
 const CARRIER_NAMES: Record<NonNullable<Order['trackingCompany']>, string> = {
   cdek: 'СДЭК',
   pochta: 'Почту России',

@@ -45,7 +45,10 @@ import {
   findUntakenOrderLines,
   type UntakenOrderLines,
   ORDER_JOURNAL_SINCE,
+  releaseOrderPromoUse,
+  retakeOrderPromoUse,
   returnCancelledOrderStock,
+  takeAdjustedOrderStock,
   type AdminStockChange,
 } from '../../utils/firebaseSync';
 import { AdminActionMenu } from './AdminActionMenu';
@@ -53,7 +56,6 @@ import {
   getDefaultDeliveryStages,
   syncStagesWithOrderStatus,
   getEstimatedDeliveryForStatus,
-  isTransportCompanyDelivery,
 } from '../../utils/deliveryStages';
 import { AdminOrderInvoiceModal } from './AdminOrderInvoiceModal';
 import { AdminOrderAdjustmentModal } from './AdminOrderAdjustmentModal';
@@ -65,6 +67,7 @@ import {
   canHandOver,
   flowStatuses,
   generatePickupCode,
+  isCarrierOrder,
   orderTimeline,
   statusChangeBlocker,
   statusLogEntry,
@@ -87,7 +90,7 @@ import { AdminOrderPriceWarning } from './AdminOrderPriceWarning';
 import { AdminChoiceMenu } from './AdminChoiceMenu';
 import { orderPriceIssues, type OrderCheckContext } from '../../utils/orderPriceCheck';
 import type { OrderPaymentDetails } from '../../types';
-import { cancelledByLabel, cancelReasonText, formatCancelledAt, isArchivedOrder, overdueUnpaidOrders, UNPAID_CANCEL_REASON } from '../../utils/orderCancel';
+import { cancelledByLabel, cancelReasonText, formatCancelledAt, isArchivedOrder, ordersWithPromoToRelease, overdueUnpaidOrders, UNPAID_CANCEL_REASON } from '../../utils/orderCancel';
 
 interface AdminOrdersTabProps {
   orders: Order[];
@@ -468,12 +471,16 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     // the candidates are read when their ids change or after «Списать со склада»
   }, [untakenKey, untakenCheck]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /** «Списать со склада»: the same per-line write-off as the buyer's, with the same journal entry */
+  /**
+   * «Списать со склада»: the same per-line write-off as the buyer's, with the same journal entry; after «Правка состава»
+   * — by variant, since the lines no longer match their entries by number (audit 07.10, finding 2)
+   */
   const handleTakeOrderStock = async (order: Order) => {
     setTakingStockOrderId(order.id);
     const at = new Date();
     try {
-      for (const i of untakenLines[order.id] ?? []) await deductOrderLineStock(order.id, order.items[i], i, at);
+      if (order.isAdjusted) await takeAdjustedOrderStock(order);
+      else for (const i of untakenLines[order.id] ?? []) await deductOrderLineStock(order.id, order.items[i], i, at);
       onShowToast(`Товары заказа № ${order.id} списаны со склада`, 'success');
     } catch (err) {
       console.error('Stock was not taken:', err);
@@ -536,13 +543,35 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
    * New status of the given orders (one or a bulk selection), with an entry in the order's history: time to the
    * second, the admin, a note («Доработки 4»). A cancelled order that gets a status again is active: the goods
    * returned on cancellation are taken from stock again. Handing over by courier or at pickup needs a code: it is
-   * made when the order leaves with the courier or is ready for pickup.
+   * made when the order leaves with the courier or is ready for pickup. Resolves to the number of restored orders, or
+   * null when the database refused the write: then the stock is not touched and no success toast is shown (audit 07.10,
+   * finding 4 — before, «Статус изменён» came before the answer and the stock changed even when the order did not).
    */
-  const changeOrdersStatus = (orderIds: string[], newStatus: Order['status'], note?: string) => {
+  const changeOrdersStatus = async (orderIds: string[], newStatus: Order['status'], note?: string): Promise<number | null> => {
     const ids = new Set(orderIds);
 
+    // a cancelled order whose goods did not get back still holds them: they go back first, otherwise the restore takes
+    // them a second time (audit 07.10, finding 5)
+    const stuck: string[] = [];
+    for (const ord of orders.filter((o) => ids.has(o.id) && o.isCancelled && o.stockReturned === false)) {
+      const back = await returnCancelledOrderStock(ord, { operator: 'Администратор', missingIsNothing: true }).catch((err) => {
+        console.error(`Stock of the cancelled order ${ord.id} was not returned before its restore:`, err);
+        return false;
+      });
+      if (!back) {
+        stuck.push(ord.id);
+        ids.delete(ord.id);
+      }
+    }
+    if (stuck.length > 0) {
+      onShowToast(
+        `Не восстановлены: ${stuck.map((id) => `№ ${id}`).join(', ')} — товары ещё не вернулись на склад. Нажмите «Вернуть на склад» в карточке.`,
+        'error'
+      );
+    }
+    if (ids.size === 0) return null;
+
     const reactivated = orders.filter((ord) => ids.has(ord.id) && ord.isCancelled && ord.items?.length);
-    for (const ord of reactivated) changeOrderStock(ord, -1, 'Заказ восстановлен после отмены');
 
     const updated = orders.map((ord) => {
       if (!ids.has(ord.id)) return ord;
@@ -558,8 +587,10 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         ...ord,
         status: newStatus,
         isCancelled: false,
-        // a restored order is back in the working list, not in «Архив»
+        // a restored order is back in the working list, not in «Архив»; its goods are taken again below
         archived: ord.isCancelled ? undefined : ord.archived,
+        stockReturned: ord.isCancelled ? undefined : ord.stockReturned,
+        promoReleased: ord.isCancelled ? undefined : ord.promoReleased,
         paymentStatus: updatedPaymentStatus,
         statusLog: [...(ord.statusLog ?? []), statusLogEntry(newStatus, 'admin', { byUid: adminUid, note: entryNote || undefined })],
         ...(needsCode ? { pickupCode: generatePickupCode() } : {}),
@@ -568,7 +599,16 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       };
     });
 
-    onUpdateOrders(updated);
+    if ((await onUpdateOrders(updated)) === false) return null;
+    for (const ord of reactivated) changeOrderStock(ord, -1, 'Заказ восстановлен после отмены');
+    // the promo code use went back on the cancellation — the restored order takes it again (audit 07.10, finding 6)
+    for (const ord of reactivated.filter((o) => o.promoReleased && o.promoCode)) {
+      const promo = promos.find((p) => p.code.trim().toUpperCase() === ord.promoCode?.trim().toUpperCase());
+      if (!promo) continue;
+      await retakeOrderPromoUse(ord.id, promo.id).catch((err) =>
+        console.error(`The promo code use of the restored order ${ord.id} was not taken again:`, err)
+      );
+    }
     return reactivated.length;
   };
 
@@ -610,8 +650,9 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     withRestoreCheck(allowed, () => applyBulkStatusChange(allowed, newStatus));
   };
 
-  const applyBulkStatusChange = (ids: string[], newStatus: Order['status']) => {
-    const restored = changeOrdersStatus(ids, newStatus, newStatus === 'delivered' ? 'Закрыт администратором (массово)' : undefined);
+  const applyBulkStatusChange = async (ids: string[], newStatus: Order['status']) => {
+    const restored = await changeOrdersStatus(ids, newStatus, newStatus === 'delivered' ? 'Закрыт администратором (массово)' : undefined);
+    if (restored === null) return;
     const sample = orders.find((o) => o.id === ids[0]);
     const label = ids.length === 1 && sample ? `«${adminStatusLabel(sample, newStatus)}»` : `«${BULK_STATUS_LABELS[newStatus]}»`;
     onShowToast(
@@ -622,13 +663,29 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     setSelectedOrderIds([]);
   };
 
-  const handleBulkPaymentStatusChange = (newStatus: NonNullable<Order['paymentStatus']>) => {
+  /**
+   * Bulk payment status. «Оплачен» skips cancelled orders (their «Возврат средств» would turn into «Оплачен») and orders
+   * whose prices differ from the catalog — those go through «Отметить оплаченным?» one by one, as in the card (audit
+   * 07.10, finding 3: the bulk path let a made-up order for 1 ₽ into the revenue).
+   */
+  const handleBulkPaymentStatusChange = async (newStatus: NonNullable<Order['paymentStatus']>) => {
     if (selectedOrderIds.length === 0) return;
-    const updated = orders.map((ord) =>
-      selectedOrderIds.includes(ord.id) ? { ...ord, paymentStatus: newStatus } : ord
+    const skipped: string[] = [];
+    const allowed = new Set<string>();
+    for (const ord of orders.filter((o) => selectedOrderIds.includes(o.id))) {
+      if (newStatus === 'paid' && ord.isCancelled) skipped.push(`№ ${ord.id} — отменён`);
+      else if (newStatus === 'paid' && orderPriceIssues(ord, products, orderCheck).length > 0) {
+        skipped.push(`№ ${ord.id} — цены не совпадают с каталогом, отметьте в карточке`);
+      } else allowed.add(ord.id);
+    }
+    if (skipped.length > 0) onShowToast(`Не изменены: ${skipped.join('; ')}`, 'error');
+    if (allowed.size === 0) return;
+    const updated = orders.map((ord) => (allowed.has(ord.id) ? { ...ord, paymentStatus: newStatus } : ord));
+    if ((await onUpdateOrders(updated)) === false) return;
+    onShowToast(
+      `Статус оплаты ${allowed.size} ${pluralRu(allowed.size, ['заказа', 'заказов', 'заказов'])}: «${PAYMENT_STATUS_CONFIG[newStatus].label}»`,
+      'success'
     );
-    onUpdateOrders(updated);
-    onShowToast(`Статус оплаты ${selectedOrderIds.length} заказов изменен на "${PAYMENT_STATUS_CONFIG[newStatus].label}"`, 'success');
     setSelectedOrderIds([]);
   };
 
@@ -660,10 +717,11 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     withRestoreCheck([orderId], () => applyOrderStatus(orderId, newStatus));
   };
 
-  const applyOrderStatus = (orderId: string, newStatus: Order['status'], note?: string) => {
+  const applyOrderStatus = async (orderId: string, newStatus: Order['status'], note?: string) => {
     const order = orders.find((o) => o.id === orderId);
     const label = order ? adminStatusLabel(order, newStatus) : STATUS_CONFIG[newStatus].label;
-    const restored = changeOrdersStatus([orderId], newStatus, note);
+    const restored = await changeOrdersStatus([orderId], newStatus, note);
+    if (restored === null) return;
     onShowToast(
       restored > 0
         ? `Заказ ${orderId} восстановлен со статусом "${label}", товары снова списаны со склада`
@@ -688,7 +746,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   };
 
   const confirmHandover = async (order: Order): Promise<boolean> => {
-    changeOrdersStatus([order.id], 'delivered', `Выдан по коду ${order.pickupCode}`);
+    if ((await changeOrdersStatus([order.id], 'delivered', `Выдан по коду ${order.pickupCode}`)) === null) return false;
     onShowToast(`Заказ № ${order.id} выдан`, 'success');
     return true;
   };
@@ -696,14 +754,14 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   // Payment Status Change Handler
   // «Оплачен» for an order whose prices differ from the catalog — after «Отметить оплаченным?» (stage 5 without Blaze)
   const [paidDespitePrices, setPaidDespitePrices] = useState<Order | null>(null);
-  const handleUpdatePaymentStatus = (orderId: string, newStatus: NonNullable<Order['paymentStatus']>, checked = false) => {
+  const handleUpdatePaymentStatus = async (orderId: string, newStatus: NonNullable<Order['paymentStatus']>, checked = false) => {
     const target = orders.find((o) => o.id === orderId);
     if (!checked && newStatus === 'paid' && target && orderPriceIssues(target, products, orderCheck).length > 0) {
       setPaidDespitePrices(target);
       return;
     }
     const updated = orders.map((ord) => (ord.id === orderId ? { ...ord, paymentStatus: newStatus } : ord));
-    onUpdateOrders(updated);
+    if ((await onUpdateOrders(updated)) === false) return;
     onShowToast(`Статус оплаты заказа ${orderId}: "${PAYMENT_STATUS_CONFIG[newStatus].label}"`, 'success');
   };
 
@@ -759,26 +817,46 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   };
 
   /**
+   * The promo code uses of cancelled orders go back to their codes and the orders are marked `promoReleased` (audit
+   * 07.10, finding 6): a one-time code is usable again. A failed return stays unmarked and is tried at the next opening
+   * of «Заказы»; nothing to return (no use recorded) is marked too. `base` — the order list as just saved (the props
+   * still hold the list before the cancellation).
+   */
+  const releasePromoUses = async (targets: Order[], base: Order[]) => {
+    const released = new Set<string>();
+    for (const ord of targets.filter((o) => o.promoCode?.trim() && !o.promoReleased)) {
+      try {
+        await releaseOrderPromoUse(ord.id);
+        released.add(ord.id);
+      } catch (err) {
+        console.error(`The promo code use of the cancelled order ${ord.id} did not go back:`, err);
+      }
+    }
+    if (released.size === 0) return;
+    await onUpdateOrders(base.map((o) => (released.has(o.id) ? { ...o, promoReleased: true } : o)));
+  };
+
+  /**
    * The store's cancellation (one order or a bulk selection), always with a reason (CancelOrderDialog). The goods go
    * back like the buyer's: per line, exactly what the order's journal entry took (`returnCancelledOrderStock`, check
    * 03.10); a line without an entry took nothing and gets nothing back (check 04.10, finding 1). An order cancelled once and
    * restored took its goods again by the ordered quantity, so it returns them the same way. A return that did not go
    * through leaves «Вернуть на склад» in the card.
    */
-  const cancelOrdersAsAdmin = async (targets: Order[], reason: string, comment: string, label?: string): Promise<boolean> => {
+  const cancelOrdersAsAdmin = async (
+    targets: Order[],
+    reason: string,
+    comment: string,
+    label?: string
+  ): Promise<{ saved: boolean; notReturned: string[] }> => {
     const active = targets.filter((o) => !o.isCancelled);
     if (active.length === 0) {
       onShowToast('Выбранные заказы уже отменены', 'info');
-      return true;
+      return { saved: true, notReturned: [] };
     }
     const reasonText = cancelReasonText({ cancelReason: reason, cancelComment: comment });
     const at = new Date().toISOString();
     const restoredBefore = new Set(active.filter((o) => Boolean(o.cancelledAt)).map((o) => o.id));
-
-    // restored once: the ordered quantity back, as it was taken on restore
-    for (const ord of active) {
-      if (restoredBefore.has(ord.id) && ord.items?.length) changeOrderStock(ord, 1, 'Отмена заказа администратором');
-    }
 
     const ids = new Set(active.map((o) => o.id));
     const updated = orders.map((o) =>
@@ -800,25 +878,32 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         : o
     );
     const saved = await onUpdateOrders(updated);
-    if (saved === false) return false;
+    if (saved === false) return { saved: false, notReturned: [] };
+
+    // restored once: the ordered quantity back, as it was taken on restore — only once the cancellation is saved
+    for (const ord of active) {
+      if (restoredBefore.has(ord.id) && ord.items?.length) changeOrderStock(ord, 1, 'Отмена заказа администратором');
+    }
 
     const notReturned: string[] = [];
     for (const ord of active) {
       if (restoredBefore.has(ord.id) || !ord.items?.length) continue;
       try {
-        await returnCancelledOrderStock(ord, { operator: 'Администратор', missingIsNothing: true });
+        const complete = await returnCancelledOrderStock(ord, { operator: 'Администратор', missingIsNothing: true });
+        if (!complete) notReturned.push(ord.id);
       } catch (err) {
         console.error(`Stock of the cancelled order ${ord.id} was not returned:`, err);
         notReturned.push(ord.id);
       }
     }
+    await releasePromoUses(active, updated);
     const what = label ?? (active.length === 1 ? `Заказ № ${active[0].id} отменен` : `Отменено ${active.length} ${pluralRu(active.length, ['заказ', 'заказа', 'заказов'])}`);
     if (notReturned.length > 0) {
       onShowToast(`${what}. Не вернулись на склад товары заказов ${notReturned.map((id) => `№ ${id}`).join(', ')} — нажмите «Вернуть на склад» в карточке.`, 'error');
     } else {
       onShowToast(`${what}. Товары возвращены на склад.`, 'success');
     }
-    return true;
+    return { saved: true, notReturned };
   };
 
   // Unpaid orders past «Витрина» → «Отменять неоплаченные заказы через» are cancelled with their stock returned (stage 5
@@ -843,6 +928,21 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     );
   }, [overdueKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // A buyer's cancellation returns no promo code use (the rules let the buyer only add one): the admin's session does it
+  // while «Заказы» are open, once per order per visit (audit 07.10, finding 6)
+  const promoReleaseTried = useRef(new Set<string>());
+  const promoReleaseKey = ordersWithPromoToRelease(orders)
+    .map((o) => o.id)
+    .filter((id) => !promoReleaseTried.current.has(id))
+    .sort()
+    .join(',');
+  useEffect(() => {
+    if (!promoReleaseKey) return;
+    const targets = ordersWithPromoToRelease(orders).filter((o) => !promoReleaseTried.current.has(o.id));
+    targets.forEach((o) => promoReleaseTried.current.add(o.id));
+    void releasePromoUses(targets, orders);
+  }, [promoReleaseKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
   /** «Удалить заказ» of an active order: first the cancellation with the stock return, then «Удалить навсегда» or «В архив» */
   const [cancelThenDelete, setCancelThenDelete] = useState(false);
   const [bulkCancelOrders, setBulkCancelOrders] = useState<Order[] | null>(null);
@@ -855,7 +955,8 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   const handleReturnCancelledStock = async (order: Order) => {
     setReturningStockOrderId(order.id);
     try {
-      await returnCancelledOrderStock(order, { operator: 'Администратор', missingIsNothing: true });
+      const complete = await returnCancelledOrderStock(order, { operator: 'Администратор', missingIsNothing: true });
+      if (!complete) throw new Error(`Stock of order ${order.id} was not returned in full`);
       onShowToast(`Товары заказа № ${order.id} возвращены на склад`, 'success');
     } catch (err) {
       console.error('Stock return failed:', err);
@@ -881,7 +982,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
   // Delete Single Order Handler
   const handleDeleteSingleOrder = async () => {
-    if (!orderToDelete) return;
+    if (!orderToDelete || orderToDelete.stockReturned === false) return;
     setIsDeletingOrder(true);
     try {
       await deleteOrderFromFirestore(orderToDelete.id);
@@ -1603,7 +1704,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
                       {/* Tracking Carrier & Number Row - Only for Transport Companies */}
                       {(() => {
-                        const isTK = isTransportCompanyDelivery(ord.deliveryMethod, ord.trackingCompany);
+                        const isTK = isCarrierOrder(ord);
                         if (!isTK) {
                           const dm = (ord.deliveryMethod || '').toLowerCase();
                           const methodTypeLabel = dm.includes('самовывоз') || dm.includes('пункт выдачи')
@@ -2054,10 +2155,13 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         onConfirm={async (reason, comment) => {
           const target = orderToCancel;
           if (!target) return false;
-          const done = await cancelOrdersAsAdmin([target], reason, comment);
-          // «Удалить заказ»: cancelled and returned — now «Удалить навсегда» or «В архив»
-          if (done && cancelThenDelete) setOrderToDelete({ ...target, isCancelled: true });
-          return done;
+          const { saved, notReturned } = await cancelOrdersAsAdmin([target], reason, comment);
+          // «Удалить заказ»: cancelled and returned — now «Удалить навсегда» or «В архив»; goods not back yet — the card's
+          // «Вернуть на склад» first (audit 07.10, finding 5)
+          if (saved && cancelThenDelete) {
+            setOrderToDelete({ ...target, isCancelled: true, stockReturned: notReturned.includes(target.id) ? false : target.stockReturned });
+          }
+          return saved;
         }}
         onClose={() => {
           setOrderToCancel(null);
@@ -2069,7 +2173,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         order={bulkCancelOrders}
         audience="admin"
         onConfirm={async (reason, comment) => {
-          const done = bulkCancelOrders ? await cancelOrdersAsAdmin(bulkCancelOrders, reason, comment) : false;
+          const done = bulkCancelOrders ? (await cancelOrdersAsAdmin(bulkCancelOrders, reason, comment)).saved : false;
           if (done) setSelectedOrderIds([]);
           return done;
         }}
@@ -2109,9 +2213,18 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
               </div>
             </div>
 
-            <p className="text-xs text-[#4E5C70]">
-              Заказ № <strong className="text-[#2D3A4E]">{orderToDelete.id}</strong> на сумму <strong className="text-[#2D3A4E]">{orderToDelete.totalPrice.toLocaleString('ru-RU')} ₽</strong> отменён, товары вернулись на склад. «Удалить навсегда» — заказ пропадёт из «Клиентов» и из доли отмен, восстановить его нельзя. «В архив» — уйдёт из рабочего списка, но останется в истории.
-            </p>
+            {orderToDelete.stockReturned === false ? (
+              // the goods are not back: deleting would lose them for good (audit 07.10, finding 5)
+              <p className="text-xs text-[#4E5C70]">
+                Заказ № <strong className="text-[#2D3A4E]">{orderToDelete.id}</strong> отменён, но{' '}
+                <strong className="text-danger">товары ещё не вернулись на склад</strong>. Удалить его можно после «Вернуть на склад»,
+                а «В архив» — уже сейчас.
+              </p>
+            ) : (
+              <p className="text-xs text-[#4E5C70]">
+                Заказ № <strong className="text-[#2D3A4E]">{orderToDelete.id}</strong> на сумму <strong className="text-[#2D3A4E]">{orderToDelete.totalPrice.toLocaleString('ru-RU')} ₽</strong> отменён, товары вернулись на склад. «Удалить навсегда» — заказ пропадёт из «Клиентов» и из доли отмен, восстановить его нельзя. «В архив» — уйдёт из рабочего списка, но останется в истории.
+              </p>
+            )}
 
             {/* phone: one under another, the deletion first and the safe «Закрыть» last */}
             <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 pt-2">
@@ -2137,24 +2250,38 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                   <span>В архив</span>
                 </button>
               )}
-              <button
-                type="button"
-                onClick={handleDeleteSingleOrder}
-                disabled={isDeletingOrder}
-                className="neu-button-danger px-4 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 whitespace-nowrap"
-              >
-                {isDeletingOrder ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Удаление...</span>
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Удалить навсегда</span>
-                  </>
-                )}
-              </button>
+              {orderToDelete.stockReturned === false ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleReturnCancelledStock(orderToDelete);
+                    setOrderToDelete(null);
+                  }}
+                  className="neu-button px-4 py-2 rounded-xl text-xs font-bold text-accent transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                >
+                  <PackageCheck className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>Вернуть на склад</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleDeleteSingleOrder}
+                  disabled={isDeletingOrder}
+                  className="neu-button-danger px-4 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 whitespace-nowrap"
+                >
+                  {isDeletingOrder ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Удаление...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Удалить навсегда</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>
