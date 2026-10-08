@@ -7,16 +7,19 @@ description: Пишет и чинит сценарии Playwright в брауз�
 
 ## Как устроено
 
-`bun run test:e2e` собирает сайт с `VITE_USE_EMULATORS` в `dist-e2e/`, поднимает эмуляторы auth и firestore и
-запускает проекты `playwright.config.ts` по порядку: `seed` (пишет магазин) → `phone` (390 px) и `desktop` (1280 px)
-**параллельно на одной базе** → `clear` → `empty-phone`/`empty-desktop` (пустой магазин).
+`bun run test:e2e` собирает сайт с `VITE_USE_EMULATORS` в `dist-e2e/` и функции (`functions/lib/`), поднимает эмуляторы
+auth, firestore и functions (`firebase.e2e.json`) и запускает проекты `playwright.config.ts` по порядку: `seed` (пишет
+магазин) → `phone` (390 px) и `desktop` (1280 px) **параллельно на одной базе** → `server-phone`/`server-desktop`
+(включают серверные заказы на весь магазин, поэтому после остальных; сценарии — `tests/e2e/server/`) → `clear` →
+`empty-phone`/`empty-desktop` (пустой магазин).
 
 - Данные магазина — `tests/e2e/store.ts`: `PRODUCTS`, `COURIER`, `PICKUP`, `ADMIN`; индекс каталога и миниатюры
   строит из `PRODUCTS` функция `catalogIndexDocs`. Новый товар — новая запись в `PRODUCTS`, остальное соберётся само.
 - База из теста — `tests/e2e/emulator.ts`: `readDoc`, `queryDocs`, `writeDocs`.
 - `tests/e2e/fixtures.ts`: `import { test, expect, rub } from '../fixtures'`, а не из `@playwright/test`. Фикстура
   рвёт запросы не на 127.0.0.1 (картинки заменяет заглушкой) и роняет тест на любой ошибке JavaScript на странице;
-  в ней же `signIn(ADMIN)` и флаг `phone`. `rub(n)` — цена так, как её печатает сайт.
+  в ней же `signIn(ADMIN)` и флаг `phone`. `rub(n)` — цена так, как её печатает сайт. Второй человек в том же сценарии
+  (владелец отвечает покупателю) — фикстура `secondPage` и `signInOn(secondPage, ADMIN)`: свой профиль браузера и вход.
 - Сценарии на заполненном магазине — в `tests/e2e/shop/`, на пустом — в `tests/e2e/empty/`. Частые шаги (товар →
   размер → «В корзину» → корзина, вход) уже написаны в `shop/guest-checkout.spec.ts` и `shop/account-chat.spec.ts`.
 
@@ -58,6 +61,10 @@ VITE_USE_EMULATORS=true bunx vite build --outDir dist-e2e --emptyOutDir
 bunx firebase emulators:exec --only auth,firestore --project ai-studio-applet-webapp-e9574 \
   'bunx playwright test tests/e2e/shop/one-click.spec.ts --project=phone --project=desktop'
 ```
+
+Файл из `tests/e2e/shop/` эмулятора функций не требует. Сценарий из `tests/e2e/server/` — с функциями и после
+`phone`/`desktop` (он от них зависит, поэтому идут и они): `npm --prefix functions run build`, затем
+`bunx firebase emulators:exec --config firebase.e2e.json --only auth,firestore,functions …` с `--project=server-phone`.
 
 `seed` запустится сам — от него зависят оба проекта. Идентификатор проекта настоящий, но `emulators:exec` пишет
 только в эмуляторы, а фикстура не выпускает страницу в интернет. Поменял код сайта — пересобери `dist-e2e`.

@@ -53,7 +53,9 @@ Wasat Shop — SPA интернет-магазина мужской одежды
 - `bun run test:functions` — тесты Cloud Functions и расчёта цены (сначала `npm ci --prefix functions`)
 - `functions/`: отдельный npm-пакет; `npm run typecheck|build --prefix functions`
 - `bun run test:e2e` — сценарии Playwright в `tests/e2e/` (заказ гостя с курьером и с промокодом, в 1 клик, заказ с входом и чат,
-  цена и этикетки в админке, пустой магазин) на эмуляторах, 390 и 1280 px. Данные — `tests/e2e/store.ts`, только
+  отмена заказа покупателем, ответ владельца в чате, заказ Почтой в админке до отмены, цена и этикетки в админке, серверный
+  заказ через `placeOrder` — `tests/e2e/server/`, пустой магазин) на эмуляторах, 390 и 1280 px; эмуляторы auth, firestore
+  и functions по `firebase.e2e.json`, нужен `npm ci --prefix functions`. Данные — `tests/e2e/store.ts`, только
   в эмулятор; вход — `window.e2eSignIn`, есть только в сборке с `VITE_USE_EMULATORS` (`src/firebase.ts`). Селекторы —
   по ролям и подписям (`getByRole`, `getByLabel`), не по классам и id: вёрстка меняется, сценарий остаётся. Телефон и
   компьютер идут параллельно на одной базе, поэтому сценарий, который меняет данные, берёт свой товар или свою почту
