@@ -21,6 +21,7 @@ import {
   subscribeToSupportStatus,
 } from '../utils/firebaseSync';
 import { pluralRu } from '../utils/pluralize';
+import { firestoreErrorCode } from '../utils/firestoreErrors';
 import { forgetGuestOrders } from './guestOrders';
 import type { AddToast, Persist } from './useToasts';
 
@@ -248,12 +249,15 @@ export function useSupportChat({
       await applyChatMessageChange(change, targetDb);
       return true;
     } catch (err) {
-      console.error('Chat message change failed:', err);
       setChatMessages(before);
+      // only the rules' refusal means «15 minutes passed» (finding 18); anything else is not the buyer's doing
+      const lateForCustomer = !asStaff && firestoreErrorCode(err) === 'permission-denied';
+      if (lateForCustomer) console.warn('Chat message change refused (15 minutes passed):', err);
+      else console.error('Chat message change failed:', err);
       addToast(
-        asStaff
-          ? 'Не удалось изменить сообщение. Проверьте соединение'
-          : 'Изменить или удалить сообщение можно в течение 15 минут после отправки',
+        lateForCustomer
+          ? 'Изменить или удалить сообщение можно в течение 15 минут после отправки'
+          : 'Не удалось изменить сообщение. Проверьте соединение и повторите',
         'error'
       );
       return false;

@@ -5,6 +5,7 @@ import { GUEST_USER_PROFILE } from '../data/products';
 import { ADMIN_EMAIL } from '../context/AuthContext';
 import { auth } from '../firebase';
 import { saveUserProfileToFirestore } from '../utils/firebaseSync';
+import { isBrowserOffline } from '../utils/network';
 import type { AddToast, Persist } from './useToasts';
 
 // Default profile of earlier versions (the shop admin's name, email, phone and office address)
@@ -48,17 +49,42 @@ export function useProfile({ authLoading, currentUser, ownProfiles, persist, add
     return GUEST_USER_PROFILE;
   });
 
-  const handleUpdateProfile = (updated: UserProfile) => {
-    setUserProfile(updated);
+  const keepInBrowser = (profile: UserProfile) => {
     try {
-      localStorage.setItem('manstyle_user_profile', JSON.stringify(updated));
+      localStorage.setItem('manstyle_user_profile', JSON.stringify(profile));
     } catch {}
+  };
+
+  /**
+   * true once the profile is saved: in the account's document (a signed-in buyer — after the database answered) or in
+   * this browser (a guest). The windows close and say «Сохранено» only then; false — the window stays with what was
+   * typed, the profile on screen goes back (audit 07.10, finding 13: before, «Сохранено» came before the answer and a
+   * refusal came later as a red toast).
+   */
+  const handleUpdateProfile = async (updated: UserProfile): Promise<boolean> => {
     // Only into the account that is signed in right now: right after «Выйти» this closure still holds the previous
     // user, and the guest profile used to overwrite their addresses and measurements (audit 02.10, finding 23)
-    if (currentUser?.uid && auth.currentUser?.uid === currentUser.uid) {
-      // The profile (addresses, measurements) must not be lost silently: a refused write says so
-      void persist('профиль', saveUserProfileToFirestore(currentUser.uid, updated));
+    const signedIn = Boolean(currentUser?.uid && auth.currentUser?.uid === currentUser.uid);
+    if (signedIn && isBrowserOffline()) {
+      console.warn('Profile was not saved: no network');
+      addToast('Нет соединения с интернетом: профиль не сохранён. Проверьте сеть и повторите.', 'error');
+      return false;
     }
+    const previous = userProfile;
+    setUserProfile(updated);
+    keepInBrowser(updated);
+    if (!signedIn || !currentUser) return true;
+    // The profile (addresses, measurements) must not be lost silently: a refused write says so
+    const saved = await persist('профиль', saveUserProfileToFirestore(currentUser.uid, updated));
+    if (!saved) {
+      // back to what is saved, unless the profile changed since
+      setUserProfile((now) => {
+        if (now !== updated) return now;
+        keepInBrowser(previous);
+        return previous;
+      });
+    }
+    return saved;
   };
 
   // Signed out: the profile of that account leaves this browser (only locally — nothing is written); the chat
@@ -103,18 +129,20 @@ export function useProfile({ authLoading, currentUser, ownProfiles, persist, add
   }, [currentUser, ownProfiles]);
 
 
-  const handleSaveMeasurements = (measurements: BodyMeasurements) => {
+  /** «Подбор размера»: false — not saved (the window says nothing is saved) */
+  const handleSaveMeasurements = async (measurements: BodyMeasurements): Promise<boolean> => {
     const updated: UserProfile = {
       ...userProfile,
       bodyMeasurements: measurements,
     };
-    handleUpdateProfile(updated);
+    if (!(await handleUpdateProfile(updated))) return false;
     addToast(
       measurements.preferredSize
         ? `Параметры и размер ${measurements.preferredSize} сохранены в профиле`
         : 'Параметры фигуры сохранены в профиле',
       'success'
     );
+    return true;
   };
 
   return { userProfile, handleUpdateProfile, handleSaveMeasurements };

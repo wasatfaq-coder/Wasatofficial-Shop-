@@ -315,7 +315,8 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       await saveAnalyticsResetAt(Date.now());
       setSelectedDay(null);
       onShowToast('Статистика сброшена: считается с этого момента. Заказы не удалены', 'success');
-    } catch {
+    } catch (err) {
+      console.error('Analytics reset was not saved:', err);
       onShowToast('Не удалось сбросить статистику', 'error');
     }
   };
@@ -324,7 +325,8 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
     try {
       await saveAnalyticsResetAt(null);
       onShowToast('Статистика снова считается по всей истории заказов', 'success');
-    } catch {
+    } catch (err) {
+      console.error('Analytics history was not restored:', err);
       onShowToast('Не удалось вернуть историю', 'error');
     }
   };

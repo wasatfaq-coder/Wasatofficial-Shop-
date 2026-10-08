@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, lazy, Suspense, useTransition } from 'react';
 import { IS_PREVIEW_BUILD } from '../../utils/previewBuild';
+import { useLoadFailed } from '../../utils/loadFailures';
+import { LoadFailedNotice } from '../../components/LoadFailedNotice';
 import { launchSteps } from '../../utils/launchChecklist';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import {
@@ -315,7 +317,7 @@ export const ProfileAdminPanel = ({
       support: { value: awaiting, label: 'ждут ответа' },
     };
   }, [isAdminOpen, orders, localChatMessages]);
-
+  const ordersLoadFailed = useLoadFailed('orders');
 
   return (
     <>
@@ -383,6 +385,15 @@ export const ProfileAdminPanel = ({
                 </button>
               </div>
             </div>
+
+            {/* the orders subscription failed: «Заказы», «Клиенты» and «Аналитика» would look empty (finding 15) */}
+            {ordersLoadFailed && (
+              <LoadFailedNotice
+                className="shrink-0"
+                title="Не удалось загрузить заказы"
+                text="«Заказы», «Клиенты» и «Аналитика» сейчас могут быть пустыми или неполными. Проверьте соединение и обновите страницу."
+              />
+            )}
 
             {/* 4 groups → sections → the section; forms report unsaved edits to the panel */}
             <UnsavedChangesContext.Provider value={unsavedRegistry}>

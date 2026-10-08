@@ -11,6 +11,8 @@ type CartOptions = {
   promos: PromoCode[];
   /** The promos are read only on demand (useStorefrontData): until they come no code is checked */
   promosLoaded: boolean;
+  /** The promos subscription ended with an error: a code waiting for them is answered, `requestPromos` tries again */
+  promosFailed: boolean;
   requestPromos: () => void;
   preorderMode: boolean;
   addToast: AddToast;
@@ -23,7 +25,7 @@ type CartOptions = {
  * Favorites, the cart and the applied promo, kept in this browser (`manstyle_favorites`, `manstyle_cart`).
  * The catalog subscription refreshes the products in the cart through `setCartItems` (App.tsx).
  */
-export function useCart({ promos, promosLoaded, requestPromos, preorderMode, addToast, setActiveTab, onOpenProduct }: CartOptions) {
+export function useCart({ promos, promosLoaded, promosFailed, requestPromos, preorderMode, addToast, setActiveTab, onOpenProduct }: CartOptions) {
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('manstyle_favorites');
@@ -211,14 +213,15 @@ export function useCart({ promos, promosLoaded, requestPromos, preorderMode, add
   };
 
   // Apply Promo with full rule validation
-  // A code applied before the promos are read (a banner, the chat): applied as soon as they come
-  const [pendingPromoCode, setPendingPromoCode] = useState<string | null>(null);
+  // A code from a banner or the chat waits: for the promos to be read (`promos`) — applied as soon as they come — or,
+  // with an empty cart, for the first product (`cart`): before, it was «applied» and silently dropped (finding 16)
+  const [pendingPromo, setPendingPromo] = useState<{ code: string; waitFor: 'promos' | 'cart' } | null>(null);
 
   const handleApplyPromo = (code: string): boolean => {
     const cleanCode = code.trim().toUpperCase();
     if (!promosLoaded) {
       requestPromos();
-      setPendingPromoCode(cleanCode);
+      setPendingPromo({ code: cleanCode, waitFor: 'promos' });
       addToast('Проверяем промокод…', 'info');
       return false;
     }
@@ -226,6 +229,18 @@ export function useCart({ promos, promosLoaded, requestPromos, preorderMode, add
 
     if (!foundPromo) {
       addToast('Промокод не найден', 'error');
+      return false;
+    }
+
+    if (cartItems.length === 0) {
+      // the code itself (active, limit, date) is checked now; the cart — when there is one
+      const codeProblem = validatePromo({ ...foundPromo, minOrderAmount: 0 }, cartItems.map(toPricingLine));
+      if (codeProblem) {
+        addToast(codeProblem, 'error');
+        return false;
+      }
+      setPendingPromo({ code: cleanCode, waitFor: 'cart' });
+      addToast(`Промокод ${foundPromo.code} применится, когда вы добавите товар в корзину`, 'info');
       return false;
     }
 
@@ -248,11 +263,20 @@ export function useCart({ promos, promosLoaded, requestPromos, preorderMode, add
   // An applied promo is checked again whenever the cart or the code changes: a shrunk cart, an expired or
   // switched-off code must not reach the order with the discount
   React.useEffect(() => {
-    if (!promosLoaded || !pendingPromoCode) return;
-    setPendingPromoCode(null);
-    handleApplyPromo(pendingPromoCode);
-    // handleApplyPromo is recreated on every render; it runs once, when the promos come
-  }, [promosLoaded, pendingPromoCode]);
+    if (!pendingPromo) return;
+    if (pendingPromo.waitFor === 'promos' && !promosLoaded) {
+      // the promos could not be read (finding 15): say so instead of «Проверяем промокод…» forever
+      if (promosFailed) {
+        setPendingPromo(null);
+        addToast('Не удалось проверить промокод: нет связи с магазином. Проверьте соединение и примените код ещё раз', 'error');
+      }
+      return;
+    }
+    if (pendingPromo.waitFor === 'cart' && cartItems.length === 0) return;
+    setPendingPromo(null);
+    handleApplyPromo(pendingPromo.code);
+    // handleApplyPromo and addToast are recreated on every render; this runs when the promos or the first product come
+  }, [promosLoaded, promosFailed, pendingPromo, cartItems.length]);
 
   React.useEffect(() => {
     if (!appliedPromo || !promosLoaded) return;

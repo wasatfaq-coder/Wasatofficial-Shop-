@@ -441,7 +441,8 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       setSelectedCustomer((prev) => (prev ? { ...prev, tags: updatedTags } : null));
       setNewTagInput('');
       onShowToast(`Тег «${newTagInput.trim()}» добавлен`, 'info');
-    } catch {
+    } catch (err) {
+      console.error('Customer tag was not added:', err);
       onShowToast('Ошибка при добавлении тега', 'error');
     }
   };
@@ -455,7 +456,8 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       await updateCustomerNotesInFirestore(docId, selectedCustomer.managerNotes || '', updatedTags);
       setSelectedCustomer((prev) => (prev ? { ...prev, tags: updatedTags } : null));
       onShowToast(`Тег «${tagToRemove}» удален`, 'info');
-    } catch {
+    } catch (err) {
+      console.error('Customer tag was not removed:', err);
       onShowToast('Ошибка при удалении тега', 'error');
     }
   };

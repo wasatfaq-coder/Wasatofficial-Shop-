@@ -35,6 +35,7 @@ export function AddressFormModal({ book }: { book: AddressBook }) {
     addrIsDefault,
     setAddrIsDefault,
     handleSaveAddress,
+    isSavingAddress,
   } = book;
   return (
     <>
@@ -269,9 +270,10 @@ export function AddressFormModal({ book }: { book: AddressBook }) {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3.5 neu-button-accent rounded-2xl text-xs font-extrabold text-white transition-all active:scale-[0.98] cursor-pointer"
+                  disabled={isSavingAddress}
+                  className="flex-1 py-3.5 neu-button-accent rounded-2xl text-xs font-extrabold text-white transition-all active:scale-[0.98] cursor-pointer disabled:cursor-wait"
                 >
-                  Сохранить
+                  {isSavingAddress ? 'Сохранение…' : 'Сохранить'}
                 </button>
               </div>
             </form>

@@ -39,6 +39,11 @@ export function useStorefrontData(wantPromos: boolean) {
   const [promos, setPromos] = useState<PromoCode[]>([]);
   const [promosLoaded, setPromosLoaded] = useState(false);
   const [promosRequested, setPromosRequested] = useState(false);
+  // The promos subscription ended with an error (finding 15): a code waiting for them is not «checked» forever, and the
+  // next request subscribes again (a failed subscription does not come back by itself)
+  const [promosFailed, setPromosFailed] = useState(false);
+  const [promosAttempt, setPromosAttempt] = useState(0);
+  const promosFailedRef = React.useRef(false);
   const readPromos = wantPromos || promosRequested;
   const [bannerSlides, setBannerSlides] = useState<BannerSlide[]>(loadCachedBanners);
   // false while the banners are the browser's copy: the admin's session moves pictures only from the database's
@@ -64,15 +69,27 @@ export function useStorefrontData(wantPromos: boolean) {
 
   React.useEffect(() => {
     if (!readPromos) return;
-    return subscribeToPromos((loadedPromos) => {
-      if (loadedPromos) {
-        setPromos(loadedPromos);
-        setPromosLoaded(true);
+    return subscribeToPromos(
+      (loadedPromos) => {
+        if (loadedPromos) {
+          setPromos(loadedPromos);
+          setPromosLoaded(true);
+        }
+      },
+      () => {
+        promosFailedRef.current = true;
+        setPromosFailed(true);
       }
-    });
-  }, [readPromos]);
+    );
+  }, [readPromos, promosAttempt]);
 
-  const requestPromos = React.useCallback(() => setPromosRequested(true), []);
+  const requestPromos = React.useCallback(() => {
+    setPromosRequested(true);
+    if (!promosFailedRef.current) return;
+    promosFailedRef.current = false;
+    setPromosFailed(false);
+    setPromosAttempt((n) => n + 1);
+  }, []);
 
   React.useEffect(() => {
     const unsubServerConfig = subscribeToServerConfig((config) => {
@@ -119,6 +136,7 @@ export function useStorefrontData(wantPromos: boolean) {
     promos,
     setPromos,
     promosLoaded,
+    promosFailed,
     requestPromos,
     bannerSlides,
     bannersLoaded,

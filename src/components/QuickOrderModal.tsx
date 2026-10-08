@@ -7,6 +7,8 @@ import { productImage } from '../utils/productImage';
 import { useProductThumbs } from '../utils/productThumbs';
 import { LegalConsentNote } from './LegalConsentNote';
 import { useDialogA11y } from '../utils/useDialogA11y';
+import { digitsAfterCountryCode, isQuickOrderPhoneComplete, PHONE_DIGITS_AFTER_CODE } from '../utils/phoneNumber';
+import { pluralRu } from '../utils/pluralize';
 
 interface QuickOrderModalProps {
   isOpen: boolean;
@@ -56,11 +58,22 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
     setPhone(val);
   };
 
+  // The manager reaches the buyer only by this number: 10 digits after «+7», not the length of the text with its spaces
+  // (audit 07.10, finding 17)
+  const phoneComplete = isQuickOrderPhoneComplete(phone);
+  const phoneDigits = digitsAfterCountryCode(phone);
+  const missingDigits = PHONE_DIGITS_AFTER_CODE - phoneDigits;
+  const phoneHint = phoneComplete
+    ? 'Менеджер перезвонит по этому номеру'
+    : phoneDigits === 0
+      ? `${PHONE_DIGITS_AFTER_CODE} цифр после +7: менеджер перезвонит по этому номеру`
+      : `Ещё ${missingDigits} ${pluralRu(missingDigits, ['цифра', 'цифры', 'цифр'])} после +7`;
+
   // Only the name and the phone are needed (the offer, 3.2): the manager calls and agrees the delivery, so the address
   // is optional — before, the window demanded a house, an entrance and an intercom code (UX audit 03.10, finding 22)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting || ordersPaused || !name.trim() || phone.length < 11) return;
+    if (isSubmitting || ordersPaused || !name.trim() || !phoneComplete) return;
 
     const extra: string[] = [];
     if (house.trim()) extra.push(`д. ${house.trim()}`);
@@ -212,10 +225,14 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   inputMode="tel"
                   required
                   placeholder="+7 (999) 000-00-00"
+                  aria-describedby="quick-order-phone-hint"
                   value={phone}
                   onChange={handlePhoneChange}
                   className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
                 />
+                <p id="quick-order-phone-hint" className="text-xs text-[#4E5C70]">
+                  {phoneHint}
+                </p>
               </div>
 
               <div className="space-y-1">
@@ -319,7 +336,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={ordersPaused || isSubmitting || !name.trim() || phone.length < 11}
+                  disabled={ordersPaused || isSubmitting || !name.trim() || !phoneComplete}
                   className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-extrabold cursor-pointer transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 btn-confirm-order ${
                     isSubmitting
                       ? 'neu-inset-deep neu-inset-deep-animated text-accent ring-2 ring-accent/40'

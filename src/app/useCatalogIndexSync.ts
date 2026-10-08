@@ -25,6 +25,8 @@ const THUMB_QUALITY = 0.6;
 const THUMB_MAX_CHARS = 60_000;
 /** Saving a product changes it in a few snapshots in a row: the index is written once they settle */
 const SETTLE_MS = 2_000;
+/** A failed subscription to the stored index is opened again after this long (audit 07.10, finding 15) */
+const RESUBSCRIBE_MS = 60_000;
 
 /**
  * The admin's session keeps the light catalog index and the product miniatures in step with the products
@@ -37,22 +39,34 @@ export function useCatalogIndexSync(products: Product[], productsLoaded: boolean
   const [stored, setStored] = React.useState<{ parts: number; hash: string; entries: CatalogEntry[] } | null>(null);
   const [storedRead, setStoredRead] = React.useState(false);
   const running = React.useRef(false);
+  // a subscription that ended with an error does not come back by itself: before, the index then stayed as it was
+  // until the owner reloaded the page (the error is logged by subscribeToCatalogIndex)
+  const [attempt, setAttempt] = React.useState(0);
 
   React.useEffect(() => {
     if (!isAdmin) return;
     let alive = true;
-    const unsub = subscribeToCatalogIndex(async (parts: CatalogIndexPart[]) => {
-      const index = await readCatalogIndex(parts).catch(() => null);
-      if (!alive) return;
-      setStored(index ? { parts: parts.length, ...index } : { parts: parts.length, hash: '', entries: [] });
-      setStoredRead(true);
-    });
+    let retry: number | undefined;
+    const unsub = subscribeToCatalogIndex(
+      async (parts: CatalogIndexPart[]) => {
+        const index = await readCatalogIndex(parts).catch(() => null);
+        if (!alive) return;
+        setStored(index ? { parts: parts.length, ...index } : { parts: parts.length, hash: '', entries: [] });
+        setStoredRead(true);
+      },
+      () => {
+        if (!alive) return;
+        setStoredRead(false);
+        retry = window.setTimeout(() => setAttempt((n) => n + 1), RESUBSCRIBE_MS);
+      }
+    );
     return () => {
       alive = false;
+      window.clearTimeout(retry);
       unsub();
       setStoredRead(false);
     };
-  }, [isAdmin]);
+  }, [isAdmin, attempt]);
 
   React.useEffect(() => {
     if (!isAdmin || !productsLoaded || !storedRead || !stored) return;

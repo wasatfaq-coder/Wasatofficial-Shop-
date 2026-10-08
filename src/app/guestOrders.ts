@@ -14,10 +14,19 @@ export function loadGuestOrders(): Order[] {
   }
 }
 
-export function saveGuestOrder(order: Order) {
+/**
+ * false — the browser did not keep it (no room, a private window): the guest will not find the order in the profile,
+ * so «Заказ оформлен» asks to write its number down, and the owner sees the number in «Ошибки на сайте»
+ * (audit 07.10, finding 19)
+ */
+export function saveGuestOrder(order: Order): boolean {
   try {
     localStorage.setItem(GUEST_ORDERS_STORAGE_KEY, JSON.stringify([order, ...loadGuestOrders()]));
-  } catch {}
+    return true;
+  } catch (err) {
+    console.error(`Guest order ${order.id} was not saved in the browser:`, err);
+    return false;
+  }
 }
 
 /** Guest orders that moved to the account: the account's subscription shows them now */

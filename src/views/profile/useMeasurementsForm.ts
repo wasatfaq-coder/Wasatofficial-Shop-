@@ -15,6 +15,8 @@ export function useMeasurementsForm(
   const [isEditingMeasurements, setIsEditingMeasurements] = useState(false);
   const measurementsDialog = useDialogA11y(isEditingMeasurements, () => setIsEditingMeasurements(false));
   const [showGostTable, setShowGostTable] = useState(false);
+  // The window waits for the database (finding 13): it closes and says «сохранены» only after the answer
+  const [isSavingMeasurements, setIsSavingMeasurements] = useState(false);
   const [measHeight, setMeasHeight] = useState(profile.bodyMeasurements?.height ?? 184);
   const [measWeight, setMeasWeight] = useState(profile.bodyMeasurements?.weight ?? 94);
   const [measChest, setMeasChest] = useState(profile.bodyMeasurements?.chest ?? 104);
@@ -24,8 +26,10 @@ export function useMeasurementsForm(
     profile.bodyMeasurements?.fitPreference ?? 'regular'
   );
 
-  // Synchronize state when profile measurements change
+  // Synchronize state when profile measurements change — not while the window is open: a refused save puts the
+  // profile back, and the sliders keep what was set (finding 13)
   React.useEffect(() => {
+    if (isEditingMeasurements) return;
     if (profile.bodyMeasurements) {
       if (profile.bodyMeasurements.height !== undefined) setMeasHeight(profile.bodyMeasurements.height);
       if (profile.bodyMeasurements.weight !== undefined) setMeasWeight(profile.bodyMeasurements.weight);
@@ -34,7 +38,7 @@ export function useMeasurementsForm(
       if (profile.bodyMeasurements.hips !== undefined) setMeasHips(profile.bodyMeasurements.hips);
       if (profile.bodyMeasurements.fitPreference !== undefined) setMeasFit(profile.bodyMeasurements.fitPreference);
     }
-  }, [profile.bodyMeasurements]);
+  }, [isEditingMeasurements, profile.bodyMeasurements]);
 
   // Dynamic real-time calculation of Russian sizing pattern (ГОСТ 31399-2009)
   const currentRussianPattern = calculateRussianPattern(
@@ -46,9 +50,11 @@ export function useMeasurementsForm(
     measFit
   );
 
-  const handleSaveMeasurements = (e: React.FormEvent) => {
+  const handleSaveMeasurements = async (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdateProfile({
+    if (isSavingMeasurements) return;
+    setIsSavingMeasurements(true);
+    const saved = await onUpdateProfile({
       ...profile,
       bodyMeasurements: {
         height: measHeight,
@@ -64,6 +70,9 @@ export function useMeasurementsForm(
         bodyType: currentRussianPattern.fullnessLabel,
       },
     });
+    setIsSavingMeasurements(false);
+    // not saved: the window stays with the sliders as they are (the toast said why)
+    if (!saved) return;
     setIsEditingMeasurements(false);
     onShowToast(`Параметры сохранены: ${currentRussianPattern.topSizeLabel}, ${currentRussianPattern.heightRange}`, 'success');
   };
@@ -88,6 +97,7 @@ export function useMeasurementsForm(
     setMeasFit,
     currentRussianPattern,
     handleSaveMeasurements,
+    isSavingMeasurements,
   };
 }
 
