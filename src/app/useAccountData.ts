@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import type { User } from 'firebase/auth';
 import type { Order, UserProfile } from '../types';
-import { subscribeToOrders, subscribeToOwnUserProfile, subscribeToProductCosts } from '../utils/firebaseSync';
+import { subscribeToOrders, subscribeToOwnUserProfile, subscribeToProductCosts, type StoredOrders } from '../utils/firebaseSync';
 import { loadGuestOrders } from './guestOrders';
+import { useOrdersIndexSync } from './useOrdersIndexSync';
 
 type AuthState = { authLoading: boolean; isAdmin: boolean; currentUser: User | null };
 
@@ -17,12 +18,17 @@ export function useAccountData({ authLoading, isAdmin, currentUser }: AuthState)
   const [orders, setOrders] = useState<Order[]>([]);
   // Admin only: cost prices from `product_costs` (a product document is readable by every visitor)
   const [productCosts, setProductCosts] = useState<Record<string, number>>({});
+  // Admin only: the orders as stored, for the orders index (docs/orders-scale-plan.md, stage 4)
+  const [storedOrders, setStoredOrders] = useState<StoredOrders | null>(null);
 
   React.useEffect(() => {
     if (authLoading) return;
 
     if (isAdmin && currentUser) {
-      const unsubOrders = subscribeToOrders((loadedOrders) => setOrders(loadedOrders));
+      const unsubOrders = subscribeToOrders((loadedOrders, stored) => {
+        setOrders(loadedOrders);
+        setStoredOrders(stored ?? null);
+      });
       const unsubProfile = subscribeToOwnUserProfile(currentUser.uid, setOwnProfiles);
       const unsubCosts = subscribeToProductCosts(setProductCosts);
       return () => {
@@ -30,6 +36,7 @@ export function useAccountData({ authLoading, isAdmin, currentUser }: AuthState)
         unsubProfile();
         unsubCosts();
         setProductCosts({});
+        setStoredOrders(null);
       };
     }
 
@@ -54,6 +61,8 @@ export function useAccountData({ authLoading, isAdmin, currentUser }: AuthState)
     setOrders(loadGuestOrders());
     setOwnProfiles([]);
   }, [authLoading, isAdmin, currentUser]);
+
+  useOrdersIndexSync(isAdmin ? storedOrders : null);
 
   return { ownProfiles, orders, setOrders, productCosts, setProductCosts };
 }

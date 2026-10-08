@@ -174,6 +174,19 @@ service cloud.firestore {
             && request.resource.data.hash is string && request.resource.data.hash.size() <= 64));
     }
 
+    // Индекс заказов (docs/orders-scale-plan.md, этап 4): все заказы сжатыми строками, выводится из заказов. В строках
+    // имена, телефоны и адреса покупателей — читает и пишет только администратор
+    match /orders_index/{partId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin() && partId.matches('^p[0-9]{1,3}$')
+        && (request.resource == null
+          || (request.resource.data.keys().hasOnly(['format', 'part', 'parts', 'hash', 'syncedUpTo', 'orders', 'updatedAt'])
+            && request.resource.data.orders is bytes
+            && request.resource.data.part is int && request.resource.data.parts is int
+            && request.resource.data.syncedUpTo is int
+            && request.resource.data.hash is string && request.resource.data.hash.size() <= 64));
+    }
+
     match /product_thumbs/{productId} {
       allow read: if true;
       allow write: if isAdmin() && isValidId(productId)
