@@ -26,7 +26,15 @@ import { NotConfigured } from '../components/NotConfigured';
 import type { StoreCategory } from '../types';
 import { categoryIcon } from '../utils/categories';
 import { pluralRu } from '../utils/pluralize';
-import { PRODUCTS_PAGE_SIZE } from '../utils/productListing';
+import {
+  DEFAULT_CATALOG_VIEW,
+  PRODUCTS_PAGE_SIZE,
+  catalogListKey,
+  shownProductCount,
+  withNextPortion,
+  type CatalogSort,
+  type CatalogView,
+} from '../utils/productListing';
 import { CatalogLoadState, type CatalogStatus } from '../components/CatalogLoadState';
 
 interface CatalogScreenProps {
@@ -59,6 +67,9 @@ interface CatalogScreenProps {
   /** Search shared with the top bar and the home screen (App); local when not given */
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
+  /** The sort and the portions opened (App): «Назад» from a product returns to the same list; local when not given */
+  view?: CatalogView;
+  onViewChange?: (updater: (prev: CatalogView) => CatalogView) => void;
 }
 
 export const CatalogScreen: React.FC<CatalogScreenProps> = ({
@@ -83,11 +94,17 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
   onFiltersClosed,
   searchQuery: externalSearchQuery,
   onSearchChange: externalOnSearchChange,
+  view: externalView,
+  onViewChange: externalOnViewChange,
 }) => {
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const searchQuery = externalSearchQuery ?? localSearchQuery;
   const setSearchQuery = externalOnSearchChange ?? setLocalSearchQuery;
-  const [sortBy, setSortBy] = useState<'popular' | 'price-asc' | 'price-desc' | 'newest'>('popular');
+  const [localView, setLocalView] = useState<CatalogView>(DEFAULT_CATALOG_VIEW);
+  const view = externalView ?? localView;
+  const setView = externalOnViewChange ?? setLocalView;
+  const sortBy = view.sortBy;
+  const setSortBy = (next: CatalogSort) => setView((prev) => ({ ...prev, sortBy: next }));
   const [showSortMenu, setShowSortMenu] = useState(false);
   
   // Local fallback filter state if not provided from parent
@@ -160,10 +177,10 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
     sortBy,
   ]);
 
-  // The catalog opens with one portion; a new search, filter or sort starts from the first portion again
-  const [visibleCount, setVisibleCount] = useState(PRODUCTS_PAGE_SIZE);
-  React.useEffect(() => setVisibleCount(PRODUCTS_PAGE_SIZE), [selectedCategory, searchQuery, filterState, sortBy]);
-  const visibleProducts = filteredProducts.slice(0, visibleCount);
+  // The catalog opens with one portion; a new search, filter or sort starts from the first portion again, and the
+  // way back from a product keeps the portions opened (finding 22)
+  const listKey = catalogListKey(selectedCategory, searchQuery, filterState, sortBy);
+  const visibleProducts = filteredProducts.slice(0, shownProductCount(view, listKey));
   const hiddenCount = filteredProducts.length - visibleProducts.length;
 
   return (
@@ -541,7 +558,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                 </p>
                 <button
                   type="button"
-                  onClick={() => setVisibleCount((count) => count + PRODUCTS_PAGE_SIZE)}
+                  onClick={() => setView((prev) => withNextPortion(prev, listKey))}
                   className="neu-button rounded-2xl h-11 px-6 text-sm font-extrabold text-accent cursor-pointer"
                 >
                   Показать ещё {Math.min(PRODUCTS_PAGE_SIZE, hiddenCount)}

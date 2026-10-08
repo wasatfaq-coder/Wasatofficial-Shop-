@@ -108,6 +108,10 @@ export interface ProfileScreenProps {
   onUpdateDeliveryMethods?: (methods: DeliveryMethod[]) => void;
   pickupPoints?: PickupPoint[];
   onUpdatePickupPoints?: (points: PickupPoint[]) => void;
+  /** «Смотреть статус» in an order notification: this order's tracking opens (App keeps it until then) */
+  openOrderId?: string | null;
+  /** The order asked for in `openOrderId` is open: App forgets it */
+  onOrderOpened?: () => void;
 }
 
 /** Admin panel section for this browser session (internal key, not renamed) */
@@ -143,6 +147,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onUpdateDeliveryMethods,
   pickupPoints,
   onUpdatePickupPoints,
+  openOrderId = null,
+  onOrderOpened,
 }) => {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -223,17 +229,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   }, [adminTab]);
   // Selected order IDs for detailed tracking & interactive delivery map
   const [selectedOrderIdForTracking, setSelectedOrderIdForTracking] = useState<string | null>(null);
-  // Listen for open order tracking events (from Push Notification click)
+  // «Смотреть статус» in an order notification: the order opens once the profile is on screen (finding 23)
   React.useEffect(() => {
-    const handleOpenTracking = (e: Event) => {
-      const customEvent = e as CustomEvent<{ orderId?: string }>;
-      if (customEvent.detail?.orderId) {
-        setSelectedOrderIdForTracking(customEvent.detail.orderId);
-      }
-    };
-    window.addEventListener('manstyle_open_order_tracking', handleOpenTracking);
-    return () => window.removeEventListener('manstyle_open_order_tracking', handleOpenTracking);
-  }, []);
+    if (!openOrderId) return;
+    setSelectedOrderIdForTracking(openOrderId);
+    onOrderOpened?.();
+  }, [openOrderId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addressBook = useAddressBook(profile, onUpdateProfile, onShowToast);
   const {
