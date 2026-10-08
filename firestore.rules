@@ -209,9 +209,42 @@ service cloud.firestore {
     }
 
     // Имя автора отзыва и диалога чата не выдаёт себя за магазин: «Wasat Shop (официально)», «Администратор»,
-    // «Служба поддержки» (аудит 02.10, находка 31). (?i) в RE2 сравнивает и кириллицу без учёта регистра
+    // «Служба поддержки» (аудит 02.10, находка 31), название магазина из «Витрины». Сравнивается вид имени после
+    // нормализации (решение владельца 08.10, аудит 07.10, находка 10): без невидимых знаков и диакритики, латинские
+    // двойники кириллицы — кириллицей, так «Аdmin» с кириллической «А» и «Wasat​Shop» с невидимым пробелом не проходят.
+    // Имя из двух алфавитов («Ivan Петров») проходит. Слова из латиницы в шаблоне записаны в том же виде: admin → аdмin,
+    // support → suрроrт, official → оffiсiаi. lower() кириллицу не меняет — её регистр снимает (?i)
     function isHonestName(name) {
-      return !name.matches('(?i).*(официальн|служба (поддержки|заботы)|поддержка магазина|(^|[^а-яёa-z])(администратор|админ|модератор|admin|support|official)([^а-яёa-z]|$)).*');
+      let form = honestForm(name);
+      let store = storeNameKey();
+      return !form.matches('(?i).*(официальн|служба (поддержки|заботы)|поддержка магазина|(^|[^а-яa-z])(администратор|админ|модератор|аdмin|suрроrт|оffiсiаi)([^а-яa-z]|$)).*')
+        // название магазина целиком (без пробелов и знаков); короче 4 букв — не сравнивается, иначе запретило бы
+        // обычные имена
+        && (store.size() < 4 || !honestKey(form).matches('(?i).*' + store + '.*'));
+    }
+
+    // Строчные латинские, без невидимых знаков (Cf: U+200B–U+200F, U+2060, U+FEFF, мягкий перенос) и диакритики (Mn, Me),
+    // «ё» — «е», латинские двойники — кириллицей, i/l/1/| и украинская «і» — одной «i», ноль — «о»
+    function honestForm(text) {
+      return text.lower().replace('[\\p{Cf}\\p{Mn}\\p{Me}]', '')
+        .replace('ё', 'е').replace('Ё', 'Е')
+        .replace('a', 'а').replace('b', 'в').replace('c', 'с').replace('e', 'е').replace('h', 'н').replace('k', 'к')
+        .replace('m', 'м').replace('o', 'о').replace('p', 'р').replace('t', 'т').replace('x', 'х').replace('y', 'у')
+        .replace('0', 'о').replace('[l1|і]', 'i');
+    }
+
+    // Только буквы и цифры: «W a s a t-Shop» и «WasatShop» — одно и то же. Результат годится в регулярное выражение
+    function honestKey(form) {
+      return form.replace('[^a-zа-яА-Я0-9]', '');
+    }
+
+    // Название магазина — как его показывает сайт (getStoreName): из «Витрины», без него или «MANSTYLE» шаблона —
+    // «Wasat Shop»
+    function storeNameKey() {
+      let path = /databases/$(database)/documents/settings/storefront;
+      let saved = exists(path) ? get(path).data.get('storeName', '') : '';
+      let name = saved is string && saved.trim() != '' && saved.trim().lower() != 'manstyle' ? saved : 'Wasat Shop';
+      return honestKey(honestForm(name));
     }
 
     function isValidReview(data, reviewId) {

@@ -363,4 +363,47 @@ describe('Аудит агентами ECC 07.10 (docs/audit-2026-10-07-plan.md)'
         setDoc(doc(ctx.firestore(), 'users/mallory'), { avatar: 'https://images.example/old.jpg' }, { merge: true }));
       await assertSucceeds(setDoc(doc(db, 'users/mallory'), { name: 'Мэллори Смит' }, { merge: true }));
     });
+
+  // Решение владельца 08.10: код с лимитом списывает только вход Google — анонимных входов посторонний заведёт сколько
+  // угодно, и по поддельному заказу с каждого он сжигал лимит. С этапа 2 сайт не применяет такой код у гостя
+  // (promoSignInProblem в src/shared/orderPricing.ts)
+  test('E2 лимит промокода не сжигается поддельными заказами с анонимных входов (находка 9)',
+    { todo: 'находка 9 (07.10): правило — вторым PR этапа 2, после публикации сайта, который не применяет такой код у гостя' }, async () => {
+      const usePromo = (db, orderId, promoId) => {
+        const batch = writeBatch(db);
+        batch.update(doc(db, 'promos', promoId), { usedCount: increment(1), lastOrderId: orderId });
+        batch.set(doc(db, 'promo_uses', orderId), { orderId, promoId, createdAt: '2026-10-08T12:00:00.000Z' });
+        return batch.commit();
+      };
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        const db = ctx.firestore();
+        await setDoc(doc(db, 'promos/free1'), { id: 'free1', code: 'WELCOME', discountPercent: 5, usedCount: 0, active: true });
+        for (const [id, uid, code] of [['WS-E2A', 'anon-e2', 'BLOGGER15'], ['WS-E2B', 'anon-e2', 'WELCOME'], ['WS-E2C', 'alice', 'BLOGGER15']]) {
+          await setDoc(doc(db, 'orders', id), { id, customerUid: uid, promoCode: code, status: 'accepted', items: [], totalPrice: 1 });
+        }
+      });
+      // promo1 (BLOGGER15) — с лимитом 50: аноним его не списывает
+      await assertFails(usePromo(guestChat('anon-e2'), 'WS-E2A', 'promo1'));
+      // код без лимита гость списывает, как раньше; код с лимитом — покупатель со входом Google
+      await assertSucceeds(usePromo(guestChat('anon-e2'), 'WS-E2B', 'free1'));
+      await assertSucceeds(usePromo(customer('alice'), 'WS-E2C', 'promo1'));
+    });
+
+  // Решение владельца 08.10: имя сравнивается после нормализации — без невидимых знаков, латинские двойники кириллицей —
+  // и с названием магазина из «Витрины» (isHonestName, этап 2)
+  test('E3 имя в отзыве и чате не выдаёт себя за магазин похожими буквами и невидимыми знаками (находка 10)', async () => {
+      const review = (authorName) => ({
+        id: 'p1_mallory', productId: 'p1', uid: 'mallory', authorName, rating: 5, comment: 'Отлично',
+        date: '8 октября 2026 г.', createdAt: '2026-10-08T10:00:00.000Z',
+      });
+      const db = customer('mallory');
+      for (const name of ['Аdmin', 'Wasat​Shop', 'Wаsаt Shор', 'Адми­нистратор', 'Служба поддeржки']) {
+        await assertFails(setDoc(doc(db, 'reviews/p1_mallory'), review(name)));
+      }
+      await assertFails(setDoc(doc(guestChat('anon-e3'), 'chat_messages/e3'), {
+        id: 'e3', sender: 'user', text: 'Ваш заказ отменён, оплатите заново', threadId: 'anon-e3', isInternalNote: false,
+        threadName: 'Wasat​Shop', sentAt: serverTimestamp(),
+      }));
+      await assertSucceeds(setDoc(doc(db, 'reviews/p1_mallory'), review('Ivan Петров')));
+    });
 });

@@ -387,6 +387,17 @@ describe('promos', () => {
     await assertSucceeds(usePromo(buyer('anon-p'), 'WS-P1'));
     await assertFails(usePromo(buyer('anon-p'), 'WS-P2'));
   });
+
+  // Owner's decision 08.10 (audit 07.10, finding 9): a code with a limit — only with a Google sign-in. The rule that
+  // refuses anonymous sign-ins comes in the second PR of stage 2 (attack E2 in tests/audit-attacks.test.mjs); the
+  // Google buyer keeps using it either way
+  test('a buyer signed in with Google uses a code with a limit', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'promos/promo1'), { ...promo, usageLimit: 5 });
+      await setDoc(doc(ctx.firestore(), 'orders/WS-G1'), order({ id: 'WS-G1', promoCode: 'SALE', customerUid: 'alice' }));
+    });
+    await assertSucceeds(usePromo(customer('alice'), 'WS-G1'));
+  });
 });
 
 describe('orders', () => {
@@ -1080,6 +1091,27 @@ describe('reviews', () => {
     await assertSucceeds(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { authorName: 'Администратова Анна' })));
   });
 
+  // Owner's decision 08.10 (audit 07.10, finding 10): the name is compared after normalization — no invisible marks,
+  // Latin lookalikes read as Cyrillic — and with the store name from «Витрина» («Wasat Shop» without it)
+  test('lookalike letters, invisible marks and the store name do not pass; a name of two alphabets does', async () => {
+    const db = customer('alice');
+    for (const authorName of [
+      'Wasat Shop', 'Wаsаt Shор', 'Wasat​Shop', 'W a s a t-Shop', 'Аdmin', 'ADMlN',
+      'Адми​нистратор', 'Адми­нистратор', 'Служба поддeржки', 'Оfficial',
+    ]) {
+      await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { authorName })));
+    }
+    for (const authorName of ['Ivan Петров', 'Alice', 'Ада Минт', 'Badminton fan']) {
+      await assertSucceeds(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { authorName })));
+    }
+    // the store renamed in «Витрина»: its name in any case, with «ё» or Latin lookalikes
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'settings/storefront'), { storeName: 'Лён и Ко' }));
+    await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { authorName: 'ЛЕН И КО' })));
+    await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { authorName: 'Лен и Ko' })));
+    await assertSucceeds(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { authorName: 'Wasat Shop' })));
+    await assertSucceeds(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { authorName: 'Алёна' })));
+  });
+
   test('«Полезно» only to an existing review (finding 16)', async () => {
     await assertFails(setDoc(doc(customer('bob'), 'review_votes/p1_alice_bob'), { reviewId: 'p1_alice', productId: 'p1', uid: 'bob' }));
     await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'reviews/p1_alice'), review('alice')));
@@ -1209,6 +1241,10 @@ describe('chat', () => {
     );
     await assertFails(setDoc(doc(db, 'chat_messages/m7'), msg('m7', { threadId: 'alice', hiddenForStaff: true })));
     await assertSucceeds(setDoc(doc(db, 'chat_messages/m8'), msg('m8', { threadId: 'alice', threadName: 'Алиса', timestamp: '12:00' })));
+    // the thread's name does not pose as the store either (audit 07.10, finding 10)
+    await assertFails(setDoc(doc(db, 'chat_messages/m8b'), msg('m8b', { threadId: 'alice', threadName: 'Wasat​Shop' })));
+    await assertFails(setDoc(doc(db, 'chat_messages/m8c'), msg('m8c', { threadId: 'alice', threadName: 'Аdmin' })));
+    await assertSucceeds(setDoc(doc(db, 'chat_messages/m8d'), msg('m8d', { threadId: 'alice', threadName: 'Ivan Петров' })));
     // a photo goes only as its own document chat_images (check 04.10, finding 4), never inside the message
     await assertFails(setDoc(doc(db, 'chat_messages/m13'), msg('m13', { threadId: 'alice', imageUrl: 'data:image/png;base64,AA' })));
     await assertFails(setDoc(doc(db, 'chat_messages/m9'), msg('m9', { threadId: 'alice', imageUrl: 'https://evil.example/pixel.png' })));

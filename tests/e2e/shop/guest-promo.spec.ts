@@ -62,3 +62,29 @@ test('гость с промокодом: скидка в заказе, счёт
   await expect.poll(() => readDoc(`promos/${promoId}`)).toMatchObject({ usedCount: 1, lastOrderId: order.id });
   await expect.poll(() => readDoc(`promo_uses/${order.id}`)).toMatchObject({ orderId: order.id, promoId });
 });
+
+// Код с лимитом использований гость не применяет: анонимный вход бесплатный, поддельные заказы сжигали лимит
+// (решение владельца 08.10, аудит 07.10, находка 9) — тост «Код действует только после входа через Google» с «Войти через Google», скидки нет
+test('гость не применяет промокод с лимитом: просим войти через Google', async ({ page }, info) => {
+  const promoId = `e2e-limited-${info.project.name}`;
+  const code = `LIMIT${info.project.name.toUpperCase()}`;
+  await writeDocs({
+    [`promos/${promoId}`]: {
+      id: promoId, code, title: 'Первые 50', description: '', active: true, isPublic: false,
+      discountType: 'percent', discountValue: 10, discountPercent: 10, usedCount: 0, usageLimit: 50,
+    },
+  });
+
+  await page.goto(`/product/${PRODUCTS.polo.id}`);
+  await chooseSize(page, /^M\b/);
+  await page.getByRole('button', { name: 'В корзину', exact: true }).first().click();
+  await expect(page.getByRole('status').filter({ hasText: 'Добавлено в корзину' })).toBeVisible();
+  await page.getByRole('button', { name: 'Корзина' }).first().click();
+
+  await page.getByRole('textbox', { name: 'Промокод' }).fill(code);
+  await page.getByRole('button', { name: 'Применить', exact: true }).click();
+  const toast = page.getByRole('status').filter({ hasText: 'Код действует только после входа через Google' });
+  await expect(toast).toBeVisible();
+  await expect(toast.getByRole('button', { name: 'Войти через Google' })).toBeVisible();
+  await expect(page.getByText(`Промокод ${code} применен`)).toHaveCount(0);
+});
