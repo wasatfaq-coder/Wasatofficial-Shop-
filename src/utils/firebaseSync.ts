@@ -36,7 +36,9 @@ import { hasHeavyPhotos, splitProductPhotos, type PhotoDoc } from './productPhot
 import { compressBase64Image } from './imageUpload';
 import { SERVER_CONFIG_DOC_ID, ServerConfig } from '../shared/orderApi';
 import {
+  adjustedOrderShortfall,
   ORDER_MOVEMENT_OPERATOR,
+  orderHeldStock,
   orderLineMovement,
   orderMovementId,
   orderReturnMovementId,
@@ -47,8 +49,9 @@ import {
 } from '../shared/stockMovements';
 import { formatOrderDate } from '../shared/orderDate';
 import { cancelReasonText, formatCancelledAt } from './orderCancel';
-import type { OrderStatusLogEntry } from '../shared/orderFlow';
-import { getDefaultHistorySteps, getSynchronizedDeliveryStages, isTransportCompanyDelivery } from './deliveryStages';
+import { DELIVERY_KINDS, type OrderStatusLogEntry } from '../shared/orderFlow';
+import { isCarrierOrder } from './orderFlow';
+import { getDefaultHistorySteps, getSynchronizedDeliveryStages } from './deliveryStages';
 import { CLIENT_ERRORS_COLLECTION, type ClientErrorReport, type StoredClientError } from './clientErrors';
 import { trackRead } from './pendingReads';
 import {
@@ -248,11 +251,19 @@ export interface UntakenOrderLines {
  * longer has. Before, only the console knew. Admin only.
  */
 export async function findUntakenOrderLines(
-  orders: Pick<Order, 'id' | 'items' | 'createdAt'>[]
+  orders: Pick<Order, 'id' | 'items' | 'createdAt' | 'isAdjusted'>[]
 ): Promise<UntakenOrderLines> {
   const wanted = new Map<string, { orderId: string; lineIndex: number; line: CartItem }>();
+  const result: UntakenOrderLines = { missing: {}, short: {} };
   for (const order of orders) {
     if (!order.createdAt || order.createdAt < ORDER_JOURNAL_SINCE) continue;
+    if (order.isAdjusted) {
+      // after «Правка состава» the lines no longer match their entries by number: by variant (audit 07.10, finding 2)
+      const { missing, short } = adjustedOrderShortfall(order.items ?? [], orderHeldStock(await readOrderJournal(order.id)));
+      if (missing.length > 0) result.missing[order.id] = missing;
+      if (short.length > 0) result.short[order.id] = short;
+      continue;
+    }
     (order.items ?? []).forEach((line, i) => {
       if (!line.isPreorder) wanted.set(orderMovementId(order.id, i), { orderId: order.id, lineIndex: i, line });
     });
@@ -263,7 +274,6 @@ export async function findUntakenOrderLines(
     const snap = await getDocs(query(collection(db, STOCK_MOVEMENTS_COLLECTION), where(documentId(), 'in', ids.slice(i, i + 30))));
     snap.forEach((d) => found.set(d.id, Number(d.data().changeQuantity) || 0));
   }
-  const result: UntakenOrderLines = { missing: {}, short: {} };
   for (const [id, { orderId, lineIndex, line }] of wanted) {
     if (!found.has(id)) {
       (result.missing[orderId] ??= []).push(lineIndex);
@@ -274,6 +284,57 @@ export async function findUntakenOrderLines(
     if (shortBy > 0) (result.short[orderId] ??= []).push({ lineIndex, taken: -changeQuantity, ordered: line.quantity });
   }
   return result;
+}
+
+/** Every journal entry of an order (write-offs, «Правка состава», returns). Admin only: the rules give lists to the admin */
+async function readOrderJournal(orderId: string): Promise<StockMovementLog[]> {
+  const snap = await getDocs(query(collection(db, STOCK_MOVEMENTS_COLLECTION), where('orderId', '==', orderId)));
+  return snap.docs.map((d) => d.data() as StockMovementLog);
+}
+
+/**
+ * «Списать со склада» for an order after «Правка состава»: the variants nothing was taken for (`adjustedOrderShortfall`),
+ * by the ordered quantity, with journal entries of the order. Throws when a variant was not changed.
+ */
+export async function takeAdjustedOrderStock(order: Pick<Order, 'id' | 'items'>): Promise<void> {
+  const held = orderHeldStock(await readOrderJournal(order.id));
+  const { missing } = adjustedOrderShortfall(order.items ?? [], held);
+  const lines = missing.map((i) => order.items[i]);
+  const changes: AdminStockChange[] = lines.map((line) => ({
+    productId: line.product.id,
+    productTitle: line.product.title,
+    color: line.selectedColor,
+    size: line.selectedSize,
+    delta: -line.quantity,
+  }));
+  const { failed } = await applyAdminStockChanges(changes, { orderId: order.id, reason: `Заказ #${order.id}`, operator: 'Администратор' });
+  if (failed.length > 0) throw new Error(`Stock not taken for ${failed.length} variant(s) of order ${order.id}`);
+}
+
+/**
+ * A cancelled order after «Правка состава» back to stock: what it holds by variant (`orderHeldStock`) — the lines and
+ * their entries `{заказ}_{строка}` no longer match by number, so the per-line return gave back the wrong goods (audit
+ * 07.10, finding 2). The return entries carry the order, so a repeated call finds nothing held and returns nothing.
+ * A removed product or variant gets nothing back. Admin only; resolves to true when the whole order is back.
+ */
+async function returnAdjustedOrderStock(order: Pick<Order, 'id'>, operator: string): Promise<boolean> {
+  const held = [...orderHeldStock(await readOrderJournal(order.id)).values()].filter((v) => v.held > 0);
+  const changes: AdminStockChange[] = held.map((v) => ({
+    productId: v.productId,
+    productTitle: v.productTitle,
+    color: v.color,
+    size: v.size,
+    delta: v.held,
+  }));
+  const { failed } = await applyAdminStockChanges(changes, {
+    orderId: order.id,
+    reason: orderReturnReason(order.id),
+    operator,
+    missingIsNothing: true,
+  });
+  if (failed.length > 0) return false;
+  await updateDoc(doc(db, 'orders', order.id), { stockReturned: true, updatedAt: serverTimestamp() });
+  return true;
 }
 
 /** One stock change the admin makes by an order: «+» back to stock, «−» taken from it */
@@ -298,7 +359,7 @@ export interface AdminStockChange {
  */
 export async function applyAdminStockChanges(
   changes: AdminStockChange[],
-  meta: { orderId?: string; reason: string; operator: string; at?: Date }
+  meta: { orderId?: string; reason: string; operator: string; at?: Date; missingIsNothing?: boolean }
 ): Promise<{ failed: AdminStockChange[] }> {
   const at = meta.at ?? new Date();
   const failed: AdminStockChange[] = [];
@@ -308,7 +369,10 @@ export async function applyAdminStockChanges(
     try {
       await runTransaction(db, async (tx) => {
         const snap = await tx.get(productRef);
-        if (!snap.exists()) throw new Error('product removed');
+        if (!snap.exists()) {
+          if (meta.missingIsNothing) return;
+          throw new Error('product removed');
+        }
         const data = snap.data();
         const savedSkus: ProductSKU[] = Array.isArray(data.skus) ? data.skus : [];
         const matches = (sku: ProductSKU) => sameVariantName(sku.color, change.color) && sameVariantName(sku.size, change.size);
@@ -317,7 +381,10 @@ export async function applyAdminStockChanges(
         const missing = savedSkus.some(matches)
           ? undefined
           : generateDefaultSKUs({ ...(data as Product), id: change.productId }).find(matches);
-        if (!savedSkus.some(matches) && !missing) throw new Error('variant missing');
+        if (!savedSkus.some(matches) && !missing) {
+          if (meta.missingIsNothing) return;
+          throw new Error('variant missing');
+        }
         const skus = missing ? [...savedSkus, missing] : savedSkus;
         const skuIndex = skus.findIndex(matches);
         const sku = skus[skuIndex];
@@ -516,9 +583,14 @@ export async function returnOrderLineStock(
  * `stockReturned` when no line is left unknown. Resolves to true when the whole order is back.
  */
 export async function returnCancelledOrderStock(
-  order: Pick<Order, 'id' | 'items'>,
+  order: Pick<Order, 'id' | 'items' | 'isAdjusted'>,
   options: { operator?: string; missingIsNothing?: boolean } = {}
 ): Promise<boolean> {
+  if (order.isAdjusted) {
+    // after «Правка состава» only the admin returns, by variant (the buyer cannot read the order's whole journal);
+    // the buyer's browser leaves it to «Вернуть на склад» in «Заказы»
+    return options.missingIsNothing ? returnAdjustedOrderStock(order, options.operator ?? 'Администратор') : false;
+  }
   const at = new Date();
   let complete = true;
   for (let i = 0; i < (order.items ?? []).length; i++) {
@@ -946,7 +1018,13 @@ function normalizeOrderFromFirestore(raw: any, docId?: string): Order {
   );
   const rawDeliveryMethod = String(raw.deliveryMethod ?? raw.delivery_method ?? 'Курьерская доставка');
   const rawTrackingCompany = raw.trackingCompany ? String(raw.trackingCompany) : undefined;
-  const isTK = isTransportCompanyDelivery(rawDeliveryMethod, rawTrackingCompany);
+  const rawDeliveryKind = DELIVERY_KINDS.find(kind => kind === raw.deliveryKind);
+  // по типу заказа, а не по названию способа: трек ТК с любым названием не пропадает (аудит 07.10, находка 1)
+  const isTK = isCarrierOrder({
+    deliveryKind: rawDeliveryKind,
+    deliveryMethod: rawDeliveryMethod,
+    trackingCompany: rawTrackingCompany as Order['trackingCompany'],
+  });
   const trackingNumber = isTK && raw.trackingNumber ? String(raw.trackingNumber) : undefined;
   const estimatedDelivery = raw.estimatedDelivery ? String(raw.estimatedDelivery) : undefined;
 
@@ -1270,6 +1348,42 @@ export async function recordPromoUsageInFirestore(promo: PromoCode, orderId: str
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `promos/${promo.id}`);
   }
+}
+
+/**
+ * The promo code use of a cancelled order goes back to the code: `promo_uses/{заказ}` is removed and `usedCount` drops
+ * by one, in one transaction (audit 07.10, finding 6). No use recorded — nothing to return. Admin only (the rules let the
+ * buyer only add a use). Resolves to true when a use went back.
+ */
+export async function releaseOrderPromoUse(orderId: string): Promise<boolean> {
+  const useRef = doc(db, 'promo_uses', orderId);
+  return runTransaction(db, async (tx) => {
+    const use = await tx.get(useRef);
+    if (!use.exists()) return false;
+    const promoId = String(use.data().promoId ?? '');
+    const promoRef = promoId ? doc(db, 'promos', promoId) : null;
+    const promo = promoRef ? await tx.get(promoRef) : null;
+    tx.delete(useRef);
+    if (promoRef && promo?.exists()) {
+      tx.update(promoRef, { usedCount: Math.max(0, (Number(promo.data().usedCount) || 0) - 1) });
+    }
+    return true;
+  });
+}
+
+/**
+ * A restored order takes its promo code use again (it was returned on the cancellation): `usedCount` + 1 and
+ * `promo_uses/{заказ}`, like the order did. Admin only; the code's limit is the admin's call here.
+ */
+export async function retakeOrderPromoUse(orderId: string, promoId: string): Promise<boolean> {
+  const useRef = doc(db, 'promo_uses', orderId);
+  const promoRef = doc(db, 'promos', promoId);
+  return runTransaction(db, async (tx) => {
+    if ((await tx.get(useRef)).exists() || !(await tx.get(promoRef)).exists()) return false;
+    tx.set(useRef, { orderId, promoId, createdAt: new Date().toISOString() });
+    tx.update(promoRef, { usedCount: increment(1), lastOrderId: orderId });
+    return true;
+  });
 }
 
 export async function syncAllPromosToFirestore(promos: PromoCode[]) {

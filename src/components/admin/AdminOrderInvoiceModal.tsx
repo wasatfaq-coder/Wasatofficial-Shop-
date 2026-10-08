@@ -3,7 +3,7 @@ import { X, Printer, FileText, CreditCard, Truck } from 'lucide-react';
 import { Order, StorefrontSettings } from '../../types';
 import { currentStoreName, getLegalDetails, getStoreContacts } from '../../utils/storeContacts';
 import { copyToClipboard } from '../../utils/clipboard';
-import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
+import { isCarrierOrder } from '../../utils/orderFlow';
 import { motion, AnimatePresence } from 'motion/react';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 
@@ -174,7 +174,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
                 {order.paymentMethod || 'Банковская карта онлайн'}
               </span>
               <span className="text-[11px] text-slate-500 font-mono block">
-                {isTransportCompanyDelivery(order.deliveryMethod, order.trackingCompany)
+                {isCarrierOrder(order)
                   ? `Трек (ТК): ${order.trackingNumber || 'Формируется'}`
                   : 'Трек: Не требуется (прямая доставка)'}
               </span>

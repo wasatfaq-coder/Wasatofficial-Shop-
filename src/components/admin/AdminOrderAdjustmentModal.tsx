@@ -25,8 +25,7 @@ import {
 } from '../../utils/inventory';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { applyAdminStockChanges, type AdminStockChange } from '../../utils/firebaseSync';
-import { adminStatusLabel } from '../../utils/orderFlow';
-import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
+import { adminStatusLabel, isCarrierOrder } from '../../utils/orderFlow';
 import { OrderLineThumbImage } from '../ProductThumbImage';
 import { toOrderLineProduct } from '../../shared/orderLine';
 import { useDialogA11y } from '../../utils/useDialogA11y';
@@ -234,7 +233,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
       return;
     }
 
-    const isTK = isTransportCompanyDelivery(order?.deliveryMethod, order?.trackingCompany);
+    const isTK = !!order && isCarrierOrder(order);
     const effectiveTrackingNumber = isTK ? (trackingNumber.trim() || undefined) : undefined;
 
     // Only the track number changed: the items, the sum and the history stay as they were
@@ -650,7 +649,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
 
         {/* Tracking Number Management Section - Only for Transport Companies */}
         {(() => {
-          const isTK = isTransportCompanyDelivery(order?.deliveryMethod, order?.trackingCompany);
+          const isTK = !!order && isCarrierOrder(order);
           if (!isTK) {
             const dm = (order?.deliveryMethod || '').toLowerCase();
             const methodTypeLabel = dm.includes('самовывоз') || dm.includes('пункт выдачи')

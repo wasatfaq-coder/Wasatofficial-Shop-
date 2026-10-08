@@ -17,11 +17,11 @@ import {
 import { Product } from '../../types';
 import { isQuickOrderDelivery, QUICK_ORDER_DELIVERY_TITLE } from '../../shared/orderPricing';
 import {
-  isTransportCompanyDelivery,
   isRussianPostDelivery,
   isCourierDelivery,
   isPickupDelivery,
 } from '../../utils/deliveryStages';
+import { isCarrierOrder } from '../../utils/orderFlow';
 import { useOrderLinePhotos } from '../../utils/productThumbs';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import type { ProfileScreenProps } from '../ProfileScreen';
@@ -177,7 +177,7 @@ export const ProfileOrdersModal = ({
                       {/* Tracking number badge & delivery method for client order item */}
                       {(() => {
                         const isPost = isRussianPostDelivery(ord.deliveryMethod, ord.trackingCompany);
-                        const isTK = isTransportCompanyDelivery(ord.deliveryMethod, ord.trackingCompany);
+                        const isTK = isCarrierOrder(ord);
                         const isPickup = isPickupDelivery(ord.deliveryMethod);
                         // «Заказ в 1 клик»: the manager agrees the delivery (older ones said «Экспресс курьер (1 клик)»)
                         const isQuick = isQuickOrderDelivery(ord.deliveryMethod);

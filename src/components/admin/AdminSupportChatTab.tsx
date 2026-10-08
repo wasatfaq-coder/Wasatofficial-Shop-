@@ -48,12 +48,12 @@ import { copyToClipboard } from '../../utils/clipboard';
 import { AdminReceiptReview, type ReviewReceipt } from './AdminReceiptReview';
 import { isReceiptOnReview } from '../../utils/paymentDetails';
 import { compressChatImageFile } from '../../utils/imageUpload';
-import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
 import {
   adminStatusLabel,
   customerStatusLabel,
   flowStatuses,
   generatePickupCode,
+  isCarrierOrder,
   statusChangeBlocker,
   statusLogEntry,
   usesPickupCode,
@@ -427,7 +427,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   const handleSaveStatus = (e: React.FormEvent) => {
     e.preventDefault();
     if (!order) return;
-    const isTK = isTransportCompanyDelivery(order.deliveryMethod, order.trackingCompany);
+    const isTK = isCarrierOrder(order);
     const tracking = isTK ? newTracking.trim() || order.trackingNumber : order.trackingNumber;
     const withTracking: Order = { ...order, trackingNumber: tracking };
     // the same chain as in «Заказы»: a carrier's order leaves only with its track number
@@ -1145,7 +1145,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 options={flowStatuses(order).map((s) => ({ value: s, label: adminStatusLabel(order, s) }))}
               />
             </div>
-            {isTransportCompanyDelivery(order.deliveryMethod, order.trackingCompany) && (
+            {isCarrierOrder(order) && (
               <label className="block">
                 <span className={labelClass}>Трек-номер транспортной компании</span>
                 <input value={newTracking} onChange={(e) => setNewTracking(e.target.value)} className={inputClass} />
