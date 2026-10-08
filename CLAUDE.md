@@ -47,10 +47,12 @@ Wasat Shop — SPA интернет-магазина мужской одежды
 - `bun run lint` — `tsc --noEmit` (линтера ESLint нет); с `@types/react` проверяются и экраны: пропсы компонентов,
   `useState`, обработчики. Неиспользуемые переменные, импорты и параметры — ошибка (`noUnusedLocals`,
   `noUnusedParameters`): ненужный проп убирать вместе с местами вызова, нужный по сигнатуре параметр — с `_`
-- `bun run test:rules` — тесты `firestore.rules` в эмуляторе (нужна Java); сначала пишет образцы заказа `tests/.generated/`
+- `bun run test:rules` — тесты `firestore.rules` в эмуляторе (нужна Java); сначала пишет в `tests/.generated/` образцы заказа
+  и сборку `firebaseSync.ts` (`scripts/firebase-sync-bundle.ts`, без `src/firebase.ts`): записи покупателя и админки тест
+  вызывает кодом сайта со своей базой (`targetDb`), а не копией (аудит 07.10, находка 40)
 - `bun run test:functions` — тесты Cloud Functions и расчёта цены (сначала `npm ci --prefix functions`)
 - `functions/`: отдельный npm-пакет; `npm run typecheck|build --prefix functions`
-- `bun run test:e2e` — сценарии Playwright в `tests/e2e/` (заказ гостя с курьером, в 1 клик, заказ с входом и чат,
+- `bun run test:e2e` — сценарии Playwright в `tests/e2e/` (заказ гостя с курьером и с промокодом, в 1 клик, заказ с входом и чат,
   цена и этикетки в админке, пустой магазин) на эмуляторах, 390 и 1280 px. Данные — `tests/e2e/store.ts`, только
   в эмулятор; вход — `window.e2eSignIn`, есть только в сборке с `VITE_USE_EMULATORS` (`src/firebase.ts`). Селекторы —
   по ролям и подписям (`getByRole`, `getByLabel`), не по классам и id: вёрстка меняется, сценарий остаётся. Телефон и
