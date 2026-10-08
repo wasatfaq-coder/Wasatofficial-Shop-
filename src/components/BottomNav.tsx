@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Home, Grid, ShoppingBag, Heart, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ActiveTab } from '../types';
+import { pluralRu } from '../utils/pluralize';
 
 interface BottomNavProps {
   activeTab: ActiveTab;
@@ -89,7 +90,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   ? 'text-accent font-bold'
                   : 'text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95'
               }`}
-              aria-label={tab.label}
+              // The number on the badge is heard too, as on the computer's header (audit 07.10, finding 35)
+              aria-label={
+                tab.badge
+                  ? `${tab.label}, ${tab.badge} ${pluralRu(tab.badge, ['товар', 'товара', 'товаров'])}`
+                  : tab.label
+              }
               aria-current={isActive ? 'page' : undefined}
             >
               {isActive && (

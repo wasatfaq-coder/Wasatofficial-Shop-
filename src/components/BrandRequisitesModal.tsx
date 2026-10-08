@@ -424,28 +424,30 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                   />
                 )}
                 {requisiteItems.map((item) => (
-                  <div
+                  <button
+                    type="button"
                     key={item.key}
                     onClick={() => copyToClipboard(item.value, item.key)}
-                    className="neu-inset p-2.5 px-3 rounded-2xl flex items-center justify-between gap-2 transition-all cursor-pointer group"
+                    className="w-full text-left neu-inset p-2.5 px-3 rounded-2xl flex items-center justify-between gap-2 transition-all cursor-pointer group"
                     title="Нажмите, чтобы скопировать"
+                    aria-label={`Скопировать — ${item.label}: ${item.value}`}
                   >
-                    <div className="min-w-0 flex-1">
+                    <span className="min-w-0 flex-1">
                       <span className="text-[11px] uppercase font-bold text-[#4E5C70] block">
                         {item.label}
                       </span>
                       <span className="text-xs font-extrabold text-[#2D3A4E] block break-all">
                         {item.value}
                       </span>
-                    </div>
-                    <div className="w-7 h-7 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] group-hover:text-accent shrink-0 transition-colors">
+                    </span>
+                    <span className="w-7 h-7 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] group-hover:text-accent shrink-0 transition-colors">
                       {copiedKey === item.key ? (
                         <Check className="w-3.5 h-3.5 text-success stroke-[2.5]" />
                       ) : (
                         <Copy className="w-3.5 h-3.5" />
                       )}
-                    </div>
-                  </div>
+                    </span>
+                  </button>
                 ))}
               </div>
 

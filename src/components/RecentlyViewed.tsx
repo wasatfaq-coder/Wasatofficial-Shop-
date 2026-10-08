@@ -6,6 +6,7 @@ import { NeumorphicImage } from './NeumorphicImage';
 import { photoBadgeClass } from '../utils/productBadge';
 import { getProductRating } from '../utils/productRating';
 import { useProductThumbs } from '../utils/productThumbs';
+import { productHref } from '../utils/navigation';
 
 interface RecentlyViewedProps {
   recentlyViewed: Product[];
@@ -66,15 +67,14 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
           return (
             <div
               key={`recently-viewed-${product.id}-${idx}`}
-              onClick={() => onSelectProduct(product)}
-              className="group relative neu-flat-sm rounded-2xl overflow-hidden w-36 sm:w-40 shrink-0 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98] flex flex-col justify-between select-none"
+              className="group relative neu-flat-sm rounded-2xl overflow-hidden w-36 sm:w-40 shrink-0 transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98] flex flex-col justify-between select-none"
             >
               <div className="space-y-2">
                 {/* Thumbnail Image Container */}
                 <div className="relative w-full aspect-[3/4] overflow-hidden mb-1">
                   <NeumorphicImage
                     src={thumbImage}
-                    alt={product.title}
+                    alt=""
                     priority={idx < 2}
                     containerClassName="w-full h-full"
                     className="w-full h-full object-cover object-top group-hover:scale-[1.03] transition-transform duration-500"
@@ -87,9 +87,9 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
                         e.stopPropagation();
                         onRemoveFromRecentlyViewed(product.id);
                       }}
-                      className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full neu-photo-btn flex items-center justify-center text-[#4E5C70] hover:text-danger transition-transform z-10"
+                      className="absolute top-1.5 left-1.5 w-8 h-8 rounded-full neu-photo-btn flex items-center justify-center text-[#4E5C70] hover:text-danger transition-transform z-10"
                       title="Удалить из истории"
-                      aria-label="Удалить из истории"
+                      aria-label={`Удалить из истории: ${product.title}`}
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -102,9 +102,10 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
                         e.stopPropagation();
                         onToggleFavorite(product, e);
                       }}
-                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full neu-photo-btn flex items-center justify-center text-[#4E5C70] hover:text-danger transition-transform z-10"
-                      title="В избранное"
-                      aria-label="В избранное"
+                      className="absolute top-1.5 right-1.5 w-8 h-8 rounded-full neu-photo-btn flex items-center justify-center text-[#4E5C70] hover:text-danger transition-transform z-10"
+                      title={isFav ? 'Убрать из избранного' : 'В избранное'}
+                      aria-label={`В избранное: ${product.title}`}
+                      aria-pressed={isFav}
                     >
                       <Heart
                         className={`w-3.5 h-3.5 ${
@@ -127,8 +128,19 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
                   <p className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider truncate">
                     {product.categoryLabel}
                   </p>
+                  {/* The card opens with its title link stretched over it, as ProductCard (Tab reaches it) */}
                   <h4 className="text-xs font-bold text-[#2D3A4E] truncate leading-tight group-hover:text-accent transition-colors">
-                    {product.title}
+                    <a
+                      href={productHref(product.id)}
+                      onClick={(e) => {
+                        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                        e.preventDefault();
+                        onSelectProduct(product);
+                      }}
+                      className="rounded-md cursor-pointer after:absolute after:inset-0 after:rounded-2xl after:content-['']"
+                    >
+                      {product.title}
+                    </a>
                   </h4>
                 </div>
               </div>

@@ -143,6 +143,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                 <AnimatedFavoriteButton
                   isFavorite={isFavorite}
                   onToggle={(e) => onToggleFavorite(product, e)}
+                  productTitle={product.title}
                   size="md"
                   className="absolute top-3 right-3 neu-photo-btn"
                 />

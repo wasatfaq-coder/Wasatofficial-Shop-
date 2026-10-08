@@ -242,23 +242,27 @@ export function AddressFormModal({ book }: { book: AddressBook }) {
                 </p>
               </div>
 
-              <div
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={addrIsDefault}
                 onClick={() => setAddrIsDefault(!addrIsDefault)}
-                className="flex items-center gap-3 pt-1 cursor-pointer select-none group"
+                className="flex items-center gap-3 pt-1 cursor-pointer select-none group text-left"
               >
-                <div
+                <span
                   className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
                     addrIsDefault
                       ? 'neu-fill-accent text-white'
                       : 'neu-inset text-transparent'
                   }`}
+                  aria-hidden="true"
                 >
                   <Check className="w-3.5 h-3.5 stroke-[3]" />
-                </div>
+                </span>
                 <span className="font-bold text-xs text-[#2D3A4E] group-hover:text-accent">
                   Сделать основным адресом
                 </span>
-              </div>
+              </button>
 
               <div className="flex gap-3 pt-2">
                 <button

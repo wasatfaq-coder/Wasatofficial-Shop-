@@ -647,12 +647,14 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+              <p id="batch-discount-type-label" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
                 Тип скидки
-              </label>
-              <div className="flex rounded-xl neu-flat-sm p-1">
+              </p>
+              <div role="radiogroup" aria-labelledby="batch-discount-type-label" className="flex rounded-xl neu-flat-sm p-1">
                 <button
                   type="button"
+                  role="radio"
+                  aria-checked={batchDiscountType === 'fixed'}
                   onClick={() => setBatchDiscountType('fixed')}
                   className={`flex-1 py-1 text-[11px] font-extrabold rounded-lg transition-all ${
                     batchDiscountType === 'fixed' ? 'neu-pill-active' : 'text-[#4E5C70]'
@@ -662,6 +664,8 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 </button>
                 <button
                   type="button"
+                  role="radio"
+                  aria-checked={batchDiscountType === 'percent'}
                   onClick={() => setBatchDiscountType('percent')}
                   className={`flex-1 py-1 text-[11px] font-extrabold rounded-lg transition-all ${
                     batchDiscountType === 'percent' ? 'neu-pill-active' : 'text-[#4E5C70]'
@@ -814,12 +818,14 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+              <p id="promo-discount-type-label" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
                 Тип скидки *
-              </label>
-              <div className="flex rounded-xl neu-flat-sm p-1">
+              </p>
+              <div role="radiogroup" aria-labelledby="promo-discount-type-label" className="flex rounded-xl neu-flat-sm p-1">
                 <button
                   type="button"
+                  role="radio"
+                  aria-checked={discountType === 'percent'}
                   onClick={() => {
                     setDiscountType('percent');
                     if (discountValue > 100) setDiscountValue(15);
@@ -835,6 +841,8 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 </button>
                 <button
                   type="button"
+                  role="radio"
+                  aria-checked={discountType === 'fixed'}
                   onClick={() => {
                     setDiscountType('fixed');
                     if (discountValue <= 100) setDiscountValue(500);
@@ -1060,13 +1068,15 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             {/* Scope Targeting: All vs Categories vs Specific Products */}
             <div className="pt-2 border-t border-[#BAC5D5]/40 space-y-2.5">
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <label className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
+                <p id="promo-scope-label" className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-accent shrink-0" />
                   <span>Область действия скидки:</span>
-                </label>
-                <div className="flex items-center gap-1 neu-flat-sm p-1 rounded-xl">
+                </p>
+                <div role="radiogroup" aria-labelledby="promo-scope-label" className="flex items-center gap-1 neu-flat-sm p-1 rounded-xl">
                   <button
                     type="button"
+                    role="radio"
+                    aria-checked={scopeType === 'all'}
                     onClick={() => setScopeType('all')}
                     className={`py-1 px-2.5 rounded-lg text-[11px] font-bold transition-all ${
                       scopeType === 'all'
@@ -1078,6 +1088,8 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                   </button>
                   <button
                     type="button"
+                    role="radio"
+                    aria-checked={scopeType === 'categories'}
                     onClick={() => setScopeType('categories')}
                     className={`py-1 px-2.5 rounded-lg text-[11px] font-bold transition-all ${
                       scopeType === 'categories'
@@ -1089,6 +1101,8 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                   </button>
                   <button
                     type="button"
+                    role="radio"
+                    aria-checked={scopeType === 'products'}
                     onClick={() => setScopeType('products')}
                     className={`py-1 px-2.5 rounded-lg text-[11px] font-bold transition-all ${
                       scopeType === 'products'
@@ -1178,10 +1192,14 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     {filteredProductsForSelect.map((prod) => {
                       const isSelected = selectedProductIds.includes(prod.id);
                       return (
-                        <div
+                        // The whole row is a checkbox: Tab reaches it, its state is heard (audit 07.10, finding 38)
+                        <button
                           key={prod.id}
+                          type="button"
+                          role="checkbox"
+                          aria-checked={isSelected}
                           onClick={() => handleToggleProduct(prod.id)}
-                          className={`p-2 rounded-xl flex items-center justify-between gap-2 transition-all cursor-pointer ${
+                          className={`w-full text-left p-2 rounded-xl flex items-center justify-between gap-2 transition-all cursor-pointer ${
                             isSelected
                               ? 'neu-pill-active'
                               : 'hover:bg-white/40 border border-transparent'
@@ -1191,7 +1209,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                             <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 neu-inset">
                               <ProductThumbImage
                                 product={prod}
-                                alt={prod.title}
+                                alt=""
                                 className="w-full h-full object-cover"
                                 referrerPolicy="no-referrer"
                               />
@@ -1204,7 +1222,8 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                             </div>
                           </div>
 
-                          <div
+                          <span
+                            aria-hidden="true"
                             className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all ${
                               isSelected
                                 ? 'neu-fill-accent text-white'
@@ -1212,8 +1231,8 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                             }`}
                           >
                             <Check className="w-3 h-3 stroke-[3]" />
-                          </div>
-                        </div>
+                          </span>
+                        </button>
                       );
                     })}
                   </div>

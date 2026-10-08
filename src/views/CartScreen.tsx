@@ -212,6 +212,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
           const isPreorder = inStock === 0 && availableStock > 0;
           const isAtMaxStock = item.quantity >= availableStock;
           const isEditingVariant = editingVariantItemId === item.id;
+          // Buttons of a row name its product: «Удалить товар» eight times does not say which (audit 07.10, finding 37)
+          const title = item.product.title;
+          const variantPanelId = `cart-variant-${itemIdx}`;
 
           return (
             <div
@@ -241,14 +244,17 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     </h3>
                     {/* Favorite Heart Icon */}
                     <button
+                      type="button"
                       onClick={(e) => onToggleFavorite(item.product, e)}
-                      className={`w-7 h-7 rounded-full neu-button flex items-center justify-center transition-colors shrink-0 ${
+                      className={`w-8 h-8 rounded-full neu-button flex items-center justify-center transition-colors shrink-0 ${
                         isFav ? 'text-accent' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
                       }`}
                       title={isFav ? 'В избранном' : 'Добавить в избранное'}
-                      aria-label={isFav ? 'В избранном' : 'Добавить в избранное'}
+                      aria-label={`В избранное: ${title}`}
+                      aria-pressed={isFav}
                     >
                       <Heart
+                        aria-hidden="true"
                         className={`w-3.5 h-3.5 ${
                           isFav ? 'fill-accent stroke-accent' : 'stroke-[2]'
                         }`}
@@ -263,7 +269,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                       onClick={() => setEditingVariantItemId(isEditingVariant ? null : item.id)}
                       className="neu-button min-h-8 px-2.5 py-0.5 rounded-xl flex items-center gap-1.5 text-[11px] font-bold text-accent hover:scale-102 transition-transform cursor-pointer"
                       title="Нажмите, чтобы изменить цвет или размер"
-                      aria-label={`Цвет и размер: ${item.selectedColor}, ${item.selectedSize}. Изменить`}
+                      aria-label={`Цвет и размер: ${item.selectedColor}, ${item.selectedSize}. Изменить — ${title}`}
+                      aria-expanded={isEditingVariant}
+                      aria-controls={isEditingVariant ? variantPanelId : undefined}
                     >
                       <span>{item.selectedColor} • {item.selectedSize}</span>
                       <SlidersHorizontal className="w-3 h-3 text-accent" />
@@ -300,7 +308,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                         type="button"
                         className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent cursor-pointer"
                         title={item.quantity === 1 ? 'Удалить товар' : 'Уменьшить количество'}
-                        aria-label={item.quantity === 1 ? 'Удалить товар' : 'Уменьшить количество'}
+                        aria-label={`${item.quantity === 1 ? 'Удалить товар' : 'Уменьшить количество'}: ${title}`}
                       >
                         <Minus className="w-3 h-3 stroke-[2.5]" />
                       </button>
@@ -327,7 +335,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                               : `На складе всего ${availableStock} шт.`
                             : 'Добавить'
                         }
-                        aria-label="Увеличить количество"
+                        aria-label={`Увеличить количество: ${title}`}
                       >
                         <Plus className="w-3 h-3 stroke-[2.5]" />
                       </button>
@@ -335,10 +343,11 @@ export const CartScreen: React.FC<CartScreenProps> = ({
 
                     {/* Trigger removal modal */}
                     <button
+                      type="button"
                       onClick={() => setItemToRemove(item)}
                       className="w-8 h-8 rounded-full neu-button-danger flex items-center justify-center transition-colors cursor-pointer"
                       title="Удалить товар"
-                      aria-label="Удалить товар"
+                      aria-label={`Удалить товар: ${title}`}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -348,7 +357,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
 
               {/* Interactive In-Cart Variant Selector Drawer */}
               {isEditingVariant && onUpdateVariant && (
-                <div className="neu-inset rounded-2xl p-3.5 sm:p-4 space-y-3 border border-white/70 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div id={variantPanelId} className="neu-inset rounded-2xl p-3.5 sm:p-4 space-y-3 border border-white/70 animate-in fade-in slide-in-from-top-2 duration-200">
                   {/* Header */}
                   <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
                     <div className="flex items-center gap-2 min-w-0">
@@ -378,7 +387,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                         {item.selectedColor}
                       </span>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={`Цвет: ${title}`}>
                       {item.product.colors.map((c, cIdx) => {
                         const colorName = typeof c === 'string' ? c : c?.name || '';
                         const colorHex = typeof c === 'object' && c !== null ? (c as any).hex : undefined;
@@ -390,6 +399,8 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                           <button
                             key={`cart-${item.id}-col-${colorName || cIdx}-${cIdx}`}
                             type="button"
+                            role="radio"
+                            aria-checked={isCurrent}
                             disabled={isOutOfStock}
                             onClick={() => {
                               onUpdateVariant(item.id, colorName, item.selectedSize);
@@ -422,7 +433,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                         {item.selectedSize}
                       </span>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={`Размер: ${title}`}>
                       {item.product.sizes.map((sz, szIdx) => {
                         const isCurrent = sz === item.selectedSize;
                         const szStock = getVariantStock(item.product, item.selectedColor, sz);
@@ -432,6 +443,8 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                           <button
                             key={`cart-${item.id}-sz-${sz}-${szIdx}`}
                             type="button"
+                            role="radio"
+                            aria-checked={isCurrent}
                             disabled={isOutOfStock}
                             onClick={() => {
                               onUpdateVariant(item.id, item.selectedColor, sz);

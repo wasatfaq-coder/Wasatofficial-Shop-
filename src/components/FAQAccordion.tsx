@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { ChevronDown, CheckCircle2, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -23,6 +23,8 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
   onToggle,
   emptyMessage = 'Вопросы по вашему запросу не найдены',
 }) => {
+  // The question says whether its answer is open and which panel it opens (audit 07.10, finding 36)
+  const idPrefix = useId();
   if (items.length === 0) {
     return (
       <div className="neu-flat rounded-2xl p-6 text-center space-y-2 text-[#4E5C70]">
@@ -39,6 +41,7 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
     <div className="space-y-3">
       {items.map((item) => {
         const isExpanded = !!expandedIds[item.id];
+        const panelId = `${idPrefix}-answer-${items.indexOf(item)}`;
 
         return (
           <div
@@ -49,6 +52,8 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
             <button
               type="button"
               onClick={() => onToggle(item.id)}
+              aria-expanded={isExpanded}
+              aria-controls={isExpanded ? panelId : undefined}
               className={`w-full p-3.5 sm:p-4 rounded-2xl neu-button flex items-start justify-between gap-3 text-left transition-all duration-200 cursor-pointer active:scale-[0.99] ${
                 isExpanded
                   ? 'border border-accent/30 bg-white/80'
@@ -69,7 +74,7 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
                     : 'text-accent bg-[#E3E8EF]'
                 }`}
               >
-                <ChevronDown className={`w-4 h-4 ${isExpanded ? 'text-white' : 'text-accent'}`} />
+                <ChevronDown aria-hidden="true" className={`w-4 h-4 ${isExpanded ? 'text-white' : 'text-accent'}`} />
               </div>
             </button>
 
@@ -77,6 +82,7 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
             <AnimatePresence>
               {isExpanded && (
                 <motion.div
+                  id={panelId}
                   initial={{ height: 0, opacity: 0, marginTop: 0 }}
                   animate={{ height: 'auto', opacity: 1, marginTop: 8 }}
                   exit={{ height: 0, opacity: 0, marginTop: 0 }}
