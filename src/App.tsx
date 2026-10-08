@@ -22,7 +22,7 @@ import { useToasts } from './app/useToasts';
 import { useCart } from './app/useCart';
 import { useSupportChat } from './app/useSupportChat';
 import { useCheckout } from './app/useCheckout';
-import { useScreenHistory, useScreenState } from './app/screenHistory';
+import { useScreenHeadingFocus, useScreenHistory, useScreenState } from './app/screenHistory';
 import { useProfile } from './app/useProfile';
 import { useOrderNotifications } from './app/useOrderNotifications';
 import { useCustomerOrders } from './app/useCustomerOrders';
@@ -49,6 +49,7 @@ import { isPromoListed } from './shared/orderPricing';
 import { storeAcceptsOrders } from './shared/orderApi';
 import { getStoreContacts, getStoreName, publicSetting, withStoreName, withStoreNameFields } from './utils/storeContacts';
 import { getCategories } from './utils/categories';
+import { screenDocumentTitle } from './utils/screenMeta';
 import { VariantPickerSheet } from './components/VariantPickerSheet';
 import { DEFAULT_CATALOG_VIEW, type CatalogView } from './utils/productListing';
 
@@ -222,11 +223,15 @@ export default function App() {
     () => ({ ...withStoreNameFields(storefrontSettings, storeName), storeName }),
     [storefrontSettings, storeName]
   );
-  // Tab title: a product's name on its screen (the browser's history, bookmarks and search results show it)
+  // Tab title of the screen: «Каталог — …», a product's name on its screen (screenMeta.ts; WCAG 2.4.2, finding 31)
   const productTitle = activeTab === 'product-detail' ? selectedProduct?.title : undefined;
   React.useEffect(() => {
-    document.title = productTitle ? `${productTitle} — ${storeName}` : `${storeName} — мужская одежда`;
-  }, [productTitle, storeName]);
+    document.title = screenDocumentTitle(activeTab, storeName, productTitle);
+  }, [activeTab, productTitle, storeName]);
+  // A new screen moves the focus to its heading: a screen reader reads it, Tab goes on from the new screen
+  useScreenHeadingFocus(
+    activeTab === 'product-detail' ? (selectedProduct ? `product-detail:${selectedProduct.id}` : null) : activeTab
+  );
   const customerDeliveryMethods = React.useMemo(
     () => deliveryMethods.map((m) => withStoreNameFields(m, storeName)),
     [deliveryMethods, storeName]

@@ -210,3 +210,47 @@ export function useScreenHistory(
 
   return { handleHeaderBack };
 }
+
+/** How long a new screen may take to show its heading: windows closing, the screen leaving (AnimatePresence) */
+const HEADING_WAIT_FRAMES = 90;
+
+const NOT_TYPED_INPUTS = ['button', 'checkbox', 'radio', 'submit', 'reset', 'range', 'color', 'file', 'image'];
+
+/** A field the visitor types in (the header's search opens the catalog): the focus stays there */
+function isTypingIn(el: Element | null): boolean {
+  if (el instanceof HTMLTextAreaElement) return true;
+  if (el instanceof HTMLElement && el.isContentEditable) return true;
+  return el instanceof HTMLInputElement && !NOT_TYPED_INPUTS.includes(el.type);
+}
+
+/**
+ * A new screen is announced as a new page would be (WCAG 2.4.3, audit 07.10, finding 31): the focus moves to the
+ * screen's visible heading (`data-screen-heading` — the phone's top bar, the computer's title row, the main page's
+ * heading), so a screen reader reads it and Tab goes on from the new screen, not from the menu that opened it.
+ * The first screen of the visit keeps the browser's start; open windows close first (they return the focus to
+ * their button). `screenKey` null — the screen is not resolved yet (a product from a link, catalog loading).
+ */
+export function useScreenHeadingFocus(screenKey: string | null) {
+  const shownKey = React.useRef<string | null>(screenKey);
+  React.useEffect(() => {
+    if (screenKey === null || shownKey.current === screenKey) return;
+    const firstScreen = shownKey.current === null;
+    shownKey.current = screenKey;
+    if (firstScreen || isTypingIn(document.activeElement)) return;
+    let frame = 0;
+    let frames = 0;
+    const focusHeading = () => {
+      const heading = Array.from(document.querySelectorAll<HTMLElement>('[data-screen-heading]')).find(
+        (el) => el.getClientRects().length > 0
+      );
+      if (heading && !document.querySelector('[aria-modal="true"]')) {
+        heading.focus({ preventScroll: true });
+        return;
+      }
+      frames += 1;
+      if (frames < HEADING_WAIT_FRAMES) frame = requestAnimationFrame(focusHeading);
+    };
+    frame = requestAnimationFrame(focusHeading);
+    return () => cancelAnimationFrame(frame);
+  }, [screenKey]);
+}

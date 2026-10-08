@@ -87,7 +87,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
             </div>
             <div>
               <h3 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">Товарная накладная и чек</h3>
-              <p className="text-xs text-slate-500">Печатная форма для комплектации и передачи клиенту</p>
+              <p className="text-xs text-[#4E5C70]">Печатная форма для комплектации и передачи клиенту</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -119,23 +119,24 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
                   Официальный документ
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-1 font-medium">
+              <p className="text-xs text-[#4E5C70] mt-1 font-medium">
                 Интернет-магазин премиальной мужской одежды
               </p>
-              {sellerLine && <p className="text-xs text-slate-400">{sellerLine}</p>}
+              {sellerLine && <p className="text-xs text-[#4E5C70]">{sellerLine}</p>}
             </div>
             <div className="text-right">
-              <div
+              <button
+                type="button"
                 onClick={handleCopyInvoiceNumber}
-                className="cursor-pointer hover:opacity-80 transition-opacity"
+                className="block ml-auto text-right cursor-pointer hover:opacity-80 transition-opacity"
                 title="Нажмите, чтобы скопировать номер"
               >
-                <span className="text-xs font-bold text-slate-400 block uppercase">Накладная №</span>
+                <span className="text-xs font-bold text-[#4E5C70] block uppercase">Накладная №</span>
                 <span className="text-base font-extrabold text-accent tracking-wide">
                   WS-INV-{order.id.slice(-6).toUpperCase()}
                 </span>
-              </div>
-              <p className="text-xs text-slate-500 font-semibold mt-0.5">
+              </button>
+              <p className="text-xs text-[#4E5C70] font-semibold mt-0.5">
                 от {order.date || new Date().toLocaleDateString('ru-RU')}
               </p>
             </div>
@@ -144,36 +145,36 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
           {/* Logistics & Order Metadata */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-100 text-xs">
             <div>
-              <span className="text-[11px] uppercase font-bold text-slate-400 block">Заказчик</span>
+              <span className="text-[11px] uppercase font-bold text-[#4E5C70] block">Заказчик</span>
               <span className="font-bold text-slate-800">
                 {order.customerName || 'Покупатель'}
               </span>
-              <span className="text-[11px] text-slate-500 block">
+              <span className="text-[11px] text-[#4E5C70] block">
                 {order.customerPhone || '—'}
               </span>
               {order.customerEmail && (
-                <span className="text-[11px] text-slate-400 block truncate">
+                <span className="text-[11px] text-[#4E5C70] block truncate">
                   {order.customerEmail}
                 </span>
               )}
             </div>
             <div>
-              <span className="text-[11px] uppercase font-bold text-slate-400 block">Доставка</span>
+              <span className="text-[11px] uppercase font-bold text-[#4E5C70] block">Доставка</span>
               <span className="font-bold text-slate-800 flex items-center gap-1">
                 <Truck className="w-3 h-3 text-accent" />
                 {order.deliveryMethod || 'Способ не указан'}
               </span>
-              <span className="text-[11px] text-slate-500 block truncate" title={order.deliveryAddress}>
+              <span className="text-[11px] text-[#4E5C70] block truncate" title={order.deliveryAddress}>
                 {order.deliveryAddress || 'Адрес не указан'}
               </span>
             </div>
             <div>
-              <span className="text-[11px] uppercase font-bold text-slate-400 block">Оплата и доставка</span>
+              <span className="text-[11px] uppercase font-bold text-[#4E5C70] block">Оплата и доставка</span>
               <span className="font-bold text-slate-800 flex items-center gap-1">
                 <CreditCard className="w-3 h-3 text-success" />
                 {order.paymentMethod || 'Банковская карта онлайн'}
               </span>
-              <span className="text-[11px] text-slate-500 font-mono block">
+              <span className="text-[11px] text-[#4E5C70] font-mono block">
                 {isCarrierOrder(order)
                   ? `Трек (ТК): ${order.trackingNumber || 'Формируется'}`
                   : 'Трек: Не требуется (прямая доставка)'}
@@ -204,11 +205,11 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
                     const sum = price * (it.quantity || 1);
                     return (
                       <tr key={it.id || idx} className="hover:bg-slate-50">
-                        <td className="py-2.5 px-3 text-slate-400 font-mono text-[11px]">{idx + 1}</td>
+                        <td className="py-2.5 px-3 text-[#4E5C70] font-mono text-[11px]">{idx + 1}</td>
                         <td className="py-2.5 px-3 font-bold text-slate-800">
                           {it.product?.title || 'Товар каталога'}
                           {it.product?.material && (
-                            <span className="block text-[11px] text-slate-400 font-normal">
+                            <span className="block text-[11px] text-[#4E5C70] font-normal">
                               {it.product.material}
                             </span>
                           )}
@@ -263,7 +264,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
           </div>
 
           {/* Footer with return policy & stamp placeholder */}
-          <div className="border-t border-slate-200 pt-4 grid grid-cols-2 gap-4 text-[11px] text-slate-500">
+          <div className="border-t border-slate-200 pt-4 grid grid-cols-2 gap-4 text-[11px] text-[#4E5C70]">
             <div>
               <p className="font-bold text-slate-700">Правила возврата и примерки:</p>
               <p className="leading-tight mt-0.5">
@@ -272,10 +273,10 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
               </p>
             </div>
             <div className="text-right flex flex-col items-end justify-end">
-              <div className="w-36 border-b border-slate-400 border-dashed pb-0.5 text-center text-slate-400 font-mono text-[11px]">
+              <div className="w-36 border-b border-slate-400 border-dashed pb-0.5 text-center text-[#4E5C70] font-mono text-[11px]">
                 Отпустил со склада (подпись)
               </div>
-              <p className="text-xs text-slate-400 mt-1">Штамп отдела контроля качества {currentStoreName()}</p>
+              <p className="text-xs text-[#4E5C70] mt-1">Штамп отдела контроля качества {currentStoreName()}</p>
             </div>
           </div>
         </div>

@@ -61,7 +61,10 @@ export const DesktopTitleRow: React.FC<{ title: { main: string; sub: string }; o
       <ArrowLeft className="w-5 h-5" />
     </button>
     <div className="min-w-0">
-      <h1 className="text-2xl font-extrabold text-[#2D3A4E] leading-tight truncate tracking-tight">{title.main}</h1>
+      {/* data-screen-heading: a new screen moves the focus here (useScreenHeadingFocus) */}
+      <h1 data-screen-heading tabIndex={-1} className="text-2xl font-extrabold text-[#2D3A4E] leading-tight truncate tracking-tight">
+        {title.main}
+      </h1>
       {title.sub && <p className="text-xs font-semibold text-[#4E5C70] truncate">{title.sub}</p>}
     </div>
   </div>
@@ -108,7 +111,11 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Center Header Title */}
         <div className="text-center flex-1 min-w-0 px-2">
           {/* A step smaller on 320 px, so a short product name fits; the full one is on the product card */}
-          <h1 className="text-lg max-[359px]:text-base font-extrabold text-[#2D3A4E] leading-tight truncate tracking-tight">
+          <h1
+            data-screen-heading
+            tabIndex={-1}
+            className="text-lg max-[359px]:text-base font-extrabold text-[#2D3A4E] leading-tight truncate tracking-tight"
+          >
             {titleInfo.main}
             {/* Brand mark: a gold dot after the store name */}
             {titleInfo.main === storeName && (

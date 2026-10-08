@@ -100,6 +100,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           <AnimatedFavoriteButton
             isFavorite={isFavorite}
             onToggle={(e) => onToggleFavorite(product, e)}
+            productTitle={product.title}
             size="sm"
             className="neu-photo-btn"
           />

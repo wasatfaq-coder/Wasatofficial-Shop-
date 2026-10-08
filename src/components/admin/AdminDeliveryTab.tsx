@@ -469,9 +469,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
       {/* Subtabs Switcher & Actions */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
         {/* Subtabs */}
-        <div className="p-1 neu-flat-sm rounded-2xl flex items-center gap-1">
+        <div role="radiogroup" aria-label="Раздел доставки" className="p-1 neu-flat-sm rounded-2xl flex items-center gap-1">
           <button
             type="button"
+            role="radio"
+            aria-checked={activeSubTab === 'methods'}
             onClick={() => setActiveSubTab('methods')}
             className={`flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeSubTab === 'methods'
@@ -488,6 +490,8 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
           <button
             type="button"
+            role="radio"
+            aria-checked={activeSubTab === 'pickup_points'}
             onClick={() => setActiveSubTab('pickup_points')}
             className={`flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeSubTab === 'pickup_points'
@@ -556,7 +560,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
         </div>
 
         {activeSubTab === 'methods' && (
-          <div className="flex gap-1 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+          <div role="radiogroup" aria-label="Тип способа" className="flex gap-1 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
             {[
               { id: 'all', label: 'Все' },
               { id: 'courier', label: 'Курьер' },
@@ -568,6 +572,8 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               <button
                 key={f.id}
                 type="button"
+                role="radio"
+                aria-checked={typeFilter === f.id}
                 onClick={() => setTypeFilter(f.id as any)}
                 className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all shrink-0 cursor-pointer ${
                   typeFilter === f.id
@@ -642,6 +648,10 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                         {/* Active toggle */}
                         <button
                           type="button"
+                          // a switch with its state and the method's name (audit 07.10, finding 38)
+                          role="switch"
+                          aria-checked={isActive}
+                          aria-label={`Способ «${method.title}» показан покупателям`}
                           onClick={(e) => handleToggleMethodActive(method.id, e)}
                           className={`p-1.5 rounded-xl transition-all cursor-pointer ${
                             isActive
@@ -777,7 +787,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                             onClick={(e) => handleSetDefaultPoint(point.id, e)}
                             className="p-1.5 neu-button rounded-xl text-[#4E5C70] hover:text-accent cursor-pointer"
                             title="Сделать основным пунктом самовывоза"
-                            aria-label="Сделать основным пунктом самовывоза"
+                            aria-label={`Сделать основным пунктом самовывоза: ${point.name}`}
                           >
                             <Check className="w-3.5 h-3.5" />
                           </button>
@@ -1077,10 +1087,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
             <form onSubmit={handleSavePoint} className="space-y-3 text-xs">
               <div>
-                <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                <label htmlFor="point-name" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                   Название бутика / пункта *
                 </label>
                 <input
+                  id="point-name"
                   type="text"
                   value={formPointName}
                   onChange={(e) => setFormPointName(e.target.value)}
@@ -1092,10 +1103,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="point-city" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     Город *
                   </label>
                   <input
+                    id="point-city"
                     type="text"
                     value={formPointCity}
                     onChange={(e) => setFormPointCity(e.target.value)}
@@ -1106,10 +1118,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="point-metro" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     Станция метро (опционально)
                   </label>
                   <input
+                    id="point-metro"
                     type="text"
                     value={formPointMetro}
                     onChange={(e) => setFormPointMetro(e.target.value)}
@@ -1120,10 +1133,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                <label htmlFor="point-address" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                   Точный полный адрес для клиента *
                 </label>
                 <textarea
+                  id="point-address"
                   rows={2}
                   value={formPointAddress}
                   onChange={(e) => setFormPointAddress(e.target.value)}
@@ -1135,10 +1149,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="point-schedule" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     График работы
                   </label>
                   <input
+                    id="point-schedule"
                     type="text"
                     value={formPointSchedule}
                     onChange={(e) => setFormPointSchedule(e.target.value)}
@@ -1149,10 +1164,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="point-phone" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     Контактный телефон
                   </label>
                   <input
+                    id="point-phone"
                     type="text"
                     value={formPointPhone}
                     onChange={(e) => setFormPointPhone(e.target.value)}
@@ -1164,10 +1180,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                <label htmlFor="point-note" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                   Ориентир, вход и условия примерки
                 </label>
                 <textarea
+                  id="point-note"
                   rows={2}
                   value={formPointNote}
                   onChange={(e) => setFormPointNote(e.target.value)}

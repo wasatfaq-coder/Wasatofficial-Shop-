@@ -3,6 +3,9 @@ import { X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Sparkles } from 'lucide-
 import { motion, AnimatePresence } from 'motion/react';
 import { useDialogA11y } from '../utils/useDialogA11y';
 
+/** How far one arrow press moves the zoomed photo, px */
+const PAN_STEP = 60;
+
 interface ProductImageZoomModalProps {
   isOpen: boolean;
   images: string[];
@@ -27,6 +30,19 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const imageRef = React.useRef<HTMLImageElement>(null);
+
+  /** The zoomed photo moves no further than its own edge: arrows cannot lose it off screen */
+  const clampPan = (offset: { x: number; y: number }, zoom: number) => {
+    const img = imageRef.current;
+    if (!img || zoom <= 1) return { x: 0, y: 0 };
+    const maxX = ((zoom - 1) * img.offsetWidth) / 2;
+    const maxY = ((zoom - 1) * img.offsetHeight) / 2;
+    return {
+      x: Math.min(maxX, Math.max(-maxX, offset.x)),
+      y: Math.min(maxY, Math.max(-maxY, offset.y)),
+    };
+  };
 
   // Reset zoom on index change
   React.useEffect(() => {
@@ -60,11 +76,9 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
 
   const handleZoomOut = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setZoomLevel((prev) => {
-      const next = Math.max(prev - 0.5, 1);
-      if (next === 1) setPanOffset({ x: 0, y: 0 });
-      return next;
-    });
+    const next = Math.max(zoomLevel - 0.5, 1);
+    setZoomLevel(next);
+    setPanOffset((prev) => clampPan(prev, next));
   };
 
   const handleResetZoom = (e?: React.MouseEvent) => {
@@ -73,24 +87,57 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
     setPanOffset({ x: 0, y: 0 });
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (zoomLevel > 1) {
-      setIsDragging(true);
-      setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
-    }
+  // Pointer events: the zoomed photo moves with a finger, a pen or a mouse (WCAG 2.5.1, audit 07.10, finding 28)
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (zoomLevel <= 1 || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging && zoomLevel > 1) {
-      setPanOffset({
-        x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y,
-      });
-    }
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging || zoomLevel <= 1) return;
+    setPanOffset(clampPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y }, zoomLevel));
   };
 
-  const handleMouseUp = () => {
+  const handlePointerUp = () => {
     setIsDragging(false);
+  };
+
+  /** Keyboard: + and − zoom, arrows move the zoomed photo or, at 100 %, switch photos (WCAG 2.1.1) */
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.key === '+' || e.key === '=') {
+      e.preventDefault();
+      handleZoomIn();
+      return;
+    }
+    if (e.key === '-' || e.key === '_') {
+      e.preventDefault();
+      handleZoomOut();
+      return;
+    }
+    if (e.key === '0') {
+      e.preventDefault();
+      handleResetZoom();
+      return;
+    }
+    const step: Record<string, [number, number]> = {
+      ArrowLeft: [PAN_STEP, 0],
+      ArrowRight: [-PAN_STEP, 0],
+      ArrowUp: [0, PAN_STEP],
+      ArrowDown: [0, -PAN_STEP],
+    };
+    const move = step[e.key];
+    if (!move) return;
+    if (zoomLevel > 1) {
+      e.preventDefault();
+      setPanOffset((prev) => clampPan({ x: prev.x + move[0], y: prev.y + move[1] }, zoomLevel));
+    } else if (images.length > 1 && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      e.preventDefault();
+      if (e.key === 'ArrowLeft') handlePrev();
+      else handleNext();
+    }
   };
 
   return (
@@ -105,9 +152,12 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
           className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-[#1C2836]/90 backdrop-blur-md p-3 sm:p-6 select-none"
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
+          onKeyDown={handleKeyDown}
+          aria-describedby="zoom-keys-hint"
         >
+          <p id="zoom-keys-hint" className="sr-only">
+            Плюс и минус меняют масштаб, стрелки двигают увеличенное фото, а без увеличения листают фото.
+          </p>
           {/* Top Floating Control Bar */}
           <div className="w-full max-w-4xl flex items-center justify-between gap-2 sm:gap-3 z-20 shrink-0">
             {/* Title and Angle info */}
@@ -171,10 +221,12 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
           {/* Central Zoom Canvas Viewport */}
           <div
             className={`relative w-full max-w-3xl flex-1 flex items-center justify-center overflow-hidden my-4 rounded-3xl neu-inset ${
-              zoomLevel > 1 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-in'
+              zoomLevel > 1 ? `touch-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}` : 'cursor-zoom-in'
             }`}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
             onClick={(e) => {
               if (zoomLevel === 1) {
                 handleZoomIn(e);
@@ -183,6 +235,7 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
           >
             {/* Main Image */}
             <motion.img
+              ref={imageRef}
               key={currentIndex}
               src={images[currentIndex]}
               alt={`${productTitle}, фото ${currentIndex + 1}`}
@@ -223,7 +276,7 @@ export const ProductImageZoomModal: React.FC<ProductImageZoomModalProps> = ({
             {zoomLevel === 1 && (
               <div className="absolute bottom-3 left-1/2 -translate-x-1/2 neu-photo-badge text-[#2D3A4E] text-[11px] font-bold px-3.5 py-1.5 rounded-full z-10 flex items-center gap-1.5 pointer-events-none">
                 <ZoomIn className="w-3.5 h-3.5 text-accent" />
-                <span>Кликните для увеличения (до 300%)</span>
+                <span>Нажмите, чтобы увеличить (до 300%)</span>
               </div>
             )}
           </div>

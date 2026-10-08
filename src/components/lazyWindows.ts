@@ -3,6 +3,7 @@ import {
   loadProductImageZoomModal,
   loadQuickOrderModal,
   loadQuickViewModal,
+  loadReviewFormModal,
   loadSizeCalculatorModal,
 } from '../customerLoaders';
 
@@ -14,3 +15,4 @@ export const SizeCalculatorModal = lazy(() => loadSizeCalculatorModal().then((m)
 export const QuickViewModal = lazy(() => loadQuickViewModal().then((m) => ({ default: m.QuickViewModal })));
 export const ProductImageZoomModal = lazy(() => loadProductImageZoomModal().then((m) => ({ default: m.ProductImageZoomModal })));
 export const QuickOrderModal = lazy(() => loadQuickOrderModal().then((m) => ({ default: m.QuickOrderModal })));
+export const ReviewFormModal = lazy(() => loadReviewFormModal().then((m) => ({ default: m.ReviewFormModal })));

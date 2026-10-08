@@ -1,24 +1,34 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Star, ThumbsUp, MessageSquarePlus, CheckCircle2, Plus, X, ChevronDown, Check } from 'lucide-react';
-import { Product, ProductReview, StoredReview, UserProfile } from '../types';
+import React, { useState } from 'react';
+import { Star, ThumbsUp, CheckCircle2, Plus } from 'lucide-react';
+import { Product, ProductReview, UserProfile } from '../types';
 import { getProductRating } from '../utils/productRating';
-import { initialSize } from '../utils/variantSelection';
-import { helpfulCount, reviewDocId } from '../utils/reviews';
-import {
-  deleteReviewFromFirestore,
-  saveReviewToFirestore,
-  setReviewVoteInFirestore,
-} from '../utils/firebaseSync';
+import { helpfulCount } from '../utils/reviews';
+import { deleteReviewFromFirestore, setReviewVoteInFirestore } from '../utils/firebaseSync';
 import { useAuth } from '../context/AuthContext';
 import { ConfirmDialog } from './ConfirmDialog';
 import { pluralRu } from '../utils/pluralize';
-import { useDialogA11y } from '../utils/useDialogA11y';
+import { LazyMount } from './LazyMount';
+import { ReviewFormModal } from './lazyWindows';
+import { loadReviewFormModal } from '../customerLoaders';
 
 interface ProductReviewsSectionProps {
   product: Product;
   userProfile?: UserProfile;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
+
+/** Five stars as one picture with its text: a screen reader hears «Оценка 4 из 5» (audit 07.10, finding 33) */
+const RatingStars: React.FC<{ rating: number; className: string }> = ({ rating, className }) => (
+  <div role="img" aria-label={`Оценка ${rating} из 5`} className="flex items-center gap-0.5">
+    {[1, 2, 3, 4, 5].map((star) => (
+      <Star
+        key={star}
+        aria-hidden="true"
+        className={`${className} ${star <= rating ? 'fill-warning text-warning' : 'text-[#4E5C70]'}`}
+      />
+    ))}
+  </div>
+);
 
 /**
  * Reviews are stored in the `reviews` collection, one per customer and product (firestore.rules
@@ -33,45 +43,8 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
   const uid = currentUser && !currentUser.isAnonymous ? currentUser.uid : null;
   const myReview = uid ? product.reviews?.find((r) => r.fromCollection && r.uid === uid) : undefined;
   const [reviewToDelete, setReviewToDelete] = useState<ProductReview | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
   const [isWriteReviewOpen, setIsWriteReviewOpen] = useState(false);
-  const reviewDialog = useDialogA11y(isWriteReviewOpen, () => setIsWriteReviewOpen(false));
-  const [selectedRating, setSelectedRating] = useState<number>(5);
-  const [hoverRating, setHoverRating] = useState<number | null>(null);
-  const [authorName, setAuthorName] = useState(userProfile?.name || '');
-  const [commentText, setCommentText] = useState('');
-  const [prosText, setProsText] = useState('');
-  const [consText, setConsText] = useState('');
-  // The size the customer bought: not guessed (a default «M» went into reviews unnoticed)
-  const [selectedSize, setSelectedSize] = useState(() => initialSize(product));
-  const [selectedColor, setSelectedColor] = useState(product.colors[0]?.name || '');
   const [sortBy, setSortBy] = useState<'newest' | 'helpful'>('newest');
-
-  // Dropdown states for custom neumorphic pickers
-  const [isSizeDropdownOpen, setIsSizeDropdownOpen] = useState(false);
-  const [isColorDropdownOpen, setIsColorDropdownOpen] = useState(false);
-  const sizeDropdownRef = useRef<HTMLDivElement>(null);
-  const colorDropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-      if (sizeDropdownRef.current && !sizeDropdownRef.current.contains(event.target as Node)) {
-        setIsSizeDropdownOpen(false);
-      }
-      if (colorDropdownRef.current && !colorDropdownRef.current.contains(event.target as Node)) {
-        setIsColorDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
-    };
-  }, []);
-
-  const currentColorObj = product.colors.find((c) => c.name === selectedColor) || product.colors[0];
 
   // Only real reviews; the summary is computed from them (stored rating fields may be template numbers)
   const reviews: ProductReview[] = product.reviews ?? [];
@@ -104,56 +77,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
       onShowToast('Войдите через Google в профиле, чтобы оставить отзыв', 'info');
       return;
     }
-    if (myReview) {
-      // One review per customer: the form edits it
-      setSelectedRating(myReview.rating);
-      setAuthorName(myReview.authorName);
-      setCommentText(myReview.comment);
-      setProsText(myReview.pros ?? '');
-      setConsText(myReview.cons ?? '');
-      if (myReview.sizePurchased) setSelectedSize(myReview.sizePurchased);
-      if (myReview.colorPurchased) setSelectedColor(myReview.colorPurchased);
-    }
     setIsWriteReviewOpen(true);
-  };
-
-  const handleSubmitReview = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!uid) return;
-    if (!commentText.trim()) {
-      onShowToast('Пожалуйста, напишите текст отзыва', 'error');
-      return;
-    }
-
-    const review: StoredReview = {
-      id: reviewDocId(product.id, uid),
-      productId: product.id,
-      uid,
-      authorName: (authorName.trim() || userProfile?.name?.trim() || 'Покупатель').slice(0, 60),
-      rating: selectedRating,
-      comment: commentText.trim().slice(0, 2000),
-      ...(prosText.trim() ? { pros: prosText.trim().slice(0, 500) } : {}),
-      ...(consText.trim() ? { cons: consText.trim().slice(0, 500) } : {}),
-      ...(selectedSize ? { sizePurchased: selectedSize } : {}),
-      colorPurchased: selectedColor,
-      date: myReview?.date ?? new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }),
-      createdAt: myReview?.createdAt ?? new Date().toISOString(),
-    };
-
-    setIsSaving(true);
-    try {
-      await saveReviewToFirestore(review);
-      setIsWriteReviewOpen(false);
-      setCommentText('');
-      setProsText('');
-      setConsText('');
-      onShowToast(myReview ? 'Отзыв обновлен' : 'Отзыв опубликован! Спасибо за обратную связь', 'success');
-    } catch (err) {
-      console.error('Review save failed:', err);
-      onShowToast('Не удалось сохранить отзыв. Попробуйте еще раз', 'error');
-    } finally {
-      setIsSaving(false);
-    }
   };
 
   const handleDeleteReview = async () => {
@@ -194,6 +118,8 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
         <button
           type="button"
           onClick={openReviewForm}
+          onPointerEnter={() => void loadReviewFormModal().catch(() => {})}
+          onFocus={() => void loadReviewFormModal().catch(() => {})}
           className="neu-button px-3.5 py-2 rounded-xl text-xs font-bold text-accent flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-all cursor-pointer hover:opacity-90"
         >
           <Plus className="w-4 h-4" />
@@ -219,18 +145,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
           </div>
 
           <div>
-            <div className="flex items-center gap-1 text-warning">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star
-                  key={star}
-                  className={`w-4 h-4 ${
-                    star <= Math.round(ratingInfo.rating)
-                      ? 'fill-amber-400 text-amber-400'
-                      : 'text-[#BAC5D5]'
-                  }`}
-                />
-              ))}
-            </div>
+            <RatingStars rating={Math.round(ratingInfo.rating)} className="w-4 h-4" />
             <p className="text-xs font-bold text-[#2D3A4E] mt-1">
               {ratingInfo.count} {pluralRu(ratingInfo.count, ['отзыв', 'отзыва', 'отзывов'])}
             </p>
@@ -288,16 +203,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-0.5 text-warning">
-                  {[1, 2, 3, 4, 5].map((st) => (
-                    <Star
-                      key={st}
-                      className={`w-3.5 h-3.5 ${
-                        st <= rev.rating ? 'fill-amber-400 text-amber-400' : 'text-[#BAC5D5]'
-                      }`}
-                    />
-                  ))}
-                </div>
+                <RatingStars rating={rev.rating} className="w-3.5 h-3.5" />
               </div>
 
               {/* Purchase specs */}
@@ -361,237 +267,19 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
         })}
       </div>
 
-      {/* Modal: Write Review */}
-      {isWriteReviewOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/50 backdrop-blur-sm animate-in fade-in">
-          <div ref={reviewDialog.ref} {...reviewDialog.props} className="neu-modal rounded-3xl p-5 max-w-md w-full space-y-4 max-h-[90vh] overflow-y-auto no-scrollbar border border-white/80 text-[#2D3A4E]">
-            <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl neu-inset flex items-center justify-center text-accent">
-                  <MessageSquarePlus className="w-5 h-5 stroke-[2.2]" />
-                </div>
-                <div>
-                  <h3 id={reviewDialog.titleId} className="text-base font-extrabold text-[#2D3A4E]">Оставить отзыв</h3>
-                  <p className="text-xs text-[#4E5C70] truncate max-w-[220px]">
-                    {product.title}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsWriteReviewOpen(false)}
-                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
-                aria-label="Закрыть"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitReview} className="space-y-3.5 text-xs">
-              {/* Rating stars picker */}
-              <div className="space-y-1.5 text-center p-3 neu-inset rounded-2xl">
-                <p className="text-xs font-bold text-[#2D3A4E]">Ваша оценка товару:</p>
-                <div className="flex items-center justify-center gap-2 text-warning py-1">
-                  {[1, 2, 3, 4, 5].map((st) => (
-                    <button
-                      key={st}
-                      type="button"
-                      onMouseEnter={() => setHoverRating(st)}
-                      onMouseLeave={() => setHoverRating(null)}
-                      onClick={() => setSelectedRating(st)}
-                      className="p-1 cursor-pointer transform hover:scale-125 transition-transform"
-                      aria-label={`Оценка ${st} из 5`}
-                    >
-                      <Star
-                        className={`w-6 h-6 ${
-                          st <= (hoverRating ?? selectedRating)
-                            ? 'fill-amber-400 text-amber-400'
-                            : 'text-[#BAC5D5]'
-                        }`}
-                      />
-                    </button>
-                  ))}
-                </div>
-                <span className="text-[11px] font-bold text-accent">
-                  {selectedRating === 5 && 'Превосходно!'}
-                  {selectedRating === 4 && 'Хорошо'}
-                  {selectedRating === 3 && 'Нормально'}
-                  {selectedRating === 2 && 'Не понравилось'}
-                  {selectedRating === 1 && 'Очень плохо'}
-                </span>
-              </div>
-
-              {/* Author Name */}
-              <div className="space-y-1">
-                <label className="font-bold text-[#2D3A4E]">Ваше имя:</label>
-                <input
-                  type="text"
-                  value={authorName}
-                  onChange={(e) => setAuthorName(e.target.value)}
-                  placeholder="Например, Александр В."
-                  className="w-full py-2.5 px-3.5 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
-                />
-              </div>
-
-              {/* Size & Color options with Custom Neumorphic Dropdowns */}
-              <div className="grid grid-cols-2 gap-2.5">
-                {/* Custom Size Dropdown */}
-                <div className="space-y-1 relative" ref={sizeDropdownRef}>
-                  <label className="font-bold text-[#2D3A4E]">Размер:</label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsSizeDropdownOpen(!isSizeDropdownOpen);
-                      setIsColorDropdownOpen(false);
-                    }}
-                    className={`w-full py-2.5 px-3 rounded-xl neu-inset text-xs font-semibold text-[#2D3A4E] flex items-center justify-between transition-all cursor-pointer ${
-                      isSizeDropdownOpen ? 'ring-2 ring-accent/40' : ''
-                    }`}
-                  >
-                    <span className="font-bold">{selectedSize || 'Размер'}</span>
-                    <ChevronDown
-                      className={`w-4 h-4 text-[#4E5C70] transition-transform duration-200 shrink-0 ${
-                        isSizeDropdownOpen ? 'rotate-180 text-accent' : ''
-                      }`}
-                    />
-                  </button>
-
-                  {isSizeDropdownOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-1.5 rounded-2xl p-1.5 z-50 neu-dropdown border border-white/80 space-y-1 max-h-48 overflow-y-auto no-scrollbar">
-                      {product.sizes.map((s) => {
-                        const isSelected = selectedSize === s;
-                        return (
-                          <button
-                            key={s}
-                            type="button"
-                            onClick={() => {
-                              setSelectedSize(s);
-                              setIsSizeDropdownOpen(false);
-                            }}
-                            className={`w-full text-left px-3 py-2 text-xs rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
-                              isSelected
-                                ? 'neu-pill-active font-bold'
-                                : 'text-[#2D3A4E] font-medium hover:bg-white/60'
-                            }`}
-                          >
-                            <span>{s}</span>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-accent stroke-[2.5]" />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Custom Color Dropdown */}
-                <div className="space-y-1 relative" ref={colorDropdownRef}>
-                  <label className="font-bold text-[#2D3A4E]">Цвет:</label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsColorDropdownOpen(!isColorDropdownOpen);
-                      setIsSizeDropdownOpen(false);
-                    }}
-                    className={`w-full py-2.5 px-3 rounded-xl neu-inset text-xs font-semibold text-[#2D3A4E] flex items-center justify-between transition-all cursor-pointer ${
-                      isColorDropdownOpen ? 'ring-2 ring-accent/40' : ''
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5 truncate">
-                      {currentColorObj?.hex && (
-                        <span
-                          className="w-3.5 h-3.5 rounded-full border border-black/15 shrink-0 shadow-xs"
-                          style={{ backgroundColor: currentColorObj.hex }}
-                        />
-                      )}
-                      <span className="truncate font-bold">{selectedColor || 'Цвет'}</span>
-                    </div>
-                    <ChevronDown
-                      className={`w-4 h-4 text-[#4E5C70] transition-transform duration-200 shrink-0 ${
-                        isColorDropdownOpen ? 'rotate-180 text-accent' : ''
-                      }`}
-                    />
-                  </button>
-
-                  {isColorDropdownOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-1.5 rounded-2xl p-1.5 z-50 neu-dropdown border border-white/80 space-y-1 max-h-48 overflow-y-auto no-scrollbar">
-                      {product.colors.map((c) => {
-                        const isSelected = selectedColor === c.name;
-                        return (
-                          <button
-                            key={c.name}
-                            type="button"
-                            onClick={() => {
-                              setSelectedColor(c.name);
-                              setIsColorDropdownOpen(false);
-                            }}
-                            className={`w-full text-left px-3 py-2 text-xs rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
-                              isSelected
-                                ? 'neu-pill-active font-bold'
-                                : 'text-[#2D3A4E] font-medium hover:bg-white/60'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 truncate">
-                              <span
-                                className="w-3.5 h-3.5 rounded-full border border-black/15 shrink-0 shadow-xs"
-                                style={{ backgroundColor: c.hex }}
-                              />
-                              <span className="truncate">{c.name}</span>
-                            </div>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-accent stroke-[2.5] shrink-0" />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Comment Text */}
-              <div className="space-y-1">
-                <label className="font-bold text-[#2D3A4E]">Текст отзыва *:</label>
-                <textarea
-                  rows={3}
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  placeholder="Опишите ваши впечатления от посадки, ткани, деталей кроя..."
-                  className="w-full p-3 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A] resize-none"
-                />
-              </div>
-
-              {/* Pros */}
-              <div className="space-y-1">
-                <label className="font-bold text-[#2D3A4E]">Достоинства (необязательно):</label>
-                <input
-                  type="text"
-                  value={prosText}
-                  onChange={(e) => setProsText(e.target.value)}
-                  placeholder="Например: качественная ткань, идеальный воротник"
-                  className="w-full py-2 px-3.5 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
-                />
-              </div>
-
-              {/* Cons */}
-              <div className="space-y-1">
-                <label className="font-bold text-[#2D3A4E]">Недостатки (необязательно):</label>
-                <input
-                  type="text"
-                  value={consText}
-                  onChange={(e) => setConsText(e.target.value)}
-                  placeholder="Например: маломерит на полразмера"
-                  className="w-full py-2 px-3.5 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="w-full py-3 rounded-2xl neu-button-accent text-white text-xs font-bold hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-60 disabled:cursor-wait"
-              >
-                {myReview ? 'Сохранить отзыв' : 'Опубликовать отзыв'}
-              </button>
-            </form>
-          </div>
-        </div>
+      {/* «Оставить отзыв»: its own chunk (NeumorphicSelect, Base UI), loaded on the first tap */}
+      {uid && (
+        <LazyMount when={isWriteReviewOpen}>
+          <ReviewFormModal
+            isOpen={isWriteReviewOpen}
+            onClose={() => setIsWriteReviewOpen(false)}
+            product={product}
+            myReview={myReview}
+            uid={uid}
+            userProfile={userProfile}
+            onShowToast={onShowToast}
+          />
+        </LazyMount>
       )}
 
       <ConfirmDialog

@@ -199,7 +199,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   return (
     <div className="space-y-5 pb-36 lg:pb-10 animate-in fade-in duration-300">
       {/* The home screen has no title bar: the page heading is for screen readers only */}
-      <h1 className="sr-only">{getStoreName(storefrontSettings)}</h1>
+      <h1 data-screen-heading tabIndex={-1} className="sr-only">{getStoreName(storefrontSettings)}</h1>
       {/* 1. «Технические работы» in «Витрина»: the site takes no orders now (checkout and 1-click refuse too) */}
       {!isOnline && (
         <div className="neu-flat rounded-2xl p-3.5 border border-warning/30 flex items-center gap-3 text-warning animate-in fade-in">
