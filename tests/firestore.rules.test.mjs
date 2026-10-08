@@ -380,17 +380,26 @@ describe('promos', () => {
     await assertFails(updateDoc(doc(guest(), 'promos/promo1'), { discountPercent: 99 }));
   });
 
+  // A code with a limit is used only with a Google sign-in (finding 9), so the limit is checked on such a buyer
   test('a code at its usage limit is not used again', async () => {
-    await env.withSecurityRulesDisabled((ctx) =>
-      setDoc(doc(ctx.firestore(), 'promos/promo1'), { ...promo, usageLimit: 1 })
-    );
-    await assertSucceeds(usePromo(buyer('anon-p'), 'WS-P1'));
-    await assertFails(usePromo(buyer('anon-p'), 'WS-P2'));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'promos/promo1'), { ...promo, usageLimit: 1 });
+      await setDoc(doc(ctx.firestore(), 'orders/WS-L1'), order({ id: 'WS-L1', promoCode: 'SALE', customerUid: 'alice' }));
+      await setDoc(doc(ctx.firestore(), 'orders/WS-L2'), order({ id: 'WS-L2', promoCode: 'SALE', customerUid: 'alice' }));
+    });
+    await assertSucceeds(usePromo(customer('alice'), 'WS-L1'));
+    await assertFails(usePromo(customer('alice'), 'WS-L2'));
   });
 
-  // Owner's decision 08.10 (audit 07.10, finding 9): a code with a limit — only with a Google sign-in. The rule that
-  // refuses anonymous sign-ins comes in the second PR of stage 2 (attack E2 in tests/audit-attacks.test.mjs); the
-  // Google buyer keeps using it either way
+  // Owner's decision 08.10 (audit 07.10, finding 9): a code with a limit — only with a Google sign-in; an anonymous
+  // sign-in uses only codes without a limit (attack E2 in tests/audit-attacks.test.mjs)
+  test('a guest (anonymous sign-in) does not use a code with a limit', async () => {
+    await env.withSecurityRulesDisabled((ctx) =>
+      setDoc(doc(ctx.firestore(), 'promos/promo1'), { ...promo, usageLimit: 5 })
+    );
+    await assertFails(usePromo(buyer('anon-p'), 'WS-P1'));
+  });
+
   test('a buyer signed in with Google uses a code with a limit', async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'promos/promo1'), { ...promo, usageLimit: 5 });

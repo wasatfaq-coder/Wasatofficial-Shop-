@@ -343,8 +343,7 @@ describe('Аудит агентами ECC 07.10 (docs/audit-2026-10-07-plan.md)'
 
   // «Клиенты» показывают аватар профиля владельцу: ссылка на чужой сервер выдала бы его IP и часы работы. С этапа 2
   // сайт пишет только фото Google-аккаунта или пусто, а админка показывает только такие адреса (src/utils/googleAvatar.ts)
-  test('E1 аватар профиля — только фото Google-аккаунта (https://….googleusercontent.com/…) или пусто (находка 8)',
-    { todo: 'находка 8 (07.10): правило isGoogleAvatar — вторым PR этапа 2, после публикации сайта, который пишет только фото Google' }, async () => {
+  test('E1 аватар профиля — только фото Google-аккаунта (https://….googleusercontent.com/…) или пусто (находка 8)', async () => {
       const db = customer('mallory');
       for (const avatar of [
         'https://attacker.example/pixel.gif',
@@ -367,8 +366,7 @@ describe('Аудит агентами ECC 07.10 (docs/audit-2026-10-07-plan.md)'
   // Решение владельца 08.10: код с лимитом списывает только вход Google — анонимных входов посторонний заведёт сколько
   // угодно, и по поддельному заказу с каждого он сжигал лимит. С этапа 2 сайт не применяет такой код у гостя
   // (promoSignInProblem в src/shared/orderPricing.ts)
-  test('E2 лимит промокода не сжигается поддельными заказами с анонимных входов (находка 9)',
-    { todo: 'находка 9 (07.10): правило — вторым PR этапа 2, после публикации сайта, который не применяет такой код у гостя' }, async () => {
+  test('E2 лимит промокода не сжигается поддельными заказами с анонимных входов (находка 9)', async () => {
       const usePromo = (db, orderId, promoId) => {
         const batch = writeBatch(db);
         batch.update(doc(db, 'promos', promoId), { usedCount: increment(1), lastOrderId: orderId });
@@ -384,6 +382,14 @@ describe('Аудит агентами ECC 07.10 (docs/audit-2026-10-07-plan.md)'
       });
       // promo1 (BLOGGER15) — с лимитом 50: аноним его не списывает
       await assertFails(usePromo(guestChat('anon-e2'), 'WS-E2A', 'promo1'));
+      // и не через отметку кода без лимита в том же пакете: счётчик кода с лимитом поднимается только своей отметкой
+      // (ревью второго PR этапа 2)
+      const anon = guestChat('anon-e2');
+      const sideways = writeBatch(anon);
+      sideways.update(doc(anon, 'promos', 'promo1'), { usedCount: increment(1), lastOrderId: 'WS-E2B' });
+      sideways.update(doc(anon, 'promos', 'free1'), { usedCount: increment(1), lastOrderId: 'WS-E2B' });
+      sideways.set(doc(anon, 'promo_uses', 'WS-E2B'), { orderId: 'WS-E2B', promoId: 'free1', createdAt: '2026-10-08T12:00:00.000Z' });
+      await assertFails(sideways.commit());
       // код без лимита гость списывает, как раньше; код с лимитом — покупатель со входом Google
       await assertSucceeds(usePromo(guestChat('anon-e2'), 'WS-E2B', 'free1'));
       await assertSucceeds(usePromo(customer('alice'), 'WS-E2C', 'promo1'));

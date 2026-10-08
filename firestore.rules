@@ -307,7 +307,10 @@ service cloud.firestore {
           && request.resource.data.lastOrderId is string
           && request.resource.data.lastOrderId.matches('^[A-Za-z0-9-]{1,40}$')
           && !exists(/databases/$(database)/documents/promo_uses/$(request.resource.data.lastOrderId))
-          && existsAfter(/databases/$(database)/documents/promo_uses/$(request.resource.data.lastOrderId)));
+          && existsAfter(/databases/$(database)/documents/promo_uses/$(request.resource.data.lastOrderId))
+          // отметка — об этом коде: иначе в том же пакете отметка кода без лимита поднимала счётчик кода с лимитом
+          // с анонимного входа (аудит 07.10, находка 9, ревью второго PR этапа 2)
+          && getAfter(/databases/$(database)/documents/promo_uses/$(request.resource.data.lastOrderId)).data.promoId == promoId);
     }
 
     // Лимит использований: без лимита (нет поля, 0 или null) — не ограничено
@@ -341,7 +344,15 @@ service cloud.firestore {
         && get(orderPath).data.get('promoCode', '') is string
         && get(orderPath).data.get('promoCode', '').size() > 0
         && get(orderPath).data.promoCode.upper() == get(promoPath).data.code.upper()
-        && getAfter(promoPath).data.get('lastOrderId', '') == orderId;
+        && getAfter(promoPath).data.get('lastOrderId', '') == orderId
+        // код с лимитом списывает только вход Google (решение владельца 08.10, аудит 07.10, находка 9): анонимных
+        // входов посторонний заведёт сколько угодно и поддельными заказами сжёг бы лимит
+        && (signInProvider() != 'anonymous' || !isLimitedPromoDoc(get(promoPath).data));
+    }
+
+    // Как isLimitedPromo (src/shared/orderPricing.ts): лимит — usageLimit больше 0
+    function isLimitedPromoDoc(promo) {
+      return promo.get('usageLimit', 0) is number && promo.get('usageLimit', 0) > 0;
     }
 
     match /banners/{bannerId} {
@@ -770,6 +781,7 @@ service cloud.firestore {
         && isOptionalText(data, 'middleName', 60)
         && isOptionalText(data, 'phone', 40)
         && isOptionalText(data, 'avatar', 2000)
+        && (!('avatar' in changed) || isGoogleAvatar(data.avatar))
         && isOptionalText(data, 'updatedAt', 40)
         && isOptionalText(data, 'createdAt', 40)
         && isOptionalText(data, 'lastActive', 40)
@@ -777,6 +789,14 @@ service cloud.firestore {
         && (!('savedAddresses' in changed) || isSavedAddressList(data.savedAddresses))
         && (!('bodyMeasurements' in changed) || isBodyMeasurements(data.bodyMeasurements))
         && (!('notificationsEnabled' in changed) || data.notificationsEnabled is bool);
+    }
+
+    // Аватар — только фото Google-аккаунта или пусто (аудит 07.10, находка 8): «Клиенты» показывают его владельцу, и ссылка
+    // на чужой сервер выдала бы его IP. Тот же шаблон, что googleAvatarUrl (src/utils/googleAvatar.ts): без пробелов.
+    // Неизменённый аватар не проверяется — старый профиль со ссылкой из прошлых версий сохраняет остальные поля
+    function isGoogleAvatar(avatar) {
+      return avatar == ''
+        || avatar.matches('https://[a-z0-9-]+([.][a-z0-9-]+)*[.]googleusercontent[.]com/\\S*');
     }
 
     // Тексты адреса вместе — не длиннее 2 000 знаков (комментарий курьеру — до 300), флажок «по умолчанию» не в счёт.
