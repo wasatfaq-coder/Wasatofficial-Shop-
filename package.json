@@ -11,7 +11,7 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "deploy": "bun run lint && bun run test:rules && bun run test:functions && bun run build && bun run build:share && firebase deploy --only hosting,firestore",
-    "test:rules": "bun scripts/client-order-sample.ts && firebase emulators:exec --only firestore --project demo-manstyle 'node --test tests/firestore.rules.test.mjs tests/audit-attacks.test.mjs'",
+    "test:rules": "bun scripts/client-order-sample.ts && bun scripts/firebase-sync-bundle.ts && firebase emulators:exec --only firestore --project demo-manstyle 'node --test tests/firestore.rules.test.mjs tests/audit-attacks.test.mjs'",
     "test:functions": "firebase emulators:exec --only firestore --project demo-manstyle 'cd functions && bun test test/'",
     "test:e2e": "VITE_USE_EMULATORS=true vite build --outDir dist-e2e --emptyOutDir && firebase emulators:exec --only auth,firestore --project ai-studio-applet-webapp-e9574 'playwright test'",
     "build:functions": "cd functions && npm run build",

@@ -1,5 +1,6 @@
 // Tests for firestore.rules. Run with: bun run test:rules
 // (starts the Firestore emulator via `firebase emulators:exec`).
+import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { after, before, beforeEach, describe, test } from 'node:test';
 import {
@@ -26,6 +27,17 @@ import {
   increment,
   Bytes,
 } from 'firebase/firestore';
+// The site's own writes (src/utils/firebaseSync.ts), each with the database of the test's sign-in (`targetDb`):
+// audit 07.10, finding 40 — the rules are checked against the code the buyer and the admin run, not a copy of it.
+// Built by scripts/firebase-sync-bundle.ts before the test (bun run test:rules)
+import {
+  applyAdminStockChanges,
+  cancelOrderAsCustomer,
+  confirmOrderReceipt,
+  handOverGuestData,
+  returnCancelledOrderStock,
+  submitPaymentReceipt,
+} from './.generated/firebase-sync.mjs';
 
 const ADMIN_EMAIL = 'gunh83975@gmail.com';
 
@@ -54,6 +66,8 @@ const guestOrder = (data) => {
   return placeOrder(buyer(uid), uid, data);
 };
 const extraAdmin = () => env.authenticatedContext('staff', { email: 'staff@example.com', email_verified: true }).firestore();
+// A document as the database holds it now (read as the owner)
+const read = async (path) => (await getDoc(doc(owner(), path))).data();
 
 const product = {
   id: 'p1',
@@ -266,6 +280,65 @@ describe('catalog', () => {
     await assertFails(setDoc(doc(guest(), 'settings/legal'), edition));
     await assertSucceeds(setDoc(doc(owner(), 'settings/legal'), edition));
     await assertSucceeds(getDoc(doc(guest(), 'settings/legal')));
+  });
+});
+
+// Аудит 07.10, находка 46: способы доставки и пункты выдачи читает оформление любого посетителя, меняет только
+// администратор («Доставка и ПВЗ»); коллекции, которых нет в правилах, и проверка соединения test/{id} закрыты для записи
+describe('delivery methods and pickup points', () => {
+  const method = { id: 'courier', title: 'Курьер', type: 'courier', price: 350, duration: '1–2 дня', isActive: true };
+  const point = { id: 'pp1', name: 'Пункт на Тверской', city: 'Москва', address: 'ул. Тверская, 7', isActive: true };
+  const readers = () => [['visitor', guest()], ['buyer', customer('alice')], ['guest', buyer('anon-d')]];
+
+  beforeEach(() =>
+    env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'delivery_methods/courier'), method);
+      await setDoc(doc(ctx.firestore(), 'pickup_points/pp1'), point);
+      await setDoc(doc(ctx.firestore(), 'test/connection'), { ok: true });
+    })
+  );
+
+  test('a visitor, a buyer and a guest read them (the checkout lists them)', async () => {
+    for (const [, db] of readers()) {
+      await assertSucceeds(getDocs(collection(db, 'delivery_methods')));
+      await assertSucceeds(getDoc(doc(db, 'delivery_methods/courier')));
+      await assertSucceeds(getDocs(collection(db, 'pickup_points')));
+      await assertSucceeds(getDoc(doc(db, 'pickup_points/pp1')));
+    }
+  });
+
+  test('a visitor, a buyer and a guest do not change them: not the price, not a new one, not a deletion', async () => {
+    for (const [, db] of readers()) {
+      await assertFails(updateDoc(doc(db, 'delivery_methods/courier'), { price: 0 }));
+      await assertFails(setDoc(doc(db, 'delivery_methods/free'), { ...method, id: 'free', price: 0 }));
+      await assertFails(deleteDoc(doc(db, 'delivery_methods/courier')));
+      await assertFails(updateDoc(doc(db, 'pickup_points/pp1'), { address: 'другой адрес' }));
+      await assertFails(setDoc(doc(db, 'pickup_points/pp2'), { ...point, id: 'pp2' }));
+      await assertFails(deleteDoc(doc(db, 'pickup_points/pp1')));
+    }
+  });
+
+  test('the admin (owner email or /admins doc) writes and deletes them', async () => {
+    await assertSucceeds(updateDoc(doc(owner(), 'delivery_methods/courier'), { price: 400 }));
+    await assertSucceeds(setDoc(doc(extraAdmin(), 'delivery_methods/pickup'), { ...method, id: 'pickup', type: 'pickup', price: 0 }));
+    await assertSucceeds(setDoc(doc(owner(), 'pickup_points/pp2'), { ...point, id: 'pp2' }));
+    await assertSucceeds(deleteDoc(doc(extraAdmin(), 'pickup_points/pp1')));
+    await assertSucceeds(deleteDoc(doc(owner(), 'delivery_methods/courier')));
+    // an id longer than 128 is not a document of the shop
+    await assertFails(setDoc(doc(owner(), `delivery_methods/${'x'.repeat(129)}`), method));
+  });
+
+  test('a collection the rules do not know and test/{id} take no writes, not even from the admin', async () => {
+    for (const db of [guest(), customer('alice'), buyer('anon-d'), owner()]) {
+      await assertFails(setDoc(doc(db, 'unknown_things/x'), { a: 1 }));
+      await assertFails(setDoc(doc(db, 'test/connection'), { ok: false }));
+      await assertFails(setDoc(doc(db, 'test/other'), { ok: true }));
+      await assertFails(deleteDoc(doc(db, 'test/connection')));
+    }
+    await assertFails(getDoc(doc(guest(), 'unknown_things/x')));
+    await assertFails(getDoc(doc(owner(), 'unknown_things/x')));
+    // the connection check at the start only reads
+    await assertSucceeds(getDoc(doc(guest(), 'test/connection')));
   });
 });
 
@@ -494,6 +567,152 @@ describe('stock journal (stock_movements)', () => {
   });
 });
 
+// Аудит 07.10, находка 41: склад админки кодом сайта (applyAdminStockChanges — «Склад и SKU», правка состава заказа,
+// восстановление и отмена восстановленного): транзакция на вариант против остатка в базе, с записью журнала в ней же
+describe('admin stock changes (applyAdminStockChanges)', () => {
+  const at = new Date('2026-10-07T10:00:00.000Z');
+  const shirt = {
+    id: 'p5',
+    title: 'Рубашка',
+    price: 3000,
+    inStock: true,
+    colors: [{ name: 'Белый', hex: '#FFFFFF' }, { name: 'Синий', hex: '#2C4A6B' }],
+    sizes: ['M', 'L'],
+    // «Синий» has no saved variants yet (a colour from an old CSV import)
+    skus: [
+      { id: 'p5-Белый-M', color: 'Белый', size: 'M', stock: 2, skuCode: 'WS-P5-W-M' },
+      { id: 'p5-Белый-L', color: 'Белый', size: 'L', stock: 0, skuCode: 'WS-P5-W-L' },
+    ],
+  };
+  const setShirt = (fields = {}) =>
+    env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'products/p5'), { ...shirt, ...fields }));
+  const change = (fields) => ({ productId: 'p5', productTitle: 'Рубашка', color: 'Белый', size: 'M', delta: 0, ...fields });
+  const stockOf = async (color, size) =>
+    (await read('products/p5')).skus.find((s) => s.color === color && s.size === size)?.stock;
+  const journal = async () =>
+    (await getDocs(query(collection(owner(), 'stock_movements'), where('productId', '==', 'p5')))).docs.map((d) => d.data());
+
+  beforeEach(() => setShirt());
+
+  test('a receipt adds the difference to the stock in the database and writes the journal', async () => {
+    // the admin saw 2 and adds 5; a buyer took 1 meanwhile — that sale stays sold
+    await setShirt({ skus: [{ ...shirt.skus[0], stock: 1 }, shirt.skus[1]] });
+    const { failed } = await applyAdminStockChanges([change({ delta: 5 })], { reason: 'Приход', operator: 'Администратор', at }, owner());
+    assert.deepEqual(failed, []);
+    assert.equal(await stockOf('Белый', 'M'), 6);
+    const [entry] = await journal();
+    assert.equal(entry.type, 'receipt');
+    assert.equal(entry.orderId, undefined);
+    assert.deepEqual(
+      [entry.changeQuantity, entry.previousStock, entry.newStock, entry.reason, entry.operator, entry.skuCode, entry.createdAt],
+      [5, 1, 6, 'Приход', 'Администратор', 'WS-P5-W-M', at.toISOString()]
+    );
+  });
+
+  test('a write-off stops at 0, the product is sold out; by an order the entry is «order» with its number', async () => {
+    const { failed } = await applyAdminStockChanges(
+      [change({ delta: -5 })],
+      { orderId: 'WS-70', reason: 'Правка состава #WS-70', operator: 'Администратор', at },
+      owner()
+    );
+    assert.deepEqual(failed, []);
+    assert.equal(await stockOf('Белый', 'M'), 0);
+    assert.equal((await read('products/p5')).inStock, false);
+    const [entry] = await journal();
+    assert.deepEqual([entry.type, entry.orderId, entry.changeQuantity, entry.newStock], ['order', 'WS-70', -2, 0]);
+    // nothing left to take: no second entry
+    await applyAdminStockChanges([change({ delta: -1 })], { reason: 'Списание', operator: 'Администратор', at }, owner());
+    assert.equal((await journal()).length, 1);
+  });
+
+  test('an inventory count sets the exact stock (setTo) with the reason of its variant', async () => {
+    const { failed } = await applyAdminStockChanges(
+      [change({ delta: 7, setTo: 9, reason: 'Инвентаризация склада (Оприходование излишка)' }), change({ size: 'L', setTo: 0 })],
+      { reason: 'Инвентаризация склада', operator: 'Инспектор склада', at },
+      owner()
+    );
+    assert.deepEqual(failed, []);
+    assert.equal(await stockOf('Белый', 'M'), 9);
+    assert.equal(await stockOf('Белый', 'L'), 0);
+    // the count equal to the stock changes nothing and writes nothing
+    const entries = await journal();
+    assert.equal(entries.length, 1);
+    assert.deepEqual(
+      [entries[0].reason, entries[0].operator, entries[0].previousStock, entries[0].newStock],
+      ['Инвентаризация склада (Оприходование излишка)', 'Инспектор склада', 2, 9]
+    );
+  });
+
+  test('a colour × size of the product without a saved variant gets one; a variant not of the product fails', async () => {
+    const { failed } = await applyAdminStockChanges(
+      [change({ color: 'Синий', size: 'L', delta: 4 }), change({ color: 'Красный', delta: 1 }), change({ productId: 'gone', delta: 1 })],
+      { reason: 'Приход', operator: 'Администратор', at },
+      owner()
+    );
+    assert.deepEqual(failed.map((f) => `${f.productId} ${f.color}`), ['p5 Красный', 'gone Белый']);
+    const { skus } = await read('products/p5');
+    assert.equal(skus.length, 3);
+    assert.deepEqual((({ color, size, stock }) => ({ color, size, stock }))(skus[2]), { color: 'Синий', size: 'L', stock: 4 });
+    assert.deepEqual(skus.slice(0, 2), shirt.skus);
+    assert.equal((await journal()).length, 1);
+  });
+
+  test('a product taken off sale stays off after a receipt; a sold-out one goes back on sale', async () => {
+    await setShirt({ hiddenFromSale: true, inStock: false });
+    await applyAdminStockChanges([change({ delta: 3 })], { reason: 'Приход', operator: 'Администратор', at }, owner());
+    assert.equal(await stockOf('Белый', 'M'), 5);
+    assert.equal((await read('products/p5')).inStock, false);
+    // an older product: «Снят с витрины» was inStock == false with stock left
+    await setShirt({ inStock: false });
+    await applyAdminStockChanges([change({ delta: 1 })], { reason: 'Приход', operator: 'Администратор', at }, owner());
+    assert.equal((await read('products/p5')).inStock, false);
+    // sold out, not taken off sale: on sale again
+    await setShirt({ inStock: false, skus: shirt.skus.map((s) => ({ ...s, stock: 0 })) });
+    await applyAdminStockChanges([change({ delta: 2 })], { reason: 'Приход', operator: 'Администратор', at }, owner());
+    assert.equal((await read('products/p5')).inStock, true);
+  });
+
+  test('a buyer running the admin\'s code changes nothing', async () => {
+    const { failed } = await applyAdminStockChanges([change({ delta: 5 })], { reason: 'Приход', operator: 'Администратор', at }, customer());
+    assert.equal(failed.length, 1);
+    assert.equal(await stockOf('Белый', 'M'), 2);
+  });
+
+  // Аудит 07.10, находка 2: после «Правки состава» номера строк не совпадают с записями `{заказ}_{строка}` — возврат
+  // по сумме журнала заказа по вариантам, удалённый вариант ничего не получает, повтор ничего не возвращает
+  test('a cancelled order after «Правка состава» returns what its journal holds, by variant, once', async () => {
+    const entry = (id, fields) =>
+      env.withSecurityRulesDisabled((ctx) =>
+        setDoc(doc(ctx.firestore(), 'stock_movements', id), {
+          id, productId: 'p5', productTitle: 'Рубашка', color: 'Белый', size: 'M', type: 'order', orderId: 'WS-71',
+          reason: 'Заказ #WS-71', operator: 'Покупатель', createdAt: at.toISOString(), ...fields,
+        })
+      );
+    // ordered 2 × M (line 0) and 1 × L (line 1); the admin took one M back, then removed the line L and the size L
+    await entry('WS-71_0', { changeQuantity: -2, previousStock: 4, newStock: 2 });
+    await entry('WS-71_1', { size: 'L', changeQuantity: -1, previousStock: 1, newStock: 0 });
+    await entry('adj-1', { changeQuantity: 1, previousStock: 2, newStock: 3, reason: 'Правка состава #WS-71', operator: 'Администратор' });
+    await setShirt({ sizes: ['M'], skus: [{ ...shirt.skus[0], stock: 3 }] });
+    await env.withSecurityRulesDisabled((ctx) =>
+      setDoc(doc(ctx.firestore(), 'orders/WS-71'), { id: 'WS-71', customerUid: 'alice', isCancelled: true, isAdjusted: true })
+    );
+    const items = [{ product: { id: 'p5', title: 'Рубашка' }, selectedColor: 'Белый', selectedSize: 'M', quantity: 1 }];
+    const order = { id: 'WS-71', items, isAdjusted: true };
+
+    // the buyer's browser leaves it to the admin
+    assert.equal(await returnCancelledOrderStock(order, {}, customer('alice')), false);
+    assert.equal(
+      await returnCancelledOrderStock(order, { operator: 'Администратор', missingIsNothing: true }, owner()),
+      true
+    );
+    assert.equal(await stockOf('Белый', 'M'), 4);
+    assert.equal((await read('products/p5')).skus.length, 1);
+    assert.equal((await read('orders/WS-71')).stockReturned, true);
+    await returnCancelledOrderStock(order, { operator: 'Администратор', missingIsNothing: true }, owner());
+    assert.equal(await stockOf('Белый', 'M'), 4);
+  });
+});
+
 // «Доработки 3»: the buyer cancels own order WS-20 (2 × p1 size M, written off by the entry WS-20_0; 1 M left)
 describe('order cancellation by the buyer', () => {
   const cancelFields = (overrides = {}) => ({
@@ -623,6 +842,45 @@ describe('order cancellation by the buyer', () => {
     await assertFails(updateDoc(doc(customer('alice'), 'orders/WS-20'), { stockReturned: true, updatedAt: Timestamp.fromMillis(1) }));
     await assertSucceeds(updateDoc(doc(customer('alice'), 'orders/WS-20'), { stockReturned: true, updatedAt: serverTimestamp() }));
   });
+
+  // Аудит 07.10, находка 40: тот же путь кодом сайта (useCustomerOrders → firebaseSync.ts), а не копией записей
+  test('the site\'s own code cancels the order and returns exactly what the line took, once (finding 40, 07.10)', async () => {
+    const at = new Date('2026-10-02T18:00:00.000Z');
+    await assertFails(cancelOrderAsCustomer('WS-20', 'Заказ больше не нужен', '', at, customer('bob')));
+    await assertSucceeds(cancelOrderAsCustomer('WS-20', 'Заказ больше не нужен', 'Купил в другом месте', at, customer('alice')));
+    const cancelled = await read('orders/WS-20');
+    assert.equal(cancelled.isCancelled, true);
+    assert.equal(cancelled.cancelledBy, 'customer');
+    assert.equal(cancelled.cancelComment, 'Купил в другом месте');
+    assert.equal(cancelled.stockReturned, false);
+
+    // someone else cannot return the goods of this order
+    await assertFails(returnCancelledOrderStock({ id: 'WS-20', items: cancelled.items }, {}, customer('bob')));
+    assert.equal(await returnCancelledOrderStock({ id: 'WS-20', items: cancelled.items }, {}, customer('alice')), true);
+    assert.equal((await read('products/p1')).skus[0].stock, 3);
+    assert.equal((await read('products/p1')).lastStockMovement, 'WS-20_0_return');
+    assert.deepEqual(
+      (({ type, orderId, lineIndex, productId, changeQuantity, reason, operator }) => ({ type, orderId, lineIndex, productId, changeQuantity, reason, operator }))(
+        await read('stock_movements/WS-20_0_return')
+      ),
+      { type: 'return', orderId: 'WS-20', lineIndex: 0, productId: 'p1', changeQuantity: 2, reason: 'Отмена заказа #WS-20', operator: 'Покупатель' }
+    );
+    assert.equal((await read('orders/WS-20')).stockReturned, true);
+
+    // the second tab (or a retry at the next visit) returns nothing twice
+    assert.equal(await returnCancelledOrderStock({ id: 'WS-20', items: cancelled.items }, {}, customer('alice')), true);
+    assert.equal((await read('products/p1')).skus[0].stock, 3);
+  });
+
+  test('a line without a write-off entry: the buyer\'s code leaves the order «not returned» (finding 40, 07.10)', async () => {
+    await env.withSecurityRulesDisabled((ctx) => deleteDoc(doc(ctx.firestore(), 'stock_movements/WS-20_0')));
+    await assertSucceeds(cancelOrderAsCustomer('WS-20', 'Заказ больше не нужен', '', new Date(), customer('alice')));
+    const { items } = await read('orders/WS-20');
+    // nothing was taken, so nothing comes back; the admin decides in «Заказы» («Вернуть на склад»)
+    assert.equal(await returnCancelledOrderStock({ id: 'WS-20', items }, {}, customer('alice')), false);
+    assert.equal((await read('products/p1')).skus[0].stock, 1);
+    assert.equal((await read('orders/WS-20')).stockReturned, false);
+  });
 });
 
 // «Доработки 4»: «Я получил заказ» — свой заказ у транспортной компании становится «Получен»
@@ -669,6 +927,16 @@ describe('receipt confirmation by the buyer', () => {
     await assertFails(confirm(customer('alice')));
     await set({ deliveryKind: 'carrier', isCancelled: true });
     await assertFails(confirm(customer('alice')));
+  });
+
+  test('the site\'s own code: «Я получил заказ» (finding 40, 07.10)', async () => {
+    const at = new Date('2026-10-03T08:00:00.000Z');
+    await assertFails(confirmOrderReceipt({ id: 'WS-30', statusLog: log }, at, customer('bob')));
+    await assertSucceeds(confirmOrderReceipt({ id: 'WS-30', statusLog: log }, at, customer('alice')));
+    const saved = await read('orders/WS-30');
+    assert.equal(saved.status, 'delivered');
+    assert.deepEqual(saved.statusLog, [...log, { status: 'delivered', at: at.toISOString(), by: 'customer' }]);
+    assert.equal(saved.paymentStatus, 'pending');
   });
 });
 
@@ -729,6 +997,30 @@ describe('payment receipt from the buyer', () => {
     await assertFails(submit(customer('alice')));
     await set({ paymentDetails: details, isCancelled: true });
     await assertFails(submit(customer('alice')));
+  });
+
+  test('the site\'s own code sends the receipt photo to the chat and the order waits for the check (finding 40, 07.10)', async () => {
+    const at = new Date('2026-10-03T08:00:00.000Z');
+    const photo = 'data:image/jpeg;base64,' + 'A'.repeat(1000);
+    const message = await submitPaymentReceipt({ id: 'WS-40' }, 'sbp', photo, { threadId: 'alice', threadName: 'Алиса' }, at, customer('alice'));
+    assert.equal(message.receiptOrderId, 'WS-40');
+    const stored = await read(`chat_messages/${message.id}`);
+    assert.equal(stored.threadId, 'alice');
+    assert.equal(stored.imageId, message.id);
+    assert.equal(stored.imageUrl, undefined); // the photo is a document of its own (stage 6, finding 20)
+    assert.equal((await read(`chat_images/${message.id}`)).data, photo);
+    const saved = await read('orders/WS-40');
+    assert.equal(saved.paymentStatus, 'receipt_review');
+    assert.deepEqual(saved.paymentReceipt, { method: 'sbp', at: at.toISOString(), messageId: message.id });
+    assert.deepEqual(saved.paymentLog, [{ event: 'receipt', at: at.toISOString(), by: 'customer' }]);
+    // a second receipt for an order already waiting for the check is refused
+    await assertFails(submitPaymentReceipt(saved, 'sbp', photo, { threadId: 'alice' }, new Date(at.getTime() + 60_000), customer('alice')));
+  });
+
+  test('the site\'s own code: not someone else\'s order (finding 40, 07.10)', async () => {
+    // bob's photo reaches his own chat, but the order of alice does not take it
+    await assertFails(submitPaymentReceipt({ id: 'WS-40' }, 'sbp', 'data:image/jpeg;base64,AAAA', { threadId: 'bob' }, new Date(), customer('bob')));
+    assert.equal((await read('orders/WS-40')).paymentStatus, 'pending');
   });
 
   test('templates of requisites — only the admin', async () => {
@@ -1188,6 +1480,19 @@ describe('guest data goes to the account after sign-in', () => {
     await assertFails(setDoc(doc(customer('bob'), 'guest_links', 'bob'), { accountUid: 'alice' }));
     await assertFails(setDoc(doc(buyer('anon-x'), 'account_guests', 'anon-x_anon-g'), { accountUid: 'anon-x', guestUid: 'anon-g' }));
     await assertFails(setDoc(doc(customer('bob'), 'account_guests', 'alice_anon-g'), { accountUid: 'alice', guestUid: 'anon-g' }));
+  });
+
+  // Аудит 07.10, находка 40: передача кодом сайта (useSupportChat → handOverGuestData), а не копией записей
+  test('the site\'s own code moves the guest\'s orders and the chat it sees to the account (finding 40, 07.10)', async () => {
+    const moved = await handOverGuestData({ uid: 'anon-g', db: buyer('anon-g') }, 'alice', customer('alice'));
+    assert.deepEqual(moved, { orderIds: ['WS-G1'], messages: 30 });
+    assert.equal((await read('orders/WS-G1')).customerUid, 'alice');
+    assert.equal((await read('orders/WS-B1')).customerUid, 'bob');
+    await assertSucceeds(getDoc(doc(customer('alice'), 'orders/WS-G1')));
+    const thread = await getDocs(query(collection(owner(), 'chat_messages'), where('threadId', '==', 'alice')));
+    assert.equal(thread.size, 30);
+    // the staff note stays in the guest's old dialog
+    assert.equal((await read('chat_messages/gn')).threadId, 'anon-g');
   });
 });
 

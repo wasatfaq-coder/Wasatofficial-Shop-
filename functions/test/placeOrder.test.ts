@@ -267,6 +267,23 @@ describe('placeOrderCore', () => {
       'invalid-argument'
     );
   });
+
+  // Находка 43 (07.10): способ оплаты сервер не сверяет с «Оплатой» в «Витрине» — заказ проходит с любым текстом,
+  // например «при получении», которого у магазина нет. Известно с 02.10 (находка 7): закрыть до включения серверных
+  // заказов. Проверить, что находка ещё воспроизводится: `bun test --todo test/placeOrder.test.ts` под эмулятором
+  test.todo('a payment method the shop does not offer (or has switched off) is refused', async () => {
+    await db.doc('settings/storefront').set({
+      freeDeliveryThreshold: 5000,
+      paymentMethods: [
+        { id: 'transfer', title: 'Перевод по номеру телефона', isActive: true },
+        { id: 'cash', title: 'Наличными при получении', onDelivery: true, isActive: false },
+      ],
+    });
+    await expectOrderError(placeOrderCore(db, request({ paymentMethod: 'Наличные курьеру (при получении)' }), null), 'invalid-argument');
+    await expectOrderError(placeOrderCore(db, request({ paymentMethod: 'Наличными при получении' }), null), 'invalid-argument');
+    const order = await placeOrderCore(db, request({ paymentMethod: 'Перевод по номеру телефона' }), null);
+    expect(order.paymentStatus).toBe('pending');
+  });
 });
 
 describe('parsePlaceOrderRequest', () => {

@@ -287,8 +287,8 @@ export async function findUntakenOrderLines(
 }
 
 /** Every journal entry of an order (write-offs, «Правка состава», returns). Admin only: the rules give lists to the admin */
-async function readOrderJournal(orderId: string): Promise<StockMovementLog[]> {
-  const snap = await getDocs(query(collection(db, STOCK_MOVEMENTS_COLLECTION), where('orderId', '==', orderId)));
+async function readOrderJournal(orderId: string, targetDb: Firestore = db): Promise<StockMovementLog[]> {
+  const snap = await getDocs(query(collection(targetDb, STOCK_MOVEMENTS_COLLECTION), where('orderId', '==', orderId)));
   return snap.docs.map((d) => d.data() as StockMovementLog);
 }
 
@@ -317,8 +317,8 @@ export async function takeAdjustedOrderStock(order: Pick<Order, 'id' | 'items'>)
  * 07.10, finding 2). The return entries carry the order, so a repeated call finds nothing held and returns nothing.
  * A removed product or variant gets nothing back. Admin only; resolves to true when the whole order is back.
  */
-async function returnAdjustedOrderStock(order: Pick<Order, 'id'>, operator: string): Promise<boolean> {
-  const held = [...orderHeldStock(await readOrderJournal(order.id)).values()].filter((v) => v.held > 0);
+async function returnAdjustedOrderStock(order: Pick<Order, 'id'>, operator: string, targetDb: Firestore = db): Promise<boolean> {
+  const held = [...orderHeldStock(await readOrderJournal(order.id, targetDb)).values()].filter((v) => v.held > 0);
   const changes: AdminStockChange[] = held.map((v) => ({
     productId: v.productId,
     productTitle: v.productTitle,
@@ -331,9 +331,9 @@ async function returnAdjustedOrderStock(order: Pick<Order, 'id'>, operator: stri
     reason: orderReturnReason(order.id),
     operator,
     missingIsNothing: true,
-  });
+  }, targetDb);
   if (failed.length > 0) return false;
-  await updateDoc(doc(db, 'orders', order.id), { stockReturned: true, updatedAt: serverTimestamp() });
+  await updateDoc(doc(targetDb, 'orders', order.id), { stockReturned: true, updatedAt: serverTimestamp() });
   return true;
 }
 
@@ -356,18 +356,20 @@ export interface AdminStockChange {
  * transaction with its journal entry: the stock is read from the database at that moment and changed by the difference.
  * Before, the browser wrote the whole product from its copy and an order placed meanwhile came back as stock (audit
  * 02.10, finding 5 and its kin). A deduction stops at 0; «Снят с витрины» stays off sale. Returns what was not applied.
+ * `targetDb` — another sign-in's database (the rules test calls this code as the admin).
  */
 export async function applyAdminStockChanges(
   changes: AdminStockChange[],
-  meta: { orderId?: string; reason: string; operator: string; at?: Date; missingIsNothing?: boolean }
+  meta: { orderId?: string; reason: string; operator: string; at?: Date; missingIsNothing?: boolean },
+  targetDb: Firestore = db
 ): Promise<{ failed: AdminStockChange[] }> {
   const at = meta.at ?? new Date();
   const failed: AdminStockChange[] = [];
   for (const change of changes) {
     if (!change.delta && change.setTo === undefined) continue;
-    const productRef = doc(db, 'products', change.productId);
+    const productRef = doc(targetDb, 'products', change.productId);
     try {
-      await runTransaction(db, async (tx) => {
+      await runTransaction(targetDb, async (tx) => {
         const snap = await tx.get(productRef);
         if (!snap.exists()) {
           if (meta.missingIsNothing) return;
@@ -409,7 +411,7 @@ export async function applyAdminStockChanges(
           reason: change.reason ?? meta.reason,
           operator: meta.operator,
         };
-        tx.set(doc(db, STOCK_MOVEMENTS_COLLECTION, movement.id), sanitizeForFirestore(movement));
+        tx.set(doc(targetDb, STOCK_MOVEMENTS_COLLECTION, movement.id), sanitizeForFirestore(movement));
         tx.update(productRef, {
           skus: nextSkus,
           inStock: inStockAfterStockChange({ inStock: data.inStock, skus: savedSkus, hiddenFromSale: data.hiddenFromSale }, nextSkus),
@@ -426,10 +428,16 @@ export async function applyAdminStockChanges(
 /**
  * The buyer cancels their own order (profile → order → «Отменить заказ»). The rules allow it only for a signed-in
  * order of their own in «Принят», once, with a reason; then `returnCancelledOrderStock` returns the goods.
- * Throws when the write is refused.
+ * Throws when the write is refused. `targetDb` — the buyer's sign-in (the rules test calls this code as the buyer).
  */
-export async function cancelOrderAsCustomer(orderId: string, reason: string, comment: string, at: Date): Promise<void> {
-  await updateDoc(doc(db, 'orders', orderId), {
+export async function cancelOrderAsCustomer(
+  orderId: string,
+  reason: string,
+  comment: string,
+  at: Date,
+  targetDb: Firestore = db
+): Promise<void> {
+  await updateDoc(doc(targetDb, 'orders', orderId), {
     isCancelled: true,
     cancelledBy: 'customer',
     cancelReason: reason,
@@ -445,9 +453,13 @@ export async function cancelOrderAsCustomer(orderId: string, reason: string, com
  * «Я получил заказ» (заказ у транспортной компании или Почты, «Доработки 4»): «Получен» и запись покупателя в истории.
  * Правило `isCustomerReceiptConfirm` пускает только это. Throws when the write is refused.
  */
-export async function confirmOrderReceipt(order: Pick<Order, 'id' | 'statusLog'>, at: Date): Promise<void> {
+export async function confirmOrderReceipt(
+  order: Pick<Order, 'id' | 'statusLog'>,
+  at: Date,
+  targetDb: Firestore = db
+): Promise<void> {
   const entry: OrderStatusLogEntry = { status: 'delivered', at: at.toISOString(), by: 'customer' };
-  await updateDoc(doc(db, 'orders', order.id), {
+  await updateDoc(doc(targetDb, 'orders', order.id), {
     status: 'delivered',
     statusLog: [...(order.statusLog ?? []), entry],
     updatedAt: serverTimestamp(),
@@ -464,7 +476,8 @@ export async function submitPaymentReceipt(
   kind: PaymentKind,
   imageUrl: string,
   thread: Pick<ChatMessage, 'threadId' | 'threadName'>,
-  at: Date
+  at: Date,
+  targetDb: Firestore = db
 ): Promise<ChatMessage> {
   const message: ChatMessage = {
     id: `msg-${at.getTime()}-receipt-${order.id}`,
@@ -476,8 +489,8 @@ export async function submitPaymentReceipt(
     timestamp: at.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
     ...thread,
   };
-  await saveChatMessageToFirestore(message);
-  await updateDoc(doc(db, 'orders', order.id), {
+  await saveChatMessageToFirestore(message, targetDb);
+  await updateDoc(doc(targetDb, 'orders', order.id), {
     paymentStatus: 'receipt_review',
     paymentReceipt: { method: kind, at: at.toISOString(), messageId: message.id },
     paymentLog: [...(order.paymentLog ?? []), paymentLogEntry('receipt', 'customer', { at })],
@@ -527,13 +540,14 @@ export async function returnOrderLineStock(
   line: CartItem,
   lineIndex: number,
   at: Date,
-  options: { operator?: string; missingIsNothing?: boolean } = {}
+  options: { operator?: string; missingIsNothing?: boolean } = {},
+  targetDb: Firestore = db
 ): Promise<LineReturn> {
   if (line.isPreorder) return 'nothing';
-  const productRef = doc(db, 'products', line.product.id);
-  const returnRef = doc(db, STOCK_MOVEMENTS_COLLECTION, orderReturnMovementId(orderId, lineIndex));
-  const takenRef = doc(db, STOCK_MOVEMENTS_COLLECTION, orderMovementId(orderId, lineIndex));
-  return runTransaction(db, async (tx) => {
+  const productRef = doc(targetDb, 'products', line.product.id);
+  const returnRef = doc(targetDb, STOCK_MOVEMENTS_COLLECTION, orderReturnMovementId(orderId, lineIndex));
+  const takenRef = doc(targetDb, STOCK_MOVEMENTS_COLLECTION, orderMovementId(orderId, lineIndex));
+  return runTransaction(targetDb, async (tx) => {
     const [returnSnap, takenSnap, productSnap] = await Promise.all([tx.get(returnRef), tx.get(takenRef), tx.get(productRef)]);
     if (returnSnap.exists()) return 'already';
     if (!takenSnap.exists()) return options.missingIsNothing ? 'nothing' : 'unknown';
@@ -581,31 +595,33 @@ export async function returnOrderLineStock(
 /**
  * Every line of a cancelled order back to stock, one transaction per line (as the write-off). Marks the order
  * `stockReturned` when no line is left unknown. Resolves to true when the whole order is back.
+ * `targetDb` — the sign-in that returns (the buyer or the admin; the rules test calls this code with its own).
  */
 export async function returnCancelledOrderStock(
   order: Pick<Order, 'id' | 'items' | 'isAdjusted'>,
-  options: { operator?: string; missingIsNothing?: boolean } = {}
+  options: { operator?: string; missingIsNothing?: boolean } = {},
+  targetDb: Firestore = db
 ): Promise<boolean> {
   if (order.isAdjusted) {
     // after «Правка состава» only the admin returns, by variant (the buyer cannot read the order's whole journal);
     // the buyer's browser leaves it to «Вернуть на склад» in «Заказы»
-    return options.missingIsNothing ? returnAdjustedOrderStock(order, options.operator ?? 'Администратор') : false;
+    return options.missingIsNothing ? returnAdjustedOrderStock(order, options.operator ?? 'Администратор', targetDb) : false;
   }
   const at = new Date();
   let complete = true;
   for (let i = 0; i < (order.items ?? []).length; i++) {
     let result: LineReturn;
     try {
-      result = await returnOrderLineStock(order.id, order.items[i], i, at, options);
+      result = await returnOrderLineStock(order.id, order.items[i], i, at, options, targetDb);
     } catch (err) {
       // Another tab (or the admin) returned this line at the same moment: its entry is there now
-      const entry = await getDoc(doc(db, STOCK_MOVEMENTS_COLLECTION, orderReturnMovementId(order.id, i))).catch(() => null);
+      const entry = await getDoc(doc(targetDb, STOCK_MOVEMENTS_COLLECTION, orderReturnMovementId(order.id, i))).catch(() => null);
       if (!entry?.exists()) throw err;
       result = 'already';
     }
     if (result === 'unknown') complete = false;
   }
-  if (complete) await updateDoc(doc(db, 'orders', order.id), { stockReturned: true, updatedAt: serverTimestamp() });
+  if (complete) await updateDoc(doc(targetDb, 'orders', order.id), { stockReturned: true, updatedAt: serverTimestamp() });
   return complete;
 }
 
@@ -1208,12 +1224,14 @@ export async function orderRateWaitSeconds(uid: string, targetDb: Firestore = db
  * A guest signed in with Google: the orders and the support chat of the guest's anonymous sign-in go to the account
  * (audit 02.10, finding 26). Both sides agree in this browser (rules: guest_links + account_guests), then the guest's
  * session moves each order (`customerUid`) and each message it sees (`threadId`). Returns what was moved.
+ * `accountDb` — the account's sign-in (the site's own; the rules test passes the account's database).
  */
 export async function handOverGuestData(
   guest: { uid: string; db: Firestore },
-  accountUid: string
+  accountUid: string,
+  accountDb: Firestore = db
 ): Promise<{ orderIds: string[]; messages: number }> {
-  await setDoc(doc(db, 'account_guests', `${accountUid}_${guest.uid}`), { accountUid, guestUid: guest.uid });
+  await setDoc(doc(accountDb, 'account_guests', `${accountUid}_${guest.uid}`), { accountUid, guestUid: guest.uid });
   await setDoc(doc(guest.db, 'guest_links', guest.uid), { accountUid });
 
   const orders = await getDocs(query(collection(guest.db, 'orders'), where('customerUid', '==', guest.uid)));
