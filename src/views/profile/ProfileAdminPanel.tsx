@@ -419,6 +419,7 @@ export const ProfileAdminPanel = ({
               {adminTab === 'analytics' && (
                 <AdminAnalyticsTab
                   orders={orders}
+                  products={productsList}
                   promos={localPromos}
                   onShowToast={onShowToast}
                   onSelectOrder={(ord) => setSelectedOrderIdForTracking(ord.id)}

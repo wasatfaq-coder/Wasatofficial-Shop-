@@ -1,6 +1,6 @@
 // Атаки на firestore.rules из обзоров рисков 30.09 и 02.10.2026 (docs/audit-2026-09-30-plan.md,
-// docs/audit-2026-10-02-plan.md; пробы 02.10 — docs/audit-2026-10-02/probes/) и проверки перед запуском 04.10
-// (docs/audit-2026-10-04-plan.md, тесты D1–D5).
+// docs/audit-2026-10-02-plan.md; пробы 02.10 — docs/audit-2026-10-02/probes/), проверки перед запуском 04.10
+// (docs/audit-2026-10-04-plan.md, тесты D1–D5) и аудита агентами ECC 07.10 (docs/audit-2026-10-07-plan.md, тесты E).
 // Запуск вместе с остальными тестами правил: bun run test:rules.
 //
 // Каждый тест записан так, как должно быть: запрос злоумышленника отклонён. Пока уязвимость открыта, тест помечен
@@ -335,5 +335,32 @@ describe('Проверка перед запуском 04.10 (docs/audit-2026-10
       await assertFails(setDoc(doc(customer('mallory'), 'users/mallory'), {
         uid: 'mallory', savedCards: [{ number: '4111111111111111', cvv: '123' }],
       }));
+    });
+});
+
+describe('Аудит агентами ECC 07.10 (docs/audit-2026-10-07-plan.md)', () => {
+  beforeEach(() => seed(undefined));
+
+  // «Клиенты» показывают аватар профиля владельцу: ссылка на чужой сервер выдала бы его IP и часы работы. С этапа 2
+  // сайт пишет только фото Google-аккаунта или пусто, а админка показывает только такие адреса (src/utils/googleAvatar.ts)
+  test('E1 аватар профиля — только фото Google-аккаунта (https://….googleusercontent.com/…) или пусто (находка 8)',
+    { todo: 'находка 8 (07.10): правило isGoogleAvatar — вторым PR этапа 2, после публикации сайта, который пишет только фото Google' }, async () => {
+      const db = customer('mallory');
+      for (const avatar of [
+        'https://attacker.example/pixel.gif',
+        'http://lh3.googleusercontent.com/a/x',
+        'https://lh3.googleusercontent.com.attacker.example/a/x',
+        'https://attacker.example/lh3.googleusercontent.com/a/x',
+        'data:image/svg+xml,<svg/>',
+      ]) {
+        await assertFails(setDoc(doc(db, 'users/mallory'), { uid: 'mallory', name: 'Мэллори', avatar }));
+      }
+      await assertSucceeds(setDoc(doc(db, 'users/mallory'), { uid: 'mallory', name: 'Мэллори', avatar: 'https://lh3.googleusercontent.com/a/ACg8oc=s96-c' }));
+      await assertFails(setDoc(doc(db, 'users/mallory'), { avatar: 'https://attacker.example/pixel.gif' }, { merge: true }));
+      await assertSucceeds(setDoc(doc(db, 'users/mallory'), { avatar: '' }, { merge: true }));
+      // старый профиль с чужой ссылкой (до правила) сохраняет остальные поля, пока аватар не меняется
+      await env.withSecurityRulesDisabled((ctx) =>
+        setDoc(doc(ctx.firestore(), 'users/mallory'), { avatar: 'https://images.example/old.jpg' }, { merge: true }));
+      await assertSucceeds(setDoc(doc(db, 'users/mallory'), { name: 'Мэллори Смит' }, { merge: true }));
     });
 });

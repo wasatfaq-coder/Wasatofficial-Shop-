@@ -39,6 +39,7 @@ import { NeumorphicSelect, NeumorphicSelectOption } from '../NeumorphicSelect';
 import { orderStatusChip } from '../../utils/orderStatusStyle';
 import { isRevenueOrder, orderRevenue } from '../../utils/analyticsEngine';
 import { formatAddress } from '../../utils/addressFormat';
+import { googleAvatarUrl } from '../../utils/googleAvatar';
 import { ADMIN_EMAIL } from '../../context/AuthContext';
 import { pluralRu } from '../../utils/pluralize';
 import { cancelledByLabel, cancelledShare, cancelReasonText, formatCancelledAt } from '../../utils/orderCancel';
@@ -215,7 +216,9 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
         name: u.name || 'Пользователь',
         email: u.email || '',
         phone: u.phone || '',
-        avatar: u.avatar,
+        // only a Google account photo: any other link would open here and give away the owner's IP (finding 8);
+        // without it the card shows the letters
+        avatar: googleAvatarUrl(u.avatar) || undefined,
         isRegisteredUser: true,
         registeredAt: displayDate(u.createdAt),
         lastActiveAt: displayDate(u.lastActive),

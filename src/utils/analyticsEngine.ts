@@ -260,10 +260,14 @@ export function computeFirestoreDailySales(
   };
 }
 
+/**
+ * A product of the period's top. No picture: the order line is written by the visitor, and a link from it would open
+ * on the owner's screen and give away their IP (audit 07.10, finding 7) — the screen takes the photo from the catalog
+ * by `id` (OrderLineThumbImage → orderLineImage), as «Заказы» do
+ */
 export interface ProductSales {
   id: string;
   title: string;
-  image?: string;
   quantity: number;
   revenue: number;
 }
@@ -307,7 +311,6 @@ export function computePeriodBreakdown(periodOrders: Order[], topCount = 5): {
       const entry = products.get(product.id) ?? {
         id: product.id,
         title: product.title || 'Товар',
-        image: product.images?.[0],
         quantity: 0,
         revenue: 0,
       };

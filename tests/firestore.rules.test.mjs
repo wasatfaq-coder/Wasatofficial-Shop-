@@ -1331,6 +1331,16 @@ describe('users & admins', () => {
     await assertFails(setDoc(doc(db, 'users/dave'), { savedAddresses: Array.from({ length: 11 }, (_, i) => ({ id: String(i) })) }, { merge: true }));
   });
 
+  // The site writes only the Google account's photo or '' (googleAvatarUrl, audit 07.10, finding 8); a foreign link is
+  // refused by the rule of the second PR — test E1 in tests/audit-attacks.test.mjs
+  test('avatar: the Google account photo or none, as the site writes it', async () => {
+    const db = customer('erin');
+    await assertSucceeds(setDoc(doc(db, 'users/erin'), {
+      uid: 'erin', name: 'Эрин', avatar: 'https://lh3.googleusercontent.com/a/ACg8oc=s96-c',
+    }));
+    await assertSucceeds(setDoc(doc(db, 'users/erin'), { avatar: '' }, { merge: true }));
+  });
+
   test('manager notes are admin-only', async () => {
     await assertFails(getDoc(doc(customer('alice'), 'customer_notes/alice')));
     await assertFails(setDoc(doc(customer('alice'), 'customer_notes/alice'), { managerNotes: 'x' }));

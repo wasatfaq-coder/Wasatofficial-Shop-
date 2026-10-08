@@ -55,6 +55,7 @@ import { isCarrierOrder } from './orderFlow';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages } from './deliveryStages';
 import { CLIENT_ERRORS_COLLECTION, type ClientErrorReport, type StoredClientError } from './clientErrors';
 import { trackRead } from './pendingReads';
+import { googleAvatarUrl } from './googleAvatar';
 import {
   CATALOG_INDEX_COLLECTION,
   PRODUCT_THUMBS_COLLECTION,
@@ -1920,7 +1921,8 @@ const ADMIN_ONLY_PROFILE_FIELDS = ['bonusPoints', 'managerNotes', 'tags'] as con
 
 export async function saveUserProfileToFirestore(uid: string, profile: UserProfile) {
   try {
-    const editable: Record<string, unknown> = { ...profile };
+    // the avatar is only the Google account's photo or none: «Клиенты» show it to the owner (audit 07.10, finding 8)
+    const editable: Record<string, unknown> = { ...profile, avatar: googleAvatarUrl(profile.avatar) };
     for (const field of ADMIN_ONLY_PROFILE_FIELDS) {
       delete editable[field];
     }
