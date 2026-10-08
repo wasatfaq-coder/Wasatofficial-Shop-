@@ -93,9 +93,35 @@ if installed_commit | grep -qx "$COMMIT"; then
   exit 0
 fi
 
-# --scope project пишет в .claude/settings.json те же строки, что уже лежат там, поэтому файл не меняется.
+# --scope project пишет в .claude/settings.json те же значения, что уже лежат там, но переставляет ключи — и файл висел
+# незакоммиченной правкой в каждой новой сессии. Если по смыслу ничего не изменилось, возвращаем файл из репозитория;
+# если изменилось — оставляем правку CLI и предупреждаем.
+same_settings() {
+  python3 -I - "$SETTINGS.ecc-before" "$SETTINGS" <<'PY'
+import json, sys
+from pathlib import Path
+try:
+    before, after = (json.loads(Path(p).read_text(encoding='utf-8')) for p in sys.argv[1:3])
+except (OSError, ValueError):
+    sys.exit(1)
+sys.exit(0 if before == after else 1)
+PY
+}
+# Снимок сверяется и при сбое claude plugin (trap), чтобы перестановка не осталась и тогда; нет файла — нечего сверять.
+restore_settings() {
+  [ -f "$SETTINGS.ecc-before" ] || return 0
+  if same_settings; then
+    mv "$SETTINGS.ecc-before" "$SETTINGS"
+  else
+    rm -f "$SETTINGS.ecc-before"
+    echo "claude plugin изменил .claude/settings.json по смыслу — проверь разницу и закоммить." >&2
+  fi
+}
+if [ -f "$SETTINGS" ]; then cp "$SETTINGS" "$SETTINGS.ecc-before"; fi
+trap restore_settings EXIT
 claude plugin marketplace add "affaan-m/ECC@$TAG" --scope project >&2
 claude plugin install ecc@ecc --scope project >&2
+restore_settings
 
 if ! installed_commit | grep -qx "$COMMIT"; then
   # Тег указывает не на прочитанный коммит: такой код не запускаем.
