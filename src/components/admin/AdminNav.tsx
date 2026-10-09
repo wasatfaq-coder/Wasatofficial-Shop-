@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import {
   BarChart3,
   Boxes,
+  Coins,
   CircleHelp,
   FileText,
   FolderTree,
@@ -31,6 +32,7 @@ const TABS: Record<AdminTab, { label: string; icon: LucideIcon }> = {
   products: { label: 'Товары', icon: Layers },
   categories: { label: 'Категории', icon: FolderTree },
   inventory: { label: 'Склад и SKU', icon: Boxes },
+  rates: { label: 'Курсы и наценка', icon: Coins },
   promos: { label: 'Промокоды', icon: Tag },
   banners: { label: 'Баннеры', icon: ImageIcon },
   delivery: { label: 'Доставка и ПВЗ', icon: Truck },
@@ -45,7 +47,7 @@ type AdminGroupId = 'sales' | 'catalog' | 'marketing' | 'store';
 /** 14 sections in 4 groups (Hick: 4 choices, then 2–5) */
 const GROUPS: { id: AdminGroupId; label: string; icon: LucideIcon; tabs: AdminTab[] }[] = [
   { id: 'sales', label: 'Продажи', icon: TrendingUp, tabs: ['analytics', 'orders', 'customers', 'support'] },
-  { id: 'catalog', label: 'Каталог', icon: Layers, tabs: ['products', 'categories', 'inventory'] },
+  { id: 'catalog', label: 'Каталог', icon: Layers, tabs: ['products', 'categories', 'inventory', 'rates'] },
   { id: 'marketing', label: 'Маркетинг', icon: Megaphone, tabs: ['promos', 'banners'] },
   { id: 'store', label: 'Магазин', icon: Store, tabs: ['delivery', 'payment', 'faq', 'legal', 'storefront'] },
 ];

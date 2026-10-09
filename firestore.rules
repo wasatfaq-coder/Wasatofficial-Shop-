@@ -42,10 +42,12 @@ service cloud.firestore {
       return request.resource.data.updatedAt == request.time;
     }
 
-    // Себестоимость живёт в закрытой product_costs: в товар её не добавить и не поменять, старое значение — только удалить
+    // Себестоимость живёт в закрытой product_costs: в товар её не добавить и не поменять, старое значение — только удалить.
+    // Закупка в валюте (purchase) — там же: в товаре её не было никогда, поэтому её нет и в записи товара
     function keepsCostPriceOut() {
-      return !('costPrice' in request.resource.data)
-        || request.resource.data.costPrice == resource.data.get('costPrice', null);
+      return (!('costPrice' in request.resource.data)
+        || request.resource.data.costPrice == resource.data.get('costPrice', null))
+        && !('purchase' in request.resource.data);
     }
 
     // settings/server.serverOrdersEnabled: заказы оформляет Cloud Function placeOrder
@@ -67,7 +69,8 @@ service cloud.firestore {
 
     match /products/{productId} {
       allow read: if true;
-      allow create: if isAdmin() && isValidId(productId) && !('costPrice' in request.resource.data);
+      allow create: if isAdmin() && isValidId(productId) && !('costPrice' in request.resource.data)
+        && !('purchase' in request.resource.data);
       allow delete: if isAdmin() && isValidId(productId);
       // Пока заказы не оформляются на сервере, покупатели списывают остатки — только своим заказом.
       // Остальные поля (в том числе старые отзывы внутри товара) — только администратор.
@@ -373,8 +376,9 @@ service cloud.firestore {
     }
 
     match /settings/{settingId} {
-      // шаблоны быстрых ответов поддержки — рабочие тексты сотрудников (аудит 02.10, находка 49 / тест B2)
-      allow read: if settingId != 'quick_phrases' || isAdmin();
+      // шаблоны быстрых ответов поддержки — рабочие тексты сотрудников (аудит 02.10, находка 49 / тест B2);
+      // курсы и наценка (exchange_rates) по наценке выдают маржу магазина — только администратору
+      allow read: if !(settingId in ['quick_phrases', 'exchange_rates']) || isAdmin();
       allow write: if isAdmin() && isValidId(settingId);
     }
 

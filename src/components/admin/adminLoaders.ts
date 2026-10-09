@@ -15,6 +15,7 @@ export const ADMIN_SECTION_LOADERS: Record<AdminTab, () => Promise<unknown>> = {
   products: () => import('./AdminProductsTab'),
   categories: () => import('./AdminCategoriesTab'),
   inventory: () => import('./AdminInventoryTab'),
+  rates: () => import('./AdminRatesTab'),
   promos: () => import('./AdminPromoConstructorTab'),
   banners: () => import('./AdminBannersTab'),
   delivery: () => import('./AdminDeliveryTab'),

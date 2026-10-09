@@ -1,5 +1,6 @@
 import type { AddressParts } from './shared/personName';
 import type { DeliveryKind, OrderStatusLogEntry } from './shared/orderFlow';
+import type { ProductPurchase } from './utils/currencyPricing';
 export interface BodyMeasurements {
   height: number;
   weight: number;
@@ -98,6 +99,11 @@ export interface Product {
   categoryLabel: string;
   price: number;
   costPrice?: number; // Себестоимость для расчета маржинальности
+  /**
+   * Purchase in dollars or yuan (`product_costs/{id}.purchase`, admin only, like costPrice): «Курсы и наценка»
+   * recalculates price and costPrice from it (src/utils/currencyPricing.ts). Never stored in the product
+   */
+  purchase?: ProductPurchase;
   originalPrice?: number;
   badge?: string;
   description: string;

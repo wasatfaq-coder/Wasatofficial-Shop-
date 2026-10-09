@@ -135,6 +135,16 @@ export const PRODUCTS = {
     colors: [{ name: 'Черный', hex: '#111111' }],
     sizes: ['Единый'],
   }), isPopular: false },
+  // «Курсы и наценка» (09.10): its price goes after the dollar rate; only rates.spec.ts changes it
+  tshirt: { ...product({
+    id: 'e2e-tshirt',
+    title: 'Футболка из Китая',
+    category: 'tshirts',
+    categoryLabel: 'Футболки',
+    price: 1000,
+    colors: [{ name: 'Синий', hex: '#2C4A6B' }],
+    sizes: ['48', '50', '52'],
+  }), isPopular: false },
 };
 
 /** A full photo of a product as `product_photos` keeps it (the product holds a preview) */
