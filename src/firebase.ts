@@ -130,9 +130,13 @@ const GUEST_SESSION_KEY = 'manstyle_guest_session';
 // A guest of an earlier version has no mark yet: their orders or chat kept in this browser say there is a session
 const GUEST_TRACE_KEYS = ['manstyle_guest_orders', 'manstyle_chat_messages_v2'];
 
+// '1' — there is a guest sign-in; '0' — checked, there is none: the traces below (a signed-in buyer keeps the chat cache too)
+// are read only until the first check
 function hasGuestSession(): boolean {
   try {
-    if (localStorage.getItem(GUEST_SESSION_KEY)) return true;
+    const mark = localStorage.getItem(GUEST_SESSION_KEY);
+    if (mark === '1') return true;
+    if (mark === '0') return false;
     return GUEST_TRACE_KEYS.some((key) => {
       const saved = localStorage.getItem(key);
       return Boolean(saved && saved !== '[]');
@@ -145,8 +149,7 @@ function hasGuestSession(): boolean {
 
 function markGuestSession(present: boolean): void {
   try {
-    if (present) localStorage.setItem(GUEST_SESSION_KEY, '1');
-    else localStorage.removeItem(GUEST_SESSION_KEY);
+    localStorage.setItem(GUEST_SESSION_KEY, present ? '1' : '0');
   } catch {}
 }
 
@@ -157,6 +160,7 @@ export function restoreGuestChatIdentity(): Promise<ChatIdentity | null> {
   return new Promise((resolve) => {
     const unsubscribe = onAuthStateChanged(guest.auth, (user) => {
       unsubscribe();
+      markGuestSession(Boolean(user));
       resolve(user ? { uid: user.uid, db: guest.db, isGuest: true } : null);
     });
   });

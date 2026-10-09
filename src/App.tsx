@@ -98,6 +98,7 @@ export default function App() {
     setDeliveryMethods,
     pickupPoints,
     pickupPointsLoaded,
+    pickupPointsFailed,
     setPickupPoints,
   } = useStorefrontData(
     isAdmin || activeTab === 'cart' || activeTab === 'checkout',
@@ -269,6 +270,7 @@ export default function App() {
     pendingChatIds,
     failedChatMessages,
     customerChatMessages,
+    chatThreadLoading,
     handleSendMessageFromUser,
     handleRetryChatMessage,
     handleChangeChatMessage,
@@ -479,6 +481,7 @@ export default function App() {
             setChatDraft('');
           }}
           messages={customerChatMessages}
+          loading={chatThreadLoading}
           onSendMessage={handleSendMessageFromUser}
           pendingIds={pendingChatIds}
           failedIds={new Set(failedChatMessages.map((m) => m.id))}
@@ -727,6 +730,7 @@ export default function App() {
               deliveryMethods={customerDeliveryMethods}
               pickupPoints={customerPickupPoints}
               pickupPointsLoaded={pickupPointsLoaded}
+              pickupPointsFailed={pickupPointsFailed}
             />
           )}
 

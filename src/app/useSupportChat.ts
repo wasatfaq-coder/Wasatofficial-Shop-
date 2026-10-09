@@ -157,6 +157,8 @@ export function useSupportChat({
   // A customer's thread is read only once the chat was opened in this visit (audit 07.10, finding 50: the whole history
   // was read on every visit with the chat closed; only the chat window shows it), then it stays subscribed
   const [chatWanted, setChatWanted] = useState(false);
+  // the customer's thread answered at least once since it was subscribed: until then an empty chat is «loading», not empty
+  const [threadLoadedFor, setThreadLoadedFor] = useState<string | null>(null);
   React.useEffect(() => {
     if (chatOpen) setChatWanted(true);
   }, [chatOpen]);
@@ -167,7 +169,11 @@ export function useSupportChat({
     }
     if (chatIdentity) {
       if (!chatWanted) return;
-      return subscribeToChatMessages((loadedMsgs) => setChatMessages(loadedMsgs), undefined, {
+      const threadUid = chatIdentity.uid;
+      return subscribeToChatMessages((loadedMsgs) => {
+        setChatMessages(loadedMsgs);
+        setThreadLoadedFor(threadUid);
+      }, undefined, {
         threadId: chatIdentity.uid,
         db: chatIdentity.db,
       });
@@ -364,6 +370,8 @@ export function useSupportChat({
     supportStatus,
     pendingChatIds,
     failedChatMessages,
+    // a customer's own thread is not read yet (the window says «Загружаем переписку…» instead of «Диалог пуст»)
+    chatThreadLoading: !isAdmin && Boolean(chatIdentity) && threadLoadedFor !== chatIdentity?.uid,
     customerChatMessages,
     handleSendMessageFromUser,
     handleRetryChatMessage,

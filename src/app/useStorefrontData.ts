@@ -59,6 +59,7 @@ export function useStorefrontData(wantPromos: boolean, wantPickupPoints: boolean
   const [pickupPoints, setPickupPoints] = useState<PickupPoint[]>(loadLocalPickupPoints);
   const [pickupPointsRequested, setPickupPointsRequested] = useState(false);
   const [pickupPointsLoaded, setPickupPointsLoaded] = useState(false);
+  const [pickupPointsFailed, setPickupPointsFailed] = useState(false);
   const readPickupPoints = wantPickupPoints || pickupPointsRequested;
 
   React.useEffect(() => {
@@ -67,11 +68,15 @@ export function useStorefrontData(wantPromos: boolean, wantPickupPoints: boolean
 
   React.useEffect(() => {
     if (!readPickupPoints) return;
-    return subscribeToPickupPoints((loadedPoints) => {
-      setPickupPoints(loadedPoints);
-      setPickupPointsLoaded(true);
-      saveLocalPickupPoints(loadedPoints);
-    });
+    return subscribeToPickupPoints(
+      (loadedPoints) => {
+        setPickupPoints(loadedPoints);
+        setPickupPointsLoaded(true);
+        setPickupPointsFailed(false);
+        saveLocalPickupPoints(loadedPoints);
+      },
+      () => setPickupPointsFailed(true)
+    );
   }, [readPickupPoints]);
 
   // Sync storefront settings on custom update event
@@ -162,6 +167,7 @@ export function useStorefrontData(wantPromos: boolean, wantPickupPoints: boolean
     setDeliveryMethods,
     pickupPoints,
     pickupPointsLoaded,
+    pickupPointsFailed,
     setPickupPoints,
   };
 }
