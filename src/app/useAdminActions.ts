@@ -27,6 +27,7 @@ import {
   type ProductCostEntry,
 } from '../utils/firebaseSync';
 import { samePurchase, type ExchangeRates } from '../utils/currencyPricing';
+import { withPriceChange, withPriceHistories } from '../utils/priceHistory';
 import { BANNERS_STORAGE_KEY } from './useStorefrontData';
 import type { AddToast, Persist } from './useToasts';
 
@@ -179,13 +180,15 @@ export function useAdminActions({
     return persist('пункты выдачи', removed, syncAllPickupPointsToFirestore(updated));
   };
 
-  const handleUpdateProducts = (updatedWithCosts: Product[]) => {
+  const handleUpdateProducts = (edited: Product[]) => {
     // Right after sign-in the admin may still hold index lines (no photos, texts or composition): a product written from
     // one would lose them (admin audit 09.10, finding 4)
     if (!fullCatalog) {
       addToast('Каталог ещё загружается: подождите несколько секунд и сохраните снова', 'info');
       return Promise.resolve(false);
     }
+    // a changed price keeps the old one: unpaid orders are checked against the price of their time (finding 1)
+    const updatedWithCosts = withPriceHistories(adminProducts, edited);
     const changed = changedItems(adminProducts, updatedWithCosts);
     const kept = new Set(updatedWithCosts.map((p) => p.id));
     const costChanges: ({ id: string } & ProductCostEntry)[] = [
@@ -270,13 +273,22 @@ export function useAdminActions({
       addToast('Каталог ещё загружается: подождите несколько секунд и нажмите «Применить» снова', 'info');
       return Promise.resolve(false);
     }
-    const known = new Set(adminProducts.map((p) => p.id));
-    const changed = repriced.filter((p) => known.has(p.id) && p.purchase);
+    const byIdNow = new Map(adminProducts.map((p) => [p.id, p]));
+    const now = new Date();
+    const changed = repriced
+      .filter((p) => byIdNow.has(p.id) && p.purchase)
+      .map((p) => ({ ...p, priceHistory: withPriceChange(byIdNow.get(p.id)!, p.price, now) }));
     const saved = persist(
       'курсы и цены',
       (async () => {
         await updateProductPrices(
-          changed.map((p) => ({ id: p.id, price: p.price, originalPrice: p.originalPrice, discountPercent: p.discountPercent }))
+          changed.map((p) => ({
+            id: p.id,
+            price: p.price,
+            originalPrice: p.originalPrice,
+            discountPercent: p.discountPercent,
+            priceHistory: p.priceHistory,
+          }))
         );
         await saveProductCosts(changed.map((p) => ({ id: p.id, costPrice: p.costPrice, purchase: p.purchase })));
         await saveExchangeRates(rates);
@@ -298,6 +310,7 @@ export function useAdminActions({
           return {
             ...rest,
             price: next.price,
+            ...(next.priceHistory ? { priceHistory: next.priceHistory } : {}),
             ...(typeof next.originalPrice === 'number' ? { originalPrice: next.originalPrice } : {}),
             ...(typeof next.discountPercent === 'number' ? { discountPercent: next.discountPercent } : {}),
           };

@@ -113,6 +113,12 @@ export interface ReviewVote {
   uid: string;
 }
 
+/** A price the product had and when it ended (ISO) */
+export interface PriceHistoryEntry {
+  price: number;
+  until: string;
+}
+
 export interface Product {
   id: string;
   title: string;
@@ -132,6 +138,11 @@ export interface Product {
    * while it matches the prices (`repriceProduct`); the struck-out price stays `originalPrice`
    */
   discountPercent?: number;
+  /**
+   * Earlier prices with the time each ended (`src/utils/priceHistory.ts`, admin audit 09.10, finding 1): an unpaid order
+   * is compared with the price in effect when it was placed. Written by the admin's saves and «Курсы и наценка»
+   */
+  priceHistory?: PriceHistoryEntry[];
   badge?: string;
   description: string;
   material: string;

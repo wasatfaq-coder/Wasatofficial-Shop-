@@ -25,7 +25,7 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { needsOwnerAttention } from './firestoreErrors';
-import { CartItem, Product, ProductSKU, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog, PaymentKind, PaymentTemplate } from '../types';
+import { CartItem, Product, ProductSKU, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog, PaymentKind, PaymentTemplate, PriceHistoryEntry } from '../types';
 import { paymentLogEntry, receiptMessageText } from './paymentDetails';
 import { DEFAULT_STOREFRONT_SETTINGS, generateDefaultSKUs, inStockAfterReturn, inStockAfterStockChange, stockMovementId } from './inventory';
 import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
@@ -708,16 +708,18 @@ export async function saveProductCosts(changes: ({ id: string } & ProductCostEnt
  * No old price or discount percent (`undefined`) removes the field: an old price not above the price is no discount.
  */
 export async function updateProductPrices(
-  changes: { id: string; price: number; originalPrice?: number; discountPercent?: number }[]
+  changes: { id: string; price: number; originalPrice?: number; discountPercent?: number; priceHistory?: PriceHistoryEntry[] }[]
 ) {
   if (changes.length === 0) return;
   const orDelete = (n: number | undefined) => (typeof n === 'number' ? n : deleteField());
   try {
-    await commitInChunks(changes, (batch, { id, price, originalPrice, discountPercent }) =>
+    await commitInChunks(changes, (batch, { id, price, originalPrice, discountPercent, priceHistory }) =>
       batch.update(doc(db, 'products', id), {
         price,
         originalPrice: orDelete(originalPrice),
         discountPercent: orDelete(discountPercent),
+        // earlier prices: unpaid orders are checked against the price of their time
+        ...(priceHistory ? { priceHistory } : {}),
       })
     );
   } catch (error) {
