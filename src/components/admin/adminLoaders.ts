@@ -7,6 +7,8 @@ import type { AdminTab } from './adminSections';
 export const loadAdminNav = () => import('./AdminNav');
 
 export const ADMIN_SECTION_LOADERS: Record<AdminTab, () => Promise<unknown>> = {
+  today: () => import('./AdminTodayTab'),
+  more: loadAdminNav,
   // the chart (recharts) is its own chunk: prefetched too, but the section does not wait for it
   analytics: () => Promise.all([import('./AdminAnalyticsTab'), import('./AdminAnalyticsChart')]),
   orders: () => import('./AdminOrdersTab'),

@@ -1,6 +1,6 @@
 // «Склад» и «Категории» (этап 9 плана docs/admin-wholesale-plan.md): приход нескольких размеров одной операцией,
 // окно удаления категории говорит, сколько в ней товаров
-import { test, expect } from '../fixtures';
+import { test, expect, openAdminSection } from '../fixtures';
 import { readDoc } from '../emulator';
 import { ADMIN, PRODUCTS } from '../store';
 
@@ -14,8 +14,7 @@ test('приход нескольких размеров одной операц
   await signIn(ADMIN);
   await page.getByRole('button', { name: /^Панель администратора/ }).click();
   const panel = page.getByRole('dialog', { name: 'Панель администратора' });
-  await panel.getByRole('tab', { name: 'Каталог', exact: true }).click();
-  await panel.getByRole('tab', { name: 'Склад и SKU' }).click();
+  await openAdminSection(panel, 'Склад и SKU');
   await panel.getByRole('button', { name: 'Оформить операцию', exact: true }).click();
 
   const operation = page.getByRole('dialog', { name: 'Складская операция' });
@@ -38,8 +37,7 @@ test('удаление категории называет число её то�
   await signIn(ADMIN);
   await page.getByRole('button', { name: /^Панель администратора/ }).click();
   const panel = page.getByRole('dialog', { name: 'Панель администратора' });
-  await panel.getByRole('tab', { name: 'Каталог', exact: true }).click();
-  await panel.getByRole('tab', { name: 'Категории', exact: true }).click();
+  await openAdminSection(panel, 'Категории');
   await panel.getByRole('button', { name: 'Удалить: Футболки' }).click();
 
   const confirm = page.getByRole('alertdialog', { name: 'Удалить запись?' });
