@@ -83,4 +83,32 @@ test('владелец задаёт курс и надбавку, цена то�
   const shop = await page.context().newPage();
   await shop.goto(`/product/${item.id}`);
   await expect(shop.getByRole('main').getByText(rub(900)).first()).toBeVisible();
+  await shop.close();
+
+  // the form shows the price at today's rate; a price below the cost is warned about, «Подставить» puts the rate back
+  // (stage 4 of docs/admin-wholesale-plan.md, А8 and А9)
+  await openAdminSection(panel, 'Товары');
+  await panel.getByRole('textbox', { name: 'Поиск товаров' }).fill(item.title);
+  await panel.getByRole('button', { name: 'Редактировать' }).click();
+  await expect(form.getByText('По курсу: 900 ₽')).toBeVisible();
+  await expect(form.getByText('Цена и закупка в ₽ уже по курсу')).toBeVisible();
+  const price = form.getByRole('spinbutton', { name: /^Цена, ₽/ });
+  await price.fill('800');
+  await expect(form.getByText(/Цена ниже закупки на 100/)).toBeVisible();
+  await form.getByRole('button', { name: 'Подставить', exact: true }).click();
+  await expect(price).toHaveValue('900');
+  await expect(form.getByText(/Цена ниже закупки/)).toHaveCount(0);
+  await form.getByRole('button', { name: 'Сохранить изменения' }).click();
+  await expect(form).toBeHidden();
+
+  // a new product bought in dollars gets the price from the rate at once
+  await panel.getByRole('button', { name: 'Добавить товар' }).click();
+  const newForm = page.getByRole('dialog', { name: 'Новый товар каталога' });
+  await newForm.getByRole('radio', { name: '$ Доллар' }).click();
+  await newForm.getByLabel('Закупка, $ *').fill('10');
+  await expect(newForm.getByRole('spinbutton', { name: /^Цена, ₽/ })).toHaveValue('900');
+  await expect(newForm.getByRole('spinbutton', { name: /^Закупка, ₽/ })).toHaveValue('900');
+  await newForm.getByRole('button', { name: 'Отмена' }).click();
+  await page.getByRole('alertdialog', { name: 'Закрыть без сохранения?' }).getByRole('button', { name: 'Не сохранять' }).click();
+  await expect(newForm).toBeHidden();
 });

@@ -37,6 +37,7 @@ import { EMPTY_SIZE_CHART, sizeChartErrors, sizeChartForForm } from '../../../ut
 import type { ProductSizeChart } from '../../../types';
 
 import type { AdminProductsTabProps, ProductCategoryOption } from '../AdminProductsTab';
+import { EDITED_PRODUCT_OPEN_BLOCKS, PRODUCT_FORM_BLOCKS, type ProductFormBlockId } from './ProductFormBlock';
 
 type ProductFormOptions = {
   categories: StoreCategory[];
@@ -86,11 +87,25 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
   const [formPrice, setFormPrice] = useState<number>(0);
   const [formCostPrice, setFormCostPrice] = useState<number | undefined>(undefined);
   const [formOldPrice, setFormOldPrice] = useState<number | undefined>(undefined);
+  // The discount «Подставить» keeps, percent: written with the product, so the next «Применить» keeps the same one
+  // (rounding up to 10 ₽ would make a percent read from the prices smaller at every press)
+  const [formDiscountPercent, setFormDiscountPercent] = useState<number | undefined>(undefined);
+  // The price a new product took from the rate: while the price is still that one, a new rate moves it
+  const autoPriceRef = useRef<number | null>(null);
   // Purchase in dollars or yuan: «Курсы и наценка» recalculates the price from it (src/utils/currencyPricing.ts)
   const [formPurchaseCurrency, setFormPurchaseCurrency] = useState<PurchaseCurrency | ''>('');
   const [formPurchaseAmount, setFormPurchaseAmount] = useState('');
   const [formPurchaseMarkup, setFormPurchaseMarkup] = useState('');
   const [formBadge, setFormBadge] = useState<string>('');
+  // Open blocks of the form: a new product — all, an existing one — «Основное» and «Цены» (stage 4, variant A)
+  const [openFormBlocks, setOpenFormBlocks] = useState<ReadonlySet<ProductFormBlockId>>(new Set());
+  const toggleFormBlock = (id: ProductFormBlockId) =>
+    setOpenFormBlocks((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   const [formInStock, setFormInStock] = useState<boolean>(true);
   const [formImages, setFormImages] = useState<string[]>([]);
   const [newImageUrlInput, setNewImageUrlInput] = useState('');
@@ -288,6 +303,8 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormPurchaseAmount('');
     setFormPurchaseMarkup('');
     setFormOldPrice(undefined);
+    setFormDiscountPercent(undefined);
+    autoPriceRef.current = null;
     setFormBadge('');
     setFormInStock(true);
     setFormImages([]);
@@ -302,6 +319,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setShowFormErrors(false);
     setPhotoError(null);
     setSaveError(null);
+    setOpenFormBlocks(new Set(PRODUCT_FORM_BLOCKS));
     setIsProductFormOpen(true);
   };
 
@@ -329,6 +347,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormPurchaseAmount(prod.purchase ? String(prod.purchase.amount).replace('.', ',') : '');
     setFormPurchaseMarkup(prod.purchase?.markupPercent !== undefined ? String(prod.purchase.markupPercent).replace('.', ',') : '');
     setFormOldPrice(prod.originalPrice);
+    setFormDiscountPercent(prod.discountPercent);
     setFormBadge(prod.badge || '');
     setFormInStock(!isHiddenFromSale(prod));
     setFormImages([...(prod.images ?? [])]);
@@ -347,6 +366,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setShowFormErrors(false);
     setPhotoError(null);
     setSaveError(null);
+    setOpenFormBlocks(new Set(EDITED_PRODUCT_OPEN_BLOCKS));
     setIsProductFormOpen(true);
   };
 
@@ -367,6 +387,8 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setPhotoError(null);
     setSaveError(null);
     if (validationErrors.length > 0) {
+      // every field the list names is on the screen: a closed block would hide it
+      setOpenFormBlocks(new Set(PRODUCT_FORM_BLOCKS));
       requestAnimationFrame(() => formErrorsRef.current?.focus());
       return;
     }
@@ -448,6 +470,8 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
         costPrice: formCostPrice ? Number(formCostPrice) : undefined,
         purchase: formPurchase(),
         originalPrice: formOldPrice ? Number(formOldPrice) : undefined,
+        // no old price — no discount to keep
+        discountPercent: formOldPrice && formDiscountPercent ? formDiscountPercent : undefined,
         badge: formBadge.trim() || undefined,
         description: formDescription.trim(),
         ...photoFields,
@@ -484,6 +508,8 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
         costPrice: formCostPrice ? Number(formCostPrice) : undefined,
         purchase: formPurchase(),
         originalPrice: formOldPrice ? Number(formOldPrice) : undefined,
+        // no old price — no discount to keep
+        discountPercent: formOldPrice && formDiscountPercent ? formDiscountPercent : undefined,
         badge: formBadge.trim() || undefined,
         description: formDescription.trim(),
         ...photoFields,
@@ -563,10 +589,16 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormPurchaseAmount,
     formPurchaseMarkup,
     setFormPurchaseMarkup,
+    formPurchase,
     formOldPrice,
     setFormOldPrice,
+    formDiscountPercent,
+    setFormDiscountPercent,
+    autoPriceRef,
     formBadge,
     setFormBadge,
+    openFormBlocks,
+    toggleFormBlock,
     formInStock,
     setFormInStock,
     formImages,
