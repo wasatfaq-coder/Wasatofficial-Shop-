@@ -201,7 +201,7 @@ export function useAdminActions({
       'товары',
       deleteRemovedDocs('products', adminProducts, updatedWithCosts),
       deleteRemovedDocs('product_previews', adminProducts, updatedWithCosts),
-      syncAllProductsToFirestore(changed),
+      syncAllProductsToFirestore(changed, adminProducts),
       saveProductCosts(costChanges)
     );
     // a removed product's photos go after it: a product never points at a missing photo
@@ -241,9 +241,53 @@ export function useAdminActions({
     return saved;
   };
 
-  const handleUpdateOrders = (updatedOrders: Order[]) => {
-    setOrders(updatedOrders);
-    return persist('заказы', syncAllOrdersToFirestore(changedItems(orders, updatedOrders)));
+  // Orders this session wrote, with the version it changed. A flow that saves twice before the next render (a cancel,
+  // then its promo release) builds the second change on the first: that change is compared with what was written,
+  // not with the list before it. A newer render (a snapshot) has its own version and is compared with that, so data
+  // the database got meanwhile is never written back (admin audit 09.10, finding 7).
+  const writtenOrdersRef = React.useRef(new Map<string, { from: Order; to: Order }>());
+
+  const handleUpdateOrders = async (updatedOrders: Order[]) => {
+    const shown = new Map(orders.map((o) => [o.id, o]));
+    const baseOf = (id: string) => {
+      const written = writtenOrdersRef.current.get(id);
+      const current = shown.get(id);
+      return written && written.from === current ? written.to : current;
+    };
+    const changed = updatedOrders.filter((o) => o !== baseOf(o.id) && o !== shown.get(o.id));
+    const seen = changed.flatMap((o) => {
+      const base = baseOf(o.id);
+      return base ? [base] : [];
+    });
+    // only the changed orders on screen: the caller's list may be older than a snapshot that arrived meanwhile
+    // (a deleted order — one the caller's render had and the list has not — goes away)
+    const changedById = new Map(changed.map((o) => [o.id, o]));
+    const kept = new Set(updatedOrders.map((o) => o.id));
+    setOrders((prev) => {
+      const known = new Set(prev.map((o) => o.id));
+      const rest = prev.filter((o) => kept.has(o.id) || !shown.has(o.id)).map((o) => changedById.get(o.id) ?? o);
+      return [...changed.filter((o) => !known.has(o.id)), ...rest];
+    });
+    let changedMeanwhile: Order[] = [];
+    const saved = await persist(
+      'заказы',
+      syncAllOrdersToFirestore(changed, seen).then((conflicts) => {
+        changedMeanwhile = conflicts;
+      })
+    );
+    if (saved && changedMeanwhile.length === 0) {
+      for (const o of changed) {
+        const current = shown.get(o.id);
+        if (current) writtenOrdersRef.current.set(o.id, { from: current, to: o });
+      }
+    }
+    if (!saved || changedMeanwhile.length === 0) return saved;
+    // the buyer cancelled, paid or confirmed receipt meanwhile: their version stays, the admin sees it and decides again
+    const fresh = new Map(changedMeanwhile.map((o) => [o.id, o]));
+    setOrders((prev) => prev.map((o) => fresh.get(o.id) ?? o));
+    const ids = changedMeanwhile.map((o) => `№ ${o.id}`).join(', ');
+    addToast(`Не сохранено: заказ ${ids} изменил покупатель, пока вы его правили. Проверьте заказ и повторите`, 'error');
+    return false;
   };
 
   const handleUpdatePromos = (updatedPromos: PromoCode[]) => {
