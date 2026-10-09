@@ -45,6 +45,20 @@ test('владелец задаёт курс и надбавку, цена то�
       'Цены изменятся после «Применить»'
     );
     await expect(panel.getByText('есть неприменённые изменения')).toBeVisible();
+
+    // «Закупка в $/¥» for selected products (admin audit 09.10, finding 5): the preview only, nothing is written here
+    await panel.getByRole('tab', { name: 'Товары', exact: true }).click();
+    await panel.getByRole('textbox', { name: 'Поиск товаров' }).fill(item.title);
+    await panel.getByRole('button', { name: 'Выбрать все отфильтрованные' }).click();
+    await panel.getByRole('button', { name: 'Массовые операции' }).click();
+    const bulk = page.getByRole('dialog', { name: 'Массовые операции каталога' });
+    await bulk.getByRole('button', { name: 'Закупка в $/¥' }).click();
+    await bulk.getByRole('radio', { name: '¥ Юань' }).click();
+    await bulk.getByLabel('Закупка за штуку, ¥').fill('0');
+    await expect(bulk.getByRole('alert')).toHaveText('Закупка — число больше нуля');
+    await bulk.getByLabel('Закупка за штуку, ¥').fill('42,5');
+    await expect(bulk.getByText('42,5 ¥')).toBeVisible();
+    await bulk.getByRole('button', { name: 'Закрыть' }).click();
     return;
   }
 
@@ -79,6 +93,11 @@ test('владелец задаёт курс и надбавку, цена то�
   // prices, costs and the rates in one batch (finding 13)
   await expect.poll(async () => (await readDoc(`product_costs/${item.id}`))?.costPrice).toBe(900);
   await expect.poll(async () => (await readDoc('settings/exchange_rates'))?.usd).toEqual({ official: 85, markup: 5, markupKind: 'rub' });
+
+  // the price journal: who, when, from what to what and at which rate (admin audit 09.10, finding 11)
+  await panel.getByRole('button', { name: 'Показать журнал' }).click();
+  const journal = panel.getByRole('list', { name: 'Изменения цен' });
+  await expect(journal.getByRole('listitem').filter({ hasText: item.title }).first()).toContainText('по курсу 90 ₽ за $');
 
   // the customer sees the new price
   const shop = await page.context().newPage();

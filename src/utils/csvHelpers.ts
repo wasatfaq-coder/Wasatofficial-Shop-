@@ -2,6 +2,7 @@ import { Product, Order } from '../types';
 import { extractColorName, getProductTotalStock } from './inventory';
 import { adminStatusLabel } from './orderFlow';
 import { colorHexForName, normalizeColorName, readColorCode, splitColorEntry, UNKNOWN_COLOR_HEX } from './colorCode';
+import { parseDecimal, readPurchase, type ProductPurchase, type PurchaseCurrency } from './currencyPricing';
 
 /**
  * One CSV cell: quoted with doubled quotes. Text starting with = + - @ would run as a formula in Excel
@@ -42,7 +43,41 @@ const PRODUCT_CSV_HEADERS = [
   'Цвета',
   'Ссылка на изображение',
   'Описание',
+  // purchase in a currency (admin audit 09.10, finding 5): «Курсы и наценка» recalculate the price from it
+  'Валюта закупки',
+  'Закупка',
+  'Своя наценка (%)',
 ];
+
+/** «USD», «$», «доллар» — dollars; «CNY», «¥», «юань», «RMB» — yuan */
+function purchaseCurrencyOf(cell: string): PurchaseCurrency | null {
+  const t = cell.trim().toLowerCase();
+  if (['usd', '$', 'доллар', 'долл', 'дол'].includes(t) || t.startsWith('доллар')) return 'USD';
+  if (['cny', 'rmb', '¥', 'юань', 'юани', 'юаней'].includes(t)) return 'CNY';
+  return null;
+}
+
+/** «₽», «RUB», «нет», «-»: the product is bought in roubles, its purchase in a currency is removed */
+const NO_PURCHASE_CELLS = ['₽', 'rub', 'руб', 'рубль', 'рубли', 'нет', '-', '—'];
+
+/**
+ * The purchase from the three cells: `undefined` — the cells are empty, the product keeps its own; `null` — remove it;
+ * `'invalid'` — not a currency, or not an amount above zero (the row is imported without the purchase).
+ */
+export function purchaseFromCells(
+  currencyCell = '',
+  amountCell = '',
+  markupCell = ''
+): ProductPurchase | null | undefined | 'invalid' {
+  const cur = currencyCell.trim();
+  if (!cur && !amountCell.trim() && !markupCell.trim()) return undefined;
+  if (NO_PURCHASE_CELLS.includes(cur.toLowerCase())) return null;
+  const currency = purchaseCurrencyOf(cur);
+  const amount = parseDecimal(amountCell);
+  const markup = markupCell.trim() === '' ? undefined : parseDecimal(markupCell.replace('%', ''));
+  if (!currency || Number.isNaN(markup)) return 'invalid';
+  return readPurchase({ currency, amount, ...(markup !== undefined ? { markupPercent: markup } : {}) }) ?? 'invalid';
+}
 
 /**
  * Export catalog products to CSV (the same columns the import reads)
@@ -67,6 +102,9 @@ export function exportProductsToCSV(products: Product[]): void {
       .join('; '),
     p.images?.[0] || '',
     p.description || '',
+    p.purchase?.currency ?? '',
+    p.purchase?.amount ?? '',
+    p.purchase?.markupPercent ?? '',
   ]);
   downloadCSV(`catalog_${new Date().toISOString().slice(0, 10)}.csv`, [PRODUCT_CSV_HEADERS, ...rows]);
 }
@@ -111,17 +149,18 @@ export function parseProductsFromCSV(
   csvText: string,
   /** the catalog: a colour of an existing product written without a code keeps its shade */
   catalog: Pick<Product, 'id' | 'colors'>[] = []
-): { products: Partial<Product>[]; skipped: number } {
+): { products: Partial<Product>[]; skipped: number; badPurchase: number } {
   const lines = csvText.split(/\r?\n/).filter((l) => l.trim().length > 0);
-  if (lines.length < 2) return { products: [], skipped: 0 };
+  if (lines.length < 2) return { products: [], skipped: 0, badPurchase: 0 };
   // files saved by Excel in the Russian locale use «;»
   const separator = lines[0].split(';').length > lines[0].split(',').length ? ';' : ',';
 
   const products: Partial<Product>[] = [];
   let skipped = 0;
+  let badPurchase = 0;
   for (const line of lines.slice(1)) {
     const cells = splitCsvLine(line, separator);
-    const [id, title, category, priceCell, oldPriceCell, inStockCell, , sizesCell, colorsCell, image, description] = cells;
+    const [id, title, category, priceCell, oldPriceCell, inStockCell, , sizesCell, colorsCell, image, description, currencyCell, amountCell, markupCell] = cells;
     const price = Number(String(priceCell ?? '').replace(/\s/g, '').replace(',', '.'));
     // an existing product may come without a photo: its previews live in product_previews (catalog-scale-plan, stage 6),
     // and the export leaves the cell empty
@@ -147,6 +186,8 @@ export function parseProductsFromCSV(
         hex: hex ?? knownHex ?? colorHexForName(colorName) ?? UNKNOWN_COLOR_HEX,
       };
     });
+    const purchase = purchaseFromCells(currencyCell, amountCell, markupCell);
+    if (purchase === 'invalid') badPurchase++;
     products.push({
       ...(id ? { id } : {}),
       title,
@@ -159,9 +200,11 @@ export function parseProductsFromCSV(
       ...(colors.length ? { colors } : {}),
       ...(image ? { images: [image] } : {}),
       description: description || '',
+      // empty cells keep the product's purchase; «₽» removes it (the key with undefined replaces the old one)
+      ...(purchase === null ? { purchase: undefined } : purchase && purchase !== 'invalid' ? { purchase } : {}),
     });
   }
-  return { products, skipped };
+  return { products, skipped, badPurchase };
 }
 
 /**

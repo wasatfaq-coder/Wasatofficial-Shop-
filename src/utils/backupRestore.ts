@@ -39,6 +39,7 @@ export const BACKUP_COLLECTION_TITLES: Record<string, string> = {
   stock_movements: 'Журнал склада',
   promo_uses: 'Использования промокодов',
   payment_templates: 'Шаблоны реквизитов',
+  price_changes: 'Журнал цен',
 };
 
 export type RestoreMode = 'missing' | 'overwrite';

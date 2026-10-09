@@ -20,6 +20,7 @@ import { isBrowserOffline } from '../../utils/network';
 import { useUnsavedChanges } from '../../utils/unsavedChanges';
 import { pluralRu } from '../../utils/pluralize';
 import { ConfirmDialog } from '../ConfirmDialog';
+import { AdminPriceJournal } from './AdminPriceJournal';
 
 interface AdminRatesTabProps {
   /** Products with their cost and purchase (admin products) */
@@ -197,7 +198,8 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
             <p className="text-xs text-[#4E5C70] leading-snug mt-0.5">
               Цены товаров, закупленных в долларах или юанях, считаются от рабочего курса: курс ЦБ плюс ваша надбавка.
               «Применить» пересчитывает цену и себестоимость всех таких товаров сразу, цена округляется вверх до{' '}
-              {PRICE_ROUNDING_RUB} ₽. Закупку в $ или ¥ задают в форме товара, в блоке цен.
+              {PRICE_ROUNDING_RUB} ₽. Закупку в $ или ¥ задают в форме товара, в CSV («Валюта закупки», «Закупка») или списком:
+              «Товары» → выбрать товары → «Массовые операции» → «Закупка в $/¥».
             </p>
           </div>
         </div>
@@ -403,6 +405,8 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
           Применить
         </button>
       </div>
+
+      <AdminPriceJournal />
 
       <ConfirmDialog
         isOpen={confirmOpen}
