@@ -1,23 +1,41 @@
 import { Order } from '../types';
 import { orderTimestamp } from '../shared/orderDate';
-import { linePrice } from '../shared/orderLine';
+import { linePrice, orderSalesChannel, type SalesChannel } from '../shared/orderLine';
+import { isRevenueOrder, orderRevenue } from './orderRevenue';
+import {
+  defaultGrouping,
+  fitGrouping,
+  periodBuckets,
+  resolvePeriod,
+  type AnalyticsGrouping,
+  type PeriodSelection,
+} from './analyticsPeriods';
+import { NO_COSTS, orderCogs, orderGoodsRevenue, summarizeProfit, type CostSources, type ProfitSummary } from './salesProfit';
 
-export type AnalyticsPeriod = '7d' | '14d' | '30d' | '6m' | '1y';
+export { isRevenueOrder, orderRevenue, orderTotalAfterRefund } from './orderRevenue';
+export type { AnalyticsPeriod, AnalyticsGrouping, PeriodSelection } from './analyticsPeriods';
+
 export type OrderStatusFilter = 'all' | 'paid' | 'delivered';
+/** «Все продажи», «Розница», «Опт» */
+export type ChannelFilter = 'all' | SalesChannel;
 
 export interface DailyDataPoint {
-  dateKey: string;          // ISO Date "YYYY-MM-DD"
-  label: string;            // Short axis label: "Пн 15", "15 авг"
+  dateKey: string;          // «YYYY-MM-DD» (day), «WYYYY-MM-DD» (week from Monday), «YYYY-MM» (month)
+  label: string;            // Short axis label: "Пн 15", "15 авг", "ОКТ"
   date: string;             // Display date: "15 авг"
-  fullDate: string;         // Full Russian date: "15 августа 2026"
-  weekday: string;          // Short weekday: "Пн", "Вт", etc.
-  revenue: number;          // Daily revenue in RUB
+  fullDate: string;         // Full Russian date: "15 августа 2026", "5–11 октября 2026"
+  weekday: string;          // Short weekday: "Пн", "Вт", etc.; «Неделя», «Месяц»
+  revenue: number;          // Revenue in RUB: paid money with delivery
   prevRevenue: number;      // Comparison revenue from prior period
   orders: number;           // Orders count
   prevOrders: number;       // Comparison orders count
   avgCheck: number;         // Average check in RUB
   returns: number;          // Returns / cancellations
   prevReturns: number;      // Prior returns
+  /** What the goods of the paid orders cost to buy (salesProfit.ts) */
+  cogs: number;
+  /** Paid money for goods (without delivery) minus `cogs`; may be below zero */
+  netProfit: number;
   isPeakDay: boolean;       // Is this the peak revenue day in the period?
   hasRealOrders: boolean;   // Are there real Firestore orders on this date?
   realOrdersList: Order[];  // Orders placed on this date
@@ -38,64 +56,17 @@ export interface AnalyticsSummary {
   realOrdersCount: number;
   paidOrdersCount: number;
   periodDaysCount: number;
+  /** Net profit of the period (salesProfit.ts) and of the previous one */
+  profit: ProfitSummary;
+  prevNetProfit: number;
+  netProfitGrowth: number;
 }
 
-const RU_MONTHS_SHORT = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-const RU_MONTHS_FULL = [
-  'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
-  'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
-];
-const RU_MONTHS_NOMINATIVE = [
-  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-];
-const RU_WEEKDAYS = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-
-/** YYYY-MM-DD in local time */
-function formatISODateKey(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function formatDateLabels(d: Date): { label: string; date: string; fullDate: string; weekday: string } {
-  const dayNum = d.getDate();
-  const monthIdx = d.getMonth();
-  const weekday = RU_WEEKDAYS[d.getDay()] || '';
-  return {
-    label: `${weekday} ${dayNum}`,
-    date: `${dayNum} ${RU_MONTHS_SHORT[monthIdx]}`,
-    fullDate: `${dayNum} ${RU_MONTHS_FULL[monthIdx]} ${d.getFullYear()}`,
-    weekday,
-  };
-}
-
-/** The order's sum minus a refund, whatever its payment (a cancelled order — 0) */
-export function orderTotalAfterRefund(o: Order): number {
-  if (o.isCancelled) return 0;
-  const price = typeof o.totalPrice === 'number' ? o.totalPrice : Number(o.totalPrice) || 0;
-  const refund = typeof o.refundAmount === 'number' ? o.refundAmount : 0;
-  return Math.max(0, price - refund);
-}
-
-/**
- * Revenue an order brings: only paid money (owner's decision 02.10, finding 29) — «Оплачен» is set by the admin after
- * checking the money, and payment on delivery becomes «Оплачен» when the order is handed over. A refund is taken off;
- * a refunded order without the refunded sum counts as refunded in full. Unpaid and cancelled orders bring nothing.
- */
-export function orderRevenue(o: Order): number {
-  if (o.isCancelled) return 0;
-  const price = typeof o.totalPrice === 'number' ? o.totalPrice : Number(o.totalPrice) || 0;
-  const refund = typeof o.refundAmount === 'number' ? o.refundAmount : null;
-  if (o.paymentStatus === 'paid') return Math.max(0, price - (refund ?? 0));
-  if (o.paymentStatus === 'refunded') return refund === null ? 0 : Math.max(0, price - refund);
-  return 0;
-}
-
-/** The order is counted in «Выручка» and «Средний чек»: paid (a partly refunded one too) and not cancelled */
-export function isRevenueOrder(o: Order): boolean {
-  return !o.isCancelled && (o.paymentStatus === 'paid' || (o.paymentStatus === 'refunded' && orderRevenue(o) > 0));
+/** What else the period is counted by: grouping (default — by the period), sales channel, line costs */
+export interface SalesOptions {
+  grouping?: AnalyticsGrouping;
+  channel?: ChannelFilter;
+  costs?: CostSources;
 }
 
 function matchesStatusFilter(o: Order, statusFilter: OrderStatusFilter): boolean {
@@ -110,78 +81,40 @@ function matchesStatusFilter(o: Order, statusFilter: OrderStatusFilter): boolean
   return true;
 }
 
-interface Bucket {
-  start: number;
-  end: number;
-  dateKey: string;
-  label: string;
-  date: string;
-  fullDate: string;
-  weekday: string;
-}
-
-/** The period's buckets (days or months, oldest first) and the previous period of the same length */
-function periodBuckets(period: AnalyticsPeriod, now: Date): { buckets: Bucket[]; prevStart: number } {
-  const buckets: Bucket[] = [];
-  if (period === '6m' || period === '1y') {
-    const months = period === '6m' ? 6 : 12;
-    for (let i = months - 1; i >= 0; i--) {
-      const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
-      const m = start.getMonth();
-      buckets.push({
-        start: start.getTime(),
-        end: end.getTime(),
-        dateKey: `${start.getFullYear()}-${String(m + 1).padStart(2, '0')}`,
-        label: RU_MONTHS_SHORT[m].toUpperCase(),
-        date: `${RU_MONTHS_SHORT[m]} ${start.getFullYear()}`,
-        fullDate: `${RU_MONTHS_NOMINATIVE[m]} ${start.getFullYear()}`,
-        weekday: 'Месяц',
-      });
-    }
-    const prevStart = new Date(now.getFullYear(), now.getMonth() - months * 2 + 1, 1).getTime();
-    return { buckets, prevStart };
-  }
-  const days = period === '7d' ? 7 : period === '14d' ? 14 : 30;
-  for (let i = days - 1; i >= 0; i--) {
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i + 1);
-    const labels = formatDateLabels(start);
-    buckets.push({
-      start: start.getTime(),
-      end: end.getTime(),
-      dateKey: formatISODateKey(start),
-      ...labels,
-      label: period === '30d' ? labels.date : labels.label,
-    });
-  }
-  const prevStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days * 2 + 1).getTime();
-  return { buckets, prevStart };
+function matchesChannel(o: Order, channel: ChannelFilter): boolean {
+  return channel === 'all' || orderSalesChannel(o) === channel;
 }
 
 const growth = (current: number, prev: number) =>
   prev > 0 ? Number((((current - prev) / prev) * 100).toFixed(1)) : 0;
 
 /**
- * Orders of the selected period by day (7/14/30 days) or month (6/12 months), dated by createdAt
- * (orderTimestamp). Only orders placed after the statistics reset (settings/analytics.resetAt) count;
- * orders without a known date are counted separately and left out of the chart.
+ * Orders of the selected period by day, week or month, dated by createdAt (orderTimestamp). Only orders placed after
+ * the statistics reset (settings/analytics.resetAt) count; orders without a known date are counted separately and left
+ * out of the chart. `options.channel` keeps only retail or only wholesale orders (every number then is of that channel),
+ * `options.costs` gives the line costs for the net profit.
  */
 export function computeFirestoreDailySales(
   orders: Order[],
-  period: AnalyticsPeriod,
+  period: PeriodSelection,
   statusFilter: OrderStatusFilter = 'all',
   resetAt: number | null = null,
-  now: Date = new Date()
-): { dailyData: DailyDataPoint[]; summary: AnalyticsSummary; periodOrders: Order[]; undatedCount: number } {
-  const { buckets, prevStart } = periodBuckets(period, now);
-  const periodStart = buckets[0].start;
-  const periodEnd = buckets[buckets.length - 1].end;
+  now: Date = new Date(),
+  options: SalesOptions = {}
+): { dailyData: DailyDataPoint[]; summary: AnalyticsSummary; periodOrders: Order[]; undatedCount: number; grouping: AnalyticsGrouping } {
+  const resolved = resolvePeriod(period, now);
+  const grouping = fitGrouping(options.grouping ?? defaultGrouping(period, now), resolved);
+  const buckets = periodBuckets(resolved, grouping);
+  const periodStart = resolved.start.getTime();
+  const periodEnd = resolved.end.getTime();
+  const prevStart = resolved.prevStart.getTime();
+  const channel = options.channel ?? 'all';
+  const costs = options.costs ?? NO_COSTS;
 
   let undatedCount = 0;
   const dated: { order: Order; t: number }[] = [];
   for (const order of orders) {
-    if (!matchesStatusFilter(order, statusFilter)) continue;
+    if (!matchesStatusFilter(order, statusFilter) || !matchesChannel(order, channel)) continue;
     const t = orderTimestamp(order, now);
     if (t === null) {
       if (resetAt === null) undatedCount++;
@@ -195,7 +128,9 @@ export function computeFirestoreDailySales(
     const inBucket = dated.filter((d) => d.t >= b.start && d.t < b.end).map((d) => d.order);
     const active = inBucket.filter((o) => !o.isCancelled);
     const revenue = active.reduce((sum, o) => sum + orderRevenue(o), 0);
-    const paidCount = active.filter(isRevenueOrder).length;
+    const paid = active.filter(isRevenueOrder);
+    const goodsRevenue = paid.reduce((sum, o) => sum + orderGoodsRevenue(o), 0);
+    const cogs = paid.reduce((sum, o) => sum + orderCogs(o, costs).cogs, 0);
     return {
       dateKey: b.dateKey,
       label: b.label,
@@ -207,9 +142,11 @@ export function computeFirestoreDailySales(
       orders: active.length,
       prevOrders: 0,
       // the check of the paid orders: unpaid ones bring no revenue and would lower it
-      avgCheck: paidCount > 0 ? Math.round(revenue / paidCount) : 0,
+      avgCheck: paid.length > 0 ? Math.round(revenue / paid.length) : 0,
       returns: inBucket.length - active.length,
       prevReturns: 0,
+      cogs,
+      netProfit: goodsRevenue - cogs,
       isPeakDay: false,
       hasRealOrders: inBucket.length > 0,
       realOrdersList: inBucket,
@@ -228,16 +165,19 @@ export function computeFirestoreDailySales(
 
   const totalRevenue = dailyData.reduce((sum, item) => sum + item.revenue, 0);
   const totalOrders = dailyData.reduce((sum, item) => sum + item.orders, 0);
-  const totalPaidOrders = dated.filter((d) => d.t >= periodStart && d.t < periodEnd && isRevenueOrder(d.order)).length;
+  const totalPaidOrders = periodOrders.filter(isRevenueOrder).length;
   const totalReturns = dailyData.reduce((sum, item) => sum + item.returns, 0);
   const prevTotalRevenue = prevActive.reduce((sum, o) => sum + orderRevenue(o), 0);
   const prevTotalOrders = prevActive.length;
   const allPlaced = totalOrders + totalReturns;
+  const profit = summarizeProfit(periodOrders, costs);
+  const prevNetProfit = summarizeProfit(prevOrders, costs).netProfit;
 
   return {
     dailyData,
     periodOrders,
     undatedCount,
+    grouping,
     summary: {
       totalRevenue,
       prevTotalRevenue,
@@ -257,6 +197,9 @@ export function computeFirestoreDailySales(
       realOrdersCount: orders.length,
       paidOrdersCount: periodOrders.filter((o) => matchesStatusFilter(o, 'paid')).length,
       periodDaysCount: dailyData.length,
+      profit,
+      prevNetProfit,
+      netProfitGrowth: growth(profit.netProfit, prevNetProfit),
     },
   };
 }

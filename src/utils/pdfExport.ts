@@ -1,4 +1,5 @@
 import { currentStoreName } from './storeContacts';
+import type { ProfitSummary } from './salesProfit';
 
 interface ReportData {
   periodLabel: string;
@@ -20,6 +21,10 @@ interface ReportData {
     quantity: number;
     revenue: number;
   }>;
+  /** «Все продажи», «Розница», «Опт»: which orders the numbers above are of */
+  channelLabel?: string;
+  /** Net profit of retail and wholesale; `estimated` — part of the cost is today's purchase price */
+  profit?: { retail: ProfitSummary; wholesale: ProfitSummary; estimated: boolean };
   /** «Статистика считается с …» after a reset */
   resetNote?: string;
   recentOrders: Array<{
@@ -34,6 +39,49 @@ interface ReportData {
 /** Order ids, product and category names come from the database (orders can be created by customers) */
 const esc = (value: unknown) =>
   String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]!);
+
+const rub = (value: number) => `${value < 0 ? '−' : ''}${Math.abs(value).toLocaleString('ru-RU')} ₽`;
+
+/** «Чистый доход: розница и опт» — the same numbers as on the screen */
+function profitTable(profit: NonNullable<ReportData['profit']>): string {
+  const approx = profit.estimated ? '≈ ' : '';
+  const cell = 'padding: 6px 8px; text-align: right; font-weight: 700; color: #0F172A;';
+  const rows: [string, (p: ProfitSummary) => string][] = [
+    ['Оплаченных заказов', (p) => String(p.orders)],
+    ['Выручка от товаров (без доставки)', (p) => rub(p.revenue)],
+    ['Себестоимость закупки', (p) => approx + rub(p.cogs)],
+    ['Чистый доход', (p) => approx + rub(p.netProfit)],
+    ['Маржа', (p) => (p.marginPercent === null ? '—' : `${approx}${p.marginPercent}%`)],
+  ];
+  return `
+    <div style="border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px; margin-bottom: 24px;">
+      <h3 style="margin: 0 0 10px 0; font-size: 12px; font-weight: 800; text-transform: uppercase; color: #334155; letter-spacing: 0.5px;">
+        Чистый доход: розница и опт
+      </h3>
+      <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+        <thead>
+          <tr style="border-bottom: 1px solid #CBD5E1; color: #64748B;">
+            <th style="padding: 4px 0; text-align: left;"></th>
+            <th style="padding: 4px 8px; text-align: right;">Розница</th>
+            <th style="padding: 4px 8px; text-align: right;">Опт</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows
+            .map(
+              ([label, value]) => `
+            <tr style="border-bottom: 1px solid #F1F5F9;">
+              <td style="padding: 6px 0; color: #334155;">${esc(label)}</td>
+              <td style="${cell}">${esc(value(profit.retail))}</td>
+              <td style="${cell}">${esc(value(profit.wholesale))}</td>
+            </tr>`
+            )
+            .join('')}
+        </tbody>
+      </table>
+      ${profit.estimated ? '<p style="margin: 8px 0 0 0; font-size: 10px; color: #64748B;">≈ — себестоимость части заказов взята по сегодняшней закупке товара (оценка)</p>' : ''}
+    </div>`;
+}
 
 /** Start loading the PDF libraries before the click (hover or focus on the report button) */
 export function preloadPdfLibraries(): void {
@@ -80,6 +128,7 @@ export async function generateAnalyticsPDF(data: ReportData): Promise<void> {
     </div>
 
     ${data.resetNote ? `<p style="margin: -12px 0 16px 0; font-size: 11px; color: #64748B;">${esc(data.resetNote)}</p>` : ''}
+    ${data.channelLabel ? `<p style="margin: -8px 0 14px 0; font-size: 12px; font-weight: 700; color: #334155;">Продажи: ${esc(data.channelLabel)}</p>` : ''}
     <!-- Summary Metrics Grid -->
     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px;">
       <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px;">
@@ -112,6 +161,8 @@ export async function generateAnalyticsPDF(data: ReportData): Promise<void> {
         </p>
       </div>
     </div>
+
+    ${data.profit ? profitTable(data.profit) : ''}
 
     <!-- 2 Column Section: Categories & Top Products -->
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
