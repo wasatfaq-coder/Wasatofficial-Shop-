@@ -36,7 +36,7 @@ import {
   getProductFeatures,
   getProductSpecRows,
 } from '../utils/productAttributes';
-import { photoBadgeClass } from '../utils/productBadge';
+import { photoBadgeClass, shownBadge, shownOldPrice } from '../utils/productBadge';
 import { getProductRating } from '../utils/productRating';
 import { productImage } from '../utils/productImage';
 import { useProductPhotos } from '../utils/useProductPhotos';
@@ -303,10 +303,10 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           />
 
           {/* Badge in top-left */}
-          {product.badge && (
+          {shownBadge(product) && (
             <div className="absolute top-3 left-3 z-10">
-              <span className={`h-6 px-3 rounded-full ${photoBadgeClass(product.badge)} text-[11px] tracking-wider uppercase font-bold inline-flex items-center justify-center leading-none`}>
-                {product.badge}
+              <span className={`h-6 px-3 rounded-full ${photoBadgeClass(shownBadge(product)!)} text-[11px] tracking-wider uppercase font-bold inline-flex items-center justify-center leading-none`}>
+                {shownBadge(product)}
               </span>
             </div>
           )}
@@ -561,9 +561,9 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               <span className="text-2xl font-extrabold text-[#2D3A4E] whitespace-nowrap">
                 {product.price.toLocaleString('ru-RU')} ₽
               </span>
-              {product.originalPrice && (
+              {shownOldPrice(product) !== null && (
                 <span className="text-sm text-[#4E5C70] line-through whitespace-nowrap">
-                  {product.originalPrice.toLocaleString('ru-RU')} ₽
+                  {shownOldPrice(product)!.toLocaleString('ru-RU')} ₽
                 </span>
               )}
             </div>

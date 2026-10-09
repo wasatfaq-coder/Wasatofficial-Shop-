@@ -55,14 +55,14 @@ export function ProductListDialogs({ list, products, onUpdateProducts, onShowToa
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  if (productToInspect?.id === productToDelete.id) {
-                    setProductToInspect(null);
-                  }
-                  onUpdateProducts(products.filter((p) => p.id !== productToDelete.id));
-                  setSelectedProductIds((prev) => prev.filter((id) => id !== productToDelete.id));
-                  onShowToast(`Товар «${productToDelete.title}» удален`, 'info');
+                onClick={async () => {
+                  const removed = productToDelete;
                   setProductToDelete(null);
+                  // «удален» only after the database answered; a refusal already showed its toast
+                  if ((await onUpdateProducts(products.filter((p) => p.id !== removed.id))) === false) return;
+                  if (productToInspect?.id === removed.id) setProductToInspect(null);
+                  setSelectedProductIds((prev) => prev.filter((id) => id !== removed.id));
+                  onShowToast(`Товар «${removed.title}» удален`, 'info');
                 }}
                 className="flex-1 py-2.5 neu-button-danger rounded-xl text-xs font-extrabold transition-all cursor-pointer"
               >

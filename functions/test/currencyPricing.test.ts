@@ -104,9 +104,45 @@ describe('«Применить» recalculates every product bought in a currency
     expect(repriceProducts([p], rates())).toEqual([]);
   });
 
-  test('an old (struck-out) price not above the new one is flagged: the discount would stop showing', () => {
-    const p = product('usd', { price: 850, originalPrice: 890, purchase: { currency: 'USD', amount: 10 } });
-    expect(repriceProducts([p], rates())[0].oldPriceBelow).toBe(true);
+  test('a discounted product keeps its discount: the old price follows the rate, the price the same share below it', () => {
+    // 10 $ × 90 ₽ = 900 ₽ without discount; the product sold 20 % off (800 of 1000)
+    const p = product('usd', { price: 800, originalPrice: 1000, purchase: { currency: 'USD', amount: 10 } });
+    const [change] = repriceProducts([p], rates());
+    expect(change.after).toEqual({ price: 720, costPrice: 900, originalPrice: 900 });
+    expect(change.discountPercent).toBe(20);
+  });
+
+  test('a kept discount is stable: the same rates change nothing the second time', () => {
+    const p = product('usd', { price: 720, costPrice: 900, originalPrice: 900, purchase: { currency: 'USD', amount: 10 } });
+    expect(repriceProducts([p], rates())).toEqual([]);
+  });
+
+  test('the discount does not shrink over several rates: the stored percent is kept, not the rounded share', () => {
+    let p = product('usd', { price: 850, originalPrice: 1000, discountPercent: 15, purchase: { currency: 'USD', amount: 10 } });
+    for (const official of [98, 96, 98, 96, 98]) {
+      const [change] = repriceProducts([p], rates({ usd: { official, markup: 5, markupKind: 'rub' } }));
+      p = { ...p, ...change.after, originalPrice: change.after.originalPrice ?? undefined, discountPercent: change.discountPercent };
+    }
+    // 10 $ × 103 ₽ = 1030 ₽, 15 % off = 875,5 → 880 ₽ (rounded up), the same as after the first change
+    expect([p.price, p.originalPrice, p.discountPercent]).toEqual([880, 1030, 15]);
+  });
+
+  test('a stored percent the prices no longer show (price changed by hand) gives way to the prices', () => {
+    const p = product('usd', { price: 700, originalPrice: 1000, discountPercent: 15, purchase: { currency: 'USD', amount: 10 } });
+    expect(repriceProducts([p], rates())[0].discountPercent).toBe(30);
+  });
+
+  test('an old price not above the price is no discount and is removed (admin audit 09.10, finding 2)', () => {
+    const p = product('usd', { price: 900, costPrice: 900, originalPrice: 890, purchase: { currency: 'USD', amount: 10 } });
+    const [change] = repriceProducts([p], rates());
+    expect(change.after).toEqual({ price: 900, costPrice: 900, originalPrice: null });
+    expect(change.discountPercent).toBe(0);
+  });
+
+  test('a discount that rounding would eat is removed rather than shown as 0 %', () => {
+    // 1 % off 900 ₽ rounds up to 900 ₽ — no discount is left
+    const p = product('usd', { price: 990, originalPrice: 1000, purchase: { currency: 'USD', amount: 10 } });
+    expect(repriceProducts([p], rates())[0].after).toEqual({ price: 900, costPrice: 900, originalPrice: null });
   });
 });
 

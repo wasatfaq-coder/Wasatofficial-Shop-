@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, X, Tag, Sparkles, Palette, ArrowRight } from 'lucide-react';
 import { Product } from '../types';
 import { RatingBadge } from './RatingBadge';
-import { photoBadgeClass } from '../utils/productBadge';
+import { photoBadgeClass, shownBadge, shownOldPrice } from '../utils/productBadge';
 import { getProductRating } from '../utils/productRating';
 import type { StoreCategory } from '../types';
 import { productImage } from '../utils/productImage';
@@ -281,17 +281,17 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
                       </p>
                       <div className="flex items-center gap-1.5 min-w-0 text-[11px] text-[#4E5C70] font-medium">
                         <span className="truncate">{product.categoryLabel}</span>
-                        {product.badge && (
-                          <span className={`text-[11px] font-extrabold ${photoBadgeClass(product.badge)} px-1.5 py-0.5 rounded-md shrink-0`}>
-                            {product.badge}
+                        {shownBadge(product) && (
+                          <span className={`text-[11px] font-extrabold ${photoBadgeClass(shownBadge(product)!)} px-1.5 py-0.5 rounded-md shrink-0`}>
+                            {shownBadge(product)}
                           </span>
                         )}
                       </div>
                       <div className="flex items-baseline gap-1.5 flex-wrap">
                         <span className="text-xs font-extrabold text-[#2D3A4E]">{product.price.toLocaleString('ru-RU')} ₽</span>
-                        {product.originalPrice && (
+                        {shownOldPrice(product) !== null && (
                           <span className="text-[11px] text-[#4E5C70] line-through">
-                            {product.originalPrice.toLocaleString('ru-RU')} ₽
+                            {shownOldPrice(product)!.toLocaleString('ru-RU')} ₽
                           </span>
                         )}
                         <RatingBadge rating={getProductRating(product)?.rating} className="ml-auto" />

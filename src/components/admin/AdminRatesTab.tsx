@@ -115,7 +115,13 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
     setConfirmOpen(false);
     if (!onApply) return;
     setSaving(true);
-    const repriced = changes.map((c) => ({ ...c.product, price: c.after.price, costPrice: c.after.costPrice }));
+    const repriced = changes.map((c) => ({
+      ...c.product,
+      price: c.after.price,
+      costPrice: c.after.costPrice,
+      originalPrice: c.after.originalPrice ?? undefined,
+      discountPercent: c.discountPercent || undefined,
+    }));
     const ok = await onApply({ ...rates, appliedAt: new Date().toISOString() }, repriced);
     setSaving(false);
     if (!ok) return;
@@ -287,8 +293,14 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
                         закупка {sign}
                         {c.product.purchase?.amount.toLocaleString('ru-RU')} → себестоимость {rub(c.after.costPrice)}
                       </p>
-                      {c.oldPriceBelow && (
-                        <p className="text-[11px] font-bold text-warning">Старая цена не выше новой — скидка пропадёт</p>
+                      {c.after.originalPrice !== null ? (
+                        <p className="text-[11px] text-[#4E5C70]">
+                          скидка {c.discountPercent} % сохраняется: старая цена {rub(c.after.originalPrice)}
+                        </p>
+                      ) : (
+                        typeof c.before.originalPrice === 'number' && (
+                          <p className="text-[11px] font-bold text-warning">Старая цена не выше новой — она убирается</p>
+                        )
                       )}
                     </div>
                     <p className="flex items-center gap-1.5 text-xs font-bold tabular-nums">

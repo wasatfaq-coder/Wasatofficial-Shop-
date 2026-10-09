@@ -105,6 +105,12 @@ export interface Product {
    */
   purchase?: ProductPurchase;
   originalPrice?: number;
+  /**
+   * The discount, percent, the owner set (bulk «Скидка», kept by «Курсы и наценка»): the price after rounding up to 10 ₽
+   * gives a slightly smaller share, and recalculating from it would shrink the discount at every new rate. Trusted only
+   * while it matches the prices (`repriceProduct`); the struck-out price stays `originalPrice`
+   */
+  discountPercent?: number;
   badge?: string;
   description: string;
   material: string;

@@ -154,6 +154,7 @@ export function useProductList(
         ...p,
         originalPrice: orig,
         price: newPrice,
+        discountPercent: bulkDiscountPercent,
         badge: `-${bulkDiscountPercent}%`,
       };
     });

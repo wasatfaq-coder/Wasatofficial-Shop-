@@ -101,6 +101,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
             ...p,
             price: restoredPrice,
             originalPrice: undefined,
+            discountPercent: undefined,
             badge: p.badge === 'SALE' || p.badge === 'Скидка' ? undefined : p.badge,
           };
         } else {
@@ -112,6 +113,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
             ...p,
             price: roundedPrice,
             originalPrice: basePrice,
+            discountPercent,
             badge: discountBadge === 'Без бейджа' ? undefined : discountBadge,
           };
         }
