@@ -52,6 +52,7 @@ import { getCategories } from './utils/categories';
 import { screenDocumentTitle } from './utils/screenMeta';
 import { VariantPickerSheet } from './components/VariantPickerSheet';
 import { DEFAULT_CATALOG_VIEW, type CatalogView } from './utils/productListing';
+import { linePrice } from './shared/orderLine';
 
 // Legal documents: a separate chunk with the templates, loaded when a document is opened
 const LegalDocumentScreen = lazy(() => import('./views/LegalDocumentScreen'));
@@ -531,7 +532,7 @@ export default function App() {
           appliedPromo={appliedPromo}
           onApplyPromo={handleApplyPromo}
           onRemovePromo={handleRemovePromo}
-          cartSubtotal={cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0)}
+          cartSubtotal={cartItems.reduce((acc, item) => acc + linePrice(item) * item.quantity, 0)}
           cartItems={cartItems}
           promos={promos}
         />

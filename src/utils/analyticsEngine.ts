@@ -1,5 +1,6 @@
 import { Order } from '../types';
 import { orderTimestamp } from '../shared/orderDate';
+import { linePrice } from '../shared/orderLine';
 
 export type AnalyticsPeriod = '7d' | '14d' | '30d' | '6m' | '1y';
 export type OrderStatusFilter = 'all' | 'paid' | 'delivered';
@@ -307,7 +308,7 @@ export function computePeriodBreakdown(periodOrders: Order[], topCount = 5): {
       const product = item.product;
       if (!product) continue;
       const quantity = item.quantity || 1;
-      const lineRevenue = (Number(product.price) || 0) * quantity;
+      const lineRevenue = linePrice(item) * quantity;
       const entry = products.get(product.id) ?? {
         id: product.id,
         title: product.title || 'Товар',

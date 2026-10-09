@@ -27,7 +27,7 @@ import { ConfirmDialog } from '../ConfirmDialog';
 import { applyAdminStockChanges, type AdminStockChange } from '../../utils/firebaseSync';
 import { adminStatusLabel, isCarrierOrder } from '../../utils/orderFlow';
 import { OrderLineThumbImage } from '../ProductThumbImage';
-import { toOrderLineProduct } from '../../shared/orderLine';
+import { toOrderLineProduct, linePrice } from '../../shared/orderLine';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { sameValue, useUnsavedChanges } from '../../utils/unsavedChanges';
 import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
@@ -537,7 +537,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
               </div>
             ) : (
               items.map((item, idx) => {
-                const itemTotal = (item.product.price || 0) * item.quantity;
+                const itemTotal = linePrice(item) * item.quantity;
                 return (
                   <div
                     key={item.id || idx}
@@ -586,7 +586,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                           {itemTotal.toLocaleString('ru-RU')} ₽
                         </span>
                         <span className="text-[11px] text-[#4E5C70] font-medium">
-                          ({(item.product.price || 0).toLocaleString('ru-RU')} ₽/шт.)
+                          ({linePrice(item).toLocaleString('ru-RU')} ₽/шт.)
                         </span>
                       </div>
 

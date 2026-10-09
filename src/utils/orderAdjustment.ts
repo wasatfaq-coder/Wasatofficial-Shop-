@@ -1,5 +1,6 @@
 import type { CartItem, Order, PromoCode } from '../types';
 import { calcSubtotal, toPricingLine } from '../shared/orderPricing';
+import { linePrice } from '../shared/orderLine';
 
 export interface AdjustedTotals {
   subtotal: number;
@@ -46,7 +47,7 @@ export function adjustedOrderTotals(
 }
 
 function lineKey(item: CartItem): string {
-  return `${item.product.id}|${item.selectedColor ?? ''}|${item.selectedSize ?? ''}|${item.quantity}|${item.product.price}`;
+  return `${item.product.id}|${item.selectedColor ?? ''}|${item.selectedSize ?? ''}|${item.quantity}|${linePrice(item)}`;
 }
 
 function sameLines(a: CartItem[], b: CartItem[]): boolean {

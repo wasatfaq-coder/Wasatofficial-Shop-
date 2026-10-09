@@ -29,4 +29,12 @@ describe('cart storage', () => {
     expect(loadStoredCart('не json')).toEqual([]);
     expect(loadStoredCart(null)).toEqual([]);
   });
+
+  test('a line\'s own price is not read from the browser: localStorage can be edited by anyone', () => {
+    const raw = JSON.stringify([{ ...line('cheap'), unitPrice: 1, priceKind: 'wholesale' }]);
+    const [loaded] = loadStoredCart(raw);
+    expect(loaded.unitPrice).toBeUndefined();
+    expect(loaded.priceKind).toBeUndefined();
+    expect(loaded.product.price).toBe(2990);
+  });
 });
