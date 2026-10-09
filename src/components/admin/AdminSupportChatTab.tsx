@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { AdminHint } from './AdminHint';
 import { OrderLineThumbImage, ProductThumbImage } from '../ProductThumbImage';
 import { thumbOf } from '../../utils/productThumbs';
 import {
@@ -123,6 +124,7 @@ const inputClass =
 const textareaClass =
   'w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A] resize-y leading-relaxed';
 const labelClass = 'text-[11px] font-bold text-[#4E5C70] block mb-1';
+const labelHintRowClass = 'text-[11px] font-bold text-[#4E5C70] flex items-center gap-0.5 mb-1';
 
 const newPromoCode = () => `CARE-${Math.floor(1000 + Math.random() * 9000)}`;
 
@@ -688,7 +690,10 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <div>
-              <span className={labelClass}>Статус диалога</span>
+              <span className={labelHintRowClass}>
+                Статус диалога
+                <AdminHint label="Статус диалога" className="-my-1">«В работе» — отвечаете, «Решён» — вопрос закрыт, «Закрыт» — без продолжения</AdminHint>
+              </span>
               <Segments
                 label="Статус диалога"
                 value={status}
@@ -697,7 +702,10 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               />
             </div>
             <div>
-              <span className={labelClass}>Приоритет</span>
+              <span className={labelHintRowClass}>
+                Приоритет
+                <AdminHint label="Приоритет" className="-my-1">Срочные и VIP-диалоги видны в списке красной меткой</AdminHint>
+              </span>
               <Segments
                 label="Приоритет"
                 value={priority}
@@ -797,6 +805,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               <Truck className="w-3.5 h-3.5" />
               Изменить статус
             </button>
+            <span className="inline-flex items-center gap-0.5">
             <button
               type="button"
               onClick={() => setIsReturnModalOpen(true)}
@@ -806,6 +815,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               <RotateCcw className="w-3.5 h-3.5" />
               Возврат или обмен
             </button>
+            <AdminHint label="Возврат или обмен">Записывает причину возврата в историю заказа</AdminHint>
+            </span>
           </div>
           </>
           )}
@@ -818,6 +829,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
           <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#2D3A4E]">Переписка</span>
           <div className="flex items-center gap-2 flex-wrap justify-end">
           {hiddenCount > 0 && (
+            <span className="inline-flex items-center gap-0.5">
             <button
               type="button"
               role="switch"
@@ -832,6 +844,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 />
               </span>
             </button>
+            <AdminHint label="Скрытые">Сообщения, которые сотрудник или покупатель убрал у себя</AdminHint>
+            </span>
           )}
           {notesCount > 0 && (
             <button
@@ -1009,6 +1023,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               </button>
             </div>
           ) : (
+          <div className="flex items-center gap-1">
+          <div className="flex-1 min-w-0">
           <Segments
             label="Кому"
             value={isInternalNote ? 'note' : 'reply'}
@@ -1018,6 +1034,9 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             ]}
             onChange={(v) => setIsInternalNote(v === 'note')}
           />
+          </div>
+          <AdminHint label="Заметка для команды">Не уходит покупателю. Видят только сотрудники</AdminHint>
+          </div>
           )}
 
           {/* Attachments and helpers */}
@@ -1032,6 +1051,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               {isProcessingPhoto ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5 text-accent" />}
               Фото
             </button>
+            <span className="inline-flex items-center gap-0.5">
             <button
               type="button"
               onClick={openProductPicker}
@@ -1042,6 +1062,9 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               <ShoppingBag className="w-3.5 h-3.5 text-accent" />
               Товар
             </button>
+            <AdminHint label="Рекомендовать товар">Покупатель получит карточку товара с вашим пояснением</AdminHint>
+            </span>
+            <span className="inline-flex items-center gap-0.5">
             <button
               type="button"
               onClick={openPromoModal}
@@ -1051,6 +1074,9 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               <Gift className="w-3.5 h-3.5 text-accent" />
               Промокод
             </button>
+            <AdminHint label="Промокод">Отправить скидку в чат: выберите действующий или создайте новый</AdminHint>
+            </span>
+            <span className="inline-flex items-center gap-0.5">
             <button
               type="button"
               onClick={() => setIsTemplatesOpen(true)}
@@ -1059,6 +1085,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               <FileText className="w-3.5 h-3.5 text-accent" />
               Шаблоны{templates.length > 0 ? ` · ${templates.length}` : ''}
             </button>
+            <AdminHint label="Шаблоны">Ваши готовые ответы. Хранятся только в этом браузере</AdminHint>
+            </span>
           </div>
           )}
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />

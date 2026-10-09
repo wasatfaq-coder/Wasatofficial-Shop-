@@ -1,4 +1,5 @@
 import { pluralRu } from '../../utils/pluralize';
+import { AdminHint } from './AdminHint';
 import React, { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminLaunchChecklist } from './AdminLaunchChecklist';
 import { AdminSiteErrorsCard } from './AdminSiteErrorsCard';
@@ -200,6 +201,13 @@ const EmptyState: React.FC<{ text: string }> = ({ text }) => (
     {text}
   </p>
 );
+
+const KPI_HINTS: Record<ActiveMetric, string> = {
+  revenue: 'Деньги только за заказы с отметкой «Оплачен». Неоплаченные не считаются',
+  orders: 'Все оформленные заказы, кроме отменённых — и неоплаченные тоже',
+  avgCheck: 'Выручка, делённая на число оплаченных заказов',
+  returns: 'Заказы, которые отменили покупатель или магазин',
+};
 
 const Segments = <T extends string>({
   label,
@@ -446,11 +454,12 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
               {isMonthly ? 'По месяцам' : 'По дням'}. Сравнение — с предыдущим периодом той же длины
             </p>
           </div>
+          <div className="flex items-center gap-1 self-stretch sm:self-auto min-w-0">
           <button
             type="button"
             onClick={() => setIsPeriodOpen(true)}
             aria-haspopup="dialog"
-            className="min-h-11 px-3.5 py-2 neu-button rounded-2xl flex items-center gap-2.5 text-left cursor-pointer self-stretch sm:self-auto shrink-0"
+            className="min-h-11 px-3.5 py-2 neu-button rounded-2xl flex items-center gap-2.5 text-left cursor-pointer flex-1 sm:flex-none shrink-0"
           >
             <CalendarRange className="w-4 h-4 text-accent shrink-0" />
             <span className="min-w-0 flex-1">
@@ -459,6 +468,8 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
             </span>
             <ChevronDown className="w-4 h-4 text-[#4E5C70] shrink-0" />
           </button>
+          <AdminHint label="Период">За какой срок считать цифры и с каким прошлым сроком сравнивать</AdminHint>
+          </div>
         </div>
         {resetAt !== null && (
           <div className="neu-inset rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -486,8 +497,8 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
         {kpis.map((k) => {
           const selected = activeMetric === k.metric;
           return (
+            <div key={k.metric} className="relative min-w-0">
             <button
-              key={k.metric}
               type="button"
               role="radio"
               aria-checked={selected}
@@ -495,12 +506,12 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
                 setActiveMetric(k.metric);
                 triggerChartHapticFeedback('light');
               }}
-              className={`neu-pressable rounded-2xl p-3.5 space-y-1.5 min-w-0 text-left cursor-pointer ${
+              className={`neu-pressable w-full h-full rounded-2xl p-3.5 space-y-1.5 min-w-0 text-left cursor-pointer ${
                 selected ? 'neu-pill-active' : 'neu-flat'
               }`}
             >
               <span className="flex items-center justify-between gap-2">
-                <span className={`text-[11px] font-bold uppercase tracking-wider ${selected ? 'text-accent' : 'text-[#4E5C70]'}`}>
+                <span className={`text-[11px] font-bold uppercase tracking-wider pr-7 ${selected ? 'text-accent' : 'text-[#4E5C70]'}`}>
                   {k.title}
                 </span>
                 <span
@@ -517,6 +528,10 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
               <span className="block text-[11px] leading-snug">{k.footer}</span>
               {k.extra}
             </button>
+            <AdminHint label={k.title} className="absolute top-3 right-[46px]">
+              {KPI_HINTS[k.metric]}
+            </AdminHint>
+            </div>
           );
         })}
       </div>
@@ -530,6 +545,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
               {metric.label} {isMonthly ? 'по месяцам' : 'по дням'}
             </h4>
             {peakDay && (
+              <span className="flex items-center gap-0.5 shrink-0">
               <button
                 type="button"
                 onClick={showPeakDay}
@@ -539,10 +555,13 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
                 <Flame className="w-3.5 h-3.5 text-accent" />
                 Пик: {peakDay.label} · {rub(peakDay.revenue)}
               </button>
+              <AdminHint label="Пик">День (или месяц) с самой большой выручкой. Нажмите — увидите его заказы</AdminHint>
+              </span>
             )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Segments<OrderStatusFilter> label="Какие заказы учитывать" grid="grid-cols-3" value={statusFilter} options={STATUS_FILTERS} onChange={setStatusFilter} />
+            <AdminHint label="Какие заказы учитывать">Меняет все цифры на странице: всё, только оплаченное или только полученное</AdminHint>
             <Segments<ChartType>
               label="Вид графика"
               value={chartType}
@@ -702,7 +721,10 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
                       <span className="text-xs font-extrabold text-accent">{rub(p.revenue)}</span>
                     </div>
                     <div>
-                      <span className="text-[11px] text-[#4E5C70] block">Доля заказов</span>
+                      <span className="text-[11px] text-[#4E5C70] flex items-center justify-center gap-0.5">
+                        Доля заказов
+                        <AdminHint label="Доля заказов" className="-my-0.5">Какая часть заказов за период пришла с этим промокодом</AdminHint>
+                      </span>
                       <span className="text-xs font-extrabold">{p.share}%</span>
                     </div>
                   </div>
@@ -721,6 +743,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
                           </>
                         )}
                         {c.pendingOrders > 0 && `; ждут оплаты или получения: ${c.pendingOrders}`}
+                        <AdminHint label="Комиссия партнёра" className="align-middle">Процент партнёру с оплаченных и полученных заказов по его промокоду</AdminHint>
                       </p>
                     );
                   })()}
@@ -762,6 +785,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
           <Trash2 className="w-4 h-4" />
           Сбросить статистику
         </button>
+        <AdminHint label="Сбросить статистику" className="self-center">Цифры начнут считаться с нуля. Сами заказы не удаляются, историю можно вернуть</AdminHint>
       </section>
 
       {isPeriodOpen && <PeriodDialog value={period} onChange={changePeriod} onClose={() => setIsPeriodOpen(false)} />}

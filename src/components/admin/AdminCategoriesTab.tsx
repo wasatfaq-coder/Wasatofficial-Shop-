@@ -27,6 +27,10 @@ export const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({
     <AdminListEditor<StoreCategory>
       title="Категории товаров"
       description="Используются на главной, в каталоге, поиске, карточках товаров, баннерах и промокодах. Первые четыре показываются на главной."
+      descriptionHint={{
+        label: 'Первые четыре — на главной',
+        text: 'На главной видны первые четыре категории. Порядок меняют стрелки.',
+      }}
       emptyTitle="Категории"
       emptyHint="Добавьте категории или возьмите их из уже заведённых товаров."
       items={categories}
@@ -37,6 +41,7 @@ export const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({
         {
           key: 'icon',
           label: 'Иконка',
+          help: 'Значок категории на главной и в каталоге.',
           type: 'select',
           layout: 'grid',
           groups: CATEGORY_ICON_GROUPS,

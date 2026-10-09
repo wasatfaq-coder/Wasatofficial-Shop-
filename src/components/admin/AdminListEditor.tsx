@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowDown, ArrowUp, Check, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { ConfirmDialog } from '../ConfirmDialog';
+import { AdminHint } from './AdminHint';
 import { NotConfigured } from '../NotConfigured';
 import { NeumorphicSelect, type NeumorphicSelectOption } from '../NeumorphicSelect';
 import { shallowChanged, useUnsavedChanges } from '../../utils/unsavedChanges';
@@ -18,6 +19,8 @@ export type ListField<T> = {
   layout?: 'list' | 'grid';
   /** Shown under a checkbox */
   hint?: string;
+  /** «Для чего это» next to the field's label (AdminHint) */
+  help?: string;
 };
 
 interface AdminListEditorProps<T extends { id: string }> {
@@ -39,6 +42,10 @@ interface AdminListEditorProps<T extends { id: string }> {
   addLabel?: string;
   /** Optional one-click fill, e.g. «Взять категории из товаров» */
   quickAction?: { label: string; run: (items: T[]) => T[]; disabledReason?: string };
+  /** «Для чего это» next to the list's title (AdminHint) */
+  titleHint?: string;
+  /** «Для чего это» at the end of the description, for something it names */
+  descriptionHint?: { label: string; text: string };
 }
 
 /**
@@ -58,6 +65,8 @@ export function AdminListEditor<T extends { id: string }>({
   onShowToast,
   addLabel = 'Добавить',
   quickAction,
+  titleHint,
+  descriptionHint,
 }: AdminListEditorProps<T>) {
   const [draft, setDraft] = useState<T | null>(null);
   // The item as it was when the form opened: the form has unsaved edits while the draft differs from it
@@ -66,6 +75,11 @@ export function AdminListEditor<T extends { id: string }>({
   useUnsavedChanges(Boolean(draft) && shallowChanged(draft, draftStart), title);
   const [toDelete, setToDelete] = useState<T | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  /** The item's name for its row buttons and the delete dialog: the first text field (title, question, name) */
+  const nameField = fields.find((f) => f.type === 'text');
+  const nameOf = (item: T) =>
+    String((nameField ? (item as Record<string, unknown>)[nameField.key] : '') ?? '').trim() || 'без названия';
 
   /** «Сохранено» only after the database accepted the write */
   const commit = async (next: T[], successText: string, type: 'success' | 'info' = 'success') => {
@@ -121,8 +135,18 @@ export function AdminListEditor<T extends { id: string }>({
       <div className="neu-flat rounded-2xl p-4 space-y-3">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0">
-            <h3 className="text-sm font-extrabold text-[#2D3A4E]">{title}</h3>
-            <p className="text-xs text-[#4E5C70] leading-snug mt-0.5">{description}</p>
+            <div className="flex items-center gap-1">
+              <h3 className="text-sm font-extrabold text-[#2D3A4E]">{title}</h3>
+              {titleHint && <AdminHint label={title}>{titleHint}</AdminHint>}
+            </div>
+            <p className="text-xs text-[#4E5C70] leading-snug mt-0.5">
+              {description}
+              {descriptionHint && (
+                <AdminHint label={descriptionHint.label} className="ml-0.5">
+                  {descriptionHint.text}
+                </AdminHint>
+              )}
+            </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {quickAction && (
@@ -159,7 +183,7 @@ export function AdminListEditor<T extends { id: string }>({
               const value = (draft as Record<string, unknown>)[field.key];
               const id = `field-${field.key}`;
               if (field.type === 'checkbox') {
-                return (
+                const checkbox = (
                   <label key={field.key} htmlFor={id} className="flex items-start gap-2.5 cursor-pointer">
                     <input
                       id={id}
@@ -174,13 +198,23 @@ export function AdminListEditor<T extends { id: string }>({
                     </span>
                   </label>
                 );
+                if (!field.help) return checkbox;
+                return (
+                  <div key={field.key} className="flex items-start gap-1">
+                    {checkbox}
+                    <AdminHint label={field.label} className="-mt-1">{field.help}</AdminHint>
+                  </div>
+                );
               }
               return (
                 <div key={field.key} className="space-y-1">
-                  <label htmlFor={id} className="text-[11px] font-bold text-[#4E5C70] block">
-                    {field.label}
-                    {field.required && ' *'}
-                  </label>
+                  <div className="flex items-center gap-1">
+                    <label htmlFor={id} className="text-[11px] font-bold text-[#4E5C70] block">
+                      {field.label}
+                      {field.required && ' *'}
+                    </label>
+                    {field.help && <AdminHint label={field.label}>{field.help}</AdminHint>}
+                  </div>
                   {field.type === 'textarea' ? (
                     <textarea
                       id={id}
@@ -249,8 +283,8 @@ export function AdminListEditor<T extends { id: string }>({
                   onClick={() => move(index, -1)}
                   disabled={index === 0}
                   className="w-8 h-8 neu-button rounded-xl flex items-center justify-center text-[#4E5C70] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                  aria-label="Выше"
-                  title="Выше"
+                  aria-label={`Выше: ${nameOf(item)}`}
+                  title={`Выше: ${nameOf(item)}`}
                 >
                   <ArrowUp className="w-3.5 h-3.5" />
                 </button>
@@ -259,8 +293,8 @@ export function AdminListEditor<T extends { id: string }>({
                   onClick={() => move(index, 1)}
                   disabled={index === items.length - 1}
                   className="w-8 h-8 neu-button rounded-xl flex items-center justify-center text-[#4E5C70] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                  aria-label="Ниже"
-                  title="Ниже"
+                  aria-label={`Ниже: ${nameOf(item)}`}
+                  title={`Ниже: ${nameOf(item)}`}
                 >
                   <ArrowDown className="w-3.5 h-3.5" />
                 </button>
@@ -269,8 +303,8 @@ export function AdminListEditor<T extends { id: string }>({
                   onClick={() => startEdit(item)}
                   disabled={Boolean(draft)}
                   className="w-8 h-8 neu-button rounded-xl flex items-center justify-center text-accent cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                  aria-label="Изменить"
-                  title="Изменить"
+                  aria-label={`Изменить: ${nameOf(item)}`}
+                  title={`Изменить: ${nameOf(item)}`}
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -278,8 +312,8 @@ export function AdminListEditor<T extends { id: string }>({
                   type="button"
                   onClick={() => setToDelete(item)}
                   className="w-8 h-8 neu-button-danger rounded-xl flex items-center justify-center cursor-pointer"
-                  aria-label="Удалить"
-                  title="Удалить"
+                  aria-label={`Удалить: ${nameOf(item)}`}
+                  title={`Удалить: ${nameOf(item)}`}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -293,6 +327,7 @@ export function AdminListEditor<T extends { id: string }>({
         isOpen={Boolean(toDelete)}
         title="Удалить запись?"
         message="Запись будет удалена из базы, покупатели перестанут её видеть."
+        preview={toDelete ? <span className="text-xs font-bold text-[#2D3A4E] break-words">{nameOf(toDelete)}</span> : undefined}
         onConfirm={() => {
           if (!toDelete) return;
           void commit(items.filter((it) => it.id !== toDelete.id), 'Удалено', 'info');

@@ -32,6 +32,7 @@ import {
   withAutoRemainder,
 } from '../../utils/cardSuggestions';
 import { CARE_SYMBOLS, careSymbolOf, toggleCareSymbol, type CareSymbol } from '../../utils/careSymbols';
+import { AdminHint } from './AdminHint';
 import { CareSymbolIcon } from './CareSymbolIcon';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { NeumorphicSelect } from '../NeumorphicSelect';
@@ -328,11 +329,12 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
   return (
     <div className="neu-flat-sm rounded-2xl border border-white/60">
       {/* Summary row */}
+      <div className="flex items-center pr-2">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
-        className="w-full p-3 flex items-center justify-between gap-3 text-left cursor-pointer"
+        className="flex-1 min-w-0 p-3 flex items-center justify-between gap-3 text-left cursor-pointer"
       >
         <span className="flex items-center gap-2.5 min-w-0">
           <span className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0">
@@ -349,6 +351,8 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
           className={`w-4 h-4 text-accent shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
+      <AdminHint label="Структура карточки">Блоки на странице товара. Пустой блок покупатель не видит.</AdminHint>
+      </div>
 
       {isOpen && (
         <div className="px-3 pb-3 space-y-2">

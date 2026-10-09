@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { AdminHint } from './AdminHint';
 import { CheckCircle2, Loader2, MessageSquare, X, XCircle } from 'lucide-react';
 import type { Order, Product } from '../../types';
 import { AdminOrderPriceWarning } from './AdminOrderPriceWarning';
@@ -54,7 +55,10 @@ export const AdminReceiptReview: React.FC<AdminReceiptReviewProps> = ({ order, o
   return (
     <div className="rounded-xl bg-warning-soft border border-warning/30 p-2.5 space-y-2 text-xs text-[#2D3A4E]">
       <div className="flex items-center gap-2 flex-wrap">
-        <ReceiptReviewBadge />
+        <span className="inline-flex items-center gap-0.5">
+          <ReceiptReviewBadge />
+          <AdminHint label="Чек на проверке">Покупатель прислал чек. Сверьте поступление и подтвердите или отклоните</AdminHint>
+        </span>
         <span className="font-bold">
           {receipt ? PAYMENT_KIND_TITLES[receipt.method] : 'Чек'}
           {sentAt && !Number.isNaN(sentAt.getTime()) && (

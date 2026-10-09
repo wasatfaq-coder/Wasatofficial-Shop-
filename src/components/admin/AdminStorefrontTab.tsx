@@ -35,6 +35,7 @@ import { AdminScheduleEditor } from './AdminScheduleEditor';
 import { scheduleErrors } from '../../utils/storeSchedule';
 import { QuickTextEditModal, QuickEditFieldConfig } from './QuickTextEditModal';
 import { ConfirmDialog } from '../ConfirmDialog';
+import { AdminHint } from './AdminHint';
 import { resetStorefrontTexts } from '../../utils/storefrontReset';
 import { sameValue, useUnsavedChanges } from '../../utils/unsavedChanges';
 
@@ -197,6 +198,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               <Crown className="w-3.5 h-3.5" />
               <span className="text-[11px]">Клиент</span>
             </button>
+            <AdminHint label="Клиент">Покажет окно «Бренд и реквизиты» так, как его видит покупатель.</AdminHint>
             <button
               type="button"
               onClick={() => setShowLivePreview(!showLivePreview)}
@@ -210,6 +212,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               <Eye className="w-3.5 h-3.5" />
               <span className="text-[11px]">Сводка</span>
             </button>
+            <AdminHint label="Сводка">Короткий итог главного. Нажмите на любую плитку, чтобы поправить.</AdminHint>
           </div>
 
           {/* Primary & Destructive Actions */}
@@ -223,6 +226,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               <RotateCcw className="w-3.5 h-3.5" />
               <span className="text-[11px]">Сброс</span>
             </button>
+            <AdminHint label="Сброс">Очищает тексты и контакты витрины. Товары и заказы не трогает.</AdminHint>
             <button
               type="button"
               onClick={() => handleSave()}
@@ -443,10 +447,13 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
         {/* 1. STORE CONTACTS & SHOWROOM */}
         <div className="neu-inset rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-3.5 border border-transparent">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
-              <Phone className="w-3.5 h-3.5 text-accent" />
-              Основные контакты бутика и витрины
-            </h4>
+            <div className="flex items-center gap-1 min-w-0">
+              <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-accent" />
+                Основные контакты бутика и витрины
+              </h4>
+              <AdminHint label="Основные контакты">Эти контакты видят покупатели в шапке, подвале и профиле.</AdminHint>
+            </div>
             <span className="text-[11px] font-extrabold text-accent neu-flat-sm px-2.5 py-1 rounded-lg border border-white/80">
               Шапка и футер
             </span>
@@ -478,8 +485,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     })
                   }
                   className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                  title="Редактировать в модальном окне"
-                  aria-label="Редактировать в модальном окне"
+                  title="Изменить: Название бутика / бренда"
+                  aria-label="Изменить: Название бутика / бренда"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -514,8 +521,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     })
                   }
                   className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                  title="Редактировать в модальном окне"
-                  aria-label="Редактировать в модальном окне"
+                  title="Изменить: Слоган / Описание витрины"
+                  aria-label="Изменить: Слоган / Описание витрины"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -548,8 +555,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     })
                   }
                   className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                  title="Редактировать в модальном окне"
-                  aria-label="Редактировать в модальном окне"
+                  title="Изменить: Телефон горячей линии"
+                  aria-label="Изменить: Телефон горячей линии"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -582,8 +589,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     })
                   }
                   className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                  title="Редактировать в модальном окне"
-                  aria-label="Редактировать в модальном окне"
+                  title="Изменить: Email клиентской службы"
+                  aria-label="Изменить: Email клиентской службы"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -616,8 +623,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     })
                   }
                   className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                  title="Редактировать в модальном окне"
-                  aria-label="Редактировать в модальном окне"
+                  title="Изменить: Telegram канал / бот"
+                  aria-label="Изменить: Telegram канал / бот"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -650,8 +657,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     })
                   }
                   className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                  title="Редактировать в модальном окне"
-                  aria-label="Редактировать в модальном окне"
+                  title="Изменить: WhatsApp для консультаций"
+                  aria-label="Изменить: WhatsApp для консультаций"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -685,8 +692,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     })
                   }
                   className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                  title="Редактировать в модальном окне"
-                  aria-label="Редактировать в модальном окне"
+                  title="Изменить: Адрес бутика / шоурума"
+                  aria-label="Изменить: Адрес бутика / шоурума"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -709,6 +716,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-accent flex items-center gap-1.5">
                 <Tag className="w-3.5 h-3.5 text-accent shrink-0" />
                 Промо-сообщение в шапке сайта
+                <AdminHint label="Промо-сообщение в шапке">
+                  Тонкая полоса над шапкой сайта: акция, объявление. Не то же, что «Баннеры».
+                </AdminHint>
               </span>
               <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
                 <label htmlFor="storefront-isStoreBannerVisible" className="text-[11px] font-bold text-[#4E5C70] whitespace-nowrap cursor-pointer select-none">
@@ -752,8 +762,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       })
                     }
                     className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                    title="Редактировать в модальном окне"
-                    aria-label="Редактировать в модальном окне"
+                    title="Изменить: Текст бейджа"
+                    aria-label="Изменить: Текст бейджа"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
@@ -790,8 +800,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       })
                     }
                     className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                    title="Редактировать в модальном окне"
-                    aria-label="Редактировать в модальном окне"
+                    title="Изменить: Текст промо-сообщения"
+                    aria-label="Изменить: Текст промо-сообщения"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
@@ -848,8 +858,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     })
                   }
                   className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                  title="Редактировать в модальном окне"
-                  aria-label="Редактировать в модальном окне"
+                  title="Изменить: Приветственное описание консьерж-сервиса"
+                  aria-label="Изменить: Приветственное описание консьерж-сервиса"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -903,8 +913,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                      title="Редактировать в модальном окне"
-                      aria-label="Редактировать в модальном окне"
+                      title="Изменить: Услуга 1, заголовок"
+                      aria-label="Изменить: Услуга 1, заголовок"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -945,8 +955,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                      title="Редактировать в модальном окне"
-                      aria-label="Редактировать в модальном окне"
+                      title="Изменить: Услуга 1, описание"
+                      aria-label="Изменить: Услуга 1, описание"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -999,8 +1009,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                      title="Редактировать в модальном окне"
-                      aria-label="Редактировать в модальном окне"
+                      title="Изменить: Услуга 2, заголовок"
+                      aria-label="Изменить: Услуга 2, заголовок"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1041,8 +1051,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                      title="Редактировать в модальном окне"
-                      aria-label="Редактировать в модальном окне"
+                      title="Изменить: Услуга 2, описание"
+                      aria-label="Изменить: Услуга 2, описание"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1092,8 +1102,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                      title="Редактировать в модальном окне"
-                      aria-label="Редактировать в модальном окне"
+                      title="Изменить: Услуга 3, заголовок"
+                      aria-label="Изменить: Услуга 3, заголовок"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1134,8 +1144,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                      title="Редактировать в модальном окне"
-                      aria-label="Редактировать в модальном окне"
+                      title="Изменить: Услуга 3, описание"
+                      aria-label="Изменить: Услуга 3, описание"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1149,10 +1159,13 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
         {/* 3. LEGAL REQUISITES OF THE ORGANIZATION */}
         <div className="neu-inset rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-3.5 border border-transparent">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
-              <Building2 className="w-3.5 h-3.5 text-accent" />
-              Вкладка «Реквизиты»: Официальные юридические данные
-            </h4>
+            <div className="flex items-center gap-1 min-w-0">
+              <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-accent" />
+                Вкладка «Реквизиты»: Официальные юридические данные
+              </h4>
+              <AdminHint label="Реквизиты">Нужны для оферты и счетов. Без них документы покупателям не показываются.</AdminHint>
+            </div>
             <span className="text-[11px] font-extrabold text-accent neu-flat-sm px-2.5 py-1 rounded-lg border border-white/80">
               Вкладка 2 из 3
             </span>
@@ -1199,8 +1212,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                      title="Редактировать в модальном окне"
-                      aria-label="Редактировать в модальном окне"
+                      title="Изменить: Юридическое лицо / Организация"
+                      aria-label="Изменить: Юридическое лицо / Организация"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1233,8 +1246,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                      title="Редактировать в модальном окне"
-                      aria-label="Редактировать в модальном окне"
+                      title="Изменить: Руководитель / Генеральный директор"
+                      aria-label="Изменить: Руководитель / Генеральный директор"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1269,8 +1282,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                      title="Редактировать в модальном окне"
-                      aria-label="Редактировать в модальном окне"
+                      title="Изменить: Юридический адрес компании"
+                      aria-label="Изменить: Юридический адрес компании"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1303,8 +1316,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                      title="Редактировать в модальном окне"
-                      aria-label="Редактировать в модальном окне"
+                      title="Изменить: Система электронного документооборота (ЭДО)"
+                      aria-label="Изменить: Система электронного документооборота (ЭДО)"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1347,8 +1360,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                      title="Редактировать в модальном окне"
-                      aria-label="Редактировать в модальном окне"
+                      title="Изменить: ИНН"
+                      aria-label="Изменить: ИНН"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1381,8 +1394,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                      title="Редактировать в модальном окне"
-                      aria-label="Редактировать в модальном окне"
+                      title="Изменить: КПП"
+                      aria-label="Изменить: КПП"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1415,8 +1428,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                      title="Редактировать в модальном окне"
-                      aria-label="Редактировать в модальном окне"
+                      title="Изменить: ОГРН / ОГРНИП"
+                      aria-label="Изменить: ОГРН / ОГРНИП"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1459,8 +1472,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                      title="Редактировать в модальном окне"
-                      aria-label="Редактировать в модальном окне"
+                      title="Изменить: Банк обслуживания"
+                      aria-label="Изменить: Банк обслуживания"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1493,8 +1506,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                      title="Редактировать в модальном окне"
-                      aria-label="Редактировать в модальном окне"
+                      title="Изменить: БИК банка"
+                      aria-label="Изменить: БИК банка"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1529,8 +1542,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                      title="Редактировать в модальном окне"
-                      aria-label="Редактировать в модальном окне"
+                      title="Изменить: Расчетный счет (Р/С)"
+                      aria-label="Изменить: Расчетный счет (Р/С)"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1565,8 +1578,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                      title="Редактировать в модальном окне"
-                      aria-label="Редактировать в модальном окне"
+                      title="Изменить: Корреспондентский счет (К/С)"
+                      aria-label="Изменить: Корреспондентский счет (К/С)"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1625,8 +1638,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       })
                     }
                     className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                    title="Редактировать в модальном окне"
-                    aria-label="Редактировать в модальном окне"
+                    title="Изменить: Философия бренда, заголовок блока"
+                    aria-label="Изменить: Философия бренда, заголовок блока"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
@@ -1666,8 +1679,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       })
                     }
                     className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80 mt-0.5"
-                    title="Редактировать в модальном окне"
-                    aria-label="Редактировать в модальном окне"
+                    title="Изменить: Текст манифеста бренда"
+                    aria-label="Изменить: Текст манифеста бренда"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
@@ -1710,8 +1723,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                      title="Редактировать в модальном окне"
-                      aria-label="Редактировать в модальном окне"
+                      title="Изменить: Материалы и ткани, заголовок"
+                      aria-label="Изменить: Материалы и ткани, заголовок"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1751,8 +1764,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80 mt-0.5"
-                      title="Редактировать в модальном окне"
-                      aria-label="Редактировать в модальном окне"
+                      title="Изменить: Материалы и ткани, описание"
+                      aria-label="Изменить: Материалы и ткани, описание"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1796,8 +1809,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                      title="Редактировать в модальном окне"
-                      aria-label="Редактировать в модальном окне"
+                      title="Изменить: Крой и пошив, заголовок"
+                      aria-label="Изменить: Крой и пошив, заголовок"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1840,8 +1853,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80 mt-0.5"
-                      title="Редактировать в модальном окне"
-                      aria-label="Редактировать в модальном окне"
+                      title="Изменить: Крой и пошив, описание"
+                      aria-label="Изменить: Крой и пошив, описание"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1889,8 +1902,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                       })
                     }
                     className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                    title="Редактировать в модальном окне"
-                    aria-label="Редактировать заголовок блока гарантий"
+                    title="Изменить: Заголовок блока гарантий"
+                    aria-label="Изменить: Заголовок блока гарантий"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
@@ -1928,8 +1941,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                         })
                       }
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                      title="Редактировать в модальном окне"
-                      aria-label={`Редактировать пункт гарантии ${i + 1}`}
+                      title={`Изменить: Пункт гарантии ${i + 1}`}
+                      aria-label={`Изменить: Пункт гарантии ${i + 1}`}
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -1960,9 +1973,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             {/* Free Delivery Threshold */}
             <div className="neu-inset p-3 rounded-2xl space-y-1.5">
-              <label htmlFor="storefront-freeDeliveryThreshold" className="block text-[11px] font-bold text-[#2D3A4E] mb-1 truncate">
-                Порог бесплатной доставки
-              </label>
+              <div className="flex items-center gap-1 mb-1 min-w-0">
+                <label htmlFor="storefront-freeDeliveryThreshold" className="block text-[11px] font-bold text-[#2D3A4E] truncate">
+                  Порог бесплатной доставки
+                </label>
+                <AdminHint label="Порог бесплатной доставки">С этой суммы доставка бесплатна. У способа доставки может быть свой порог.</AdminHint>
+              </div>
               <div className="flex items-center gap-1.5">
                 <div className="relative flex-1 min-w-0">
                   <input
@@ -2001,8 +2017,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     })
                   }
                   className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                  title="Редактировать в модальном окне"
-                  aria-label="Редактировать в модальном окне"
+                  title="Изменить: Порог бесплатной доставки"
+                  aria-label="Изменить: Порог бесплатной доставки"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -2014,9 +2030,12 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
             {/* Return Period */}
             <div className="neu-inset p-3 rounded-2xl space-y-1.5">
-              <label htmlFor="storefront-returnPeriodDays" className="block text-[11px] font-bold text-[#2D3A4E] mb-1 truncate">
-                Срок возврата и примерки
-              </label>
+              <div className="flex items-center gap-1 mb-1 min-w-0">
+                <label htmlFor="storefront-returnPeriodDays" className="block text-[11px] font-bold text-[#2D3A4E] truncate">
+                  Срок возврата и примерки
+                </label>
+                <AdminHint label="Срок возврата">Сколько дней покупатель может вернуть товар. Попадает в FAQ и документы.</AdminHint>
+              </div>
               <div className="flex items-center gap-1.5">
                 <div className="relative flex-1 min-w-0">
                   <input
@@ -2057,8 +2076,8 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                     })
                   }
                   className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all shrink-0 cursor-pointer border border-white/80"
-                  title="Редактировать в модальном окне"
-                  aria-label="Редактировать в модальном окне"
+                  title="Изменить: Срок возврата и примерки"
+                  aria-label="Изменить: Срок возврата и примерки"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
@@ -2105,6 +2124,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   </span>
                 </div>
               </label>
+              <AdminHint label="Онлайн-витрина">Выключите, если не можете выполнять заказы: сайт перестанет их принимать.</AdminHint>
               <NeumorphicSwitch
                 id="storefront-isStoreOnline"
                 checked={Boolean(localSettings.isStoreOnline)}
@@ -2130,6 +2150,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   </span>
                 </div>
               </label>
+              <AdminHint label="Экспресс 2 часа">Показывает покупателям способ «Экспресс». Выключите, если сегодня не везёте.</AdminHint>
               <NeumorphicSwitch
                 id="storefront-isExpressEnabled"
                 checked={Boolean(localSettings.isExpressEnabled)}
@@ -2155,6 +2176,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   </span>
                 </div>
               </label>
+              <AdminHint label="Предзаказ">Можно заказать товар, которого нет на складе. Остаток уйдёт в минус.</AdminHint>
               <NeumorphicSwitch
                 id="storefront-isPreorderMode"
                 checked={Boolean(localSettings.isPreorderMode)}
@@ -2166,9 +2188,14 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
 
           {/* Unpaid orders give their goods back (stage 5 without Blaze): a made-up order does not hold the stock */}
           <div className="neu-inset p-3 rounded-2xl space-y-1.5">
-            <label htmlFor="storefront-unpaidOrderCancelDays" className="block text-xs font-extrabold text-[#2D3A4E]">
-              Отменять неоплаченные заказы через
-            </label>
+            <div className="flex items-center gap-1">
+              <label htmlFor="storefront-unpaidOrderCancelDays" className="block text-xs font-extrabold text-[#2D3A4E]">
+                Отменять неоплаченные заказы через
+              </label>
+              <AdminHint label="Отменять неоплаченные заказы через">
+                Если не оплатили за N дней, заказ отменится, а товар вернётся на склад.
+              </AdminHint>
+            </div>
             <div className="relative max-w-[12rem]">
               <input
                 id="storefront-unpaidOrderCancelDays"

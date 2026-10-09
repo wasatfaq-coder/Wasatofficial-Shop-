@@ -1,4 +1,5 @@
 import React from 'react';
+import { AdminHint } from './AdminHint';
 import { Check, ChevronRight, Rocket } from 'lucide-react';
 import type { LaunchStep } from '../../utils/launchChecklist';
 import type { AdminTab } from './adminSections';
@@ -21,9 +22,12 @@ export const AdminLaunchChecklist: React.FC<{ steps: LaunchStep[]; onOpenTab: (t
           <Rocket className="w-4 h-4" aria-hidden="true" />
         </div>
         <div className="min-w-0">
-          <h3 id="launch-checklist-title" className="text-sm font-extrabold text-[#2D3A4E]">
-            Запуск магазина
-          </h3>
+          <div className="flex items-center gap-1">
+            <h3 id="launch-checklist-title" className="text-sm font-extrabold text-[#2D3A4E]">
+              Запуск магазина
+            </h3>
+            <AdminHint label="Запуск магазина">Что осталось заполнить, чтобы покупатель мог оформить первый заказ</AdminHint>
+          </div>
           <p className="text-xs text-[#4E5C70]">
             Для первой продажи осталось {left} {pluralRu(left, ['шаг', 'шага', 'шагов'])} из {steps.length}
           </p>
