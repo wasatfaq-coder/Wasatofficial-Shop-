@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Truck,
   Store,
@@ -29,13 +29,20 @@ import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
 
 interface AdminDeliveryTabProps {
   deliveryMethods: DeliveryMethod[];
-  onUpdateDeliveryMethods: (methods: DeliveryMethod[]) => void;
+  onUpdateDeliveryMethods: (methods: DeliveryMethod[]) => Promise<boolean> | void;
   pickupPoints: PickupPoint[];
-  onUpdatePickupPoints: (points: PickupPoint[]) => void;
+  onUpdatePickupPoints: (points: PickupPoint[]) => Promise<boolean> | void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   storefrontSettings?: StorefrontSettings;
-  onUpdateStorefrontSettings?: (settings: StorefrontSettings) => void;
+  onUpdateStorefrontSettings?: (settings: StorefrontSettings) => Promise<boolean> | void;
 }
+
+/**
+ * Every write here waits for the database: «сохранен», «удален» and closing the form come only after `true`;
+ * a refusal shows «Не сохранено» (`persist`), and the form stays with what was typed (audit 09.10, finding 3)
+ */
+const allSaved = async (...writes: (Promise<boolean> | void)[]) =>
+  (await Promise.all(writes)).every((ok) => ok !== false);
 
 /** Icons a delivery method can have (the checkout knows these five) */
 const METHOD_ICONS = [
@@ -186,58 +193,73 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
     setIsMethodModalOpen(true);
   };
 
-  const handleSaveMethod = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formMethodTitle.trim()) {
-      onShowToast('Введите название способа доставки', 'error');
-      return;
+  // A second «Сохранить» while the first write is on its way would add the method or point twice
+  const savingMethod = useRef(false);
+  const savingPoint = useRef(false);
+  const runOnce = async (saving: React.MutableRefObject<boolean>, save: () => Promise<void>) => {
+    if (saving.current) return;
+    saving.current = true;
+    try {
+      await save();
+    } finally {
+      saving.current = false;
     }
-
-    if (editingMethod) {
-      const updated = deliveryMethods.map((m) =>
-        m.id === editingMethod.id
-          ? {
-              ...m,
-              title: formMethodTitle.trim(),
-              duration: formMethodDuration.trim(),
-              price: Number(formMethodPrice) || 0,
-              icon: formMethodIcon,
-              type: formMethodType,
-              description: formMethodDesc.trim(),
-              freeThreshold: formMethodFreeThreshold !== undefined ? Number(formMethodFreeThreshold) : undefined,
-              isActive: formMethodIsActive,
-              highlightBadge: formMethodBadge.trim() || undefined,
-            }
-          : m
-      );
-      onUpdateDeliveryMethods(updated);
-      onShowToast(`Способ «${formMethodTitle}» успешно обновлен`, 'success');
-    } else {
-      const newMethod: DeliveryMethod = {
-        id: `deliv-${Date.now()}`,
-        title: formMethodTitle.trim(),
-        duration: formMethodDuration.trim() || '1-3 дня',
-        price: Number(formMethodPrice) || 0,
-        icon: formMethodIcon,
-        type: formMethodType,
-        description: formMethodDesc.trim(),
-        freeThreshold: formMethodFreeThreshold !== undefined ? Number(formMethodFreeThreshold) : undefined,
-        isActive: formMethodIsActive,
-        highlightBadge: formMethodBadge.trim() || undefined,
-        sortOrder: deliveryMethods.length + 1,
-      };
-      onUpdateDeliveryMethods([...deliveryMethods, newMethod]);
-      onShowToast(`Способ «${formMethodTitle}» успешно добавлен`, 'success');
-    }
-    setIsMethodModalOpen(false);
   };
 
-  const handleToggleMethodActive = (id: string, e: React.MouseEvent) => {
+  const handleSaveMethod = (e: React.FormEvent) => {
+    e.preventDefault();
+    void runOnce(savingMethod, async () => {
+      if (!formMethodTitle.trim()) {
+        onShowToast('Введите название способа доставки', 'error');
+        return;
+      }
+
+      if (editingMethod) {
+        const updated = deliveryMethods.map((m) =>
+          m.id === editingMethod.id
+            ? {
+                ...m,
+                title: formMethodTitle.trim(),
+                duration: formMethodDuration.trim(),
+                price: Number(formMethodPrice) || 0,
+                icon: formMethodIcon,
+                type: formMethodType,
+                description: formMethodDesc.trim(),
+                freeThreshold: formMethodFreeThreshold !== undefined ? Number(formMethodFreeThreshold) : undefined,
+                isActive: formMethodIsActive,
+                highlightBadge: formMethodBadge.trim() || undefined,
+              }
+            : m
+        );
+        if (!(await allSaved(onUpdateDeliveryMethods(updated)))) return;
+        onShowToast(`Способ «${formMethodTitle}» успешно обновлен`, 'success');
+      } else {
+        const newMethod: DeliveryMethod = {
+          id: `deliv-${Date.now()}`,
+          title: formMethodTitle.trim(),
+          duration: formMethodDuration.trim() || '1-3 дня',
+          price: Number(formMethodPrice) || 0,
+          icon: formMethodIcon,
+          type: formMethodType,
+          description: formMethodDesc.trim(),
+          freeThreshold: formMethodFreeThreshold !== undefined ? Number(formMethodFreeThreshold) : undefined,
+          isActive: formMethodIsActive,
+          highlightBadge: formMethodBadge.trim() || undefined,
+          sortOrder: deliveryMethods.length + 1,
+        };
+        if (!(await allSaved(onUpdateDeliveryMethods([...deliveryMethods, newMethod])))) return;
+        onShowToast(`Способ «${formMethodTitle}» успешно добавлен`, 'success');
+      }
+      setIsMethodModalOpen(false);
+    });
+  };
+
+  const handleToggleMethodActive = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const updated = deliveryMethods.map((m) =>
       m.id === id ? { ...m, isActive: m.isActive === false ? true : false } : m
     );
-    onUpdateDeliveryMethods(updated);
+    if (!(await allSaved(onUpdateDeliveryMethods(updated)))) return;
     const target = updated.find((m) => m.id === id);
     onShowToast(
       target?.isActive ? `Способ «${target.title}» активирован` : `Способ «${target?.title}» отключен`,
@@ -245,11 +267,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
     );
   };
 
-  const handleDeleteMethod = (id: string) => {
+  const handleDeleteMethod = async (id: string) => {
     const toDelete = deliveryMethods.find((m) => m.id === id);
     const updated = deliveryMethods.filter((m) => m.id !== id);
-    onUpdateDeliveryMethods(updated);
     setDeletingMethodId(null);
+    if (!(await allSaved(onUpdateDeliveryMethods(updated)))) return;
     onShowToast(`Способ «${toDelete?.title || ''}» удален`, 'info');
   };
 
@@ -284,104 +306,105 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
   const handleSavePoint = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formPointName.trim() || !formPointAddress.trim()) {
-      onShowToast('Укажите название и адрес пункта выдачи', 'error');
-      return;
-    }
-
-    if (editingPoint) {
-      const updated = pickupPoints.map((p) => {
-        if (p.id === editingPoint.id) {
-          return {
-            ...p,
-            name: formPointName.trim(),
-            city: formPointCity.trim(),
-            address: formPointAddress.trim(),
-            metro: formPointMetro.trim() || undefined,
-            schedule: formPointSchedule.trim(),
-            phone: formPointPhone.trim(),
-            note: formPointNote.trim() || undefined,
-            isActive: formPointIsActive,
-            isDefault: formPointIsDefault,
-          };
-        }
-        // If this becomes default, remove default from others
-        if (formPointIsDefault) {
-          return { ...p, isDefault: false };
-        }
-        return p;
-      });
-      onUpdatePickupPoints(updated);
-
-      // If updating the default point, also update storefrontSettings.pickupAddress for consistency
-      if (formPointIsDefault && onUpdateStorefrontSettings && storefrontSettings) {
-        onUpdateStorefrontSettings({
-          ...storefrontSettings,
-          pickupAddress: `${formPointCity.trim()}, ${formPointAddress.trim()}`,
-        });
+    void runOnce(savingPoint, async () => {
+      if (!formPointName.trim() || !formPointAddress.trim()) {
+        onShowToast('Укажите название и адрес пункта выдачи', 'error');
+        return;
       }
 
-      onShowToast(`Пункт «${formPointName}» сохранен`, 'success');
-    } else {
-      const newPoint: PickupPoint = {
-        id: `point-${Date.now()}`,
-        name: formPointName.trim(),
-        city: formPointCity.trim(),
-        address: formPointAddress.trim(),
-        metro: formPointMetro.trim() || undefined,
-        schedule: formPointSchedule.trim(),
-        phone: formPointPhone.trim(),
-        note: formPointNote.trim() || undefined,
-        isActive: formPointIsActive,
-        isDefault: formPointIsDefault || pickupPoints.length === 0,
-      };
-
-      const updated = formPointIsDefault
-        ? [...pickupPoints.map((p) => ({ ...p, isDefault: false })), newPoint]
-        : [...pickupPoints, newPoint];
-
-      onUpdatePickupPoints(updated);
-
-      if (formPointIsDefault && onUpdateStorefrontSettings && storefrontSettings) {
-        onUpdateStorefrontSettings({
-          ...storefrontSettings,
-          pickupAddress: `${formPointCity.trim()}, ${formPointAddress.trim()}`,
+      if (editingPoint) {
+        const updated = pickupPoints.map((p) => {
+          if (p.id === editingPoint.id) {
+            return {
+              ...p,
+              name: formPointName.trim(),
+              city: formPointCity.trim(),
+              address: formPointAddress.trim(),
+              metro: formPointMetro.trim() || undefined,
+              schedule: formPointSchedule.trim(),
+              phone: formPointPhone.trim(),
+              note: formPointNote.trim() || undefined,
+              isActive: formPointIsActive,
+              isDefault: formPointIsDefault,
+            };
+          }
+          // If this becomes default, remove default from others
+          if (formPointIsDefault) {
+            return { ...p, isDefault: false };
+          }
+          return p;
         });
-      }
+        // If updating the default point, also update storefrontSettings.pickupAddress for consistency
+        const saved = await allSaved(
+          onUpdatePickupPoints(updated),
+          formPointIsDefault && onUpdateStorefrontSettings && storefrontSettings
+            ? onUpdateStorefrontSettings({
+                ...storefrontSettings,
+                pickupAddress: `${formPointCity.trim()}, ${formPointAddress.trim()}`,
+              })
+            : undefined
+        );
+        if (!saved) return;
+        onShowToast(`Пункт «${formPointName}» сохранен`, 'success');
+      } else {
+        const newPoint: PickupPoint = {
+          id: `point-${Date.now()}`,
+          name: formPointName.trim(),
+          city: formPointCity.trim(),
+          address: formPointAddress.trim(),
+          metro: formPointMetro.trim() || undefined,
+          schedule: formPointSchedule.trim(),
+          phone: formPointPhone.trim(),
+          note: formPointNote.trim() || undefined,
+          isActive: formPointIsActive,
+          isDefault: formPointIsDefault || pickupPoints.length === 0,
+        };
 
-      onShowToast(`Пункт «${formPointName}» добавлен`, 'success');
-    }
-    setIsPointModalOpen(false);
+        const updated = formPointIsDefault
+          ? [...pickupPoints.map((p) => ({ ...p, isDefault: false })), newPoint]
+          : [...pickupPoints, newPoint];
+
+        const saved = await allSaved(
+          onUpdatePickupPoints(updated),
+          formPointIsDefault && onUpdateStorefrontSettings && storefrontSettings
+            ? onUpdateStorefrontSettings({
+                ...storefrontSettings,
+                pickupAddress: `${formPointCity.trim()}, ${formPointAddress.trim()}`,
+              })
+            : undefined
+        );
+        if (!saved) return;
+        onShowToast(`Пункт «${formPointName}» добавлен`, 'success');
+      }
+      setIsPointModalOpen(false);
+    });
   };
 
-  const handleSetDefaultPoint = (id: string, e: React.MouseEvent) => {
+  const handleSetDefaultPoint = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const updated = pickupPoints.map((p) => ({
       ...p,
       isDefault: p.id === id,
     }));
-    onUpdatePickupPoints(updated);
-
     const target = updated.find((p) => p.id === id);
-    if (target && onUpdateStorefrontSettings && storefrontSettings) {
-      onUpdateStorefrontSettings({
-        ...storefrontSettings,
-        pickupAddress: `${target.city}, ${target.address}`,
-      });
-    }
-
+    const saved = await allSaved(
+      onUpdatePickupPoints(updated),
+      target && onUpdateStorefrontSettings && storefrontSettings
+        ? onUpdateStorefrontSettings({ ...storefrontSettings, pickupAddress: `${target.city}, ${target.address}` })
+        : undefined
+    );
+    if (!saved) return;
     onShowToast(`Пункт «${target?.name}» назначен основным адресом самовывоза`, 'success');
   };
 
-  const handleDeletePoint = (id: string) => {
+  const handleDeletePoint = async (id: string) => {
     const toDelete = pickupPoints.find((p) => p.id === id);
-    const updated = pickupPoints.filter((p) => p.id !== id);
-    // If deleted point was default, set next as default
-    if (toDelete?.isDefault && updated.length > 0) {
-      updated[0].isDefault = true;
-    }
-    onUpdatePickupPoints(updated);
+    const remaining = pickupPoints.filter((p) => p.id !== id);
+    // If deleted point was default, set next as default (a copy: the point object is still the one in the props)
+    const updated =
+      toDelete?.isDefault && remaining.length > 0 ? [{ ...remaining[0], isDefault: true }, ...remaining.slice(1)] : remaining;
     setDeletingPointId(null);
+    if (!(await allSaved(onUpdatePickupPoints(updated)))) return;
     onShowToast(`Пункт «${toDelete?.name || ''}» удален`, 'info');
   };
 

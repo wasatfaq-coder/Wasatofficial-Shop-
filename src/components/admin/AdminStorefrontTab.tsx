@@ -121,30 +121,25 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
     setIsEditModalOpen(true);
   };
 
+  // Only this field goes to the database, on top of the saved settings: other edits still waiting for «Применить»
+  // are neither written nor lost (audit 09.10, finding 2)
   const handleQuickEditSave = async (key: string, newValue: string) => {
-    let newSettings: StorefrontSettings;
-
-    if (key.startsWith('guarantee_')) {
-      const idx = parseInt(key.replace('guarantee_', ''), 10);
-      newSettings = {
-        ...localSettings,
-        brandGuaranteesList: withGuaranteeItem(localSettings.brandGuaranteesList, idx, newValue),
-      };
-    } else if (
-      key === 'freeDeliveryThreshold' ||
-      key === 'returnPeriodDays'
-    ) {
-      const num = Math.max(0, parseInt(newValue.replace(/\D/g, ''), 10) || 0);
-      newSettings = { ...localSettings, [key]: num };
-    } else {
-      newSettings = { ...localSettings, [key]: newValue };
-    }
+    const withField = (base: StorefrontSettings): StorefrontSettings => {
+      if (key.startsWith('guarantee_')) {
+        const idx = parseInt(key.replace('guarantee_', ''), 10);
+        return { ...base, brandGuaranteesList: withGuaranteeItem(base.brandGuaranteesList, idx, newValue) };
+      }
+      if (key === 'freeDeliveryThreshold' || key === 'returnPeriodDays') {
+        return { ...base, [key]: Math.max(0, parseInt(newValue.replace(/\D/g, ''), 10) || 0) };
+      }
+      return { ...base, [key]: newValue };
+    };
 
     const fieldTitle = editModalConfig?.fieldLabel || editModalConfig?.title || 'Поле';
-    setLocalSettings(newSettings);
-    if (await persistSettings(newSettings)) {
-      onShowToast(`«${fieldTitle}» обновлено`, 'success');
-    }
+    if (!(await persistSettings(withField(propSettings ?? localSettings)))) return false;
+    setLocalSettings((prev) => withField(prev));
+    onShowToast(`«${fieldTitle}» обновлено`, 'success');
+    return true;
   };
 
   const handleSave = async (e?: React.FormEvent) => {

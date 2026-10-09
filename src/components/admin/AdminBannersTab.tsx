@@ -34,7 +34,7 @@ interface AdminBannersTabProps {
   categories?: StoreCategory[];
   products?: Product[];
   promos?: PromoCode[];
-  onUpdateBanners: (banners: BannerSlide[]) => void;
+  onUpdateBanners: (banners: BannerSlide[]) => Promise<boolean> | void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
@@ -65,8 +65,14 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('mobile');
 
+  // Toasts, the cleared form and closing come only after the database answered: on a refusal `persist` shows
+  // «Не сохранено», and the form keeps what was typed (audit 09.10, finding 3)
+  const saveBanners = async (next: BannerSlide[]) => (await onUpdateBanners(next)) !== false;
+  // A second «Сохранить» while the first write is on its way would add the banner twice
+  const saving = useRef(false);
+
   // Move banner position in list (reordering/sorting)
-  const handleMoveBanner = (index: number, direction: 'up' | 'down') => {
+  const handleMoveBanner = async (index: number, direction: 'up' | 'down') => {
     if (direction === 'up' && index === 0) return;
     if (direction === 'down' && index === banners.length - 1) return;
 
@@ -75,7 +81,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
     const item = reordered.splice(index, 1)[0];
     reordered.splice(newIndex, 0, item);
 
-    onUpdateBanners(reordered);
+    if (!(await saveBanners(reordered))) return;
     onShowToast(`Баннер перенесен на позицию ${newIndex + 1}`, 'success');
   };
 
@@ -267,79 +273,85 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
     onShowToast('Пресет расписания применен', 'info');
   };
 
-  const handleSaveBanner = (e: React.FormEvent) => {
+  const handleSaveBanner = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) {
-      onShowToast('Введите заголовок баннера', 'error');
-      return;
+    if (saving.current) return;
+    saving.current = true;
+    try {
+      if (!title.trim()) {
+        onShowToast('Введите заголовок баннера', 'error');
+        return;
+      }
+
+      // no invented picture: a banner without an image is not saved
+      const finalImage = mobileImage.trim() || image.trim();
+      if (!finalImage) {
+        onShowToast('Добавьте изображение баннера или выберите готовое', 'error');
+        return;
+      }
+
+      const finalDesktop =
+        desktopImage.trim() ||
+        finalImage;
+
+      if (editingId) {
+        const updated = banners.map((b) =>
+          b.id === editingId
+            ? {
+                ...b,
+                title: title.trim(),
+                subtitle: subtitle.trim(),
+                btnText: btnText.trim() || 'В каталог',
+                image: finalImage,
+                mobileImage: finalImage,
+                desktopImage: finalDesktop,
+                actionType,
+                targetCategory: actionType === 'category' ? targetCategory : undefined,
+                targetProductId: actionType === 'product' ? targetProductId : undefined,
+                targetPromoCode: actionType === 'promo' ? targetPromoCode : undefined,
+                badge: badge.trim() || undefined,
+                scheduleEnabled,
+                startDate: scheduleEnabled && startDate ? startDate : undefined,
+                endDate: scheduleEnabled && endDate ? endDate : undefined,
+              }
+            : b
+        );
+        if (!(await saveBanners(updated))) return;
+        onShowToast('Баннер успешно обновлен', 'success');
+      } else {
+        const newBanner: BannerSlide = {
+          id: `banner-${Date.now()}`,
+          title: title.trim(),
+          subtitle: subtitle.trim(),
+          btnText: btnText.trim() || 'Смотреть',
+          image: finalImage,
+          mobileImage: finalImage,
+          desktopImage: finalDesktop,
+          actionType,
+          targetCategory: actionType === 'category' ? targetCategory : undefined,
+          targetProductId: actionType === 'product' ? targetProductId : undefined,
+          targetPromoCode: actionType === 'promo' ? targetPromoCode : undefined,
+          badge: badge.trim() || undefined,
+          active: true,
+          scheduleEnabled,
+          startDate: scheduleEnabled && startDate ? startDate : undefined,
+          endDate: scheduleEnabled && endDate ? endDate : undefined,
+        };
+        if (!(await saveBanners([...banners, newBanner]))) return;
+        onShowToast('Новый промо-баннер добавлен в слайдер', 'success');
+      }
+
+      resetForm();
+    } finally {
+      saving.current = false;
     }
-
-    // no invented picture: a banner without an image is not saved
-    const finalImage = mobileImage.trim() || image.trim();
-    if (!finalImage) {
-      onShowToast('Добавьте изображение баннера или выберите готовое', 'error');
-      return;
-    }
-
-    const finalDesktop =
-      desktopImage.trim() ||
-      finalImage;
-
-    if (editingId) {
-      const updated = banners.map((b) =>
-        b.id === editingId
-          ? {
-              ...b,
-              title: title.trim(),
-              subtitle: subtitle.trim(),
-              btnText: btnText.trim() || 'В каталог',
-              image: finalImage,
-              mobileImage: finalImage,
-              desktopImage: finalDesktop,
-              actionType,
-              targetCategory: actionType === 'category' ? targetCategory : undefined,
-              targetProductId: actionType === 'product' ? targetProductId : undefined,
-              targetPromoCode: actionType === 'promo' ? targetPromoCode : undefined,
-              badge: badge.trim() || undefined,
-              scheduleEnabled,
-              startDate: scheduleEnabled && startDate ? startDate : undefined,
-              endDate: scheduleEnabled && endDate ? endDate : undefined,
-            }
-          : b
-      );
-      onUpdateBanners(updated);
-      onShowToast('Баннер успешно обновлен', 'success');
-    } else {
-      const newBanner: BannerSlide = {
-        id: `banner-${Date.now()}`,
-        title: title.trim(),
-        subtitle: subtitle.trim(),
-        btnText: btnText.trim() || 'Смотреть',
-        image: finalImage,
-        mobileImage: finalImage,
-        desktopImage: finalDesktop,
-        actionType,
-        targetCategory: actionType === 'category' ? targetCategory : undefined,
-        targetProductId: actionType === 'product' ? targetProductId : undefined,
-        targetPromoCode: actionType === 'promo' ? targetPromoCode : undefined,
-        badge: badge.trim() || undefined,
-        active: true,
-        scheduleEnabled,
-        startDate: scheduleEnabled && startDate ? startDate : undefined,
-        endDate: scheduleEnabled && endDate ? endDate : undefined,
-      };
-      onUpdateBanners([...banners, newBanner]);
-      onShowToast('Новый промо-баннер добавлен в слайдер', 'success');
-    }
-
-    resetForm();
   };
 
-  const handleToggleActive = (id: string) => {
+  const handleToggleActive = async (id: string) => {
     const updated = banners.map((b) =>
       b.id === id ? { ...b, active: !b.active } : b
     );
-    onUpdateBanners(updated);
+    if (!(await saveBanners(updated))) return;
     const target = updated.find((b) => b.id === id);
     onShowToast(
       `Баннер «${target?.title}» ${target?.active ? 'показывается' : 'скрыт'}`,
@@ -347,10 +359,10 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
     );
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     const target = banners.find((b) => b.id === id);
     const updated = banners.filter((b) => b.id !== id);
-    onUpdateBanners(updated);
+    if (!(await saveBanners(updated))) return;
     onShowToast(`Баннер «${target?.title || ''}» удален`, 'info');
   };
 
