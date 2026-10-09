@@ -3,6 +3,7 @@ import { extractColorName, getProductTotalStock } from './inventory';
 import { adminStatusLabel } from './orderFlow';
 import { colorHexForName, normalizeColorName, readColorCode, splitColorEntry, UNKNOWN_COLOR_HEX } from './colorCode';
 import { parseDecimal, readPurchase, type ProductPurchase, type PurchaseCurrency } from './currencyPricing';
+import { SUPPLIER_MAX_LENGTH, SUPPLIER_SKU_MAX_LENGTH, supplierText } from './productCosts';
 
 /**
  * One CSV cell: quoted with doubled quotes. Text starting with = + - @ would run as a formula in Excel
@@ -47,6 +48,9 @@ const PRODUCT_CSV_HEADERS = [
   'Валюта закупки',
   'Закупка',
   'Своя наценка (%)',
+  // where the product is bought (stage 11): for reordering and checking the supplier's invoices
+  'Поставщик',
+  'Артикул поставщика',
 ];
 
 /** «USD», «$», «доллар» — dollars; «CNY», «¥», «юань», «RMB» — yuan */
@@ -80,6 +84,19 @@ export function purchaseFromCells(
   return readPurchase({ currency, amount, ...(markup !== undefined ? { markupPercent: markup } : {}) }) ?? 'invalid';
 }
 
+/** «-» or «—»: the supplier or its article is removed */
+const NO_SUPPLIER_CELLS = ['-', '—', 'нет'];
+
+/**
+ * A supplier's name or article from its cell: `undefined` — empty, the product keeps its own; `null` — remove it
+ */
+export function supplierFromCell(cell = '', maxLength: number): string | null | undefined {
+  const text = cell.trim();
+  if (!text) return undefined;
+  if (NO_SUPPLIER_CELLS.includes(text.toLowerCase())) return null;
+  return supplierText(text, maxLength) ?? undefined;
+}
+
 /**
  * Export catalog products to CSV (the same columns the import reads)
  */
@@ -106,6 +123,8 @@ export function exportProductsToCSV(products: Product[]): void {
     p.purchase?.currency ?? '',
     p.purchase?.amount ?? '',
     p.purchase?.markupPercent ?? '',
+    p.supplier ?? '',
+    p.supplierSku ?? '',
   ]);
   downloadCSV(`catalog_${new Date().toISOString().slice(0, 10)}.csv`, [PRODUCT_CSV_HEADERS, ...rows]);
 }
@@ -161,7 +180,8 @@ export function parseProductsFromCSV(
   let badPurchase = 0;
   for (const line of lines.slice(1)) {
     const cells = splitCsvLine(line, separator);
-    const [id, title, category, priceCell, oldPriceCell, inStockCell, , sizesCell, colorsCell, image, description, currencyCell, amountCell, markupCell] = cells;
+    const [id, title, category, priceCell, oldPriceCell, inStockCell, , sizesCell, colorsCell, image, description, currencyCell, amountCell, markupCell, supplierCell, supplierSkuCell] =
+      cells;
     const price = Number(String(priceCell ?? '').replace(/\s/g, '').replace(',', '.'));
     // an existing product may come without a photo: its previews live in product_previews (catalog-scale-plan, stage 6),
     // and the export leaves the cell empty
@@ -189,6 +209,8 @@ export function parseProductsFromCSV(
     });
     const purchase = purchaseFromCells(currencyCell, amountCell, markupCell);
     if (purchase === 'invalid') badPurchase++;
+    const supplier = supplierFromCell(supplierCell, SUPPLIER_MAX_LENGTH);
+    const supplierSku = supplierFromCell(supplierSkuCell, SUPPLIER_SKU_MAX_LENGTH);
     products.push({
       ...(id ? { id } : {}),
       title,
@@ -203,6 +225,9 @@ export function parseProductsFromCSV(
       description: description || '',
       // empty cells keep the product's purchase; «₽» removes it (the key with undefined replaces the old one)
       ...(purchase === null ? { purchase: undefined } : purchase && purchase !== 'invalid' ? { purchase } : {}),
+      // the same for the supplier: empty keeps it, «-» removes it
+      ...(supplier !== undefined ? { supplier: supplier ?? undefined } : {}),
+      ...(supplierSku !== undefined ? { supplierSku: supplierSku ?? undefined } : {}),
     });
   }
   return { products, skipped, badPurchase };

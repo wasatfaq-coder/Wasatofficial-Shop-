@@ -15,6 +15,7 @@ import { AdminHint } from '../AdminHint';
 import { ProductFormBlock } from './ProductFormBlock';
 import { ProductFormGallery } from './ProductFormGallery';
 import { ProductFormPrices } from './ProductFormPrices';
+import { ProductFormSupplier } from './ProductFormSupplier';
 import { ProductFormVariants } from './ProductFormVariants';
 import { ProductFormSizeChart } from './ProductFormSizeChart';
 
@@ -53,6 +54,7 @@ export function ProductFormModal({
     formCategoryOptions,
     formPrice,
     formOldPrice,
+    formSupplier,
     formPurchaseCurrency,
     formBadge,
     setFormBadge,
@@ -92,6 +94,7 @@ export function ProductFormModal({
           rub(formPrice),
           formOldPrice ? `старая ${rub(formOldPrice)}` : '',
           currencySign ? `закупка в ${currencySign}` : '',
+          formSupplier.trim(),
         ]
           .filter(Boolean)
           .join(' · ')
@@ -310,6 +313,7 @@ export function ProductFormModal({
 
               <ProductFormBlock {...blockProps('prices')} title="Цены" summary={pricesSummary} required>
                 <ProductFormPrices form={form} />
+                <ProductFormSupplier form={form} products={products} />
               </ProductFormBlock>
 
               <ProductFormBlock {...blockProps('photos')} title="Фото" summary={photosSummary} required>

@@ -43,11 +43,16 @@ service cloud.firestore {
     }
 
     // Себестоимость живёт в закрытой product_costs: в товар её не добавить и не поменять, старое значение — только удалить.
-    // Закупка в валюте (purchase) — там же: в товаре её не было никогда, поэтому её нет и в записи товара
+    // Закупка в валюте (purchase), поставщик и его артикул (supplier, supplierSku) — там же: в товаре их не было никогда,
+    // поэтому их нет и в записи товара
     function keepsCostPriceOut() {
       return (!('costPrice' in request.resource.data)
         || request.resource.data.costPrice == resource.data.get('costPrice', null))
-        && !('purchase' in request.resource.data);
+        && hasNoPurchaseData();
+    }
+
+    function hasNoPurchaseData() {
+      return !request.resource.data.keys().hasAny(['purchase', 'supplier', 'supplierSku']);
     }
 
     // settings/server.serverOrdersEnabled: заказы оформляет Cloud Function placeOrder
@@ -70,7 +75,7 @@ service cloud.firestore {
     match /products/{productId} {
       allow read: if true;
       allow create: if isAdmin() && isValidId(productId) && !('costPrice' in request.resource.data)
-        && !('purchase' in request.resource.data);
+        && hasNoPurchaseData();
       allow delete: if isAdmin() && isValidId(productId);
       // Пока заказы не оформляются на сервере, покупатели списывают остатки — только своим заказом.
       // Остальные поля (в том числе старые отзывы внутри товара) — только администратор.

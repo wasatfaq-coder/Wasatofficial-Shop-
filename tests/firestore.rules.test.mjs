@@ -264,6 +264,17 @@ describe('catalog', () => {
     await assertSucceeds(updateDoc(doc(owner(), 'products/p1'), { price: 970 }));
   });
 
+  test('the supplier and its article are admin-only: in product_costs, never inside a product (stage 11)', async () => {
+    const supplier = { supplier: 'Guangzhou Fashion', supplierSku: 'GF-2231' };
+    await assertSucceeds(setDoc(doc(owner(), 'product_costs/p1'), { costPrice: 344.82, ...supplier }));
+    await assertFails(getDoc(doc(customer(), 'product_costs/p1')));
+    await assertFails(setDoc(doc(customer(), 'product_costs/p1'), supplier));
+    await assertFails(setDoc(doc(owner(), 'products/p3'), { ...product, id: 'p3', supplier: 'Guangzhou Fashion' }));
+    await assertFails(setDoc(doc(owner(), 'products/p3'), { ...product, id: 'p3', supplierSku: 'GF-2231' }));
+    await assertFails(updateDoc(doc(owner(), 'products/p1'), { supplier: 'Guangzhou Fashion' }));
+    await assertFails(updateDoc(doc(owner(), 'products/p1'), { supplierSku: 'GF-2231' }));
+  });
+
   test('the price journal is admin-only and its entries are never deleted (admin audit 09.10, finding 11)', async () => {
     const entry = { id: 'e1', createdAt: '2026-10-09T12:00:00.000Z', productId: 'p1', productTitle: 'Рубашка', oldPrice: 900, newPrice: 970, source: 'rates', currency: 'USD', rate: 90, operator: 'owner@example.com' };
     await assertFails(setDoc(doc(guest(), 'price_changes/e1'), entry));

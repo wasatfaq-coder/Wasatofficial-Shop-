@@ -37,6 +37,7 @@ import { EMPTY_SIZE_CHART, sizeChartErrors, sizeChartForForm } from '../../../ut
 import type { ProductSizeChart } from '../../../types';
 
 import type { AdminProductsTabProps, ProductCategoryOption } from '../AdminProductsTab';
+import { SUPPLIER_MAX_LENGTH, SUPPLIER_SKU_MAX_LENGTH, supplierText } from '../../../utils/productCosts';
 import { EDITED_PRODUCT_OPEN_BLOCKS, PRODUCT_FORM_BLOCKS, type ProductFormBlockId } from './ProductFormBlock';
 
 type ProductFormOptions = {
@@ -96,6 +97,9 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
   const [formPurchaseCurrency, setFormPurchaseCurrency] = useState<PurchaseCurrency | ''>('');
   const [formPurchaseAmount, setFormPurchaseAmount] = useState('');
   const [formPurchaseMarkup, setFormPurchaseMarkup] = useState('');
+  // Where the product is bought (stage 11): kept in product_costs with the cost, the customer never sees it
+  const [formSupplier, setFormSupplier] = useState('');
+  const [formSupplierSku, setFormSupplierSku] = useState('');
   const [formBadge, setFormBadge] = useState<string>('');
   // Open blocks of the form: a new product — all, an existing one — «Основное» and «Цены» (stage 4, variant A)
   const [openFormBlocks, setOpenFormBlocks] = useState<ReadonlySet<ProductFormBlockId>>(new Set());
@@ -218,6 +222,8 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     formPurchaseCurrency,
     formPurchaseAmount,
     formPurchaseMarkup,
+    formSupplier,
+    formSupplierSku,
     formOldPrice,
     formBadge,
     formInStock,
@@ -302,6 +308,8 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormPurchaseCurrency('');
     setFormPurchaseAmount('');
     setFormPurchaseMarkup('');
+    setFormSupplier('');
+    setFormSupplierSku('');
     setFormOldPrice(undefined);
     setFormDiscountPercent(undefined);
     autoPriceRef.current = null;
@@ -346,6 +354,8 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormPurchaseCurrency(prod.purchase?.currency ?? '');
     setFormPurchaseAmount(prod.purchase ? String(prod.purchase.amount).replace('.', ',') : '');
     setFormPurchaseMarkup(prod.purchase?.markupPercent !== undefined ? String(prod.purchase.markupPercent).replace('.', ',') : '');
+    setFormSupplier(prod.supplier ?? '');
+    setFormSupplierSku(prod.supplierSku ?? '');
     setFormOldPrice(prod.originalPrice);
     setFormDiscountPercent(prod.discountPercent);
     setFormBadge(prod.badge || '');
@@ -469,6 +479,8 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
         price: numPrice,
         costPrice: formCostPrice ? Number(formCostPrice) : undefined,
         purchase: formPurchase(),
+        supplier: supplierText(formSupplier, SUPPLIER_MAX_LENGTH),
+        supplierSku: supplierText(formSupplierSku, SUPPLIER_SKU_MAX_LENGTH),
         originalPrice: formOldPrice ? Number(formOldPrice) : undefined,
         // no old price — no discount to keep
         discountPercent: formOldPrice && formDiscountPercent ? formDiscountPercent : undefined,
@@ -507,6 +519,8 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
         price: numPrice,
         costPrice: formCostPrice ? Number(formCostPrice) : undefined,
         purchase: formPurchase(),
+        supplier: supplierText(formSupplier, SUPPLIER_MAX_LENGTH),
+        supplierSku: supplierText(formSupplierSku, SUPPLIER_SKU_MAX_LENGTH),
         originalPrice: formOldPrice ? Number(formOldPrice) : undefined,
         // no old price — no discount to keep
         discountPercent: formOldPrice && formDiscountPercent ? formDiscountPercent : undefined,
@@ -590,6 +604,10 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     formPurchaseMarkup,
     setFormPurchaseMarkup,
     formPurchase,
+    formSupplier,
+    setFormSupplier,
+    formSupplierSku,
+    setFormSupplierSku,
     formOldPrice,
     setFormOldPrice,
     formDiscountPercent,

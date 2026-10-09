@@ -57,7 +57,9 @@ import { getDefaultHistorySteps, getSynchronizedDeliveryStages } from './deliver
 import { CLIENT_ERRORS_COLLECTION, type ClientErrorReport, type StoredClientError } from './clientErrors';
 import { trackRead } from './pendingReads';
 import { googleAvatarUrl } from './googleAvatar';
-import { EXCHANGE_RATES_DOC_ID, readExchangeRates, readPurchase, type ExchangeRates, type ProductPurchase } from './currencyPricing';
+import { EXCHANGE_RATES_DOC_ID, readExchangeRates, type ExchangeRates } from './currencyPricing';
+import { costEntryOf, hasCostData, readCostEntry, type ProductCostEntry } from './productCosts';
+export type { ProductCostEntry } from './productCosts';
 import {
   CATALOG_INDEX_COLLECTION,
   PRODUCT_THUMBS_COLLECTION,
@@ -184,11 +186,12 @@ export function subscribeToProducts(
 
 
 /**
- * Product as stored in `products`, which every visitor reads: without merged-in reviews and without the cost price
- * (it lives in the admin-only `product_costs`).
+ * Product as stored in `products`, which every visitor reads: without merged-in reviews and without the cost price,
+ * the purchase and the supplier (they live in the admin-only `product_costs`).
  */
 function toStoredProduct(product: Product): Product {
-  const { costPrice: _cost, purchase: _purchase, catalogRating: _rating, ...stored } = withoutCollectionReviews(product);
+  const { costPrice: _cost, purchase: _purchase, supplier: _supplier, supplierSku: _supplierSku, catalogRating: _rating, ...stored } =
+    withoutCollectionReviews(product);
   return stored;
 }
 
@@ -688,12 +691,6 @@ function fieldUpdate(changes: FieldChanges): Record<string, unknown> {
   return { ...changes.set, ...Object.fromEntries(changes.removed.map((key) => [key, deleteField()])) };
 }
 
-/** Admin only: what a product cost — the rouble cost and the purchase in a currency (`product_costs/{id}`) */
-export interface ProductCostEntry {
-  costPrice?: number;
-  purchase?: ProductPurchase;
-}
-
 /** Admin only: costs by product id (`product_costs`, closed to customers by firestore.rules) */
 export function subscribeToProductCosts(onUpdate: (costs: Record<string, ProductCostEntry>) => void) {
   return onSnapshot(
@@ -701,12 +698,8 @@ export function subscribeToProductCosts(onUpdate: (costs: Record<string, Product
     (snapshot) => {
       const costs: Record<string, ProductCostEntry> = {};
       snapshot.forEach((snap) => {
-        const data = snap.data();
-        const entry: ProductCostEntry = {};
-        if (typeof data.costPrice === 'number') entry.costPrice = data.costPrice;
-        const purchase = readPurchase(data.purchase);
-        if (purchase) entry.purchase = purchase;
-        if (entry.costPrice !== undefined || entry.purchase) costs[snap.id] = entry;
+        const entry = readCostEntry(snap.data());
+        if (entry) costs[snap.id] = entry;
       });
       onUpdate(costs);
     },
@@ -714,20 +707,14 @@ export function subscribeToProductCosts(onUpdate: (costs: Record<string, Product
   );
 }
 
-function addProductCost(batch: WriteBatch, { id, costPrice, purchase }: { id: string } & ProductCostEntry) {
-  if (typeof costPrice === 'number' || purchase) {
-    batch.set(
-      doc(db, 'product_costs', id),
-      sanitizeForFirestore({
-        ...(typeof costPrice === 'number' ? { costPrice } : {}),
-        ...(purchase ? { purchase } : {}),
-        updatedAt: new Date().toISOString(),
-      })
-    );
+function addProductCost(batch: WriteBatch, { id, ...fields }: { id: string } & ProductCostEntry) {
+  const entry = costEntryOf(fields);
+  if (hasCostData(entry)) {
+    batch.set(doc(db, 'product_costs', id), sanitizeForFirestore({ ...entry, updatedAt: new Date().toISOString() }));
   } else batch.delete(doc(db, 'product_costs', id));
 }
 
-/** Writes the costs the admin changed; an entry with neither field removes the document */
+/** Writes the costs the admin changed; an empty entry removes the document */
 export async function saveProductCosts(changes: ({ id: string } & ProductCostEntry)[]) {
   if (changes.length === 0) return;
   try {

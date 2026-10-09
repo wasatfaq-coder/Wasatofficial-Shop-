@@ -80,6 +80,8 @@ export function ProductCsvImportModal({ list, products, categories, onUpdateProd
           rating: 0,
           reviewsCount: 0,
           ...(p.purchase ? { purchase: p.purchase } : {}),
+          ...(p.supplier ? { supplier: p.supplier } : {}),
+          ...(p.supplierSku ? { supplierSku: p.supplierSku } : {}),
         };
         fullProd.skus = generateDefaultSKUs(fullProd);
         newProducts.push(fullProd);
@@ -174,9 +176,10 @@ export function ProductCsvImportModal({ list, products, categories, onUpdateProd
                 />
               </div>
               <p className="text-xs text-[#4E5C70] leading-snug">
-                Закупка в валюте — последние три столбца: «Валюта закупки» (USD или CNY), «Закупка» (цена одной штуки
-                в этой валюте) и «Своя наценка (%)», если она не общая. Пустые ячейки оставляют закупку товара как есть,
-                «₽» её убирает. Цену по курсу пересчитает «Курсы и наценка» → «Применить».
+                Закупка в валюте — столбцы «Валюта закупки» (USD или CNY), «Закупка» (цена одной штуки в этой валюте)
+                и «Своя наценка (%)», если она не общая. Пустые ячейки оставляют закупку товара как есть, «₽» её убирает.
+                Цену по курсу пересчитает «Курсы и наценка» → «Применить». Последние два столбца — «Поставщик»
+                и «Артикул поставщика»: пустая ячейка их не меняет, «-» или «нет» убирает. Покупатель их не видит.
               </p>
             </div>
 

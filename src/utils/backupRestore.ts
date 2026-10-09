@@ -19,7 +19,7 @@ export const BACKUP_COLLECTION_TITLES: Record<string, string> = {
   products: 'Товары',
   product_previews: 'Превью фото товаров',
   product_photos: 'Фото товаров',
-  product_costs: 'Себестоимость',
+  product_costs: 'Себестоимость и поставщики',
   promos: 'Промокоды',
   settings: 'Настройки витрины',
   banners: 'Баннеры',
