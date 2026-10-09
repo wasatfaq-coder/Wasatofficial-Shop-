@@ -233,7 +233,7 @@ export function ProductFormVariants({
             <div className="flex items-center gap-1">
               <label className="text-[11px] font-extrabold text-[#2D3A4E] flex items-center gap-1.5 uppercase tracking-wider">
                 <Palette className="w-3.5 h-3.5 text-accent" />
-                <span>Цвета товара ({formColors.length})</span>
+                <span>Цвета товара * ({formColors.length})</span>
               </label>
               <AdminHint label="Цвета">Цвет и оттенок для покупателя. Добавьте цвета, потом размеры.</AdminHint>
             </div>
@@ -367,7 +367,7 @@ export function ProductFormVariants({
           <div className="flex items-center justify-between pb-1 border-b border-[#BAC5D5]/30">
             <label className="text-[11px] font-extrabold text-[#2D3A4E] flex items-center gap-1.5 uppercase tracking-wider">
               <Ruler className="w-3.5 h-3.5 text-accent" />
-              <span>Размеры товара ({formSizes.length})</span>
+              <span>Размеры товара * ({formSizes.length})</span>
             </label>
             <span className="text-[11px] font-semibold text-[#4E5C70]">Мин. 1 размер</span>
           </div>

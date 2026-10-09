@@ -133,7 +133,7 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
             <div className="w-5 h-5 rounded-md neu-inset flex items-center justify-center text-accent">
               <ImageIcon className="w-3 h-3" />
             </div>
-            <span className="text-[11px] font-extrabold text-[#2D3A4E]">Галерея фото</span>
+            <span className="text-[11px] font-extrabold text-[#2D3A4E]">Галерея фото *</span>
             <span className="text-[11px] font-extrabold px-1.5 py-0.2 rounded-md neu-inset text-accent">
               {formImages.length}
             </span>
