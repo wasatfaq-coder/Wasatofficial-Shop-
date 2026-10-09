@@ -203,9 +203,16 @@ export const ProfileAdminPanel = ({
     return onUpdateBannerSlides?.(updated);
   };
 
+  // The list shows the change at once and goes back when the save was refused before writing (the catalog is still
+  // loading); a refusal of the database is undone by the next catalog snapshot
   const handleUpdateProductsList = (updated: Product[]) => {
+    const before = productsList;
     setProductsList(updated);
-    return onUpdateProducts?.(updated);
+    const saved = onUpdateProducts?.(updated);
+    void Promise.resolve(saved).then((ok) => {
+      if (ok === false) setProductsList((current) => (current === updated ? before : current));
+    });
+    return saved;
   };
 
   const handleUpdateOrders = (updated: Order[]) => onUpdateOrders?.(updated);
@@ -445,10 +452,7 @@ export const ProfileAdminPanel = ({
               {adminTab === 'inventory' && (
                 <AdminInventoryTab
                   products={productsList}
-                  onUpdateProducts={(upd) => {
-                    setProductsList(upd);
-                    if (onUpdateProducts) onUpdateProducts(upd);
-                  }}
+                  onUpdateProducts={handleUpdateProductsList}
                   onShowToast={onShowToast}
                   settings={storefrontSettings}
                   onUpdateSettings={onUpdateStorefrontSettings}

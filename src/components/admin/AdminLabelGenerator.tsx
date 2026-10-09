@@ -41,7 +41,8 @@ interface AdminLabelGeneratorProps {
   products: Product[];
   settings: StorefrontSettings;
   onUpdateSettings?: SaveStorefrontSettings;
-  onUpdateProducts: (products: Product[]) => void;
+  /** false — not saved (the toast is already shown) */
+  onUpdateProducts: (products: Product[]) => Promise<boolean> | void;
   onClose: () => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
@@ -313,9 +314,9 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
     (p) => !formats.some((f) => f.widthMm === p.widthMm && f.heightMm === p.heightMm)
   );
 
-  const reissueBarcodes = () => {
+  const reissueBarcodes = async () => {
     const groups = new Set<string>(barcodeIssues.map((r) => articleGroupKey(r.product.id, r.sku.color)));
-    onUpdateProducts(unifyArticleBarcodes(products, groups));
+    if ((await onUpdateProducts(unifyArticleBarcodes(products, groups))) === false) return;
     onShowToast(
       `Штрихкоды обновлены у ${groups.size} ${pluralRu(groups.size, ['артикула', 'артикулов', 'артикулов'])}: у всех размеров артикула один код`,
       'success'

@@ -703,13 +703,23 @@ export async function saveProductCosts(changes: ({ id: string } & ProductCostEnt
 }
 
 /**
- * «Курсы и наценка» → «Применить»: only the price field of each product — stock, photos and texts stay as the
- * database has them (a whole-document write from the admin's copy could bring back sold stock)
+ * «Курсы и наценка» → «Применить»: only the price and the old (struck-out) price of each product — stock, photos and
+ * texts stay as the database has them (a whole-document write from the admin's copy could bring back sold stock).
+ * No old price or discount percent (`undefined`) removes the field: an old price not above the price is no discount.
  */
-export async function updateProductPrices(changes: { id: string; price: number }[]) {
+export async function updateProductPrices(
+  changes: { id: string; price: number; originalPrice?: number; discountPercent?: number }[]
+) {
   if (changes.length === 0) return;
+  const orDelete = (n: number | undefined) => (typeof n === 'number' ? n : deleteField());
   try {
-    await commitInChunks(changes, (batch, { id, price }) => batch.update(doc(db, 'products', id), { price }));
+    await commitInChunks(changes, (batch, { id, price, originalPrice, discountPercent }) =>
+      batch.update(doc(db, 'products', id), {
+        price,
+        originalPrice: orDelete(originalPrice),
+        discountPercent: orDelete(discountPercent),
+      })
+    );
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'products');
   }

@@ -5,7 +5,7 @@ import { needsVariantChoice } from '../utils/variantSelection';
 import { productHref } from '../utils/navigation';
 import { NeumorphicImage } from './NeumorphicImage';
 import { AnimatedFavoriteButton } from './AnimatedFavoriteButton';
-import { photoBadgeClass } from '../utils/productBadge';
+import { photoBadgeClass, shownBadge, shownOldPrice } from '../utils/productBadge';
 import { getProductRating } from '../utils/productRating';
 import { useProductThumb } from '../utils/productThumbs';
 
@@ -49,11 +49,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   // From real reviews only; hidden until the product has any
   const ratingInfo = getProductRating(product);
 
-  // Calculate discount percentage if old price exists
-  const discountPercent =
-    product.originalPrice && product.originalPrice > product.price
-      ? Math.round((1 - product.price / product.originalPrice) * 100)
-      : null;
+  // Discount percentage when the old price is above the price
+  const oldPrice = shownOldPrice(product);
+  const badge = shownBadge(product);
+  const discountPercent = oldPrice !== null ? Math.round((1 - product.price / oldPrice) * 100) : null;
 
   return (
     // The title link is stretched over the card (after:inset-0): one Tab stop and Enter opens the product;
@@ -73,10 +72,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         />
 
         {/* Badge in top-left corner */}
-        {product.badge && (
+        {badge && (
           <div className="absolute top-2.5 left-2.5 z-10">
-            <span className={`h-6 px-2.5 rounded-full ${photoBadgeClass(product.badge)} text-[11px] tracking-wider uppercase font-bold inline-flex items-center justify-center leading-none`}>
-              {product.badge}
+            <span className={`h-6 px-2.5 rounded-full ${photoBadgeClass(badge)} text-[11px] tracking-wider uppercase font-bold inline-flex items-center justify-center leading-none`}>
+              {badge}
             </span>
           </div>
         )}
@@ -153,9 +152,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 </span>
               ) : null}
             </div>
-            {product.originalPrice && product.originalPrice > product.price ? (
+            {oldPrice !== null ? (
               <span className="text-[12px] text-[#4E5C70] line-through font-normal leading-tight mt-0.5">
-                {product.originalPrice.toLocaleString('ru-RU')} ₽
+                {oldPrice.toLocaleString('ru-RU')} ₽
               </span>
             ) : (
               <span className="text-[12px] opacity-0 font-normal leading-tight mt-0.5 select-none" aria-hidden="true">

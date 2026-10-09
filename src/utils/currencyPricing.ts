@@ -121,25 +121,65 @@ export function exchangeRateErrors(rates: ExchangeRates): string[] {
 export interface RepricedProduct {
   product: Product;
   currency: PurchaseCurrency;
-  before: { price: number; costPrice?: number };
-  after: { price: number; costPrice: number };
-  /** The struck-out old price is not above the new one: the discount stops showing */
-  oldPriceBelow: boolean;
+  before: { price: number; costPrice?: number; originalPrice?: number };
+  /** `originalPrice` null — the struck-out price is removed (it was not above the price) */
+  after: { price: number; costPrice: number; originalPrice: number | null };
+  /** The product's discount, percent, kept at the new price; 0 — no discount (the stored percent is removed) */
+  discountPercent: number;
 }
 
-/** Products whose price or cost changes at these rates (products without a purchase in a currency stay as they are) */
+/** Off by more than this, a stored discount is not the one the prices show (the price was changed by hand) */
+const DISCOUNT_DRIFT_PERCENT = 2;
+
+/**
+ * The discount to keep: the owner's stored percent while the prices agree with it (rounding up to 10 ₽ makes the price
+ * share a little larger, so a percent recalculated from it would shrink at every new rate), otherwise the one the
+ * prices give, to a whole percent
+ */
+function keptDiscountPercent(price: number, oldPrice: number, stored: number | undefined): number {
+  const fromPrices = (1 - price / oldPrice) * 100;
+  const valid = typeof stored === 'number' && stored > 0 && stored < 100 && Math.abs(stored - fromPrices) <= DISCOUNT_DRIFT_PERCENT;
+  return valid ? stored : Math.min(99, Math.round(fromPrices));
+}
+
+/**
+ * Price, cost and old price of one product at these rates. A discounted product (old price above the price) keeps its
+ * discount: the old price becomes the price from the rate, and the price goes the same share below it (owner's
+ * choice 09.10, admin audit finding 3). An old price not above the price is no discount and is removed (finding 2).
+ */
+export function repriceProduct(
+  product: Product,
+  rates: ExchangeRates
+): (RepricedProduct['after'] & { discountPercent: number }) | null {
+  const fromRate = priceFromRate(product.purchase, rates);
+  if (!fromRate) return null;
+  const old = product.originalPrice;
+  const discounted = typeof old === 'number' && old > product.price && product.price > 0;
+  if (!discounted) {
+    return { ...fromRate, originalPrice: null, discountPercent: 0 };
+  }
+  const percent = keptDiscountPercent(product.price, old, product.discountPercent);
+  const price = roundPriceUp(fromRate.price * (1 - percent / 100));
+  if (price >= fromRate.price) return { ...fromRate, originalPrice: null, discountPercent: 0 };
+  return { price, costPrice: fromRate.costPrice, originalPrice: fromRate.price, discountPercent: percent };
+}
+
+/** Products whose price, cost or old price changes at these rates (products without a purchase in a currency stay) */
 export function repriceProducts(products: Product[], rates: ExchangeRates): RepricedProduct[] {
   const changes: RepricedProduct[] = [];
   for (const product of products) {
-    const after = priceFromRate(product.purchase, rates);
-    if (!after || !product.purchase) continue;
-    if (after.price === product.price && after.costPrice === product.costPrice) continue;
+    const result = repriceProduct(product, rates);
+    if (!result || !product.purchase) continue;
+    const { discountPercent, ...after } = result;
+    const sameOld = (after.originalPrice ?? undefined) === (product.originalPrice ?? undefined);
+    // the stored percent alone is no change: it is written with the next new price
+    if (after.price === product.price && after.costPrice === product.costPrice && sameOld) continue;
     changes.push({
       product,
       currency: product.purchase.currency,
-      before: { price: product.price, costPrice: product.costPrice },
+      before: { price: product.price, costPrice: product.costPrice, originalPrice: product.originalPrice },
       after,
-      oldPriceBelow: typeof product.originalPrice === 'number' && product.originalPrice > 0 && product.originalPrice <= after.price,
+      discountPercent,
     });
   }
   return changes;

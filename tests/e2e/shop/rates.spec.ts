@@ -3,6 +3,7 @@
 import { test, expect, rub } from '../fixtures';
 import { readDoc } from '../emulator';
 import { ADMIN, PRODUCTS } from '../store';
+import { CBR_DAILY_URL } from '../../../src/utils/cbrRates';
 
 test('владелец задаёт курс и надбавку, цена товара в долларах пересчитывается', async ({ page, phone, signIn }) => {
   const item = PRODUCTS.tshirt;
@@ -22,6 +23,28 @@ test('владелец задаёт курс и надбавку, цена то�
     await expect(dollar.getByLabel('Курс ЦБ, ₽ за $1')).toBeVisible();
     await expect(panel.getByRole('group', { name: 'Юань' }).getByLabel('Курс ЦБ, ₽ за ¥1')).toBeVisible();
     await expect(panel.getByRole('button', { name: 'Применить' })).toBeVisible();
+
+    // «Подставить курс ЦБ» only fills the fields: the answer of the CBR mirror is faked, nothing is written
+    await page.route(CBR_DAILY_URL, (route) =>
+      route.fulfill({
+        contentType: 'application/javascript',
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        body: JSON.stringify({
+          Date: '2026-10-09T11:30:00+03:00',
+          Valute: {
+            USD: { CharCode: 'USD', Nominal: 1, Value: 81.2345 },
+            CNY: { CharCode: 'CNY', Nominal: 1, Value: 11.3712 },
+          },
+        }),
+      })
+    );
+    await panel.getByRole('button', { name: 'Подставить курс ЦБ' }).click();
+    await expect(dollar.getByLabel('Курс ЦБ, ₽ за $1')).toHaveValue('81,2345');
+    await expect(panel.getByRole('group', { name: 'Юань' }).getByLabel('Курс ЦБ, ₽ за ¥1')).toHaveValue('11,3712');
+    await expect(panel.getByRole('status').filter({ hasText: 'Подставлен курс ЦБ на 9 октября 2026' })).toContainText(
+      'Цены изменятся после «Применить»'
+    );
+    await expect(panel.getByText('есть неприменённые изменения')).toBeVisible();
     return;
   }
 
