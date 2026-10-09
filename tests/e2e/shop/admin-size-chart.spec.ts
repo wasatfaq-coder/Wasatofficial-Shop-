@@ -1,6 +1,6 @@
 // Владелец заполняет размерную сетку в форме товара (этап 14 плана docs/admin-wholesale-plan.md): замер — чипом,
 // значение — по размеру; пустой замер не сохраняется, предпросмотр — как у покупателя
-import { test, expect } from '../fixtures';
+import { test, expect, openAdminSection } from '../fixtures';
 import { queryDocs } from '../emulator';
 import { ADMIN } from '../store';
 
@@ -12,8 +12,7 @@ test('размерная сетка в форме нового товара', as
   await signIn(ADMIN);
   await page.getByRole('button', { name: /^Панель администратора/ }).click();
   const panel = page.getByRole('dialog', { name: 'Панель администратора' });
-  await panel.getByRole('tab', { name: 'Каталог', exact: true }).click();
-  await panel.getByRole('tab', { name: 'Товары', exact: true }).click();
+  await openAdminSection(panel, 'Товары');
   await panel.getByRole('button', { name: 'Добавить товар' }).click();
 
   const form = page.getByRole('dialog', { name: 'Новый товар каталога' });

@@ -1,6 +1,6 @@
 // Покупатель пишет в чат поддержки — владелец видит диалог «Ждёт ответа» и отвечает — покупатель видит ответ, пока чат
 // открыт (аудит 07.10, находка 45: счётчик «ждут ответа» и ответ сотрудника не были проверены в браузере)
-import { test, expect, signInOn } from '../fixtures';
+import { test, expect, signInOn, openAdminSection } from '../fixtures';
 import { queryDocs } from '../emulator';
 import { ADMIN } from '../store';
 
@@ -27,8 +27,7 @@ test('покупатель пишет в чат, владелец отвечае
   await signInOn(owner, ADMIN);
   await owner.getByRole('button', { name: /^Панель администратора/ }).click();
   const panel = owner.getByRole('dialog', { name: 'Панель администратора' });
-  await panel.getByRole('tab', { name: 'Продажи', exact: true }).click();
-  await panel.getByRole('tab', { name: /^Чат поддержки/ }).click();
+  await openAdminSection(panel, /^Чат/);
   await panel.getByRole('textbox', { name: 'Поиск диалога' }).fill(buyer.name);
   const thread = panel.getByRole('button', { name: new RegExp(buyer.name) });
   await expect(thread).toContainText('Ждет ответа');

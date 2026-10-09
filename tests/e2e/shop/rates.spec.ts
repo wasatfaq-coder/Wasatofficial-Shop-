@@ -1,6 +1,6 @@
 // «Курсы и наценка» (решение владельца 09.10): закупка в долларах в форме товара, курс ЦБ 85 ₽ + надбавка 5 ₽ —
 // «Применить» пересчитывает цену товара по курсу 90 ₽, покупатель видит новую цену
-import { test, expect, rub } from '../fixtures';
+import { test, expect, rub, openAdminSection } from '../fixtures';
 import { readDoc } from '../emulator';
 import { ADMIN, PRODUCTS } from '../store';
 import { CBR_DAILY_URL } from '../../../src/utils/cbrRates';
@@ -12,12 +12,11 @@ test('владелец задаёт курс и надбавку, цена то�
   await signIn(ADMIN);
   await page.getByRole('button', { name: /^Панель администратора/ }).click();
   const panel = page.getByRole('dialog', { name: 'Панель администратора' });
-  await panel.getByRole('tab', { name: 'Каталог', exact: true }).click();
 
   if (!phone) {
     // the rates are one for the whole shop and phone and desktop run at the same time on one database:
     // the desktop checks the section without applying, the phone applies
-    await panel.getByRole('tab', { name: 'Курсы и наценка' }).click();
+    await openAdminSection(panel, 'Курсы и наценка');
     await expect(panel.getByRole('heading', { name: 'Курсы и наценка' })).toBeVisible();
     const dollar = panel.getByRole('group', { name: 'Доллар' });
     await expect(dollar.getByLabel('Курс ЦБ, ₽ за $1')).toBeVisible();
@@ -49,7 +48,7 @@ test('владелец задаёт курс и надбавку, цена то�
   }
 
   // purchase in dollars: stays out of the product, which every visitor reads
-  await panel.getByRole('tab', { name: 'Товары', exact: true }).click();
+  await openAdminSection(panel, 'Товары');
   await panel.getByRole('textbox', { name: 'Поиск товаров' }).fill(item.title);
   await panel.getByRole('button', { name: 'Редактировать' }).click();
   const form = page.getByRole('dialog', { name: 'Редактирование товара' });
@@ -61,7 +60,7 @@ test('владелец задаёт курс и надбавку, цена то�
   expect((await readDoc(`products/${item.id}`))?.purchase).toBeUndefined();
 
   // 85 ₽ + 5 ₽ = 90 ₽ for a dollar: 10 $ → 900 ₽ (was 1 000 ₽)
-  await panel.getByRole('tab', { name: 'Курсы и наценка' }).click();
+  await openAdminSection(panel, 'Курсы и наценка');
   const dollar = panel.getByRole('group', { name: 'Доллар' });
   await dollar.getByLabel('Курс ЦБ, ₽ за $1').fill('85');
   await dollar.getByLabel('Надбавка, ₽').fill('5');

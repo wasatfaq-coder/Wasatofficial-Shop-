@@ -1,10 +1,7 @@
 import { pluralRu } from '../../utils/pluralize';
 import { AdminHint } from './AdminHint';
 import React, { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import { AdminLaunchChecklist } from './AdminLaunchChecklist';
 import { AdminSiteErrorsCard } from './AdminSiteErrorsCard';
-import type { LaunchStep } from '../../utils/launchChecklist';
-import type { AdminTab } from './adminSections';
 import {
   TrendingUp,
   ShoppingBag,
@@ -65,9 +62,6 @@ interface AdminAnalyticsTabProps {
   promos?: PromoCode[];
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   onSelectOrder?: (order: Order) => void;
-  /** «Запуск магазина» above the numbers while something for the first sale is missing */
-  launchSteps?: LaunchStep[];
-  onOpenTab?: (tab: AdminTab) => void;
 }
 
 export type ChartType = 'area' | 'bar';
@@ -247,7 +241,7 @@ const Segments = <T extends string>({
  * top products, categories and promo codes, the PDF report. Everything is counted from orders (dated by
  * createdAt) placed after the statistics reset; orders themselves are never deleted here.
  */
-export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, products, promos = [], onShowToast, onSelectOrder, launchSteps, onOpenTab }) => {
+export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, products, promos = [], onShowToast, onSelectOrder }) => {
   const [period, setPeriod] = useState<AnalyticsPeriod>('7d');
   const [statusFilter, setStatusFilter] = useState<OrderStatusFilter>('all');
   const [activeMetric, setActiveMetric] = useState<ActiveMetric>('revenue');
@@ -440,7 +434,6 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
 
   return (
     <div className="space-y-4 sm:space-y-5 text-[#2D3A4E]">
-      {launchSteps && onOpenTab && <AdminLaunchChecklist steps={launchSteps} onOpenTab={onOpenTab} />}
       <AdminSiteErrorsCard onShowToast={onShowToast} />
       {/* 1. Header: title, period, reset state */}
       <section className="neu-flat rounded-3xl p-4 space-y-3">

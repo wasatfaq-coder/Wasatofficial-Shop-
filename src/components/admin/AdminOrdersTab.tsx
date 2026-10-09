@@ -1961,6 +1961,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
                   {/* Rarely used actions: «Ещё» menu; delete is the last item, after a line */}
                   <AdminActionMenu
+                    of={`заказ № ${ord.id}`}
                     actions={[
                       // a cancelled order already returned its goods: a second return here doubled the stock (finding 6)
                       ...(!ord.isCancelled

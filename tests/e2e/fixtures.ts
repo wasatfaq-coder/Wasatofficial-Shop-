@@ -1,4 +1,4 @@
-import { test as base, expect, type BrowserContext, type Page } from '@playwright/test';
+import { test as base, expect, type BrowserContext, type Locator, type Page } from '@playwright/test';
 
 export { expect };
 
@@ -63,4 +63,21 @@ export async function chooseSize(page: Page, name: RegExp): Promise<void> {
 /** A price as the site prints it, «3 340 ₽» (with a no-break space between thousands) */
 export function rub(n: number): RegExp {
   return new RegExp(String(n).replace(/\B(?=(\d{3})+$)/g, '\\s?') + '\\s?₽');
+}
+
+/**
+ * Opens a section of the admin panel by its name (menu variant A): a button of «Разделы панели» — the phone's bottom
+ * bar or the computer's list — or, on a phone, «Ещё» and the section there
+ */
+export async function openAdminSection(panel: Locator, name: string | RegExp): Promise<void> {
+  const nav = panel.getByRole('navigation', { name: 'Разделы панели' });
+  await expect(nav).toBeVisible();
+  const exact = typeof name === 'string';
+  const direct = nav.getByRole('button', { name, exact });
+  if ((await direct.count()) > 0) {
+    await direct.click();
+    return;
+  }
+  await nav.getByRole('button', { name: /^Ещё/ }).click();
+  await panel.getByRole('navigation', { name: 'Все разделы' }).getByRole('button', { name: exact ? new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`) : name }).click();
 }
