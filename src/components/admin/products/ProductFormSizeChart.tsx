@@ -32,8 +32,11 @@ export function ProductFormSizeChart({
   const chips = isFull ? [] : measurementSuggestions(products, formSizeChart);
   const preview = normalizeSizeChart(formSizeChart, formSizes);
 
+  // the same measurement again is not added: the typed name stays in the field
   const addMeasurement = (label: string) => {
-    setFormSizeChart((chart) => withColumn(chart, label));
+    const next = withColumn(formSizeChart, label);
+    if (next === formSizeChart) return;
+    setFormSizeChart(next);
     setNewMeasurement('');
   };
 
@@ -76,7 +79,7 @@ export function ProductFormSizeChart({
       ) : (
         <>
           {chips.length > 0 && (
-            <div className="flex flex-wrap gap-1.5" aria-label="Частые замеры">
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Частые замеры">
               {chips.map((label) => (
                 <button
                   key={label}
