@@ -159,6 +159,10 @@ describe('the form says what to fix before applying', () => {
     expect(exchangeRateErrors(rates({ usd: { official: 85, markup: 120, markupKind: 'percent' } }))).toEqual(['Доллар: надбавка больше 100 %']);
     expect(exchangeRateErrors(rates({ usd: { official: 85, markup: 90, markupKind: 'rub' } }))).toEqual(['Доллар: надбавка больше самого курса']);
     expect(exchangeRateErrors(rates({ markupPercent: -5 }))).toEqual(['Наценка для всех товаров — от 0 до 1000 %']);
+    // a rate over the limit is not «not set» (admin audit 09.10, finding 14)
+    expect(exchangeRateErrors(rates({ usd: { official: 200_000, markup: 0, markupKind: 'rub' } }))).toEqual([
+      'Доллар: курс ЦБ — не больше 100 000 ₽',
+    ]);
   });
 });
 

@@ -104,7 +104,8 @@ export function exchangeRateErrors(rates: ExchangeRates): string[] {
   const errors: string[] = [];
   for (const { id, title } of PURCHASE_CURRENCIES) {
     const r = rateOf(rates, id);
-    if (!isPositive(r.official) || r.official > MAX_RATE) errors.push(`${title}: укажите курс ЦБ больше нуля`);
+    if (!isPositive(r.official)) errors.push(`${title}: укажите курс ЦБ больше нуля`);
+    else if (r.official > MAX_RATE) errors.push(`${title}: курс ЦБ — не больше ${MAX_RATE.toLocaleString('ru-RU')} ₽`);
     if (!isNonNegative(r.markup)) errors.push(`${title}: надбавка не может быть меньше нуля`);
     else if (r.markupKind === 'percent' && r.markup > 100) errors.push(`${title}: надбавка больше 100 %`);
     else if (r.markupKind === 'rub' && isPositive(r.official) && r.markup > r.official) {
