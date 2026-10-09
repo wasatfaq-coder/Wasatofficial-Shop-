@@ -71,8 +71,11 @@ test('владелец задаёт курс и надбавку, цена то�
 
   await panel.getByRole('button', { name: 'Применить' }).click();
   await page.getByRole('alertdialog', { name: 'Применить курсы?' }).getByRole('button', { name: 'Применить' }).click();
+  // «Курсы применены» only after customers' catalog index has the new prices (admin audit 09.10, finding 10)
+  await expect(page.getByText(/Курсы применены/)).toBeVisible({ timeout: 25_000 });
+  await expect(page.getByText(/Каталог покупателей ещё обновляется/)).toHaveCount(0);
   await expect.poll(async () => (await readDoc(`products/${item.id}`))?.price).toBe(900);
-  // prices, then costs, then the rates: «Последний раз применено» only over new prices
+  // prices, costs and the rates in one batch (finding 13)
   await expect.poll(async () => (await readDoc(`product_costs/${item.id}`))?.costPrice).toBe(900);
   await expect.poll(async () => (await readDoc('settings/exchange_rates'))?.usd).toEqual({ official: 85, markup: 5, markupKind: 'rub' });
 
