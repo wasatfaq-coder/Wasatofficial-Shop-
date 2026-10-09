@@ -1,6 +1,8 @@
 import type { DeliveryMethod, Order, Product, PromoCode, StorefrontSettings } from '../types';
 import { calcPromoDiscount, getAvailableDeliveryMethods, isQuickOrderDelivery, type PricingLine } from '../shared/orderPricing';
 import { linePrice } from '../shared/orderLine';
+import { orderTimestamp } from '../shared/orderDate';
+import { pricesAtOrderTime } from './priceHistory';
 
 /** What the order is compared with besides the catalog: the store's codes, delivery and payment methods */
 export interface OrderCheckContext {
@@ -14,10 +16,27 @@ const AGREED_BY_MANAGER = 'Уточнит менеджер';
 
 const rub = (value: number) => `${value.toLocaleString('ru-RU')} ₽`;
 
+/** The server writes `updatedAt` with every write of an order; the buyer's clock may differ this much from it */
+const SERVER_CLOCK_SLACK_MS = 10 * 60 * 1000;
+
+/**
+ * The moment the order's prices are checked at. `createdAt` is written by the buyer's browser, and an order dated back
+ * would pass with a lower price the product had weeks ago; while nobody has changed the order since it was placed, its
+ * server `updatedAt` is the moment it was written, and the order is not older than that (review of finding 1)
+ */
+function checkedOrderTime(order: Order): number | null {
+  const created = orderTimestamp(order);
+  const untouched =
+    (order.statusLog?.length ?? 0) <= 1 && !order.paymentLog?.length && !order.cancelledAt && !order.paymentReceipt;
+  if (created === null || !untouched || typeof order.updatedAt !== 'number') return created;
+  return Math.max(created, order.updatedAt - SERVER_CLOCK_SLACK_MS);
+}
+
 /**
  * «Цены не совпадают с каталогом» (audit 02.10, stage 5 without Blaze): an order from the browser is written by the
  * buyer, and its prices nobody but `placeOrder` checks — a made-up order could cost 1 ₽. The owner confirms the payment
- * by hand, so before «Подтвердить оплату» the order is compared with today's catalog and with its own sum, and — with
+ * by hand, so before «Подтвердить оплату» the order is compared with the catalog's prices at the time of the order
+ * (`priceHistory`) and with its own sum, and — with
  * `shop` — its discount with the promo code, its delivery fee with the delivery method and its payment method with
  * «Оплата» (check 04.10, finding 2: a made-up discount, a missing fee or «при получении» passed unnoticed).
  * A price could also change after the order — the text asks to check, it does not accuse.
@@ -29,6 +48,7 @@ export function orderPriceIssues(order: Order, products: Product[], shop: OrderC
 
   const issues: string[] = [];
   const byId = new Map(products.map((p) => [p.id, p]));
+  const orderTime = checkedOrderTime(order);
   const lines: PricingLine[] = [];
   for (const item of order.items ?? []) {
     const price = linePrice(item);
@@ -36,8 +56,11 @@ export function orderPriceIssues(order: Order, products: Product[], shop: OrderC
     const catalog = item.product?.id ? byId.get(item.product.id) : undefined;
     // the category for the promo is the catalog's: the line's copy is written by the buyer
     lines.push({ productId: item.product?.id ?? '', category: catalog?.category ?? item.product?.category, price, quantity });
-    if (catalog && catalog.price !== price) {
-      issues.push(`«${catalog.title}»: в заказе ${rub(price)}, в каталоге ${rub(catalog.price)}`);
+    // the price in the catalog when the order was placed: «Курсы и наценка» may have changed it since (admin audit
+    // 09.10, finding 1)
+    const then = catalog ? pricesAtOrderTime(catalog, orderTime) : [];
+    if (catalog && !then.includes(price)) {
+      issues.push(`«${catalog.title}»: в заказе ${rub(price)}, в каталоге ${then.map(rub).join(' или ')}`);
     }
     if (quantity <= 0) issues.push(`«${item.product?.title ?? 'строка'}»: количество ${quantity}`);
   }
