@@ -183,6 +183,27 @@ export const PRODUCTS = {
     sizes: ['S', 'M', 'L'],
     stock: 4,
   }), isPopular: false },
+  // «Товары»: the price and the stock right in the list (stage 4 of docs/admin-wholesale-plan.md), one per screen size
+  overshirt: { ...product({
+    id: 'e2e-overshirt',
+    title: 'Куртка-рубашка',
+    category: 'tshirts',
+    categoryLabel: 'Футболки',
+    price: 5990,
+    colors: [{ name: 'Хаки', hex: '#556B2F' }],
+    sizes: ['S', 'M'],
+    stock: 5,
+  }), isPopular: false },
+  vest: { ...product({
+    id: 'e2e-vest',
+    title: 'Жилет стёганый',
+    category: 'tshirts',
+    categoryLabel: 'Футболки',
+    price: 5490,
+    colors: [{ name: 'Хаки', hex: '#556B2F' }],
+    sizes: ['S', 'M'],
+    stock: 5,
+  }), isPopular: false },
 };
 
 /** A full photo of a product as `product_photos` keeps it (the product holds a preview) */
