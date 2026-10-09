@@ -91,7 +91,7 @@ interface AdminSupportChatTabProps {
   categories: StoreCategory[];
   initialOrderId?: string | null;
   onSend: (payload: AdminChatPayload) => void;
-  onUpdateOrders?: (orders: Order[]) => void;
+  onUpdateOrders?: (orders: Order[]) => Promise<boolean> | void;
   /** «Подтвердить оплату» / «Отклонить чек» right on the receipt photo («Доработки 5») */
   onReviewReceipt?: ReviewReceipt;
   onClear: () => void;
@@ -426,7 +426,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
     setIsStatusModalOpen(true);
   };
 
-  const handleSaveStatus = (e: React.FormEvent) => {
+  const handleSaveStatus = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!order) return;
     const isTK = isCarrierOrder(order);
@@ -452,7 +452,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
       ],
       ...(needsCode ? { pickupCode: generatePickupCode() } : {}),
     };
-    onUpdateOrders?.(allOrders.map((o) => (o.id === order.id ? updated : o)));
+    // the buyer is told only about a status that was saved (a refusal or their own change meanwhile keeps the old one)
+    if ((await onUpdateOrders?.(allOrders.map((o) => (o.id === order.id ? updated : o)))) === false) return;
     if (notifyCustomer && !isLegacy) {
       send({
         text: `Статус вашего заказа № ${order.id}: «${customerStatusLabel(withTracking, newStatus)}»${tracking && isTK ? `. Трек-номер: ${tracking}` : ''}.`,

@@ -26,7 +26,7 @@ interface AdminSupportInboxProps {
   /** Opened from an order in «Заказы»: select that customer's dialog */
   initialOrderId?: string | null;
   onSend: (thread: { threadId: string; threadName: string }, payload: AdminChatPayload) => void;
-  onUpdateOrders?: (orders: Order[]) => void;
+  onUpdateOrders?: (orders: Order[]) => Promise<boolean> | void;
   /** «Подтвердить оплату» / «Отклонить чек» on a receipt photo («Доработки 5») */
   onReviewReceipt?: ReviewReceipt;
   onClearThread: (threadId: string | null) => void;

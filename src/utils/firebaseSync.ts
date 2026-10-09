@@ -25,6 +25,7 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { needsOwnerAttention } from './firestoreErrors';
+import { changedFields, changedSince, hasFieldChanges, orderFieldsToCheck, type FieldChanges } from './fieldChanges';
 import { CartItem, Product, ProductSKU, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog, PaymentKind, PaymentTemplate, PriceHistoryEntry } from '../types';
 import { paymentLogEntry, receiptMessageText } from './paymentDetails';
 import { DEFAULT_STOREFRONT_SETTINGS, generateDefaultSKUs, inStockAfterReturn, inStockAfterStockChange, stockMovementId } from './inventory';
@@ -641,18 +642,50 @@ export async function returnCancelledOrderStock(
 /**
  * Products without their previews inside (stage 6 of docs/catalog-scale-plan.md, productPreviews.ts): the previews go to
  * `product_previews` first (a product never points to previews that are not there yet), and only changed ones — a
- * product the admin changed without its photos keeps its `previewKey`
+ * product the admin changed without its photos keeps its `previewKey`.
+ * A product in `previous` (what the admin panel showed) gets only the fields the admin changed (`update`): a bulk
+ * action or a new category must not write back stock an order took in the same seconds (admin audit 09.10, finding 6).
+ * A new product, or one whose previous version cannot be compared, is written whole.
  */
-export async function syncAllProductsToFirestore(products: Product[]) {
+export async function syncAllProductsToFirestore(products: Product[], previous: Product[] = []) {
   try {
+    const before = new Map(previous.map((p) => [p.id, p]));
     const split = products.map(splitProductPreviews);
     await saveProductPreviews(
       split.flatMap(({ stored, previews }, i) => (previews && stored.previewKey !== products[i].previewKey ? [previews] : []))
     );
-    await setDocs('products', split.map(({ stored }) => toStoredProduct(stored)));
+    const writes = split.flatMap(({ stored }): ProductWrite[] => {
+      const next = sanitizeForFirestore(toStoredProduct(stored));
+      const prev = storedProductForCompare(before.get(next.id));
+      if (!prev) return [{ id: next.id, whole: next }];
+      const changes = changedFields(prev, next as unknown as Record<string, unknown>);
+      return hasFieldChanges(changes) ? [{ id: next.id, changes }] : [];
+    });
+    await commitInChunks(writes, (batch, write) => {
+      const ref = doc(db, 'products', write.id);
+      if ('whole' in write) batch.set(ref, write.whole);
+      else batch.update(ref, fieldUpdate(write.changes));
+    });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'products');
   }
+}
+
+type ProductWrite = { id: string; whole: Product } | { id: string; changes: FieldChanges };
+
+/** The stored form of the version the admin saw; null — not known or not comparable (previews not read) */
+function storedProductForCompare(product: Product | undefined): Record<string, unknown> | null {
+  if (!product) return null;
+  try {
+    return sanitizeForFirestore(toStoredProduct(splitProductPreviews(product).stored)) as unknown as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+/** `update()` data of changed fields: removed ones are deleted */
+function fieldUpdate(changes: FieldChanges): Record<string, unknown> {
+  return { ...changes.set, ...Object.fromEntries(changes.removed.map((key) => [key, deleteField()])) };
 }
 
 /** Admin only: what a product cost — the rouble cost and the purchase in a currency (`product_costs/{id}`) */
@@ -1385,12 +1418,76 @@ export async function saveAnalyticsResetAt(resetAt: number | null) {
   }
 }
 
-export async function syncAllOrdersToFirestore(orders: Order[]) {
+type OrderWrite =
+  | { id: string; whole: Record<string, unknown> }
+  | { id: string; changes: FieldChanges; seen?: Record<string, unknown>; check?: string[] };
+
+/**
+ * Admin changes of orders. An order in `previous` (what «Заказы» showed) gets only the fields the admin changed
+ * (`update`), so a buyer's cancel, receipt or «Я получил» in the same seconds is not written over (admin audit 09.10,
+ * finding 7). A change of a field the buyer also writes (status, payment, cancellation) goes in a transaction and only
+ * while the database still has the order's state the admin saw. Resolves to the orders that changed meanwhile — as
+ * the database has them now; when the read before writing finds one, nothing of the change is written.
+ */
+/** The order as the database has it, when one of `fields` differs from what the admin saw; null — unchanged */
+async function currentOrderIfChanged(id: string, seen: Record<string, unknown>, fields: string[]): Promise<Order | null> {
+  const snap = await getDoc(doc(db, 'orders', id));
+  if (!snap.exists()) throw new Error(`Заказ ${id} удалён`);
+  const current = normalizeOrderFromFirestore(snap.data(), snap.id);
+  return changedSince(seen, sanitizeForFirestore(current) as unknown as Record<string, unknown>, fields).length > 0 ? current : null;
+}
+
+export async function syncAllOrdersToFirestore(orders: Order[], previous: Order[] = []): Promise<Order[]> {
+  const before = new Map(previous.map((o) => [o.id, o]));
+  const writes: OrderWrite[] = [];
+  for (const order of orders) {
+    const next = sanitizeForFirestore(order) as unknown as Record<string, unknown>;
+    const seenOrder = before.get(order.id);
+    if (!seenOrder) {
+      writes.push({ id: order.id, whole: next });
+      continue;
+    }
+    const seen = sanitizeForFirestore(seenOrder) as unknown as Record<string, unknown>;
+    const changes = changedFields(seen, next, ['updatedAt']);
+    if (!hasFieldChanges(changes)) continue;
+    const check = orderFieldsToCheck(changes);
+    writes.push(check.length > 0 ? { id: order.id, changes, seen, check } : { id: order.id, changes });
+  }
+  const conflicts: Order[] = [];
   try {
-    await commitInChunks(orders, (batch, order) => batch.set(doc(db, 'orders', order.id), storedOrder(order)));
+    const checked = writes.filter((w): w is Extract<OrderWrite, { changes: FieldChanges }> & { seen: Record<string, unknown>; check: string[] } =>
+      'check' in w && !!w.check && !!w.seen
+    );
+    // All or nothing in practice: if a buyer changed any of the orders meanwhile, none is written, so the admin
+    // screen's follow-up (stock, promo) never runs for a half-saved change
+    for (const { id, seen, check } of checked) {
+      const current = await currentOrderIfChanged(id, seen, check);
+      if (current) conflicts.push(current);
+    }
+    if (conflicts.length > 0) return conflicts;
+    const plain = writes.filter((w) => !checked.includes(w as (typeof checked)[number]));
+    await commitInChunks(plain, (batch, write) => {
+      const ref = doc(db, 'orders', write.id);
+      if ('whole' in write) batch.set(ref, { ...write.whole, updatedAt: serverTimestamp() });
+      else batch.update(ref, { ...fieldUpdate(write.changes), updatedAt: serverTimestamp() });
+    });
+    // the check again inside the transaction: the buyer may act between the read above and the write
+    for (const { id, changes, seen, check } of checked) {
+      const ref = doc(db, 'orders', id);
+      const changedMeanwhile = await runTransaction(db, async (tx) => {
+        const snap = await tx.get(ref);
+        if (!snap.exists()) throw new Error(`Заказ ${id} удалён`);
+        const current = normalizeOrderFromFirestore(snap.data(), snap.id);
+        if (changedSince(seen, sanitizeForFirestore(current) as unknown as Record<string, unknown>, check).length > 0) return current;
+        tx.update(ref, { ...fieldUpdate(changes), updatedAt: serverTimestamp() });
+        return null;
+      });
+      if (changedMeanwhile) conflicts.push(changedMeanwhile);
+    }
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, 'orders');
   }
+  return conflicts;
 }
 
 /**
