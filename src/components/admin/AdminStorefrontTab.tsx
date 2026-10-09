@@ -28,14 +28,14 @@ import { SaveStorefrontSettings, StorefrontSettings } from '../../types';
 import {
   loadStorefrontSettings,
   saveStorefrontSettings,
-  DEFAULT_STOREFRONT_SETTINGS,
 } from '../../utils/inventory';
 import { BrandRequisitesModal } from '../BrandRequisitesModal';
 import { NeumorphicSwitch } from '../NeumorphicSwitch';
 import { AdminScheduleEditor } from './AdminScheduleEditor';
 import { scheduleErrors } from '../../utils/storeSchedule';
 import { QuickTextEditModal, QuickEditFieldConfig } from './QuickTextEditModal';
-import { useDialogA11y } from '../../utils/useDialogA11y';
+import { ConfirmDialog } from '../ConfirmDialog';
+import { resetStorefrontTexts } from '../../utils/storefrontReset';
 import { sameValue, useUnsavedChanges } from '../../utils/unsavedChanges';
 
 
@@ -111,7 +111,6 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
   const [editModalConfig, setEditModalConfig] = useState<QuickEditFieldConfig | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
-  const resetDialog = useDialogA11y(isResetConfirmOpen, () => setIsResetConfirmOpen(false));
 
 
   const openQuickEdit = (config: Omit<QuickEditFieldConfig, 'value'> & { value?: string }) => {
@@ -158,10 +157,13 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
     onShowToast('Настройки витрины, реквизиты и данные бренда сохранены', 'success');
   };
 
+  // Only the section's contacts, legal details and texts, from the saved version (not edits waiting for «Применить»):
+  // categories, payment, FAQ, labels, schedule, modes and thresholds stay (audit 07.10, stage 8, finding 59-P1)
   const handleResetToDefaults = async () => {
-    setLocalSettings(DEFAULT_STOREFRONT_SETTINGS);
-    if (await persistSettings(DEFAULT_STOREFRONT_SETTINGS)) {
-      onShowToast('Тексты и контакты витрины очищены', 'info');
+    const next = resetStorefrontTexts(propSettings ?? localSettings);
+    setLocalSettings(next);
+    if (await persistSettings(next)) {
+      onShowToast('Контакты, реквизиты и тексты витрины очищены', 'info');
     }
   };
 
@@ -240,55 +242,24 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
         </div>
       </div>
 
-      {/* Reset Confirmation Dialog */}
-      {isResetConfirmOpen && (
-        <div
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setIsResetConfirmOpen(false);
-          }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2D3A4E]/50 backdrop-blur-xs animate-in fade-in duration-200"
-        >
-          <div
-            ref={resetDialog.ref}
-            {...resetDialog.props}
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm neu-flat rounded-3xl p-5 sm:p-6 space-y-4 border border-white/80 animate-in zoom-in-95 duration-150"
-          >
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-2xl neu-flat-sm flex items-center justify-center text-warning shrink-0 border border-white/80">
-                <AlertCircle className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 id={resetDialog.titleId} className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E]">
-                  Сброс настроек витрины
-                </h4>
-                <p className="text-xs text-[#4E5C70] mt-1 leading-relaxed">
-                  Очистить контакты, реквизиты, описание консьерж-сервиса и тексты о бренде? Покупатели увидят «Не настроено», пока вы не заполните их снова. Тарифы доставки вернутся к значениям по умолчанию.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#BAC5D5]/30">
-              <button
-                type="button"
-                onClick={() => setIsResetConfirmOpen(false)}
-                className="py-2 px-3.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer transition-all border border-white/80"
-              >
-                Отмена
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsResetConfirmOpen(false);
-                  handleResetToDefaults();
-                }}
-                className="py-2 px-4 neu-button rounded-xl text-xs font-extrabold text-danger hover:text-danger transition-all cursor-pointer border border-danger/70"
-              >
-                Да, сбросить
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Reset confirmation: what is cleared and what stays */}
+      <ConfirmDialog
+        isOpen={isResetConfirmOpen}
+        title="Очистить контакты, реквизиты и тексты?"
+        tone="danger"
+        confirmLabel="Очистить"
+        cancelLabel="Отмена"
+        message={
+          <>
+            Очистятся телефон, почта, мессенджеры, адрес шоурума, слоган, реквизиты организации и банка, тексты
+            консьерж-сервиса и бренда. Покупатели увидят «Не настроено», пока вы не заполните их снова. Название
+            магазина, объявление в шапке, график, категории, способы оплаты, FAQ, этикетки, режимы и пороги останутся
+            как есть, а неприменённые правки на этой странице отменятся.
+          </>
+        }
+        onConfirm={() => void handleResetToDefaults()}
+        onClose={() => setIsResetConfirmOpen(false)}
+      />
 
       {/* LIVE PREVIEW COMPONENT */}
       {showLivePreview && (

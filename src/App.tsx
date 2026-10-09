@@ -97,8 +97,13 @@ export default function App() {
     deliveryMethods,
     setDeliveryMethods,
     pickupPoints,
+    pickupPointsLoaded,
+    pickupPointsFailed,
     setPickupPoints,
-  } = useStorefrontData(isAdmin || activeTab === 'cart' || activeTab === 'checkout');
+  } = useStorefrontData(
+    isAdmin || activeTab === 'cart' || activeTab === 'checkout',
+    isAdmin || activeTab === 'cart' || activeTab === 'checkout'
+  );
 
   // The removed local admin password was kept here in plain text: erase it
   React.useEffect(() => {
@@ -265,12 +270,24 @@ export default function App() {
     pendingChatIds,
     failedChatMessages,
     customerChatMessages,
+    chatThreadLoading,
+    chatThreadFailed,
     handleSendMessageFromUser,
     handleRetryChatMessage,
     handleChangeChatMessage,
     handleSendMessageAsAdmin,
     handleClearChat,
-  } = useSupportChat({ authLoading, isAdmin, currentUser, userProfile, promos, setPromos, addToast, persist });
+  } = useSupportChat({
+    authLoading,
+    isAdmin,
+    currentUser,
+    userProfile,
+    promos,
+    setPromos,
+    addToast,
+    persist,
+    chatOpen: isSupportChatOpen,
+  });
 
   // Placing an order and the confirmation screen (useCheckout.ts)
   const { latestOrder, checkoutStockProblems, handleCompleteOrder } = useCheckout({
@@ -467,6 +484,8 @@ export default function App() {
             setChatDraft('');
           }}
           messages={customerChatMessages}
+          loading={chatThreadLoading}
+          loadFailed={chatThreadFailed}
           onSendMessage={handleSendMessageFromUser}
           pendingIds={pendingChatIds}
           failedIds={new Set(failedChatMessages.map((m) => m.id))}
@@ -714,6 +733,8 @@ export default function App() {
               onShowToast={addToast}
               deliveryMethods={customerDeliveryMethods}
               pickupPoints={customerPickupPoints}
+              pickupPointsLoaded={pickupPointsLoaded}
+              pickupPointsFailed={pickupPointsFailed}
             />
           )}
 
