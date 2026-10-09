@@ -33,7 +33,7 @@ export function ProductCsvImportModal({ list, products, categories, onUpdateProd
     }
 
     try {
-      const { products: parsed, skipped } = parseProductsFromCSV(csvInputText, products);
+      const { products: parsed, skipped, badPurchase } = parseProductsFromCSV(csvInputText, products);
       if (parsed.length === 0) {
         onShowToast(
           skipped > 0
@@ -79,6 +79,7 @@ export function ProductCsvImportModal({ list, products, categories, onUpdateProd
           skus: [],
           rating: 0,
           reviewsCount: 0,
+          ...(p.purchase ? { purchase: p.purchase } : {}),
         };
         fullProd.skus = generateDefaultSKUs(fullProd);
         newProducts.push(fullProd);
@@ -92,6 +93,7 @@ export function ProductCsvImportModal({ list, products, categories, onUpdateProd
           `Добавлено: ${newProducts.length}`,
           updatedCount ? `обновлено: ${updatedCount}` : '',
           skipped ? `пропущено без названия, цены или фото: ${skipped}` : '',
+          badPurchase ? `закупка не распознана и не изменена: ${badPurchase}` : '',
         ]
           .filter(Boolean)
           .join(', '),
@@ -171,6 +173,11 @@ export function ProductCsvImportModal({ list, products, categories, onUpdateProd
                   className="w-full p-3 neu-inset rounded-xl font-mono text-[11px] text-[#2D3A4E] leading-relaxed"
                 />
               </div>
+              <p className="text-xs text-[#4E5C70] leading-snug">
+                Закупка в валюте — последние три столбца: «Валюта закупки» (USD или CNY), «Закупка» (цена одной штуки
+                в этой валюте) и «Своя наценка (%)», если она не общая. Пустые ячейки оставляют закупку товара как есть,
+                «₽» её убирает. Цену по курсу пересчитает «Курсы и наценка» → «Применить».
+              </p>
             </div>
 
             <div className="flex gap-2.5 pt-2 border-t border-[#BAC5D5]/50">

@@ -947,6 +947,14 @@ service cloud.firestore {
       allow update, delete: if isAdmin() && isValidId(movementId);
     }
 
+    // Журнал цен (аудит админки 09.10, находка 11): было, стало, курс и кто — пишет и читает только администратор.
+    // Записи не удаляются: журнал нужен, чтобы разобрать спор о цене с оптовым покупателем.
+    match /price_changes/{changeId} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && isValidId(changeId);
+      allow delete: if false;
+    }
+
     // ------------------------------------------------------------------
     // Реестр администраторов: только чтение своей записи.
     // Добавлять администраторов — вручную через Firebase Console.

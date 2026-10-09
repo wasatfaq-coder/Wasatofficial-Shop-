@@ -643,6 +643,26 @@ export interface StockMovementLog {
   operator: string;
 }
 
+/**
+ * One price change of a product (`price_changes`, admin only; admin audit 09.10, finding 11): who changed the price,
+ * when, from what to what and, for «Курсы и наценка», at which working rate.
+ */
+export interface PriceChangeLog {
+  id: string;
+  createdAt: string;
+  productId: string;
+  productTitle: string;
+  oldPrice: number;
+  newPrice: number;
+  /** «Применить» of the rates, or the admin's own edit (form, list, bulk action, CSV import) */
+  source: 'rates' | 'admin';
+  /** Rates only: the purchase currency and the working rate the price came from */
+  currency?: 'USD' | 'CNY';
+  rate?: number;
+  /** The admin's Google account e-mail */
+  operator: string;
+}
+
 /** Saves storefront settings; resolves to false when the write failed (the error toast is already shown) */
 export type SaveStorefrontSettings = (settings: StorefrontSettings) => Promise<boolean> | void;
 

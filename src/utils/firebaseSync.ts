@@ -26,7 +26,7 @@ import {
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { needsOwnerAttention } from './firestoreErrors';
 import { changedFields, changedSince, hasFieldChanges, orderFieldsToCheck, type FieldChanges } from './fieldChanges';
-import { CartItem, Product, ProductSKU, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog, PaymentKind, PaymentTemplate, PriceHistoryEntry } from '../types';
+import { CartItem, Product, ProductSKU, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog, PaymentKind, PaymentTemplate, PriceHistoryEntry, PriceChangeLog } from '../types';
 import { paymentLogEntry, receiptMessageText } from './paymentDetails';
 import { DEFAULT_STOREFRONT_SETTINGS, generateDefaultSKUs, inStockAfterReturn, inStockAfterStockChange, stockMovementId } from './inventory';
 import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
@@ -770,10 +770,38 @@ export async function updateProductPrices(changes: ProductPriceChange[]) {
   }
 }
 
+/** The price journal (admin audit 09.10, finding 11; admin only, closed to customers by firestore.rules) */
+export const PRICE_CHANGES_COLLECTION = 'price_changes';
+
+function addPriceChange(batch: WriteBatch, entry: PriceChangeLog) {
+  batch.set(doc(db, PRICE_CHANGES_COLLECTION, entry.id), sanitizeForFirestore(entry));
+}
+
+/** Adds entries to the price journal; throws when the write is refused */
+export async function savePriceChanges(entries: PriceChangeLog[]) {
+  if (entries.length === 0) return;
+  try {
+    await commitInChunks(entries, addPriceChange);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, PRICE_CHANGES_COLLECTION);
+  }
+}
+
+/** Admin only: the newest entries of the price journal, read once when «Журнал цен» is opened */
+export async function loadPriceChanges(max: number): Promise<PriceChangeLog[]> {
+  try {
+    const snapshot = await getDocs(query(collection(db, PRICE_CHANGES_COLLECTION), orderBy('createdAt', 'desc'), limit(max)));
+    return snapshot.docs.map((d) => ({ ...(d.data() as PriceChangeLog), id: d.id }));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, PRICE_CHANGES_COLLECTION);
+  }
+}
+
 /**
  * «Применить» of the rates: new prices, the costs of those products and the rates — in one batch, so a failure leaves
  * nothing half applied (admin audit 09.10, finding 13). A catalog too big for one batch goes in parts: costs first,
  * then prices, the rates last — «Последний раз применено» never shows over old prices, and pressing again finishes it.
+ * The price journal is written after it (`savePriceChanges`): a refused journal must not hold the prices back.
  */
 export async function applyExchangeRateChanges(
   prices: ProductPriceChange[],
@@ -2290,6 +2318,7 @@ export const BACKUP_COLLECTIONS = [
   'products', 'product_previews', 'product_photos', 'product_costs', 'promos', 'settings', 'banners', 'banner_images', 'delivery_methods', 'pickup_points',
   'orders', 'users', 'customer_notes', 'admins', 'reviews', 'review_votes',
   'chat_messages', 'chat_images', 'support_threads', 'support_status', STOCK_MOVEMENTS_COLLECTION, 'promo_uses', 'payment_templates',
+  PRICE_CHANGES_COLLECTION,
 ] as const;
 
 export interface DatabaseBackup {
