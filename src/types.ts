@@ -131,6 +131,12 @@ export interface Product {
    * recalculates price and costPrice from it (src/utils/currencyPricing.ts). Never stored in the product
    */
   purchase?: ProductPurchase;
+  /**
+   * Supplier and the supplier's article (`product_costs/{id}`, admin only, like costPrice; src/utils/productCosts.ts):
+   * for reordering and checking invoices. Never stored in the product
+   */
+  supplier?: string;
+  supplierSku?: string;
   originalPrice?: number;
   /**
    * The discount, percent, the owner set (bulk «Скидка», kept by «Курсы и наценка»): the price after rounding up to 10 ₽

@@ -1,6 +1,7 @@
 // Admin audit 09.10, findings 5 and 11: the purchase in a currency in the catalog CSV, and the price journal
 import { describe, expect, test } from 'bun:test';
-import { parseProductsFromCSV, purchaseFromCells } from '../../src/utils/csvHelpers';
+import { parseProductsFromCSV, purchaseFromCells, supplierFromCell } from '../../src/utils/csvHelpers';
+import { costEntryOf, readCostEntry, sameCostEntry } from '../../src/utils/productCosts';
 import { priceChangeEntries, priceChangeSourceText } from '../../src/utils/priceChanges';
 import type { ExchangeRates } from '../../src/utils/currencyPricing';
 
@@ -33,6 +34,40 @@ describe('purchase columns of the catalog CSV', () => {
     const { products, badPurchase } = parseProductsFromCSV(row('EUR,10,'));
     expect(badPurchase).toBe(1);
     expect('purchase' in products[0]).toBe(false);
+  });
+});
+
+describe('supplier columns of the catalog CSV (stage 11)', () => {
+  const header =
+    'ID,Название,Категория,Цена,Старая цена,В наличии,Остаток,Размеры,Цвета,Картинка,Описание,Валюта закупки,Закупка,Своя наценка (%),Поставщик,Артикул поставщика';
+  const row = (cells: string) => `${header}\np1,Рубашка,shirts,4000,,Да,0,M,Белый,https://x/1.jpg,,,,,${cells}`;
+
+  test('supplier and its article are read, trimmed to one line', () => {
+    const p = parseProductsFromCSV(row('"  Guangzhou   Fashion ",GF-2231')).products[0];
+    expect(p.supplier).toBe('Guangzhou Fashion');
+    expect(p.supplierSku).toBe('GF-2231');
+  });
+
+  test('empty cells keep them, «-» removes them, an old file without the columns changes nothing', () => {
+    const kept = parseProductsFromCSV(row(',')).products[0];
+    expect('supplier' in kept || 'supplierSku' in kept).toBe(false);
+    const removed = parseProductsFromCSV(row('-,—')).products[0];
+    expect('supplier' in removed && removed.supplier === undefined).toBe(true);
+    expect('supplierSku' in removed && removed.supplierSku === undefined).toBe(true);
+    const old = 'ID,Название,Категория,Цена,Старая цена,В наличии,Остаток,Размеры,Цвета,Картинка,Описание\np1,Рубашка,shirts,4000,,Да,0,M,Белый,https://x/1.jpg,';
+    expect('supplier' in parseProductsFromCSV(old).products[0]).toBe(false);
+    expect(supplierFromCell('x'.repeat(200), 60)).toHaveLength(60);
+  });
+});
+
+describe('product_costs entry', () => {
+  test('the supplier counts as cost data: a save with it keeps the document, the cost and purchase stay', () => {
+    const purchase = { currency: 'USD' as const, amount: 4.2 };
+    expect(costEntryOf({ costPrice: 380, purchase, supplier: ' Текстиль ', supplierSku: '' })).toEqual({ costPrice: 380, purchase, supplier: 'Текстиль' });
+    expect(readCostEntry({ supplier: 'Текстиль' })).toEqual({ supplier: 'Текстиль' });
+    expect(readCostEntry({ supplier: '  ', updatedAt: 'x' })).toBeNull();
+    expect(sameCostEntry({ costPrice: 1 }, { costPrice: 1, supplier: 'A' })).toBe(false);
+    expect(sameCostEntry(undefined, {})).toBe(true);
   });
 });
 

@@ -28,7 +28,8 @@ import {
 } from '../utils/firebaseSync';
 import { auth } from '../firebase';
 import { priceChangeEntries } from '../utils/priceChanges';
-import { samePurchase, type ExchangeRates } from '../utils/currencyPricing';
+import { type ExchangeRates } from '../utils/currencyPricing';
+import { costEntryOf, hasCostData, sameCostEntry } from '../utils/productCosts';
 import { withPriceChange, withPriceHistories } from '../utils/priceHistory';
 import { BANNERS_STORAGE_KEY } from './useStorefrontData';
 import type { AddToast, Persist } from './useToasts';
@@ -109,10 +110,10 @@ export function useAdminActions({
         ? products.map((p) => {
             const entry = productCosts[p.id];
             if (!entry) return p;
-            const cost = entry.costPrice ?? p.costPrice;
-            return cost === p.costPrice && samePurchase(entry.purchase, p.purchase)
+            const merged = { ...entry, costPrice: entry.costPrice ?? p.costPrice };
+            return sameCostEntry(merged, p)
               ? p
-              : { ...p, costPrice: cost, purchase: entry.purchase };
+              : { ...p, costPrice: merged.costPrice, purchase: entry.purchase, supplier: entry.supplier, supplierSku: entry.supplierSku };
           })
         : products,
     [isAdmin, products, productCosts]
@@ -202,8 +203,8 @@ export function useAdminActions({
     const kept = new Set(updatedWithCosts.map((p) => p.id));
     const costChanges: ({ id: string } & ProductCostEntry)[] = [
       ...changed
-        .filter((p) => p.costPrice !== productCosts[p.id]?.costPrice || !samePurchase(p.purchase, productCosts[p.id]?.purchase))
-        .map((p) => ({ id: p.id, costPrice: p.costPrice, purchase: p.purchase })),
+        .filter((p) => !sameCostEntry(p, productCosts[p.id]))
+        .map((p) => ({ id: p.id, ...costEntryOf(p) })),
       ...Object.keys(productCosts).filter((id) => !kept.has(id)).map((id) => ({ id })),
     ];
     const saved = persist(
@@ -226,14 +227,16 @@ export function useAdminActions({
     }
     setProductCosts((prev) => {
       const next = { ...prev };
-      for (const { id, costPrice, purchase } of costChanges) {
-        if (typeof costPrice === 'number' || purchase) next[id] = { costPrice, purchase };
+      for (const { id, ...entry } of costChanges) {
+        if (hasCostData(entry)) next[id] = costEntryOf(entry);
         else delete next[id];
       }
       return next;
     });
-    // Cost and purchase stay in the admin panel: products in the cart and in orders go without them
-    const updatedProds = updatedWithCosts.map(({ costPrice: _cost, purchase: _purchase, ...p }) => p);
+    // Cost, purchase and supplier stay in the admin panel: products in the cart and in orders go without them
+    const updatedProds = updatedWithCosts.map(
+      ({ costPrice: _cost, purchase: _purchase, supplier: _supplier, supplierSku: _supplierSku, ...p }) => p
+    );
     setProducts(updatedProds);
     // Synchronize cart with updated products & remove deleted items
     setCartItems((prevCart) =>
@@ -347,7 +350,8 @@ export function useAdminActions({
           discountPercent: p.discountPercent,
           priceHistory: p.priceHistory,
         })),
-        changed.map((p) => ({ id: p.id, costPrice: p.costPrice, purchase: p.purchase })),
+        // the whole entry: the document is rewritten, and the supplier must stay
+        changed.map((p) => ({ id: p.id, ...costEntryOf(p) })),
         rates
       )
     );
@@ -361,7 +365,7 @@ export function useAdminActions({
       const byId = new Map(changed.map((p) => [p.id, p]));
       setProductCosts((prev) => {
         const next = { ...prev };
-        for (const p of changed) next[p.id] = { costPrice: p.costPrice, purchase: p.purchase };
+        for (const p of changed) next[p.id] = costEntryOf(p);
         return next;
       });
       setProducts((prev) =>
