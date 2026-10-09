@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Product, SaveStorefrontSettings, StoreCategory, StorefrontSettings } from '../../types';
 import { CATEGORY_ICON_GROUPS, CATEGORY_ICONS, categoriesFromProducts, categoryIcon, categoryIdFromName } from '../../utils/categories';
+import { pluralRu } from '../../utils/pluralize';
 import { AdminListEditor } from './AdminListEditor';
 
 interface AdminCategoriesTabProps {
@@ -57,6 +58,12 @@ export const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({
         label: 'Взять из товаров',
         disabledReason: 'Все категории товаров уже есть в списке',
         run: (items) => [...items, ...categoriesFromProducts(products, items)],
+      }}
+      deleteMessage={(c) => {
+        const count = productCount(c.id);
+        return count > 0
+          ? `В категории ${count} ${pluralRu(count, ['товар', 'товара', 'товаров'])}: они останутся без категории и пропадут из её раздела в каталоге. Назначьте им новую категорию в «Товарах».`
+          : 'В категории нет товаров. Покупатели перестанут её видеть.';
       }}
       renderSummary={(c) => {
         const Icon = categoryIcon(c);

@@ -29,6 +29,8 @@ export interface AdminProductsTabProps {
   /** Resolves to false when the database refused the write (the error toast is already shown) */
   onUpdateProducts: (updated: Product[]) => Promise<boolean> | void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
+  /** «Мало на складе» of the shop (`lowStockThresholdOf`): the same as in «Склад и SKU» */
+  lowStockThreshold: number;
 }
 
 
@@ -40,6 +42,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   products,
   onUpdateProducts,
   onShowToast,
+  lowStockThreshold,
 }) => {
   // «Все категории» for the filter + the categories from Admin → «Категории»
   const CATEGORY_OPTIONS = useMemo(() => [{ id: 'all', name: 'Все категории' }, ...categories], [categories]);
@@ -148,10 +151,17 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         duplicatingId={duplicatingId}
         handleDuplicateProduct={handleDuplicateProduct}
         handleOpenEditProduct={handleOpenEditProduct}
+        lowStockThreshold={lowStockThreshold}
       />
 
       {/* ================= MODAL: CREATE / EDIT PRODUCT ================= */}
-      <ProductFormModal form={form} categories={categories} products={products} onShowToast={onShowToast} />
+      <ProductFormModal
+        form={form}
+        categories={categories}
+        products={products}
+        lowStockThreshold={lowStockThreshold}
+        onShowToast={onShowToast}
+      />
 
       {/* ================= MODAL: CSV IMPORT ================= */}
       <ProductCsvImportModal

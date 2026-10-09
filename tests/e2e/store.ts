@@ -162,6 +162,27 @@ export const PRODUCTS = {
     colors: [{ name: 'Синий', hex: '#2C4A6B' }],
     sizes: ['48', '50', '52'],
   }), isPopular: false },
+  // «Склад и SKU» → «Оформить операцию»: a receipt of several sizes at once (warehouse.spec.ts), one per screen size
+  hoodie: { ...product({
+    id: 'e2e-hoodie',
+    title: 'Худи на молнии',
+    category: 'tshirts',
+    categoryLabel: 'Футболки',
+    price: 3990,
+    colors: [{ name: 'Серый', hex: '#8A8F98' }],
+    sizes: ['S', 'M', 'L'],
+    stock: 4,
+  }), isPopular: false },
+  sweater: { ...product({
+    id: 'e2e-sweater',
+    title: 'Свитер вязаный',
+    category: 'tshirts',
+    categoryLabel: 'Футболки',
+    price: 4490,
+    colors: [{ name: 'Серый', hex: '#8A8F98' }],
+    sizes: ['S', 'M', 'L'],
+    stock: 4,
+  }), isPopular: false },
 };
 
 /** A full photo of a product as `product_photos` keeps it (the product holds a preview) */

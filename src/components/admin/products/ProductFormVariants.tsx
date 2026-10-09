@@ -1,6 +1,6 @@
 import { Plus, X, Boxes, Minus, RefreshCw, Palette, Ruler } from 'lucide-react';
 import { ProductSKU } from '../../../types';
-import { generateSkuCode, generateBarcode } from '../../../utils/inventory';
+import { generateSkuCode, generateBarcode, stockLevel } from '../../../utils/inventory';
 import { colorHexForName, normalizeColorName, readColorCode, splitColorEntry } from '../../../utils/colorCode';
 
 import { AdminHint } from '../AdminHint';
@@ -10,7 +10,16 @@ import type { ProductForm } from './useProductForm';
 const PRESET_SIZES = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '46', '48', '50', '52', '54'];
 
 /** Colours, sizes and the stock of every colour × size, with their articles and barcodes */
-export function ProductFormVariants({ form, onShowToast }: { form: ProductForm; onShowToast: AdminProductsTabProps['onShowToast'] }) {
+export function ProductFormVariants({
+  form,
+  lowStockThreshold,
+  onShowToast,
+}: {
+  form: ProductForm;
+  /** «Мало на складе» of the shop, as in the list and «Склад и SKU» */
+  lowStockThreshold: number;
+  onShowToast: AdminProductsTabProps['onShowToast'];
+}) {
   const {
     editingProduct,
     formCategory,
@@ -549,16 +558,16 @@ export function ProductFormVariants({ form, onShowToast }: { form: ProductForm; 
                       {/* Stock status dot */}
                       <span
                         className={`w-2 h-2 rounded-full ml-1 shrink-0 ${
-                          sku.stock === 0
+                          stockLevel(sku.stock, lowStockThreshold) === 'out'
                             ? 'bg-danger'
-                            : sku.stock < 3
+                            : stockLevel(sku.stock, lowStockThreshold) === 'low'
                             ? 'bg-warning'
                             : 'bg-success'
                         }`}
                         title={
-                          sku.stock === 0
+                          stockLevel(sku.stock, lowStockThreshold) === 'out'
                             ? 'Нет в наличии'
-                            : sku.stock < 3
+                            : stockLevel(sku.stock, lowStockThreshold) === 'low'
                             ? 'Мало на складе'
                             : 'В наличии'
                         }

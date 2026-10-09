@@ -46,6 +46,8 @@ interface AdminListEditorProps<T extends { id: string }> {
   titleHint?: string;
   /** «Для чего это» at the end of the description, for something it names */
   descriptionHint?: { label: string; text: string };
+  /** Text of «Удалить запись?» for this item, when deleting it touches more than the list (a category's products) */
+  deleteMessage?: (item: T) => string;
 }
 
 /**
@@ -67,6 +69,7 @@ export function AdminListEditor<T extends { id: string }>({
   quickAction,
   titleHint,
   descriptionHint,
+  deleteMessage,
 }: AdminListEditorProps<T>) {
   const [draft, setDraft] = useState<T | null>(null);
   // The item as it was when the form opened: the form has unsaved edits while the draft differs from it
@@ -326,7 +329,9 @@ export function AdminListEditor<T extends { id: string }>({
       <ConfirmDialog
         isOpen={Boolean(toDelete)}
         title="Удалить запись?"
-        message="Запись будет удалена из базы, покупатели перестанут её видеть."
+        message={
+          (toDelete && deleteMessage?.(toDelete)) || 'Запись будет удалена из базы, покупатели перестанут её видеть.'
+        }
         preview={toDelete ? <span className="text-xs font-bold text-[#2D3A4E] break-words">{nameOf(toDelete)}</span> : undefined}
         onConfirm={() => {
           if (!toDelete) return;
