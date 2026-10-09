@@ -3,7 +3,7 @@ import { Clock, Heart, Trash2, X } from 'lucide-react';
 import { Product } from '../types';
 import { RatingBadge } from './RatingBadge';
 import { NeumorphicImage } from './NeumorphicImage';
-import { photoBadgeClass } from '../utils/productBadge';
+import { photoBadgeClass, shownBadge, shownOldPrice } from '../utils/productBadge';
 import { getProductRating } from '../utils/productRating';
 import { useProductThumbs } from '../utils/productThumbs';
 import { productHref } from '../utils/navigation';
@@ -116,9 +116,9 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
                   )}
 
                   {/* Badge */}
-                  {product.badge && (
-                    <span className={`absolute bottom-1.5 left-1.5 ${photoBadgeClass(product.badge)} font-bold text-[11px] uppercase px-2 py-0.5 rounded-full z-10`}>
-                      {product.badge}
+                  {shownBadge(product) && (
+                    <span className={`absolute bottom-1.5 left-1.5 ${photoBadgeClass(shownBadge(product)!)} font-bold text-[11px] uppercase px-2 py-0.5 rounded-full z-10`}>
+                      {shownBadge(product)}
                     </span>
                   )}
                 </div>
@@ -151,9 +151,9 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
                   <span className="text-xs font-bold text-[#2D3A4E]">
                     {product.price.toLocaleString('ru-RU')} ₽
                   </span>
-                  {product.originalPrice && (
+                  {shownOldPrice(product) !== null && (
                     <span className="text-[11px] text-[#4E5C70] line-through block leading-none">
-                      {product.originalPrice.toLocaleString('ru-RU')} ₽
+                      {shownOldPrice(product)!.toLocaleString('ru-RU')} ₽
                     </span>
                   )}
                 </div>

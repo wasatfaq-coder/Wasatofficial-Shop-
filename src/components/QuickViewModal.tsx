@@ -13,6 +13,7 @@ import { colorStock, initialColor, initialSize, maxOrderableForColor, profileSiz
 import { useDialogA11y } from '../utils/useDialogA11y';
 import { useLiveProduct } from '../utils/liveProducts';
 import { useProductThumb } from '../utils/productThumbs';
+import { shownOldPrice } from '../utils/productBadge';
 
 interface QuickViewModalProps {
   product: Product | null;
@@ -199,9 +200,9 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                 <span className="text-xl font-bold text-[#2D3A4E]">
                   {product.price.toLocaleString('ru-RU')} ₽
                 </span>
-                {product.originalPrice && (
+                {shownOldPrice(product) !== null && (
                   <span className="text-xs text-[#4E5C70] line-through">
-                    {product.originalPrice.toLocaleString('ru-RU')} ₽
+                    {shownOldPrice(product)!.toLocaleString('ru-RU')} ₽
                   </span>
                 )}
               </div>

@@ -180,6 +180,12 @@ export function useAdminActions({
   };
 
   const handleUpdateProducts = (updatedWithCosts: Product[]) => {
+    // Right after sign-in the admin may still hold index lines (no photos, texts or composition): a product written from
+    // one would lose them (admin audit 09.10, finding 4)
+    if (!fullCatalog) {
+      addToast('Каталог ещё загружается: подождите несколько секунд и сохраните снова', 'info');
+      return Promise.resolve(false);
+    }
     const changed = changedItems(adminProducts, updatedWithCosts);
     const kept = new Set(updatedWithCosts.map((p) => p.id));
     const costChanges: ({ id: string } & ProductCostEntry)[] = [
@@ -269,7 +275,9 @@ export function useAdminActions({
     const saved = persist(
       'курсы и цены',
       (async () => {
-        await updateProductPrices(changed.map((p) => ({ id: p.id, price: p.price })));
+        await updateProductPrices(
+          changed.map((p) => ({ id: p.id, price: p.price, originalPrice: p.originalPrice, discountPercent: p.discountPercent }))
+        );
         await saveProductCosts(changed.map((p) => ({ id: p.id, costPrice: p.costPrice, purchase: p.purchase })));
         await saveExchangeRates(rates);
       })()
@@ -282,7 +290,19 @@ export function useAdminActions({
         for (const p of changed) next[p.id] = { costPrice: p.costPrice, purchase: p.purchase };
         return next;
       });
-      setProducts((prev) => prev.map((p) => (byId.has(p.id) ? { ...p, price: byId.get(p.id)!.price } : p)));
+      setProducts((prev) =>
+        prev.map((p) => {
+          const next = byId.get(p.id);
+          if (!next) return p;
+          const { originalPrice: _old, discountPercent: _percent, ...rest } = p;
+          return {
+            ...rest,
+            price: next.price,
+            ...(typeof next.originalPrice === 'number' ? { originalPrice: next.originalPrice } : {}),
+            ...(typeof next.discountPercent === 'number' ? { discountPercent: next.discountPercent } : {}),
+          };
+        })
+      );
     });
     return saved;
   };

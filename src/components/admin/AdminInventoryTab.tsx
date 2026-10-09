@@ -47,7 +47,8 @@ import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
 
 interface AdminInventoryTabProps {
   products: Product[];
-  onUpdateProducts: (updated: Product[]) => void;
+  /** false — not saved (the toast is already shown) */
+  onUpdateProducts: (updated: Product[]) => Promise<boolean> | void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   /** Label formats live in settings/storefront */
   settings?: StorefrontSettings;
