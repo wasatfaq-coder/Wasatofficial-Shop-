@@ -80,14 +80,18 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
     ? 'Своя наценка — от 0 до 1000 %'
     : '';
 
-  /** Empty amount keeps each product's own (a product without one stays as it is); empty markup — the common one */
+  /** Empty amount or markup keeps each product's own (a product without an amount stays as it is) */
   const withPurchase = (p: Product): Product => {
     if (purchaseRemove) return p.purchase ? { ...p, purchase: undefined } : p;
     const amount = purchaseAmount.trim() === '' ? p.purchase?.amount : amountValue;
     const purchase = readPurchase({
       currency: purchaseCurrency,
       amount,
-      ...(purchaseMarkup.trim() !== '' ? { markupPercent: markupValue } : {}),
+      ...(purchaseMarkup.trim() !== ''
+        ? { markupPercent: markupValue }
+        : p.purchase?.markupPercent !== undefined
+        ? { markupPercent: p.purchase.markupPercent }
+        : {}),
     });
     return purchase ? { ...p, purchase } : p;
   };
@@ -588,14 +592,14 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                       inputMode="decimal"
                       value={purchaseMarkup}
                       onChange={(e) => setPurchaseMarkup(e.target.value)}
-                      placeholder="общая"
+                      placeholder="своя у каждого"
                       className="w-full px-3 py-2 neu-inset rounded-xl text-sm font-extrabold text-[#2D3A4E]"
                     />
                   </div>
                 </div>
                 <p className="text-xs text-[#4E5C70]">
-                  Пустая закупка — у каждого товара остаётся своя сумма, меняется только валюта и наценка. Разные суммы
-                  удобнее задать в CSV. Новые цены посчитает «Курсы и наценка» → «Применить».
+                  Пустое поле — у каждого товара остаётся своя сумма или наценка, меняется только то, что заполнено.
+                  Разные суммы удобнее задать в CSV. Новые цены посчитает «Курсы и наценка» → «Применить».
                 </p>
                 {purchaseError && (
                   <p role="alert" className="text-xs font-bold text-danger">

@@ -28,6 +28,8 @@ describe('purchase columns of the catalog CSV', () => {
     expect(purchaseFromCells('EUR', '10', '')).toBe('invalid');
     expect(purchaseFromCells('USD', '0', '')).toBe('invalid');
     expect(purchaseFromCells('USD', '10', 'много')).toBe('invalid');
+    expect(purchaseFromCells('USD', '10', '1500')).toBe('invalid');
+    expect(purchaseFromCells('USD', '10', '-5')).toBe('invalid');
     const { products, badPurchase } = parseProductsFromCSV(row('EUR,10,'));
     expect(badPurchase).toBe(1);
     expect('purchase' in products[0]).toBe(false);

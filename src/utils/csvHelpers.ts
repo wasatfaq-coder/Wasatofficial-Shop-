@@ -75,7 +75,8 @@ export function purchaseFromCells(
   const currency = purchaseCurrencyOf(cur);
   const amount = parseDecimal(amountCell);
   const markup = markupCell.trim() === '' ? undefined : parseDecimal(markupCell.replace('%', ''));
-  if (!currency || Number.isNaN(markup)) return 'invalid';
+  // a markup out of 0…1000 % would be dropped silently and the product priced with the common one
+  if (!currency || (markup !== undefined && !(markup >= 0 && markup <= 1000))) return 'invalid';
   return readPurchase({ currency, amount, ...(markup !== undefined ? { markupPercent: markup } : {}) }) ?? 'invalid';
 }
 

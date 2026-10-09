@@ -798,30 +798,27 @@ export async function loadPriceChanges(max: number): Promise<PriceChangeLog[]> {
 }
 
 /**
- * «Применить» of the rates: new prices, the costs of those products, the price journal and the rates — in one batch,
- * so a failure leaves nothing half applied (admin audit 09.10, finding 13). A catalog too big for one batch goes in
- * parts: costs first, then prices with their journal, the rates last — «Последний раз применено» never shows over old
- * prices, and pressing again finishes it.
+ * «Применить» of the rates: new prices, the costs of those products and the rates — in one batch, so a failure leaves
+ * nothing half applied (admin audit 09.10, finding 13). A catalog too big for one batch goes in parts: costs first,
+ * then prices, the rates last — «Последний раз применено» never shows over old prices, and pressing again finishes it.
+ * The price journal is written after it (`savePriceChanges`): a refused journal must not hold the prices back.
  */
 export async function applyExchangeRateChanges(
   prices: ProductPriceChange[],
   costs: ({ id: string } & ProductCostEntry)[],
-  rates: ExchangeRates,
-  journal: PriceChangeLog[] = []
+  rates: ExchangeRates
 ) {
   try {
-    if (prices.length + costs.length + journal.length + 1 <= BATCH_LIMIT) {
+    if (prices.length + costs.length + 1 <= BATCH_LIMIT) {
       const batch = writeBatch(db);
       costs.forEach((c) => addProductCost(batch, c));
       prices.forEach((p) => addProductPrice(batch, p));
-      journal.forEach((e) => addPriceChange(batch, e));
       addExchangeRates(batch, rates);
       await batch.commit();
       return;
     }
     await commitInChunks(costs, addProductCost);
     await commitInChunks(prices, addProductPrice);
-    await commitInChunks(journal, addPriceChange);
     await commitInChunks([rates], addExchangeRates);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'products');

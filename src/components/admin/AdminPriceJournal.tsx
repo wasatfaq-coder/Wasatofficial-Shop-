@@ -73,7 +73,7 @@ export function AdminPriceJournal() {
               <li key={e.id} className="py-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-[#2D3A4E] truncate">{e.productTitle}</p>
-                  <p className="text-[11px] text-[#4E5C70]">
+                  <p className="text-xs text-[#4E5C70]">
                     {formatDate(e.createdAt)} · {priceChangeSourceText(e)} · {e.operator}
                   </p>
                 </div>

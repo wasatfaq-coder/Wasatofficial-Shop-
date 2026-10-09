@@ -348,10 +348,14 @@ export function useAdminActions({
           priceHistory: p.priceHistory,
         })),
         changed.map((p) => ({ id: p.id, costPrice: p.costPrice, purchase: p.purchase })),
-        rates,
-        priceChangeEntries(adminProducts, changed, { operator: adminOperator(), rates, now })
+        rates
       )
     );
+    // the price journal after the prices, like any product save: its failure is only logged
+    const journal = priceChangeEntries(adminProducts, changed, { operator: adminOperator(), rates, now });
+    if (journal.length > 0) {
+      void saved.then((ok) => ok && savePriceChanges(journal).catch((err) => console.error('Price journal entries were not written:', err)));
+    }
     const applied = saved.then((ok) => {
       if (!ok || changed.length === 0) return ok;
       const byId = new Map(changed.map((p) => [p.id, p]));

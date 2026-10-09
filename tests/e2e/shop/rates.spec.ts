@@ -15,6 +15,20 @@ test('владелец задаёт курс и надбавку, цена то�
   await panel.getByRole('tab', { name: 'Каталог', exact: true }).click();
 
   if (!phone) {
+    // «Закупка в $/¥» for selected products (admin audit 09.10, finding 5): the preview only, nothing is written here
+    await panel.getByRole('tab', { name: 'Товары', exact: true }).click();
+    await panel.getByRole('textbox', { name: 'Поиск товаров' }).fill(item.title);
+    await panel.getByRole('checkbox', { name: `Выбрать товар «${item.title}»` }).click();
+    await panel.getByRole('button', { name: 'Массовые операции', exact: true }).click();
+    const bulk = page.getByRole('dialog', { name: 'Массовые операции каталога' });
+    await bulk.getByRole('button', { name: 'Закупка в $/¥' }).click();
+    await bulk.getByRole('radio', { name: '¥ Юань' }).click();
+    await bulk.getByLabel('Закупка за штуку, ¥').fill('0');
+    await expect(bulk.getByRole('alert')).toHaveText('Закупка — число больше нуля');
+    await bulk.getByLabel('Закупка за штуку, ¥').fill('42,5');
+    await expect(bulk.getByText('42,5 ¥')).toBeVisible();
+    await bulk.getByRole('button', { name: 'Закрыть' }).click();
+
     // the rates are one for the whole shop and phone and desktop run at the same time on one database:
     // the desktop checks the section without applying, the phone applies
     await panel.getByRole('tab', { name: 'Курсы и наценка' }).click();
@@ -46,19 +60,6 @@ test('владелец задаёт курс и надбавку, цена то�
     );
     await expect(panel.getByText('есть неприменённые изменения')).toBeVisible();
 
-    // «Закупка в $/¥» for selected products (admin audit 09.10, finding 5): the preview only, nothing is written here
-    await panel.getByRole('tab', { name: 'Товары', exact: true }).click();
-    await panel.getByRole('textbox', { name: 'Поиск товаров' }).fill(item.title);
-    await panel.getByRole('button', { name: 'Выбрать все отфильтрованные' }).click();
-    await panel.getByRole('button', { name: 'Массовые операции' }).click();
-    const bulk = page.getByRole('dialog', { name: 'Массовые операции каталога' });
-    await bulk.getByRole('button', { name: 'Закупка в $/¥' }).click();
-    await bulk.getByRole('radio', { name: '¥ Юань' }).click();
-    await bulk.getByLabel('Закупка за штуку, ¥').fill('0');
-    await expect(bulk.getByRole('alert')).toHaveText('Закупка — число больше нуля');
-    await bulk.getByLabel('Закупка за штуку, ¥').fill('42,5');
-    await expect(bulk.getByText('42,5 ¥')).toBeVisible();
-    await bulk.getByRole('button', { name: 'Закрыть' }).click();
     return;
   }
 
