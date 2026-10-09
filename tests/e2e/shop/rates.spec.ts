@@ -69,10 +69,16 @@ test('владелец задаёт курс и надбавку, цена то�
   const form = page.getByRole('dialog', { name: 'Редактирование товара' });
   await form.getByRole('radio', { name: '$ Доллар' }).click();
   await form.getByLabel('Закупка, $ *').fill('10');
+  // the supplier and its article (stage 11): next to the cost, never in the product
+  await form.getByLabel('Поставщик', { exact: true }).fill('Guangzhou Fashion');
+  await form.getByLabel('Артикул поставщика', { exact: true }).fill('GF-2231');
   await form.getByRole('button', { name: 'Сохранить изменения' }).click();
   await expect(form).toBeHidden();
   await expect.poll(async () => (await readDoc(`product_costs/${item.id}`))?.purchase).toEqual({ currency: 'USD', amount: 10 });
-  expect((await readDoc(`products/${item.id}`))?.purchase).toBeUndefined();
+  const stored = await readDoc(`products/${item.id}`);
+  expect(stored?.purchase).toBeUndefined();
+  expect(stored?.supplier).toBeUndefined();
+  expect((await readDoc(`product_costs/${item.id}`))?.supplierSku).toBe('GF-2231');
 
   // 85 ₽ + 5 ₽ = 90 ₽ for a dollar: 10 $ → 900 ₽ (was 1 000 ₽)
   await openAdminSection(panel, 'Курсы и наценка');
@@ -92,6 +98,8 @@ test('владелец задаёт курс и надбавку, цена то�
   await expect.poll(async () => (await readDoc(`products/${item.id}`))?.price).toBe(900);
   // prices, costs and the rates in one batch (finding 13)
   await expect.poll(async () => (await readDoc(`product_costs/${item.id}`))?.costPrice).toBe(900);
+  // «Применить» rewrites the cost document: the supplier stays
+  expect((await readDoc(`product_costs/${item.id}`))?.supplier).toBe('Guangzhou Fashion');
   await expect.poll(async () => (await readDoc('settings/exchange_rates'))?.usd).toEqual({ official: 85, markup: 5, markupKind: 'rub' });
 
   // the price journal: who, when, from what to what and at which rate (admin audit 09.10, finding 11)
