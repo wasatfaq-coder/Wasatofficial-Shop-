@@ -110,35 +110,40 @@ export function useProductList(
     );
   };
 
-  // Bulk Operations
-  const handleBulkToggleStock = (inStock: boolean) => {
+  // Bulk Operations: the toast and the cleared selection only after the database answered — on a refusal `persist`
+  // shows «Не сохранено», and the selection stays for another try (audit 09.10, finding 3)
+  const saveProducts = async (updated: Product[]) => (await onUpdateProducts(updated)) !== false;
+
+  const handleBulkToggleStock = async (inStock: boolean) => {
     const updated = products.map((p) =>
       selectedProductIds.includes(p.id) ? { ...p, inStock, hiddenFromSale: !inStock } : p
     );
-    onUpdateProducts(updated);
+    const count = selectedProductIds.length;
+    if (!(await saveProducts(updated))) return;
     onShowToast(
       inStock
-        ? `Товары (${selectedProductIds.length}) возвращены в продажу`
-        : `Товары (${selectedProductIds.length}) сняты с продажи`,
+        ? `Товары (${count}) возвращены в продажу`
+        : `Товары (${count}) сняты с продажи`,
       'info'
     );
     setSelectedProductIds([]);
   };
 
-  const handleBulkChangeCategory = (newCat: string) => {
+  const handleBulkChangeCategory = async (newCat: string) => {
     const catObj = CATEGORY_OPTIONS.find((c) => c.id === newCat);
     const updated = products.map((p) =>
       selectedProductIds.includes(p.id)
         ? { ...p, category: newCat, categoryLabel: catObj?.name || p.categoryLabel || newCat }
         : p
     );
-    onUpdateProducts(updated);
-    onShowToast(`Категория обновлена для ${selectedProductIds.length} товаров на "${catObj?.name || newCat}"`, 'success');
-    setSelectedProductIds([]);
+    const count = selectedProductIds.length;
     setIsBulkCategoryDropdownOpen(false);
+    if (!(await saveProducts(updated))) return;
+    onShowToast(`Категория обновлена для ${count} товаров на "${catObj?.name || newCat}"`, 'success');
+    setSelectedProductIds([]);
   };
 
-  const handleBulkApplyDiscount = () => {
+  const handleBulkApplyDiscount = async () => {
     if (!bulkDiscountPercent || bulkDiscountPercent <= 0) return;
     const factor = (100 - bulkDiscountPercent) / 100;
     const updated = products.map((p) => {
@@ -152,20 +157,21 @@ export function useProductList(
         badge: `-${bulkDiscountPercent}%`,
       };
     });
-    onUpdateProducts(updated);
-    onShowToast(`Скидка ${bulkDiscountPercent}% применена к ${selectedProductIds.length} товарам`, 'success');
+    const count = selectedProductIds.length;
+    if (!(await saveProducts(updated))) return;
+    onShowToast(`Скидка ${bulkDiscountPercent}% применена к ${count} товарам`, 'success');
     setIsBulkDiscountModalOpen(false);
     setSelectedProductIds([]);
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (selectedProductIds.length === 0) return;
     const count = selectedProductIds.length;
     const updated = products.filter((p) => !selectedProductIds.includes(p.id));
     if (productToInspect && selectedProductIds.includes(productToInspect.id)) {
       setProductToInspect(null);
     }
-    onUpdateProducts(updated);
+    if (!(await saveProducts(updated))) return;
     onShowToast(`Удалено товаров: ${count}`, 'info');
     setSelectedProductIds([]);
   };

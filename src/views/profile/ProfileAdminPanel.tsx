@@ -184,13 +184,13 @@ export const ProfileAdminPanel = ({
   const handleUpdateDeliveryMethodsList = (updated: DeliveryMethod[]) => {
     setLocalDeliveryMethods(updated);
     saveLocalDeliveryMethods(updated);
-    if (onUpdateDeliveryMethods) onUpdateDeliveryMethods(updated);
+    return onUpdateDeliveryMethods?.(updated);
   };
 
   const handleUpdatePickupPointsList = (updated: PickupPoint[]) => {
     setLocalPickupPoints(updated);
     saveLocalPickupPoints(updated);
-    if (onUpdatePickupPoints) onUpdatePickupPoints(updated);
+    return onUpdatePickupPoints?.(updated);
   };
 
   const handleUpdatePromosList = (updated: PromoCode[]) => {
@@ -200,7 +200,7 @@ export const ProfileAdminPanel = ({
 
   const handleUpdateBannersList = (updated: BannerSlide[]) => {
     setLocalBanners(updated);
-    if (onUpdateBannerSlides) onUpdateBannerSlides(updated);
+    return onUpdateBannerSlides?.(updated);
   };
 
   const handleUpdateProductsList = (updated: Product[]) => {

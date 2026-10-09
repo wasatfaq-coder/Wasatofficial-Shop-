@@ -85,7 +85,7 @@ export interface ProfileScreenProps {
   /** Resolves to false when the database refused the write (the error toast is already shown) */
   onUpdatePromos?: (promos: PromoCode[]) => Promise<boolean> | void;
   bannerSlides?: BannerSlide[];
-  onUpdateBannerSlides?: (banners: BannerSlide[]) => void;
+  onUpdateBannerSlides?: (banners: BannerSlide[]) => Promise<boolean> | void;
   chatMessages?: ChatMessage[];
   onSendMessageAsAdmin?: (
     text: string,
@@ -108,9 +108,9 @@ export interface ProfileScreenProps {
   /** «Курсы и наценка» → «Применить»: rates and recalculated products in one save */
   onApplyExchangeRates?: (rates: ExchangeRates, repriced: Product[]) => Promise<boolean>;
   deliveryMethods?: DeliveryMethod[];
-  onUpdateDeliveryMethods?: (methods: DeliveryMethod[]) => void;
+  onUpdateDeliveryMethods?: (methods: DeliveryMethod[]) => Promise<boolean> | void;
   pickupPoints?: PickupPoint[];
-  onUpdatePickupPoints?: (points: PickupPoint[]) => void;
+  onUpdatePickupPoints?: (points: PickupPoint[]) => Promise<boolean> | void;
   /** «Смотреть статус» in an order notification: this order's tracking opens (App keeps it until then) */
   openOrderId?: string | null;
   /** The order asked for in `openOrderId` is open: App forgets it */
