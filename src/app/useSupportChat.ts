@@ -43,6 +43,8 @@ type SupportChatOptions = {
   setPromos: React.Dispatch<React.SetStateAction<PromoCode[]>>;
   addToast: AddToast;
   persist: Persist;
+  /** The chat window is open: a customer's thread is read from its first opening on (audit 07.10, finding 50) */
+  chatOpen: boolean;
 };
 
 /**
@@ -58,6 +60,7 @@ export function useSupportChat({
   setPromos,
   addToast,
   persist,
+  chatOpen,
 }: SupportChatOptions) {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
     try {
@@ -150,20 +153,35 @@ export function useSupportChat({
   }, [authLoading, currentUser, isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 1d. Chat messages: admins see every thread, customers only their own. The cache is cleared only when there is
-  // surely no thread (a guest who never wrote): before, it was erased on every load and showed «Диалог пуст»
+  // surely no thread (a guest who never wrote): before, it was erased on every load and showed «Диалог пуст».
+  // A customer's thread is read only once the chat was opened in this visit (audit 07.10, finding 50: the whole history
+  // was read on every visit with the chat closed; only the chat window shows it), then it stays subscribed
+  const [chatWanted, setChatWanted] = useState(false);
+  // the customer's thread answered at least once since it was subscribed: until then an empty chat is «loading», not empty
+  const [threadLoadedFor, setThreadLoadedFor] = useState<string | null>(null);
+  const [threadFailedFor, setThreadFailedFor] = useState<string | null>(null);
+  React.useEffect(() => {
+    if (chatOpen) setChatWanted(true);
+  }, [chatOpen]);
   React.useEffect(() => {
     if (authLoading) return;
     if (isAdmin) {
       return subscribeToChatMessages((loadedMsgs) => setChatMessages(loadedMsgs));
     }
     if (chatIdentity) {
-      return subscribeToChatMessages((loadedMsgs) => setChatMessages(loadedMsgs), undefined, {
+      if (!chatWanted) return;
+      const threadUid = chatIdentity.uid;
+      return subscribeToChatMessages((loadedMsgs) => {
+        setChatMessages(loadedMsgs);
+        setThreadLoadedFor(threadUid);
+        setThreadFailedFor(null);
+      }, () => setThreadFailedFor(threadUid), {
         threadId: chatIdentity.uid,
         db: chatIdentity.db,
       });
     }
     if (chatIdentityKnown) setChatMessages([]);
-  }, [authLoading, isAdmin, chatIdentity, chatIdentityKnown]);
+  }, [authLoading, isAdmin, chatIdentity, chatIdentityKnown, chatWanted]);
 
   // 1e. Status of the customer's own dialog, set by the staff (shown in «Служба заботы»)
   const [supportStatus, setSupportStatus] = useState<SupportStatus | null>(null);
@@ -354,6 +372,10 @@ export function useSupportChat({
     supportStatus,
     pendingChatIds,
     failedChatMessages,
+    // a customer's own thread is not read yet (the window says «Загружаем переписку…» instead of «Диалог пуст»)
+    chatThreadLoading: !isAdmin && Boolean(chatIdentity) && threadLoadedFor !== chatIdentity?.uid,
+    // the thread's subscription failed (rules, quota): the window says so instead of «loading» forever
+    chatThreadFailed: !isAdmin && Boolean(chatIdentity) && threadFailedFor === chatIdentity?.uid,
     customerChatMessages,
     handleSendMessageFromUser,
     handleRetryChatMessage,
