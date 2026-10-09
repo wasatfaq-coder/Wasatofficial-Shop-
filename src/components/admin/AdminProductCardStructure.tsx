@@ -8,7 +8,6 @@ import {
   ShieldCheck,
   Sparkles,
   Trash2,
-  LayoutList,
 } from 'lucide-react';
 import type {
   CareInstructionItem,
@@ -146,7 +145,6 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
   suggestFrom = [],
   isNewProduct = false,
 }) => {
-  const [isOpen, setIsOpen] = useState(isNewProduct);
   const [openSection, setOpenSection] = useState<SectionId | null>(isNewProduct ? 'composition' : null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   /** The fiber row whose share is the rest to 100 % (the last tapped chip); null once its share is typed */
@@ -327,35 +325,16 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
   };
 
   return (
-    <div className="neu-flat-sm rounded-2xl border border-white/60">
-      {/* Summary row */}
-      <div className="flex items-center pr-2">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        aria-expanded={isOpen}
-        className="flex-1 min-w-0 p-3 flex items-center justify-between gap-3 text-left cursor-pointer"
-      >
-        <span className="flex items-center gap-2.5 min-w-0">
-          <span className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0">
-            <LayoutList className="w-4 h-4" />
-          </span>
-          <span className="min-w-0">
-            <span className="block text-xs font-extrabold text-[#2D3A4E]">Структура карточки</span>
-            <span className="block text-[11px] font-semibold text-[#4E5C70] leading-snug">
-              Покупатель видит разделов: {shownCount} из {sections.length}. Пустые разделы скрыты.
-            </span>
-          </span>
+    <div>
+      <div className="flex items-center gap-1 pb-2">
+        <span className="text-xs font-extrabold text-[#2D3A4E]">Структура карточки</span>
+        <AdminHint label="Структура карточки">Блоки на странице товара. Пустой блок покупатель не видит.</AdminHint>
+        <span className="text-[11px] font-semibold text-[#4E5C70] leading-snug">
+          · видно разделов: {shownCount} из {sections.length}
         </span>
-        <ChevronDown
-          className={`w-4 h-4 text-accent shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-        />
-      </button>
-      <AdminHint label="Структура карточки">Блоки на странице товара. Пустой блок покупатель не видит.</AdminHint>
       </div>
 
-      {isOpen && (
-        <div className="px-3 pb-3 space-y-2">
+      <div className="space-y-2">
           {sections.map((section) => {
             const SectionIcon = section.icon;
             const expanded = openSection === section.id;
@@ -672,8 +651,7 @@ export const AdminProductCardStructure: React.FC<AdminProductCardStructureProps>
               </div>
             );
           })}
-        </div>
-      )}
+      </div>
 
       <ConfirmDialog
         isOpen={Boolean(pendingDelete)}
