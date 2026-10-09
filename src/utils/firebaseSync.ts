@@ -714,22 +714,24 @@ export function subscribeToProductCosts(onUpdate: (costs: Record<string, Product
   );
 }
 
+function addProductCost(batch: WriteBatch, { id, costPrice, purchase }: { id: string } & ProductCostEntry) {
+  if (typeof costPrice === 'number' || purchase) {
+    batch.set(
+      doc(db, 'product_costs', id),
+      sanitizeForFirestore({
+        ...(typeof costPrice === 'number' ? { costPrice } : {}),
+        ...(purchase ? { purchase } : {}),
+        updatedAt: new Date().toISOString(),
+      })
+    );
+  } else batch.delete(doc(db, 'product_costs', id));
+}
+
 /** Writes the costs the admin changed; an entry with neither field removes the document */
 export async function saveProductCosts(changes: ({ id: string } & ProductCostEntry)[]) {
   if (changes.length === 0) return;
   try {
-    await commitInChunks(changes, (batch, { id, costPrice, purchase }) =>
-      typeof costPrice === 'number' || purchase
-        ? batch.set(
-            doc(db, 'product_costs', id),
-            sanitizeForFirestore({
-              ...(typeof costPrice === 'number' ? { costPrice } : {}),
-              ...(purchase ? { purchase } : {}),
-              updatedAt: new Date().toISOString(),
-            })
-          )
-        : batch.delete(doc(db, 'product_costs', id))
-    );
+    await commitInChunks(changes, addProductCost);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'product_costs');
   }
@@ -740,21 +742,56 @@ export async function saveProductCosts(changes: ({ id: string } & ProductCostEnt
  * texts stay as the database has them (a whole-document write from the admin's copy could bring back sold stock).
  * No old price or discount percent (`undefined`) removes the field: an old price not above the price is no discount.
  */
-export async function updateProductPrices(
-  changes: { id: string; price: number; originalPrice?: number; discountPercent?: number; priceHistory?: PriceHistoryEntry[] }[]
-) {
-  if (changes.length === 0) return;
+export interface ProductPriceChange {
+  id: string;
+  price: number;
+  originalPrice?: number;
+  discountPercent?: number;
+  priceHistory?: PriceHistoryEntry[];
+}
+
+function addProductPrice(batch: WriteBatch, { id, price, originalPrice, discountPercent, priceHistory }: ProductPriceChange) {
   const orDelete = (n: number | undefined) => (typeof n === 'number' ? n : deleteField());
+  batch.update(doc(db, 'products', id), {
+    price,
+    originalPrice: orDelete(originalPrice),
+    discountPercent: orDelete(discountPercent),
+    // earlier prices: unpaid orders are checked against the price of their time
+    ...(priceHistory ? { priceHistory } : {}),
+  });
+}
+
+export async function updateProductPrices(changes: ProductPriceChange[]) {
+  if (changes.length === 0) return;
   try {
-    await commitInChunks(changes, (batch, { id, price, originalPrice, discountPercent, priceHistory }) =>
-      batch.update(doc(db, 'products', id), {
-        price,
-        originalPrice: orDelete(originalPrice),
-        discountPercent: orDelete(discountPercent),
-        // earlier prices: unpaid orders are checked against the price of their time
-        ...(priceHistory ? { priceHistory } : {}),
-      })
-    );
+    await commitInChunks(changes, addProductPrice);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'products');
+  }
+}
+
+/**
+ * «Применить» of the rates: new prices, the costs of those products and the rates — in one batch, so a failure leaves
+ * nothing half applied (admin audit 09.10, finding 13). A catalog too big for one batch goes in parts: costs first,
+ * then prices, the rates last — «Последний раз применено» never shows over old prices, and pressing again finishes it.
+ */
+export async function applyExchangeRateChanges(
+  prices: ProductPriceChange[],
+  costs: ({ id: string } & ProductCostEntry)[],
+  rates: ExchangeRates
+) {
+  try {
+    if (prices.length + costs.length + 1 <= BATCH_LIMIT) {
+      const batch = writeBatch(db);
+      costs.forEach((c) => addProductCost(batch, c));
+      prices.forEach((p) => addProductPrice(batch, p));
+      addExchangeRates(batch, rates);
+      await batch.commit();
+      return;
+    }
+    await commitInChunks(costs, addProductCost);
+    await commitInChunks(prices, addProductPrice);
+    await commitInChunks([rates], addExchangeRates);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'products');
   }
@@ -772,12 +809,8 @@ export function subscribeToExchangeRates(onUpdate: (rates: ExchangeRates) => voi
   );
 }
 
-export async function saveExchangeRates(rates: ExchangeRates) {
-  try {
-    await setDoc(doc(db, 'settings', EXCHANGE_RATES_DOC_ID), sanitizeForFirestore({ ...rates, updatedAt: new Date().toISOString() }));
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, `settings/${EXCHANGE_RATES_DOC_ID}`);
-  }
+function addExchangeRates(batch: WriteBatch, rates: ExchangeRates) {
+  batch.set(doc(db, 'settings', EXCHANGE_RATES_DOC_ID), sanitizeForFirestore({ ...rates, updatedAt: new Date().toISOString() }));
 }
 
 /** How many newest entries of the stock journal the admin screen loads */

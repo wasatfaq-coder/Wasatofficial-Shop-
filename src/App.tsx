@@ -176,7 +176,7 @@ export default function App() {
   });
   // Catalog with its reviews (useCatalog.ts). Every snapshot brings the cart's stock and prices up to date and
   // refreshes the open product
-  const { products, setProducts, productsLoaded, productsError, fullCatalog } = useCatalog((loadedProds) => {
+  const { products, setProducts, productsLoaded, productsError, fullCatalog, waitForCatalogIndex } = useCatalog((loadedProds) => {
     setCartItems((prevCart) =>
       prevCart
         .filter((ci) => loadedProds.some((p) => p.id === ci.product.id))
@@ -383,6 +383,7 @@ export default function App() {
     setProducts,
     productsLoaded,
     fullCatalog,
+    waitForCatalogIndex,
     productCosts,
     setProductCosts,
     selectedProduct,

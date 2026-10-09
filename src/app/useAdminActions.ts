@@ -22,14 +22,14 @@ import {
   syncAllBannersToFirestore,
   syncAllDeliveryMethodsToFirestore,
   syncAllPickupPointsToFirestore,
-  saveExchangeRates,
-  updateProductPrices,
+  applyExchangeRateChanges,
   type ProductCostEntry,
 } from '../utils/firebaseSync';
 import { samePurchase, type ExchangeRates } from '../utils/currencyPricing';
 import { withPriceChange, withPriceHistories } from '../utils/priceHistory';
 import { BANNERS_STORAGE_KEY } from './useStorefrontData';
 import type { AddToast, Persist } from './useToasts';
+import type { WaitForCatalogIndex } from './useCatalogIndexSync';
 
 type SetState<T> = React.Dispatch<React.SetStateAction<T>>;
 
@@ -40,6 +40,8 @@ type AdminActionOptions = {
   productsLoaded: boolean;
   /** The full catalog is loaded (not index lines): «Применить» of the rates waits for it */
   fullCatalog: boolean;
+  /** Resolves once customers' catalog index has the products as they are now (`useCatalogIndexSync`) */
+  waitForCatalogIndex: WaitForCatalogIndex;
   productCosts: Record<string, ProductCostEntry>;
   setProductCosts: SetState<Record<string, ProductCostEntry>>;
   selectedProduct: Product | null;
@@ -73,6 +75,7 @@ export function useAdminActions({
   setProducts,
   productsLoaded,
   fullCatalog,
+  waitForCatalogIndex,
   productCosts,
   setProductCosts,
   selectedProduct,
@@ -324,22 +327,20 @@ export function useAdminActions({
       .map((p) => ({ ...p, priceHistory: withPriceChange(byIdNow.get(p.id)!, p.price, now) }));
     const saved = persist(
       'курсы и цены',
-      (async () => {
-        await updateProductPrices(
-          changed.map((p) => ({
-            id: p.id,
-            price: p.price,
-            originalPrice: p.originalPrice,
-            discountPercent: p.discountPercent,
-            priceHistory: p.priceHistory,
-          }))
-        );
-        await saveProductCosts(changed.map((p) => ({ id: p.id, costPrice: p.costPrice, purchase: p.purchase })));
-        await saveExchangeRates(rates);
-      })()
+      applyExchangeRateChanges(
+        changed.map((p) => ({
+          id: p.id,
+          price: p.price,
+          originalPrice: p.originalPrice,
+          discountPercent: p.discountPercent,
+          priceHistory: p.priceHistory,
+        })),
+        changed.map((p) => ({ id: p.id, costPrice: p.costPrice, purchase: p.purchase })),
+        rates
+      )
     );
-    void saved.then((ok) => {
-      if (!ok || changed.length === 0) return;
+    const applied = saved.then((ok) => {
+      if (!ok || changed.length === 0) return ok;
       const byId = new Map(changed.map((p) => [p.id, p]));
       setProductCosts((prev) => {
         const next = { ...prev };
@@ -360,8 +361,15 @@ export function useAdminActions({
           };
         })
       );
+      // «Курсы применены» only once customers' catalog has the new prices (admin audit 09.10, finding 10)
+      return waitForCatalogIndex().then((synced) => {
+        if (!synced) {
+          addToast('Каталог покупателей ещё обновляется: не закрывайте админку минуту', 'info');
+        }
+        return true;
+      });
     });
-    return saved;
+    return applied;
   };
 
   const handleSaveLegalText = (id: LegalDocId, text: string | null) => persist('документ', saveLegalText(id, text));
