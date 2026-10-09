@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, ArrowRight, Check, Coins, Loader2 } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Check, Coins, Landmark, Loader2 } from 'lucide-react';
 import type { Product } from '../../types';
 import {
   EMPTY_EXCHANGE_RATES,
@@ -14,7 +14,9 @@ import {
   type ExchangeRates,
   type PurchaseCurrency,
 } from '../../utils/currencyPricing';
+import { cbrDateLabel, fetchCbrRates } from '../../utils/cbrRates';
 import { subscribeToExchangeRates } from '../../utils/firebaseSync';
+import { isBrowserOffline } from '../../utils/network';
 import { useUnsavedChanges } from '../../utils/unsavedChanges';
 import { pluralRu } from '../../utils/pluralize';
 import { ConfirmDialog } from '../ConfirmDialog';
@@ -71,6 +73,8 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
   const [errors, setErrors] = useState<string[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [cbrLoading, setCbrLoading] = useState(false);
+  const [cbrNote, setCbrNote] = useState<{ ok: boolean; text: string } | null>(null);
   const errorsRef = useRef<HTMLDivElement>(null);
 
   useEffect(
@@ -97,9 +101,39 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
   const edit = (patch: (d: Draft) => Draft) => {
     setDraft(patch(current));
     if (errors.length) setErrors([]);
+    // the note names the rates it put in: after the owner's own edit it would no longer match the fields
+    setCbrNote(null);
   };
   const editRate = (c: PurchaseCurrency, field: keyof RateDraft, value: string) =>
     edit((d) => ({ ...d, [key(c)]: { ...d[key(c)], [field]: value } }));
+
+  /** Fills only the official rates; the owner's additions stay, prices change after «Применить» */
+  const fillFromCbr = async () => {
+    if (isBrowserOffline()) {
+      setCbrNote({ ok: false, text: 'Нет соединения. Проверьте интернет или введите курс вручную.' });
+      return;
+    }
+    setCbrLoading(true);
+    setCbrNote(null);
+    try {
+      const cbr = await fetchCbrRates();
+      // functional update: the owner may have typed while the rates were loading
+      setDraft((prev) => {
+        const d = prev ?? toDraft(saved ?? EMPTY_EXCHANGE_RATES);
+        return { ...d, usd: { ...d.usd, official: text(cbr.usd) }, cny: { ...d.cny, official: text(cbr.cny) } };
+      });
+      setErrors([]);
+      setCbrNote({
+        ok: true,
+        text: `Подставлен курс ЦБ на ${cbrDateLabel(cbr.date)}: $1 = ${rub(cbr.usd)}, ¥1 = ${rub(cbr.cny)}. Цены изменятся после «Применить».`,
+      });
+    } catch (error) {
+      console.warn('CBR rates were not loaded', error);
+      setCbrNote({ ok: false, text: 'Не удалось получить курс ЦБ. Попробуйте позже или введите курс вручную.' });
+    } finally {
+      setCbrLoading(false);
+    }
+  };
 
   const requestApply = () => {
     const found = exchangeRateErrors(rates);
@@ -126,6 +160,7 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
     setSaving(false);
     if (!ok) return;
     setDraft(null);
+    setCbrNote(null);
     onShowToast(
       repriced.length
         ? `Курсы применены: ${pluralRu(repriced.length, ['цена обновлена у', 'цены обновлены у', 'цены обновлены у'])} ${repriced.length} ${pluralRu(repriced.length, ['товара', 'товаров', 'товаров'])}`
@@ -170,6 +205,29 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
           {saved.appliedAt ? `Последний раз применено ${formatDate(saved.appliedAt)}` : 'Курсы ещё не применялись'}
           {dirty && <span className="ml-2 font-bold text-warning">есть неприменённые изменения</span>}
         </p>
+        <button
+          type="button"
+          onClick={fillFromCbr}
+          disabled={cbrLoading}
+          className={`inline-flex items-center gap-2 px-4 h-10 rounded-2xl text-xs font-bold ${
+            cbrLoading ? 'neu-button-disabled' : 'neu-button text-[#2D3A4E] hover:text-accent cursor-pointer'
+          }`}
+        >
+          {cbrLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <Landmark className="w-4 h-4" aria-hidden="true" />
+          )}
+          Подставить курс ЦБ
+        </button>
+        <p role="status" className="text-xs text-[#4E5C70]">
+          {cbrNote?.ok && cbrNote.text}
+        </p>
+        {cbrNote && !cbrNote.ok && (
+          <p role="alert" className="text-xs font-bold text-danger">
+            {cbrNote.text}
+          </p>
+        )}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
