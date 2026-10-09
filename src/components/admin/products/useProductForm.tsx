@@ -32,6 +32,9 @@ import { useChangedSince, useUnsavedChanges } from '../../../utils/unsavedChange
 import { docSizeBytes, formatMegabytes, PRODUCT_SIZE_BUDGET_BYTES } from '../../../utils/productSize';
 import { useDiscardGuard } from '../../DiscardChangesDialog';
 import { parseDecimal as decimal, type ProductPurchase, type PurchaseCurrency } from '../../../utils/currencyPricing';
+import { normalizeSizeChart } from '../../../utils/sizeChart';
+import { EMPTY_SIZE_CHART, sizeChartErrors, sizeChartForForm } from '../../../utils/sizeChartEditing';
+import type { ProductSizeChart } from '../../../types';
 
 import type { AdminProductsTabProps, ProductCategoryOption } from '../AdminProductsTab';
 
@@ -113,6 +116,8 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
   const [formSkusOpened, setFormSkusOpened] = useState<ProductSKU[]>([]);
   // Card sections (description highlights, composition, characteristics, care)
   const [formCard, setFormCard] = useState<ProductCardStructure>(EMPTY_CARD_STRUCTURE);
+  // «Размерная сетка»: measurements in cm per size (wholesale plan, stage 14); saved without empty ones
+  const [formSizeChart, setFormSizeChart] = useState<ProductSizeChart>(EMPTY_SIZE_CHART);
   // What the product will take in the database: photos (data: URIs) are almost all of it
   const formSizeBytes = useMemo(
     () =>
@@ -126,9 +131,10 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
             sizes: formSizes,
             skus: formSkus,
             ...cardStructureToProduct(formCard),
+            sizeChart: normalizeSizeChart(formSizeChart, formSizes),
           })
         : 0,
-    [isProductFormOpen, formTitle, formDescription, formImages, formColors, formSizes, formSkus, formCard]
+    [isProductFormOpen, formTitle, formDescription, formImages, formColors, formSizes, formSkus, formCard, formSizeChart]
   );
 
   const formPurchase = (): ProductPurchase | undefined => {
@@ -162,11 +168,12 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
         'Старая цена должна быть больше текущей — иначе скидки нет. Очистите поле или исправьте цену',
       fibers.length > 0 && fiberTotal !== 100 &&
         `Сумма состава ткани — ${fiberTotal}%, а должна быть 100% («Структура карточки»)`,
+      ...sizeChartErrors(formSizeChart, formSizes),
       formSizeBytes > PRODUCT_SIZE_BUDGET_BYTES &&
         `Товар занимает ${formatMegabytes(formSizeBytes)} из ${formatMegabytes(PRODUCT_SIZE_BUDGET_BYTES)}: база его не примет. Уберите часть фото`,
     ].filter((m): m is string => Boolean(m));
 
-  }, [formTitle, formCategory, formPrice, formColors, formSizes, formImages, formOldPrice, formCard, formSizeBytes, formPurchaseCurrency, formPurchaseAmount, formPurchaseMarkup]);
+  }, [formTitle, formCategory, formPrice, formColors, formSizes, formImages, formOldPrice, formCard, formSizeChart, formSizeBytes, formPurchaseCurrency, formPurchaseAmount, formPurchaseMarkup]);
   const formErrors = [
     ...(showFormErrors ? validationErrors : []),
     ...(photoError ? [photoError] : []),
@@ -206,6 +213,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     formColors,
     formSkus,
     formCard,
+    formSizeChart,
     customSizeInput,
     customColorName,
   ]);
@@ -290,6 +298,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormSkus([]);
     setFormSkusOpened([]);
     setFormCard(EMPTY_CARD_STRUCTURE);
+    setFormSizeChart(EMPTY_SIZE_CHART);
     setShowFormErrors(false);
     setPhotoError(null);
     setSaveError(null);
@@ -334,6 +343,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormSkus(openedSkus);
     setFormSkusOpened(openedSkus);
     setFormCard(cardStructureFromProduct(prod));
+    setFormSizeChart(sizeChartForForm(prod));
     setShowFormErrors(false);
     setPhotoError(null);
     setSaveError(null);
@@ -367,7 +377,8 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
       catObj?.name ||
       (editingProduct?.category === formCategory ? editingProduct.categoryLabel : undefined) ||
       formCategory;
-    const cardFields = cardStructureToProduct(formCard);
+    // an emptied chart clears the field: the product is written whole, without `undefined` keys
+    const cardFields = { ...cardStructureToProduct(formCard), sizeChart: normalizeSizeChart(formSizeChart, formSizes) };
     // Full photos go to their own documents, the product keeps previews (stage 6, finding 18). A photo that stayed keeps
     // its document; the photos are written before the product, so the product never points at a missing photo
     const productId = editingProduct?.id ?? `prod-${Date.now()}`;
@@ -586,6 +597,8 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormSkusOpened,
     formCard,
     setFormCard,
+    formSizeChart,
+    setFormSizeChart,
     formSizeBytes,
     validationErrors,
     formErrors,
