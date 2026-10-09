@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { AdminHint } from './AdminHint';
 import { ProductThumbImage } from '../ProductThumbImage';
 import {
   Boxes,
@@ -33,6 +34,8 @@ import {
   stockMovementId,
   withMissingSkus,
   LEGACY_STOCK_LOGS_STORAGE_KEY,
+  LOW_STOCK_THRESHOLD_CHOICES,
+  lowStockThresholdOf,
 } from '../../utils/inventory';
 import { applyAdminStockChanges, saveStockMovements, subscribeToStockMovements } from '../../utils/firebaseSync';
 import { AdminLabelGenerator, type LabelTarget } from './AdminLabelGenerator';
@@ -129,6 +132,9 @@ const StockInput: React.FC<{ value: number; label: string; onCommit: (next: numb
 /** One move of the old browser journal per page load (effects run twice in development) */
 let legacyJournalMoveStarted = false;
 
+/** Most pieces of one variation in one warehouse operation (a typo of an extra zero stays visible) */
+const OPERATION_MAX_QUANTITY = 10000;
+
 export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
   products,
   onUpdateProducts,
@@ -167,11 +173,16 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
       return next;
     });
 
-  // Critical Low Stock Threshold
-  const [lowStockThreshold, setLowStockThreshold] = useState<number>(() => {
-    const saved = localStorage.getItem('manstyle_low_stock_threshold');
-    return saved ? parseInt(saved, 10) : 3;
-  });
+  // «Мало на складе»: one threshold of the shop in settings/storefront (finding 5), shown at once while it is saved
+  const [pendingThreshold, setPendingThreshold] = useState<number | null>(null);
+  const lowStockThreshold = pendingThreshold ?? lowStockThresholdOf(settings);
+  const handleThresholdChange = async (threshold: number) => {
+    if (!onUpdateSettings || threshold === lowStockThreshold || pendingThreshold !== null) return;
+    setPendingThreshold(threshold);
+    const ok = await onUpdateSettings({ ...settings, lowStockThreshold: threshold });
+    setPendingThreshold(null);
+    if (ok !== false) onShowToast(`Порог сохранён: мало — не больше ${threshold} шт., в товарах и на складе`, 'success');
+  };
 
   // Stock journal from the database (`stock_movements`): customer orders, order changes and warehouse operations
   const [movementLogs, setMovementLogs] = useState<StockMovementLog[]>([]);
@@ -226,10 +237,6 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
   // Counted stock not yet approved («Утвердить инвентаризацию»)
   useUnsavedChanges(Object.keys(auditCounts).length > 0, 'Инвентаризация');
   const [auditSessionDate] = useState(() => new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric' }));
-
-  useEffect(() => {
-    localStorage.setItem('manstyle_low_stock_threshold', String(lowStockThreshold));
-  }, [lowStockThreshold]);
 
   // Flatten and normalize all SKUs across all products
   const allProductSKUs = useMemo(() => {
@@ -445,16 +452,18 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
   const [isOperationModalOpen, setIsOperationModalOpen] = useState(false);
   const [opType, setOpType] = useState<StockMovementLog['type']>('receipt');
   const [opSelectedProductId, setOpSelectedProductId] = useState<string>(products?.[0]?.id || '');
-  const [opSelectedSkuIndex, setOpSelectedSkuIndex] = useState<number>(0);
-  const [opQuantity, setOpQuantity] = useState<number>(5);
+  // Quantity per variation of the chosen product (by «цвет|размер», not position: a variation added on write moves the
+  // others), as typed: several sizes in one operation (finding 29)
+  const [opQuantities, setOpQuantities] = useState<Record<string, string>>({});
+  const [opError, setOpError] = useState<string | null>(null);
+  const [isOpSaving, setIsOpSaving] = useState(false);
   const [opReason, setOpReason] = useState<string>('Плановое пополнение остатков');
   const [opOperator, setOpOperator] = useState<string>('Администратор');
   // A filled-in operation: Escape, «×» and «Отмена» ask before the window closes
   const isOperationDirty = useChangedSince(isOperationModalOpen ? 'operation' : null, [
     opType,
     opSelectedProductId,
-    opSelectedSkuIndex,
-    opQuantity,
+    JSON.stringify(opQuantities),
     opReason,
     opOperator,
   ]);
@@ -659,27 +668,61 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
     onShowToast(`Артикул ${skuCode} скопирован`, 'info');
   };
 
-  // Execute warehouse operation modal
+  /** Typed quantity of a row of the operation: whole pieces, 0 when empty or not a number */
+  const opKey = (sku: Pick<ProductSKU, 'color' | 'size'>) => `${sku.color}|${sku.size}`;
+  const opQuantityOf = (sku: Pick<ProductSKU, 'color' | 'size'>) =>
+    Math.min(OPERATION_MAX_QUANTITY, Math.floor(Math.abs(Number(opQuantities[opKey(sku)]) || 0)));
+
+  // Warehouse operation: every size and colour of one product with its own quantity, one journal entry per variation
   const handleExecuteOperation = async (e: React.FormEvent) => {
     e.preventDefault();
-    const prod = products.find((p) => p.id === opSelectedProductId);
+    if (isOpSaving) return;
+    const prod = products.find((p) => p.id === opSelectedProductId) || products[0];
     if (!prod) return;
-
-    const skus = withMissingSkus(prod);
-    const sku = skus?.[opSelectedSkuIndex] || skus?.[0];
-    if (!sku) return;
-
-    const qtyChange =
-      opType === 'receipt' || opType === 'return' ? Math.abs(opQuantity) : -Math.abs(opQuantity);
-
-    const oldStock = sku.stock;
-    const newStock = Math.max(0, oldStock + qtyChange);
-
-    if (!(await handleUpdateStock(prod.id, sku.color, sku.size, newStock, opReason, opOperator || 'Администратор'))) return;
+    const adds = opType === 'receipt' || opType === 'return';
+    const lines = withMissingSkus(prod).flatMap((sku) => {
+      const qty = opQuantityOf(sku);
+      return qty > 0 ? [{ sku, qty }] : [];
+    });
+    if (lines.length === 0) {
+      setOpError('Укажите количество хотя бы у одного варианта');
+      return;
+    }
+    setOpError(null);
+    // Stock never goes below zero: a write-off of more than there is takes what there is
+    const changes = lines
+      .map(({ sku, qty }) => ({
+        productId: prod.id,
+        productTitle: prod.title,
+        color: sku.color,
+        size: sku.size,
+        delta: adds ? qty : -Math.min(qty, Math.max(0, sku.stock)),
+      }))
+      .filter((c) => c.delta !== 0);
+    if (changes.length === 0) {
+      setOpError('Списывать нечего: у выбранных вариантов остаток 0');
+      return;
+    }
+    setIsOpSaving(true);
+    const { failed } = await applyAdminStockChanges(changes, { reason: opReason, operator: opOperator || 'Администратор' });
+    setIsOpSaving(false);
+    if (failed.length > 0) {
+      // what went through stays done; the window keeps only the rows to repeat
+      const failedKeys = new Set(failed.map(opKey));
+      setOpQuantities((prev) => Object.fromEntries(Object.entries(prev).filter(([key]) => failedKeys.has(key))));
+      setOpError(
+        `Не проведено: ${failed.map((c) => `${c.color}, ${c.size}`).join('; ')}. Проверьте соединение и повторите — остальное уже на складе`
+      );
+      return;
+    }
+    const pieces = changes.reduce((sum, c) => sum + Math.abs(c.delta), 0);
     onShowToast(
-      `Складская операция проведена: ${sku.skuCode} ${qtyChange > 0 ? `+${qtyChange}` : qtyChange} шт.`,
+      `Операция проведена: ${prod.title}, ${changes.length} ${pluralRu(changes.length, ['вариант', 'варианта', 'вариантов'])}, ${
+        adds ? '+' : '−'
+      }${pieces} шт.`,
       'success'
     );
+    setOpQuantities({});
     setIsOperationModalOpen(false);
   };
 
@@ -814,6 +857,8 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
 
   const selectedProductForModal = products?.find((p) => p.id === opSelectedProductId) || products?.[0];
   const selectedProductSkus = selectedProductForModal ? withMissingSkus(selectedProductForModal) : [];
+  const opLineCount = selectedProductSkus.filter((sku) => opQuantityOf(sku) > 0).length;
+  const opTotal = selectedProductSkus.reduce((sum, sku) => sum + opQuantityOf(sku), 0);
 
   return (
     <div className="space-y-4">
@@ -828,8 +873,8 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                 : 'text-[#4E5C70] hover:text-[#2D3A4E]'
             }`}
           >
-            <Boxes className="w-3.5 h-3.5" />
-            Матрица остатков
+            <Boxes className="hidden sm:block w-3.5 h-3.5" aria-hidden="true" />
+            Остатки
           </button>
           <button
             onClick={() => setActiveSubTab('audit')}
@@ -839,11 +884,12 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                 : 'text-[#4E5C70] hover:text-[#2D3A4E]'
             }`}
           >
-            <ClipboardCheck className="w-3.5 h-3.5" />
+            <ClipboardCheck className="hidden sm:block w-3.5 h-3.5" aria-hidden="true" />
             Инвентаризация {auditStats.discrepancyCount > 0 && (
               <span className="w-2 h-2 rounded-full bg-danger animate-pulse" />
             )}
           </button>
+          <AdminHint label="Инвентаризация" className="-ml-1.5 self-center">Пересчитали на полке — введите факт, увидите недостачу и излишек.</AdminHint>
           <button
             onClick={() => setActiveSubTab('movements')}
             className={`py-1.5 px-3 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
@@ -852,14 +898,21 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                 : 'text-[#4E5C70] hover:text-[#2D3A4E]'
             }`}
           >
-            <History className="w-3.5 h-3.5" />
-            Журнал движений ({movementLogs.length})
+            <History className="hidden sm:block w-3.5 h-3.5" aria-hidden="true" />
+            Журнал ({movementLogs.length})
           </button>
+          <AdminHint label="Журнал движений" className="-ml-1.5 self-center">Кто, когда и почему менял остаток: заказы, приходы, списания.</AdminHint>
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <AdminHint label="Оформить операцию">Приход, брак или возврат: меняет остаток и пишет в журнал.</AdminHint>
           <button
-            onClick={() => setIsOperationModalOpen(true)}
+            onClick={() => {
+              // a new operation starts empty: quantities of a cancelled one are not carried over
+              setOpQuantities({});
+              setOpError(null);
+              setIsOperationModalOpen(true);
+            }}
             className="h-9 px-4 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 cursor-pointer transition-all"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -879,19 +932,27 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
         </div>
 
         <div className="neu-inset rounded-2xl p-3 space-y-0.5">
-          <span className="text-[11px] uppercase font-bold text-[#4E5C70] block">Порог дефицита</span>
+          <span className="flex items-center gap-1">
+            <span className="text-[11px] uppercase font-bold text-[#4E5C70]">Порог дефицита</span>
+            <AdminHint label="Порог дефицита">«Мало» — не больше этого числа штук. Порог общий: товары, форма товара и склад.</AdminHint>
+          </span>
           <div className="flex items-center gap-1.5">
             <span className="text-base font-extrabold text-accent">≤ {lowStockThreshold} шт.</span>
             <div className="flex gap-1">
-              {[2, 3, 5].map((th) => (
+              {LOW_STOCK_THRESHOLD_CHOICES.map((th) => (
                 <button
                   key={th}
                   type="button"
-                  onClick={() => setLowStockThreshold(th)}
+                  onClick={() => void handleThresholdChange(th)}
+                  disabled={!onUpdateSettings || pendingThreshold !== null}
                   aria-pressed={lowStockThreshold === th}
                   aria-label={`Порог дефицита ${th} шт.`}
                   className={`min-w-7 h-7 text-[11px] font-bold px-1.5 rounded-lg cursor-pointer transition-all ${
-                    lowStockThreshold === th ? 'neu-pill-active' : 'neu-button text-[#2D3A4E]'
+                    lowStockThreshold === th
+                      ? 'neu-pill-active'
+                      : pendingThreshold !== null
+                      ? 'neu-button-disabled text-[#4E5C70] cursor-wait'
+                      : 'neu-button text-[#2D3A4E]'
                   }`}
                 >
                   {th}
@@ -956,6 +1017,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
 
             {/* Grouping: category → model → article → sizes, models only, or the flat list */}
             <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-1">
               <div role="radiogroup" aria-label="Группировка" className="neu-flat-sm rounded-xl p-1 flex gap-1">
                 {(
                   [
@@ -977,6 +1039,8 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                     {g.label}
                   </button>
                 ))}
+              </div>
+              <AdminHint label="Группировка склада">Как сгруппировать склад. Выбор запоминается.</AdminHint>
               </div>
               {grouping !== 'flat' && filteredSkus.length > 0 && (
                 <div className="flex items-center gap-1.5">
@@ -1686,7 +1750,8 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                   value={opSelectedProductId}
                   onChange={(val) => {
                     setOpSelectedProductId(val);
-                    setOpSelectedSkuIndex(0);
+                    setOpQuantities({});
+                    setOpError(null);
                   }}
                   options={products.map((p) => ({
                     value: p.id,
@@ -1696,51 +1761,62 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                 />
               </div>
 
-              <div className="min-w-0">
-                <label htmlFor="stock-op-sku" className="block text-[11px] font-bold text-[#4E5C70] mb-1 truncate">
-                  Вариация (Цвет / Размер / SKU)
-                </label>
-                <NeumorphicSelect
-                  id="stock-op-sku"
-                  ariaLabel="Вариант товара"
-                  value={opSelectedSkuIndex.toString()}
-                  onChange={(val) => setOpSelectedSkuIndex(Number(val))}
-                  options={selectedProductSkus.map((s, idx) => ({
-                    value: idx.toString(),
-                    label: `${s.color} / ${s.size} (${s.skuCode}) — Остаток: ${s.stock} шт.`,
-                  }))}
-                  variant="inset"
-                />
-              </div>
+              <fieldset className="min-w-0 space-y-1.5">
+                <legend className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                  Сколько штук — у каждого цвета и размера
+                </legend>
+                {selectedProductSkus.length === 0 ? (
+                  <p className="text-xs font-bold text-[#4E5C70]">У товара нет цветов и размеров: добавьте их в форме товара</p>
+                ) : (
+                  <ul className="max-h-64 overflow-y-auto space-y-1.5 pr-1">
+                    {selectedProductSkus.map((s) => (
+                      <li key={opKey(s)} className="flex items-center gap-2 neu-flat-sm rounded-xl px-2.5 py-1.5">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-extrabold text-[#2D3A4E] truncate">
+                            {s.color} · {s.size}
+                          </p>
+                          <p className="text-[11px] font-bold text-[#4E5C70] truncate">
+                            есть {s.stock} шт.{s.skuCode ? ` · ${s.skuCode}` : ''}
+                          </p>
+                        </div>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min="0"
+                          max={OPERATION_MAX_QUANTITY}
+                          placeholder="0"
+                          aria-label={`Количество: ${s.color}, ${s.size}`}
+                          value={opQuantities[opKey(s)] ?? ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setOpQuantities((prev) => ({ ...prev, [opKey(s)]: value }));
+                            setOpError(null);
+                          }}
+                          className="w-20 shrink-0 py-2 px-2.5 neu-inset rounded-xl font-extrabold text-xs text-accent text-right"
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {opTotal > 0 && (
+                  <p className="text-xs font-bold text-[#2D3A4E]">
+                    Итого: {opType === 'receipt' || opType === 'return' ? '+' : '−'}
+                    {opTotal} шт. в {opLineCount} {pluralRu(opLineCount, ['варианте', 'вариантах', 'вариантах'])}
+                  </p>
+                )}
+              </fieldset>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div className="min-w-0">
-                  <label htmlFor="stock-op-quantity" className="block text-[11px] font-bold text-[#4E5C70] mb-1 truncate">
-                    Количество (шт.)
-                  </label>
-                  <input
-                    id="stock-op-quantity"
-                    type="number"
-                    min="1"
-                    max="500"
-                    value={opQuantity}
-                    onChange={(e) => setOpQuantity(Number(e.target.value))}
-                    className="w-full py-2 px-3 neu-inset rounded-xl font-extrabold text-xs text-accent"
-                    required
-                  />
-                </div>
-                <div className="min-w-0">
-                  <label htmlFor="stock-op-operator" className="block text-[11px] font-bold text-[#4E5C70] mb-1 truncate">
-                    Оператор
-                  </label>
-                  <input
-                    id="stock-op-operator"
-                    type="text"
-                    value={opOperator}
-                    onChange={(e) => setOpOperator(e.target.value)}
-                    className="w-full py-2 px-3 neu-inset rounded-xl font-bold text-xs text-[#2D3A4E] truncate"
-                  />
-                </div>
+              <div className="min-w-0">
+                <label htmlFor="stock-op-operator" className="block text-[11px] font-bold text-[#4E5C70] mb-1 truncate">
+                  Оператор
+                </label>
+                <input
+                  id="stock-op-operator"
+                  type="text"
+                  value={opOperator}
+                  onChange={(e) => setOpOperator(e.target.value)}
+                  className="w-full py-2 px-3 neu-inset rounded-xl font-bold text-xs text-[#2D3A4E] truncate"
+                />
               </div>
 
               <div>
@@ -1757,6 +1833,12 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                 />
               </div>
 
+              {opError && (
+                <p role="alert" className="text-xs font-bold text-danger">
+                  {opError}
+                </p>
+              )}
+
               <div className="flex gap-2 pt-2 border-t border-[#BAC5D5]/50">
                 <button
                   type="button"
@@ -1767,9 +1849,10 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 neu-button-accent rounded-xl text-xs font-extrabold text-white"
+                  disabled={isOpSaving}
+                  className="flex-1 py-2.5 neu-button-accent rounded-xl text-xs font-extrabold text-white disabled:opacity-60 disabled:cursor-wait"
                 >
-                  Провести операцию
+                  {isOpSaving ? 'Проводим…' : 'Провести операцию'}
                 </button>
               </div>
             </form>

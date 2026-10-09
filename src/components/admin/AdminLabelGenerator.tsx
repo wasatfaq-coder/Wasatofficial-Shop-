@@ -8,6 +8,7 @@ import { useDialogA11y } from '../../utils/useDialogA11y';
 import {
   canvasMeasure,
   downloadLabelsPdf,
+  LABEL_COPIES_MAX,
   drawLabel,
   layoutLabel,
   loadLabelFonts,
@@ -30,6 +31,7 @@ import {
   type BarcodeProblem,
 } from '../../shared/barcode';
 import { pluralRu } from '../../utils/pluralize';
+import { AdminHint } from './AdminHint';
 
 export interface LabelTarget {
   productId: string;
@@ -177,6 +179,9 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
   useEffect(() => writePref('template', template), [template]);
   const [isSavingFormats, setIsSavingFormats] = useState(false);
   const [options, setOptions] = useState<LabelOptions>({ showPrice: true, showBarcode: true });
+  // Copies of each label as typed: one per piece on the shelf (finding 29); empty or wrong — 1
+  const [copiesText, setCopiesText] = useState('1');
+  const copies = Math.min(LABEL_COPIES_MAX, Math.max(1, Math.floor(Number(copiesText)) || 1));
   const [previewIndex, setPreviewIndex] = useState(0);
   const [fontsReady, setFontsReady] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -323,6 +328,8 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
     );
   };
 
+  const pageCount = labels.length * copies;
+
   const handleDownload = async () => {
     if (!format || !canDownload) return;
     setIsGenerating(true);
@@ -331,9 +338,10 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
         format,
         template,
         labels.map((r) => labelData(r.product, r.sku)),
-        options
+        options,
+        copies
       );
-      onShowToast(`PDF: ${labels.length} ${pluralRu(labels.length, ['этикетка', 'этикетки', 'этикеток'])} ${sizeText(format)}`, 'success');
+      onShowToast(`PDF: ${pageCount} ${pluralRu(pageCount, ['этикетка', 'этикетки', 'этикеток'])} ${sizeText(format)}`, 'success');
     } catch (err) {
       console.error('Label PDF failed:', err);
       onShowToast('Не удалось сформировать PDF', 'error');
@@ -392,7 +400,10 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
             {/* Formats */}
             <section className="space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <h4 className={sectionTitle}>Формат этикетки</h4>
+                <div className="flex items-center gap-1">
+                  <h4 className={sectionTitle}>Формат этикетки</h4>
+                  <AdminHint label="Формат">Размер этикетки в мм под ваш принтер. Добавьте один раз.</AdminHint>
+                </div>
                 {formats.length > 0 && !isAddingFormat && onUpdateSettings && (
                   <button
                     type="button"
@@ -575,7 +586,10 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
 
             {/* Templates */}
             <section className="space-y-2">
-              <h4 className={sectionTitle}>Шаблон</h4>
+              <div className="flex items-center gap-1">
+                <h4 className={sectionTitle}>Шаблон</h4>
+                <AdminHint label="Шаблон">Как расположены название, цена и штрихкод. Образец виден сразу.</AdminHint>
+              </div>
               {!format && current && (
                 <p className="text-xs text-[#4E5C70] leading-snug">
                   Образцы — на частом размере {sizeText(sampleFormat)}. Добавьте формат вашего принтера: образцы
@@ -640,6 +654,27 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                 label="Штрихкод"
                 checked={options.showBarcode}
                 onChange={(v) => setOptions((o) => ({ ...o, showBarcode: v }))}
+              />
+            </section>
+
+            {/* How many of each */}
+            <section className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-1 min-w-0">
+                <label htmlFor="label-copies" className="text-xs font-bold text-[#2D3A4E]">
+                  Копий каждой этикетки
+                </label>
+                <AdminHint label="Копий">Сколько одинаковых этикеток напечатать на каждый вариант — например, по числу штук.</AdminHint>
+              </div>
+              <input
+                id="label-copies"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={LABEL_COPIES_MAX}
+                value={copiesText}
+                onChange={(e) => setCopiesText(e.target.value)}
+                onBlur={() => setCopiesText(String(copies))}
+                className="w-20 h-10 px-3 neu-inset rounded-xl text-xs font-extrabold text-accent text-right shrink-0"
               />
             </section>
 
@@ -786,7 +821,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
               className="h-11 flex-1 min-w-0 px-4 neu-button-accent rounded-xl text-xs font-extrabold text-white whitespace-nowrap transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FileDown className="w-4 h-4 shrink-0" />
-              <span>{isGenerating ? 'Готовим PDF…' : `Скачать PDF (${labels.length})`}</span>
+              <span>{isGenerating ? 'Готовим PDF…' : `Скачать PDF (${pageCount})`}</span>
             </button>
           </div>
         </div>

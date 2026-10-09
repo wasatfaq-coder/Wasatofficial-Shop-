@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { AdminHint } from './AdminHint';
 import { usePagedList } from '../../utils/usePagedList';
 import { AdminShowMore } from './AdminShowMore';
 import { useCustomerProfiles } from './useCustomerProfiles';
@@ -549,7 +550,10 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
             <Users className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <span className="text-[11px] font-semibold text-[#4E5C70] block leading-tight">Всего клиентов</span>
+            <span className="text-[11px] font-semibold text-[#4E5C70] flex items-center gap-0.5 leading-tight">
+              Всего клиентов
+              <AdminHint label="Всего клиентов" className="-my-1">Покупатели с входом через Google и гости, оформившие заказ</AdminHint>
+            </span>
             <div className="flex items-baseline gap-1.5">
               <span className="text-lg font-extrabold text-[#2D3A4E]">{stats.totalClients}</span>
               <span className="text-[11px] text-accent font-bold">{stats.registeredCount} с аккаунтом</span>
@@ -562,7 +566,10 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
             <DollarSign className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <span className="text-[11px] font-semibold text-[#4E5C70] block leading-tight">Сумма покупок</span>
+            <span className="text-[11px] font-semibold text-[#4E5C70] flex items-center gap-0.5 leading-tight">
+              Сумма покупок
+              <AdminHint label="Сумма покупок" className="-my-1">Сколько клиенты заплатили за всё время (только оплаченные заказы)</AdminHint>
+            </span>
             <span className="text-lg font-extrabold text-[#2D3A4E] block truncate">
               {stats.totalLTV.toLocaleString('ru-RU')} ₽
             </span>
@@ -586,7 +593,10 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
             <UserCheck className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <span className="text-[11px] font-semibold text-[#4E5C70] block leading-tight">Постоянные</span>
+            <span className="text-[11px] font-semibold text-[#4E5C70] flex items-center gap-0.5 leading-tight">
+              Постоянные
+              <AdminHint label="Постоянные" className="-my-1">Клиенты, у которых два и больше оплаченных заказов</AdminHint>
+            </span>
             <div className="flex items-baseline gap-1.5">
               <span className="text-lg font-extrabold text-[#2D3A4E]">{stats.repeatClients}</span>
               <span className="text-[11px] text-success font-bold">2+ заказа</span>
@@ -739,12 +749,15 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                             <span>Google</span>
                           </span>
                         ) : (
+                          <>
                           <span
                             className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-[#D8DFE8] text-[#4E5C70]"
                             title="Заказ оформлен без регистрации учетной записи"
                           >
                             <span>Гость</span>
                           </span>
+                          <AdminHint label="Гость" className="-my-0.5">Заказ оформлен без входа. Данные — только из заказов</AdminHint>
+                          </>
                         )}
                       </div>
                       {/* email and phone on their own lines: side by side the email shrank to one letter */}
@@ -795,7 +808,10 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     <span className="text-xs font-extrabold text-[#2D3A4E]">{customer.ordersCount}</span>
                   </div>
                   <div className="px-1 border-l border-[#BAC5D5]/30">
-                    <span className="text-[11px] text-[#4E5C70] block">Ср. чек</span>
+                    <span className="text-[11px] text-[#4E5C70] flex items-center justify-center gap-0.5">
+                      Ср. чек
+                      <AdminHint label="Ср. чек" className="-my-1">Средняя сумма оплаченного заказа клиента</AdminHint>
+                    </span>
                     <span className="text-xs font-extrabold text-[#2D3A4E]">
                       {customer.averageOrderValue > 0 ? `${Math.round(customer.averageOrderValue / 1000)}k ₽` : '—'}
                     </span>
@@ -1196,6 +1212,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                   <label htmlFor="customer-manager-notes" className="text-xs font-extrabold text-[#2D3A4E]">
                     Заметки и теги менеджера
                   </label>
+                  <AdminHint label="Заметки и теги">Видны только вам. Теги помогают искать, например «Оптовик»</AdminHint>
                 </div>
 
                 <textarea
@@ -1396,6 +1413,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                     Удалить клиента
                   </button>
+                  <AdminHint label="Удалить клиента" className="ml-1 self-center">Убирает карточку и профиль. Заказы остаются в разделе «Заказы»</AdminHint>
                 </div>
               )}
             </div>

@@ -16,7 +16,6 @@ import {
   Phone,
   Info,
   CheckCircle2,
-  AlertCircle,
   Search,
   Sparkles,
 } from 'lucide-react';
@@ -26,6 +25,8 @@ import { NeumorphicSwitch } from '../NeumorphicSwitch';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
 import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
+import { ConfirmDialog } from '../ConfirmDialog';
+import { AdminHint } from './AdminHint';
 
 interface AdminDeliveryTabProps {
   deliveryMethods: DeliveryMethod[];
@@ -78,12 +79,12 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
   const [editingMethod, setEditingMethod] = useState<DeliveryMethod | null>(null);
   const [isMethodModalOpen, setIsMethodModalOpen] = useState(false);
   const [deletingMethodId, setDeletingMethodId] = useState<string | null>(null);
-  const deleteMethodDialog = useDialogA11y(Boolean(deletingMethodId), () => setDeletingMethodId(null));
 
   const [editingPoint, setEditingPoint] = useState<PickupPoint | null>(null);
   const [isPointModalOpen, setIsPointModalOpen] = useState(false);
   const [deletingPointId, setDeletingPointId] = useState<string | null>(null);
-  const deletePointDialog = useDialogA11y(Boolean(deletingPointId), () => setDeletingPointId(null));
+  const deletingMethod = deliveryMethods.find((m) => m.id === deletingMethodId);
+  const deletingPoint = pickupPoints.find((p) => p.id === deletingPointId);
 
   // Method Form State
   const [formMethodTitle, setFormMethodTitle] = useState('');
@@ -492,7 +493,8 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
       {/* Subtabs Switcher & Actions */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
         {/* Subtabs */}
-        <div role="radiogroup" aria-label="Раздел доставки" className="p-1 neu-flat-sm rounded-2xl flex items-center gap-1">
+        <div className="flex items-center gap-1">
+        <div role="radiogroup" aria-label="Раздел доставки" className="flex-1 sm:flex-none min-w-0 p-1 neu-flat-sm rounded-2xl flex items-center gap-1">
           <button
             type="button"
             role="radio"
@@ -528,6 +530,10 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               {pickupPoints.length}
             </span>
           </button>
+        </div>
+        <AdminHint label="Пункты выдачи">
+          ПВЗ — место, где покупатель сам забирает заказ: ваш офис или пункт выдачи.
+        </AdminHint>
         </div>
 
         {/* Action Buttons */}
@@ -685,13 +691,16 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                         >
                           <span className={`w-2 h-2 rounded-full block ${isActive ? 'bg-success' : 'bg-[#BAC5D5]'}`} />
                         </button>
+                        <AdminHint label="Показ способа покупателям">
+                          Скрывает способ при оформлении. Сам способ не удаляется.
+                        </AdminHint>
 
                         <button
                           type="button"
                           onClick={() => handleOpenEditMethod(method)}
                           className="p-1.5 neu-button rounded-xl text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
-                          title="Редактировать способ доставки"
-                          aria-label="Редактировать способ доставки"
+                          title={`Изменить способ: ${method.title}`}
+                          aria-label={`Изменить способ: ${method.title}`}
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
@@ -700,8 +709,8 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                           type="button"
                           onClick={() => setDeletingMethodId(method.id)}
                           className="p-1.5 neu-button-danger rounded-xl cursor-pointer"
-                          title="Удалить способ доставки"
-                          aria-label="Удалить способ доставки"
+                          title={`Удалить способ: ${method.title}`}
+                          aria-label={`Удалить способ: ${method.title}`}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -795,6 +804,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                                 Основной адрес
                               </span>
                             )}
+                            {isDefault && (
+                              <AdminHint label="Основной">
+                                Этот пункт покупатель увидит первым, его адрес попадёт на сайт.
+                              </AdminHint>
+                            )}
                           </div>
                           <p className="text-xs font-bold text-accent flex items-center gap-1 mt-0.5">
                             <MapPin className="w-3 h-3" />
@@ -820,8 +834,8 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                           type="button"
                           onClick={() => handleOpenEditPoint(point)}
                           className="p-1.5 neu-button rounded-xl text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
-                          title="Редактировать пункт выдачи"
-                          aria-label="Редактировать пункт выдачи"
+                          title={`Изменить пункт: ${point.name}`}
+                          aria-label={`Изменить пункт: ${point.name}`}
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
@@ -830,8 +844,8 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                           type="button"
                           onClick={() => setDeletingPointId(point.id)}
                           className="p-1.5 neu-button-danger rounded-xl cursor-pointer"
-                          title="Удалить пункт выдачи"
-                          aria-label="Удалить пункт выдачи"
+                          title={`Удалить пункт: ${point.name}`}
+                          aria-label={`Удалить пункт: ${point.name}`}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -951,9 +965,16 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               </div>
 
               <div>
-                <label htmlFor="delivery-method-type" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
-                  Тип модуля
-                </label>
+                <div className="flex items-center gap-1 mb-1">
+                  <label htmlFor="delivery-method-type" className="block text-[11px] font-bold text-[#2D3A4E]">
+                    Тип модуля
+                  </label>
+                  {formMethodType === 'express' && (
+                    <AdminHint label="Экспресс-доставка">
+                      Показывается, только если включён «Экспресс 2 часа» в «Витрине».
+                    </AdminHint>
+                  )}
+                </div>
                 <NeumorphicSelect
                   id="delivery-method-type"
                   value={formMethodType}
@@ -1007,9 +1028,14 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="delivery-method-free" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
-                    Бесплатно при заказе от (₽)
-                  </label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <label htmlFor="delivery-method-free" className="block text-[11px] font-bold text-[#2D3A4E]">
+                      Бесплатно при заказе от (₽)
+                    </label>
+                    <AdminHint label="Бесплатно при заказе от">
+                      Для этого способа. Если пусто — действует общий порог из «Витрины».
+                    </AdminHint>
+                  </div>
                   <input
                     id="delivery-method-free"
                     type="number"
@@ -1025,9 +1051,14 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 </div>
 
                 <div>
-                  <label htmlFor="delivery-method-badge" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
-                    Бейдж-метка (опционально)
-                  </label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <label htmlFor="delivery-method-badge" className="block text-[11px] font-bold text-[#2D3A4E]">
+                      Бейдж-метка (опционально)
+                    </label>
+                    <AdminHint label="Бейдж-метка">
+                      Короткая метка на карточке способа: «Быстро», «Хит». Можно оставить пустой.
+                    </AdminHint>
+                  </div>
                   <input
                     id="delivery-method-badge"
                     type="text"
@@ -1268,65 +1299,29 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
       <DiscardChangesDialog {...pointGuard.dialogProps} what="Изменения пункта самовывоза" />
 
       {/* ================= CONFIRM DELETE MODALS ================= */}
-      {deletingMethodId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2D3A4E]/40 backdrop-blur-xs animate-in fade-in">
-          <div ref={deleteMethodDialog.ref} {...deleteMethodDialog.props} className="neu-modal rounded-3xl p-5 max-w-sm w-full space-y-4 border border-white/80 text-[#2D3A4E]">
-            <div className="flex items-center gap-2.5 text-danger">
-              <AlertCircle className="w-5 h-5 shrink-0" />
-              <h4 id={deleteMethodDialog.titleId} className="text-sm font-extrabold">Удалить способ доставки?</h4>
-            </div>
-            <p className="text-xs text-[#4E5C70]">
-              Этот способ доставки перестанет отображаться при оформлении заказов на сайте.
-            </p>
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setDeletingMethodId(null)}
-                className="flex-1 py-2 neu-button rounded-xl text-xs font-bold text-[#4E5C70]"
-              >
-                Отмена
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDeleteMethod(deletingMethodId)}
-                className="neu-button-danger flex-1 py-2 rounded-xl text-xs font-extrabold cursor-pointer"
-              >
-                Удалить
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={Boolean(deletingMethodId)}
+        title="Удалить способ доставки?"
+        message="Этот способ доставки перестанет отображаться при оформлении заказов на сайте."
+        preview={
+          deletingMethod ? <span className="text-xs font-bold text-[#2D3A4E]">{deletingMethod.title}</span> : undefined
+        }
+        onConfirm={() => {
+          if (deletingMethodId) void handleDeleteMethod(deletingMethodId);
+        }}
+        onClose={() => setDeletingMethodId(null)}
+      />
 
-      {deletingPointId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2D3A4E]/40 backdrop-blur-xs animate-in fade-in">
-          <div ref={deletePointDialog.ref} {...deletePointDialog.props} className="neu-modal rounded-3xl p-5 max-w-sm w-full space-y-4 border border-white/80 text-[#2D3A4E]">
-            <div className="flex items-center gap-2.5 text-danger">
-              <AlertCircle className="w-5 h-5 shrink-0" />
-              <h4 id={deletePointDialog.titleId} className="text-sm font-extrabold">Удалить пункт самовывоза?</h4>
-            </div>
-            <p className="text-xs text-[#4E5C70]">
-              Пункт выдачи будет удален из списка доступных адресов для самовывоза клиентами.
-            </p>
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setDeletingPointId(null)}
-                className="flex-1 py-2 neu-button rounded-xl text-xs font-bold text-[#4E5C70]"
-              >
-                Отмена
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDeletePoint(deletingPointId)}
-                className="neu-button-danger flex-1 py-2 rounded-xl text-xs font-extrabold cursor-pointer"
-              >
-                Удалить
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={Boolean(deletingPointId)}
+        title="Удалить пункт самовывоза?"
+        message="Пункт выдачи будет удален из списка доступных адресов для самовывоза клиентами."
+        preview={deletingPoint ? <span className="text-xs font-bold text-[#2D3A4E]">{deletingPoint.name}</span> : undefined}
+        onConfirm={() => {
+          if (deletingPointId) void handleDeletePoint(deletingPointId);
+        }}
+        onClose={() => setDeletingPointId(null)}
+      />
     </div>
   );
 };

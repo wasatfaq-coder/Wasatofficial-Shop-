@@ -754,13 +754,21 @@ export async function loadLabelFonts() {
 
 const PDF_PX_PER_MM = 16; // ≈406 dpi for the text; bars are vectors
 
-/** One PDF page per label, page size = label size. Returns the file name. */
+/** Most copies of each label in one PDF */
+export const LABEL_COPIES_MAX = 200;
+
+/**
+ * One PDF page per label, page size = label size; each label `copies` times in a row (one per piece on the shelf,
+ * admin audit 09.10, finding 29). Returns the file name.
+ */
 export async function downloadLabelsPdf(
   format: LabelFormat,
   template: LabelTemplate,
   labels: LabelData[],
-  options: LabelOptions
+  options: LabelOptions,
+  copies = 1
 ): Promise<string> {
+  const times = Math.min(LABEL_COPIES_MAX, Math.max(1, Math.floor(copies) || 1));
   // jspdf is loaded on demand (as for the analytics report), not with the main bundle
   const [{ default: jsPDF }] = await Promise.all([import('jspdf'), loadLabelFonts()]);
   const measure = canvasMeasure();
@@ -768,13 +776,17 @@ export async function downloadLabelsPdf(
   const pdf = new jsPDF({ unit: 'mm', format: [format.widthMm, format.heightMm], orientation, compress: true });
   const canvas = document.createElement('canvas');
   labels.forEach((data, index) => {
-    if (index > 0) pdf.addPage([format.widthMm, format.heightMm], orientation);
     const layout = layoutLabel(template, format, data, options, measure);
     drawLabel(canvas, layout, PDF_PX_PER_MM, { bars: false });
-    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, format.widthMm, format.heightMm, undefined, 'FAST');
-    pdf.setFillColor(0, 0, 0);
-    for (const item of layout.items) {
-      if (item.kind === 'bars') forEachBar(item, (x, width) => pdf.rect(x, item.y, width, item.height, 'F'));
+    // drawn once, placed on every copy's page (jspdf keeps one image for the same alias)
+    const image = canvas.toDataURL('image/png');
+    for (let copy = 0; copy < times; copy++) {
+      if (index > 0 || copy > 0) pdf.addPage([format.widthMm, format.heightMm], orientation);
+      pdf.addImage(image, 'PNG', 0, 0, format.widthMm, format.heightMm, `label-${index}`, 'FAST');
+      pdf.setFillColor(0, 0, 0);
+      for (const item of layout.items) {
+        if (item.kind === 'bars') forEachBar(item, (x, width) => pdf.rect(x, item.y, width, item.height, 'F'));
+      }
     }
   });
   const date = new Date().toISOString().slice(0, 10);
