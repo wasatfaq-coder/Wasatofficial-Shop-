@@ -4,6 +4,7 @@ import { Trash2, Heart, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CartItem } from '../types';
 import { useDialogA11y } from '../utils/useDialogA11y';
+import { linePrice } from '../shared/orderLine';
 
 interface CartRemoveConfirmModalProps {
   isOpen: boolean;
@@ -76,7 +77,7 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
                 {item.selectedColor} • {item.selectedSize} ({item.quantity} шт.)
               </p>
               <p className="text-xs font-extrabold text-accent pt-0.5">
-                {(item.product.price * item.quantity).toLocaleString('ru-RU')} ₽
+                {(linePrice(item) * item.quantity).toLocaleString('ru-RU')} ₽
               </p>
             </div>
           </div>

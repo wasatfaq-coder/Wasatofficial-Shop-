@@ -27,6 +27,7 @@ import {
 } from '../shared/orderPricing';
 import { promoDiscountText } from '../utils/promoLabel';
 import { useDialogA11y } from '../utils/useDialogA11y';
+import { linePrice } from '../shared/orderLine';
 
 interface CartScreenProps {
   cartItems: CartItem[];
@@ -93,7 +94,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
 
   // Calculate totals
   const rawSubtotal = cartItems.reduce(
-    (acc, item) => acc + item.product.price * item.quantity,
+    (acc, item) => acc + linePrice(item) * item.quantity,
     0
   );
 
@@ -291,7 +292,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                   </div>
 
                   <p className="text-sm font-extrabold text-[#2D3A4E] pt-0.5">
-                    {(item.product.price * item.quantity).toLocaleString('ru-RU')} ₽
+                    {(linePrice(item) * item.quantity).toLocaleString('ru-RU')} ₽
                   </p>
 
                   {/* Quantity Controller & Delete Button */}

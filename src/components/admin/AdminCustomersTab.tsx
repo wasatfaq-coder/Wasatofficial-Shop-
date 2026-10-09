@@ -46,6 +46,7 @@ import { cancelledByLabel, cancelledShare, cancelReasonText, formatCancelledAt }
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { useUnsavedChanges } from '../../utils/unsavedChanges';
 import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
+import { linePrice } from '../../shared/orderLine';
 
 interface AdminCustomersTabProps {
   orders: Order[];
@@ -1356,7 +1357,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                                   </span>
                                 </div>
                                 <span className="font-bold shrink-0 whitespace-nowrap">
-                                  {it.quantity} × {Number(it.product.price || 0).toLocaleString('ru-RU')} ₽
+                                  {it.quantity} × {linePrice(it).toLocaleString('ru-RU')} ₽
                                 </span>
                               </div>
                             ))}

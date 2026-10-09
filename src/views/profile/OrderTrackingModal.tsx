@@ -52,6 +52,7 @@ import { useDialogA11y } from '../../utils/useDialogA11y';
 import type { ProfileScreenProps } from '../ProfileScreen';
 
 import { getOrderStatusProgress } from './orderProgress';
+import { linePrice } from '../../shared/orderLine';
 
 type OrderTrackingModalProps = Pick<
   ProfileScreenProps,
@@ -480,7 +481,7 @@ export const OrderTrackingModal = ({
                       </div>
                     </div>
                     <span className="text-xs font-extrabold text-[#2D3A4E]">
-                      {(((it.product?.price ?? 0) * (it.quantity ?? 1))).toLocaleString('ru-RU')} ₽
+                      {(linePrice(it) * (it.quantity ?? 1)).toLocaleString('ru-RU')} ₽
                     </span>
                   </div>
                 ))}

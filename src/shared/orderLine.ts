@@ -5,7 +5,7 @@
  * Firestore document limit and could not be placed. Order screens take the photo from the catalog by `id`.
  * Used by the storefront and by placeOrder.
  */
-import type { Product } from '../types';
+import type { CartItem, Product } from '../types';
 
 export function toOrderLineProduct(product: Product): Product {
   const line = {
@@ -22,4 +22,15 @@ export function toOrderLineProduct(product: Product): Product {
     images: (product.images ?? []).filter((src) => src && !src.startsWith('data:')),
   };
   return line as Product;
+}
+
+/**
+ * Price of one item of a cart or order line: its own `unitPrice` (wholesale, a pack) or the product's price. Every
+ * screen and sum of a cart or an order reads the line price only here (docs/wholesale-spec.md, stage 1); old orders
+ * and carts have no `unitPrice` and count as before. The product's own price on its card stays `product.price`
+ */
+export function linePrice(item: Pick<CartItem, 'unitPrice'> & { product?: Pick<Product, 'price'> }): number {
+  const own = item.unitPrice;
+  if (typeof own === 'number' && Number.isFinite(own) && own >= 0) return own;
+  return Number(item.product?.price) || 0;
 }

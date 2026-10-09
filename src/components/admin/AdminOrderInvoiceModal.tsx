@@ -6,6 +6,7 @@ import { copyToClipboard } from '../../utils/clipboard';
 import { isCarrierOrder } from '../../utils/orderFlow';
 import { motion, AnimatePresence } from 'motion/react';
 import { useDialogA11y } from '../../utils/useDialogA11y';
+import { linePrice } from '../../shared/orderLine';
 
 interface AdminOrderInvoiceModalProps {
   isOpen: boolean;
@@ -201,7 +202,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                   {(order.items || []).map((it, idx) => {
-                    const price = it.product?.price || 0;
+                    const price = linePrice(it);
                     const sum = price * (it.quantity || 1);
                     return (
                       <tr key={it.id || idx} className="hover:bg-slate-50">

@@ -91,6 +91,7 @@ import { AdminChoiceMenu } from './AdminChoiceMenu';
 import { orderPriceIssues, type OrderCheckContext } from '../../utils/orderPriceCheck';
 import type { OrderPaymentDetails } from '../../types';
 import { cancelledByLabel, cancelReasonText, formatCancelledAt, isArchivedOrder, ordersWithPromoToRelease, overdueUnpaidOrders, UNPAID_CANCEL_REASON } from '../../utils/orderCancel';
+import { linePrice } from '../../shared/orderLine';
 
 interface AdminOrdersTabProps {
   orders: Order[];
@@ -1603,7 +1604,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                             <p className="text-xs text-[#4E5C70] flex flex-wrap gap-x-2">
                               <span>{[it.selectedColor, it.selectedSize].filter(Boolean).join(', ')}</span>
                               <span className="font-bold text-accent whitespace-nowrap">
-                                {it.quantity} шт. × {(it.product?.price || 0).toLocaleString('ru-RU')} ₽
+                                {it.quantity} шт. × {linePrice(it).toLocaleString('ru-RU')} ₽
                               </span>
                               {it.isPreorder && <span className="font-extrabold text-accent">Предзаказ</span>}
                             </p>

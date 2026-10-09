@@ -9,6 +9,7 @@ import { LegalConsentNote } from './LegalConsentNote';
 import { useDialogA11y } from '../utils/useDialogA11y';
 import { digitsAfterCountryCode, isQuickOrderPhoneComplete, PHONE_DIGITS_AFTER_CODE } from '../utils/phoneNumber';
 import { pluralRu } from '../utils/pluralize';
+import { linePrice } from '../shared/orderLine';
 
 interface QuickOrderModalProps {
   isOpen: boolean;
@@ -102,7 +103,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
           image: photoOf(singleProduct.product) || productImage(singleProduct.product),
           variant: `${singleProduct.color} • ${singleProduct.size}`,
           qty: singleProduct.quantity,
-          price: (singleProduct.product?.price || 0) * singleProduct.quantity,
+          price: linePrice(singleProduct) * singleProduct.quantity,
         },
       ]
     : cartItems.map((item) => ({
@@ -110,7 +111,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
         image: photoOf(item.product) || productImage(item.product),
         variant: `${item.selectedColor} • ${item.selectedSize}`,
         qty: item.quantity,
-        price: (item.product?.price || 0) * item.quantity,
+        price: linePrice(item) * item.quantity,
       }));
 
   return (

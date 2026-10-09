@@ -34,6 +34,14 @@ describe('orderPriceIssues', () => {
     expect(issues).toContain('скидка без промокода');
   });
 
+  test('a line\'s own price below the catalog is flagged too (docs/wholesale-spec.md, stage 1)', () => {
+    const fake = order({
+      items: [{ id: 'l1', product: { id: 'p1', title: 'Рубашка', price: 4000 }, unitPrice: 1, quantity: 2 }] as Order['items'],
+      totalPrice: 302,
+    });
+    expect(orderPriceIssues(fake, catalog)[0]).toContain('в заказе 1 ₽, в каталоге 4');
+  });
+
   test('not checked: placed by the server, paid, cancelled; an order without a fee is checked with the fee 0 (check 04.10)', () => {
     const cheap = { items: [{ id: 'l1', product: { id: 'p1', title: 'Рубашка', price: 1 }, quantity: 1 }] as Order['items'] };
     expect(orderPriceIssues(order({ ...cheap, placedVia: 'server' }), catalog)).toEqual([]);

@@ -3,6 +3,7 @@
  * (server-side order validation). Keep this module free of browser APIs.
  */
 import type { AppliedPromoInfo, CartItem, DeliveryMethod, PromoCode, StorefrontSettings } from '../types';
+import { linePrice } from './orderLine';
 
 /** Delivery method id used by the one-click "quick order" flow (no fee, no promo). */
 export const QUICK_ORDER_DELIVERY_ID = 'quick-order';
@@ -34,11 +35,11 @@ export type PromoForPricing = Pick<
 type DeliverySettings = Pick<StorefrontSettings, 'freeDeliveryThreshold' | 'isExpressEnabled'>;
 
 /** A storefront cart line as the pricing sees it */
-export function toPricingLine(item: Pick<CartItem, 'product' | 'quantity'>): PricingLine {
+export function toPricingLine(item: Pick<CartItem, 'product' | 'quantity' | 'unitPrice'>): PricingLine {
   return {
     productId: item.product.id,
     category: item.product.category,
-    price: item.product.price,
+    price: linePrice(item),
     quantity: item.quantity,
   };
 }

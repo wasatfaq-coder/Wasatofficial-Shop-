@@ -41,6 +41,7 @@ import { NotConfigured } from '../components/NotConfigured';
 import { promoDiscountText } from '../utils/promoLabel';
 import { cleanAddressParts, fullName, namePartsOf, requiresFullName, type AddressParts, type PersonName } from '../shared/personName';
 import { deliveryKindOfMethod } from '../shared/orderFlow';
+import { linePrice } from '../shared/orderLine';
 
 interface CheckoutScreenProps {
   cartItems: CartItem[];
@@ -597,7 +598,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
               </div>
               <div className="text-right shrink-0">
                 <p className="text-xs font-bold text-[#2D3A4E]">
-                  {(item.product.price * item.quantity).toLocaleString('ru-RU')} ₽
+                  {(linePrice(item) * item.quantity).toLocaleString('ru-RU')} ₽
                 </p>
                 <p className="text-xs text-[#4E5C70]">x{item.quantity}</p>
               </div>

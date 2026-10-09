@@ -154,6 +154,13 @@ export interface CartItem {
   quantity: number;
   /** Ordered while out of stock in preorder mode: not deducted from (or returned to) stock */
   isPreorder?: boolean;
+  /**
+   * Price of one item when it is not the product's (wholesale, a size-run pack — docs/wholesale-spec.md); absent — the
+   * product's price. Read only through `linePrice` (`src/shared/orderLine.ts`); nothing sets it yet
+   */
+  unitPrice?: number;
+  /** Which price `unitPrice` is; absent — retail */
+  priceKind?: 'retail' | 'wholesale' | 'pack';
 }
 
 export interface SavedAddress {

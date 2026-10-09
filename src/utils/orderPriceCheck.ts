@@ -1,5 +1,6 @@
 import type { DeliveryMethod, Order, Product, PromoCode, StorefrontSettings } from '../types';
 import { calcPromoDiscount, getAvailableDeliveryMethods, isQuickOrderDelivery, type PricingLine } from '../shared/orderPricing';
+import { linePrice } from '../shared/orderLine';
 
 /** What the order is compared with besides the catalog: the store's codes, delivery and payment methods */
 export interface OrderCheckContext {
@@ -30,7 +31,7 @@ export function orderPriceIssues(order: Order, products: Product[], shop: OrderC
   const byId = new Map(products.map((p) => [p.id, p]));
   const lines: PricingLine[] = [];
   for (const item of order.items ?? []) {
-    const price = Number(item.product?.price) || 0;
+    const price = linePrice(item);
     const quantity = Number(item.quantity) || 0;
     const catalog = item.product?.id ? byId.get(item.product.id) : undefined;
     // the category for the promo is the catalog's: the line's copy is written by the buyer

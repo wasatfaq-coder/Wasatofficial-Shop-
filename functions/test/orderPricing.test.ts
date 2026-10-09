@@ -8,10 +8,11 @@ import {
   isPromoListed,
   promoExpiryDate,
   promoExpiryTime,
+  toPricingLine,
   validatePromo,
   type PricingLine,
 } from '../../src/shared/orderPricing';
-import type { DeliveryMethod, PromoCode } from '../../src/types';
+import type { CartItem, DeliveryMethod, PromoCode } from '../../src/types';
 
 const lines: PricingLine[] = [
   { productId: 'shirt', category: 'shirts', price: 3000, quantity: 2 },
@@ -133,5 +134,14 @@ describe('isPromoListed', () => {
     expect(isPromoListed(promo({ discountPercent: 10, expiresAt: '2026-09-29' }), now)).toBe(false);
     expect(isPromoListed(promo({ discountPercent: 10, active: false }), now)).toBe(false);
     expect(isPromoListed(promo({ discountPercent: 10, usageLimit: 1, usedCount: 1 }), now)).toBe(false);
+  });
+});
+
+describe('toPricingLine (docs/wholesale-spec.md, stage 1)', () => {
+  const product = { id: 'p1', category: 'shirts', price: 2990 } as CartItem['product'];
+
+  test('the product\'s price for an ordinary line, the line\'s own price when it has one', () => {
+    expect(toPricingLine({ product, quantity: 2 })).toEqual({ productId: 'p1', category: 'shirts', price: 2990, quantity: 2 });
+    expect(toPricingLine({ product, quantity: 2, unitPrice: 1900 }).price).toBe(1900);
   });
 });
