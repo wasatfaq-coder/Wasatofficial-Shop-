@@ -56,6 +56,7 @@ import { getDefaultHistorySteps, getSynchronizedDeliveryStages } from './deliver
 import { CLIENT_ERRORS_COLLECTION, type ClientErrorReport, type StoredClientError } from './clientErrors';
 import { trackRead } from './pendingReads';
 import { googleAvatarUrl } from './googleAvatar';
+import { EXCHANGE_RATES_DOC_ID, readExchangeRates, readPurchase, type ExchangeRates, type ProductPurchase } from './currencyPricing';
 import {
   CATALOG_INDEX_COLLECTION,
   PRODUCT_THUMBS_COLLECTION,
@@ -186,7 +187,7 @@ export function subscribeToProducts(
  * (it lives in the admin-only `product_costs`).
  */
 function toStoredProduct(product: Product): Product {
-  const { costPrice: _cost, catalogRating: _rating, ...stored } = withoutCollectionReviews(product);
+  const { costPrice: _cost, purchase: _purchase, catalogRating: _rating, ...stored } = withoutCollectionReviews(product);
   return stored;
 }
 
@@ -654,15 +655,25 @@ export async function syncAllProductsToFirestore(products: Product[]) {
   }
 }
 
-/** Admin only: cost prices by product id (`product_costs`, closed to customers by firestore.rules) */
-export function subscribeToProductCosts(onUpdate: (costs: Record<string, number>) => void) {
+/** Admin only: what a product cost — the rouble cost and the purchase in a currency (`product_costs/{id}`) */
+export interface ProductCostEntry {
+  costPrice?: number;
+  purchase?: ProductPurchase;
+}
+
+/** Admin only: costs by product id (`product_costs`, closed to customers by firestore.rules) */
+export function subscribeToProductCosts(onUpdate: (costs: Record<string, ProductCostEntry>) => void) {
   return onSnapshot(
     collection(db, 'product_costs'),
     (snapshot) => {
-      const costs: Record<string, number> = {};
+      const costs: Record<string, ProductCostEntry> = {};
       snapshot.forEach((snap) => {
-        const cost = snap.data().costPrice;
-        if (typeof cost === 'number') costs[snap.id] = cost;
+        const data = snap.data();
+        const entry: ProductCostEntry = {};
+        if (typeof data.costPrice === 'number') entry.costPrice = data.costPrice;
+        const purchase = readPurchase(data.purchase);
+        if (purchase) entry.purchase = purchase;
+        if (entry.costPrice !== undefined || entry.purchase) costs[snap.id] = entry;
       });
       onUpdate(costs);
     },
@@ -670,17 +681,57 @@ export function subscribeToProductCosts(onUpdate: (costs: Record<string, number>
   );
 }
 
-/** Writes the cost prices the admin changed; `undefined` removes the cost */
-export async function saveProductCosts(changes: { id: string; costPrice?: number }[]) {
+/** Writes the costs the admin changed; an entry with neither field removes the document */
+export async function saveProductCosts(changes: ({ id: string } & ProductCostEntry)[]) {
   if (changes.length === 0) return;
   try {
-    await commitInChunks(changes, (batch, { id, costPrice }) =>
-      typeof costPrice === 'number'
-        ? batch.set(doc(db, 'product_costs', id), { costPrice, updatedAt: new Date().toISOString() })
+    await commitInChunks(changes, (batch, { id, costPrice, purchase }) =>
+      typeof costPrice === 'number' || purchase
+        ? batch.set(
+            doc(db, 'product_costs', id),
+            sanitizeForFirestore({
+              ...(typeof costPrice === 'number' ? { costPrice } : {}),
+              ...(purchase ? { purchase } : {}),
+              updatedAt: new Date().toISOString(),
+            })
+          )
         : batch.delete(doc(db, 'product_costs', id))
     );
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'product_costs');
+  }
+}
+
+/**
+ * «Курсы и наценка» → «Применить»: only the price field of each product — stock, photos and texts stay as the
+ * database has them (a whole-document write from the admin's copy could bring back sold stock)
+ */
+export async function updateProductPrices(changes: { id: string; price: number }[]) {
+  if (changes.length === 0) return;
+  try {
+    await commitInChunks(changes, (batch, { id, price }) => batch.update(doc(db, 'products', id), { price }));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'products');
+  }
+}
+
+/** Admin only: «Курсы и наценка» (`settings/exchange_rates`, closed to customers: the markup shows the margin) */
+export function subscribeToExchangeRates(onUpdate: (rates: ExchangeRates) => void, onError?: (error: unknown) => void) {
+  return onSnapshot(
+    doc(db, 'settings', EXCHANGE_RATES_DOC_ID),
+    (snap) => onUpdate(readExchangeRates(snap.data())),
+    (error) => {
+      logSubscriptionError('Exchange rates', error);
+      onError?.(error);
+    }
+  );
+}
+
+export async function saveExchangeRates(rates: ExchangeRates) {
+  try {
+    await setDoc(doc(db, 'settings', EXCHANGE_RATES_DOC_ID), sanitizeForFirestore({ ...rates, updatedAt: new Date().toISOString() }));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `settings/${EXCHANGE_RATES_DOC_ID}`);
   }
 }
 
@@ -937,7 +988,8 @@ export async function moveProductCostsToPrivate(products: Product[]) {
     // Two writes per product: half a batch of products at a time
     for (let i = 0; i < legacy.length; i += BATCH_LIMIT / 2) {
       await commitInChunks(legacy.slice(i, i + BATCH_LIMIT / 2), (batch, p) => {
-        batch.set(doc(db, 'product_costs', p.id), { costPrice: p.costPrice, updatedAt: new Date().toISOString() });
+        // merge: a purchase in a currency already kept there stays
+        batch.set(doc(db, 'product_costs', p.id), { costPrice: p.costPrice, updatedAt: new Date().toISOString() }, { merge: true });
         batch.update(doc(db, 'products', p.id), { costPrice: deleteField() });
       });
     }

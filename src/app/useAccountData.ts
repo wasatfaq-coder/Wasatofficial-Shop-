@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { User } from 'firebase/auth';
 import type { Order, UserProfile } from '../types';
-import { subscribeToOrders, subscribeToOwnUserProfile, subscribeToProductCosts } from '../utils/firebaseSync';
+import { subscribeToOrders, subscribeToOwnUserProfile, subscribeToProductCosts, type ProductCostEntry } from '../utils/firebaseSync';
 import { setLoadFailed } from '../utils/loadFailures';
 import { loadGuestOrders } from './guestOrders';
 
@@ -16,8 +16,8 @@ type AuthState = { authLoading: boolean; isAdmin: boolean; currentUser: User | n
 export function useAccountData({ authLoading, isAdmin, currentUser }: AuthState) {
   const [ownProfiles, setOwnProfiles] = useState<UserProfile[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  // Admin only: cost prices from `product_costs` (a product document is readable by every visitor)
-  const [productCosts, setProductCosts] = useState<Record<string, number>>({});
+  // Admin only: cost prices and purchases in a currency from `product_costs` (a product is readable by every visitor)
+  const [productCosts, setProductCosts] = useState<Record<string, ProductCostEntry>>({});
 
   React.useEffect(() => {
     if (authLoading) return;

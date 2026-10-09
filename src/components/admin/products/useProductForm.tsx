@@ -31,6 +31,7 @@ import { useDialogA11y } from '../../../utils/useDialogA11y';
 import { useChangedSince, useUnsavedChanges } from '../../../utils/unsavedChanges';
 import { docSizeBytes, formatMegabytes, PRODUCT_SIZE_BUDGET_BYTES } from '../../../utils/productSize';
 import { useDiscardGuard } from '../../DiscardChangesDialog';
+import { parseDecimal as decimal, type ProductPurchase, type PurchaseCurrency } from '../../../utils/currencyPricing';
 
 import type { AdminProductsTabProps, ProductCategoryOption } from '../AdminProductsTab';
 
@@ -82,6 +83,10 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
   const [formPrice, setFormPrice] = useState<number>(0);
   const [formCostPrice, setFormCostPrice] = useState<number | undefined>(undefined);
   const [formOldPrice, setFormOldPrice] = useState<number | undefined>(undefined);
+  // Purchase in dollars or yuan: «Курсы и наценка» recalculates the price from it (src/utils/currencyPricing.ts)
+  const [formPurchaseCurrency, setFormPurchaseCurrency] = useState<PurchaseCurrency | ''>('');
+  const [formPurchaseAmount, setFormPurchaseAmount] = useState('');
+  const [formPurchaseMarkup, setFormPurchaseMarkup] = useState('');
   const [formBadge, setFormBadge] = useState<string>('');
   const [formInStock, setFormInStock] = useState<boolean>(true);
   const [formImages, setFormImages] = useState<string[]>([]);
@@ -126,6 +131,17 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     [isProductFormOpen, formTitle, formDescription, formImages, formColors, formSizes, formSkus, formCard]
   );
 
+  const formPurchase = (): ProductPurchase | undefined => {
+    const amount = decimal(formPurchaseAmount);
+    if (!formPurchaseCurrency || !(amount > 0)) return undefined;
+    const markup = decimal(formPurchaseMarkup);
+    return {
+      currency: formPurchaseCurrency,
+      amount,
+      ...(formPurchaseMarkup.trim() !== '' && markup >= 0 ? { markupPercent: markup } : {}),
+    };
+  };
+
   // Checked on «Сохранить» and then live, so a fixed field drops out of the list at once
   const validationErrors = useMemo(() => {
     const numPrice = Number(formPrice);
@@ -139,6 +155,9 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
       formColors.length === 0 && 'Добавьте хотя бы один цвет',
       formSizes.length === 0 && 'Выберите хотя бы один размер',
       formImages.length === 0 && 'Добавьте хотя бы одно фото',
+      formPurchaseCurrency && !(decimal(formPurchaseAmount) > 0) && 'Укажите закупку в валюте больше нуля или выберите «Нет»',
+      formPurchaseMarkup.trim() !== '' && !(decimal(formPurchaseMarkup) >= 0 && decimal(formPurchaseMarkup) <= 1000) &&
+        'Своя наценка — от 0 до 1000 %; пустое поле — наценка для всех товаров',
       formOldPrice && Number(formOldPrice) <= numPrice &&
         'Старая цена должна быть больше текущей — иначе скидки нет. Очистите поле или исправьте цену',
       fibers.length > 0 && fiberTotal !== 100 &&
@@ -147,7 +166,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
         `Товар занимает ${formatMegabytes(formSizeBytes)} из ${formatMegabytes(PRODUCT_SIZE_BUDGET_BYTES)}: база его не примет. Уберите часть фото`,
     ].filter((m): m is string => Boolean(m));
 
-  }, [formTitle, formCategory, formPrice, formColors, formSizes, formImages, formOldPrice, formCard, formSizeBytes]);
+  }, [formTitle, formCategory, formPrice, formColors, formSizes, formImages, formOldPrice, formCard, formSizeBytes, formPurchaseCurrency, formPurchaseAmount, formPurchaseMarkup]);
   const formErrors = [
     ...(showFormErrors ? validationErrors : []),
     ...(photoError ? [photoError] : []),
@@ -174,6 +193,9 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     formCategory,
     formPrice,
     formCostPrice,
+    formPurchaseCurrency,
+    formPurchaseAmount,
+    formPurchaseMarkup,
     formOldPrice,
     formBadge,
     formInStock,
@@ -254,6 +276,9 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormCategory('');
     setFormPrice(0);
     setFormCostPrice(undefined);
+    setFormPurchaseCurrency('');
+    setFormPurchaseAmount('');
+    setFormPurchaseMarkup('');
     setFormOldPrice(undefined);
     setFormBadge('');
     setFormInStock(true);
@@ -291,6 +316,9 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormCategory(prod.category || '');
     setFormPrice(prod.price);
     setFormCostPrice(prod.costPrice);
+    setFormPurchaseCurrency(prod.purchase?.currency ?? '');
+    setFormPurchaseAmount(prod.purchase ? String(prod.purchase.amount).replace('.', ',') : '');
+    setFormPurchaseMarkup(prod.purchase?.markupPercent !== undefined ? String(prod.purchase.markupPercent).replace('.', ',') : '');
     setFormOldPrice(prod.originalPrice);
     setFormBadge(prod.badge || '');
     setFormInStock(!isHiddenFromSale(prod));
@@ -407,6 +435,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
         categoryLabel: catLabel,
         price: numPrice,
         costPrice: formCostPrice ? Number(formCostPrice) : undefined,
+        purchase: formPurchase(),
         originalPrice: formOldPrice ? Number(formOldPrice) : undefined,
         badge: formBadge.trim() || undefined,
         description: formDescription.trim(),
@@ -442,6 +471,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
         categoryLabel: catLabel,
         price: numPrice,
         costPrice: formCostPrice ? Number(formCostPrice) : undefined,
+        purchase: formPurchase(),
         originalPrice: formOldPrice ? Number(formOldPrice) : undefined,
         badge: formBadge.trim() || undefined,
         description: formDescription.trim(),
@@ -516,6 +546,12 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormPrice,
     formCostPrice,
     setFormCostPrice,
+    formPurchaseCurrency,
+    setFormPurchaseCurrency,
+    formPurchaseAmount,
+    setFormPurchaseAmount,
+    formPurchaseMarkup,
+    setFormPurchaseMarkup,
     formOldPrice,
     setFormOldPrice,
     formBadge,

@@ -175,7 +175,7 @@ export default function App() {
   });
   // Catalog with its reviews (useCatalog.ts). Every snapshot brings the cart's stock and prices up to date and
   // refreshes the open product
-  const { products, setProducts, productsLoaded, productsError } = useCatalog((loadedProds) => {
+  const { products, setProducts, productsLoaded, productsError, fullCatalog } = useCatalog((loadedProds) => {
     setCartItems((prevCart) =>
       prevCart
         .filter((ci) => loadedProds.some((p) => p.id === ci.product.id))
@@ -375,11 +375,13 @@ export default function App() {
     handleUpdatePickupPoints,
     handleUpdateStorefrontSettings,
     handleSaveLegalText,
+    handleApplyExchangeRates,
   } = useAdminActions({
     isAdmin,
     products,
     setProducts,
     productsLoaded,
+    fullCatalog,
     productCosts,
     setProductCosts,
     selectedProduct,
@@ -774,6 +776,7 @@ export default function App() {
               storefrontSettings={storefrontSettings}
               onUpdateStorefrontSettings={handleUpdateStorefrontSettings}
               onSaveLegalText={handleSaveLegalText}
+              onApplyExchangeRates={handleApplyExchangeRates}
               deliveryMethods={deliveryMethods}
               onUpdateDeliveryMethods={handleUpdateDeliveryMethods}
               pickupPoints={pickupPoints}

@@ -8,6 +8,7 @@ import type { StoreCategory } from '../../../types';
 
 import type { AdminProductsTabProps } from '../AdminProductsTab';
 import type { ProductForm } from './useProductForm';
+import { PURCHASE_CURRENCIES, type PurchaseCurrency } from '../../../utils/currencyPricing';
 
 const PRESET_BADGES = ['ХИТ', 'NEW', 'SALE', '-20%', 'PREMIUM', 'LIMITED', 'ECO', 'EXCLUSIVE'];
 import { ProductFormGallery } from './ProductFormGallery';
@@ -41,6 +42,12 @@ export function ProductFormModal({
     setFormPrice,
     formCostPrice,
     setFormCostPrice,
+    formPurchaseCurrency,
+    setFormPurchaseCurrency,
+    formPurchaseAmount,
+    setFormPurchaseAmount,
+    formPurchaseMarkup,
+    setFormPurchaseMarkup,
     formOldPrice,
     setFormOldPrice,
     formBadge,
@@ -396,6 +403,65 @@ export function ProductFormModal({
                         />
                       </div>
                     </div>
+
+                    <fieldset className="space-y-2 pt-1">
+                      <legend className="text-[11px] font-bold text-[#4E5C70]">Закупка в валюте</legend>
+                      <div role="radiogroup" aria-label="Валюта закупки" className="flex gap-2">
+                        {([['', 'Нет'], ...PURCHASE_CURRENCIES.map((c) => [c.id, `${c.sign} ${c.title}`])] as [PurchaseCurrency | '', string][]).map(
+                          ([id, label]) => (
+                            <button
+                              key={id || 'none'}
+                              type="button"
+                              role="radio"
+                              aria-checked={formPurchaseCurrency === id}
+                              onClick={() => setFormPurchaseCurrency(id)}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer ${
+                                formPurchaseCurrency === id ? 'neu-pill-active' : 'neu-button text-[#2D3A4E] hover:text-accent'
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          )
+                        )}
+                      </div>
+                      {formPurchaseCurrency && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="min-w-0">
+                            <label htmlFor="product-form-purchase" className="text-[11px] font-bold text-[#4E5C70] block mb-1 leading-tight">
+                              Закупка, {formPurchaseCurrency === 'USD' ? '$' : '¥'} *
+                            </label>
+                            <input
+                              id="product-form-purchase"
+                              type="text"
+                              inputMode="decimal"
+                              value={formPurchaseAmount}
+                              onChange={(e) => setFormPurchaseAmount(e.target.value)}
+                              placeholder="напр. 4,20"
+                              className="w-full h-9 px-2.5 neu-inset rounded-xl text-xs font-bold text-[#2D3A4E] placeholder:text-[#56647A]"
+                            />
+                          </div>
+                          <div className="min-w-0">
+                            <label htmlFor="product-form-purchase-markup" className="text-[11px] font-bold text-[#4E5C70] block mb-1 leading-tight">
+                              Своя наценка, %
+                            </label>
+                            <input
+                              id="product-form-purchase-markup"
+                              type="text"
+                              inputMode="decimal"
+                              value={formPurchaseMarkup}
+                              onChange={(e) => setFormPurchaseMarkup(e.target.value)}
+                              placeholder="общая"
+                              className="w-full h-9 px-2.5 neu-inset rounded-xl text-xs font-bold text-[#2D3A4E] placeholder:text-[#56647A]"
+                            />
+                          </div>
+                        </div>
+                      )}
+                      <p className="text-xs text-[#4E5C70] leading-snug">
+                        {formPurchaseCurrency
+                          ? 'Цену и закупку в ₽ пересчитает раздел «Курсы и наценка» кнопкой «Применить». Пустая своя наценка — общая для всех товаров.'
+                          : 'Товар закуплен в долларах или юанях — выберите валюту, и его цена пойдёт за курсом.'}
+                      </p>
+                    </fieldset>
                   </div>
 
                   <ProductFormGallery form={form} onShowToast={onShowToast} />

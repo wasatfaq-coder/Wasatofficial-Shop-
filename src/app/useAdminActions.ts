@@ -22,7 +22,11 @@ import {
   syncAllBannersToFirestore,
   syncAllDeliveryMethodsToFirestore,
   syncAllPickupPointsToFirestore,
+  saveExchangeRates,
+  updateProductPrices,
+  type ProductCostEntry,
 } from '../utils/firebaseSync';
+import { samePurchase, type ExchangeRates } from '../utils/currencyPricing';
 import { BANNERS_STORAGE_KEY } from './useStorefrontData';
 import type { AddToast, Persist } from './useToasts';
 
@@ -33,8 +37,10 @@ type AdminActionOptions = {
   products: Product[];
   setProducts: SetState<Product[]>;
   productsLoaded: boolean;
-  productCosts: Record<string, number>;
-  setProductCosts: SetState<Record<string, number>>;
+  /** The full catalog is loaded (not index lines): «Применить» of the rates waits for it */
+  fullCatalog: boolean;
+  productCosts: Record<string, ProductCostEntry>;
+  setProductCosts: SetState<Record<string, ProductCostEntry>>;
   selectedProduct: Product | null;
   setSelectedProduct: SetState<Product | null>;
   setCartItems: SetState<CartItem[]>;
@@ -65,6 +71,7 @@ export function useAdminActions({
   products,
   setProducts,
   productsLoaded,
+  fullCatalog,
   productCosts,
   setProductCosts,
   selectedProduct,
@@ -90,8 +97,12 @@ export function useAdminActions({
     () =>
       isAdmin
         ? products.map((p) => {
-            const cost = productCosts[p.id];
-            return cost !== undefined && cost !== p.costPrice ? { ...p, costPrice: cost } : p;
+            const entry = productCosts[p.id];
+            if (!entry) return p;
+            const cost = entry.costPrice ?? p.costPrice;
+            return cost === p.costPrice && samePurchase(entry.purchase, p.purchase)
+              ? p
+              : { ...p, costPrice: cost, purchase: entry.purchase };
           })
         : products,
     [isAdmin, products, productCosts]
@@ -171,10 +182,10 @@ export function useAdminActions({
   const handleUpdateProducts = (updatedWithCosts: Product[]) => {
     const changed = changedItems(adminProducts, updatedWithCosts);
     const kept = new Set(updatedWithCosts.map((p) => p.id));
-    const costChanges: { id: string; costPrice?: number }[] = [
+    const costChanges: ({ id: string } & ProductCostEntry)[] = [
       ...changed
-        .filter((p) => p.costPrice !== productCosts[p.id])
-        .map((p) => ({ id: p.id, costPrice: p.costPrice })),
+        .filter((p) => p.costPrice !== productCosts[p.id]?.costPrice || !samePurchase(p.purchase, productCosts[p.id]?.purchase))
+        .map((p) => ({ id: p.id, costPrice: p.costPrice, purchase: p.purchase })),
       ...Object.keys(productCosts).filter((id) => !kept.has(id)).map((id) => ({ id })),
     ];
     const saved = persist(
@@ -191,14 +202,14 @@ export function useAdminActions({
     }
     setProductCosts((prev) => {
       const next = { ...prev };
-      for (const { id, costPrice } of costChanges) {
-        if (typeof costPrice === 'number') next[id] = costPrice;
+      for (const { id, costPrice, purchase } of costChanges) {
+        if (typeof costPrice === 'number' || purchase) next[id] = { costPrice, purchase };
         else delete next[id];
       }
       return next;
     });
-    // The cost price stays in the admin panel: products in the cart and in orders go without it
-    const updatedProds = updatedWithCosts.map(({ costPrice: _cost, ...p }) => p);
+    // Cost and purchase stay in the admin panel: products in the cart and in orders go without them
+    const updatedProds = updatedWithCosts.map(({ costPrice: _cost, purchase: _purchase, ...p }) => p);
     setProducts(updatedProds);
     // Synchronize cart with updated products & remove deleted items
     setCartItems((prevCart) =>
@@ -243,6 +254,39 @@ export function useAdminActions({
     return persist('настройки витрины', saveStorefrontSettingsToFirestore(upd));
   };
 
+  /**
+   * «Курсы и наценка» → «Применить»: the new prices (price field only), the costs of those products, then the rates —
+   * the rates last, so «Последний раз применено» never shows over old prices. Nothing is removed. Refused until
+   * the full catalog is loaded: right after sign-in the admin may still hold index lines or no products at all.
+   */
+  const handleApplyExchangeRates = (rates: ExchangeRates, repriced: Product[]) => {
+    if (!fullCatalog) {
+      addToast('Каталог ещё загружается: подождите несколько секунд и нажмите «Применить» снова', 'info');
+      return Promise.resolve(false);
+    }
+    const known = new Set(adminProducts.map((p) => p.id));
+    const changed = repriced.filter((p) => known.has(p.id) && p.purchase);
+    const saved = persist(
+      'курсы и цены',
+      (async () => {
+        await updateProductPrices(changed.map((p) => ({ id: p.id, price: p.price })));
+        await saveProductCosts(changed.map((p) => ({ id: p.id, costPrice: p.costPrice, purchase: p.purchase })));
+        await saveExchangeRates(rates);
+      })()
+    );
+    void saved.then((ok) => {
+      if (!ok || changed.length === 0) return;
+      const byId = new Map(changed.map((p) => [p.id, p]));
+      setProductCosts((prev) => {
+        const next = { ...prev };
+        for (const p of changed) next[p.id] = { costPrice: p.costPrice, purchase: p.purchase };
+        return next;
+      });
+      setProducts((prev) => prev.map((p) => (byId.has(p.id) ? { ...p, price: byId.get(p.id)!.price } : p)));
+    });
+    return saved;
+  };
+
   const handleSaveLegalText = (id: LegalDocId, text: string | null) => persist('документ', saveLegalText(id, text));
 
   return {
@@ -255,5 +299,6 @@ export function useAdminActions({
     handleUpdatePickupPoints,
     handleUpdateStorefrontSettings,
     handleSaveLegalText,
+    handleApplyExchangeRates,
   };
 }

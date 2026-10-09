@@ -255,6 +255,26 @@ describe('catalog', () => {
     await assertFails(updateDoc(doc(owner(), 'products/p1'), { costPrice: 4000 }));
   });
 
+  test('purchase in a currency is admin-only too: in product_costs, never inside a product (09.10)', async () => {
+    const purchase = { currency: 'USD', amount: 4.2, markupPercent: 180 };
+    await assertSucceeds(setDoc(doc(owner(), 'product_costs/p1'), { costPrice: 344.82, purchase }));
+    await assertFails(getDoc(doc(customer(), 'product_costs/p1')));
+    await assertFails(setDoc(doc(owner(), 'products/p3'), { ...product, id: 'p3', purchase }));
+    await assertFails(updateDoc(doc(owner(), 'products/p1'), { purchase }));
+    await assertSucceeds(updateDoc(doc(owner(), 'products/p1'), { price: 970 }));
+  });
+
+  test('exchange rates and the markup are read and written only by admins (09.10)', async () => {
+    const rates = { usd: { official: 85, markup: 5, markupKind: 'rub' }, cny: { official: 11.7, markup: 2, markupKind: 'percent' }, markupPercent: 180 };
+    await assertFails(setDoc(doc(customer(), 'settings/exchange_rates'), rates));
+    await assertSucceeds(setDoc(doc(owner(), 'settings/exchange_rates'), rates));
+    await assertSucceeds(getDoc(doc(extraAdmin(), 'settings/exchange_rates')));
+    await assertFails(getDoc(doc(guest(), 'settings/exchange_rates')));
+    await assertFails(getDoc(doc(customer(), 'settings/exchange_rates')));
+    // the storefront settings stay public
+    await assertSucceeds(getDoc(doc(guest(), 'settings/storefront')));
+  });
+
   test('a cost price left inside a product can only be removed, and stock still deducts meanwhile', async () => {
     await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'products/p1'), { ...product, costPrice: 4000 }));
     await assertSucceeds(takeStock(guest(), { skus: [{ size: 'M', stock: 1 }] }));

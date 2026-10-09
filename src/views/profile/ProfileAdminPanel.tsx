@@ -43,6 +43,7 @@ const AdminAnalyticsTab = lazy(() => import('../../components/admin/AdminAnalyti
 const AdminPromoConstructorTab = lazy(() => import('../../components/admin/AdminPromoConstructorTab').then((m) => ({ default: m.AdminPromoConstructorTab })));
 const AdminBannersTab = lazy(() => import('../../components/admin/AdminBannersTab').then((m) => ({ default: m.AdminBannersTab })));
 const AdminSupportInbox = lazy(() => import('../../components/admin/AdminSupportInbox').then((m) => ({ default: m.AdminSupportInbox })));
+const AdminRatesTab = lazy(() => import('../../components/admin/AdminRatesTab').then((m) => ({ default: m.AdminRatesTab })));
 const AdminInventoryTab = lazy(() => import('../../components/admin/AdminInventoryTab').then((m) => ({ default: m.AdminInventoryTab })));
 const AdminProductsTab = lazy(() => import('../../components/admin/AdminProductsTab').then((m) => ({ default: m.AdminProductsTab })));
 const AdminOrdersTab = lazy(() => import('../../components/admin/AdminOrdersTab').then((m) => ({ default: m.AdminOrdersTab })));
@@ -78,6 +79,7 @@ type ProfileAdminPanelProps = Pick<
   | 'storefrontSettings'
   | 'onUpdateStorefrontSettings'
   | 'onSaveLegalText'
+  | 'onApplyExchangeRates'
   | 'deliveryMethods'
   | 'onUpdateDeliveryMethods'
   | 'pickupPoints'
@@ -123,6 +125,7 @@ export const ProfileAdminPanel = ({
   onChangeChatMessage,
   onUpdateStorefrontSettings,
   onSaveLegalText,
+  onApplyExchangeRates,
   onUpdateDeliveryMethods,
   onUpdatePickupPoints,
 }: ProfileAdminPanelProps) => {
@@ -449,6 +452,25 @@ export const ProfileAdminPanel = ({
                   onShowToast={onShowToast}
                   settings={storefrontSettings}
                   onUpdateSettings={onUpdateStorefrontSettings}
+                />
+              )}
+
+              {adminTab === 'rates' && (
+                <AdminRatesTab
+                  products={productsList}
+                  onApply={
+                    onApplyExchangeRates &&
+                    (async (rates, repriced) => {
+                      const ok = await onApplyExchangeRates(rates, repriced);
+                      // the list shows new prices only once they are saved (refused or failed — the old ones stay)
+                      if (ok) {
+                        const byId = new Map(repriced.map((p) => [p.id, p]));
+                        setProductsList((list) => list.map((p) => byId.get(p.id) ?? p));
+                      }
+                      return ok;
+                    })
+                  }
+                  onShowToast={onShowToast}
                 />
               )}
 

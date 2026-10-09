@@ -40,6 +40,7 @@ import {
   PaymentKind,
 } from '../types';
 import type { LegalDocId } from '../utils/legalDocs';
+import type { ExchangeRates } from '../utils/currencyPricing';
 import type { ChatMessageChange } from '../utils/firebaseSync';
 import { isNotificationSupported, requestNotificationPermission, showSystemNotification } from '../utils/pushNotifications';
 import { NeumorphicSwitch } from '../components/NeumorphicSwitch';
@@ -104,6 +105,8 @@ export interface ProfileScreenProps {
   onUpdateStorefrontSettings?: SaveStorefrontSettings;
   /** Admin → «Документы»: the store's edition of the offer / policy, null — the template */
   onSaveLegalText?: (id: LegalDocId, text: string | null) => Promise<boolean>;
+  /** «Курсы и наценка» → «Применить»: rates and recalculated products in one save */
+  onApplyExchangeRates?: (rates: ExchangeRates, repriced: Product[]) => Promise<boolean>;
   deliveryMethods?: DeliveryMethod[];
   onUpdateDeliveryMethods?: (methods: DeliveryMethod[]) => void;
   pickupPoints?: PickupPoint[];
@@ -143,6 +146,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   storefrontSettings,
   onUpdateStorefrontSettings,
   onSaveLegalText,
+  onApplyExchangeRates,
   deliveryMethods,
   onUpdateDeliveryMethods,
   pickupPoints,
@@ -795,6 +799,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         onChangeChatMessage={onChangeChatMessage}
         onUpdateStorefrontSettings={onUpdateStorefrontSettings}
         onSaveLegalText={onSaveLegalText}
+        onApplyExchangeRates={onApplyExchangeRates}
         onUpdateDeliveryMethods={onUpdateDeliveryMethods}
         onUpdatePickupPoints={onUpdatePickupPoints}
       />
