@@ -18,6 +18,7 @@ import { isHiddenFromSale } from '../../../utils/inventory';
 import { NeumorphicSelect } from '../../NeumorphicSelect';
 import type { StoreCategory } from '../../../types';
 
+import { AdminHint } from '../AdminHint';
 import type { ProductCategoryOption } from '../AdminProductsTab';
 import type { ProductList } from './useProductList';
 
@@ -67,7 +68,7 @@ export function ProductListToolbar({ list, products, categories, CATEGORY_OPTION
           />
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
           <button
             onClick={() => exportProductsToCSV(products)}
             className="py-2 px-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-accent flex items-center gap-1 cursor-pointer transition-colors"
@@ -76,6 +77,7 @@ export function ProductListToolbar({ list, products, categories, CATEGORY_OPTION
             <Download className="w-3.5 h-3.5 text-accent" />
             <span className="hidden sm:inline">Экспорт CSV</span>
           </button>
+          <AdminHint label="Экспорт CSV">Скачать весь каталог таблицей, чтобы править в Excel.</AdminHint>
 
           <button
             onClick={() => setIsCSVImportModalOpen(true)}
@@ -85,6 +87,7 @@ export function ProductListToolbar({ list, products, categories, CATEGORY_OPTION
             <Upload className="w-3.5 h-3.5 text-accent" />
             <span className="hidden sm:inline">Импорт</span>
           </button>
+          <AdminHint label="Импорт CSV">Загрузить таблицу: новые товары добавятся, у старых поменяются цены и данные.</AdminHint>
 
           <button
             onClick={() =>
@@ -102,6 +105,7 @@ export function ProductListToolbar({ list, products, categories, CATEGORY_OPTION
             <Sparkles className="w-3.5 h-3.5 text-accent" />
             <span className="hidden sm:inline">Быстрые фразы</span>
           </button>
+          <AdminHint label="Быстрые фразы">Готовые фразы для описаний: вставляете их в товар одним нажатием.</AdminHint>
 
           <button
             onClick={handleOpenAddProduct}
@@ -198,6 +202,7 @@ export function ProductListToolbar({ list, products, categories, CATEGORY_OPTION
               <SlidersHorizontal className="w-3.5 h-3.5" />
               Массовые операции
             </button>
+            <AdminHint label="Массовые операции" className="-ml-1.5">Цена, скидки или категория сразу у всех выбранных товаров.</AdminHint>
 
             <button
               onClick={() => setIsBulkDiscountModalOpen(true)}
@@ -206,6 +211,7 @@ export function ProductListToolbar({ list, products, categories, CATEGORY_OPTION
               <Tag className="w-3.5 h-3.5 text-accent" />
               Скидка
             </button>
+            <AdminHint label="Скидка" className="-ml-1.5">Старая цена запомнится, новая станет ниже на выбранный процент.</AdminHint>
 
             <div className="relative">
               <button

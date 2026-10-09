@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { AdminHint } from './AdminHint';
 import { AlertTriangle } from 'lucide-react';
 import type { Order, Product } from '../../types';
 import { orderPriceIssues, type OrderCheckContext } from '../../utils/orderPriceCheck';
@@ -20,6 +21,7 @@ export const AdminOrderPriceWarning: React.FC<{ order: Order; products: Product[
       <p className="flex items-center gap-1.5 font-extrabold text-danger">
         <AlertTriangle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
         Цены не совпадают с каталогом
+        <AdminHint label="Цены не совпадают с каталогом">Цена в заказе другая, чем в каталоге. Сверьте сумму перед отправкой</AdminHint>
       </p>
       <ul className="list-disc pl-5 space-y-0.5">
         {issues.map((issue) => (

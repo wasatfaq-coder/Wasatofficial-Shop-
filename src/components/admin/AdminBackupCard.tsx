@@ -5,6 +5,7 @@ import { exportDatabase } from '../../utils/firebaseSync';
 import { pluralRu } from '../../utils/pluralize';
 import { parseBackup, type ParsedBackup } from '../../utils/backupRestore';
 import { AdminRestoreDialog } from './AdminRestoreDialog';
+import { AdminHint } from './AdminHint';
 
 interface AdminBackupCardProps {
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
@@ -73,7 +74,12 @@ export const AdminBackupCard: React.FC<AdminBackupCardProps> = ({ onShowToast })
           <DatabaseBackup className="w-5 h-5" />
         </div>
         <div className="min-w-0">
-          <h4 className="text-sm font-extrabold text-[#2D3A4E]">Резервная копия базы</h4>
+          <div className="flex items-center gap-1">
+            <h4 className="text-sm font-extrabold text-[#2D3A4E]">Резервная копия базы</h4>
+            <AdminHint label="Резервная копия базы">
+              Файл со всем магазином на ваш телефон. Делайте раз в неделю, храните тайно.
+            </AdminHint>
+          </div>
           <p className="text-xs text-[#4E5C70] leading-snug">
             Файл со всеми товарами, заказами, покупателями и перепиской сохранится на этом устройстве. Делайте копию
             раз в неделю и перед большими изменениями. В файле личные данные покупателей — храните его только у себя.
@@ -103,6 +109,9 @@ export const AdminBackupCard: React.FC<AdminBackupCardProps> = ({ onShowToast })
           <Upload className="w-4 h-4" aria-hidden="true" />
           {isReading ? 'Читаем файл…' : 'Восстановить из копии'}
         </button>
+        <AdminHint label="Восстановить из копии" className="-ml-2">
+          Вернёт данные из файла копии. Сначала прочтите, чем отличаются два режима.
+        </AdminHint>
         <input
           ref={fileInput}
           type="file"

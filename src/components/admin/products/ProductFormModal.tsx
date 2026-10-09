@@ -11,6 +11,7 @@ import type { ProductForm } from './useProductForm';
 import { PURCHASE_CURRENCIES, type PurchaseCurrency } from '../../../utils/currencyPricing';
 
 const PRESET_BADGES = ['ХИТ', 'NEW', 'SALE', '-20%', 'PREMIUM', 'LIMITED', 'ECO', 'EXCLUSIVE'];
+import { AdminHint } from '../AdminHint';
 import { ProductFormGallery } from './ProductFormGallery';
 import { ProductFormVariants } from './ProductFormVariants';
 import { ProductFormSizeChart } from './ProductFormSizeChart';
@@ -112,8 +113,9 @@ export function ProductFormModal({
               </button>
 
               {/* Status switch: a raised track with the selected option pressed in */}
+              <div className="order-3 sm:order-2 w-full sm:w-auto flex items-center gap-1 shrink-0">
               <div
-                className="order-3 sm:order-2 w-full sm:w-auto grid grid-cols-2 neu-flat-sm p-1 rounded-xl gap-1 shrink-0"
+                className="flex-1 sm:flex-none grid grid-cols-2 neu-flat-sm p-1 rounded-xl gap-1"
                 role="group"
                 aria-label="Статус товара"
               >
@@ -137,6 +139,8 @@ export function ProductFormModal({
                 >
                   <span className={!formInStock ? 'text-danger' : ''}>Снят с витрины</span>
                 </button>
+              </div>
+              <AdminHint label="В продаже / Снят с витрины">«Снят с витрины» — товар скрыт от покупателей, но остаётся у вас в базе.</AdminHint>
               </div>
             </div>
 
@@ -191,10 +195,13 @@ export function ProductFormModal({
                   {/* Marketing Badge Selector - Unified Inset Container */}
                   <div className="neu-inset rounded-2xl p-3.5 border border-white/60 space-y-2.5">
                     <div className="flex items-start justify-between gap-2 pb-1 border-b border-[#BAC5D5]/30">
+                      <div className="min-w-0 flex items-start gap-1">
                       <label className="min-w-0 text-[11px] font-extrabold text-[#2D3A4E] flex items-start gap-1.5 uppercase tracking-wider leading-snug">
                         <Tag className="w-3.5 h-3.5 text-accent shrink-0 mt-px" />
                         <span>Маркетинговый ярлык (Бейдж)</span>
                       </label>
+                      <AdminHint label="Бейдж" className="-mt-1">Плашка на фото товара: «Хит», «Новинка», «-20%». Необязательно.</AdminHint>
+                      </div>
                       {formBadge ? (
                         <button
                           type="button"
@@ -238,9 +245,12 @@ export function ProductFormModal({
                   <div>
                     <div className="min-w-0">
                       <div className="flex items-center justify-between gap-2 mb-1 min-h-5">
+                        <span className="inline-flex items-center gap-1">
                         <label htmlFor="product-form-category" className="text-[11px] font-bold text-[#4E5C70]">
                           Категория *
                         </label>
+                        <AdminHint label="Категория">Где покупатель найдёт товар. Список ведётся в «Категориях».</AdminHint>
+                        </span>
                         {!categoryIsListed && formCategory && (
                           <span className="text-[11px] font-bold text-warning whitespace-nowrap">Нет в «Категориях»</span>
                         )}
@@ -319,6 +329,7 @@ export function ProductFormModal({
                             <Wand2 className="w-3.5 h-3.5" aria-hidden="true" />
                             Черновик из характеристик
                           </button>
+                          <AdminHint label="Черновик из характеристик" className="-ml-1.5">Дописывает в описание состав, покрой и страну. Текст можно править.</AdminHint>
                           <span className="text-[11px] text-[#4E5C70] leading-snug">
                             {!draft
                               ? 'Заполните состав, покрой или страну в «Структуре карточки»'
@@ -337,6 +348,7 @@ export function ProductFormModal({
                       <span className="flex items-center gap-1.5">
                         <DollarSign className="w-3.5 h-3.5 text-accent" />
                         Ценообразование и маржинальность
+                        <AdminHint label="Маржа">Ваша прибыль с одной штуки: цена минус закупка.</AdminHint>
                       </span>
                       {formPrice > 0 && formCostPrice !== undefined && (
                         <span
@@ -355,9 +367,12 @@ export function ProductFormModal({
 
                     <div className="grid grid-cols-3 gap-2 items-end">
                       <div className="min-w-0">
-                        <label htmlFor="product-form-price" className="text-[11px] font-bold text-[#4E5C70] block mb-1 leading-tight">
-                          Цена, ₽ *
-                        </label>
+                        <div className="flex items-center gap-0.5 mb-1">
+                          <label htmlFor="product-form-price" className="text-[11px] font-bold text-[#4E5C70] leading-tight">
+                            Цена, ₽ *
+                          </label>
+                          <AdminHint label="Цена, ₽">Цена, по которой покупатель закажет товар.</AdminHint>
+                        </div>
                         <input
                           id="product-form-price"
                           type="number"
@@ -371,9 +386,12 @@ export function ProductFormModal({
                       </div>
 
                       <div className="min-w-0">
-                        <label htmlFor="product-form-cost" className="text-[11px] font-bold text-[#4E5C70] block mb-1 leading-tight" title="Себестоимость закупки">
-                          Закупка, ₽
-                        </label>
+                        <div className="flex items-center gap-0.5 mb-1">
+                          <label htmlFor="product-form-cost" className="text-[11px] font-bold text-[#4E5C70] leading-tight" title="Себестоимость закупки">
+                            Закупка, ₽
+                          </label>
+                          <AdminHint label="Закупка">Во сколько товар обошёлся вам. Покупатель не видит.</AdminHint>
+                        </div>
                         <input
                           id="product-form-cost"
                           type="number"
@@ -387,9 +405,12 @@ export function ProductFormModal({
                       </div>
 
                       <div className="min-w-0">
-                        <label htmlFor="product-form-old-price" className="text-[11px] font-bold text-[#4E5C70] block mb-1 leading-tight">
-                          Старая цена, ₽
-                        </label>
+                        <div className="flex items-center gap-0.5 mb-1">
+                          <label htmlFor="product-form-old-price" className="text-[11px] font-bold text-[#4E5C70] leading-tight">
+                            Старая цена, ₽
+                          </label>
+                          <AdminHint label="Старая цена">Зачёркнутая цена рядом с новой. Должна быть выше текущей.</AdminHint>
+                        </div>
                         <input
                           id="product-form-old-price"
                           type="number"

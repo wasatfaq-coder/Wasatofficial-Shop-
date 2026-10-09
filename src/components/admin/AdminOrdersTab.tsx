@@ -88,6 +88,7 @@ import { usePaymentTemplates } from './usePaymentTemplates';
 import { isReceiptOnReview } from '../../utils/paymentDetails';
 import { AdminOrderPriceWarning } from './AdminOrderPriceWarning';
 import { AdminChoiceMenu } from './AdminChoiceMenu';
+import { AdminHint } from './AdminHint';
 import { orderPriceIssues, type OrderCheckContext } from '../../utils/orderPriceCheck';
 import type { OrderPaymentDetails } from '../../types';
 import { cancelledByLabel, cancelReasonText, formatCancelledAt, isArchivedOrder, ordersWithPromoToRelease, overdueUnpaidOrders, UNPAID_CANCEL_REASON } from '../../utils/orderCancel';
@@ -108,6 +109,15 @@ interface AdminOrdersTabProps {
   /** «Подтвердить оплату» / «Отклонить чек» («Доработки 5»): the order and a message to the buyer's chat */
   onReviewReceipt?: ReviewReceipt;
 }
+
+/** «Для чего это» to the status chips (docs/admin-wholesale/hints.md) */
+const CHIP_HINTS: Partial<Record<string, string>> = {
+  accepted: 'Заказы, которые вы ещё не взяли в работу',
+  assembling: 'Товар собран и упакован, ещё не передан в доставку',
+  in_transit: 'Отдали курьеру или в службу доставки',
+  ready: 'Покупатель может забрать заказ в пункте или у курьера',
+  archive: 'Скрытые из основного списка отменённые заказы. Удалять их не нужно',
+};
 
 const STATUS_CONFIG: Record<
   Order['status'],
@@ -1063,9 +1073,10 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         <div role="radiogroup" aria-label="Статус заказа" className="flex flex-wrap gap-1.5">
           {statusChips.map((chip) => {
             const active = statusFilter === chip.value;
+            const chipHint = CHIP_HINTS[chip.value];
             return (
+              <span key={chip.value} className="inline-flex items-center gap-0.5">
               <button
-                key={chip.value}
                 type="button"
                 role="radio"
                 aria-checked={active}
@@ -1077,6 +1088,8 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                 {chip.label}
                 <span className={`text-[11px] ${active ? 'text-accent' : 'text-[#4E5C70]'}`}>{chip.count}</span>
               </button>
+              {chipHint && <AdminHint label={chip.label}>{chipHint}</AdminHint>}
+              </span>
             );
           })}
         </div>
@@ -1416,8 +1429,11 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                     </span>
 
                     {ord.isAdjusted && (
-                      <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-warning-soft text-warning border border-warning/35">
-                        Скорректирован
+                      <span className="inline-flex items-center gap-0.5">
+                        <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-warning-soft text-warning border border-warning/35">
+                          Скорректирован
+                        </span>
+                        <AdminHint label="Скорректирован">Состав заказа меняли после оформления</AdminHint>
                       </span>
                     )}
 
@@ -1454,6 +1470,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                       <span>{payConfig.label}</span>
                       <ChevronDown className="w-3 h-3 opacity-60" aria-hidden="true" />
                     </AdminChoiceMenu>
+                    <AdminHint label="Статус оплаты">Отметьте «Оплачен», когда деньги пришли. Сайт сам деньги не принимает</AdminHint>
 
                     <AdminChoiceMenu
                       label="Статус заказа"
@@ -1507,6 +1524,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                         <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                         <span>Удалить навсегда</span>
                       </button>
+                      <AdminHint label="Удалить навсегда">Заказ исчезает без возможности вернуть. Лучше отправьте в архив</AdminHint>
                     </div>
                     {ord.stockReturned === false && (
                       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1539,6 +1557,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                       {untakenLines[ord.id].map((i) => ord.items[i]?.product?.title ?? `строка ${i + 1}`).join(', ')}. Связь у покупателя
                       оборвалась при оформлении.
                     </p>
+                    <span className="inline-flex items-center gap-0.5">
                     <button
                       type="button"
                       onClick={() => handleTakeOrderStock(ord)}
@@ -1550,6 +1569,8 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                       {takingStockOrderId === ord.id ? <RefreshCw className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> : <PackageCheck className="w-3.5 h-3.5" aria-hidden="true" />}
                       <span>Списать со склада</span>
                     </button>
+                    <AdminHint label="Списать со склада">Остаток не уменьшился из-за обрыва связи. Кнопка спишет его сейчас</AdminHint>
+                    </span>
                   </div>
                 )}
 
@@ -1619,6 +1640,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                         <span className="font-bold text-[#4E5C70] flex items-center gap-1.5">
                           <MessageSquare className="w-3 h-3 text-accent" />
                           Служебная заметка менеджера:
+                          <AdminHint label="Служебная заметка">Видна только вам и команде. Покупатель её не увидит</AdminHint>
                         </span>
                         {!isEditingNote && (
                           <button
@@ -2006,6 +2028,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
                   {/* «Забрать заказ»: courier and pickup orders on their way to the buyer, handed over by the code */}
                   {usesPickupCode(ord) && !ord.isCancelled && (ord.status === 'in_transit' || ord.status === 'ready') && (
+                    <span className="inline-flex items-center gap-0.5">
                     <button
                       type="button"
                       onClick={() => openHandover(ord)}
@@ -2018,22 +2041,27 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                       <KeyRound className="w-3.5 h-3.5" aria-hidden="true" />
                       <span>Забрать заказ</span>
                     </button>
+                    <AdminHint label="Забрать заказ">Выдать заказ: покупатель называет код из своего кабинета, вы сверяете</AdminHint>
+                    </span>
                   )}
 
                   {/* История заказа: every status with its time to the second and who changed it */}
+                  <span className="inline-flex items-center gap-0.5 sm:ml-auto">
                   <button
                     type="button"
                     onClick={() =>
                       setExpandedOrderAuditLogId(isAuditExpanded ? null : ord.id)
                     }
                     aria-expanded={isAuditExpanded}
-                    className={`h-8 px-3 rounded-xl text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-all sm:ml-auto ${
+                    className={`h-8 px-3 rounded-xl text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
                       isAuditExpanded ? 'neu-pill-active' : 'neu-button text-[#4E5C70] hover:text-accent'
                     }`}
                   >
                     <History className="w-3.5 h-3.5 text-accent" />
                     <span>История ({orderTimeline(ord, 'admin').length})</span>
                   </button>
+                  <AdminHint label="История">Все смены статуса: когда и кто менял</AdminHint>
+                  </span>
                 </div>
 
                 {isAuditExpanded && (

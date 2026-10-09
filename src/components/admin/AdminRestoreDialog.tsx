@@ -5,6 +5,7 @@ import firebaseConfig from '../../../firebase-applet-config.json';
 import { ModalPortal } from '../ModalPortal';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { SelectCheckbox } from './SelectCheckbox';
+import { AdminHint } from './AdminHint';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { pluralRu } from '../../utils/pluralize';
 import { readExistingIds, restoreDatabase } from '../../utils/firebaseSync';
@@ -21,16 +22,18 @@ import {
 const docsWord = (n: number) => pluralRu(n, ['документ', 'документа', 'документов']);
 const toTimestamp = (iso: string) => Timestamp.fromDate(new Date(iso));
 
-const MODES: { value: RestoreMode; title: string; hint: string }[] = [
+const MODES: { value: RestoreMode; title: string; hint: string; help: string }[] = [
   {
     value: 'missing',
     title: 'Только недостающие',
     hint: 'Вернуть удалённое: пишутся документы, которых сейчас нет в базе. Существующие не меняются.',
+    help: 'Вернёт удалённое. То, что есть сейчас, не изменится — безопасный режим.',
   },
   {
     value: 'overwrite',
     title: 'Как в копии',
     hint: 'Документы из копии заменят те же документы в базе: изменения после даты копии в них пропадут.',
+    help: 'Заменит нынешние данные копией: всё изменённое после копии пропадёт.',
   },
 ];
 
@@ -165,14 +168,14 @@ export const AdminRestoreDialog: React.FC<AdminRestoreDialogProps> = ({ backup, 
             {MODES.map((item) => {
               const selected = mode === item.value;
               return (
+                <div key={item.value} className="flex items-start gap-1">
                 <button
-                  key={item.value}
                   type="button"
                   role="radio"
                   aria-checked={selected}
                   onClick={() => setMode(item.value)}
                   disabled={Boolean(busy)}
-                  className={`w-full px-3 py-2 rounded-xl text-left flex items-start gap-2.5 cursor-pointer ${
+                  className={`flex-1 min-w-0 px-3 py-2 rounded-xl text-left flex items-start gap-2.5 cursor-pointer ${
                     selected ? 'neu-pill-active' : 'neu-button'
                   }`}
                 >
@@ -187,6 +190,8 @@ export const AdminRestoreDialog: React.FC<AdminRestoreDialogProps> = ({ backup, 
                     <span className="block text-xs text-[#4E5C70]">{item.hint}</span>
                   </span>
                 </button>
+                <AdminHint label={item.title} className="mt-1.5">{item.help}</AdminHint>
+                </div>
               );
             })}
           </div>

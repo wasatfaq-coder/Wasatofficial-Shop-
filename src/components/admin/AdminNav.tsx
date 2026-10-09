@@ -23,6 +23,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { isAdminTab, type AdminNavCounts, type AdminTab } from './adminSections';
+import { AdminHint } from './AdminHint';
 
 const TABS: Record<AdminTab, { label: string; icon: LucideIcon }> = {
   analytics: { label: 'Аналитика', icon: BarChart3 },
@@ -45,11 +46,17 @@ const TABS: Record<AdminTab, { label: string; icon: LucideIcon }> = {
 type AdminGroupId = 'sales' | 'catalog' | 'marketing' | 'store';
 
 /** 14 sections in 4 groups (Hick: 4 choices, then 2–5) */
-const GROUPS: { id: AdminGroupId; label: string; icon: LucideIcon; tabs: AdminTab[] }[] = [
+const GROUPS: { id: AdminGroupId; label: string; icon: LucideIcon; tabs: AdminTab[]; hint?: string }[] = [
   { id: 'sales', label: 'Продажи', icon: TrendingUp, tabs: ['analytics', 'orders', 'customers', 'support'] },
   { id: 'catalog', label: 'Каталог', icon: Layers, tabs: ['products', 'categories', 'inventory', 'rates'] },
   { id: 'marketing', label: 'Маркетинг', icon: Megaphone, tabs: ['promos', 'banners'] },
-  { id: 'store', label: 'Магазин', icon: Store, tabs: ['delivery', 'payment', 'faq', 'legal', 'storefront'] },
+  {
+    id: 'store',
+    label: 'Магазин',
+    icon: Store,
+    tabs: ['delivery', 'payment', 'faq', 'legal', 'storefront'],
+    hint: 'Как покупатель получает и оплачивает заказ и что о вас узнаёт.',
+  },
 ];
 
 const groupOf = (tab: AdminTab) => GROUPS.find((g) => g.tabs.includes(tab)) ?? GROUPS[0];
@@ -174,9 +181,10 @@ export const AdminNav: React.FC<AdminNavProps> = ({ tab, onRequestTab, onPrefetc
           }}
           className="flex-1 min-h-0 flex flex-col gap-3 min-w-0 w-full"
         >
+          <div className="flex items-start gap-1 shrink-0 min-w-0">
           <Tabs.List
             aria-label={`Разделы группы «${group.label}»`}
-            className="flex flex-wrap items-center gap-2 shrink-0 px-1 py-1.5 -my-1"
+            className="flex-1 min-w-0 flex flex-wrap items-center gap-2 px-1 py-1.5 -my-1"
           >
             {group.tabs.map((t) => {
               const { label, icon: Icon } = TABS[t];
@@ -205,6 +213,12 @@ export const AdminNav: React.FC<AdminNavProps> = ({ tab, onRequestTab, onPrefetc
               );
             })}
           </Tabs.List>
+          {group.hint && (
+            <AdminHint label={group.label} className="mt-1">
+              {group.hint}
+            </AdminHint>
+          )}
+          </div>
 
           <Tabs.Panel
             value={tab}

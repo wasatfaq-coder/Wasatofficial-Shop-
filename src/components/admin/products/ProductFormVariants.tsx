@@ -3,6 +3,7 @@ import { ProductSKU } from '../../../types';
 import { generateSkuCode, generateBarcode } from '../../../utils/inventory';
 import { colorHexForName, normalizeColorName, readColorCode, splitColorEntry } from '../../../utils/colorCode';
 
+import { AdminHint } from '../AdminHint';
 import type { AdminProductsTabProps } from '../AdminProductsTab';
 import type { ProductForm } from './useProductForm';
 
@@ -220,10 +221,13 @@ export function ProductFormVariants({ form, onShowToast }: { form: ProductForm; 
         {/* Colors Section - Unified Inset Container */}
         <div className="neu-inset rounded-2xl p-3.5 border border-white/60 space-y-3">
           <div className="flex items-center justify-between pb-1 border-b border-[#BAC5D5]/30">
-            <label className="text-[11px] font-extrabold text-[#2D3A4E] flex items-center gap-1.5 uppercase tracking-wider">
-              <Palette className="w-3.5 h-3.5 text-accent" />
-              <span>Цвета товара ({formColors.length})</span>
-            </label>
+            <div className="flex items-center gap-1">
+              <label className="text-[11px] font-extrabold text-[#2D3A4E] flex items-center gap-1.5 uppercase tracking-wider">
+                <Palette className="w-3.5 h-3.5 text-accent" />
+                <span>Цвета товара ({formColors.length})</span>
+              </label>
+              <AdminHint label="Цвета">Цвет и оттенок для покупателя. Добавьте цвета, потом размеры.</AdminHint>
+            </div>
             <span className="text-[11px] font-semibold text-[#4E5C70]">Мин. 1 цвет</span>
           </div>
 
@@ -385,6 +389,7 @@ export function ProductFormVariants({ form, onShowToast }: { form: ProductForm; 
           {/* Preset Sizes Bar */}
           <div className="flex flex-wrap items-center gap-1 pt-0.5">
             <span className="text-[11px] text-[#4E5C70] font-semibold mr-0.5">Сетка:</span>
+            <AdminHint label="Размеры («Сетка»)" className="-ml-1">Размеры, в которых есть товар. Для каждого цвета создастся вариант.</AdminHint>
             {PRESET_SIZES.map((sz) => {
               const isSelected = formSizes.includes(sz);
               return (
@@ -429,10 +434,13 @@ export function ProductFormVariants({ form, onShowToast }: { form: ProductForm; 
         {/* SKU Stock Matrix */}
         <div>
           <div className="flex items-center justify-between mb-2 flex-wrap gap-x-2 gap-y-1.5">
-            <label className="text-[11px] font-extrabold text-[#2D3A4E] uppercase tracking-wider flex items-center gap-1.5">
-              <Boxes className="w-3.5 h-3.5 text-accent" />
-              <span>Остатки SKU ({formSkus.length})</span>
-            </label>
+            <div className="flex items-center gap-1">
+              <label className="text-[11px] font-extrabold text-[#2D3A4E] uppercase tracking-wider flex items-center gap-1.5">
+                <Boxes className="w-3.5 h-3.5 text-accent" />
+                <span>Остатки SKU ({formSkus.length})</span>
+              </label>
+              <AdminHint label="Остатки SKU">SKU — один цвет в одном размере. Здесь считаем штуки каждого.</AdminHint>
+            </div>
 
             {/* Bulk Adjustments */}
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -444,6 +452,7 @@ export function ProductFormVariants({ form, onShowToast }: { form: ProductForm; 
               >
                 Обнулить
               </button>
+              <AdminHint label="Обнулить" className="-ml-1">Ставит остаток 0 у всех вариантов. Спросит подтверждение.</AdminHint>
               <button
                 type="button"
                 onClick={handleRegenerateMissingCodes}
@@ -453,6 +462,7 @@ export function ProductFormVariants({ form, onShowToast }: { form: ProductForm; 
                 <RefreshCw className="w-2.5 h-2.5" />
                 <span>Коды</span>
               </button>
+              <AdminHint label="Коды" className="-ml-1">Допишет артикулы и штрихкоды, которых ещё нет. Старые не меняются.</AdminHint>
             </div>
           </div>
 
@@ -553,6 +563,9 @@ export function ProductFormVariants({ form, onShowToast }: { form: ProductForm; 
                             : 'В наличии'
                         }
                       />
+                      {sIdx === 0 && (
+                        <AdminHint label="Точка у остатка">Зелёная — есть, жёлтая — мало, красная — нет в наличии.</AdminHint>
+                      )}
                     </div>
                   </div>
                 );

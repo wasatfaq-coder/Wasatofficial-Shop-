@@ -49,11 +49,11 @@ test('новый товар: состав и страна чипами, уход
   await page.getByRole('option', { name: 'Рубашка' }).click();
   const description = form.getByRole('textbox', { name: /^Описание товара/ });
   await description.fill('Базовая футболка на каждый день.');
-  await form.getByRole('button', { name: 'Черновик из характеристик' }).click();
+  await form.getByRole('button', { name: 'Черновик из характеристик', exact: true }).click();
   await expect(description).toHaveValue(
     'Базовая футболка на каждый день.\n\nСостав: 95% хлопок, 5% эластан. Страна производства — Турция.'
   );
-  await expect(form.getByRole('button', { name: 'Черновик из характеристик' })).toBeDisabled();
+  await expect(form.getByRole('button', { name: 'Черновик из характеристик', exact: true })).toBeDisabled();
   await form.getByRole('spinbutton', { name: /^Цена, ₽/ }).fill('1990');
   await form.getByRole('textbox', { name: 'Ссылка на фото' }).fill('https://img.test/new-tee.jpg');
   await form.getByRole('textbox', { name: 'Ссылка на фото' }).press('Enter');

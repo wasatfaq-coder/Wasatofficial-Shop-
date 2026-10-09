@@ -26,6 +26,7 @@ import { processImageFiles } from '../../utils/imageUpload';
 import { NotConfigured } from '../NotConfigured';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { useBannersWithImages } from '../../utils/useBannerImage';
+import { AdminHint } from './AdminHint';
 import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
 
 interface AdminBannersTabProps {
@@ -466,9 +467,12 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
           {/* Row 1: Title, Subtitle, Button Text & Badge */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
-                Главный заголовок *
-              </label>
+              <div className="flex items-center gap-1 mb-1">
+                <label className="text-[11px] font-bold text-[#4E5C70] block">
+                  Главный заголовок *
+                </label>
+                <AdminHint label="Главный заголовок">Крупный текст слайда на главной. Обязательное поле.</AdminHint>
+              </div>
               <input
                 type="text"
                 required
@@ -495,9 +499,12 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
-                Текст кнопки действия
-              </label>
+              <div className="flex items-center gap-1 mb-1">
+                <label className="text-[11px] font-bold text-[#4E5C70] block">
+                  Текст кнопки действия
+                </label>
+                <AdminHint label="Текст кнопки">Подпись на кнопке слайда. Пусто — «Смотреть».</AdminHint>
+              </div>
               <input
                 type="text"
                 value={btnText}
@@ -508,9 +515,12 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
-                Бейдж / Стикер
-              </label>
+              <div className="flex items-center gap-1 mb-1">
+                <label className="text-[11px] font-bold text-[#4E5C70] block">
+                  Бейдж / Стикер
+                </label>
+                <AdminHint label="Бейдж / Стикер">Короткая метка в углу слайда: «Хит», «-20 %». Можно оставить пустой.</AdminHint>
+              </div>
               <input
                 type="text"
                 value={badge}
@@ -527,6 +537,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
               <span className="text-[11px] font-extrabold text-[#2D3A4E] uppercase tracking-wider flex items-center gap-1.5">
                 <ArrowUpRight className="w-3.5 h-3.5 text-accent" />
                 <span>Целевое действие при клике (Диплинк):</span>
+                <AdminHint label="Целевое действие">Куда попадёт покупатель, когда нажмёт на слайд.</AdminHint>
               </span>
               <span className="text-[11px] text-[#4E5C70] font-semibold">
                 Куда перейдет покупатель
@@ -598,9 +609,12 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
 
             {actionType === 'promo' && (
               <div className="space-y-1 pt-1">
-                <label className="text-[11px] font-bold text-[#4E5C70] block">
-                  Выберите промокод, который автоматически активируется при клике:
-                </label>
+                <div className="flex items-center gap-1">
+                  <label className="text-[11px] font-bold text-[#4E5C70] block">
+                    Выберите промокод, который автоматически активируется при клике:
+                  </label>
+                  <AdminHint label="Действие «Промокод»">Код сам подставится в корзину. Для кода с лимитом нужен вход через Google.</AdminHint>
+                </div>
                 <NeumorphicSelect
                   ariaLabel="Промокод"
                   value={targetPromoCode}
@@ -655,10 +669,13 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
               {/* Mobile Image Card */}
               <div className="neu-flat rounded-2xl p-3 border border-white/60 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
-                    <Smartphone className="w-3.5 h-3.5 text-accent" />
-                    <span>Версия для смартфонов</span>
-                  </label>
+                  <div className="flex items-center gap-1">
+                    <label className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
+                      <Smartphone className="w-3.5 h-3.5 text-accent" />
+                      <span>Версия для смартфонов</span>
+                    </label>
+                    <AdminHint label="Фото для смартфонов">Показывается на телефоне. Лучше вертикальное, 4:5.</AdminHint>
+                  </div>
                   <span
                     className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md ${
                       mobileImage || image
@@ -761,7 +778,10 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
 
                 {/* Manual URL Input */}
                 <div className="space-y-0.5 pt-0.5">
-                  <span className="text-[11px] font-bold text-[#4E5C70]">Или прямая ссылка:</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11px] font-bold text-[#4E5C70]">Или прямая ссылка:</span>
+                    <AdminHint label="Или прямая ссылка">Адрес картинки в интернете. Надёжнее загрузить файл: чужой сайт может её убрать.</AdminHint>
+                  </div>
                   <input
                     type="url"
                     value={mobileImage || image}
@@ -778,10 +798,13 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
               {/* Desktop Image Card */}
               <div className="neu-flat rounded-2xl p-3 border border-white/60 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
-                    <Monitor className="w-3.5 h-3.5 text-accent" />
-                    <span>Широкоформатная десктоп-версия (16:9)</span>
-                  </label>
+                  <div className="flex items-center gap-1">
+                    <label className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
+                      <Monitor className="w-3.5 h-3.5 text-accent" />
+                      <span>Широкоформатная десктоп-версия (16:9)</span>
+                    </label>
+                    <AdminHint label="Фото для десктопа">Показывается на экранах от 1024 px. Пусто — берём фото для телефона.</AdminHint>
+                  </div>
                   <span
                     className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md ${
                       desktopImage
@@ -884,7 +907,10 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
 
                 {/* Manual URL Input */}
                 <div className="space-y-0.5 pt-0.5">
-                  <span className="text-[11px] font-bold text-[#4E5C70]">Или прямая ссылка:</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11px] font-bold text-[#4E5C70]">Или прямая ссылка:</span>
+                    <AdminHint label="Или прямая ссылка">Адрес картинки в интернете. Надёжнее загрузить файл: чужой сайт может её убрать.</AdminHint>
+                  </div>
                   <input
                     type="url"
                     value={desktopImage}
@@ -924,9 +950,12 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-accent" />
                 <div>
-                  <span className="text-[11px] font-extrabold text-[#2D3A4E] block">
-                    Планировщик автоматических публикаций
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11px] font-extrabold text-[#2D3A4E] block">
+                      Планировщик автоматических публикаций
+                    </span>
+                    <AdminHint label="Планировщик">Баннер сам появится и сам исчезнет в нужное время. Время — по часам вашего устройства.</AdminHint>
+                  </div>
                   <span className="text-[11px] text-[#4E5C70]">
                     Точный запуск и снятие баннера с витрины в указанные часы (ночные акции, Черная пятница)
                   </span>
@@ -1095,6 +1124,10 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                       </div>
                     </div>
 
+                    {index === 0 && (
+                      <AdminHint label="Стрелки порядка">Первый в списке показывается на главной первым.</AdminHint>
+                    )}
+
                     <span className="text-xs font-extrabold text-[#2D3A4E] neu-flat-sm px-2.5 py-1 rounded-xl">
                       {slide.title}
                     </span>
@@ -1126,6 +1159,9 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     >
                       {slide.active ? 'Активен' : 'Скрыт'}
                     </button>
+                    {index === 0 && (
+                      <AdminHint label="Активен / Скрыт">Скрытый баннер не показывается, даже если по расписанию его время.</AdminHint>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleOpenEdit(slide)}

@@ -30,6 +30,7 @@ import {
   type BarcodeProblem,
 } from '../../shared/barcode';
 import { pluralRu } from '../../utils/pluralize';
+import { AdminHint } from './AdminHint';
 
 export interface LabelTarget {
   productId: string;
@@ -392,7 +393,10 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
             {/* Formats */}
             <section className="space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <h4 className={sectionTitle}>Формат этикетки</h4>
+                <div className="flex items-center gap-1">
+                  <h4 className={sectionTitle}>Формат этикетки</h4>
+                  <AdminHint label="Формат">Размер этикетки в мм под ваш принтер. Добавьте один раз.</AdminHint>
+                </div>
                 {formats.length > 0 && !isAddingFormat && onUpdateSettings && (
                   <button
                     type="button"
@@ -575,7 +579,10 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
 
             {/* Templates */}
             <section className="space-y-2">
-              <h4 className={sectionTitle}>Шаблон</h4>
+              <div className="flex items-center gap-1">
+                <h4 className={sectionTitle}>Шаблон</h4>
+                <AdminHint label="Шаблон">Как расположены название, цена и штрихкод. Образец виден сразу.</AdminHint>
+              </div>
               {!format && current && (
                 <p className="text-xs text-[#4E5C70] leading-snug">
                   Образцы — на частом размере {sizeText(sampleFormat)}. Добавьте формат вашего принтера: образцы

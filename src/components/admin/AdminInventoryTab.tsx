@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { AdminHint } from './AdminHint';
 import { ProductThumbImage } from '../ProductThumbImage';
 import {
   Boxes,
@@ -844,6 +845,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
               <span className="w-2 h-2 rounded-full bg-danger animate-pulse" />
             )}
           </button>
+          <AdminHint label="Инвентаризация" className="-ml-1.5 self-center">Пересчитали на полке — введите факт, увидите недостачу и излишек.</AdminHint>
           <button
             onClick={() => setActiveSubTab('movements')}
             className={`py-1.5 px-3 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
@@ -855,9 +857,11 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
             <History className="w-3.5 h-3.5" />
             Журнал движений ({movementLogs.length})
           </button>
+          <AdminHint label="Журнал движений" className="-ml-1.5 self-center">Кто, когда и почему менял остаток: заказы, приходы, списания.</AdminHint>
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <AdminHint label="Оформить операцию">Приход, брак или возврат: меняет остаток и пишет в журнал.</AdminHint>
           <button
             onClick={() => setIsOperationModalOpen(true)}
             className="h-9 px-4 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 cursor-pointer transition-all"
@@ -879,7 +883,10 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
         </div>
 
         <div className="neu-inset rounded-2xl p-3 space-y-0.5">
-          <span className="text-[11px] uppercase font-bold text-[#4E5C70] block">Порог дефицита</span>
+          <span className="flex items-center gap-1">
+            <span className="text-[11px] uppercase font-bold text-[#4E5C70]">Порог дефицита</span>
+            <AdminHint label="Порог дефицита">«Мало» — когда осталось не больше этого числа штук.</AdminHint>
+          </span>
           <div className="flex items-center gap-1.5">
             <span className="text-base font-extrabold text-accent">≤ {lowStockThreshold} шт.</span>
             <div className="flex gap-1">
@@ -956,6 +963,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
 
             {/* Grouping: category → model → article → sizes, models only, or the flat list */}
             <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-1">
               <div role="radiogroup" aria-label="Группировка" className="neu-flat-sm rounded-xl p-1 flex gap-1">
                 {(
                   [
@@ -977,6 +985,8 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                     {g.label}
                   </button>
                 ))}
+              </div>
+              <AdminHint label="Группировка склада">Как сгруппировать склад. Выбор запоминается.</AdminHint>
               </div>
               {grouping !== 'flat' && filteredSkus.length > 0 && (
                 <div className="flex items-center gap-1.5">
