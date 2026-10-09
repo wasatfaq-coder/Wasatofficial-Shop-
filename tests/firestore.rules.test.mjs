@@ -264,6 +264,17 @@ describe('catalog', () => {
     await assertSucceeds(updateDoc(doc(owner(), 'products/p1'), { price: 970 }));
   });
 
+  test('the price journal is admin-only and its entries are never deleted (admin audit 09.10, finding 11)', async () => {
+    const entry = { id: 'e1', createdAt: '2026-10-09T12:00:00.000Z', productId: 'p1', productTitle: 'Рубашка', oldPrice: 900, newPrice: 970, source: 'rates', currency: 'USD', rate: 90, operator: 'owner@example.com' };
+    await assertFails(setDoc(doc(guest(), 'price_changes/e1'), entry));
+    await assertFails(setDoc(doc(customer(), 'price_changes/e1'), entry));
+    await assertSucceeds(setDoc(doc(owner(), 'price_changes/e1'), entry));
+    await assertSucceeds(getDocs(collection(extraAdmin(), 'price_changes')));
+    await assertFails(getDocs(collection(customer(), 'price_changes')));
+    await assertFails(getDoc(doc(guest(), 'price_changes/e1')));
+    await assertFails(deleteDoc(doc(owner(), 'price_changes/e1')));
+  });
+
   test('exchange rates and the markup are read and written only by admins (09.10)', async () => {
     const rates = { usd: { official: 85, markup: 5, markupKind: 'rub' }, cny: { official: 11.7, markup: 2, markupKind: 'percent' }, markupPercent: 180 };
     await assertFails(setDoc(doc(customer(), 'settings/exchange_rates'), rates));

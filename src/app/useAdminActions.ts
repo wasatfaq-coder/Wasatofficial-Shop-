@@ -23,8 +23,11 @@ import {
   syncAllDeliveryMethodsToFirestore,
   syncAllPickupPointsToFirestore,
   applyExchangeRateChanges,
+  savePriceChanges,
   type ProductCostEntry,
 } from '../utils/firebaseSync';
+import { auth } from '../firebase';
+import { priceChangeEntries } from '../utils/priceChanges';
 import { samePurchase, type ExchangeRates } from '../utils/currencyPricing';
 import { withPriceChange, withPriceHistories } from '../utils/priceHistory';
 import { BANNERS_STORAGE_KEY } from './useStorefrontData';
@@ -32,6 +35,9 @@ import type { AddToast, Persist } from './useToasts';
 import type { WaitForCatalogIndex } from './useCatalogIndexSync';
 
 type SetState<T> = React.Dispatch<React.SetStateAction<T>>;
+
+/** Who changed the prices, for the price journal: the admin's Google account */
+const adminOperator = () => auth.currentUser?.email || auth.currentUser?.uid || 'Администратор';
 
 type AdminActionOptions = {
   isAdmin: boolean;
@@ -207,6 +213,12 @@ export function useAdminActions({
       syncAllProductsToFirestore(changed, adminProducts),
       saveProductCosts(costChanges)
     );
+    // the price journal (admin audit 09.10, finding 11): written once the prices are saved, its failure only logged —
+    // the products are already saved, and «Не сохранено» would make the owner save them again
+    const journal = priceChangeEntries(adminProducts, changed, { operator: adminOperator() });
+    if (journal.length > 0) {
+      void saved.then((ok) => ok && savePriceChanges(journal).catch((err) => console.error('Price journal entries were not written:', err)));
+    }
     // a removed product's photos go after it: a product never points at a missing photo
     const orphanPhotos = removedProductPhotoIds(adminProducts, updatedWithCosts);
     if (orphanPhotos.length > 0) {
@@ -339,6 +351,11 @@ export function useAdminActions({
         rates
       )
     );
+    // the price journal after the prices, like any product save: its failure is only logged
+    const journal = priceChangeEntries(adminProducts, changed, { operator: adminOperator(), rates, now });
+    if (journal.length > 0) {
+      void saved.then((ok) => ok && savePriceChanges(journal).catch((err) => console.error('Price journal entries were not written:', err)));
+    }
     const applied = saved.then((ok) => {
       if (!ok || changed.length === 0) return ok;
       const byId = new Map(changed.map((p) => [p.id, p]));

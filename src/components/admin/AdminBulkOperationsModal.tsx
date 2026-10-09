@@ -1,12 +1,21 @@
 import React, { useState } from 'react';
 import { ProductThumbImage } from '../ProductThumbImage';
 import { ModalPortal } from '../ModalPortal';
-import { X, Tag, DollarSign, Layers, Sparkles, Check, ArrowRight, RotateCcw, CheckCheck } from 'lucide-react';
+import { X, Tag, DollarSign, Layers, Sparkles, Check, ArrowRight, RotateCcw, CheckCheck, Coins } from 'lucide-react';
 import { Product, StoreCategory } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { NotConfigured } from '../NotConfigured';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { pluralRu } from '../../utils/pluralize';
+import { PURCHASE_CURRENCIES, parseDecimal, readPurchase, type ProductPurchase, type PurchaseCurrency } from '../../utils/currencyPricing';
+
+/** «12,5 $», «—» */
+const purchaseText = (p: ProductPurchase | undefined) =>
+  p
+    ? `${p.amount.toLocaleString('ru-RU')} ${PURCHASE_CURRENCIES.find((c) => c.id === p.currency)?.sign ?? ''}${
+        p.markupPercent !== undefined ? ` · наценка ${p.markupPercent} %` : ''
+      }`
+    : '—';
 
 interface AdminBulkOperationsModalProps {
   isOpen: boolean;
@@ -18,7 +27,7 @@ interface AdminBulkOperationsModalProps {
   onApplyChanges?: (updatedProducts: Product[], summaryMessage: string) => void;
 }
 
-type BulkTab = 'pricing' | 'discounts' | 'categories';
+type BulkTab = 'pricing' | 'discounts' | 'categories' | 'purchase';
 
 const DISCOUNT_PRESETS = [10, 15, 20, 25, 30, 40, 50];
 const PRICE_PRESETS_PERCENT = [5, 10, 15, 20, -10, -15, -20];
@@ -55,6 +64,37 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
   const [discountPercent, setDiscountPercent] = useState<number>(20);
   const [discountBadge, setDiscountBadge] = useState<string>('SALE');
   const [isRemoveDiscountMode, setIsRemoveDiscountMode] = useState<boolean>(false);
+
+  // --- Purchase Tab State (admin audit 09.10, finding 5): one currency, amount and markup for the selected products ---
+  const [purchaseRemove, setPurchaseRemove] = useState(false);
+  const [purchaseCurrency, setPurchaseCurrency] = useState<PurchaseCurrency>('USD');
+  const [purchaseAmount, setPurchaseAmount] = useState('');
+  const [purchaseMarkup, setPurchaseMarkup] = useState('');
+  const amountValue = parseDecimal(purchaseAmount);
+  const markupValue = parseDecimal(purchaseMarkup.replace('%', ''));
+  const purchaseError = purchaseRemove
+    ? ''
+    : purchaseAmount.trim() !== '' && !(amountValue > 0)
+    ? 'Закупка — число больше нуля'
+    : purchaseMarkup.trim() !== '' && !(markupValue >= 0 && markupValue <= 1000)
+    ? 'Своя наценка — от 0 до 1000 %'
+    : '';
+
+  /** Empty amount or markup keeps each product's own (a product without an amount stays as it is) */
+  const withPurchase = (p: Product): Product => {
+    if (purchaseRemove) return p.purchase ? { ...p, purchase: undefined } : p;
+    const amount = purchaseAmount.trim() === '' ? p.purchase?.amount : amountValue;
+    const purchase = readPurchase({
+      currency: purchaseCurrency,
+      amount,
+      ...(purchaseMarkup.trim() !== ''
+        ? { markupPercent: markupValue }
+        : p.purchase?.markupPercent !== undefined
+        ? { markupPercent: p.purchase.markupPercent }
+        : {}),
+    });
+    return purchase ? { ...p, purchase } : p;
+  };
 
   // --- Category Tab State ---
   const [targetCategory, setTargetCategory] = useState<string>(categories[0]?.id ?? '');
@@ -119,6 +159,8 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
         }
       }
 
+      if (activeTab === 'purchase') return withPurchase(p);
+
       if (activeTab === 'categories') {
         const catObj = categories.find((c) => c.id === targetCategory);
         return {
@@ -151,6 +193,11 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
       } else {
         summaryMsg = `Назначена сезонная скидка ${discountPercent}% для ${ofProducts}`;
       }
+    } else if (activeTab === 'purchase') {
+      const touched = previewList.filter((p, i) => p !== selectedProducts[i]).length;
+      summaryMsg = purchaseRemove
+        ? `Закупка в валюте убрана у ${touched} ${pluralRu(touched, ['товара', 'товаров', 'товаров'])}`
+        : `Закупка в ${purchaseCurrency === 'USD' ? '$' : '¥'} задана у ${touched} ${pluralRu(touched, ['товара', 'товаров', 'товаров'])}: цены пересчитает «Курсы и наценка» → «Применить»`;
     } else if (activeTab === 'categories') {
       const catObj = categories.find((c) => c.id === targetCategory);
       summaryMsg = `${n} ${pluralRu(n, ['товар перемещён', 'товара перемещены', 'товаров перемещены'])} в категорию «${catObj?.name || targetCategory}»`;
@@ -221,11 +268,12 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
             </div>
 
             {/* Action Tabs Bar with Spring Indicator */}
-            <div className="neu-inset rounded-2xl p-1.5 flex gap-1 text-xs">
+            <div className="neu-inset rounded-2xl p-1.5 grid grid-cols-2 sm:flex gap-1 text-xs">
               {[
                 { id: 'pricing', label: 'Пакетная цена', icon: DollarSign },
                 { id: 'discounts', label: 'Сезонные скидки', icon: Tag },
                 { id: 'categories', label: 'Смена категории', icon: Layers },
+                { id: 'purchase', label: 'Закупка в $/¥', icon: Coins },
               ].map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -482,6 +530,87 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
           </div>
         )}
 
+        {/* Tab 4: Purchase in a currency */}
+        {activeTab === 'purchase' && (
+          <div className="neu-flat rounded-2xl p-4 space-y-3.5 border border-white/70">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-extrabold text-[#2D3A4E] uppercase tracking-wide">Закупка в валюте</span>
+              <button
+                type="button"
+                onClick={() => setPurchaseRemove(!purchaseRemove)}
+                aria-pressed={purchaseRemove}
+                className={`py-1.5 px-3 rounded-xl text-xs font-extrabold flex items-center gap-1.5 cursor-pointer transition-all ${
+                  purchaseRemove ? 'neu-pill-active text-warning' : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
+                }`}
+              >
+                <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
+                Убрать закупку в валюте
+              </button>
+            </div>
+            {purchaseRemove ? (
+              <p className="text-xs text-[#4E5C70]">
+                Цены выбранных товаров перестанут пересчитываться по курсу. Цена и себестоимость в рублях останутся.
+              </p>
+            ) : (
+              <>
+                <div role="radiogroup" aria-label="Валюта закупки" className="flex gap-2">
+                  {PURCHASE_CURRENCIES.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={purchaseCurrency === c.id}
+                      onClick={() => setPurchaseCurrency(c.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-extrabold cursor-pointer ${
+                        purchaseCurrency === c.id ? 'neu-pill-active' : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
+                      }`}
+                    >
+                      {c.sign} {c.title}
+                    </button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label htmlFor="bulk-purchase-amount" className="text-[11px] font-bold text-[#4E5C70]">
+                      Закупка за штуку, {purchaseCurrency === 'USD' ? '$' : '¥'}
+                    </label>
+                    <input
+                      id="bulk-purchase-amount"
+                      inputMode="decimal"
+                      value={purchaseAmount}
+                      onChange={(e) => setPurchaseAmount(e.target.value)}
+                      placeholder="своя у каждого"
+                      className="w-full px-3 py-2 neu-inset rounded-xl text-sm font-extrabold text-[#2D3A4E]"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label htmlFor="bulk-purchase-markup" className="text-[11px] font-bold text-[#4E5C70]">
+                      Своя наценка, %
+                    </label>
+                    <input
+                      id="bulk-purchase-markup"
+                      inputMode="decimal"
+                      value={purchaseMarkup}
+                      onChange={(e) => setPurchaseMarkup(e.target.value)}
+                      placeholder="своя у каждого"
+                      className="w-full px-3 py-2 neu-inset rounded-xl text-sm font-extrabold text-[#2D3A4E]"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-[#4E5C70]">
+                  Пустое поле — у каждого товара остаётся своя сумма или наценка, меняется только то, что заполнено.
+                  Разные суммы удобнее задать в CSV. Новые цены посчитает «Курсы и наценка» → «Применить».
+                </p>
+                {purchaseError && (
+                  <p role="alert" className="text-xs font-bold text-danger">
+                    {purchaseError}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
         {/* Live Preview List */}
         <div className="space-y-2">
           <label className="text-xs font-extrabold uppercase text-[#2D3A4E] tracking-wider flex items-center justify-between">
@@ -554,6 +683,14 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
                       </div>
                     )}
 
+                    {activeTab === 'purchase' && (
+                      <div className="flex items-center gap-1.5 text-[11px] tabular-nums">
+                        <span className="text-[#4E5C70]">{purchaseText(original.purchase)}</span>
+                        <ArrowRight className="w-3 h-3 text-accent" aria-label="станет" />
+                        <span className="font-extrabold text-accent">{purchaseText(p.purchase)}</span>
+                      </div>
+                    )}
+
                     {activeTab === 'categories' && (
                       <div className="flex items-center gap-1.5 text-[11px]">
                         <span className="text-[#4E5C70]">{original.categoryLabel}</span>
@@ -580,7 +717,10 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
           <button
             type="button"
             onClick={handleApply}
-            className="w-full sm:w-auto py-2.5 px-5 neu-button-accent rounded-xl text-xs font-extrabold text-white cursor-pointer transition-all flex items-center justify-center gap-2"
+            disabled={activeTab === 'purchase' && Boolean(purchaseError)}
+            className={`w-full sm:w-auto py-2.5 px-5 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'purchase' && purchaseError ? 'neu-button-disabled' : 'neu-button-accent text-white cursor-pointer'
+            }`}
           >
             <CheckCheck className="w-4 h-4 stroke-[2.5]" />
             <span>

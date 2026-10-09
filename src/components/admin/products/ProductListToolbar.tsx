@@ -202,7 +202,7 @@ export function ProductListToolbar({ list, products, categories, CATEGORY_OPTION
               <SlidersHorizontal className="w-3.5 h-3.5" />
               Массовые операции
             </button>
-            <AdminHint label="Массовые операции" className="-ml-1.5">Цена, скидки или категория сразу у всех выбранных товаров.</AdminHint>
+            <AdminHint label="Массовые операции" className="-ml-1.5">Цена, скидки, категория или закупка в $/¥ сразу у всех выбранных товаров.</AdminHint>
 
             <button
               onClick={() => setIsBulkDiscountModalOpen(true)}
