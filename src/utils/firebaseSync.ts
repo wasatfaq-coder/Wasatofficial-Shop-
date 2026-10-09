@@ -2300,6 +2300,8 @@ export async function deleteClientErrorsBefore(beforeMs: number): Promise<number
 /**
  * 11. DATABASE BACKUP (admin only)
  */
+export const CHAT_TEMPLATES_DOC_ID = 'chat_templates';
+
 /** Every collection of the store; `test` holds only the connection probe */
 export const BACKUP_COLLECTIONS = [
   'products', 'product_previews', 'product_photos', 'product_costs', 'promos', 'settings', 'banners', 'banner_images', 'delivery_methods', 'pickup_points',
@@ -2326,6 +2328,42 @@ function toBackupValue(value: unknown): unknown {
     return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, toBackupValue(v)]));
   }
   return value;
+}
+
+/**
+ * Reply templates of the support chat (`settings/chat_templates`, admin only — admin audit 09.10, stage 7, finding 4):
+ * one list for the phone and the computer. `null` — not saved yet. Items are raw: `normalizeChatTemplates` reads them.
+ */
+export function subscribeToChatTemplates(onData: (items: unknown[] | null) => void, onError?: (error: unknown) => void) {
+  return onSnapshot(
+    doc(db, 'settings', CHAT_TEMPLATES_DOC_ID),
+    (snapshot) => {
+      const items = snapshot.exists() ? (snapshot.data() as { items?: unknown }).items : null;
+      onData(Array.isArray(items) ? items : snapshot.exists() ? [] : null);
+    },
+    (error) => {
+      logSubscriptionError('Firestore Chat Templates', error);
+      onError?.(error);
+    }
+  );
+}
+
+/**
+ * Changes the template list inside a transaction: `change` gets the list as it is in the database now (raw items), so
+ * an edit on the phone and one on the computer in the same seconds both stay (review of stage 7).
+ */
+export async function updateChatTemplates(change: (current: unknown[]) => object[]): Promise<void> {
+  const ref = doc(db, 'settings', CHAT_TEMPLATES_DOC_ID);
+  try {
+    await runTransaction(db, async (tx) => {
+      const snapshot = await tx.get(ref);
+      const items = snapshot.exists() ? (snapshot.data() as { items?: unknown }).items : undefined;
+      const next = change(Array.isArray(items) ? items : []);
+      tx.set(ref, sanitizeForFirestore({ items: next, updatedAt: new Date().toISOString() }));
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `settings/${CHAT_TEMPLATES_DOC_ID}`);
+  }
 }
 
 /** Admin's quick phrases (`settings/quick_phrases`, admin only — finding 49); null — not saved yet (phrasesSync.ts) */

@@ -65,6 +65,8 @@ import type { ChatMessageChange } from '../../utils/firebaseSync';
 import { formatPromoExpiry, isPromoUsable, promoDiscountKind } from '../../shared/orderPricing';
 import { ChatMessageDeleteDialog, ChatMessageMenu } from '../ChatMessageActions';
 import { NotConfigured } from '../NotConfigured';
+import { useChatTemplates } from './useChatTemplates';
+import { MAX_CHAT_TEMPLATES, MAX_TEMPLATE_TEXT, MAX_TEMPLATE_TITLE } from '../../utils/chatTemplates';
 import { ChatPhoto, hasChatPhoto } from '../ChatPhoto';
 
 /** What an admin sends into a customer's dialog */
@@ -99,9 +101,6 @@ interface AdminSupportChatTabProps {
   onChangeMessage: (change: ChatMessageChange) => Promise<boolean>;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
-
-// Reply templates are the admin's own, kept in this browser
-const TEMPLATES_STORAGE_KEY = 'manstyle_admin_reply_templates';
 
 const TEMPLATE_CATEGORIES: { value: ChatQuickTemplate['category']; label: string }[] = [
   { value: 'general', label: 'Общие вопросы' },
@@ -247,6 +246,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   const [orderOpen, setOrderOpen] = useState(
     () => typeof window === 'undefined' || !window.matchMedia || window.matchMedia('(min-width: 1024px)').matches
   );
+  // Status, priority and «Очистить» of the dialog — under one button, closed: the reply box comes first
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [isInternalNote, setIsInternalNote] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
   // A typed but not sent reply (or photo): the admin panel asks before closing or switching the section
@@ -314,25 +315,21 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
 
   // --- templates ---
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
-  const [templates, setTemplatesState] = useState<ChatQuickTemplate[]>(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(TEMPLATES_STORAGE_KEY) || '[]');
-      return Array.isArray(saved) ? saved : [];
-    } catch {
-      return [];
-    }
-  });
+  // One list in the database for the phone and the computer (admin audit 09.10, stage 7)
+  const { templates: savedTemplates, failed: templatesFailed, save: saveTemplates } = useChatTemplates(onShowToast);
+  const templates = savedTemplates ?? [];
+  const [savingTemplates, setSavingTemplates] = useState(false);
   const [tplTitle, setTplTitle] = useState('');
   const [tplCategory, setTplCategory] = useState<ChatQuickTemplate['category']>('general');
   const [tplText, setTplText] = useState('');
   const [editingTplId, setEditingTplId] = useState<string | null>(null);
   const [templateToDelete, setTemplateToDelete] = useState<ChatQuickTemplate | null>(null);
-  const setTemplates = (next: ChatQuickTemplate[]) => {
-    setTemplatesState(next);
+  const setTemplates = async (change: (current: ChatQuickTemplate[]) => ChatQuickTemplate[]): Promise<boolean> => {
+    setSavingTemplates(true);
     try {
-      localStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // storage unavailable: templates stay for this session
+      return await saveTemplates(change);
+    } finally {
+      setSavingTemplates(false);
     }
   };
 
@@ -616,24 +613,22 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
     setTplCategory('general');
   };
 
-  const handleSaveTemplate = (e: React.FormEvent) => {
+  const handleSaveTemplate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savedTemplates === null || savingTemplates) return;
     if (!tplTitle.trim() || !tplText.trim()) return onShowToast('Заполните название и текст шаблона', 'error');
-    const categoryLabel = TEMPLATE_CATEGORIES.find((c) => c.value === tplCategory)?.label || 'Общие вопросы';
-    if (editingTplId) {
-      setTemplates(
-        templates.map((t) =>
-          t.id === editingTplId ? { ...t, title: tplTitle.trim(), text: tplText.trim(), category: tplCategory, categoryLabel } : t
-        )
-      );
-      onShowToast('Шаблон обновлен', 'success');
-    } else {
-      setTemplates([
-        ...templates,
-        { id: `tpl-${Date.now()}`, title: tplTitle.trim(), text: tplText.trim(), category: tplCategory, categoryLabel },
-      ]);
-      onShowToast('Шаблон добавлен', 'success');
+    if (!editingTplId && templates.length >= MAX_CHAT_TEMPLATES) {
+      return onShowToast(`Шаблонов не больше ${MAX_CHAT_TEMPLATES}: удалите ненужные`, 'error');
     }
+    const categoryLabel = TEMPLATE_CATEGORIES.find((c) => c.value === tplCategory)?.label || 'Общие вопросы';
+    const edited = { title: tplTitle.trim(), text: tplText.trim(), category: tplCategory, categoryLabel };
+    const id = editingTplId || `tpl-${Date.now()}`;
+    // applied to the list in the database: a template deleted on another device meanwhile is saved again, not lost
+    const change = (current: ChatQuickTemplate[]) =>
+      current.some((t) => t.id === id) ? current.map((t) => (t.id === id ? { ...t, ...edited } : t)) : [...current, { id, ...edited }];
+    // «Сохранено» only after the database answered; on refusal the form keeps what was typed
+    if (!(await setTemplates(change))) return;
+    onShowToast(editingTplId ? 'Шаблон обновлен' : 'Шаблон добавлен', 'success');
     resetTemplateForm();
   };
 
@@ -655,7 +650,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* 1. Dialog header: customer, status, priority, clear */}
+      {/* 1. Dialog header: customer and one «Диалог» button — status, priority and clearing open under it (admin audit
+          09.10, finding 4 of stage 7: the header took half the phone screen before the first message) */}
       <section className="neu-flat rounded-3xl p-3.5 sm:p-4 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-2.5 min-w-0">
@@ -673,14 +669,33 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               <p className="text-xs text-[#4E5C70]">Сообщений: {thread.count}</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setIsClearConfirmOpen(true)}
-            className="h-9 px-3 rounded-xl neu-button-danger text-[11px] font-bold flex items-center gap-1.5 shrink-0 transition-all cursor-pointer"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            Очистить
-          </button>
+          {isLegacy ? (
+            <button
+              type="button"
+              onClick={() => setIsClearConfirmOpen(true)}
+              className="h-9 px-3 rounded-xl neu-button-danger text-[11px] font-bold flex items-center gap-1.5 shrink-0 transition-all cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Очистить
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setDialogOpen((v) => !v)}
+              aria-expanded={dialogOpen}
+              aria-controls="support-dialog-settings"
+              className="min-h-9 px-3 py-1.5 rounded-xl neu-button text-[11px] font-bold text-[#2D3A4E] hover:text-accent flex items-center gap-1.5 shrink-0 cursor-pointer text-left"
+            >
+              <span className="flex flex-col leading-tight">
+                <span>Диалог</span>
+                <span className={priority === 'normal' ? 'text-[#4E5C70]' : 'text-danger'}>
+                  {STATUS_LABELS[status]}
+                  {priority !== 'normal' && ` · ${PRIORITY_LABELS[priority]}`}
+                </span>
+              </span>
+              <ChevronDown aria-hidden="true" className={`w-4 h-4 text-[#4E5C70] transition-transform ${dialogOpen ? 'rotate-180' : ''}`} />
+            </button>
+          )}
         </div>
 
         {isLegacy ? (
@@ -689,32 +704,47 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             Ответить сюда нельзя: у этих сообщений нет покупателя, ответ никто не увидит. Историю можно очистить.
           </p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            <div>
-              <span className={labelHintRowClass}>
-                Статус диалога
-                <AdminHint label="Статус диалога" className="-my-1">«В работе» — отвечаете, «Решён» — вопрос закрыт, «Закрыт» — без продолжения</AdminHint>
-              </span>
-              <Segments
-                label="Статус диалога"
-                value={status}
-                options={(Object.keys(STATUS_LABELS) as SupportThreadMeta['status'][]).map((v) => ({ value: v, label: STATUS_LABELS[v] }))}
-                onChange={(v) => onUpdateMeta({ status: v })}
-              />
+          dialogOpen && (
+            <div id="support-dialog-settings" className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <span className={labelHintRowClass}>
+                    Статус диалога
+                    <AdminHint label="Статус диалога" className="-my-1">«В работе» — отвечаете, «Решён» — вопрос закрыт, «Закрыт» — без продолжения</AdminHint>
+                  </span>
+                  <Segments
+                    label="Статус диалога"
+                    value={status}
+                    options={(Object.keys(STATUS_LABELS) as SupportThreadMeta['status'][]).map((v) => ({ value: v, label: STATUS_LABELS[v] }))}
+                    onChange={(v) => onUpdateMeta({ status: v })}
+                  />
+                </div>
+                <div>
+                  <span className={labelHintRowClass}>
+                    Приоритет
+                    <AdminHint label="Приоритет" className="-my-1">Срочные и VIP-диалоги видны в списке красной меткой</AdminHint>
+                  </span>
+                  <Segments
+                    label="Приоритет"
+                    value={priority}
+                    options={(Object.keys(PRIORITY_LABELS) as SupportThreadMeta['priority'][]).map((v) => ({ value: v, label: PRIORITY_LABELS[v] }))}
+                    onChange={(v) => onUpdateMeta({ priority: v })}
+                  />
+                </div>
+              </div>
+              {/* Clearing is rare and cannot be undone: last, after a line, and confirmed */}
+              <div className="border-t border-[#BAC5D5]/40 pt-3 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsClearConfirmOpen(true)}
+                  className="h-9 px-3 rounded-xl neu-button-danger text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Очистить переписку
+                </button>
+              </div>
             </div>
-            <div>
-              <span className={labelHintRowClass}>
-                Приоритет
-                <AdminHint label="Приоритет" className="-my-1">Срочные и VIP-диалоги видны в списке красной меткой</AdminHint>
-              </span>
-              <Segments
-                label="Приоритет"
-                value={priority}
-                options={(Object.keys(PRIORITY_LABELS) as SupportThreadMeta['priority'][]).map((v) => ({ value: v, label: PRIORITY_LABELS[v] }))}
-                onChange={(v) => onUpdateMeta({ priority: v })}
-              />
-            </div>
-          </div>
+          )
         )}
       </section>
 
@@ -1086,7 +1116,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               <FileText className="w-3.5 h-3.5 text-accent" />
               Шаблоны{templates.length > 0 ? ` · ${templates.length}` : ''}
             </button>
-            <AdminHint label="Шаблоны">Ваши готовые ответы. Хранятся только в этом браузере</AdminHint>
+            <AdminHint label="Шаблоны">Ваши готовые ответы. Общие для телефона и компьютера</AdminHint>
             </span>
           </div>
           )}
@@ -1497,9 +1527,15 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
           }}
           wide
         >
-          {templates.length === 0 ? (
+          {templatesFailed && savedTemplates === null ? (
+            <p role="alert" className="neu-inset rounded-2xl p-3 text-xs font-bold text-danger text-center">
+              Не удалось загрузить шаблоны. Проверьте связь и откройте окно ещё раз.
+            </p>
+          ) : savedTemplates === null ? (
+            <p className="neu-inset rounded-2xl p-3 text-xs text-[#4E5C70] text-center">Загружаем шаблоны…</p>
+          ) : templates.length === 0 ? (
             <p className="neu-inset rounded-2xl p-3 text-xs text-[#4E5C70] text-center">
-              Шаблонов пока нет. Добавьте ответы, которые пишете чаще всего.
+              Шаблонов пока нет. Добавьте ответы, которые пишете чаще всего: они общие для телефона и компьютера.
             </p>
           ) : (
             <ul className="space-y-2">
@@ -1544,7 +1580,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               {editingTplId ? 'Изменить шаблон' : 'Новый шаблон'}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <input value={tplTitle} onChange={(e) => setTplTitle(e.target.value)} placeholder="Название" aria-label="Название шаблона" className={inputClass} />
+              <input value={tplTitle} onChange={(e) => setTplTitle(e.target.value)} maxLength={MAX_TEMPLATE_TITLE} placeholder="Название" aria-label="Название шаблона" className={inputClass} />
               <NeumorphicSelect
                 ariaLabel="Раздел шаблона"
                 value={tplCategory}
@@ -1558,6 +1594,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               rows={3}
               value={tplText}
               onChange={(e) => setTplText(e.target.value)}
+              maxLength={MAX_TEMPLATE_TEXT}
               placeholder="Текст ответа"
               aria-label="Текст шаблона"
               className={textareaClass}
@@ -1568,7 +1605,13 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                   Отмена
                 </button>
               )}
-              <button type="submit" className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-accent flex items-center gap-1 cursor-pointer">
+              <button
+                type="submit"
+                disabled={savedTemplates === null || savingTemplates}
+                className={`h-9 px-3 rounded-xl text-[11px] font-bold flex items-center gap-1 ${
+                  savedTemplates === null || savingTemplates ? 'neu-button-disabled' : 'neu-button text-accent cursor-pointer'
+                }`}
+              >
                 {editingTplId ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
                 {editingTplId ? 'Сохранить' : 'Добавить'}
               </button>
@@ -1639,13 +1682,12 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
         }
         confirmLabel="Удалить"
         cancelLabel="Оставить"
-        onConfirm={() => {
-          if (templateToDelete) {
-            setTemplates(templates.filter((t) => t.id !== templateToDelete.id));
-            if (editingTplId === templateToDelete.id) resetTemplateForm();
-            onShowToast('Шаблон удален', 'info');
-          }
+        onConfirm={async () => {
+          const target = templateToDelete;
           setTemplateToDelete(null);
+          if (!target || !(await setTemplates((current) => current.filter((t) => t.id !== target.id)))) return;
+          if (editingTplId === target.id) resetTemplateForm();
+          onShowToast('Шаблон удален', 'info');
         }}
         onClose={() => setTemplateToDelete(null)}
       />
