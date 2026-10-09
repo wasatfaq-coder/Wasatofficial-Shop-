@@ -260,6 +260,26 @@ export function getProductTotalStock(product: Product): number {
   return product.skus.reduce((total, sku) => total + Math.max(0, sku.stock), 0);
 }
 
+/** Choices for «Мало на складе» in «Склад и SKU» */
+export const LOW_STOCK_THRESHOLD_CHOICES = [2, 3, 5] as const;
+
+/**
+ * The one «мало на складе» threshold of the shop (admin audit 09.10, finding 5): `settings/storefront.lowStockThreshold`,
+ * set in «Склад и SKU», the same in the product list, the product form and the warehouse on every device
+ */
+export function lowStockThresholdOf(settings: Pick<StorefrontSettings, 'lowStockThreshold'> | undefined): number {
+  const value = settings?.lowStockThreshold;
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.floor(value) : DEFAULT_STOREFRONT_SETTINGS.lowStockThreshold;
+}
+
+export type StockLevel = 'out' | 'low' | 'ok';
+
+/** Stock of a variation or a product against the threshold: none, «мало» (no more than the threshold) or enough */
+export function stockLevel(stock: number, threshold: number): StockLevel {
+  if (stock <= 0) return 'out';
+  return stock <= threshold ? 'low' : 'ok';
+}
+
 /**
  * On sale and some size/color available (the storefront's «Только в наличии»)
  */

@@ -30,6 +30,7 @@ import {
   saveLocalPickupPoints,
 } from '../../data/deliveryData';
 import { getCategories } from '../../utils/categories';
+import { lowStockThresholdOf } from '../../utils/inventory';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { type AdminNavCounts, type AdminTab } from '../../components/admin/adminSections';
 import { loadAdminNav, prefetchAdmin, prefetchAllAdminWhenIdle } from '../../components/admin/adminLoaders';
@@ -445,6 +446,7 @@ export const ProfileAdminPanel = ({
                   products={productsList}
                   onUpdateProducts={handleUpdateProductsList}
                   onShowToast={onShowToast}
+                  lowStockThreshold={lowStockThresholdOf(storefrontSettings)}
                 />
               )}
 

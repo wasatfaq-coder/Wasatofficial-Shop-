@@ -2,7 +2,7 @@ import { Trash2, Edit2, Eye, Copy } from 'lucide-react';
 import { ProductThumbImage } from '../../ProductThumbImage';
 import { Product } from '../../../types';
 import { SelectCheckbox } from '../SelectCheckbox';
-import { getProductTotalStock, isHiddenFromSale } from '../../../utils/inventory';
+import { getProductTotalStock, isHiddenFromSale, stockLevel } from '../../../utils/inventory';
 import { NotConfigured } from '../../NotConfigured';
 import type { StoreCategory } from '../../../types';
 
@@ -10,13 +10,14 @@ import { AdminHint } from '../AdminHint';
 import type { ProductList } from './useProductList';
 
 /** The filtered products: photo, price, stock, quick view, copy, delete and «Редактировать» */
-export function ProductListGrid({ list, products, categories, duplicatingId, handleDuplicateProduct, handleOpenEditProduct }: {
+export function ProductListGrid({ list, products, categories, duplicatingId, handleDuplicateProduct, handleOpenEditProduct, lowStockThreshold }: {
   list: ProductList;
   products: Product[];
   categories: StoreCategory[];
   duplicatingId: string | null;
   handleDuplicateProduct: (prod: Product) => Promise<void>;
   handleOpenEditProduct: (prod: Product) => void;
+  lowStockThreshold: number;
 }) {
   const {
     selectedProductIds,
@@ -123,9 +124,9 @@ export function ProductListGrid({ list, products, categories, duplicatingId, han
                       <span className="inline-flex items-center gap-0.5 shrink-0">
                         <span
                           className={`font-extrabold text-[11px] px-2 py-0.5 rounded-lg whitespace-nowrap ${
-                            totalStock === 0
+                            stockLevel(totalStock, lowStockThreshold) === 'out'
                               ? 'text-danger bg-danger-soft border border-danger/25'
-                              : totalStock < 3
+                              : stockLevel(totalStock, lowStockThreshold) === 'low'
                               ? 'text-warning bg-warning-soft border border-warning/25'
                               : 'text-success bg-success-soft border border-success/25'
                           }`}

@@ -21,12 +21,14 @@ export function ProductFormModal({
   form,
   categories,
   products,
+  lowStockThreshold,
   onShowToast,
 }: {
   form: ProductForm;
   categories: StoreCategory[];
   /** The shop's products: their characteristics become chips in «Структура карточки» */
   products: AdminProductsTabProps['products'];
+  lowStockThreshold: number;
   onShowToast: AdminProductsTabProps['onShowToast'];
 }) {
   const {
@@ -489,7 +491,7 @@ export function ProductFormModal({
                   <ProductFormGallery form={form} onShowToast={onShowToast} />
                 </div>
 
-                <ProductFormVariants form={form} onShowToast={onShowToast} />
+                <ProductFormVariants form={form} lowStockThreshold={lowStockThreshold} onShowToast={onShowToast} />
               </div>
 
               <ProductFormSizeChart form={form} products={products} />
