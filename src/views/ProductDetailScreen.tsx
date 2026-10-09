@@ -19,6 +19,7 @@ import {
   ZoomIn,
   Layers,
   Share2,
+  Ruler,
 } from 'lucide-react';
 import { formatDays } from '../utils/pluralize';
 import { Product, UserProfile, BodyMeasurements, CartItem } from '../types';
@@ -37,6 +38,8 @@ import {
   getProductSpecRows,
 } from '../utils/productAttributes';
 import { photoBadgeClass } from '../utils/productBadge';
+import { productSizeChart } from '../utils/sizeChart';
+import { SizeChartTable } from '../components/SizeChartTable';
 import { getProductRating } from '../utils/productRating';
 import { productImage } from '../utils/productImage';
 import { useProductPhotos } from '../utils/useProductPhotos';
@@ -148,6 +151,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   const [openAccordion, setOpenAccordion] = useState<'shipping' | 'returns' | 'fabric' | null>('fabric');
   const [detailTab, setDetailTab] = useState<'description' | 'specs' | 'care'>('description');
   const [isSizeCalcOpen, setIsSizeCalcOpen] = useState(false);
+  // «Размерная сетка» of the model under the sizes: shown on a tap, the page stays short (wholesale plan, stage 14)
+  const [isSizeChartOpen, setIsSizeChartOpen] = useState(false);
   const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
   const [isQuickOrderOpen, setIsQuickOrderOpen] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
@@ -158,6 +163,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     setSelectedColor(initialColor(product, preorderMode));
     setSelectedSize(initialSize(product));
     setSizeError(false);
+    setIsSizeChartOpen(false);
     setQuantity(1);
   }, [product?.id]);
 
@@ -168,6 +174,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     : colorStock(product, selectedColor);
   const currentSKU = getProductSKU(product, selectedColor, selectedSize);
 
+  const sizeChart = productSizeChart(product);
   // Card sections from Admin → product → «Структура карточки»; a section without data is hidden
   const cardFeatures = getProductFeatures(product);
   const cardComposition = getProductFabricComposition(product);
@@ -549,6 +556,25 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               <p id="product-size-error" role="alert" className="text-xs font-bold text-danger">
                 Выберите размер, чтобы добавить товар в корзину
               </p>
+            )}
+            {sizeChart && (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSizeChartOpen((open) => !open)}
+                  aria-expanded={isSizeChartOpen}
+                  aria-controls="product-size-chart"
+                  className="min-h-8 -ml-1 px-1 rounded-lg text-xs font-bold text-accent hover:text-accent-strong flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Ruler className="w-4 h-4 shrink-0" aria-hidden="true" />
+                  <span>Размерная сетка</span>
+                  <ChevronRight
+                    aria-hidden="true"
+                    className={`w-3.5 h-3.5 transition-transform duration-200 ${isSizeChartOpen ? 'rotate-90' : ''}`}
+                  />
+                </button>
+                {isSizeChartOpen && <SizeChartTable id="product-size-chart" chart={sizeChart} selectedSize={selectedSize} />}
+              </div>
             )}
           </div>
         </div>

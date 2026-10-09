@@ -41,15 +41,32 @@ export const PRODUCTS = {
     colors: [{ name: 'Бежевый', hex: '#D8C8A8' }],
     sizes: ['S', 'M', 'L'],
   }),
-  polo: product({
-    id: 'e2e-polo',
-    title: 'Поло классическое',
-    category: 'polo',
-    categoryLabel: 'Поло',
-    price: 2490,
-    colors: [{ name: 'Темно-синий', hex: '#1F2A44' }],
-    sizes: ['M', 'L', 'XL'],
-  }),
+  polo: {
+    ...product({
+      id: 'e2e-polo',
+      title: 'Поло классическое',
+      category: 'polo',
+      categoryLabel: 'Поло',
+      price: 2490,
+      colors: [{ name: 'Темно-синий', hex: '#1F2A44' }],
+      sizes: ['M', 'L', 'XL'],
+    }),
+    // «Размерная сетка»: wider than a phone; «Обхват талии» has no values and is not shown (size-chart.spec.ts)
+    sizeChart: {
+      columns: [
+        { key: 'm1', label: 'Длина изделия' },
+        { key: 'm2', label: 'Ширина по груди' },
+        { key: 'm3', label: 'Ширина плеч' },
+        { key: 'm4', label: 'Длина рукава' },
+        { key: 'm5', label: 'Обхват талии' },
+      ],
+      rows: [
+        { size: 'M', values: { m1: '70', m2: '52', m3: '45', m4: '21' } },
+        { size: 'L', values: { m1: '72', m2: '55', m3: '47', m4: '22' } },
+        { size: 'XL', values: { m1: '74', m2: '58', m3: '49', m4: '23' } },
+      ],
+    },
+  },
   chinos: product({
     id: 'e2e-chinos',
     title: 'Брюки чинос',

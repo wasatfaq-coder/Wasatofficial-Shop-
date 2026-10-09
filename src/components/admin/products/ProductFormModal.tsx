@@ -13,6 +13,7 @@ import { PURCHASE_CURRENCIES, type PurchaseCurrency } from '../../../utils/curre
 const PRESET_BADGES = ['ХИТ', 'NEW', 'SALE', '-20%', 'PREMIUM', 'LIMITED', 'ECO', 'EXCLUSIVE'];
 import { ProductFormGallery } from './ProductFormGallery';
 import { ProductFormVariants } from './ProductFormVariants';
+import { ProductFormSizeChart } from './ProductFormSizeChart';
 
 /** The window of the product form: status, card structure, name, badge, category, description, prices, photos, variants */
 export function ProductFormModal({
@@ -469,6 +470,8 @@ export function ProductFormModal({
 
                 <ProductFormVariants form={form} onShowToast={onShowToast} />
               </div>
+
+              <ProductFormSizeChart form={form} products={products} />
 
               {/* Form Action Buttons & Summaries */}
               <div className="pt-3 border-t border-[#BAC5D5]/50 space-y-3">

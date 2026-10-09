@@ -41,6 +41,27 @@ export interface ProductFeature {
   text?: string;
 }
 
+/** A measurement of the model's size chart, e.g. «Длина изделия» (cm); `key` ties the values of rows to it */
+export interface SizeChartColumn {
+  key: string;
+  label: string;
+}
+
+/** One size of the model: its measurements by column key, as typed («72», «98–102») */
+export interface SizeChartRow {
+  size: string;
+  values: Record<string, string>;
+}
+
+/**
+ * «Размерная сетка» of a model (docs/wholesale-spec.md, stage 5): measurements in cm per size. In the public product,
+ * not in the catalog index; read through `src/utils/sizeChart.ts` (form: `sizeChartEditing.ts`)
+ */
+export interface ProductSizeChart {
+  columns: SizeChartColumn[];
+  rows: SizeChartRow[];
+}
+
 /** A characteristic row in «Состав и ткань», e.g. «Застежка — молния YKK» */
 export interface ProductSpec {
   label: string;
@@ -125,6 +146,8 @@ export interface Product {
   previewKey?: string;
   colors: { name: string; hex: string }[];
   sizes: string[];
+  /** Measurements of the model per size; shown on the product page next to the sizes, absent — not shown */
+  sizeChart?: ProductSizeChart;
   /** «Есть в наличии»: false when sold out (or, in old products without hiddenFromSale, taken off sale with stock left) */
   inStock: boolean;
   /**

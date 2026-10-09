@@ -1,5 +1,6 @@
 // Владелец заводит товар на телефоне: состав и страна — нажатием на чипы, уход — значками с бирки, описание —
-// черновиком из характеристик (быстрое заведение товара, этапы 1–3, docs/fast-product-entry-spec.md)
+// черновиком из характеристик (быстрое заведение товара, этапы 1–3, docs/fast-product-entry-spec.md), размерная сетка —
+// чипом замера (этап 14 плана docs/admin-wholesale-plan.md)
 import { test, expect } from '../fixtures';
 import { queryDocs } from '../emulator';
 import { ADMIN } from '../store';
@@ -60,6 +61,13 @@ test('новый товар: состав и страна чипами, уход
   await form.getByRole('textbox', { name: 'Название нового цвета' }).fill('Белый');
   await form.getByRole('textbox', { name: 'Название нового цвета' }).press('Enter');
   await form.getByRole('button', { name: 'M', exact: true }).click();
+
+  // «Размерная сетка» (stage 14): a measurement by chip, its value for M; an empty measurement is not saved
+  const chart = form.getByRole('region', { name: 'Размерная сетка', exact: true });
+  await chart.getByRole('button', { name: 'Длина изделия', exact: true }).click();
+  await chart.getByRole('button', { name: 'Ширина плеч', exact: true }).click();
+  await chart.getByRole('textbox', { name: 'Длина изделия, размер M, см' }).fill('70');
+  await expect(chart.getByRole('table').last().getByRole('columnheader')).toHaveText(['Размер', 'Длина изделия']);
   await form.getByRole('button', { name: 'Создать товар' }).click();
   await expect(form).toBeHidden();
 
@@ -78,4 +86,8 @@ test('новый товар: состав и страна чипами, уход
     'Гладить при температуре до 110 °C',
     'Не подвергать химчистке',
   ]);
+  expect(saved.sizeChart).toEqual({
+    columns: [{ key: 'm1', label: 'Длина изделия' }],
+    rows: [{ size: 'M', values: { m1: '70' } }],
+  });
 });
