@@ -9,7 +9,7 @@ import { ProductCard } from '../components/ProductCard';
 import { AutocompleteSearch } from '../components/AutocompleteSearch';
 import { RecentlyViewed } from '../components/RecentlyViewed';
 import { NeumorphicImage } from '../components/NeumorphicImage';
-import { useBannerImage } from '../utils/useBannerImage';
+import { useBannerImage, useWideScreen } from '../utils/useBannerImage';
 import { NotConfigured } from '../components/NotConfigured';
 import { categoryIcon, getCategories } from '../utils/categories';
 import { formatDays } from '../utils/pluralize';
@@ -186,7 +186,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   const currentSlide = displaySlides[activeBannerSlide] || displaySlides[0];
   // the picture of the slide on screen only (docs/catalog-scale-plan.md, stage 5)
-  const currentSlideImage = useBannerImage(currentSlide);
+  const wideScreen = useWideScreen();
+  const currentSlideImage = useBannerImage(currentSlide, wideScreen);
 
   // Settings values with defaults
   const isOnline = storeAcceptsOrders(storefrontSettings);

@@ -67,6 +67,8 @@ interface CheckoutScreenProps {
   onShowToast?: (text: string, type?: 'success' | 'info' | 'error') => void;
   deliveryMethods?: DeliveryMethod[];
   pickupPoints?: PickupPoint[];
+  /** false while the pickup points are not read from the database yet (only the browser's copy, maybe none) */
+  pickupPointsLoaded?: boolean;
   /** Cart lines beyond the stock now (finding 4): listed above «Подтвердить», the order is not sent */
   stockProblems?: OrderStockProblem[];
 }
@@ -112,6 +114,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   onShowToast,
   deliveryMethods,
   pickupPoints,
+  pickupPointsLoaded = true,
   hasActivePromos = false,
   stockProblems = [],
 }) => {
@@ -937,11 +940,16 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                       </div>
 
                       <div className="space-y-2" role="radiogroup" aria-label="Пункт выдачи">
-                        {activePickupPoints.length === 0 && (
-                          <p className="text-xs font-bold text-warning">
-                            Пункты выдачи пока не добавлены. Выберите другой способ доставки.
-                          </p>
-                        )}
+                        {activePickupPoints.length === 0 &&
+                          (pickupPointsLoaded ? (
+                            <p className="text-xs font-bold text-warning">
+                              Пункты выдачи пока не добавлены. Выберите другой способ доставки.
+                            </p>
+                          ) : (
+                            <p className="text-xs font-bold text-[#4E5C70]" role="status">
+                              Загружаем пункты выдачи…
+                            </p>
+                          ))}
                         {activePickupPoints.map((point) => {
                           const isPointSelected = selectedPickupPointId === point.id;
                           return (

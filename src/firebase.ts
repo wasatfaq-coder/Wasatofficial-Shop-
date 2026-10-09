@@ -124,8 +124,35 @@ function getGuestChat() {
   return guestChat;
 }
 
+// Internal key (CLAUDE.md, «manstyle_*»): this browser has a guest's anonymous sign-in (chat or order). Without it the
+// second Firebase app is not started on every visit (audit 07.10, finding 52)
+const GUEST_SESSION_KEY = 'manstyle_guest_session';
+// A guest of an earlier version has no mark yet: their orders or chat kept in this browser say there is a session
+const GUEST_TRACE_KEYS = ['manstyle_guest_orders', 'manstyle_chat_messages_v2'];
+
+function hasGuestSession(): boolean {
+  try {
+    if (localStorage.getItem(GUEST_SESSION_KEY)) return true;
+    return GUEST_TRACE_KEYS.some((key) => {
+      const saved = localStorage.getItem(key);
+      return Boolean(saved && saved !== '[]');
+    });
+  } catch {
+    // storage closed (private mode): look for the session as before
+    return true;
+  }
+}
+
+function markGuestSession(present: boolean): void {
+  try {
+    if (present) localStorage.setItem(GUEST_SESSION_KEY, '1');
+    else localStorage.removeItem(GUEST_SESSION_KEY);
+  } catch {}
+}
+
 /** Restores a previously created guest chat session without creating a new one. */
 export function restoreGuestChatIdentity(): Promise<ChatIdentity | null> {
+  if (!guestChat && !hasGuestSession()) return Promise.resolve(null);
   const guest = getGuestChat();
   return new Promise((resolve) => {
     const unsubscribe = onAuthStateChanged(guest.auth, (user) => {
@@ -140,12 +167,14 @@ export async function createGuestChatIdentity(): Promise<ChatIdentity> {
   const guest = getGuestChat();
   const credential = guest.auth.currentUser ? null : await signInAnonymously(guest.auth);
   const user = guest.auth.currentUser || credential!.user;
+  markGuestSession(true);
   return { uid: user.uid, db: guest.db, isGuest: true };
 }
 /** The guest's anonymous session ends (its orders and chat went to the account): a later guest gets a new one */
 export async function forgetGuestChatIdentity(): Promise<void> {
   if (!guestChat?.auth.currentUser) return;
   await signOut(guestChat.auth);
+  markGuestSession(false);
 }
 
 const googleProvider = new GoogleAuthProvider();
