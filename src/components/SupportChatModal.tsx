@@ -47,6 +47,8 @@ interface SupportChatModalProps {
   messages: ChatMessage[];
   /** The customer's thread is not read from the database yet: an empty list is not «Диалог пуст» */
   loading?: boolean;
+  /** Reading the thread failed: the empty list is not «Диалог пуст» either */
+  loadFailed?: boolean;
   /** Resolves false when the message could not be sent at all (the text stays in the field) */
   onSendMessage: (text: string, imageUrl?: string) => Promise<boolean>;
   /** Messages being written to the server, and the ones that failed */
@@ -115,6 +117,7 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
   onClose,
   messages,
   loading = false,
+  loadFailed = false,
   onSendMessage,
   pendingIds,
   failedIds,
@@ -372,12 +375,19 @@ export const SupportChatModal: React.FC<SupportChatModalProps> = ({
             {/* Messages */}
             <div className="flex-1 px-3.5 py-4 overflow-y-auto space-y-3.5 no-scrollbar" aria-live="polite">
               {/* No greeting message: an empty dialog says so */}
-              {visibleMessages.length === 0 && loading && (
+              {visibleMessages.length === 0 && loadFailed && (
+                <div className="h-full min-h-48 flex items-center justify-center px-6">
+                  <p className="text-xs font-bold text-danger text-center" role="alert">
+                    Не удалось загрузить переписку. Обновите страницу — новое сообщение можно отправить и сейчас.
+                  </p>
+                </div>
+              )}
+              {visibleMessages.length === 0 && loading && !loadFailed && (
                 <div className="h-full min-h-48 flex items-center justify-center px-6">
                   <p className="text-xs font-semibold text-[#4E5C70]">Загружаем переписку…</p>
                 </div>
               )}
-              {visibleMessages.length === 0 && !loading && (
+              {visibleMessages.length === 0 && !loading && !loadFailed && (
                 <div className="h-full min-h-48 flex flex-col items-center justify-center text-center gap-3 px-6">
                   <div className="w-14 h-14 rounded-2xl neu-inset flex items-center justify-center text-accent">
                     <MessageCircle className="w-6 h-6" />

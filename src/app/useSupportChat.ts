@@ -159,6 +159,7 @@ export function useSupportChat({
   const [chatWanted, setChatWanted] = useState(false);
   // the customer's thread answered at least once since it was subscribed: until then an empty chat is «loading», not empty
   const [threadLoadedFor, setThreadLoadedFor] = useState<string | null>(null);
+  const [threadFailedFor, setThreadFailedFor] = useState<string | null>(null);
   React.useEffect(() => {
     if (chatOpen) setChatWanted(true);
   }, [chatOpen]);
@@ -173,7 +174,8 @@ export function useSupportChat({
       return subscribeToChatMessages((loadedMsgs) => {
         setChatMessages(loadedMsgs);
         setThreadLoadedFor(threadUid);
-      }, undefined, {
+        setThreadFailedFor(null);
+      }, () => setThreadFailedFor(threadUid), {
         threadId: chatIdentity.uid,
         db: chatIdentity.db,
       });
@@ -372,6 +374,8 @@ export function useSupportChat({
     failedChatMessages,
     // a customer's own thread is not read yet (the window says «Загружаем переписку…» instead of «Диалог пуст»)
     chatThreadLoading: !isAdmin && Boolean(chatIdentity) && threadLoadedFor !== chatIdentity?.uid,
+    // the thread's subscription failed (rules, quota): the window says so instead of «loading» forever
+    chatThreadFailed: !isAdmin && Boolean(chatIdentity) && threadFailedFor === chatIdentity?.uid,
     customerChatMessages,
     handleSendMessageFromUser,
     handleRetryChatMessage,

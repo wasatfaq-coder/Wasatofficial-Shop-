@@ -271,6 +271,7 @@ export default function App() {
     failedChatMessages,
     customerChatMessages,
     chatThreadLoading,
+    chatThreadFailed,
     handleSendMessageFromUser,
     handleRetryChatMessage,
     handleChangeChatMessage,
@@ -482,6 +483,7 @@ export default function App() {
           }}
           messages={customerChatMessages}
           loading={chatThreadLoading}
+          loadFailed={chatThreadFailed}
           onSendMessage={handleSendMessageFromUser}
           pendingIds={pendingChatIds}
           failedIds={new Set(failedChatMessages.map((m) => m.id))}
