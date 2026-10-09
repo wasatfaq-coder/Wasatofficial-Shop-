@@ -1,6 +1,6 @@
 // Владелец заводит товар на телефоне: состав и страна — нажатием на чипы, уход — значками с бирки, описание —
 // черновиком из характеристик (быстрое заведение товара, этапы 1–3, docs/fast-product-entry-spec.md)
-import { test, expect } from '../fixtures';
+import { test, expect, openAdminSection } from '../fixtures';
 import { queryDocs } from '../emulator';
 import { ADMIN } from '../store';
 
@@ -12,8 +12,7 @@ test('новый товар: состав и страна чипами, уход
   await signIn(ADMIN);
   await page.getByRole('button', { name: /^Панель администратора/ }).click();
   const panel = page.getByRole('dialog', { name: 'Панель администратора' });
-  await panel.getByRole('tab', { name: 'Каталог', exact: true }).click();
-  await panel.getByRole('tab', { name: 'Товары', exact: true }).click();
+  await openAdminSection(panel, 'Товары');
   await panel.getByRole('button', { name: 'Добавить товар' }).click();
 
   const form = page.getByRole('dialog', { name: 'Новый товар каталога' });

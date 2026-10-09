@@ -17,13 +17,16 @@ export interface AdminAction {
  * «Ещё» menu for rarely used actions of a list row (Base UI Menu: role="menu", arrows, Escape, focus back to the
  * button). The popup is portaled above the admin panel (data-floating-layer, like NeumorphicSelect); styles neu-*.
  */
-export const AdminActionMenu: React.FC<{ actions: AdminAction[]; label?: string; className?: string }> = ({
-  actions,
-  label = 'Ещё',
-  className = '',
-}) => (
+export const AdminActionMenu: React.FC<{
+  actions: AdminAction[];
+  label?: string;
+  /** What the row is («заказ № WS-…»): the button's name says it, so it is not one more «Ещё» next to the menu's */
+  of?: string;
+  className?: string;
+}> = ({ actions, label = 'Ещё', of, className = '' }) => (
   <Menu.Root>
     <Menu.Trigger
+      aria-label={of ? `${label}: ${of}` : undefined}
       className={`h-8 px-3 neu-button rounded-xl text-xs font-bold text-[#2D3A4E] hover:text-accent flex items-center gap-1.5 cursor-pointer data-[popup-open]:text-accent ${className}`}
     >
       <MoreHorizontal className="w-4 h-4" aria-hidden="true" />

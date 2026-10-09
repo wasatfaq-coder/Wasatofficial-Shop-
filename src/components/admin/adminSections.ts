@@ -3,6 +3,10 @@
  * (AdminNav, the sections, Base UI, charts) is a separate chunk loaded when the panel opens.
  */
 export const ADMIN_TAB_IDS = [
+  // «Сегодня»: what waits for the owner; the panel opens on it
+  'today',
+  // «Ещё»: the list of the sections that are not on the bottom bar (phone)
+  'more',
   'analytics',
   'orders',
   'customers',

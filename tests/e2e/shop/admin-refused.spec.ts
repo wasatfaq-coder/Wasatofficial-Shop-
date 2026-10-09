@@ -1,6 +1,6 @@
 // «Сохранено» только после ответа базы (docs/admin-wholesale-plan.md, этап 1, находка 3): база отказала в записи —
 // админка говорит «Не сохранено» и не делает вид, что всё прошло
-import { test, expect } from '../fixtures';
+import { test, expect, openAdminSection } from '../fixtures';
 import { deleteDoc, readDoc, writeDocs } from '../emulator';
 import { COURIER, PRODUCTS } from '../store';
 
@@ -26,8 +26,7 @@ test('база отказала — админка не пишет «Сохра�
   await deleteDoc(`admins/${uid}`);
 
   // a delivery method switched off: no «отключен», the error instead
-  await panel.getByRole('tab', { name: 'Магазин', exact: true }).click();
-  await panel.getByRole('tab', { name: 'Доставка и ПВЗ' }).click();
+  await openAdminSection(panel, 'Доставка и ПВЗ');
   const courierSwitch = panel.getByRole('switch', { name: `Способ «${COURIER.title}» показан покупателям` });
   await courierSwitch.click();
   await expect(page.getByText(/Не сохранено: способы доставки/)).toBeVisible();
@@ -38,8 +37,7 @@ test('база отказала — админка не пишет «Сохра�
 
   // a product taken off sale in bulk: no «сняты с продажи», and the selection stays for another try
   const item = PRODUCTS.belt;
-  await panel.getByRole('tab', { name: 'Каталог', exact: true }).click();
-  await panel.getByRole('tab', { name: 'Товары', exact: true }).click();
+  await openAdminSection(panel, 'Товары');
   await panel.getByRole('textbox', { name: 'Поиск товаров' }).fill(item.title);
   await panel.getByRole('checkbox', { name: `Выбрать товар «${item.title}»` }).click();
   await panel.getByRole('button', { name: 'Снять с продажи', exact: true }).click();

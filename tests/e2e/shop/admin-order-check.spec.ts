@@ -1,6 +1,6 @@
 // Владелец видит в «Заказах» поддельный заказ и заказ, которому не хватило товара (проверка перед запуском 04.10,
 // docs/audit-2026-10-04-plan.md, находки 2 и 3)
-import { test, expect } from '../fixtures';
+import { test, expect, openAdminSection } from '../fixtures';
 import { writeDocs } from '../emulator';
 import { ADMIN, COURIER, PRODUCTS } from '../store';
 
@@ -37,8 +37,7 @@ test('владелец видит подделанную скидку и нед�
   await signIn(ADMIN);
   await page.getByRole('button', { name: /^Панель администратора/ }).click();
   const panel = page.getByRole('dialog', { name: 'Панель администратора' });
-  await panel.getByRole('tab', { name: 'Продажи', exact: true }).click();
-  await panel.getByRole('tab', { name: /^Заказы/ }).click();
+  await openAdminSection(panel, /^Заказы/);
   const search = panel.getByRole('textbox', { name: 'Поиск заказов' });
 
   await search.fill(fakeId);

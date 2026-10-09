@@ -40,6 +40,7 @@ import type { ProfileScreenProps } from '../ProfileScreen';
 
 
 // The admin panel is a separate chunk (its sections, Base UI, charts): customers do not download it
+const AdminTodayTab = lazy(() => import('../../components/admin/AdminTodayTab').then((m) => ({ default: m.AdminTodayTab })));
 const AdminAnalyticsTab = lazy(() => import('../../components/admin/AdminAnalyticsTab').then((m) => ({ default: m.AdminAnalyticsTab })));
 const AdminPromoConstructorTab = lazy(() => import('../../components/admin/AdminPromoConstructorTab').then((m) => ({ default: m.AdminPromoConstructorTab })));
 const AdminBannersTab = lazy(() => import('../../components/admin/AdminBannersTab').then((m) => ({ default: m.AdminBannersTab })));
@@ -99,7 +100,7 @@ type ProfileAdminPanelProps = Pick<
 };
 
 /**
- * The admin panel window: 4 groups of sections (each a separate chunk), unsaved edits asked about before closing or
+ * The admin panel window: «Сегодня» and the sections (each a separate chunk), unsaved edits asked about before closing or
  * switching, local copies of the lists the sections edit.
  */
 export const ProfileAdminPanel = ({
@@ -361,9 +362,9 @@ export const ProfileAdminPanel = ({
               className="neu-modal rounded-none sm:rounded-3xl p-3 sm:p-6 max-w-5xl lg:max-w-none w-full sm:my-auto space-y-3 sm:space-y-4 h-[100dvh] sm:h-auto max-h-none sm:max-h-[92vh] lg:max-h-none lg:h-[calc(100vh-2rem)] flex flex-col sm:border border-white/80 text-[#2D3A4E] min-w-0 overflow-hidden relative z-10"
             >
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3 shrink-0 gap-2">
+            <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-2 sm:pb-3 shrink-0 gap-2">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
+                <div className="hidden sm:flex w-9 h-9 rounded-xl neu-flat-sm items-center justify-center text-accent shrink-0">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
@@ -379,7 +380,7 @@ export const ProfileAdminPanel = ({
                   {IS_PREVIEW_BUILD ? (
                     <p className="text-xs font-bold text-warning">Проверочная версия: изменения попадут в настоящий магазин</p>
                   ) : (
-                    <p className="text-xs font-medium text-[#4E5C70] truncate">Каталог, склад, заказы и витрина</p>
+                    <p className="hidden sm:block text-xs font-medium text-[#4E5C70] truncate">Каталог, склад, заказы и витрина</p>
                   )}
                 </div>
               </div>
@@ -406,7 +407,7 @@ export const ProfileAdminPanel = ({
               />
             )}
 
-            {/* 4 groups → sections → the section; forms report unsaved edits to the panel */}
+            {/* «Сегодня» and the sections (menu variant A); forms report unsaved edits to the panel */}
             <UnsavedChangesContext.Provider value={unsavedRegistry}>
             <Suspense fallback={<AdminLoading />}>
             <AdminNav
@@ -426,6 +427,18 @@ export const ProfileAdminPanel = ({
                   transition={{ duration: 0.15, ease: 'easeOut' }}
                   className="w-full"
                 >
+              {/* «Сегодня»: what waits for the owner, the launch steps first while the store is not ready */}
+              {adminTab === 'today' && (
+                <AdminTodayTab
+                  orders={orders}
+                  chatMessages={localChatMessages}
+                  products={productsList}
+                  lowStockThreshold={lowStockThresholdOf(storefrontSettings)}
+                  launchSteps={launchSteps(productsList, localDeliveryMethods, storefrontSettings)}
+                  onOpenTab={requestAdminTab}
+                />
+              )}
+
               {/* --- TAB 1: ANALYTICS & FINANCIAL DASHBOARD --- */}
               {adminTab === 'analytics' && (
                 <AdminAnalyticsTab
@@ -434,8 +447,6 @@ export const ProfileAdminPanel = ({
                   promos={localPromos}
                   onShowToast={onShowToast}
                   onSelectOrder={(ord) => setSelectedOrderIdForTracking(ord.id)}
-                  launchSteps={launchSteps(productsList, localDeliveryMethods, storefrontSettings)}
-                  onOpenTab={requestAdminTab}
                 />
               )}
 

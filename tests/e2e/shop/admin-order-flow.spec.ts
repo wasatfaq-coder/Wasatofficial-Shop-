@@ -1,7 +1,7 @@
 // Владелец ведёт заказ Почтой в «Заказах»: «Скомплектован», без трек-номера «Передан в Почту России» не ставится, трек,
 // «Передан», «Оплачен», затем «Отменить и вернуть на склад» с причиной — оплата становится «Возврат средств», товар
 // возвращается по журналу (аудит 07.10, находка 41: смена статуса, оплата и отмена в админке не были проверены в браузере)
-import { test, expect } from '../fixtures';
+import { test, expect, openAdminSection } from '../fixtures';
 import { queryDocs, readDoc, writeDocs } from '../emulator';
 import { ADMIN, PRODUCTS } from '../store';
 
@@ -31,8 +31,7 @@ test('владелец передаёт заказ в Почту с трек-н�
   await signIn(ADMIN);
   await page.getByRole('button', { name: /^Панель администратора/ }).click();
   const panel = page.getByRole('dialog', { name: 'Панель администратора' });
-  await panel.getByRole('tab', { name: 'Продажи', exact: true }).click();
-  await panel.getByRole('tab', { name: /^Заказы/ }).click();
+  await openAdminSection(panel, /^Заказы/);
   await panel.getByRole('textbox', { name: 'Поиск заказов' }).fill(orderId);
   await expect(panel.getByText(`№ ${orderId}`)).toBeVisible();
 
@@ -62,7 +61,7 @@ test('владелец передаёт заказ в Почту с трек-н�
   await page.getByRole('menuitemradio', { name: 'Оплачен' }).click();
   await expect.poll(async () => (await readDoc(`orders/${orderId}`))?.paymentStatus).toBe('paid');
 
-  await panel.getByRole('button', { name: 'Ещё' }).click();
+  await panel.getByRole('button', { name: `Ещё: заказ № ${orderId}` }).click();
   await page.getByRole('menuitem', { name: 'Отменить и вернуть на склад' }).click();
   const cancel = page.getByRole('dialog', { name: `Отменить заказ № ${orderId}?` });
   await cancel.getByRole('radio', { name: 'Товара нет в наличии' }).click();

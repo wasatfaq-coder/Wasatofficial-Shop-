@@ -1,5 +1,5 @@
 // Копия товара получает свои фото, удалённый товар забирает свои (дорожная карта, направление 3, «Риски»)
-import { test, expect } from '../fixtures';
+import { test, expect, openAdminSection } from '../fixtures';
 import { queryDocs, readDoc } from '../emulator';
 import { ADMIN, PRODUCTS } from '../store';
 
@@ -13,8 +13,7 @@ test('копия товара со своими фото, удаление то�
   await signIn(ADMIN);
   await page.getByRole('button', { name: /^Панель администратора/ }).click();
   const panel = page.getByRole('dialog', { name: 'Панель администратора' });
-  await panel.getByRole('tab', { name: 'Каталог', exact: true }).click();
-  await panel.getByRole('tab', { name: 'Товары', exact: true }).click();
+  await openAdminSection(panel, 'Товары');
   const search = panel.getByRole('textbox', { name: 'Поиск товаров' });
 
   await search.fill(item.title);

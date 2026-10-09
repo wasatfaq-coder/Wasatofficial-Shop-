@@ -221,9 +221,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [adminTab, setAdminTab] = useState<AdminTab>(() => {
     try {
       const saved = sessionStorage.getItem(ADMIN_TAB_STORAGE_KEY);
-      return isAdminTab(saved) ? saved : 'analytics';
+      // «Ещё» is only a list: the panel opens on «Сегодня» instead
+      return isAdminTab(saved) && saved !== 'more' ? saved : 'today';
     } catch {
-      return 'analytics';
+      return 'today';
     }
   });
   useEffect(() => {
