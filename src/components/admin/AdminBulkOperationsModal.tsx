@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ProductThumbImage } from '../ProductThumbImage';
 import { ModalPortal } from '../ModalPortal';
-import { X, Tag, DollarSign, Layers, Sparkles, Check, ArrowRight, RotateCcw, CheckCheck, Coins } from 'lucide-react';
+import { X, Tag, DollarSign, Layers, Sparkles, Check, ArrowRight, RotateCcw, CheckCheck, Coins, AlertTriangle } from 'lucide-react';
 import { Product, StoreCategory } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { NotConfigured } from '../NotConfigured';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { pluralRu } from '../../utils/pluralize';
+import { belowCostLines } from '../../utils/quickProductEdit';
 import { PURCHASE_CURRENCIES, parseDecimal, readPurchase, type ProductPurchase, type PurchaseCurrency } from '../../utils/currencyPricing';
 
 /** «12,5 $», «—» */
@@ -22,12 +23,14 @@ interface AdminBulkOperationsModalProps {
   /** Admin → «Категории» */
   categories?: StoreCategory[];
   selectedProducts: Product[];
+  /** The tab the window opens on (the «Ещё» item of the selection bar) */
+  initialTab?: BulkTab;
   onClose: () => void;
-  onApplyBulkChanges?: (updatedProducts: Product[], summaryMessage: string) => void;
-  onApplyChanges?: (updatedProducts: Product[], summaryMessage: string) => void;
+  /** Resolves to false when the database refused the write: the window stays open to retry */
+  onApplyBulkChanges: (updatedProducts: Product[], summaryMessage: string) => Promise<boolean>;
 }
 
-type BulkTab = 'pricing' | 'discounts' | 'categories' | 'purchase';
+export type BulkTab = 'pricing' | 'discounts' | 'categories' | 'purchase';
 
 const DISCOUNT_PRESETS = [10, 15, 20, 25, 30, 40, 50];
 const PRICE_PRESETS_PERCENT = [5, 10, 15, 20, -10, -15, -20];
@@ -48,12 +51,18 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
   isOpen,
   categories = [],
   selectedProducts,
+  initialTab = 'pricing',
   onClose,
   onApplyBulkChanges,
-  onApplyChanges,
 }) => {
-  const dialog = useDialogA11y(isOpen && selectedProducts.length > 0, onClose);
-  const [activeTab, setActiveTab] = useState<BulkTab>('pricing');
+  const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
+  const dialog = useDialogA11y(isOpen && selectedProducts.length > 0, onClose, { closeOnEscape: !isSaving });
+  const [activeTab, setActiveTab] = useState<BulkTab>(initialTab);
+  // each opening starts on the tab of the chosen action
+  useEffect(() => {
+    if (isOpen) setActiveTab(initialTab);
+  }, [isOpen, initialTab]);
 
   // --- Pricing Tab State ---
   const [priceAdjustmentType, setPriceAdjustmentType] = useState<'percent' | 'fixed'>('percent');
@@ -175,8 +184,11 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
   };
 
   const previewProducts = getPreviewProducts();
+  // a new price below the cost: a warning before the bulk price or discount, not a ban (admin audit 09.10, А9)
+  const belowCost = activeTab === 'pricing' || (activeTab === 'discounts' && !isRemoveDiscountMode) ? belowCostLines(previewProducts) : [];
 
-  const handleApply = () => {
+  const handleApply = async () => {
+    if (savingRef.current) return;
     const previewList = getPreviewProducts();
     const n = selectedProducts.length;
     // «у 1 товара», «у 3 товаров»
@@ -203,11 +215,13 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
       summaryMsg = `${n} ${pluralRu(n, ['товар перемещён', 'товара перемещены', 'товаров перемещены'])} в категорию «${catObj?.name || targetCategory}»`;
     }
 
-    const callback = onApplyBulkChanges || onApplyChanges;
-    if (callback) {
-      callback(previewList, summaryMsg);
-    }
-    onClose();
+    // closes only after the database answered: on a refusal the window and the selection stay to retry
+    savingRef.current = true;
+    setIsSaving(true);
+    const saved = await onApplyBulkChanges(previewList, summaryMsg);
+    savingRef.current = false;
+    setIsSaving(false);
+    if (saved) onClose();
   };
 
   return (
@@ -224,7 +238,9 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
         >
           {/* Backdrop */}
           <div
-            onClick={onClose}
+            onClick={() => {
+              if (!isSaving) onClose();
+            }}
             className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer"
           />
 
@@ -260,6 +276,7 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
               </div>
               <button
                 onClick={onClose}
+                disabled={isSaving}
                 className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
                 aria-label="Закрыть"
               >
@@ -611,6 +628,27 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
           </div>
         )}
 
+        {belowCost.length > 0 && (
+          <div className="rounded-2xl bg-warning-soft border border-warning/25 p-3 space-y-2">
+            <p className="flex items-start gap-1.5 text-xs font-extrabold text-warning">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" aria-hidden="true" />
+              Цена станет ниже закупки у {belowCost.length} {pluralRu(belowCost.length, ['товара', 'товаров', 'товаров'])}: каждая
+              продажа — в убыток. Применить можно, если так задумано.
+            </p>
+            <ul aria-label="Ниже закупки" className="space-y-1 max-h-32 overflow-y-auto pr-1">
+              {belowCost.map((line) => (
+                <li key={line.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between sm:gap-2 text-xs text-[#2D3A4E]">
+                  <span className="min-w-0 truncate font-bold">{line.title}</span>
+                  <span className="sm:shrink-0 tabular-nums">
+                    {line.price.toLocaleString('ru-RU')} ₽ при закупке {line.cost.toLocaleString('ru-RU')} ₽,{' '}
+                    <strong className="text-danger">−{line.loss.toLocaleString('ru-RU')} ₽</strong>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* Live Preview List */}
         <div className="space-y-2">
           <label className="text-xs font-extrabold uppercase text-[#2D3A4E] tracking-wider flex items-center justify-between">
@@ -710,21 +748,25 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
           <button
             type="button"
             onClick={onClose}
+            disabled={isSaving}
             className="w-full sm:w-auto py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer text-center"
           >
             Отмена
           </button>
           <button
             type="button"
-            onClick={handleApply}
-            disabled={activeTab === 'purchase' && Boolean(purchaseError)}
+            onClick={() => void handleApply()}
+            disabled={isSaving || (activeTab === 'purchase' && Boolean(purchaseError))}
+            aria-busy={isSaving}
             className={`w-full sm:w-auto py-2.5 px-5 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 ${
-              activeTab === 'purchase' && purchaseError ? 'neu-button-disabled' : 'neu-button-accent text-white cursor-pointer'
+              isSaving || (activeTab === 'purchase' && purchaseError) ? 'neu-button-disabled' : 'neu-button-accent text-white cursor-pointer'
             }`}
           >
             <CheckCheck className="w-4 h-4 stroke-[2.5]" />
             <span>
-              {selectedProducts.length === 1
+              {isSaving
+                ? 'Сохраняем…'
+                : selectedProducts.length === 1
                 ? 'Применить к 1 товару'
                 : `Применить ко всем ${selectedProducts.length} ${pluralRu(selectedProducts.length, ['товару', 'товарам', 'товарам'])}`}
             </span>

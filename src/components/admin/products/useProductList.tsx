@@ -2,12 +2,14 @@ import { useState, useMemo } from 'react';
 import { Tag } from 'lucide-react';
 import { Product } from '../../../types';
 import { isHiddenFromSale } from '../../../utils/inventory';
+import type { BulkTab } from '../AdminBulkOperationsModal';
 
 import type { AdminProductsTabProps, ProductCategoryOption } from '../AdminProductsTab';
 
 /**
- * The admin's product list: search, filters, selection and bulk actions (stock, category, discount, delete), and which
- * product the quick view or the delete confirmation shows. Writes go through `onUpdateProducts`.
+ * The admin's product list: search, filters, selection and bulk actions (on sale or not, the bulk window on one of its
+ * tabs, delete), and which product the quick view, the quick price or stock edit or the delete confirmation shows.
+ * Writes go through `onUpdateProducts`.
  */
 export function useProductList(
   products: Product[],
@@ -24,12 +26,16 @@ export function useProductList(
   // Selection & Bulk
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [isBulkOperationsModalOpen, setIsBulkOperationsModalOpen] = useState(false);
-  const [isBulkDiscountModalOpen, setIsBulkDiscountModalOpen] = useState(false);
-  const [bulkDiscountPercent, setBulkDiscountPercent] = useState<number>(15);
-  const [isBulkCategoryDropdownOpen, setIsBulkCategoryDropdownOpen] = useState(false);
+  /** The tab the bulk window opens on: the «Ещё» item of the selection bar */
+  const [bulkTab, setBulkTab] = useState<BulkTab>('discounts');
+  /** «Снять с продажи» / «В продажу» on its way: a second press would write twice */
+  const [isBulkSaving, setIsBulkSaving] = useState(false);
 
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [productToInspect, setProductToInspect] = useState<Product | null>(null);
+  /** The quick price and stock edits of one row (finding 28): the id, the product itself is taken fresh from the list */
+  const [priceEditId, setPriceEditId] = useState<string | null>(null);
+  const [stockEditId, setStockEditId] = useState<string | null>(null);
   const [isCSVImportModalOpen, setIsCSVImportModalOpen] = useState(false);
 
   // Filtered Products
@@ -115,11 +121,15 @@ export function useProductList(
   const saveProducts = async (updated: Product[]) => (await onUpdateProducts(updated)) !== false;
 
   const handleBulkToggleStock = async (inStock: boolean) => {
+    if (isBulkSaving) return;
     const updated = products.map((p) =>
       selectedProductIds.includes(p.id) ? { ...p, inStock, hiddenFromSale: !inStock } : p
     );
     const count = selectedProductIds.length;
-    if (!(await saveProducts(updated))) return;
+    setIsBulkSaving(true);
+    const saved = await saveProducts(updated);
+    setIsBulkSaving(false);
+    if (!saved) return;
     onShowToast(
       inStock
         ? `Товары (${count}) возвращены в продажу`
@@ -129,40 +139,9 @@ export function useProductList(
     setSelectedProductIds([]);
   };
 
-  const handleBulkChangeCategory = async (newCat: string) => {
-    const catObj = CATEGORY_OPTIONS.find((c) => c.id === newCat);
-    const updated = products.map((p) =>
-      selectedProductIds.includes(p.id)
-        ? { ...p, category: newCat, categoryLabel: catObj?.name || p.categoryLabel || newCat }
-        : p
-    );
-    const count = selectedProductIds.length;
-    setIsBulkCategoryDropdownOpen(false);
-    if (!(await saveProducts(updated))) return;
-    onShowToast(`Категория обновлена для ${count} товаров на "${catObj?.name || newCat}"`, 'success');
-    setSelectedProductIds([]);
-  };
-
-  const handleBulkApplyDiscount = async () => {
-    if (!bulkDiscountPercent || bulkDiscountPercent <= 0) return;
-    const factor = (100 - bulkDiscountPercent) / 100;
-    const updated = products.map((p) => {
-      if (!selectedProductIds.includes(p.id)) return p;
-      const orig = p.originalPrice || p.price;
-      const newPrice = Math.round(orig * factor);
-      return {
-        ...p,
-        originalPrice: orig,
-        price: newPrice,
-        discountPercent: bulkDiscountPercent,
-        badge: `-${bulkDiscountPercent}%`,
-      };
-    });
-    const count = selectedProductIds.length;
-    if (!(await saveProducts(updated))) return;
-    onShowToast(`Скидка ${bulkDiscountPercent}% применена к ${count} товарам`, 'success');
-    setIsBulkDiscountModalOpen(false);
-    setSelectedProductIds([]);
+  const openBulkOperations = (tab: BulkTab) => {
+    setBulkTab(tab);
+    setIsBulkOperationsModalOpen(true);
   };
 
   const handleBulkDelete = async () => {
@@ -190,16 +169,17 @@ export function useProductList(
     setSelectedProductIds,
     isBulkOperationsModalOpen,
     setIsBulkOperationsModalOpen,
-    isBulkDiscountModalOpen,
-    setIsBulkDiscountModalOpen,
-    bulkDiscountPercent,
-    setBulkDiscountPercent,
-    isBulkCategoryDropdownOpen,
-    setIsBulkCategoryDropdownOpen,
+    bulkTab,
+    openBulkOperations,
+    isBulkSaving,
     productToDelete,
     setProductToDelete,
     productToInspect,
     setProductToInspect,
+    priceEditId,
+    setPriceEditId,
+    stockEditId,
+    setStockEditId,
     isCSVImportModalOpen,
     setIsCSVImportModalOpen,
     filteredProducts,
@@ -208,8 +188,6 @@ export function useProductList(
     handleToggleSelectAll,
     handleToggleSelectOne,
     handleBulkToggleStock,
-    handleBulkChangeCategory,
-    handleBulkApplyDiscount,
     handleBulkDelete,
   };
 }

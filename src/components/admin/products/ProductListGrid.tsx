@@ -1,4 +1,4 @@
-import { Trash2, Edit2, Eye, Copy } from 'lucide-react';
+import { Trash2, Edit2, Eye, Copy, Pencil } from 'lucide-react';
 import { ProductThumbImage } from '../../ProductThumbImage';
 import { Product } from '../../../types';
 import { SelectCheckbox } from '../SelectCheckbox';
@@ -9,7 +9,7 @@ import type { StoreCategory } from '../../../types';
 import { AdminHint } from '../AdminHint';
 import type { ProductList } from './useProductList';
 
-/** The filtered products: photo, price, stock, quick view, copy, delete and «Редактировать» */
+/** The filtered products: photo, price and stock (each opens its quick edit, finding 28), quick view, copy, delete and «Редактировать» */
 export function ProductListGrid({ list, products, categories, duplicatingId, handleDuplicateProduct, handleOpenEditProduct, lowStockThreshold }: {
   list: ProductList;
   products: Product[];
@@ -23,6 +23,8 @@ export function ProductListGrid({ list, products, categories, duplicatingId, han
     selectedProductIds,
     setProductToDelete,
     setProductToInspect,
+    setPriceEditId,
+    setStockEditId,
     filteredProducts,
     handleToggleSelectOne,
   } = list;
@@ -113,17 +115,28 @@ export function ProductListGrid({ list, products, categories, duplicatingId, han
                       <span className="font-mono text-accent font-bold text-[11px] bg-[#D8DFE8] px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
                         {primarySku}
                       </span>
-                      <span className="font-extrabold text-[#2D3A4E] text-xs shrink-0 whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => setPriceEditId(prod.id)}
+                        aria-label={`${prod.price.toLocaleString('ru-RU')} ₽ — изменить цену «${prod.title}»`}
+                        title="Изменить цену"
+                        className="min-h-6 -mx-1 px-1 rounded-lg font-extrabold text-[#2D3A4E] hover:text-accent text-xs shrink-0 whitespace-nowrap inline-flex items-center gap-1 underline decoration-dotted decoration-accent/60 underline-offset-2 cursor-pointer"
+                      >
                         {prod.price.toLocaleString('ru-RU')} ₽
-                      </span>
+                        <Pencil className="w-3 h-3 text-accent" aria-hidden="true" />
+                      </button>
                       {prod.originalPrice && (
                         <span className="line-through text-[#4E5C70] text-[11px] shrink-0 whitespace-nowrap">
                           {prod.originalPrice.toLocaleString('ru-RU')} ₽
                         </span>
                       )}
                       <span className="inline-flex items-center gap-0.5 shrink-0">
-                        <span
-                          className={`font-extrabold text-[11px] px-2 py-0.5 rounded-lg whitespace-nowrap ${
+                        <button
+                          type="button"
+                          onClick={() => setStockEditId(prod.id)}
+                          aria-label={`Остаток: ${totalStock} шт. — изменить «${prod.title}»`}
+                          title="Изменить остаток по цветам и размерам"
+                          className={`min-h-6 font-extrabold text-[11px] px-2 py-0.5 rounded-lg whitespace-nowrap inline-flex items-center gap-1 cursor-pointer hover:underline underline-offset-2 ${
                             stockLevel(totalStock, lowStockThreshold) === 'out'
                               ? 'text-danger bg-danger-soft border border-danger/25'
                               : stockLevel(totalStock, lowStockThreshold) === 'low'
@@ -132,8 +145,9 @@ export function ProductListGrid({ list, products, categories, duplicatingId, han
                           }`}
                         >
                           Остаток: {totalStock} шт.
-                        </span>
-                        <AdminHint label="Остаток">Сумма по всем цветам и размерам.</AdminHint>
+                          <Pencil className="w-3 h-3" aria-hidden="true" />
+                        </button>
+                        <AdminHint label="Остаток">Сумма по всем цветам и размерам. Нажмите, чтобы поменять остаток каждого.</AdminHint>
                       </span>
                     </div>
                   </div>
