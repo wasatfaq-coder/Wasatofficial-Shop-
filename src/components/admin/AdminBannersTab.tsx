@@ -28,6 +28,16 @@ import { useDialogA11y } from '../../utils/useDialogA11y';
 import { useBannersWithImages } from '../../utils/useBannerImage';
 import { AdminHint } from './AdminHint';
 import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
+import {
+  BANNER_SCHEDULE_PRESETS,
+  bannerScheduleErrors,
+  bannerScheduleState,
+  formatBannerTime,
+  schedulePreset,
+  type BannerSchedulePreset,
+} from '../../utils/bannerSchedule';
+import { BannerPreview } from './banners/BannerPreview';
+import { BannerProductPhotos } from './banners/BannerProductPhotos';
 
 interface AdminBannersTabProps {
   banners: BannerSlide[];
@@ -64,7 +74,6 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
   const [isCreating, setIsCreating] = useState(false);
   const [bannerToDelete, setBannerToDelete] = useState<BannerSlide | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('mobile');
 
   // Toasts, the cleared form and closing come only after the database answered: on a refusal `persist` shows
   // «Не сохранено», and the form keeps what was typed (audit 09.10, finding 3)
@@ -128,34 +137,6 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
     endDate,
   ]);
   useUnsavedChanges(isBannerFormDirty, 'Баннер');
-
-  const presetImages = [
-    {
-      label: 'Мужской костюм / Премиум',
-      mobile: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&q=80&w=600',
-      desktop: 'https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?auto=format&fit=crop&q=80&w=1400',
-    },
-    {
-      label: 'Льняная рубашка',
-      mobile: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&q=80&w=600',
-      desktop: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&q=80&w=1400',
-    },
-    {
-      label: 'Осенняя куртка / Верхняя одежда',
-      mobile: 'https://images.unsplash.com/photo-1548883354-7622d03aca27?auto=format&fit=crop&q=80&w=600',
-      desktop: 'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&q=80&w=1400',
-    },
-    {
-      label: 'Поло и футболки',
-      mobile: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&q=80&w=600',
-      desktop: 'https://images.unsplash.com/photo-1581655353564-df123a1eb820?auto=format&fit=crop&q=80&w=1400',
-    },
-    {
-      label: 'Брюки чинос / Casual',
-      mobile: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&q=80&w=600',
-      desktop: 'https://images.unsplash.com/photo-1479064555552-3ef4979f8908?auto=format&fit=crop&q=80&w=1400',
-    },
-  ];
 
   const resetForm = () => {
     setTitle('');
@@ -251,27 +232,12 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
     onShowToast('Десктопное фото баннера удалено', 'info');
   };
 
-  const applySchedulePreset = (preset: '24h' | 'weekend' | 'black_friday' | 'week') => {
+  // by Moscow time: before, the presets wrote UTC and the start moved 3 hours (admin audit 09.10, stage 8, finding 12)
+  const applySchedulePreset = (preset: BannerSchedulePreset) => {
+    const next = schedulePreset(preset, Date.now());
     setScheduleEnabled(true);
-    const now = new Date();
-    const formatDT = (d: Date) => d.toISOString().slice(0, 16);
-
-    const startStr = formatDT(now);
-    let end = new Date(now);
-
-    if (preset === '24h') {
-      end.setDate(end.getDate() + 1);
-    } else if (preset === 'weekend') {
-      end.setDate(end.getDate() + 3);
-    } else if (preset === 'black_friday') {
-      end.setHours(23, 59, 0, 0);
-    } else if (preset === 'week') {
-      end.setDate(end.getDate() + 7);
-    }
-
-    setStartDate(startStr);
-    setEndDate(formatDT(end));
-    onShowToast('Пресет расписания применен', 'info');
+    setStartDate(next.startDate);
+    setEndDate(next.endDate);
   };
 
   const handleSaveBanner = async (e: React.FormEvent) => {
@@ -288,6 +254,12 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
       const finalImage = mobileImage.trim() || image.trim();
       if (!finalImage) {
         onShowToast('Добавьте изображение баннера или выберите готовое', 'error');
+        return;
+      }
+
+      const scheduleError = scheduleEnabled ? bannerScheduleErrors(startDate, endDate)[0] : undefined;
+      if (scheduleError) {
+        onShowToast(scheduleError, 'error');
         return;
       }
 
@@ -367,22 +339,13 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
     onShowToast(`Баннер «${target?.title || ''}» удален`, 'info');
   };
 
-  const getBannerScheduleStatus = (b: BannerSlide) => {
-    if (!b.scheduleEnabled || (!b.startDate && !b.endDate)) {
-      return { status: 'always', label: 'Бессрочно', color: 'text-[#4E5C70]' };
-    }
-    const now = Date.now();
-    const start = b.startDate ? new Date(b.startDate).getTime() : 0;
-    const end = b.endDate ? new Date(b.endDate).getTime() : Infinity;
-
-    if (now < start) {
-      return { status: 'scheduled', label: 'Запланирован', color: 'text-warning' };
-    }
-    if (now > end) {
-      return { status: 'expired', label: 'Завершен', color: 'text-danger' };
-    }
-    return { status: 'live', label: 'В эфире (по расписанию)', color: 'text-success' };
-  };
+  const SCHEDULE_STATUS = {
+    always: { label: 'Бессрочно', color: 'text-[#4E5C70]' },
+    scheduled: { label: 'Запланирован', color: 'text-warning' },
+    live: { label: 'Показывается по расписанию', color: 'text-success' },
+    expired: { label: 'Завершен', color: 'text-danger' },
+  } as const;
+  const getBannerScheduleStatus = (b: BannerSlide) => SCHEDULE_STATUS[bannerScheduleState(b, Date.now())];
 
   return (
     <div className="space-y-4 text-[#2D3A4E] w-full min-w-0 max-w-full">
@@ -438,42 +401,19 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
               <Sparkles className="w-3.5 h-3.5" />
               <span>{editingId ? 'Редактирование баннера' : 'Создание нового слайда'}</span>
             </span>
-
-            {/* Live Device Preview Switcher in Form */}
-            <div className="flex items-center gap-1 neu-flat-sm p-0.5 rounded-xl">
-              <button
-                type="button"
-                onClick={() => setPreviewDevice('mobile')}
-                className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all ${
-                  previewDevice === 'mobile' ? 'neu-pill-active' : 'text-[#4E5C70]'
-                }`}
-              >
-                <Smartphone className="w-3 h-3" />
-                <span>Мобайл</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPreviewDevice('desktop')}
-                className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all ${
-                  previewDevice === 'desktop' ? 'neu-pill-active' : 'text-[#4E5C70]'
-                }`}
-              >
-                <Monitor className="w-3 h-3" />
-                <span>Десктоп</span>
-              </button>
-            </div>
           </div>
 
           {/* Row 1: Title, Subtitle, Button Text & Badge */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <div className="flex items-center gap-1 mb-1">
-                <label className="text-[11px] font-bold text-[#4E5C70] block">
+                <label htmlFor="banner-title" className="text-[11px] font-bold text-[#4E5C70] block">
                   Главный заголовок *
                 </label>
                 <AdminHint label="Главный заголовок">Крупный текст слайда на главной. Обязательное поле.</AdminHint>
               </div>
               <input
+                id="banner-title"
                 type="text"
                 required
                 value={title}
@@ -536,8 +476,8 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-extrabold text-[#2D3A4E] uppercase tracking-wider flex items-center gap-1.5">
                 <ArrowUpRight className="w-3.5 h-3.5 text-accent" />
-                <span>Целевое действие при клике (Диплинк):</span>
-                <AdminHint label="Целевое действие">Куда попадёт покупатель, когда нажмёт на слайд.</AdminHint>
+                <span>Куда ведёт баннер:</span>
+                <AdminHint label="Куда ведёт баннер">Куда попадёт покупатель, когда нажмёт на слайд.</AdminHint>
               </span>
               <span className="text-[11px] text-[#4E5C70] font-semibold">
                 Куда перейдет покупатель
@@ -789,7 +729,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                       setMobileImage(e.target.value);
                       setImage(e.target.value);
                     }}
-                    placeholder="https://images.unsplash.com/..."
+                    placeholder="https://…"
                     className="w-full h-7 px-2.5 neu-inset rounded-lg text-[11px] text-[#2D3A4E] placeholder:text-[#56647A]"
                   />
                 </div>
@@ -915,34 +855,34 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     type="url"
                     value={desktopImage}
                     onChange={(e) => setDesktopImage(e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
+                    placeholder="https://…"
                     className="w-full h-7 px-2.5 neu-inset rounded-lg text-[11px] text-[#2D3A4E] placeholder:text-[#56647A]"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Presets Row */}
-            <div className="space-y-1.5 pt-1 border-t border-[#BAC5D5]/40">
-              <span className="text-[11px] font-bold text-[#4E5C70]">Готовые стильные фотографии:</span>
-              <div className="flex flex-wrap gap-1.5">
-                {presetImages.map((p, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => {
-                      setMobileImage(p.mobile);
-                      setImage(p.mobile);
-                      setDesktopImage(p.desktop);
-                    }}
-                    className="neu-button px-2.5 py-1 rounded-xl text-[11px] font-bold text-[#4E5C70] hover:text-accent cursor-pointer transition-all"
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
+            {/* Ready photos: the store's own products, not stock pictures (finding 23) */}
+            <div className="pt-2 border-t border-[#BAC5D5]/40">
+              <BannerProductPhotos
+                products={products}
+                onPick={(src) => {
+                  setMobileImage(src);
+                  setImage(src);
+                  setDesktopImage(src);
+                }}
+                onError={(msg) => onShowToast(msg, 'error')}
+              />
             </div>
           </div>
+
+          <BannerPreview
+            title={title}
+            subtitle={subtitle}
+            badge={badge}
+            phoneImage={mobileImage || image}
+            desktopImage={desktopImage}
+          />
 
           {/* Section: Publication Scheduler */}
           <div className="p-3.5 neu-inset rounded-2xl space-y-3">
@@ -952,12 +892,12 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                 <div>
                   <div className="flex items-center gap-1">
                     <span className="text-[11px] font-extrabold text-[#2D3A4E] block">
-                      Планировщик автоматических публикаций
+                      Показ по времени
                     </span>
-                    <AdminHint label="Планировщик">Баннер сам появится и сам исчезнет в нужное время. Время — по часам вашего устройства.</AdminHint>
+                    <AdminHint label="Показ по времени">Баннер сам появится и сам исчезнет в нужное время. Время — московское.</AdminHint>
                   </div>
                   <span className="text-[11px] text-[#4E5C70]">
-                    Точный запуск и снятие баннера с витрины в указанные часы (ночные акции, Черная пятница)
+                    Начало и конец показа на главной, по Москве
                   </span>
                 </div>
               </div>
@@ -966,7 +906,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                 type="button"
                 role="switch"
                 aria-checked={scheduleEnabled}
-                aria-label="Планировщик публикаций"
+                aria-label="Показ по времени"
                 onClick={() => setScheduleEnabled(!scheduleEnabled)}
                 className="w-11 h-6 rounded-full neu-inset p-0.5 transition-colors cursor-pointer shrink-0"
               >
@@ -980,45 +920,28 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
 
             {scheduleEnabled && (
               <div className="space-y-3 pt-2 border-t border-[#BAC5D5]/50 animate-in fade-in duration-200">
-                {/* Fast Presets */}
+                {/* From now, by Moscow time */}
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[11px] font-bold text-[#4E5C70]">Пресеты запуска:</span>
-                  <button
-                    type="button"
-                    onClick={() => applySchedulePreset('24h')}
-                    className="neu-button px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#4E5C70] hover:text-accent"
-                  >
-                    Flash Sale (24 часа)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applySchedulePreset('weekend')}
-                    className="neu-button px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#4E5C70] hover:text-accent"
-                  >
-                    Выходные (3 дня)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applySchedulePreset('black_friday')}
-                    className="neu-button px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#4E5C70] hover:text-accent"
-                  >
-                    Черная пятница (до полуночи)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applySchedulePreset('week')}
-                    className="neu-button px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#4E5C70] hover:text-accent"
-                  >
-                    Недельная акция (7 дней)
-                  </button>
+                  <span className="text-[11px] font-bold text-[#4E5C70]">С этой минуты:</span>
+                  {BANNER_SCHEDULE_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => applySchedulePreset(preset.id)}
+                      className="neu-button min-h-6 px-2.5 py-1 rounded-lg text-[11px] font-bold text-[#4E5C70] hover:text-accent"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
-                      Дата и время старта публикации
+                    <label htmlFor="banner-start" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+                      Начало показа (МСК)
                     </label>
                     <input
+                      id="banner-start"
                       type="datetime-local"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
@@ -1027,10 +950,11 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
-                      Дата и время автоматического снятия
+                    <label htmlFor="banner-end" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+                      Конец показа (МСК)
                     </label>
                     <input
+                      id="banner-end"
                       type="datetime-local"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
@@ -1202,10 +1126,10 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                       <span>Кнопка: <strong className="text-[#2D3A4E]">{slide.btnText}</strong></span>
                       <span>Ведет: <strong className="text-accent">{bannerTargetLabel(slide)}</strong></span>
                       {slide.startDate && (
-                        <span>Старт: <strong className="text-[#2D3A4E]">{slide.startDate.replace('T', ' ')}</strong></span>
+                        <span>Начало: <strong className="text-[#2D3A4E]">{formatBannerTime(slide.startDate)} МСК</strong></span>
                       )}
                       {slide.endDate && (
-                        <span>Снятие: <strong className="text-[#2D3A4E]">{slide.endDate.replace('T', ' ')}</strong></span>
+                        <span>Конец: <strong className="text-[#2D3A4E]">{formatBannerTime(slide.endDate)} МСК</strong></span>
                       )}
                     </div>
                   </div>
