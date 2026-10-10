@@ -953,6 +953,16 @@ service cloud.firestore {
       allow update, delete: if isAdmin() && isValidId(movementId);
     }
 
+    // Себестоимость строк заказа на момент продажи (решение владельца 09.10, src/utils/orderCosts.ts): заказ читает
+    // покупатель, поэтому себестоимость — отдельно и только для администратора. Пишет сессия администратора.
+    match /order_costs/{orderId} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && isValidId(orderId)
+        && request.resource.data.orderId == orderId
+        && request.resource.data.lines is list && request.resource.data.lines.size() <= 60;
+      allow delete: if isAdmin();
+    }
+
     // Журнал цен (аудит админки 09.10, находка 11): было, стало, курс и кто — пишет и читает только администратор.
     // Записи не удаляются: журнал нужен, чтобы разобрать спор о цене с оптовым покупателем.
     match /price_changes/{changeId} {

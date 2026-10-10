@@ -286,6 +286,19 @@ describe('catalog', () => {
     await assertFails(deleteDoc(doc(owner(), 'price_changes/e1')));
   });
 
+  test('order cost snapshots are admin-only: the buyer never reads what the goods cost (owner\'s decision 09.10)', async () => {
+    const entry = { orderId: 'o1', orderCreatedAt: '2026-10-09T12:00:00.000Z', capturedAt: '2026-10-09T12:01:00.000Z', lines: [{ productId: 'p1', size: 'M', color: 'Синий', unitCost: 400 }] };
+    await assertFails(setDoc(doc(guest(), 'order_costs/o1'), entry));
+    await assertFails(setDoc(doc(customer(), 'order_costs/o1'), entry));
+    await assertSucceeds(setDoc(doc(owner(), 'order_costs/o1'), entry));
+    await assertSucceeds(getDocs(collection(extraAdmin(), 'order_costs')));
+    await assertFails(getDoc(doc(customer(), 'order_costs/o1')));
+    await assertFails(getDocs(collection(guest(), 'order_costs')));
+    // the id is the order's, the lines are a short list
+    await assertFails(setDoc(doc(owner(), 'order_costs/o2'), entry));
+    await assertFails(setDoc(doc(owner(), 'order_costs/o1'), { ...entry, lines: 'x' }));
+  });
+
   test('exchange rates and the markup are read and written only by admins (09.10)', async () => {
     const rates = { usd: { official: 85, markup: 5, markupKind: 'rub' }, cny: { official: 11.7, markup: 2, markupKind: 'percent' }, markupPercent: 180 };
     await assertFails(setDoc(doc(customer(), 'settings/exchange_rates'), rates));
