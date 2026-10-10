@@ -27,6 +27,7 @@ import { useProfile } from './app/useProfile';
 import { useOrderNotifications } from './app/useOrderNotifications';
 import { useCustomerOrders } from './app/useCustomerOrders';
 import { useAdminActions } from './app/useAdminActions';
+import { useOrderCostSnapshots } from './app/useOrderCostSnapshots';
 
 import { HomeScreen } from './views/HomeScreen';
 import { CatalogScreen } from './views/CatalogScreen';
@@ -404,6 +405,8 @@ export default function App() {
     persist,
     addToast,
   });
+  // the cost of each new order at the moment of sale, for the net profit in «Аналитика» (order_costs)
+  useOrderCostSnapshots(isAdmin, orders, adminProducts, productsLoaded && fullCatalog);
 
   const hasActivePromos = promos.some((p) => isPromoListed(p));
   const catalogStatus: CatalogStatus = productsLoaded ? 'ready' : productsError ? 'error' : 'loading';
