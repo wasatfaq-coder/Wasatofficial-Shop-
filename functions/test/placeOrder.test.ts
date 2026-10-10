@@ -206,6 +206,61 @@ describe('placeOrderCore', () => {
     await expectOrderError(placeOrderCore(db, request(), null), 'failed-precondition', /больше не продается/);
   });
 
+  test('wholesale: the wholesale price minus the volume step, no promo on it; retail lines as before', async () => {
+    await db.doc('products/jacket').update({ wholesalePrice: 6000, wholesalePackSize: 1 });
+    await db.doc('settings/storefront').set({
+      freeDeliveryThreshold: 0,
+      isExpressEnabled: true,
+      wholesale: { volumeDiscount: { kind: 'fixed', countBy: 'product', tiers: [{ minPacks: 3, value: 500 }] } },
+    });
+    await db.doc('promos/p1').set({
+      id: 'p1', code: 'SALE10', title: '', description: '', discountPercent: 10, active: true, usedCount: 0, generatedRevenue: 0,
+    });
+    const order = await placeOrderCore(
+      db,
+      request({
+        promoCode: 'SALE10',
+        items: [
+          { productId: 'jacket', color: 'Черный', size: 'L', quantity: 3, wholesale: true },
+          { productId: 'shirt', color: 'Белый', size: 'M', quantity: 1 },
+        ],
+      }),
+      null
+    );
+    const [jacketLine, shirtLine] = order.items;
+    // 3 packs reach «от 3 уп. — 500 ₽ с шт.»: 6000 − 500 = 5500 ₽
+    expect([jacketLine.priceKind, jacketLine.unitPrice, jacketLine.volumeDiscountPerUnit]).toEqual(['wholesale', 5500, 500]);
+    expect(shirtLine.priceKind).toBeUndefined();
+    // 10 % only of the retail shirt
+    expect(order.discountAmount).toBe(300);
+    expect(order.totalPrice).toBe(3 * 5500 + 3000 - 300 + 350);
+  });
+
+  test('wholesale: a product not sold wholesale is priced retail; too few packs are refused', async () => {
+    const retail = await placeOrderCore(
+      db,
+      request({ items: [{ productId: 'shirt', color: 'Белый', size: 'M', quantity: 1, wholesale: true }] }),
+      null
+    );
+    expect([retail.items[0].priceKind, retail.items[0].unitPrice]).toEqual([undefined, undefined]);
+    expect(retail.totalPrice).toBe(3000 + 350);
+
+    await db.doc('products/jacket').update({ wholesalePrice: 6000, wholesaleMinPacks: 2, saleChannel: 'wholesale' });
+    await expectOrderError(
+      placeOrderCore(db, request({ items: [{ productId: 'jacket', color: 'Черный', size: 'L', quantity: 1 }] }), null),
+      'failed-precondition',
+      /оптом — от 2 уп/
+    );
+  });
+
+  test('parses the wholesale choice and nothing else from the request', () => {
+    const parsed = parsePlaceOrderRequest({
+      ...request(),
+      items: [{ productId: 'jacket', color: 'Черный', size: 'L', quantity: 1, wholesale: true, unitPrice: 1 }],
+    });
+    expect(parsed.items[0]).toEqual({ productId: 'jacket', color: 'Черный', size: 'L', quantity: 1, wholesale: true });
+  });
+
   test('applies a promo on the server and updates its counters', async () => {
     await db.doc('promos/p1').set({
       id: 'p1', code: 'SALE10', title: '', description: '', discountPercent: 10,
