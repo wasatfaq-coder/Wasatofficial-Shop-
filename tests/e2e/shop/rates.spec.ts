@@ -18,9 +18,10 @@ test('владелец задаёт курс и надбавку, цена то�
     await openAdminSection(panel, 'Товары');
     await panel.getByRole('textbox', { name: 'Поиск товаров' }).fill(item.title);
     await panel.getByRole('checkbox', { name: `Выбрать товар «${item.title}»` }).click();
-    await panel.getByRole('button', { name: 'Массовые операции', exact: true }).click();
+    // «Ещё» on the selection bar opens the bulk window on its tab (stage 4, part 2)
+    await panel.getByRole('button', { name: 'Ещё: выбранные товары' }).click();
+    await page.getByRole('menuitem', { name: 'Закупка в $/¥' }).click();
     const bulk = page.getByRole('dialog', { name: 'Массовые операции каталога' });
-    await bulk.getByRole('button', { name: 'Закупка в $/¥' }).click();
     await bulk.getByRole('radio', { name: '¥ Юань' }).click();
     await bulk.getByLabel('Закупка за штуку, ¥').fill('0');
     await expect(bulk.getByRole('alert')).toHaveText('Закупка — число больше нуля');
