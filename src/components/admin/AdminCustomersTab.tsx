@@ -473,7 +473,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       onShowToast('Список клиентов пуст для экспорта', 'error');
       return;
     }
-    const headers = ['Имя', 'Email', 'Телефон', 'Тип', 'Сумма покупок (₽)', 'Заказов', 'Средний чек (₽)', 'Бонусы', 'Адрес'];
+    const headers = ['Имя', 'Email', 'Телефон', 'Тип', 'Сумма покупок (₽)', 'Заказов', 'Средний чек (₽)', 'Адрес'];
     const rows = filteredCustomers.map((c) => [
       c.name,
       c.email,
@@ -482,7 +482,6 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       c.totalSpent,
       c.ordersCount,
       c.averageOrderValue,
-      c.bonusPoints,
       c.primaryAddress || '',
     ]);
     downloadCSV(`customers_${new Date().toISOString().slice(0, 10)}.csv`, [headers, ...rows], ';');
@@ -796,7 +795,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 )}
 
                 {/* KPI Matrix Strip */}
-                <div className="grid grid-cols-4 gap-1.5 py-1 text-center border-y border-[#BAC5D5]/30">
+                <div className="grid grid-cols-3 gap-1.5 py-1 text-center border-y border-[#BAC5D5]/30">
                   <div className="px-1">
                     <span className="text-[11px] text-[#4E5C70] block">Покупки</span>
                     <span className="text-xs font-extrabold text-[#2D3A4E]">
@@ -815,10 +814,6 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     <span className="text-xs font-extrabold text-[#2D3A4E]">
                       {customer.averageOrderValue > 0 ? `${Math.round(customer.averageOrderValue / 1000)}k ₽` : '—'}
                     </span>
-                  </div>
-                  <div className="px-1 border-l border-[#BAC5D5]/30">
-                    <span className="text-[11px] text-[#4E5C70] block">Бонусы</span>
-                    <span className="text-xs font-extrabold text-accent">{customer.bonusPoints}</span>
                   </div>
                 </div>
 
@@ -882,23 +877,11 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     <button
                       type="button"
                       onClick={() => onOpenSupportChat(customer.orders[0]?.id, customer.name)}
-                      className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-accent shrink-0 cursor-pointer"
-                      title="Открыть чат с клиентом"
-                      aria-label="Открыть чат с клиентом"
+                      aria-label={`Написать клиенту: ${customer.name}`}
+                      className="h-9 px-3 rounded-xl neu-button text-xs font-extrabold text-[#2D3A4E] hover:text-accent flex items-center gap-1.5 shrink-0 cursor-pointer"
                     >
-                      <MessageSquare className="w-4 h-4" />
-                    </button>
-                  )}
-
-                  {customer.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase() && (
-                    <button
-                      type="button"
-                      onClick={() => setCustomerToDelete(customer)}
-                      className="w-9 h-9 rounded-xl neu-button-danger flex items-center justify-center shrink-0 cursor-pointer"
-                      title="Удалить запись клиента"
-                      aria-label="Удалить запись клиента"
-                    >
-                      <Trash2 className="w-4 h-4" />
+                      <MessageSquare className="w-4 h-4" aria-hidden="true" />
+                      Написать
                     </button>
                   )}
                 </div>
@@ -1118,9 +1101,9 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
               {/* Financial Metrics & Loyalty Card */}
               <div className="neu-inset rounded-2xl p-4 space-y-3">
                 <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider block">
-                  Финансовые показатели и лояльность
+                  Финансовые показатели
                 </span>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3 text-center">
                   <div className="neu-flat-sm p-2.5 rounded-xl">
                     <span className="text-[11px] text-[#4E5C70] block">Сумма покупок</span>
                     <span className="text-sm font-extrabold text-success">
@@ -1137,12 +1120,6 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     <span className="text-[11px] text-[#4E5C70] block">Средний чек</span>
                     <span className="text-sm font-extrabold text-[#2D3A4E]">
                       {selectedCustomer.averageOrderValue.toLocaleString('ru-RU')} ₽
-                    </span>
-                  </div>
-                  <div className="neu-flat-sm p-2.5 rounded-xl">
-                    <span className="text-[11px] text-[#4E5C70] block">Бонусные баллы</span>
-                    <span className="text-sm font-extrabold text-accent">
-                      {selectedCustomer.bonusPoints} Б
                     </span>
                   </div>
                 </div>
