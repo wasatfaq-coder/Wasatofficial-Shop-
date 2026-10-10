@@ -29,8 +29,11 @@ export function loadStoredCart(raw: string | null): CartItem[] {
           Boolean(item?.product?.id) && typeof item.quantity === 'number' && !String(item.id).startsWith('cart-init-')
       )
       // a line's own price is not taken from the browser: anyone can edit localStorage, and `linePrice` would put
-      // that price into the order (docs/wholesale-spec.md — the cart recounts it from the catalog)
-      .map(({ unitPrice: _unitPrice, priceKind: _priceKind, ...item }) => item);
+      // that price into the order (docs/wholesale-spec.md — the cart recounts it from the catalog, `priceCartLines`).
+      // Only the buyer's choice «оптом» stays
+      .map(({ unitPrice: _unitPrice, priceKind, volumeDiscountPerUnit: _discount, packSize: _size, ...item }) =>
+        priceKind === 'wholesale' ? { ...item, priceKind } : item
+      );
   } catch {
     return [];
   }

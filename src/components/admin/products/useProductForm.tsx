@@ -32,6 +32,8 @@ import { useChangedSince, useUnsavedChanges } from '../../../utils/unsavedChange
 import { docSizeBytes, formatMegabytes, PRODUCT_SIZE_BUDGET_BYTES } from '../../../utils/productSize';
 import { useDiscardGuard } from '../../DiscardChangesDialog';
 import { parseDecimal as decimal, type ProductPurchase, type PurchaseCurrency } from '../../../utils/currencyPricing';
+import { saleChannelOf, type SaleChannel } from '../../../shared/wholesalePricing';
+import { wholeNumber, wholesaleFormErrors } from '../../../utils/wholesaleEditing';
 import { normalizeSizeChart } from '../../../utils/sizeChart';
 import { EMPTY_SIZE_CHART, sizeChartErrors, sizeChartForForm } from '../../../utils/sizeChartEditing';
 import type { ProductSizeChart } from '../../../types';
@@ -97,6 +99,13 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
   const [formPurchaseCurrency, setFormPurchaseCurrency] = useState<PurchaseCurrency | ''>('');
   const [formPurchaseAmount, setFormPurchaseAmount] = useState('');
   const [formPurchaseMarkup, setFormPurchaseMarkup] = useState('');
+  // Wholesale (src/shared/wholesalePricing.ts): who the product is sold to, the wholesale price of one item, the pack and
+  // the fewest packs; the own wholesale markup lives in the purchase, like the retail one
+  const [formSaleChannel, setFormSaleChannel] = useState<SaleChannel>('both');
+  const [formWholesalePrice, setFormWholesalePrice] = useState('');
+  const [formWholesalePackSize, setFormWholesalePackSize] = useState('');
+  const [formWholesaleMinPacks, setFormWholesaleMinPacks] = useState('');
+  const [formWholesaleMarkup, setFormWholesaleMarkup] = useState('');
   // Where the product is bought (stage 11): kept in product_costs with the cost, the customer never sees it
   const [formSupplier, setFormSupplier] = useState('');
   const [formSupplierSku, setFormSupplierSku] = useState('');
@@ -160,10 +169,26 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     const amount = decimal(formPurchaseAmount);
     if (!formPurchaseCurrency || !(amount > 0)) return undefined;
     const markup = decimal(formPurchaseMarkup);
+    const wholesaleMarkup = decimal(formWholesaleMarkup);
     return {
       currency: formPurchaseCurrency,
       amount,
       ...(formPurchaseMarkup.trim() !== '' && markup >= 0 ? { markupPercent: markup } : {}),
+      ...(formWholesaleMarkup.trim() !== '' && wholesaleMarkup >= 0 ? { wholesaleMarkupPercent: wholesaleMarkup } : {}),
+    };
+  };
+
+  /** The wholesale fields of the product; empty fields remove them (undefined is written as «no field») */
+  const wholesaleFields = (): Pick<Product, 'saleChannel' | 'wholesalePrice' | 'wholesalePackSize' | 'wholesaleMinPacks'> => {
+    const price = decimal(formWholesalePrice);
+    const pack = wholeNumber(formWholesalePackSize);
+    const minPacks = wholeNumber(formWholesaleMinPacks);
+    const retailOnly = formSaleChannel === 'retail';
+    return {
+      saleChannel: formSaleChannel === 'both' ? undefined : formSaleChannel,
+      wholesalePrice: !retailOnly && price > 0 ? Math.round(price) : undefined,
+      wholesalePackSize: !retailOnly && pack > 1 ? pack : undefined,
+      wholesaleMinPacks: !retailOnly && minPacks > 1 ? minPacks : undefined,
     };
   };
 
@@ -183,6 +208,14 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
       formPurchaseCurrency && !(decimal(formPurchaseAmount) > 0) && 'Укажите закупку в валюте больше нуля или выберите «Нет»',
       formPurchaseMarkup.trim() !== '' && !(decimal(formPurchaseMarkup) >= 0 && decimal(formPurchaseMarkup) <= 1000) &&
         'Своя наценка — от 0 до 1000 %; пустое поле — наценка для всех товаров',
+      ...wholesaleFormErrors({
+        channel: formSaleChannel,
+        price: formWholesalePrice,
+        packSize: formWholesalePackSize,
+        minPacks: formWholesaleMinPacks,
+        markup: formWholesaleMarkup,
+        retailPrice: numPrice,
+      }),
       formOldPrice && Number(formOldPrice) <= numPrice &&
         'Старая цена должна быть больше текущей — иначе скидки нет. Очистите поле или исправьте цену',
       fibers.length > 0 && fiberTotal !== 100 &&
@@ -192,7 +225,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
         `Товар занимает ${formatMegabytes(formSizeBytes)} из ${formatMegabytes(PRODUCT_SIZE_BUDGET_BYTES)}: база его не примет. Уберите часть фото`,
     ].filter((m): m is string => Boolean(m));
 
-  }, [formTitle, formCategory, formPrice, formColors, formSizes, formImages, formOldPrice, formCard, formSizeChart, formSizeBytes, formPurchaseCurrency, formPurchaseAmount, formPurchaseMarkup]);
+  }, [formTitle, formCategory, formPrice, formColors, formSizes, formImages, formOldPrice, formCard, formSizeChart, formSizeBytes, formPurchaseCurrency, formPurchaseAmount, formPurchaseMarkup, formSaleChannel, formWholesalePrice, formWholesalePackSize, formWholesaleMinPacks, formWholesaleMarkup]);
   const formErrors = [
     ...(showFormErrors ? validationErrors : []),
     ...(photoError ? [photoError] : []),
@@ -222,6 +255,11 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     formPurchaseCurrency,
     formPurchaseAmount,
     formPurchaseMarkup,
+    formSaleChannel,
+    formWholesalePrice,
+    formWholesalePackSize,
+    formWholesaleMinPacks,
+    formWholesaleMarkup,
     formSupplier,
     formSupplierSku,
     formOldPrice,
@@ -308,6 +346,11 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormPurchaseCurrency('');
     setFormPurchaseAmount('');
     setFormPurchaseMarkup('');
+    setFormSaleChannel('both');
+    setFormWholesalePrice('');
+    setFormWholesalePackSize('');
+    setFormWholesaleMinPacks('');
+    setFormWholesaleMarkup('');
     setFormSupplier('');
     setFormSupplierSku('');
     setFormOldPrice(undefined);
@@ -354,6 +397,13 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormPurchaseCurrency(prod.purchase?.currency ?? '');
     setFormPurchaseAmount(prod.purchase ? String(prod.purchase.amount).replace('.', ',') : '');
     setFormPurchaseMarkup(prod.purchase?.markupPercent !== undefined ? String(prod.purchase.markupPercent).replace('.', ',') : '');
+    setFormSaleChannel(saleChannelOf(prod));
+    setFormWholesalePrice(typeof prod.wholesalePrice === 'number' ? String(prod.wholesalePrice) : '');
+    setFormWholesalePackSize(typeof prod.wholesalePackSize === 'number' ? String(prod.wholesalePackSize) : '');
+    setFormWholesaleMinPacks(typeof prod.wholesaleMinPacks === 'number' ? String(prod.wholesaleMinPacks) : '');
+    setFormWholesaleMarkup(
+      prod.purchase?.wholesaleMarkupPercent !== undefined ? String(prod.purchase.wholesaleMarkupPercent).replace('.', ',') : ''
+    );
     setFormSupplier(prod.supplier ?? '');
     setFormSupplierSku(prod.supplierSku ?? '');
     setFormOldPrice(prod.originalPrice);
@@ -479,6 +529,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
         price: numPrice,
         costPrice: formCostPrice ? Number(formCostPrice) : undefined,
         purchase: formPurchase(),
+        ...wholesaleFields(),
         supplier: supplierText(formSupplier, SUPPLIER_MAX_LENGTH),
         supplierSku: supplierText(formSupplierSku, SUPPLIER_SKU_MAX_LENGTH),
         originalPrice: formOldPrice ? Number(formOldPrice) : undefined,
@@ -519,6 +570,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
         price: numPrice,
         costPrice: formCostPrice ? Number(formCostPrice) : undefined,
         purchase: formPurchase(),
+        ...wholesaleFields(),
         supplier: supplierText(formSupplier, SUPPLIER_MAX_LENGTH),
         supplierSku: supplierText(formSupplierSku, SUPPLIER_SKU_MAX_LENGTH),
         originalPrice: formOldPrice ? Number(formOldPrice) : undefined,
@@ -604,6 +656,16 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     formPurchaseMarkup,
     setFormPurchaseMarkup,
     formPurchase,
+    formSaleChannel,
+    setFormSaleChannel,
+    formWholesalePrice,
+    setFormWholesalePrice,
+    formWholesalePackSize,
+    setFormWholesalePackSize,
+    formWholesaleMinPacks,
+    setFormWholesaleMinPacks,
+    formWholesaleMarkup,
+    setFormWholesaleMarkup,
     formSupplier,
     setFormSupplier,
     formSupplierSku,

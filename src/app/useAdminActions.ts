@@ -349,6 +349,7 @@ export function useAdminActions({
           originalPrice: p.originalPrice,
           discountPercent: p.discountPercent,
           priceHistory: p.priceHistory,
+          ...(typeof p.wholesalePrice === 'number' ? { wholesalePrice: p.wholesalePrice } : {}),
         })),
         // the whole entry: the document is rewritten, and the supplier must stay
         changed.map((p) => ({ id: p.id, ...costEntryOf(p) })),
@@ -376,6 +377,7 @@ export function useAdminActions({
           return {
             ...rest,
             price: next.price,
+            ...(typeof next.wholesalePrice === 'number' ? { wholesalePrice: next.wholesalePrice } : {}),
             ...(next.priceHistory ? { priceHistory: next.priceHistory } : {}),
             ...(typeof next.originalPrice === 'number' ? { originalPrice: next.originalPrice } : {}),
             ...(typeof next.discountPercent === 'number' ? { discountPercent: next.discountPercent } : {}),

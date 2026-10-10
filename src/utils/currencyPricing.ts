@@ -8,6 +8,7 @@
  * rounding up never takes the margin below the markup. No browser APIs: the module is plain arithmetic.
  */
 import type { Product } from '../types';
+import { saleChannelOf } from '../shared/wholesalePricing';
 
 /** `settings/{id}` of the rates; firestore.rules keep it from customers */
 export const EXCHANGE_RATES_DOC_ID = 'exchange_rates';
@@ -32,8 +33,13 @@ export interface CurrencyRate {
 export interface ExchangeRates {
   usd: CurrencyRate;
   cny: CurrencyRate;
-  /** Markup on the purchase cost for every product without its own, percent */
+  /** Retail markup on the purchase cost for every product without its own, percent */
   markupPercent: number;
+  /**
+   * Wholesale markup on the purchase cost for every wholesale product without its own, percent; absent — wholesale
+   * prices are not counted from the rate (they stay as set in the product form)
+   */
+  wholesaleMarkupPercent?: number;
   /** When «Применить» last recalculated the prices (ISO); absent — never */
   appliedAt?: string;
   updatedAt?: string;
@@ -46,6 +52,8 @@ export interface ProductPurchase {
   amount: number;
   /** The product's own markup, percent; absent — the markup for all products */
   markupPercent?: number;
+  /** The product's own wholesale markup, percent; absent — the wholesale markup for all products */
+  wholesaleMarkupPercent?: number;
 }
 
 export const EMPTY_EXCHANGE_RATES: ExchangeRates = {
@@ -87,15 +95,34 @@ export function effectiveMarkup(purchase: ProductPurchase, rates: ExchangeRates)
   return isNonNegative(purchase.markupPercent) ? purchase.markupPercent : rates.markupPercent;
 }
 
+/** Cost of one item in roubles at these rates, kopecks; null when the purchase or the rate is not set */
+function costFromRate(purchase: ProductPurchase | undefined, rates: ExchangeRates): number | null {
+  if (!purchase || !isPositive(purchase.amount)) return null;
+  const rate = workingRate(rateOf(rates, purchase.currency));
+  return rate === null ? null : purchase.amount * rate;
+}
+
+/** The product's wholesale markup: its own or the one for all products; undefined — none is set */
+export function effectiveWholesaleMarkup(purchase: ProductPurchase, rates: ExchangeRates): number | undefined {
+  if (isNonNegative(purchase.wholesaleMarkupPercent)) return purchase.wholesaleMarkupPercent;
+  return isNonNegative(rates.wholesaleMarkupPercent) ? rates.wholesaleMarkupPercent : undefined;
+}
+
+/** Wholesale price at these rates, rounded up to 10 ₽; null without a purchase, a rate or a wholesale markup */
+export function wholesalePriceFromRate(purchase: ProductPurchase | undefined, rates: ExchangeRates): number | null {
+  const cost = costFromRate(purchase, rates);
+  const markup = purchase ? effectiveWholesaleMarkup(purchase, rates) : undefined;
+  if (cost === null || markup === undefined) return null;
+  return roundPriceUp(cost * (1 + markup / 100));
+}
+
 /** Price and cost in roubles at these rates; null when the purchase or the rate is not set */
 export function priceFromRate(
   purchase: ProductPurchase | undefined,
   rates: ExchangeRates
 ): { price: number; costPrice: number } | null {
-  if (!purchase || !isPositive(purchase.amount)) return null;
-  const rate = workingRate(rateOf(rates, purchase.currency));
-  if (rate === null) return null;
-  const cost = purchase.amount * rate;
+  const cost = costFromRate(purchase, rates);
+  if (cost === null || !purchase) return null;
   return { price: roundPriceUp(cost * (1 + effectiveMarkup(purchase, rates) / 100)), costPrice: round(cost, 2) };
 }
 
@@ -112,8 +139,14 @@ export function exchangeRateErrors(rates: ExchangeRates): string[] {
       errors.push(`${title}: надбавка больше самого курса`);
     }
   }
+  // an empty field is an error, not 0 %: with 0 % the price is the cost, and a kept discount took it below the cost
+  // (owner's screenshot 09.10: «Куртка бомбер» 4 990 → 740 ₽ at a cost of 909 ₽)
   if (!isNonNegative(rates.markupPercent) || rates.markupPercent > MAX_MARKUP_PERCENT) {
-    errors.push(`Наценка для всех товаров — от 0 до ${MAX_MARKUP_PERCENT} %`);
+    errors.push(`Наценка для розницы — укажите от 0 до ${MAX_MARKUP_PERCENT} %`);
+  }
+  const wholesale = rates.wholesaleMarkupPercent;
+  if (wholesale !== undefined && (!isNonNegative(wholesale) || wholesale > MAX_MARKUP_PERCENT)) {
+    errors.push(`Наценка для опта — от 0 до ${MAX_MARKUP_PERCENT} % или пусто`);
   }
   return errors;
 }
@@ -122,11 +155,16 @@ export function exchangeRateErrors(rates: ExchangeRates): string[] {
 export interface RepricedProduct {
   product: Product;
   currency: PurchaseCurrency;
-  before: { price: number; costPrice?: number; originalPrice?: number };
-  /** `originalPrice` null — the struck-out price is removed (it was not above the price) */
-  after: { price: number; costPrice: number; originalPrice: number | null };
+  before: { price: number; costPrice?: number; originalPrice?: number; wholesalePrice?: number };
+  /**
+   * `originalPrice` null — the struck-out price is removed (it was not above the price); `wholesalePrice` absent — the
+   * wholesale price does not change
+   */
+  after: { price: number; costPrice: number; originalPrice: number | null; wholesalePrice?: number };
   /** The product's discount, percent, kept at the new price; 0 — no discount (the stored percent is removed) */
   discountPercent: number;
+  /** The kept discount was cut so the price is not below the cost; the percent asked for */
+  discountCutFrom?: number;
 }
 
 /** Off by more than this, a stored discount is not the one the prices show (the price was changed by hand) */
@@ -151,18 +189,48 @@ function keptDiscountPercent(price: number, oldPrice: number, stored: number | u
 export function repriceProduct(
   product: Product,
   rates: ExchangeRates
-): (RepricedProduct['after'] & { discountPercent: number }) | null {
+): (RepricedProduct['after'] & Pick<RepricedProduct, 'discountPercent' | 'discountCutFrom'>) | null {
   const fromRate = priceFromRate(product.purchase, rates);
   if (!fromRate) return null;
+  const wholesale = repricedWholesale(product, rates);
+  const withWholesale = wholesale !== null ? { wholesalePrice: wholesale } : {};
   const old = product.originalPrice;
   const discounted = typeof old === 'number' && old > product.price && product.price > 0;
   if (!discounted) {
-    return { ...fromRate, originalPrice: null, discountPercent: 0 };
+    return { ...fromRate, ...withWholesale, originalPrice: null, discountPercent: 0 };
   }
   const percent = keptDiscountPercent(product.price, old, product.discountPercent);
-  const price = roundPriceUp(fromRate.price * (1 - percent / 100));
-  if (price >= fromRate.price) return { ...fromRate, originalPrice: null, discountPercent: 0 };
-  return { price, costPrice: fromRate.costPrice, originalPrice: fromRate.price, discountPercent: percent };
+  // a kept discount never takes the price below the cost: it is cut to the cost rounded up (owner's task 09.10 —
+  // no unexpected loss of margin)
+  const floor = roundPriceUp(fromRate.costPrice);
+  const wanted = roundPriceUp(fromRate.price * (1 - percent / 100));
+  const cut = wanted < floor;
+  const price = cut ? floor : wanted;
+  if (price >= fromRate.price) {
+    return { ...fromRate, ...withWholesale, originalPrice: null, discountPercent: 0, ...(cut ? { discountCutFrom: percent } : {}) };
+  }
+  return {
+    price,
+    costPrice: fromRate.costPrice,
+    ...withWholesale,
+    originalPrice: fromRate.price,
+    discountPercent: cut ? Math.floor((1 - price / fromRate.price) * 100) : percent,
+    ...(cut ? { discountCutFrom: percent } : {}),
+  };
+}
+
+/**
+ * The new wholesale price of a product sold wholesale: only one that already has a wholesale price, is «только оптом»
+ * or has its own wholesale markup — a wholesale markup for all products never puts retail-only goods on wholesale sale.
+ * null — the wholesale price stays as it is
+ */
+function repricedWholesale(product: Product, rates: ExchangeRates): number | null {
+  if (saleChannelOf(product) === 'retail') return null;
+  const opted =
+    isPositive(product.wholesalePrice) ||
+    saleChannelOf(product) === 'wholesale' ||
+    isNonNegative(product.purchase?.wholesaleMarkupPercent);
+  return opted ? wholesalePriceFromRate(product.purchase, rates) : null;
 }
 
 /** Products whose price, cost or old price changes at these rates (products without a purchase in a currency stay) */
@@ -171,16 +239,23 @@ export function repriceProducts(products: Product[], rates: ExchangeRates): Repr
   for (const product of products) {
     const result = repriceProduct(product, rates);
     if (!result || !product.purchase) continue;
-    const { discountPercent, ...after } = result;
+    const { discountPercent, discountCutFrom, ...after } = result;
     const sameOld = (after.originalPrice ?? undefined) === (product.originalPrice ?? undefined);
+    const sameWholesale = after.wholesalePrice === undefined || after.wholesalePrice === product.wholesalePrice;
     // the stored percent alone is no change: it is written with the next new price
-    if (after.price === product.price && after.costPrice === product.costPrice && sameOld) continue;
+    if (after.price === product.price && after.costPrice === product.costPrice && sameOld && sameWholesale) continue;
     changes.push({
       product,
       currency: product.purchase.currency,
-      before: { price: product.price, costPrice: product.costPrice, originalPrice: product.originalPrice },
+      before: {
+        price: product.price,
+        costPrice: product.costPrice,
+        originalPrice: product.originalPrice,
+        ...(typeof product.wholesalePrice === 'number' ? { wholesalePrice: product.wholesalePrice } : {}),
+      },
       after,
       discountPercent,
+      ...(discountCutFrom !== undefined ? { discountCutFrom } : {}),
     });
   }
   return changes;
@@ -200,6 +275,9 @@ export function readPurchase(value: unknown): ProductPurchase | undefined {
     currency: v.currency,
     amount: v.amount,
     ...(isNonNegative(v.markupPercent) && v.markupPercent <= MAX_MARKUP_PERCENT ? { markupPercent: v.markupPercent } : {}),
+    ...(isNonNegative(v.wholesaleMarkupPercent) && v.wholesaleMarkupPercent <= MAX_MARKUP_PERCENT
+      ? { wholesaleMarkupPercent: v.wholesaleMarkupPercent }
+      : {}),
   };
 }
 
@@ -219,6 +297,7 @@ export function readExchangeRates(value: unknown): ExchangeRates {
     usd: readRate(v.usd),
     cny: readRate(v.cny),
     markupPercent: isNonNegative(v.markupPercent) ? v.markupPercent : 0,
+    ...(isNonNegative(v.wholesaleMarkupPercent) ? { wholesaleMarkupPercent: v.wholesaleMarkupPercent } : {}),
     ...(typeof v.appliedAt === 'string' ? { appliedAt: v.appliedAt } : {}),
     ...(typeof v.updatedAt === 'string' ? { updatedAt: v.updatedAt } : {}),
   };
@@ -227,7 +306,12 @@ export function readExchangeRates(value: unknown): ExchangeRates {
 /** Two purchases are the same (both absent counts as the same) */
 export function samePurchase(a: ProductPurchase | undefined, b: ProductPurchase | undefined): boolean {
   if (!a || !b) return !a && !b;
-  return a.currency === b.currency && a.amount === b.amount && a.markupPercent === b.markupPercent;
+  return (
+    a.currency === b.currency &&
+    a.amount === b.amount &&
+    a.markupPercent === b.markupPercent &&
+    a.wholesaleMarkupPercent === b.wholesaleMarkupPercent
+  );
 }
 
 /** A number typed by the owner: «4,20», «85.5», «1 200»; empty or not a number — NaN */

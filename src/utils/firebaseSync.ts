@@ -735,14 +735,20 @@ export interface ProductPriceChange {
   originalPrice?: number;
   discountPercent?: number;
   priceHistory?: PriceHistoryEntry[];
+  /** The wholesale price from the wholesale markup; absent — the wholesale price is not touched */
+  wholesalePrice?: number;
 }
 
-function addProductPrice(batch: WriteBatch, { id, price, originalPrice, discountPercent, priceHistory }: ProductPriceChange) {
+function addProductPrice(
+  batch: WriteBatch,
+  { id, price, originalPrice, discountPercent, priceHistory, wholesalePrice }: ProductPriceChange
+) {
   const orDelete = (n: number | undefined) => (typeof n === 'number' ? n : deleteField());
   batch.update(doc(db, 'products', id), {
     price,
     originalPrice: orDelete(originalPrice),
     discountPercent: orDelete(discountPercent),
+    ...(typeof wholesalePrice === 'number' ? { wholesalePrice } : {}),
     // earlier prices: unpaid orders are checked against the price of their time
     ...(priceHistory ? { priceHistory } : {}),
   });

@@ -45,6 +45,7 @@ import { productImage } from '../utils/productImage';
 import { useProductPhotos } from '../utils/useProductPhotos';
 import { useLiveReviews } from '../utils/liveReviews';
 import { QUICK_ORDER_DELIVERY_TITLE } from '../shared/orderPricing';
+import { sellsRetail } from '../shared/wholesalePricing';
 import { productShareUrl } from '../utils/navigation';
 import { copyToClipboard } from '../utils/clipboard';
 import { useLiveProducts } from '../utils/liveProducts';
@@ -698,8 +699,9 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             </button>
           </div>
 
-          {/* Fast 1-Click Order Button */}
-          {orderableStock > 0 && (
+          {/* Fast 1-Click Order Button: retail only — a «Только оптом» product goes through the cart (packs, the
+              volume discount) */}
+          {orderableStock > 0 && sellsRetail(product) && (
             <button
               type="button"
               onClick={() => (sizeChosen ? setIsQuickOrderOpen(true) : askForSize())}

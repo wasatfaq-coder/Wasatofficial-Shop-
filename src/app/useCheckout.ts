@@ -15,7 +15,8 @@ import { formatAddress } from '../utils/addressFormat';
 import { buildClientOrder } from '../utils/clientOrder';
 import { pluralRu } from '../utils/pluralize';
 import { QUICK_ORDER_DELIVERY_ID, promoSignInProblem } from '../shared/orderPricing';
-import { toOrderLineProduct } from '../shared/orderLine';
+import { linePrice, toOrderLineProduct } from '../shared/orderLine';
+import { isWholesaleLine, priceCartLines, wholesaleLineProblems } from '../shared/wholesalePricing';
 import { STORE_PAUSED_TEXT, storeAcceptsOrders } from '../shared/orderApi';
 import { cleanAddressParts, fullName, hasNameParts, namePartsOf, type AddressParts, type PersonName } from '../shared/personName';
 import { useLiveProducts } from '../utils/liveProducts';
@@ -167,6 +168,7 @@ export function useCheckout({
           color: extractColorName(item.selectedColor),
           size: extractSizeName(item.selectedSize),
           quantity: item.quantity,
+          ...(isWholesaleLine(item) ? { wholesale: true } : {}),
         })),
         deliveryMethodId: orderData.deliveryMethodId || QUICK_ORDER_DELIVERY_ID,
         deliveryAddress: details.deliveryAddress,
@@ -228,6 +230,18 @@ export function useCheckout({
     if (promoProblem) {
       setAppliedPromo(null);
       addToast(`Промокод ${promo?.code} снят. ${promoProblem}. Проверьте сумму и подтвердите заказ снова.`, 'error');
+      return Promise.resolve(false);
+    }
+    // Wholesale lines (src/shared/wholesalePricing.ts): whole packs, the product's minimum, and the prices the buyer saw
+    // are the ones counted now — «Опт» or the wholesale price may have changed while the checkout was open
+    const priced = priceCartLines(orderData.items, storefrontSettings?.wholesale);
+    const wholesaleProblems = wholesaleLineProblems(priced);
+    if (wholesaleProblems.length > 0) {
+      addToast(`${wholesaleProblems.join('; ')}. Измените корзину.`, 'error');
+      return Promise.resolve(false);
+    }
+    if (priced.some((item, i) => linePrice(item) !== linePrice(orderData.items[i]))) {
+      addToast('Оптовые цены изменились, пока открыто оформление. Проверьте сумму и подтвердите заказ снова.', 'error');
       return Promise.resolve(false);
     }
     return serverOrdersEnabled ? completeOrderOnServer(orderData) : completeOrderLocally(orderData);
