@@ -10,12 +10,18 @@ import { AutocompleteSearch } from '../components/AutocompleteSearch';
 import { RecentlyViewed } from '../components/RecentlyViewed';
 import { NeumorphicImage } from '../components/NeumorphicImage';
 import { useBannerImage, useWideScreen } from '../utils/useBannerImage';
+import { isBannerShown } from '../utils/bannerSchedule';
+import { BANNER_LAYOUT } from '../utils/bannerLayout';
+
 import { NotConfigured } from '../components/NotConfigured';
 import { categoryIcon, getCategories } from '../utils/categories';
 import { formatDays } from '../utils/pluralize';
 import { PRODUCTS_PAGE_SIZE } from '../utils/productListing';
 import { CatalogLoadState, type CatalogStatus } from '../components/CatalogLoadState';
 import { STORE_PAUSED_TEXT, storeAcceptsOrders } from '../shared/orderApi';
+
+// the slide's sizes, shared with the admin preview
+const banner = BANNER_LAYOUT.auto;
 
 interface HomeScreenProps {
   /** Catalog subscription: placeholders while loading, a message on error; «не настроено» only when ready */
@@ -83,23 +89,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const popularFiltered = products.filter((p) => p.isPopular);
   const popularProducts = (popularFiltered.length > 0 ? popularFiltered : products).slice(0, PRODUCTS_PAGE_SIZE);
 
-  // Filter active slides with real-time schedule checks
-  const isSlideScheduledAndActive = (slide: BannerSlide) => {
-    if (!slide.active) return false;
-    if (!slide.scheduleEnabled) return true;
-    const now = Date.now();
-    if (slide.startDate) {
-      const start = new Date(slide.startDate).getTime();
-      if (!isNaN(start) && now < start) return false;
-    }
-    if (slide.endDate) {
-      const end = new Date(slide.endDate).getTime();
-      if (!isNaN(end) && now > end) return false;
-    }
-    return true;
-  };
-
-  const activeSlides = bannerSlides.filter(isSlideScheduledAndActive);
+  // switched on and within the schedule, by Moscow time (admin audit 09.10, stage 8)
+  const now = Date.now();
+  const activeSlides = bannerSlides.filter((slide) => isBannerShown(slide, now));
   // Only banners from Admin → «Баннеры»; without any the hero block is not shown
   const displaySlides = activeSlides;
 
@@ -290,16 +282,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
-            className="relative z-10 flex items-center justify-between gap-3 min-h-[170px] lg:min-h-[280px] lg:px-4"
+            className={`relative z-10 flex items-center justify-between gap-3 ${banner.row}`}
           >
             {/* Left Text content */}
-            <div className="flex-1 space-y-2 max-w-[52%] lg:space-y-3">
+            <div className={`flex-1 ${banner.text}`}>
               {currentSlide.badge && (
                 <span className="text-[11px] font-extrabold neu-flat-sm px-2.5 py-0.5 rounded-full text-accent uppercase tracking-wider inline-block">
                   {currentSlide.badge}
                 </span>
               )}
-              <h2 className="text-[22px] sm:text-[24px] lg:text-[36px] font-extrabold text-[#2D3A4E] leading-tight">
+              <h2 className={`${banner.title} font-extrabold text-[#2D3A4E] leading-tight`}>
                 {/* The title is the banner's link: its ::after stretches over the slide (like a product card) */}
                 <button
                   type="button"
@@ -309,19 +301,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   {currentSlide.title}
                 </button>
               </h2>
-              <p className="text-[12px] sm:text-[13px] lg:text-base text-[#4E5C70] font-normal leading-relaxed line-clamp-3">
+              <p className={`${banner.subtitle} text-[#4E5C70] font-normal leading-relaxed line-clamp-3`}>
                 {currentSlide.subtitle}
               </p>
             </div>
 
             {/* Right Hero Image */}
-            {/* Narrower photo on 320 px: at full width it left the subtitle a column too thin to read */}
-            <div className="w-40 h-44 max-[359px]:w-28 max-[359px]:h-36 lg:w-[400px] lg:h-[260px] shrink-0">
+            <div className={`${banner.image} shrink-0`}>
               <NeumorphicImage
                 src={currentSlideImage}
                 alt={currentSlide.title}
                 priority={true}
-                containerClassName="w-40 h-44 max-[359px]:w-28 max-[359px]:h-36 lg:w-[400px] lg:h-[260px] rounded-2xl"
+                containerClassName={`${banner.image} rounded-2xl`}
                 className="w-full h-full object-cover object-top rounded-xl"
               />
             </div>
