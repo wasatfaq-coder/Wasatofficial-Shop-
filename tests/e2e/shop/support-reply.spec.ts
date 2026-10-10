@@ -1,7 +1,7 @@
 // Покупатель пишет в чат поддержки — владелец видит диалог «Ждёт ответа» и отвечает — покупатель видит ответ, пока чат
 // открыт (аудит 07.10, находка 45: счётчик «ждут ответа» и ответ сотрудника не были проверены в браузере)
 import { test, expect, signInOn, openAdminSection } from '../fixtures';
-import { queryDocs } from '../emulator';
+import { queryDocs, readDoc } from '../emulator';
 import { ADMIN } from '../store';
 
 test('покупатель пишет в чат, владелец отвечает, покупатель видит ответ', async ({ page, secondPage, signIn }, info) => {
@@ -42,4 +42,26 @@ test('покупатель пишет в чат, владелец отвечае
 
   // the buyer's open chat shows the answer without reloading
   await expect(chat.getByText(answer)).toBeVisible();
+
+  // status, priority and «Очистить» wait under one «Диалог» button (admin audit 09.10, stage 7)
+  await expect(panel.getByRole('radiogroup', { name: 'Приоритет' })).toBeHidden();
+  const dialogButton = panel.getByRole('button', { name: /^Диалог/ });
+  await dialogButton.click();
+  await panel.getByRole('radiogroup', { name: 'Приоритет' }).getByRole('radio', { name: 'Срочно' }).click();
+  await expect(dialogButton).toContainText('Срочно');
+  await expect(panel.getByRole('button', { name: 'Очистить переписку' })).toBeVisible();
+
+  // reply templates live in the database, one list for the phone and the computer; the list is one document,
+  // so only the desktop writes it (phone and desktop run at the same time on one database)
+  if (info.project.name === 'desktop') {
+    await panel.getByRole('button', { name: /^Шаблоны/ }).click();
+    const templates = owner.getByRole('dialog', { name: 'Шаблоны ответов' });
+    await templates.getByRole('textbox', { name: 'Название шаблона' }).fill('Срок пошива');
+    await templates.getByRole('textbox', { name: 'Текст шаблона' }).fill('Пошив занимает 5 дней.');
+    await templates.getByRole('button', { name: 'Добавить' }).click();
+    await expect(templates.getByRole('button', { name: 'Изменить шаблон «Срок пошива»' })).toBeVisible();
+    await expect
+      .poll(async () => ((await readDoc('settings/chat_templates'))?.items as { title: string }[] | undefined)?.map((t) => t.title))
+      .toEqual(['Срок пошива']);
+  }
 });
