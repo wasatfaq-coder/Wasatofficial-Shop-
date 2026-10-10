@@ -37,6 +37,7 @@ test('владелец задаёт курс и надбавку, цена то�
     await expect(dollar.getByLabel('Курс ЦБ, ₽ за $1')).toBeVisible();
     await expect(panel.getByRole('group', { name: 'Юань' }).getByLabel('Курс ЦБ, ₽ за ¥1')).toBeVisible();
     await expect(panel.getByRole('button', { name: 'Применить' })).toBeVisible();
+    await expect(panel.getByLabel('Наценка для опта, %')).toBeVisible();
 
     // «Подставить курс ЦБ» only fills the fields: the answer of the CBR mirror is faked, nothing is written
     await page.route(CBR_DAILY_URL, (route) =>
@@ -59,6 +60,17 @@ test('владелец задаёт курс и надбавку, цена то�
       'Цены изменятся после «Применить»'
     );
     await expect(panel.getByText('есть неприменённые изменения')).toBeVisible();
+
+    // «Опт»: the volume-discount scale is checked before saving (nothing is written: «Витрина» is shared by the runs)
+    await openAdminSection(panel, 'Опт');
+    await page.getByRole('alertdialog', { name: 'Перейти без сохранения?' }).getByRole('button', { name: 'Не сохранять' }).click();
+    await expect(panel.getByRole('heading', { name: 'Опт: скидка за объём' })).toBeVisible();
+    await panel.getByRole('radio', { name: 'Рублей с каждой штуки' }).click();
+    await panel.getByRole('button', { name: 'Добавить ступень' }).click();
+    await panel.getByRole('button', { name: 'Сохранить' }).click();
+    await expect(panel.getByRole('alert')).toContainText('Ступень 1: скидка больше нуля');
+    await panel.getByLabel('Скидка, ₽ с шт.').fill('30');
+    await expect(panel.getByRole('alert')).toHaveCount(0);
 
     return;
   }
@@ -88,6 +100,10 @@ test('владелец задаёт курс и надбавку, цена то�
   await dollar.getByLabel('Надбавка, ₽').fill('5');
   await panel.getByRole('group', { name: 'Юань' }).getByLabel('Курс ЦБ, ₽ за ¥1').fill('11,7');
   await expect(dollar.getByText('Рабочий курс: 90 ₽ за $1')).toBeVisible();
+  // an empty retail markup is not 0 %: «Применить» asks for it (owner's screenshot 09.10 — a price below the cost)
+  await panel.getByRole('button', { name: 'Применить' }).click();
+  await expect(panel.getByRole('alert').filter({ hasText: 'Наценка для розницы' })).toBeVisible();
+  await panel.getByLabel('Наценка для розницы, %').fill('0');
   const preview = panel.getByRole('list', { name: 'Новые цены' });
   await expect(preview.getByRole('listitem').filter({ hasText: item.title })).toContainText(rub(900));
 

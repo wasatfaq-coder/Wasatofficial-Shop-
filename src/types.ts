@@ -1,6 +1,7 @@
 import type { AddressParts } from './shared/personName';
 import type { DeliveryKind, OrderStatusLogEntry } from './shared/orderFlow';
 import type { ProductPurchase } from './utils/currencyPricing';
+import type { SaleChannel, WholesaleSettings } from './shared/wholesalePricing';
 export interface BodyMeasurements {
   height: number;
   weight: number;
@@ -139,6 +140,20 @@ export interface Product {
   supplierSku?: string;
   originalPrice?: number;
   /**
+   * Who the product is sold to (src/shared/wholesalePricing.ts): retail and wholesale, only wholesale or only retail;
+   * absent — both. Wholesale needs `wholesalePrice` as well
+   */
+  saleChannel?: SaleChannel;
+  /**
+   * Wholesale price of one item, ₽: already the lowered price — promo codes and the product's discount do not apply to it,
+   * only the volume discount of «Опт» (`settings/storefront.wholesale`). Absent — not sold wholesale
+   */
+  wholesalePrice?: number;
+  /** Items in one wholesale pack; absent — 1 (a pack is one item). Wholesale lines are ordered in whole packs */
+  wholesalePackSize?: number;
+  /** The fewest packs of the product in a wholesale order; absent — 1 */
+  wholesaleMinPacks?: number;
+  /**
    * The discount, percent, the owner set (bulk «Скидка», kept by «Курсы и наценка»): the price after rounding up to 10 ₽
    * gives a slightly smaller share, and recalculating from it would shrink the discount at every new rate. Trusted only
    * while it matches the prices (`repriceProduct`); the struck-out price stays `originalPrice`
@@ -205,8 +220,12 @@ export interface CartItem {
    * product's price. Read only through `linePrice` (`src/shared/orderLine.ts`); nothing sets it yet
    */
   unitPrice?: number;
-  /** Which price `unitPrice` is; absent — retail */
+  /** Which price `unitPrice` is; absent — retail. The buyer's choice; the price itself is counted by `priceCartLines` */
   priceKind?: 'retail' | 'wholesale' | 'pack';
+  /** Wholesale line: the volume discount of one item, ₽, already taken off `unitPrice` (for showing it) */
+  volumeDiscountPerUnit?: number;
+  /** Wholesale line: items in one pack at the moment of the order (the quantity is packs × this) */
+  packSize?: number;
 }
 
 export interface SavedAddress {
@@ -773,6 +792,8 @@ export interface StorefrontSettings {
   labelFormats?: LabelFormat[];
   /** Admin → «Категории»: the single list used by the storefront and the admin panel */
   categories?: StoreCategory[];
+  /** Admin → «Опт»: the volume discount of wholesale lines (src/shared/wholesalePricing.ts); absent — none */
+  wholesale?: WholesaleSettings;
 }
 
 /** Label size for the label generator (Admin → «Склад») */

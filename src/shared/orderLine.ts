@@ -18,6 +18,11 @@ export function toOrderLineProduct(product: Product): Product {
     material: product.material,
     colors: product.colors ?? [],
     sizes: product.sizes ?? [],
+    // what the wholesale price of the line is counted from (src/shared/wholesalePricing.ts): the cart keeps this copy
+    ...(product.saleChannel ? { saleChannel: product.saleChannel } : {}),
+    ...(typeof product.wholesalePrice === 'number' ? { wholesalePrice: product.wholesalePrice } : {}),
+    ...(typeof product.wholesalePackSize === 'number' ? { wholesalePackSize: product.wholesalePackSize } : {}),
+    ...(typeof product.wholesaleMinPacks === 'number' ? { wholesaleMinPacks: product.wholesaleMinPacks } : {}),
     // Links to photos are small; photos embedded in the document (or moved out of it, '') are not copied
     images: (product.images ?? []).filter((src) => src && !src.startsWith('data:')),
   };

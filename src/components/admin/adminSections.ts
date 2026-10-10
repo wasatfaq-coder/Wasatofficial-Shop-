@@ -15,6 +15,7 @@ export const ADMIN_TAB_IDS = [
   'categories',
   'inventory',
   'rates',
+  'wholesale',
   'promos',
   'banners',
   'delivery',

@@ -114,6 +114,8 @@ paths:
   «Реферальная система», «Аналитика»). Счётчики `commissionEarned`/`generatedRevenue` в промокоде может накрутить
   посторонний — на экранах их не показывать.
 - Промокод (`src/shared/orderPricing.ts`, клиент и `placeOrder`):
+  - действует только на розничные строки: строки опта (`PricingLine.wholesale`, `priceCartLines`) не входят ни в скидку, ни
+    в порог `minOrderAmount`; корзина только из опта код не принимает (`WHOLESALE_NO_PROMO_TEXT`, решение владельца 09.10);
   - срок `expiresAt` — «YYYY-MM-DD» из поля-даты, последний день включительно по Москве (`promoExpiryTime`);
     старые текстовые сроки («31 августа 2026 г.») читает `promoExpiryDate`;
   - ниже `minOrderAmount` скидка 0 в `calcPromoDiscount`, а применённый код перепроверяется при каждом изменении корзины

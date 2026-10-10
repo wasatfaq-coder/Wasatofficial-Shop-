@@ -9,6 +9,7 @@ import {
   repriceProducts,
   roundPriceUp,
   samePurchase,
+  wholesalePriceFromRate,
   workingRate,
   type ExchangeRates,
 } from '../../src/utils/currencyPricing';
@@ -105,31 +106,55 @@ describe('«Применить» recalculates every product bought in a currency
   });
 
   test('a discounted product keeps its discount: the old price follows the rate, the price the same share below it', () => {
-    // 10 $ × 90 ₽ = 900 ₽ without discount; the product sold 20 % off (800 of 1000)
+    // 10 $ × 90 ₽ = 900 ₽ cost, +100 % = 1800 ₽; the product sold 20 % off (800 of 1000)
     const p = product('usd', { price: 800, originalPrice: 1000, purchase: { currency: 'USD', amount: 10 } });
-    const [change] = repriceProducts([p], rates());
-    expect(change.after).toEqual({ price: 720, costPrice: 900, originalPrice: 900 });
+    const [change] = repriceProducts([p], rates({ markupPercent: 100 }));
+    expect(change.after).toEqual({ price: 1440, costPrice: 900, originalPrice: 1800 });
     expect(change.discountPercent).toBe(20);
+    expect(change.discountCutFrom).toBeUndefined();
   });
 
   test('a kept discount is stable: the same rates change nothing the second time', () => {
-    const p = product('usd', { price: 720, costPrice: 900, originalPrice: 900, purchase: { currency: 'USD', amount: 10 } });
-    expect(repriceProducts([p], rates())).toEqual([]);
+    const p = product('usd', { price: 1440, costPrice: 900, originalPrice: 1800, purchase: { currency: 'USD', amount: 10 } });
+    expect(repriceProducts([p], rates({ markupPercent: 100 }))).toEqual([]);
+  });
+
+  test('a kept discount never takes the price below the cost (owner\'s screenshot 09.10: 4 990 → 740 ₽ at a cost of 909 ₽)', () => {
+    // «Куртка бомбер»: $10, cost 909,05 ₽, markup 1 % → old price 920 ₽, 20 % off would be 740 ₽
+    const r = rates({ usd: { official: 90.905, markup: 0, markupKind: 'rub' }, markupPercent: 1 });
+    const p = product('bomber', { price: 3990, originalPrice: 4990, purchase: { currency: 'USD', amount: 10 } });
+    const [change] = repriceProducts([p], r);
+    expect(change.after.costPrice).toBe(909.05);
+    expect(change.after.price).toBe(910);
+    expect(change.after.price).toBeGreaterThanOrEqual(change.after.costPrice);
+    expect(change.discountCutFrom).toBe(20);
+    expect(change.discountPercent).toBe(1);
+    // with a real markup the same discount stays whole
+    const [healthy] = repriceProducts([p], { ...r, markupPercent: 180 });
+    expect(healthy.after).toEqual({ price: 2040, costPrice: 909.05, originalPrice: 2550 });
+    expect(healthy.discountCutFrom).toBeUndefined();
+  });
+
+  test('a discount cut to nothing by the cost is removed', () => {
+    const p = product('usd', { price: 800, originalPrice: 1000, purchase: { currency: 'USD', amount: 10 } });
+    const [change] = repriceProducts([p], rates());
+    expect(change.after).toEqual({ price: 900, costPrice: 900, originalPrice: null });
+    expect(change.discountCutFrom).toBe(20);
   });
 
   test('the discount does not shrink over several rates: the stored percent is kept, not the rounded share', () => {
     let p = product('usd', { price: 850, originalPrice: 1000, discountPercent: 15, purchase: { currency: 'USD', amount: 10 } });
     for (const official of [98, 96, 98, 96, 98]) {
-      const [change] = repriceProducts([p], rates({ usd: { official, markup: 5, markupKind: 'rub' } }));
+      const [change] = repriceProducts([p], rates({ usd: { official, markup: 5, markupKind: 'rub' }, markupPercent: 100 }));
       p = { ...p, ...change.after, originalPrice: change.after.originalPrice ?? undefined, discountPercent: change.discountPercent };
     }
-    // 10 $ × 103 ₽ = 1030 ₽, 15 % off = 875,5 → 880 ₽ (rounded up), the same as after the first change
-    expect([p.price, p.originalPrice, p.discountPercent]).toEqual([880, 1030, 15]);
+    // 10 $ × 103 ₽ = 1030 ₽ cost, +100 % = 2060 ₽, 15 % off = 1751 → 1760 ₽ (rounded up), the same as after the first change
+    expect([p.price, p.originalPrice, p.discountPercent]).toEqual([1760, 2060, 15]);
   });
 
   test('a stored percent the prices no longer show (price changed by hand) gives way to the prices', () => {
     const p = product('usd', { price: 700, originalPrice: 1000, discountPercent: 15, purchase: { currency: 'USD', amount: 10 } });
-    expect(repriceProducts([p], rates())[0].discountPercent).toBe(30);
+    expect(repriceProducts([p], rates({ markupPercent: 100 }))[0].discountPercent).toBe(30);
   });
 
   test('an old price not above the price is no discount and is removed (admin audit 09.10, finding 2)', () => {
@@ -158,7 +183,11 @@ describe('the form says what to fix before applying', () => {
     ]);
     expect(exchangeRateErrors(rates({ usd: { official: 85, markup: 120, markupKind: 'percent' } }))).toEqual(['Доллар: надбавка больше 100 %']);
     expect(exchangeRateErrors(rates({ usd: { official: 85, markup: 90, markupKind: 'rub' } }))).toEqual(['Доллар: надбавка больше самого курса']);
-    expect(exchangeRateErrors(rates({ markupPercent: -5 }))).toEqual(['Наценка для всех товаров — от 0 до 1000 %']);
+    expect(exchangeRateErrors(rates({ markupPercent: -5 }))).toEqual(['Наценка для розницы — укажите от 0 до 1000 %']);
+    // an empty field (NaN) is not 0 %: the owner's screenshot 09.10 sold below the cost with an empty markup
+    expect(exchangeRateErrors(rates({ markupPercent: NaN }))).toEqual(['Наценка для розницы — укажите от 0 до 1000 %']);
+    expect(exchangeRateErrors(rates({ wholesaleMarkupPercent: NaN }))).toEqual(['Наценка для опта — от 0 до 1000 % или пусто']);
+    expect(exchangeRateErrors(rates({ wholesaleMarkupPercent: 60 }))).toEqual([]);
     // a rate over the limit is not «not set» (admin audit 09.10, finding 14)
     expect(exchangeRateErrors(rates({ usd: { official: 200_000, markup: 0, markupKind: 'rub' } }))).toEqual([
       'Доллар: курс ЦБ — не больше 100 000 ₽',
@@ -191,5 +220,46 @@ describe('data read from the database is checked, not trusted', () => {
     expect(samePurchase({ currency: 'USD', amount: 1 }, undefined)).toBe(false);
     expect(samePurchase({ currency: 'USD', amount: 1 }, { currency: 'USD', amount: 1 })).toBe(true);
     expect(samePurchase({ currency: 'USD', amount: 1 }, { currency: 'CNY', amount: 1 })).toBe(false);
+  });
+});
+
+describe('wholesale markup for all wholesale products («Курсы и наценка», owner\'s task 09.10)', () => {
+  const r = rates({ markupPercent: 180, wholesaleMarkupPercent: 60 });
+
+  test('retail and wholesale prices from the same cost, each with its own markup', () => {
+    // 10 $ × 90 ₽ = 900 ₽: retail +180 % = 2520 ₽, wholesale +60 % = 1440 ₽
+    expect(priceFromRate({ currency: 'USD', amount: 10 }, r)?.price).toBe(2520);
+    expect(wholesalePriceFromRate({ currency: 'USD', amount: 10 }, r)).toBe(1440);
+    // the product's own wholesale markup wins
+    expect(wholesalePriceFromRate({ currency: 'USD', amount: 10, wholesaleMarkupPercent: 50 }, r)).toBe(1350);
+    // no wholesale markup anywhere — no wholesale price from the rate
+    expect(wholesalePriceFromRate({ currency: 'USD', amount: 10 }, rates())).toBeNull();
+  });
+
+  test('«Применить» changes the wholesale price only of products sold wholesale', () => {
+    const wholesale = product('w', { price: 2520, costPrice: 900, wholesalePrice: 1000, purchase: { currency: 'USD', amount: 10 } });
+    const onlyWholesale = product('o', { price: 2520, costPrice: 900, saleChannel: 'wholesale', purchase: { currency: 'USD', amount: 10 } });
+    const retailOnly = product('r', { price: 2520, costPrice: 900, saleChannel: 'retail', wholesalePrice: 1000, purchase: { currency: 'USD', amount: 10 } });
+    const plain = product('p', { price: 2520, costPrice: 900, purchase: { currency: 'USD', amount: 10 } });
+    const changes = repriceProducts([wholesale, onlyWholesale, retailOnly, plain], r);
+    expect(changes.map((c) => [c.product.id, c.after.price, c.after.wholesalePrice])).toEqual([
+      ['w', 2520, 1440],
+      ['o', 2520, 1440],
+    ]);
+    expect(changes[0].before.wholesalePrice).toBe(1000);
+  });
+
+  test('the wholesale price takes no retail discount', () => {
+    const p = product('w', { price: 2000, originalPrice: 2500, wholesalePrice: 1000, purchase: { currency: 'USD', amount: 10 } });
+    const [change] = repriceProducts([p], r);
+    expect(change.after.originalPrice).toBe(2520);
+    expect(change.after.wholesalePrice).toBe(1440);
+  });
+
+  test('stored rates and purchases keep the wholesale markup', () => {
+    expect(readExchangeRates({ markupPercent: 180, wholesaleMarkupPercent: 60 }).wholesaleMarkupPercent).toBe(60);
+    expect(readExchangeRates({ markupPercent: 180 }).wholesaleMarkupPercent).toBeUndefined();
+    expect(readPurchase({ currency: 'USD', amount: 4, wholesaleMarkupPercent: 40 })).toEqual({ currency: 'USD', amount: 4, wholesaleMarkupPercent: 40 });
+    expect(samePurchase({ currency: 'USD', amount: 4 }, { currency: 'USD', amount: 4, wholesaleMarkupPercent: 40 })).toBe(false);
   });
 });

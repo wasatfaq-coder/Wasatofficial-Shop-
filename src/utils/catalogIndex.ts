@@ -9,7 +9,7 @@ import { getProductRating } from './productRating';
  */
 
 /** Bump when an entry changes shape: the admin session then rewrites the index */
-export const CATALOG_INDEX_FORMAT = 1;
+export const CATALOG_INDEX_FORMAT = 2;
 export const CATALOG_INDEX_COLLECTION = 'catalog_index';
 export const PRODUCT_THUMBS_COLLECTION = 'product_thumbs';
 /** One part's compressed entries; a document holds up to 1 MiB, the rest is the other fields and a margin */
@@ -22,7 +22,9 @@ const PART_MAX_BYTES = 700_000;
 export type CatalogEntry = Pick<
   Product,
   'id' | 'title' | 'category' | 'categoryLabel' | 'price' | 'originalPrice' | 'badge' | 'material' | 'description' |
-  'sizes' | 'colors' | 'inStock' | 'hiddenFromSale' | 'isPopular' | 'isNew' | 'fit'
+  'sizes' | 'colors' | 'inStock' | 'hiddenFromSale' | 'isPopular' | 'isNew' | 'fit' |
+  // wholesale (format 2): the cart prices wholesale lines from them, the card will show «Опт от …»
+  'saleChannel' | 'wholesalePrice' | 'wholesalePackSize' | 'wholesaleMinPacks'
 > & {
   skus: Pick<ProductSKU, 'id' | 'color' | 'size' | 'stock' | 'skuCode'>[];
   /** From real reviews only (getProductRating): the product's own `rating` may be a template number */
@@ -100,6 +102,10 @@ export function catalogEntry(product: Product): CatalogEntry {
   if (product.isNew) entry.isNew = true;
   if (product.isPopular) entry.isPopular = true;
   if (product.fit) entry.fit = product.fit;
+  if (product.saleChannel) entry.saleChannel = product.saleChannel;
+  if (typeof product.wholesalePrice === 'number') entry.wholesalePrice = product.wholesalePrice;
+  if (typeof product.wholesalePackSize === 'number') entry.wholesalePackSize = product.wholesalePackSize;
+  if (typeof product.wholesaleMinPacks === 'number') entry.wholesaleMinPacks = product.wholesaleMinPacks;
   if (rating) {
     entry.reviewRating = rating.rating;
     entry.reviewCount = rating.count;

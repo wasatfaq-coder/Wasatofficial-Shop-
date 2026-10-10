@@ -174,6 +174,7 @@ export default function App() {
     onOpenProduct: handleSelectProduct,
     signedInWithGoogle: Boolean(currentUser && !currentUser.isAnonymous),
     onSignIn: signInForPromo,
+    wholesale: storefrontSettings?.wholesale,
   });
   // Catalog with its reviews (useCatalog.ts). Every snapshot brings the cart's stock and prices up to date and
   // refreshes the open product

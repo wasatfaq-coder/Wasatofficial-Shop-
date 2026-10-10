@@ -19,9 +19,11 @@ import {
   QUICK_ORDER_DELIVERY_TITLE,
   calcOrderTotals,
   getAvailableDeliveryMethods,
+  toPricingLine,
   validatePromo,
   type PricingLine,
 } from '../../src/shared/orderPricing';
+import { priceCartLines, wholesaleLineProblems } from '../../src/shared/wholesalePricing';
 import { extractColorName, extractSizeName, generateDefaultSKUs, isHiddenFromSale, skuCodeForLine } from '../../src/utils/inventory';
 import { orderStockMovements, STOCK_MOVEMENTS_COLLECTION } from '../../src/shared/stockMovements';
 import { deliveryKindOfMethod, estimatedDeliveryOf, initialStatusLog, type DeliveryKind } from '../../src/shared/orderFlow';
@@ -78,6 +80,7 @@ export function parsePlaceOrderRequest(data: unknown): PlaceOrderRequest {
       color: requireString(item.color, 'цвет', 128, false),
       size: requireString(item.size, 'размер', 64, false),
       quantity,
+      ...(item.wholesale === true ? { wholesale: true } : {}),
     };
   });
 
@@ -196,19 +199,29 @@ export async function placeOrderCore(
       if (isHiddenFromSale(product)) {
         throw new OrderError('failed-precondition', `Товар «${product.title}» больше не продается`);
       }
-      lines.push({ productId: product.id, category: product.category, price: product.price, quantity: item.quantity });
       cartItems.push({
         id: `cart-${idx + 1}`,
         product: toOrderLineProduct(product),
         selectedColor: item.color,
         selectedSize: item.size,
         quantity: item.quantity,
+        ...(item.wholesale === true ? { priceKind: 'wholesale' as const } : {}),
       });
       const perProduct = requestedBySku.get(product.id) ?? new Map<string, number>();
       const key = skuKey(item.color, item.size);
       perProduct.set(key, (perProduct.get(key) ?? 0) + item.quantity);
       requestedBySku.set(product.id, perProduct);
     });
+
+    // Prices of the lines: retail — the product's price, wholesale — the wholesale price minus the volume step of «Опт»
+    // (the same priceCartLines as the cart); the browser never sends a price
+    const pricedItems = priceCartLines(cartItems, settings?.wholesale);
+    const wholesaleProblems = wholesaleLineProblems(pricedItems);
+    if (wholesaleProblems.length > 0) {
+      throw new OrderError('failed-precondition', wholesaleProblems.join('; '));
+    }
+    cartItems.splice(0, cartItems.length, ...pricedItems);
+    lines.push(...cartItems.map(toPricingLine));
 
     const stockUpdates: { ref: DocumentReference; skus: ProductSKU[] }[] = [];
     // Admin → «Витрина» → «Предзаказ»: a sold-out variant is ordered without taking it from stock

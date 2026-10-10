@@ -3,12 +3,13 @@ import { calcPromoDiscount, getAvailableDeliveryMethods, isQuickOrderDelivery, t
 import { linePrice } from '../shared/orderLine';
 import { orderTimestamp } from '../shared/orderDate';
 import { pricesAtOrderTime } from './priceHistory';
+import { isWholesaleLine, priceCartLines, sellsWholesale } from '../shared/wholesalePricing';
 
 /** What the order is compared with besides the catalog: the store's codes, delivery and payment methods */
 export interface OrderCheckContext {
   promos?: PromoCode[];
   deliveryMethods?: DeliveryMethod[];
-  settings?: Partial<Pick<StorefrontSettings, 'paymentMethods' | 'freeDeliveryThreshold' | 'isExpressEnabled'>>;
+  settings?: Partial<Pick<StorefrontSettings, 'paymentMethods' | 'freeDeliveryThreshold' | 'isExpressEnabled' | 'wholesale'>>;
 }
 
 /** A 1-click order and an old one without a choice: the manager agrees payment with the buyer */
@@ -50,12 +51,38 @@ export function orderPriceIssues(order: Order, products: Product[], shop: OrderC
   const byId = new Map(products.map((p) => [p.id, p]));
   const orderTime = checkedOrderTime(order);
   const lines: PricingLine[] = [];
-  for (const item of order.items ?? []) {
+  // Wholesale lines as the catalog prices them now: the wholesale price and the volume step of «Опт» (the wholesale
+  // price has no history yet — a change after the order shows here too, and the text asks to check)
+  const items = order.items ?? [];
+  const expectedWholesale = priceCartLines(
+    items.map((item) => {
+      const catalog = item.product?.id ? byId.get(item.product.id) : undefined;
+      return catalog ? { ...item, product: catalog } : item;
+    }),
+    shop.settings?.wholesale
+  );
+  items.forEach((item, i) => {
     const price = linePrice(item);
     const quantity = Number(item.quantity) || 0;
     const catalog = item.product?.id ? byId.get(item.product.id) : undefined;
+    const wholesale = isWholesaleLine(item);
     // the category for the promo is the catalog's: the line's copy is written by the buyer
-    lines.push({ productId: item.product?.id ?? '', category: catalog?.category ?? item.product?.category, price, quantity });
+    lines.push({
+      productId: item.product?.id ?? '',
+      category: catalog?.category ?? item.product?.category,
+      price,
+      quantity,
+      ...(wholesale ? { wholesale: true } : {}),
+    });
+    if (wholesale) {
+      if (catalog && !sellsWholesale(catalog)) {
+        issues.push(`«${catalog.title}»: в заказе оптовая цена ${rub(price)}, а товар оптом не продаётся`);
+      } else if (catalog && linePrice(expectedWholesale[i]) !== price) {
+        issues.push(`«${catalog.title}»: в заказе опт ${rub(price)}, в каталоге ${rub(linePrice(expectedWholesale[i]))}`);
+      }
+      if (quantity <= 0) issues.push(`«${item.product?.title ?? 'строка'}»: количество ${quantity}`);
+      return;
+    }
     // the price in the catalog when the order was placed: «Курсы и наценка» may have changed it since (admin audit
     // 09.10, finding 1)
     const then = catalog ? pricesAtOrderTime(catalog, orderTime) : [];
@@ -63,7 +90,7 @@ export function orderPriceIssues(order: Order, products: Product[], shop: OrderC
       issues.push(`«${catalog.title}»: в заказе ${rub(price)}, в каталоге ${then.map(rub).join(' или ')}`);
     }
     if (quantity <= 0) issues.push(`«${item.product?.title ?? 'строка'}»: количество ${quantity}`);
-  }
+  });
   const subtotal = lines.reduce((sum, line) => sum + line.price * line.quantity, 0);
   const deliveryFee = Number(order.deliveryFee) || 0;
   const discount = Number(order.discountAmount) || 0;
