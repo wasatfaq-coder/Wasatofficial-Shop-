@@ -382,8 +382,9 @@ service cloud.firestore {
 
     match /settings/{settingId} {
       // шаблоны быстрых ответов поддержки — рабочие тексты сотрудников (аудит 02.10, находка 49 / тест B2);
-      // курсы и наценка (exchange_rates) по наценке выдают маржу магазина — только администратору
-      allow read: if !(settingId in ['quick_phrases', 'exchange_rates']) || isAdmin();
+      // курсы и наценка (exchange_rates) по наценке выдают маржу магазина — только администратору;
+      // шаблоны ответов чата (chat_templates) — тоже рабочие тексты сотрудников (аудит админки 09.10, этап 7)
+      allow read: if !(settingId in ['quick_phrases', 'exchange_rates', 'chat_templates']) || isAdmin();
       allow write: if isAdmin() && isValidId(settingId);
     }
 

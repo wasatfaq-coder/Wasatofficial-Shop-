@@ -310,6 +310,15 @@ describe('catalog', () => {
     await assertSucceeds(getDoc(doc(guest(), 'settings/storefront')));
   });
 
+  test('chat reply templates are read and written only by admins (admin audit 09.10, stage 7)', async () => {
+    const templates = { items: [{ id: 'tpl-1', category: 'delivery', categoryLabel: 'Доставка', title: 'Срок', text: 'Отправим завтра.' }] };
+    await assertFails(setDoc(doc(customer(), 'settings/chat_templates'), templates));
+    await assertSucceeds(setDoc(doc(owner(), 'settings/chat_templates'), templates));
+    await assertSucceeds(getDoc(doc(extraAdmin(), 'settings/chat_templates')));
+    await assertFails(getDoc(doc(guest(), 'settings/chat_templates')));
+    await assertFails(getDoc(doc(customer(), 'settings/chat_templates')));
+  });
+
   test('a cost price left inside a product can only be removed, and stock still deducts meanwhile', async () => {
     await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'products/p1'), { ...product, costPrice: 4000 }));
     await assertSucceeds(takeStock(guest(), { skus: [{ size: 'M', stock: 1 }] }));
