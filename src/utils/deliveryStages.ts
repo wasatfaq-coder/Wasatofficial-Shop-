@@ -159,14 +159,6 @@ export function formatDeliveryTimestamp(dateInput?: Date | string): string {
   });
 }
 
-export const ORDER_STATUS_LABELS: Record<Order['status'], string> = {
-  accepted: 'Принят',
-  assembling: 'Собирается',
-  in_transit: 'В пути',
-  ready: 'Готов к выдаче',
-  delivered: 'Доставлен',
-};
-
 /**
  * Generates initial realistic delivery stages for an order based on its current status and data.
  * Guarantees that completed stages strictly match the order's actual lifecycle status.

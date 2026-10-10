@@ -77,3 +77,14 @@ export function orderFieldsToCheck(changes: FieldChanges): string[] {
 export function changedSince(seen: Record<string, unknown>, current: Record<string, unknown>, fields: readonly string[]): string[] {
   return fields.filter((key) => !sameValue(seen[key] ?? null, current[key] ?? null));
 }
+
+/**
+ * The database already holds exactly this change (the same write landed once and its transaction is retried, or the
+ * admin repeats it): writing it again loses nothing, so it is not a buyer's change meanwhile
+ */
+export function holdsChange(current: Record<string, unknown>, changes: FieldChanges): boolean {
+  return (
+    changedSince(changes.set, current, Object.keys(changes.set)).length === 0 &&
+    changes.removed.every((key) => current[key] === undefined)
+  );
+}

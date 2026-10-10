@@ -1,6 +1,8 @@
 // Владелец ведёт заказ Почтой в «Заказах»: «Скомплектован», без трек-номера «Передан в Почту России» не ставится, трек,
 // «Передан», «Оплачен», затем «Отменить и вернуть на склад» с причиной — оплата становится «Возврат средств», товар
-// возвращается по журналу (аудит 07.10, находка 41: смена статуса, оплата и отмена в админке не были проверены в браузере)
+// возвращается по журналу (аудит 07.10, находка 41: смена статуса, оплата и отмена в админке не были проверены в браузере).
+// Карточка свёрнута: на виду клиент, сумма, статусы и одно главное действие, остальное — в «Подробнее» и «Ещё»; чек
+// на проверке находится чипом «Ждут проверки чека» (этап 5 плана docs/admin-wholesale-plan.md, находки 7 и 26)
 import { test, expect, openAdminSection } from '../fixtures';
 import { queryDocs, readDoc, writeDocs } from '../emulator';
 import { ADMIN, PRODUCTS } from '../store';
@@ -10,6 +12,7 @@ test('владелец передаёт заказ в Почту с трек-н�
   const orderId = phone ? 'WS-E2EFLOWP' : 'WS-E2EFLOWD';
   const item = phone ? PRODUCTS.wallet : PRODUCTS.umbrella;
   const track = phone ? '80085012345678' : '80085087654321';
+  const receiptId = phone ? 'WS-E2ECHKP' : 'WS-E2ECHKD';
   // older than 2 minutes: «Заказы» check the write-off of an order once its buyer's browser had time for it
   const createdAt = new Date(Date.now() - 10 * 60 * 1000).toISOString();
   await writeDocs({
@@ -19,6 +22,15 @@ test('владелец передаёт заказ в Почту с трек-н�
       deliveryMethod: 'Почта России', deliveryKind: 'carrier', trackingCompany: 'pochta', deliveryFee: 0, totalPrice: item.price,
       paymentMethod: 'Перевод по номеру телефона', deliveryAddress: 'Казань, ул. Баумана, 1', customerName: 'Покупатель Почтой',
       customerPhone: '+79990000001', customerUid: `buyer-${orderId}`,
+    },
+    // a receipt the buyer sent: found by the chip, not through «Фильтры»
+    [`orders/${receiptId}`]: {
+      id: receiptId, createdAt, date: 'Сегодня', status: 'accepted', paymentStatus: 'receipt_review',
+      paymentReceipt: { method: 'sbp', at: createdAt, messageId: `msg-${receiptId}` },
+      items: [{ id: 'l1', product: { id: item.id, title: item.title, price: item.price, category: item.category }, quantity: 1, selectedColor: 'Черный', selectedSize: 'Единый' }],
+      deliveryMethod: 'Почта России', deliveryKind: 'carrier', deliveryFee: 0, totalPrice: item.price,
+      paymentMethod: 'Перевод по номеру телефона', deliveryAddress: 'Казань, ул. Баумана, 2', customerName: 'Покупатель с чеком',
+      customerPhone: '+79990000002', customerUid: `buyer-${receiptId}`,
     },
     // the write-off the buyer's browser made: the return gives back exactly this
     [`stock_movements/${orderId}_0`]: {
@@ -32,16 +44,37 @@ test('владелец передаёт заказ в Почту с трек-н�
   await page.getByRole('button', { name: /^Панель администратора/ }).click();
   const panel = page.getByRole('dialog', { name: 'Панель администратора' });
   await openAdminSection(panel, /^Заказы/);
+
+  // «Ждут проверки чека»: the receipts in one tap; the other device's receipt order may be there too
+  const receiptChip = panel.getByRole('button', { name: /^Ждут проверки чека \d+$/ });
+  await receiptChip.click();
+  await expect(receiptChip).toHaveAttribute('aria-pressed', 'true');
+  await expect(panel.getByText(`№ ${receiptId}`)).toBeVisible();
+  await expect(panel.getByText(`№ ${orderId}`)).toHaveCount(0);
+  await expect(panel.getByRole('button', { name: 'Подтвердить оплату' }).first()).toBeVisible();
+  await receiptChip.click();
+
   await panel.getByRole('textbox', { name: 'Поиск заказов' }).fill(orderId);
   await expect(panel.getByText(`№ ${orderId}`)).toBeVisible();
+
+  // the short card: the client and the sum on view, the goods and the address under «Подробнее»
+  await expect(panel.getByText('Покупатель Почтой')).toBeVisible();
+  await expect(panel.getByText('Казань, ул. Баумана, 1')).toHaveCount(0);
+  await panel.getByRole('button', { name: `Подробнее: заказ № ${orderId}` }).click();
+  await expect(panel.getByText('Казань, ул. Баумана, 1').first()).toBeVisible();
+  await panel.getByRole('button', { name: `Свернуть: заказ № ${orderId}` }).click();
+  await expect(panel.getByText('Казань, ул. Баумана, 1')).toHaveCount(0);
 
   const chooseStatus = async (current: string, next: string) => {
     await panel.getByRole('button', { name: `Статус заказа: ${current}` }).click();
     await page.getByRole('menuitemradio', { name: next }).click();
   };
 
-  await chooseStatus('Новый', 'Скомплектован');
+  // one main action: the next step of the order's chain
+  await panel.getByRole('button', { name: `Заказ № ${orderId}: дальше — Скомплектован` }).click();
   await expect.poll(async () => (await readDoc(`orders/${orderId}`))?.status).toBe('assembling');
+  // a carrier's order goes on with its track number
+  await expect(panel.getByRole('button', { name: `Заказ № ${orderId}: добавить трек-номер` })).toBeVisible();
 
   // without a tracking number the order is not handed to the carrier
   await chooseStatus('Скомплектован', 'Передан в Почту России');
@@ -60,6 +93,8 @@ test('владелец передаёт заказ в Почту с трек-н�
   await panel.getByRole('button', { name: 'Статус оплаты: Ожидает оплаты' }).click();
   await page.getByRole('menuitemradio', { name: 'Оплачен' }).click();
   await expect.poll(async () => (await readDoc(`orders/${orderId}`))?.paymentStatus).toBe('paid');
+  // the screen has the paid order from the database before the next change (the owner sees it too)
+  await expect(panel.getByRole('button', { name: 'Статус оплаты: Оплачен' })).toBeVisible();
 
   await panel.getByRole('button', { name: `Ещё: заказ № ${orderId}` }).click();
   await page.getByRole('menuitem', { name: 'Отменить и вернуть на склад' }).click();

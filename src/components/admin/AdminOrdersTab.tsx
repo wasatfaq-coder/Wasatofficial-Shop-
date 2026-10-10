@@ -33,6 +33,7 @@ import {
   Archive,
   ArchiveRestore,
   PackageCheck,
+  ArrowRight,
 } from 'lucide-react';
 import { DeliveryMethod, Order, Product, OrderAdjustmentLog, PromoCode, StorefrontSettings } from '../../types';
 import { exportOrdersToCSV } from '../../utils/csvHelpers';
@@ -68,6 +69,8 @@ import {
   flowStatuses,
   generatePickupCode,
   isCarrierOrder,
+  ORDER_STEP_LABELS,
+  orderMainAction,
   orderTimeline,
   statusChangeBlocker,
   statusLogEntry,
@@ -85,7 +88,7 @@ import { CancelOrderDialog } from '../CancelOrderDialog';
 import { AdminOrderPaymentBlock } from './AdminOrderPaymentBlock';
 import { AdminReceiptReview, type ReviewReceipt } from './AdminReceiptReview';
 import { usePaymentTemplates } from './usePaymentTemplates';
-import { isReceiptOnReview } from '../../utils/paymentDetails';
+import { isReceiptOnReview, PAYMENT_STATUS_LABELS } from '../../utils/paymentDetails';
 import { AdminOrderPriceWarning } from './AdminOrderPriceWarning';
 import { AdminChoiceMenu } from './AdminChoiceMenu';
 import { AdminHint } from './AdminHint';
@@ -119,101 +122,55 @@ const CHIP_HINTS: Partial<Record<string, string>> = {
   archive: 'Скрытые из основного списка отменённые заказы. Удалять их не нужно',
 };
 
-const STATUS_CONFIG: Record<
-  Order['status'],
-  { label: string; bg: string; text: string; icon: any; nextStatus?: Order['status']; nextLabel?: string }
-> = {
-  accepted: {
-    label: 'Принят',
-    bg: 'bg-accent/5 border-accent/20',
-    text: 'text-accent',
-    icon: Clock,
-    nextStatus: 'assembling',
-    nextLabel: 'В сборку',
-  },
-  assembling: {
-    label: 'Собирается',
-    bg: 'bg-warning-soft border-warning/25',
-    text: 'text-warning',
-    icon: Package,
-    nextStatus: 'in_transit',
-    nextLabel: 'Передать курьеру',
-  },
-  in_transit: {
-    label: 'В пути',
-    bg: 'bg-accent/10 border-accent/30',
-    text: 'text-accent',
-    icon: Truck,
-    nextStatus: 'ready',
-    nextLabel: 'Прибыл в пункт',
-  },
-  ready: {
-    label: 'Готов к выдаче',
-    bg: 'bg-success-soft border-success/25',
-    text: 'text-success',
-    icon: MapPin,
-    nextStatus: 'delivered',
-    nextLabel: 'Вручить клиенту',
-  },
-  delivered: {
-    label: 'Доставлен',
-    bg: 'bg-[#D8DFE8] border-[#BAC5D5]',
-    text: 'text-[#2D3A4E]',
-    icon: CheckCircle2,
-  },
+/** Colour and icon of the order status button; the words — `adminStatusLabel` and `ORDER_STEP_LABELS` (stage 5, finding 25) */
+const STATUS_CONFIG: Record<Order['status'], { bg: string; text: string; icon: any }> = {
+  accepted: { bg: 'bg-accent/5 border-accent/20', text: 'text-accent', icon: Clock },
+  assembling: { bg: 'bg-warning-soft border-warning/25', text: 'text-warning', icon: Package },
+  in_transit: { bg: 'bg-accent/10 border-accent/30', text: 'text-accent', icon: Truck },
+  ready: { bg: 'bg-success-soft border-success/25', text: 'text-success', icon: MapPin },
+  delivered: { bg: 'bg-[#D8DFE8] border-[#BAC5D5]', text: 'text-[#2D3A4E]', icon: CheckCircle2 },
 };
 
-/** Bulk status for orders of different delivery kinds: the step in words that fit every chain (`FLOW_STATUSES`) */
-const BULK_STATUS_LABELS: Record<Order['status'], string> = {
-  accepted: 'Новый',
-  assembling: 'Скомплектован',
-  in_transit: 'Передан в доставку',
-  ready: 'Готов к выдаче / ждёт получения',
-  delivered: 'Получен (закрыть вручную)',
-};
+/** Bulk status: the step in `ORDER_STEP_LABELS` words, what each delivery kind does with it — under the step */
 const BULK_STATUS_HINTS: Record<Order['status'], string> = {
   accepted: '',
   assembling: 'Сборка завершена',
   in_transit: 'В ТК — только с трек-номером, курьеру — с кодом выдачи',
   ready: 'Самовывоз — готов к выдаче; Почта и ТК — ждёт подтверждения',
-  delivered: 'Только Почта и ТК; курьер и самовывоз выдаются по коду',
+  delivered: 'Закрыть вручную: только Почта и ТК, курьер и самовывоз выдаются по коду',
 };
 
-const PAYMENT_STATUS_CONFIG: Record<
-  NonNullable<Order['paymentStatus']>,
-  { label: string; bg: string; text: string; dot: string }
-> = {
+/** Colour of the payment status; the words — `PAYMENT_STATUS_LABELS`, the same as the buyer sees (stage 5, finding 25) */
+const PAYMENT_STATUS_STYLE: Record<NonNullable<Order['paymentStatus']>, { bg: string; text: string; dot: string }> = {
   pending: {
-    label: 'Ожидает оплаты',
     bg: 'bg-warning-soft border-warning/25',
     text: 'text-warning',
     dot: 'bg-warning',
   },
   receipt_review: {
-    label: 'Чек на проверке',
     bg: 'bg-warning-soft border-warning/40',
     text: 'text-warning',
     dot: 'bg-warning animate-pulse',
   },
   paid: {
-    label: 'Оплачен',
     bg: 'bg-success-soft border-success/25',
     text: 'text-success',
     dot: 'bg-success',
   },
   paid_on_delivery: {
-    label: 'Оплата при получении',
     bg: 'bg-accent/10 border-accent/30',
     text: 'text-accent',
     dot: 'bg-accent',
   },
   refunded: {
-    label: 'Возврат средств',
     bg: 'bg-danger-soft border-danger/25',
     text: 'text-danger',
     dot: 'bg-danger',
   },
 };
+const PAYMENT_STATUS_CONFIG = Object.fromEntries(
+  (Object.keys(PAYMENT_STATUS_STYLE) as NonNullable<Order['paymentStatus']>[]).map((k) => [k, { ...PAYMENT_STATUS_STYLE[k], label: PAYMENT_STATUS_LABELS[k] }])
+) as Record<NonNullable<Order['paymentStatus']>, { bg: string; text: string; dot: string; label: string }>;
 
 interface TrackingCarrierConfig {
   id: NonNullable<Order['trackingCompany']>;
@@ -329,15 +286,19 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       { value: 'all' as const, label: 'Все', count: listed.length },
       // the same chips for every delivery kind: «Переданы» — in a carrier or with the courier, «Ждут получения» —
       // at the pickup point or waiting for the buyer's «Я получил заказ»
-      { value: 'accepted' as const, label: 'Новые', count: count('accepted') },
-      { value: 'assembling' as const, label: 'Скомплектованы', count: count('assembling') },
-      { value: 'in_transit' as const, label: 'Переданы', count: count('in_transit') },
-      { value: 'ready' as const, label: 'Ждут получения', count: count('ready') },
-      { value: 'delivered' as const, label: 'Получены', count: count('delivered') },
+      { value: 'accepted' as const, label: ORDER_STEP_LABELS.accepted.many, count: count('accepted') },
+      { value: 'assembling' as const, label: ORDER_STEP_LABELS.assembling.many, count: count('assembling') },
+      { value: 'in_transit' as const, label: ORDER_STEP_LABELS.in_transit.many, count: count('in_transit') },
+      { value: 'ready' as const, label: ORDER_STEP_LABELS.ready.many, count: count('ready') },
+      { value: 'delivered' as const, label: ORDER_STEP_LABELS.delivered.many, count: count('delivered') },
       { value: 'cancelled' as const, label: 'Отменены', count: listed.length - active.length },
       { value: 'archive' as const, label: 'Архив', count: archived.length },
     ];
   }, [orders]);
+
+  // «Ждут проверки чека»: the receipts the buyers sent, in one tap instead of «Фильтры» → «Статус оплаты» (stage 5, finding 26)
+  const receiptReviewCount = useMemo(() => orders.filter((o) => isReceiptOnReview(o) && !isArchivedOrder(o)).length, [orders]);
+  const receiptChipActive = paymentStatusFilter === 'receipt_review';
 
   const moreFiltersCount = [dateFilter, paymentStatusFilter, deliveryFilter, paymentFilter].filter((v) => v !== 'all').length;
 
@@ -370,6 +331,10 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   const deleteOrderDialog = useDialogA11y(Boolean(orderToDelete), () => setOrderToDelete(null));
   const [isDeletingOrder, setIsDeletingOrder] = useState(false);
   const [expandedOrderAuditLogId, setExpandedOrderAuditLogId] = useState<string | null>(null);
+  /** Orders opened with «Подробнее»: the list shows the short card (stage 5, finding 7) */
+  const [expandedOrderIds, setExpandedOrderIds] = useState<string[]>([]);
+  const toggleOrderDetails = (orderId: string) =>
+    setExpandedOrderIds((ids) => (ids.includes(orderId) ? ids.filter((id) => id !== orderId) : [...ids, orderId]));
 
   // Quick Inline Tracking Editor
   const [editingTrackOrderId, setEditingTrackOrderId] = useState<string | null>(null);
@@ -665,7 +630,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     const restored = await changeOrdersStatus(ids, newStatus, newStatus === 'delivered' ? 'Закрыт администратором (массово)' : undefined);
     if (restored === null) return;
     const sample = orders.find((o) => o.id === ids[0]);
-    const label = ids.length === 1 && sample ? `«${adminStatusLabel(sample, newStatus)}»` : `«${BULK_STATUS_LABELS[newStatus]}»`;
+    const label = ids.length === 1 && sample ? `«${adminStatusLabel(sample, newStatus)}»` : `«${ORDER_STEP_LABELS[newStatus].one}»`;
     onShowToast(
       `Статус ${ids.length} ${pluralRu(ids.length, ['заказа', 'заказов', 'заказов'])}: ${label}` +
         (restored > 0 ? `. Восстановлено отмененных: ${restored}, товары снова списаны со склада` : ''),
@@ -706,6 +671,14 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     onShowToast(`Экспортировано ${ordersToExport.length || filteredOrders.length} заказов в CSV`, 'success');
   };
 
+  /** The track number editor of the order, in its opened card */
+  const openTrackEditor = (order: Order) => {
+    setExpandedOrderIds((ids) => (ids.includes(order.id) ? ids : [...ids, order.id]));
+    setEditingTrackOrderId(order.id);
+    setTempTrackValue(order.trackingNumber || '');
+    setTempCarrierValue(order.trackingCompany || 'cdek');
+  };
+
   // Order Status Change Handler: the order's own chain (src/shared/orderFlow.ts)
   const handleUpdateOrderStatus = (orderId: string, newStatus: Order['status']) => {
     const order = orders.find((o) => o.id === orderId);
@@ -714,9 +687,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     if (blocker) {
       // the track number first: its editor opens right in the card
       onShowToast(blocker, 'error');
-      setEditingTrackOrderId(order.id);
-      setTempTrackValue(order.trackingNumber || '');
-      setTempCarrierValue(order.trackingCompany || 'cdek');
+      openTrackEditor(order);
       return;
     }
     if (newStatus === 'delivered' && !order.isCancelled) {
@@ -730,7 +701,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
 
   const applyOrderStatus = async (orderId: string, newStatus: Order['status'], note?: string) => {
     const order = orders.find((o) => o.id === orderId);
-    const label = order ? adminStatusLabel(order, newStatus) : STATUS_CONFIG[newStatus].label;
+    const label = order ? adminStatusLabel(order, newStatus) : ORDER_STEP_LABELS[newStatus].one;
     const restored = await changeOrdersStatus([orderId], newStatus, note);
     if (restored === null) return;
     onShowToast(
@@ -1068,6 +1039,28 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
           />
         </div>
 
+        {(receiptReviewCount > 0 || receiptChipActive) && (
+          <span className="inline-flex items-center gap-0.5">
+            <button
+              type="button"
+              aria-pressed={receiptChipActive}
+              onClick={() => {
+                // the chip shows every order it counts: the status chip goes back to «Все»
+                if (!receiptChipActive) setStatusFilter('all');
+                setPaymentStatusFilter(receiptChipActive ? 'all' : 'receipt_review');
+              }}
+              className={`h-8 px-3 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                receiptChipActive ? 'neu-pill-active' : 'neu-button text-[#2D3A4E] hover:text-accent'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${PAYMENT_STATUS_STYLE.receipt_review.dot}`} aria-hidden="true" />
+              Ждут проверки чека
+              <span className={`text-[11px] ${receiptChipActive ? 'text-accent' : 'text-[#4E5C70]'}`}>{receiptReviewCount}</span>
+            </button>
+            <AdminHint label="Ждут проверки чека">Покупатель прислал чек. Сверьте поступление и подтвердите или отклоните</AdminHint>
+          </span>
+        )}
+
         {/* Status chips: the common filter in one tap (Hick: 7 controls → chips + «Фильтры») */}
         {/* In rows, not a sideways strip: on a phone the hidden chips («К выдаче», «Отменены») were cut off */}
         <div role="radiogroup" aria-label="Статус заказа" className="flex flex-wrap gap-1.5">
@@ -1205,7 +1198,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                 triggerLabel="Сменить статус заказа..."
                 options={(['assembling', 'in_transit', 'ready', 'delivered'] as const).map((st) => ({
                   value: st,
-                  label: BULK_STATUS_LABELS[st],
+                  label: ORDER_STEP_LABELS[st].one,
                   sublabel: BULK_STATUS_HINTS[st],
                   icon: st === 'delivered'
                     ? <CheckCircle2 className="w-3.5 h-3.5 text-success" />
@@ -1232,25 +1225,25 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                 options={[
                   {
                     value: 'paid',
-                    label: 'Отметить как «Оплачен»',
+                    label: PAYMENT_STATUS_LABELS.paid,
                     sublabel: 'Подтвердить поступление средств',
                     icon: <CheckCircle2 className="w-3.5 h-3.5 text-success" />,
                   },
                   {
                     value: 'pending',
-                    label: 'Ожидает оплаты',
+                    label: PAYMENT_STATUS_LABELS.pending,
                     sublabel: 'Счет выставлен, платеж не получен',
                     icon: <Clock className="w-3.5 h-3.5 text-warning" />,
                   },
                   {
                     value: 'paid_on_delivery',
-                    label: 'При получении',
+                    label: PAYMENT_STATUS_LABELS.paid_on_delivery,
                     sublabel: 'Расчет при передаче заказа',
                     icon: <DollarSign className="w-3.5 h-3.5 text-accent" />,
                   },
                   {
                     value: 'refunded',
-                    label: 'Возврат средств',
+                    label: PAYMENT_STATUS_LABELS.refunded,
                     sublabel: 'Оформить возврат клиенту',
                     icon: <RotateCcw className="w-3.5 h-3.5 text-danger" />,
                   },
@@ -1313,11 +1306,10 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
               prefix="Статус оплаты:"
               options={[
                 { value: 'all', label: 'Любой статус', icon: <DollarSign className="w-3.5 h-3.5 text-success" /> },
-                { value: 'paid', label: 'Оплачен' },
-                { value: 'pending', label: 'Ожидает оплаты' },
-                { value: 'receipt_review', label: 'Чек на проверке' },
-                { value: 'paid_on_delivery', label: 'При получении' },
-                { value: 'refunded', label: 'Оформлен возврат' },
+                ...(['paid', 'pending', 'receipt_review', 'paid_on_delivery', 'refunded'] as const).map((value) => ({
+                  value,
+                  label: PAYMENT_STATUS_LABELS[value],
+                })),
               ]}
             />
             <NeumorphicSelect
@@ -1391,6 +1383,10 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
             const trackingUrl = ord.trackingNumber ? carrierObj.urlPrefix(ord.trackingNumber) : '';
 
             const isOrderSelected = selectedOrderIds.includes(ord.id);
+            const isExpanded = expandedOrderIds.includes(ord.id);
+            const detailsId = `order-details-${ord.id}`;
+            const mainAction = orderMainAction(ord);
+            const pieces = (ord.items || []).reduce((n, it) => n + (Number(it.quantity) || 0), 0);
 
             return (
               <div
@@ -1470,7 +1466,9 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                       <span>{payConfig.label}</span>
                       <ChevronDown className="w-3 h-3 opacity-60" aria-hidden="true" />
                     </AdminChoiceMenu>
-                    <AdminHint label="Статус оплаты">Отметьте «Оплачен», когда деньги пришли. Сайт сам деньги не принимает</AdminHint>
+                    {ordIdx === 0 && (
+                      <AdminHint label="Статус оплаты">Отметьте «Оплачен», когда деньги пришли. Сайт сам деньги не принимает</AdminHint>
+                    )}
 
                     <AdminChoiceMenu
                       label="Статус заказа"
@@ -1487,6 +1485,19 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                       <ChevronDown className="w-3 h-3 ml-0.5 opacity-70" aria-hidden="true" />
                     </AdminChoiceMenu>
                   </div>
+                </div>
+
+                {/* Who, how much and for what sum — what the owner reads in the short card */}
+                <div className="flex items-baseline justify-between gap-3 text-xs">
+                  <p className="min-w-0 truncate text-[#2D3A4E]">
+                    <strong>{ord.customerName || 'Покупатель'}</strong>
+                    <span className="text-[#4E5C70]">
+                      {' · '}
+                      {pieces} {pluralRu(pieces, ['товар', 'товара', 'товаров'])}
+                      {ord.deliveryMethod ? ` · ${ord.deliveryMethod}` : ''}
+                    </span>
+                  </p>
+                  <p className="text-sm font-extrabold text-accent whitespace-nowrap">{ord.totalPrice.toLocaleString('ru-RU')} ₽</p>
                 </div>
 
                 {/* Cancellation: who, when (to the second), why; a buyer's cancellation that did not return the goods */}
@@ -1608,361 +1619,433 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                   </p>
                 )}
 
-                {/* Items & Logistics Details */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 text-xs">
-                  {/* Left: Items breakdown */}
-                  <div className="md:col-span-7 space-y-2 min-w-0">
-                    <div className="neu-inset-deep rounded-2xl p-3 space-y-2 overflow-hidden border border-white/40">
-                      {(ord.items || []).map((it, idx) => (
-                        <div
-                          key={`admin-ord-it-${ord.id}-${it.id || idx}-${idx}`}
-                          className="flex items-start gap-2 text-xs font-medium text-[#2D3A4E]"
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0 mt-1.5" />
-                          {/* the title gets the whole line; variant and quantity go below it */}
-                          <div className="min-w-0 flex-1">
-                            <p className="font-bold leading-snug">{it.product?.title || 'Товар каталога'}</p>
-                            <p className="text-xs text-[#4E5C70] flex flex-wrap gap-x-2">
-                              <span>{[it.selectedColor, it.selectedSize].filter(Boolean).join(', ')}</span>
-                              <span className="font-bold text-accent whitespace-nowrap">
-                                {it.quantity} шт. × {linePrice(it).toLocaleString('ru-RU')} ₽
-                              </span>
-                              {it.isPreorder && <span className="font-extrabold text-accent">Предзаказ</span>}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Internal Manager Note View & Inline Editor */}
-                    <div className="neu-inset-deep rounded-2xl p-3 space-y-1.5 border border-white/40">
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-bold text-[#4E5C70] flex items-center gap-1.5">
-                          <MessageSquare className="w-3 h-3 text-accent" />
-                          Служебная заметка менеджера:
-                          <AdminHint label="Служебная заметка">Видна только вам и команде. Покупатель её не увидит</AdminHint>
-                        </span>
-                        {!isEditingNote && (
-                          <button
-                            onClick={() => {
-                              setEditingNoteOrderId(ord.id);
-                              setTempNoteValue(ord.managerNote || '');
-                            }}
-                            className="min-h-6 px-1 text-[11px] text-accent font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                {/* The rest of the order: under «Подробнее» (stage 5, finding 7: the open card was ≈ 760 px and 13 actions) */}
+                {isExpanded && (
+                  <div id={detailsId} className="space-y-3">
+                  {/* Items & Logistics Details */}
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 text-xs">
+                    {/* Left: Items breakdown */}
+                    <div className="md:col-span-7 space-y-2 min-w-0">
+                      <div className="neu-inset-deep rounded-2xl p-3 space-y-2 overflow-hidden border border-white/40">
+                        {(ord.items || []).map((it, idx) => (
+                          <div
+                            key={`admin-ord-it-${ord.id}-${it.id || idx}-${idx}`}
+                            className="flex items-start gap-2 text-xs font-medium text-[#2D3A4E]"
                           >
-                            <Edit3 className="w-2.5 h-2.5" />
-                            {ord.managerNote ? 'Изменить' : '+ Добавить заметку'}
-                          </button>
+                            <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0 mt-1.5" />
+                            {/* the title gets the whole line; variant and quantity go below it */}
+                            <div className="min-w-0 flex-1">
+                              <p className="font-bold leading-snug">{it.product?.title || 'Товар каталога'}</p>
+                              <p className="text-xs text-[#4E5C70] flex flex-wrap gap-x-2">
+                                <span>{[it.selectedColor, it.selectedSize].filter(Boolean).join(', ')}</span>
+                                <span className="font-bold text-accent whitespace-nowrap">
+                                  {it.quantity} шт. × {linePrice(it).toLocaleString('ru-RU')} ₽
+                                </span>
+                                {it.isPreorder && <span className="font-extrabold text-accent">Предзаказ</span>}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Internal Manager Note View & Inline Editor */}
+                      <div className="neu-inset-deep rounded-2xl p-3 space-y-1.5 border border-white/40">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-bold text-[#4E5C70] flex items-center gap-1.5">
+                            <MessageSquare className="w-3 h-3 text-accent" />
+                            Служебная заметка менеджера:
+                            <AdminHint label="Служебная заметка">Видна только вам и команде. Покупатель её не увидит</AdminHint>
+                          </span>
+                          {!isEditingNote && (
+                            <button
+                              onClick={() => {
+                                setEditingNoteOrderId(ord.id);
+                                setTempNoteValue(ord.managerNote || '');
+                              }}
+                              className="min-h-6 px-1 text-[11px] text-accent font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                            >
+                              <Edit3 className="w-2.5 h-2.5" />
+                              {ord.managerNote ? 'Изменить' : '+ Добавить заметку'}
+                            </button>
+                          )}
+                        </div>
+
+                        {isEditingNote ? (
+                          <div className="flex gap-2 items-center">
+                            <input
+                              type="text"
+                              value={tempNoteValue}
+                              onChange={(e) => setTempNoteValue(e.target.value)}
+                              placeholder="Например: клиент просил отправить до 14:00, звонок за час"
+                              className="flex-1 px-2.5 py-1.5 rounded-lg neu-flat text-xs text-[#2D3A4E]"
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => handleSaveManagerNote(ord.id)}
+                              className="p-1.5 neu-button-accent rounded-lg text-white"
+                              title="Сохранить"
+                              aria-label="Сохранить"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setEditingNoteOrderId(null)}
+                              className="p-1.5 neu-button rounded-lg text-[#4E5C70]"
+                              title="Отмена"
+                              aria-label="Отмена"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-[#2D3A4E] italic">
+                            {ord.managerNote || 'Заметок по заказу нет'}
+                          </p>
                         )}
                       </div>
-
-                      {isEditingNote ? (
-                        <div className="flex gap-2 items-center">
-                          <input
-                            type="text"
-                            value={tempNoteValue}
-                            onChange={(e) => setTempNoteValue(e.target.value)}
-                            placeholder="Например: клиент просил отправить до 14:00, звонок за час"
-                            className="flex-1 px-2.5 py-1.5 rounded-lg neu-flat text-xs text-[#2D3A4E]"
-                            autoFocus
-                          />
-                          <button
-                            onClick={() => handleSaveManagerNote(ord.id)}
-                            className="p-1.5 neu-button-accent rounded-lg text-white"
-                            title="Сохранить"
-                            aria-label="Сохранить"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => setEditingNoteOrderId(null)}
-                            className="p-1.5 neu-button rounded-lg text-[#4E5C70]"
-                            title="Отмена"
-                            aria-label="Отмена"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-[#2D3A4E] italic">
-                          {ord.managerNote || 'Заметок по заказу нет'}
-                        </p>
-                      )}
                     </div>
-                  </div>
 
-                  {/* Right: Logistics, Tracking Carrier & Total */}
-                  <div className="md:col-span-5 space-y-2 text-[11px] text-[#4E5C70] min-w-0">
-                    <div className="neu-inset-deep rounded-2xl p-3 space-y-2.5 overflow-hidden border border-white/40">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-[#2D3A4E] flex items-center gap-1">
-                          <Truck className="w-3 h-3 text-accent" />
-                          {ord.deliveryMethod || 'Курьер'}
-                        </span>
-                        <span className="text-[11px] text-[#4E5C70]">
-                          {ord.paymentMethod || 'Онлайн'}
-                        </span>
-                      </div>
+                    {/* Right: Logistics, Tracking Carrier & Total */}
+                    <div className="md:col-span-5 space-y-2 text-[11px] text-[#4E5C70] min-w-0">
+                      <div className="neu-inset-deep rounded-2xl p-3 space-y-2.5 overflow-hidden border border-white/40">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-[#2D3A4E] flex items-center gap-1">
+                            <Truck className="w-3 h-3 text-accent" />
+                            {ord.deliveryMethod || 'Курьер'}
+                          </span>
+                          <span className="text-[11px] text-[#4E5C70]">
+                            {ord.paymentMethod || 'Онлайн'}
+                          </span>
+                        </div>
 
-                      {(ord.customerName || ord.customerPhone) && (
-                        <p className="truncate text-[#2D3A4E]">
-                          <strong>Клиент:</strong> {ord.customerName || 'Покупатель'}{ord.customerPhone ? ` (${ord.customerPhone})` : ''}
+                        {(ord.customerName || ord.customerPhone) && (
+                          <p className="truncate text-[#2D3A4E]">
+                            <strong>Клиент:</strong> {ord.customerName || 'Покупатель'}{ord.customerPhone ? ` (${ord.customerPhone})` : ''}
+                          </p>
+                        )}
+
+                        <p className="truncate text-[#2D3A4E]" title={ord.deliveryAddress}>
+                          <strong>Адрес:</strong> {ord.deliveryAddress || 'не указан'}
                         </p>
-                      )}
 
-                      <p className="truncate text-[#2D3A4E]" title={ord.deliveryAddress}>
-                        <strong>Адрес:</strong> {ord.deliveryAddress || 'не указан'}
-                      </p>
+                        <AdminOrderCopyCards order={ord} />
 
-                      <AdminOrderCopyCards order={ord} />
+                        {!ord.isCancelled && ord.paymentStatus !== 'paid_on_delivery' && ord.paymentStatus !== 'refunded' && (
+                          <AdminOrderPaymentBlock
+                            order={ord}
+                            templates={paymentTemplates}
+                            onSave={(details) => saveOrderPaymentDetails(ord, details)}
+                            onShowToast={onShowToast}
+                          />
+                        )}
 
-                      {!ord.isCancelled && ord.paymentStatus !== 'paid_on_delivery' && ord.paymentStatus !== 'refunded' && (
-                        <AdminOrderPaymentBlock
-                          order={ord}
-                          templates={paymentTemplates}
-                          onSave={(details) => saveOrderPaymentDetails(ord, details)}
-                          onShowToast={onShowToast}
-                        />
-                      )}
+                        {/* Tracking Carrier & Number Row - Only for Transport Companies */}
+                        {(() => {
+                          const isTK = isCarrierOrder(ord);
+                          if (!isTK) {
+                            const dm = (ord.deliveryMethod || '').toLowerCase();
+                            const methodTypeLabel = dm.includes('самовывоз') || dm.includes('пункт выдачи')
+                              ? 'самовывоз'
+                              : dm.includes('экспресс')
+                              ? 'экспресс-доставка'
+                              : 'курьерская служба';
 
-                      {/* Tracking Carrier & Number Row - Only for Transport Companies */}
-                      {(() => {
-                        const isTK = isCarrierOrder(ord);
-                        if (!isTK) {
-                          const dm = (ord.deliveryMethod || '').toLowerCase();
-                          const methodTypeLabel = dm.includes('самовывоз') || dm.includes('пункт выдачи')
-                            ? 'самовывоз'
-                            : dm.includes('экспресс')
-                            ? 'экспресс-доставка'
-                            : 'курьерская служба';
+                            return (
+                              <div className="pt-2 border-t border-[#BAC5D5]/40 flex items-center justify-between text-[11px] flex-wrap gap-1.5">
+                                <span className="font-bold text-[#4E5C70] flex items-center gap-1.5">
+                                  <Truck className="w-3.5 h-3.5 text-accent" />
+                                  <span>Способ: <strong className="text-[#2D3A4E]">{ord.deliveryMethod || 'Курьер'}</strong></span>
+                                </span>
+                                <span className="text-[11px] text-[#4E5C70] font-medium neu-inset px-2 py-0.5 rounded-lg">
+                                  Трек-номер не предусмотрен ({methodTypeLabel})
+                                </span>
+                              </div>
+                            );
+                          }
 
                           return (
-                            <div className="pt-2 border-t border-[#BAC5D5]/40 flex items-center justify-between text-[11px] flex-wrap gap-1.5">
-                              <span className="font-bold text-[#4E5C70] flex items-center gap-1.5">
-                                <Truck className="w-3.5 h-3.5 text-accent" />
-                                <span>Способ: <strong className="text-[#2D3A4E]">{ord.deliveryMethod || 'Курьер'}</strong></span>
-                              </span>
-                              <span className="text-[11px] text-[#4E5C70] font-medium neu-inset px-2 py-0.5 rounded-lg">
-                                Трек-номер не предусмотрен ({methodTypeLabel})
-                              </span>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <div className="pt-2 border-t border-[#BAC5D5]/40 space-y-1.5">
-                            <div className="flex items-center justify-between text-[11px]">
-                              <span className="font-bold text-[#2D3A4E] flex items-center gap-1.5 flex-wrap">
-                                <span className="text-[#4E5C70]">ТК:</span>
-                                <strong className="text-accent font-extrabold">{carrierObj.name}</strong>
-                                <span className={`text-[11px] font-extrabold px-1.5 py-0.5 rounded border ${carrierObj.badgeBg}`}>
-                                  {carrierObj.badge}
+                            <div className="pt-2 border-t border-[#BAC5D5]/40 space-y-1.5">
+                              <div className="flex items-center justify-between text-[11px]">
+                                <span className="font-bold text-[#2D3A4E] flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-[#4E5C70]">ТК:</span>
+                                  <strong className="text-accent font-extrabold">{carrierObj.name}</strong>
+                                  <span className={`text-[11px] font-extrabold px-1.5 py-0.5 rounded border ${carrierObj.badgeBg}`}>
+                                    {carrierObj.badge}
+                                  </span>
                                 </span>
-                              </span>
 
-                              {!isEditingTrack && (
-                                <button
-                                  onClick={() => {
-                                    setEditingTrackOrderId(ord.id);
-                                    setTempTrackValue(ord.trackingNumber || '');
-                                    setTempCarrierValue(ord.trackingCompany || 'cdek');
-                                  }}
-                                  className="text-[11px] text-accent font-bold hover:underline flex items-center gap-1 cursor-pointer neu-button px-2 py-0.5 rounded-lg transition-all"
-                                >
-                                  <Edit3 className="w-2.5 h-2.5" />
-                                  <span>{ord.trackingNumber ? 'Изменить' : 'Добавить трек'}</span>
-                                </button>
-                              )}
-                            </div>
+                                {!isEditingTrack && (
+                                  <button
+                                    onClick={() => {
+                                      setEditingTrackOrderId(ord.id);
+                                      setTempTrackValue(ord.trackingNumber || '');
+                                      setTempCarrierValue(ord.trackingCompany || 'cdek');
+                                    }}
+                                    className="text-[11px] text-accent font-bold hover:underline flex items-center gap-1 cursor-pointer neu-button px-2 py-0.5 rounded-lg transition-all"
+                                  >
+                                    <Edit3 className="w-2.5 h-2.5" />
+                                    <span>{ord.trackingNumber ? 'Изменить' : 'Добавить трек'}</span>
+                                  </button>
+                                )}
+                              </div>
 
-                            {isEditingTrack ? (
-                              <div className="neu-flat rounded-2xl p-3 border border-white/80 space-y-3 pt-2.5 animate-in fade-in duration-150">
-                                {/* Neumorphic Carrier Selector (Clean inline grid with no overlapping popover) */}
-                                <div className="space-y-1.5">
-                                  <label className="text-[11px] font-extrabold text-[#4E5C70] uppercase tracking-wider block">
-                                    Служба доставки (ТК)
-                                  </label>
+                              {isEditingTrack ? (
+                                <div className="neu-flat rounded-2xl p-3 border border-white/80 space-y-3 pt-2.5 animate-in fade-in duration-150">
+                                  {/* Neumorphic Carrier Selector (Clean inline grid with no overlapping popover) */}
+                                  <div className="space-y-1.5">
+                                    <label className="text-[11px] font-extrabold text-[#4E5C70] uppercase tracking-wider block">
+                                      Служба доставки (ТК)
+                                    </label>
 
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                                    {TRACKING_CARRIERS.map((c) => {
-                                      const isSelected = tempCarrierValue === c.id;
-                                      return (
-                                        <button
-                                          key={c.id}
-                                          type="button"
-                                          onClick={() => setTempCarrierValue(c.id)}
-                                          className={`p-2 rounded-xl text-left transition-all flex items-center justify-between gap-2 cursor-pointer ${
-                                            isSelected
-                                              ? 'neu-pill-active font-extrabold'
-                                              : 'neu-button text-[#2D3A4E] hover:text-accent border border-white/70'
-                                          }`}
-                                        >
-                                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                                            <div
-                                              className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
-                                                isSelected
-                                                  ? 'neu-pill-active'
-                                                  : 'neu-button text-[#4E5C70]'
-                                              }`}
-                                            >
-                                              <Truck className="w-3.5 h-3.5" />
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                              <div className="flex items-center gap-1.5 flex-wrap">
-                                                <span className="text-xs truncate">{c.name}</span>
-                                                <span
-                                                  className={`text-[11px] font-extrabold px-1 py-0.2 rounded border shrink-0 ${c.badgeBg}`}
-                                                >
-                                                  {c.badge}
-                                                </span>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                      {TRACKING_CARRIERS.map((c) => {
+                                        const isSelected = tempCarrierValue === c.id;
+                                        return (
+                                          <button
+                                            key={c.id}
+                                            type="button"
+                                            onClick={() => setTempCarrierValue(c.id)}
+                                            className={`p-2 rounded-xl text-left transition-all flex items-center justify-between gap-2 cursor-pointer ${
+                                              isSelected
+                                                ? 'neu-pill-active font-extrabold'
+                                                : 'neu-button text-[#2D3A4E] hover:text-accent border border-white/70'
+                                            }`}
+                                          >
+                                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                                              <div
+                                                className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
+                                                  isSelected
+                                                    ? 'neu-pill-active'
+                                                    : 'neu-button text-[#4E5C70]'
+                                                }`}
+                                              >
+                                                <Truck className="w-3.5 h-3.5" />
                                               </div>
-                                              <p className="text-xs text-[#4E5C70] truncate leading-tight mt-0.5 font-normal">
-                                                {c.sublabel}
-                                              </p>
+                                              <div className="min-w-0 flex-1">
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                  <span className="text-xs truncate">{c.name}</span>
+                                                  <span
+                                                    className={`text-[11px] font-extrabold px-1 py-0.2 rounded border shrink-0 ${c.badgeBg}`}
+                                                  >
+                                                    {c.badge}
+                                                  </span>
+                                                </div>
+                                                <p className="text-xs text-[#4E5C70] truncate leading-tight mt-0.5 font-normal">
+                                                  {c.sublabel}
+                                                </p>
+                                              </div>
                                             </div>
-                                          </div>
 
-                                          {/* Tactile indicator */}
-                                          {isSelected ? (
-                                            <div className="w-4 h-4 rounded-full neu-fill-accent text-white flex items-center justify-center shrink-0">
-                                              <Check className="w-2.5 h-2.5 stroke-[3]" />
-                                            </div>
-                                          ) : (
-                                            <div className="w-3.5 h-3.5 rounded-full neu-inset shrink-0" />
-                                          )}
+                                            {/* Tactile indicator */}
+                                            {isSelected ? (
+                                              <div className="w-4 h-4 rounded-full neu-fill-accent text-white flex items-center justify-center shrink-0">
+                                                <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                              </div>
+                                            ) : (
+                                              <div className="w-3.5 h-3.5 rounded-full neu-inset shrink-0" />
+                                            )}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+
+                                  {/* Tracking Number Input */}
+                                  <div className="space-y-1">
+                                    <label className="text-[11px] font-extrabold text-[#4E5C70] uppercase tracking-wider block">
+                                      Трек-номер отправления
+                                    </label>
+                                    <div className="relative">
+                                      <input
+                                        type="text"
+                                        value={tempTrackValue}
+                                        onChange={(e) => setTempTrackValue(e.target.value)}
+                                        aria-label="Трек-номер отправления"
+                                        placeholder="Например: 1459203810"
+                                        className="w-full px-3 py-2 pr-8 rounded-xl neu-inset text-xs font-mono font-bold text-[#2D3A4E] border border-white/60 focus:ring-2 focus:ring-accent/40 transition-all"
+                                        autoFocus
+                                      />
+                                      {tempTrackValue && (
+                                        <button
+                                          type="button"
+                                          onClick={() => setTempTrackValue('')}
+                                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                                          aria-label="Закрыть"
+                                        >
+                                          <X className="w-3 h-3" />
                                         </button>
-                                      );
-                                    })}
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Actions Row */}
+                                  <div className="flex gap-2 justify-end pt-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setEditingTrackOrderId(null);
+                                      }}
+                                      className="px-3.5 py-1.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer transition-all"
+                                    >
+                                      Отмена
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        handleSaveTracking(ord.id);
+                                      }}
+                                      className="px-4 py-1.5 neu-button-accent rounded-xl text-xs font-extrabold text-white hover:scale-102 active:neu-inset-deep transition-all cursor-pointer flex items-center gap-1.5"
+                                    >
+                                      <Save className="w-3.5 h-3.5" />
+                                      <span>Сохранить</span>
+                                    </button>
                                   </div>
                                 </div>
-
-                                {/* Tracking Number Input */}
-                                <div className="space-y-1">
-                                  <label className="text-[11px] font-extrabold text-[#4E5C70] uppercase tracking-wider block">
-                                    Трек-номер отправления
-                                  </label>
-                                  <div className="relative">
-                                    <input
-                                      type="text"
-                                      value={tempTrackValue}
-                                      onChange={(e) => setTempTrackValue(e.target.value)}
-                                      aria-label="Трек-номер отправления"
-                                      placeholder="Например: 1459203810"
-                                      className="w-full px-3 py-2 pr-8 rounded-xl neu-inset text-xs font-mono font-bold text-[#2D3A4E] border border-white/60 focus:ring-2 focus:ring-accent/40 transition-all"
-                                      autoFocus
-                                    />
-                                    {tempTrackValue && (
-                                      <button
-                                        type="button"
-                                        onClick={() => setTempTrackValue('')}
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
-                                        aria-label="Закрыть"
+                              ) : ord.trackingNumber ? (
+                                <div className="flex items-center justify-between gap-1 neu-inset rounded-lg p-1.5">
+                                  <span className="font-mono text-xs font-extrabold text-accent truncate">
+                                    {ord.trackingNumber}
+                                  </span>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                      onClick={() => handleCopyTracking(ord.trackingNumber!)}
+                                      className="p-1 neu-button rounded-md text-[#4E5C70] hover:text-accent"
+                                      title="Скопировать трек-номер"
+                                      aria-label="Скопировать трек-номер"
+                                    >
+                                      <Copy className="w-3.5 h-3.5" />
+                                    </button>
+                                    {trackingUrl && (
+                                      <a
+                                        href={trackingUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="p-1 neu-button rounded-md text-accent hover:text-[#2D3A4E]"
+                                        title="Открыть отслеживание на сайте ТК"
                                       >
-                                        <X className="w-3 h-3" />
-                                      </button>
+                                        <ExternalLink className="w-3.5 h-3.5" />
+                                      </a>
                                     )}
                                   </div>
                                 </div>
+                              ) : (
+                                <span className="text-[11px] text-[#4E5C70] italic">Трек-номер не указан</span>
+                              )}
+                            </div>
+                          );
+                        })()}
 
-                                {/* Actions Row */}
-                                <div className="flex gap-2 justify-end pt-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setEditingTrackOrderId(null);
-                                    }}
-                                    className="px-3.5 py-1.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer transition-all"
-                                  >
-                                    Отмена
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      handleSaveTracking(ord.id);
-                                    }}
-                                    className="px-4 py-1.5 neu-button-accent rounded-xl text-xs font-extrabold text-white hover:scale-102 active:neu-inset-deep transition-all cursor-pointer flex items-center gap-1.5"
-                                  >
-                                    <Save className="w-3.5 h-3.5" />
-                                    <span>Сохранить</span>
-                                  </button>
-                                </div>
-                              </div>
-                            ) : ord.trackingNumber ? (
-                              <div className="flex items-center justify-between gap-1 neu-inset rounded-lg p-1.5">
-                                <span className="font-mono text-xs font-extrabold text-accent truncate">
-                                  {ord.trackingNumber}
-                                </span>
-                                <div className="flex items-center gap-1 shrink-0">
-                                  <button
-                                    onClick={() => handleCopyTracking(ord.trackingNumber!)}
-                                    className="p-1 neu-button rounded-md text-[#4E5C70] hover:text-accent"
-                                    title="Скопировать трек-номер"
-                                    aria-label="Скопировать трек-номер"
-                                  >
-                                    <Copy className="w-3.5 h-3.5" />
-                                  </button>
-                                  {trackingUrl && (
-                                    <a
-                                      href={trackingUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="p-1 neu-button rounded-md text-accent hover:text-[#2D3A4E]"
-                                      title="Открыть отслеживание на сайте ТК"
-                                    >
-                                      <ExternalLink className="w-3.5 h-3.5" />
-                                    </a>
-                                  )}
-                                </div>
-                              </div>
-                            ) : (
-                              <span className="text-[11px] text-[#4E5C70] italic">Трек-номер не указан</span>
-                            )}
-                          </div>
-                        );
-                      })()}
-
-                      <div className="flex items-center justify-between pt-1.5 border-t border-[#BAC5D5]/40 text-xs">
-                        <span className="font-bold text-[#2D3A4E]">Сумма к оплате:</span>
-                        <span className="text-sm font-extrabold text-accent">
-                          {ord.totalPrice.toLocaleString('ru-RU')} ₽
-                        </span>
+                        <div className="flex items-center justify-between pt-1.5 border-t border-[#BAC5D5]/40 text-xs">
+                          <span className="font-bold text-[#2D3A4E]">Сумма к оплате:</span>
+                          <span className="text-sm font-extrabold text-accent">
+                            {ord.totalPrice.toLocaleString('ru-RU')} ₽
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Bottom Order Actions Bar (Neumorphic Inset Control Strip with Inset Buttons) */}
-                <div className="neu-inset-deep rounded-2xl p-2 border border-white/40 flex items-center flex-wrap gap-1.5">
-                  {/* Chat with Client Button */}
+                    <div className="flex items-center gap-1.5">
+                      {/* История заказа: every status with its time to the second and who changed it */}
+                      <span className="inline-flex items-center gap-0.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedOrderAuditLogId(isAuditExpanded ? null : ord.id)
+                        }
+                        aria-expanded={isAuditExpanded}
+                        className={`h-8 px-3 rounded-xl text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
+                          isAuditExpanded ? 'neu-pill-active' : 'neu-button text-[#4E5C70] hover:text-accent'
+                        }`}
+                      >
+                        <History className="w-3.5 h-3.5 text-accent" />
+                        <span>История ({orderTimeline(ord, 'admin').length})</span>
+                      </button>
+                      <AdminHint label="История">Все смены статуса: когда и кто менял</AdminHint>
+                      </span>
+                    </div>
+                  {isAuditExpanded && (
+                    <div className="neu-inset rounded-2xl p-3 animate-in fade-in">
+                      <OrderTimeline order={ord} audience="admin" />
+                    </div>
+                  )}
+                  </div>
+                )}
+
+                {/* One main action on view, the details under «Подробнее», the rest in «Ещё» */}
+                <div className="flex items-center flex-wrap gap-1.5">
+                  {mainAction?.kind === 'status' && (
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateOrderStatus(ord.id, mainAction.status)}
+                      aria-label={`Заказ № ${ord.id}: дальше — ${adminStatusLabel(ord, mainAction.status)}`}
+                      className="h-8 px-3 neu-button rounded-xl text-xs font-bold text-accent hover:text-[#2D3A4E] flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+                      <span>Дальше: {adminStatusLabel(ord, mainAction.status)}</span>
+                    </button>
+                  )}
+                  {mainAction?.kind === 'track' && (
+                    <button
+                      type="button"
+                      onClick={() => openTrackEditor(ord)}
+                      aria-label={`Заказ № ${ord.id}: добавить трек-номер`}
+                      className="h-8 px-3 neu-button rounded-xl text-xs font-bold text-accent hover:text-[#2D3A4E] flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Truck className="w-3.5 h-3.5" aria-hidden="true" />
+                      <span>Добавить трек</span>
+                    </button>
+                  )}
+                  {/* «Забрать заказ»: courier and pickup orders on their way to the buyer, handed over by the code */}
+                  {mainAction?.kind === 'handover' && (
+                    <span className="inline-flex items-center gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => openHandover(ord)}
+                      aria-disabled={!canHandOver(ord)}
+                      className={`h-8 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer ${
+                        canHandOver(ord) ? 'neu-button text-success' : 'neu-button-disabled text-[#4E5C70]'
+                      }`}
+                      title={canHandOver(ord) ? 'Сверить код и выдать заказ' : 'Выдача невозможна: заказ не оплачен'}
+                    >
+                      <KeyRound className="w-3.5 h-3.5" aria-hidden="true" />
+                      <span>Забрать заказ</span>
+                    </button>
+                    <AdminHint label="Забрать заказ">Выдать заказ: покупатель называет код из своего кабинета, вы сверяете</AdminHint>
+                    </span>
+                  )}
                   <button
-                    onClick={() => {
-                      if (onOpenSupportChat) {
-                        onOpenSupportChat(ord.id, ord.customerName);
-                      } else {
-                        onShowToast(`Переход в чат с клиентом ${ord.customerName || ord.id}`, 'info');
-                      }
-                    }}
-                    className="h-8 px-3 neu-button rounded-xl text-xs font-bold text-accent hover:text-[#2D3A4E] flex items-center gap-1.5 cursor-pointer transition-all border border-white/60"
-                    title="Написать клиенту в чат поддержки"
+                    type="button"
+                    onClick={() => toggleOrderDetails(ord.id)}
+                    aria-expanded={isExpanded}
+                    aria-controls={isExpanded ? detailsId : undefined}
+                    aria-label={`${isExpanded ? 'Свернуть' : 'Подробнее'}: заказ № ${ord.id}`}
+                    className={`h-8 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer ${
+                      isExpanded ? 'neu-pill-active' : 'neu-button text-[#2D3A4E] hover:text-accent'
+                    }`}
                   >
-                    <MessageSquare className="w-3.5 h-3.5 text-accent" />
-                    <span>Чат с клиентом</span>
+                    <span>{isExpanded ? 'Свернуть' : 'Подробнее'}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} aria-hidden="true" />
                   </button>
-
-                  {/* Print Invoice / Receipt Button */}
-                  <button
-                    onClick={() => setSelectedOrderForInvoice(ord)}
-                    className="h-8 px-3 neu-button rounded-xl text-xs font-bold text-[#2D3A4E] hover:text-accent flex items-center gap-1.5 cursor-pointer transition-all border border-white/60"
-                    title="Сформировать и распечатать товарный чек или накладную"
-                  >
-                    <Printer className="w-3.5 h-3.5 text-accent" />
-                    <span>Печать чека</span>
-                  </button>
-
                   {/* Rarely used actions: «Ещё» menu; delete is the last item, after a line */}
                   <AdminActionMenu
                     of={`заказ № ${ord.id}`}
                     actions={[
+                      {
+                        id: 'chat',
+                        label: 'Чат с клиентом',
+                        icon: <MessageSquare className="w-3.5 h-3.5 text-accent" />,
+                        onSelect: () => {
+                          if (onOpenSupportChat) onOpenSupportChat(ord.id, ord.customerName);
+                          else onShowToast(`Переход в чат с клиентом ${ord.customerName || ord.id}`, 'info');
+                        },
+                      },
+                      {
+                        id: 'print',
+                        label: 'Печать чека',
+                        icon: <Printer className="w-3.5 h-3.5 text-accent" />,
+                        onSelect: () => setSelectedOrderForInvoice(ord),
+                      },
                       // a cancelled order already returned its goods: a second return here doubled the stock (finding 6)
                       ...(!ord.isCancelled
                         ? [
@@ -1971,6 +2054,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                               label: 'Правка состава и склад',
                               icon: <SlidersHorizontal className="w-3.5 h-3.5 text-warning" />,
                               onSelect: () => setSelectedOrderForAdjustment(ord),
+                              separatorBefore: true,
                             },
                           ]
                         : []),
@@ -2026,50 +2110,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                           ]),
                     ]}
                   />
-
-                  {/* «Забрать заказ»: courier and pickup orders on their way to the buyer, handed over by the code */}
-                  {usesPickupCode(ord) && !ord.isCancelled && (ord.status === 'in_transit' || ord.status === 'ready') && (
-                    <span className="inline-flex items-center gap-0.5">
-                    <button
-                      type="button"
-                      onClick={() => openHandover(ord)}
-                      aria-disabled={!canHandOver(ord)}
-                      className={`h-8 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer ${
-                        canHandOver(ord) ? 'neu-button text-success' : 'neu-button-disabled text-[#4E5C70]'
-                      }`}
-                      title={canHandOver(ord) ? 'Сверить код и выдать заказ' : 'Выдача невозможна: заказ не оплачен'}
-                    >
-                      <KeyRound className="w-3.5 h-3.5" aria-hidden="true" />
-                      <span>Забрать заказ</span>
-                    </button>
-                    <AdminHint label="Забрать заказ">Выдать заказ: покупатель называет код из своего кабинета, вы сверяете</AdminHint>
-                    </span>
-                  )}
-
-                  {/* История заказа: every status with its time to the second and who changed it */}
-                  <span className="inline-flex items-center gap-0.5 sm:ml-auto">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedOrderAuditLogId(isAuditExpanded ? null : ord.id)
-                    }
-                    aria-expanded={isAuditExpanded}
-                    className={`h-8 px-3 rounded-xl text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
-                      isAuditExpanded ? 'neu-pill-active' : 'neu-button text-[#4E5C70] hover:text-accent'
-                    }`}
-                  >
-                    <History className="w-3.5 h-3.5 text-accent" />
-                    <span>История ({orderTimeline(ord, 'admin').length})</span>
-                  </button>
-                  <AdminHint label="История">Все смены статуса: когда и кто менял</AdminHint>
-                  </span>
                 </div>
-
-                {isAuditExpanded && (
-                  <div className="neu-inset rounded-2xl p-3 animate-in fade-in">
-                    <OrderTimeline order={ord} audience="admin" />
-                  </div>
-                )}
               </div>
             );
           })
