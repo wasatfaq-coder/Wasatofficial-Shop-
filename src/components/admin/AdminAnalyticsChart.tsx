@@ -1,6 +1,6 @@
 import React from 'react';
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import type { AnalyticsPeriod, DailyDataPoint } from '../../utils/analyticsEngine';
+import type { AnalyticsGrouping, DailyDataPoint } from '../../utils/analyticsEngine';
 import { AdminChartNeumorphicTooltip } from './AdminChartNeumorphicTooltip';
 import {
   NeumorphicSVGDefs,
@@ -16,7 +16,8 @@ interface AdminAnalyticsChartProps {
   dailyData: DailyDataPoint[];
   activeMetric: ActiveMetric;
   metric: { label: string; unit: string; color: string; fill: string };
-  period: AnalyticsPeriod;
+  /** One bar — a day, a week or a month */
+  grouping: AnalyticsGrouping;
   /** The day (or month) open in the inspector */
   selectedDate?: string;
   /** The day (or month) the admin clicked on the chart */
@@ -33,7 +34,7 @@ const AdminAnalyticsChart: React.FC<AdminAnalyticsChartProps> = ({
   dailyData,
   activeMetric,
   metric,
-  period,
+  grouping,
   selectedDate,
   onChartClick,
   formatYAxis,
@@ -51,7 +52,10 @@ const AdminAnalyticsChart: React.FC<AdminAnalyticsChartProps> = ({
     const point = dailyData[index];
     if (point) onChartClick(point);
   };
-  const xAxisInterval = period === '30d' ? 3 : period === '14d' ? 1 : 0;
+  // up to 8 labels fit the axis on a phone: 14 days — every other one, 30 days — every fourth
+  const count = dailyData.length;
+  const xAxisInterval = count <= 8 ? 0 : count <= 14 ? 1 : Math.ceil(count / 8) - 1;
+  const dense = count > 14;
   // The chart is not re-created on every switch: Recharts animates from the old values to the new ones
   const tooltip = (
     <Tooltip
@@ -74,7 +78,7 @@ const AdminAnalyticsChart: React.FC<AdminAnalyticsChartProps> = ({
         axisLine={{ stroke: '#BAC5D5', strokeOpacity: 0.6 }}
         dy={4}
         interval={xAxisInterval}
-        tick={<NeumorphicAxisTick selectedDate={selectedDate} period={period} dailyData={dailyData} />}
+        tick={<NeumorphicAxisTick selectedDate={selectedDate} grouping={grouping} dense={dense} dailyData={dailyData} />}
       />
       <YAxis
         stroke="#4E5C70"
@@ -120,7 +124,7 @@ const AdminAnalyticsChart: React.FC<AdminAnalyticsChartProps> = ({
             dataKey={activeMetric}
             name={metric.label}
             shape={<NeumorphicBarShape selectedDate={selectedDate} activeMetric={activeMetric} />}
-            maxBarSize={period === '30d' ? 20 : 36}
+            maxBarSize={dense ? 20 : 36}
             animationDuration={450}
             animationEasing="ease-out"
           />
