@@ -1,6 +1,6 @@
 // Admin audit 09.10, findings 6 and 7: the admin panel writes only the fields it changed
 import { describe, expect, test } from 'bun:test';
-import { changedFields, changedSince, orderFieldsToCheck, stableJson } from '../../src/utils/fieldChanges';
+import { changedFields, changedSince, holdsChange, orderFieldsToCheck, stableJson } from '../../src/utils/fieldChanges';
 
 describe('changedFields', () => {
   const skus = [{ id: 's1', color: 'Белый', size: 'M', stock: 3 }];
@@ -46,5 +46,32 @@ describe('orders: what is checked before a write', () => {
     expect(changedSince(order, { ...order, stockReturned: true }, check)).toEqual([]);
     // an absent field and null are the same
     expect(changedSince({ id: 'o' }, { id: 'o', paymentReceipt: null }, ['paymentReceipt'])).toEqual([]);
+  });
+});
+
+describe('holdsChange: the database already has this very change', () => {
+  const log = [{ status: 'cancelled', at: '2026-10-10T08:00:00.000Z', by: 'admin' }];
+  const cancel = changedFields(
+    { id: 'o', status: 'in_transit', paymentStatus: 'paid', isCancelled: false },
+    { id: 'o', status: 'in_transit', paymentStatus: 'refunded', isCancelled: true, cancelledBy: 'admin', statusLog: log }
+  );
+
+  test('the admin\'s own cancel that already landed is not a buyer change', () => {
+    const db = { id: 'o', status: 'in_transit', paymentStatus: 'refunded', isCancelled: true, cancelledBy: 'admin', statusLog: log };
+    expect(holdsChange(db, cancel)).toBe(true);
+  });
+
+  test('a buyer\'s cancel meanwhile is still a change', () => {
+    const db = {
+      id: 'o', status: 'in_transit', paymentStatus: 'paid', isCancelled: true, cancelledBy: 'customer',
+      statusLog: [{ status: 'cancelled', at: '2026-10-10T07:59:00.000Z', by: 'customer' }],
+    };
+    expect(holdsChange(db, cancel)).toBe(false);
+  });
+
+  test('a removed field still in the database is not held', () => {
+    const changes = { set: {}, removed: ['paymentReceipt'] };
+    expect(holdsChange({ id: 'o', paymentReceipt: { url: 'x' } }, changes)).toBe(false);
+    expect(holdsChange({ id: 'o' }, changes)).toBe(true);
   });
 });

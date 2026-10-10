@@ -11,6 +11,8 @@ import {
   generatePickupCode,
   isCarrierOrder,
   orderDeliveryKind,
+  ORDER_STEP_LABELS,
+  orderMainAction,
   orderTimeline,
   showsPickupCode,
   statusChangeBlocker,
@@ -88,6 +90,29 @@ describe('chains and labels', () => {
     expect(isCarrierOrder(order({ deliveryMethod: 'СДЭК до пункта выдачи' }))).toBe(true);
     expect(isCarrierOrder(order({ deliveryKind: 'courier', deliveryMethod: 'Курьером до двери' }))).toBe(false);
     expect(isCarrierOrder(order({ deliveryKind: 'pickup', deliveryMethod: 'Самовывоз' }))).toBe(false);
+  });
+});
+
+describe('the short card in «Заказы» (stage 5 of docs/admin-wholesale-plan.md)', () => {
+  test('the main action is the next step; a carrier without a track — the track; courier and pickup — the handover', () => {
+    const carrier = { deliveryKind: 'carrier' as const, deliveryMethod: 'Почта России' };
+    expect(orderMainAction(order(carrier))).toEqual({ kind: 'status', status: 'assembling' });
+    expect(orderMainAction(order({ ...carrier, status: 'assembling' }))).toEqual({ kind: 'track' });
+    expect(orderMainAction(order({ ...carrier, status: 'assembling', trackingNumber: '800' }))).toEqual({ kind: 'status', status: 'in_transit' });
+    // «Получен» of a carrier's order — the buyer's «Я получил заказ», not a button in the list
+    expect(orderMainAction(order({ ...carrier, status: 'ready', trackingNumber: '800' }))).toBeNull();
+    expect(orderMainAction(order({ status: 'assembling' }))).toEqual({ kind: 'status', status: 'in_transit' });
+    expect(orderMainAction(order({ status: 'in_transit' }))).toEqual({ kind: 'handover' });
+    expect(orderMainAction(order({ deliveryKind: 'pickup', status: 'assembling' }))).toEqual({ kind: 'status', status: 'ready' });
+    expect(orderMainAction(order({ deliveryKind: 'pickup', status: 'ready' }))).toEqual({ kind: 'handover' });
+    expect(orderMainAction(order({ status: 'delivered' }))).toBeNull();
+    expect(orderMainAction(order({ isCancelled: true }))).toBeNull();
+  });
+
+  test('the step words of chips and bulk changes are the words of the order card', () => {
+    expect(ORDER_STEP_LABELS.accepted.one).toBe(adminStatusLabel(order(), 'accepted'));
+    expect(ORDER_STEP_LABELS.assembling.one).toBe(adminStatusLabel(order(), 'assembling'));
+    expect(Object.values(ORDER_STEP_LABELS).map((l) => l.many)).toEqual(['Новые', 'Скомплектованы', 'Переданы', 'Ждут получения', 'Получены']);
   });
 });
 

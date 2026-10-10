@@ -25,7 +25,7 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { needsOwnerAttention } from './firestoreErrors';
-import { changedFields, changedSince, hasFieldChanges, orderFieldsToCheck, type FieldChanges } from './fieldChanges';
+import { changedFields, changedSince, hasFieldChanges, holdsChange, orderFieldsToCheck, type FieldChanges } from './fieldChanges';
 import { CartItem, Product, ProductSKU, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog, PaymentKind, PaymentTemplate, PriceHistoryEntry, PriceChangeLog } from '../types';
 import { paymentLogEntry, receiptMessageText } from './paymentDetails';
 import { DEFAULT_STOREFRONT_SETTINGS, generateDefaultSKUs, inStockAfterReturn, inStockAfterStockChange, stockMovementId } from './inventory';
@@ -1516,11 +1516,22 @@ type OrderWrite =
  * the database has them now; when the read before writing finds one, nothing of the change is written.
  */
 /** The order as the database has it, when one of `fields` differs from what the admin saw; null — unchanged */
-async function currentOrderIfChanged(id: string, seen: Record<string, unknown>, fields: string[]): Promise<Order | null> {
+async function currentOrderIfChanged(
+  id: string,
+  seen: Record<string, unknown>,
+  fields: string[],
+  changes: FieldChanges
+): Promise<Order | null> {
   const snap = await getDoc(doc(db, 'orders', id));
   if (!snap.exists()) throw new Error(`Заказ ${id} удалён`);
   const current = normalizeOrderFromFirestore(snap.data(), snap.id);
-  return changedSince(seen, sanitizeForFirestore(current) as unknown as Record<string, unknown>, fields).length > 0 ? current : null;
+  return orderChangedMeanwhile(current, seen, fields, changes) ? current : null;
+}
+
+/** The database order differs from what the admin saw — unless it already holds exactly this change */
+function orderChangedMeanwhile(current: Order, seen: Record<string, unknown>, fields: string[], changes: FieldChanges): boolean {
+  const now = sanitizeForFirestore(current) as unknown as Record<string, unknown>;
+  return changedSince(seen, now, fields).length > 0 && !holdsChange(now, changes);
 }
 
 export async function syncAllOrdersToFirestore(orders: Order[], previous: Order[] = []): Promise<Order[]> {
@@ -1546,8 +1557,8 @@ export async function syncAllOrdersToFirestore(orders: Order[], previous: Order[
     );
     // All or nothing in practice: if a buyer changed any of the orders meanwhile, none is written, so the admin
     // screen's follow-up (stock, promo) never runs for a half-saved change
-    for (const { id, seen, check } of checked) {
-      const current = await currentOrderIfChanged(id, seen, check);
+    for (const { id, seen, check, changes } of checked) {
+      const current = await currentOrderIfChanged(id, seen, check, changes);
       if (current) conflicts.push(current);
     }
     if (conflicts.length > 0) return conflicts;
@@ -1564,7 +1575,7 @@ export async function syncAllOrdersToFirestore(orders: Order[], previous: Order[
         const snap = await tx.get(ref);
         if (!snap.exists()) throw new Error(`Заказ ${id} удалён`);
         const current = normalizeOrderFromFirestore(snap.data(), snap.id);
-        if (changedSince(seen, sanitizeForFirestore(current) as unknown as Record<string, unknown>, check).length > 0) return current;
+        if (orderChangedMeanwhile(current, seen, check, changes)) return current;
         tx.update(ref, { ...fieldUpdate(changes), updatedAt: serverTimestamp() });
         return null;
       });
