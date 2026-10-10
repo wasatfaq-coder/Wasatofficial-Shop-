@@ -175,7 +175,7 @@ paths:
     распроданный после возврата снова в продаже.
 - Статусы заказа по способу доставки («Доработки 4», `src/shared/orderFlow.ts` и `src/utils/orderFlow.ts`): тип заказа
   `deliveryKind` (`carrier` — Почта и ТК, `courier`, `pickup`; старые — по названию способа, `orderDeliveryKind`), цепочки
-  `FLOW_STATUSES`, подписи — только `adminStatusLabel`/`customerStatusLabel` (не `ORDER_STATUS_LABELS`). Заказ перевозчика
+  `FLOW_STATUSES`, подписи — только `adminStatusLabel`/`customerStatusLabel` у заказа и `ORDER_STEP_LABELS` у чипов и массовой смены статуса в «Заказах», оплата — `PAYMENT_STATUS_LABELS` (этап 5 `docs/admin-wholesale-plan.md`). Заказ перевозчика
   передаётся только с трек-номером (`statusChangeBlocker`); поле трека, трек в карточках и уведомлениях — тоже по типу
   заказа (`isCarrierOrder`), а не по словам в названии способа: ТК с любым названием («Байкал Сервис») получает трек
   (аудит 07.10, находка 1), «Получен» ставит покупатель («Я получил заказ», правило

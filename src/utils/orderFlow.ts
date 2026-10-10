@@ -75,6 +75,19 @@ export function adminStatusLabel(order: Order, status: OrderStatus = order.statu
   }
 }
 
+/**
+ * Шаг заказа без привязки к способу доставки — одни слова для чипов «Заказов» (`many`) и массовой смены статуса (`one`),
+ * в тех же словах, что `adminStatusLabel` у первых шагов (этап 5 `docs/admin-wholesale-plan.md`, находка 25: были
+ * «Скомплектованы / Собирается / Скомплектован»). Подпись одного заказа — по-прежнему `adminStatusLabel`.
+ */
+export const ORDER_STEP_LABELS: Record<OrderStatus, { one: string; many: string }> = {
+  accepted: { one: 'Новый', many: 'Новые' },
+  assembling: { one: 'Скомплектован', many: 'Скомплектованы' },
+  in_transit: { one: 'Передан', many: 'Переданы' },
+  ready: { one: 'Ждёт получения', many: 'Ждут получения' },
+  delivered: { one: 'Получен', many: 'Получены' },
+};
+
 /** Подпись статуса для покупателя: «Передан в доставку: СДЭК», «Курьер в пути», «Заказ ожидает в пункте выдачи» */
 export function customerStatusLabel(order: Order, status: OrderStatus = order.status): string {
   const kind = orderDeliveryKind(order);
@@ -151,6 +164,24 @@ export function generatePickupCode(): string {
   const value = crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000;
   const digits = String(value).padStart(6, '0');
   return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+}
+
+/** Главное действие свёрнутой карточки заказа в админке: следующий шаг, трек-номер для него или выдача по коду */
+export type OrderMainAction = { kind: 'status'; status: OrderStatus } | { kind: 'track' } | { kind: 'handover' };
+
+/**
+ * Что владелец делает с заказом дальше (этап 5, находка 7: одно действие на виду, остальное — в «Подробнее» и «Ещё»).
+ * Курьер и самовывоз в пути или в пункте — «Забрать заказ»; заказ перевозчика без трек-номера — сначала трек; «Получен»
+ * перевозчика ставит покупатель, поэтому последнего шага здесь нет (закрыть вручную — в меню статуса). Отменённый — ничего.
+ */
+export function orderMainAction(order: Order): OrderMainAction | null {
+  if (order.isCancelled) return null;
+  if (usesPickupCode(order) && (order.status === 'in_transit' || order.status === 'ready')) return { kind: 'handover' };
+  const chain = FLOW_STATUSES[orderDeliveryKind(order)];
+  const at = chain.indexOf(order.status);
+  const next = at >= 0 ? chain[at + 1] : undefined;
+  if (!next || next === 'delivered') return null;
+  return statusChangeBlocker(order, next) ? { kind: 'track' } : { kind: 'status', status: next };
 }
 
 /** Код показывается покупателю, когда заказ передан курьеру или ждёт в пункте выдачи */
