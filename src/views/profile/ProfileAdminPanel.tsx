@@ -53,6 +53,9 @@ const AdminCustomersTab = lazy(() => import('../../components/admin/AdminCustome
 const AdminStorefrontTab = lazy(() => import('../../components/admin/AdminStorefrontTab').then((m) => ({ default: m.AdminStorefrontTab })));
 const BrandRenameCard = lazy(() => import('../../components/admin/BrandRenameCard').then((m) => ({ default: m.BrandRenameCard })));
 const AdminDeliveryTab = lazy(() => import('../../components/admin/AdminDeliveryTab').then((m) => ({ default: m.AdminDeliveryTab })));
+const AdminWholesaleTab = lazy(() =>
+  import('../../components/admin/AdminWholesaleTab').then((m) => ({ default: m.AdminWholesaleTab }))
+);
 const AdminFaqTab = lazy(() => import('../../components/admin/AdminFaqTab').then((m) => ({ default: m.AdminFaqTab })));
 const AdminLegalTab = lazy(() => import('../../components/admin/AdminLegalTab').then((m) => ({ default: m.AdminLegalTab })));
 const AdminPaymentTab = lazy(() => import('../../components/admin/AdminPaymentTab').then((m) => ({ default: m.AdminPaymentTab })));
@@ -469,6 +472,15 @@ export const ProfileAdminPanel = ({
                   onShowToast={onShowToast}
                   settings={storefrontSettings}
                   onUpdateSettings={onUpdateStorefrontSettings}
+                />
+              )}
+
+              {adminTab === 'wholesale' && (
+                <AdminWholesaleTab
+                  settings={storefrontSettings}
+                  onUpdateSettings={onUpdateStorefrontSettings}
+                  products={productsList}
+                  onShowToast={onShowToast}
                 />
               )}
 

@@ -40,6 +40,8 @@ interface Draft {
   usd: RateDraft;
   cny: RateDraft;
   markupPercent: string;
+  /** Empty — wholesale prices are not counted from the rate */
+  wholesaleMarkupPercent: string;
 }
 
 const key = (c: PurchaseCurrency) => (c === 'USD' ? 'usd' : 'cny');
@@ -47,7 +49,9 @@ const text = (n: number) => (n ? String(n).replace('.', ',') : '');
 const toDraft = (r: ExchangeRates): Draft => ({
   usd: { official: text(r.usd.official), markup: text(r.usd.markup), markupKind: r.usd.markupKind },
   cny: { official: text(r.cny.official), markup: text(r.cny.markup), markupKind: r.cny.markupKind },
-  markupPercent: text(r.markupPercent),
+  // a saved 0 % is shown as «0»; never applied — empty, and «Применить» asks for the markup instead of taking 0 %
+  markupPercent: r.appliedAt ? String(r.markupPercent).replace('.', ',') : text(r.markupPercent),
+  wholesaleMarkupPercent: r.wholesaleMarkupPercent !== undefined ? String(r.wholesaleMarkupPercent).replace('.', ',') : '',
 });
 const fromDraft = (d: Draft): ExchangeRates => {
   const rate = (r: RateDraft): CurrencyRate => ({
@@ -55,7 +59,13 @@ const fromDraft = (d: Draft): ExchangeRates => {
     markup: r.markup.trim() === '' ? 0 : num(r.markup),
     markupKind: r.markupKind,
   });
-  return { usd: rate(d.usd), cny: rate(d.cny), markupPercent: d.markupPercent.trim() === '' ? 0 : num(d.markupPercent) };
+  return {
+    usd: rate(d.usd),
+    cny: rate(d.cny),
+    // empty is NaN: exchangeRateErrors asks for the markup (an empty field used to mean 0 %, owner's screenshot 09.10)
+    markupPercent: num(d.markupPercent),
+    ...(d.wholesaleMarkupPercent.trim() !== '' ? { wholesaleMarkupPercent: num(d.wholesaleMarkupPercent) } : {}),
+  };
 };
 
 const rub = (n: number) => `${n.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ₽`;
@@ -98,6 +108,9 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
   const ready = exchangeRateErrors(rates).length === 0;
   const changes = ready ? repriceProducts(products, rates) : [];
   const inCurrency = PURCHASE_CURRENCIES.reduce((sum, c) => sum + productsInCurrency(products, c.id), 0);
+  const wholesaleNotLower = changes.filter(
+    (c) => c.after.wholesalePrice !== undefined && c.after.wholesalePrice >= c.after.price
+  ).length;
 
   const edit = (patch: (d: Draft) => Draft) => {
     setDraft(patch(current));
@@ -156,6 +169,7 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
       costPrice: c.after.costPrice,
       originalPrice: c.after.originalPrice ?? undefined,
       discountPercent: c.discountPercent || undefined,
+      ...(c.after.wholesalePrice !== undefined ? { wholesalePrice: c.after.wholesalePrice } : {}),
     }));
     const ok = await onApply({ ...rates, appliedAt: new Date().toISOString() }, repriced);
     setSaving(false);
@@ -304,22 +318,49 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
         })}
       </div>
 
-      <div className="neu-flat rounded-3xl p-4 space-y-2">
-        <label htmlFor="rate-markup-percent" className="text-sm font-extrabold text-[#2D3A4E] block">
-          Наценка для всех товаров, %
-        </label>
-        <input
-          id="rate-markup-percent"
-          type="text"
-          inputMode="decimal"
-          value={current.markupPercent}
-          onChange={(e) => edit((d) => ({ ...d, markupPercent: e.target.value }))}
-          placeholder="напр. 180"
-          className="w-full max-w-xs h-10 px-3 neu-inset rounded-xl text-sm font-bold text-[#2D3A4E]"
-        />
-        <p className="text-xs text-[#4E5C70]">
-          Цена = закупка × рабочий курс + наценка. Товар со своей наценкой в форме товара считается по своей.
-        </p>
+      <div className="neu-flat rounded-3xl p-4 grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2 min-w-0">
+          <label htmlFor="rate-markup-percent" className="text-sm font-extrabold text-[#2D3A4E] block">
+            Наценка для розницы, %
+          </label>
+          <input
+            id="rate-markup-percent"
+            type="text"
+            inputMode="decimal"
+            value={current.markupPercent}
+            onChange={(e) => edit((d) => ({ ...d, markupPercent: e.target.value }))}
+            placeholder="напр. 180"
+            className="w-full max-w-xs h-10 px-3 neu-inset rounded-xl text-sm font-bold text-[#2D3A4E]"
+          />
+          <p className="text-xs text-[#4E5C70]">
+            Розничная цена = закупка × рабочий курс + наценка. Обязательна: 0 — продавать по себестоимости. Товар со своей
+            наценкой в форме товара считается по своей.
+          </p>
+        </div>
+        <div className="space-y-2 min-w-0">
+          <label htmlFor="rate-wholesale-markup" className="text-sm font-extrabold text-[#2D3A4E] block">
+            Наценка для опта, %
+          </label>
+          <input
+            id="rate-wholesale-markup"
+            type="text"
+            inputMode="decimal"
+            value={current.wholesaleMarkupPercent}
+            onChange={(e) => edit((d) => ({ ...d, wholesaleMarkupPercent: e.target.value }))}
+            placeholder="напр. 80"
+            className="w-full max-w-xs h-10 px-3 neu-inset rounded-xl text-sm font-bold text-[#2D3A4E]"
+          />
+          <p className="text-xs text-[#4E5C70]">
+            Оптовая цена за штуку = закупка × рабочий курс + наценка опта. Считается только у товаров, которые продаются
+            оптом (есть оптовая цена, «Только оптом» или своя наценка опта). Пусто — оптовые цены не меняются.
+          </p>
+          {wholesaleNotLower > 0 && (
+            <p className="text-xs font-bold text-warning">
+              У {wholesaleNotLower} {pluralRu(wholesaleNotLower, ['товара', 'товаров', 'товаров'])} оптовая цена будет не ниже
+              розничной — проверьте наценки.
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="neu-flat rounded-3xl p-4 space-y-3">
@@ -330,7 +371,7 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
             товары курсы не меняют.
           </p>
         ) : !ready ? (
-          <p className="text-xs text-[#4E5C70]">Укажите курсы ЦБ — здесь появятся новые цены.</p>
+          <p className="text-xs text-[#4E5C70]">Укажите курсы ЦБ и наценку для розницы — здесь появятся новые цены.</p>
         ) : changes.length === 0 ? (
           <p className="flex items-center gap-1.5 text-xs font-bold text-success">
             <Check className="w-4 h-4" aria-hidden="true" /> Цены всех {inCurrency} {pluralRu(inCurrency, ['товара', 'товаров', 'товаров'])} уже такие
@@ -353,6 +394,19 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
                         закупка {sign}
                         {c.product.purchase?.amount.toLocaleString('ru-RU')} → себестоимость {rub(c.after.costPrice)}
                       </p>
+                      {c.discountCutFrom !== undefined && (
+                        <p className="text-[11px] font-bold text-warning">
+                          Скидка {c.discountCutFrom} % увела бы цену ниже себестоимости:{' '}
+                          {c.after.originalPrice !== null ? `оставлено ${c.discountPercent} %` : 'скидка убирается'}
+                        </p>
+                      )}
+                      {c.after.wholesalePrice !== undefined && c.after.wholesalePrice !== c.before.wholesalePrice && (
+                        <p className="text-[11px] text-[#4E5C70]">
+                          опт за штуку:{' '}
+                          {c.before.wholesalePrice !== undefined ? `${rub(c.before.wholesalePrice)} → ` : ''}
+                          {rub(c.after.wholesalePrice)}
+                        </p>
+                      )}
                       {c.after.originalPrice !== null ? (
                         <p className="text-[11px] text-[#4E5C70]">
                           скидка {c.discountPercent} % сохраняется: старая цена {rub(c.after.originalPrice)}

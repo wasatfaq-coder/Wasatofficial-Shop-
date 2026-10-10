@@ -15,6 +15,7 @@ import {
   Loader2,
   MoreHorizontal,
   Package,
+  PackageOpen,
   Store,
   Tag,
   Truck,
@@ -36,7 +37,8 @@ const TABS: Record<SectionTab, { label: string; short?: string; icon: LucideIcon
   analytics: { label: 'Аналитика', icon: BarChart3, about: 'Выручка, отмены, ошибки на сайте' },
   categories: { label: 'Категории', icon: FolderTree, about: 'Разделы каталога и их порядок' },
   inventory: { label: 'Склад и SKU', icon: Boxes, about: 'Остатки, приход и списание, этикетки' },
-  rates: { label: 'Курсы и наценка', icon: Coins, about: 'Курс доллара и юаня, цены от закупки' },
+  rates: { label: 'Курсы и наценка', icon: Coins, about: 'Курс доллара и юаня, наценки розницы и опта' },
+  wholesale: { label: 'Опт', icon: PackageOpen, about: 'Скидка за объём для оптовых товаров' },
   promos: { label: 'Промокоды', icon: Tag, about: 'Скидки по коду' },
   banners: { label: 'Баннеры', icon: ImageIcon, about: 'Слайды на главной' },
   delivery: { label: 'Доставка и ПВЗ', icon: Truck, about: 'Способы доставки, цены и пункты выдачи' },
@@ -52,7 +54,7 @@ const PRIMARY: SectionTab[] = ['today', 'orders', 'products', 'support'];
 /** The rest — in «Ещё», a list with a line about each section, in the old groups */
 const MORE_GROUPS: { label: string; tabs: SectionTab[] }[] = [
   { label: 'Продажи', tabs: ['customers', 'analytics'] },
-  { label: 'Каталог', tabs: ['categories', 'inventory', 'rates'] },
+  { label: 'Каталог', tabs: ['categories', 'inventory', 'rates', 'wholesale'] },
   { label: 'Маркетинг', tabs: ['promos', 'banners'] },
   { label: 'Магазин', tabs: ['delivery', 'payment', 'faq', 'legal', 'storefront'] },
 ];

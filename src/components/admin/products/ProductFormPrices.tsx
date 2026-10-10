@@ -13,6 +13,7 @@ import {
 import { subscribeToExchangeRates } from '../../../utils/firebaseSync';
 import { AdminHint } from '../AdminHint';
 import type { ProductForm } from './useProductForm';
+import { ProductFormWholesale } from './ProductFormWholesale';
 
 const rub = (value: number) => `${value.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ₽`;
 
@@ -302,6 +303,8 @@ export function ProductFormPrices({ form }: { form: ProductForm }) {
             : 'Товар закуплен в долларах или юанях — выберите валюту, и его цена пойдёт за курсом.'}
         </p>
       </fieldset>
+
+      <ProductFormWholesale form={form} rates={rates} cost={cost} />
     </>
   );
 }

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { ActiveTab, AppliedPromoInfo, CartItem, Product, PromoCode } from '../types';
+import { priceCartLines, type WholesaleSettings } from '../shared/wholesalePricing';
 import { CART_STORAGE_KEY, loadStoredCart, toStoredCart } from '../utils/cartStorage';
 import { getOrderableStock, isPreorderVariant } from '../utils/inventory';
 import { validatePromo, toPricingLine, appliedPromoFrom, currentAppliedPromo, promoSignInProblem } from '../shared/orderPricing';
@@ -23,6 +24,8 @@ type CartOptions = {
   signedInWithGoogle: boolean;
   /** «Войти через Google» from the toast about such a code */
   onSignIn: () => void;
+  /** «Опт» of the storefront settings: the volume discount of wholesale lines */
+  wholesale?: WholesaleSettings;
 };
 
 /**
@@ -31,7 +34,7 @@ type CartOptions = {
  */
 export function useCart({
   promos, promosLoaded, promosFailed, requestPromos, preorderMode, addToast, setActiveTab, onOpenProduct, signedInWithGoogle,
-  onSignIn,
+  onSignIn, wholesale,
 }: CartOptions) {
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
@@ -51,21 +54,24 @@ export function useCart({
   }, [favorites]);
 
   // Saved cart (light lines, cartStorage.ts); the full products come from the catalog subscription
-  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+  const [storedCart, setCartItems] = useState<CartItem[]>(() => {
     try {
       return loadStoredCart(localStorage.getItem(CART_STORAGE_KEY));
     } catch {
       return [];
     }
   });
+  // Every screen reads the lines with their prices: wholesale lines — the wholesale price minus the volume step
+  // (priceCartLines, the same as in placeOrder); the stored lines keep only the buyer's choice
+  const cartItems = useMemo(() => priceCartLines(storedCart, wholesale), [storedCart, wholesale]);
 
   React.useEffect(() => {
     try {
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(toStoredCart(cartItems)));
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(toStoredCart(storedCart)));
     } catch (err) {
       console.error('Cart was not saved in the browser:', err);
     }
-  }, [cartItems]);
+  }, [storedCart]);
 
   const [appliedPromo, setAppliedPromo] = useState<AppliedPromoInfo | null>(null);
 
