@@ -80,7 +80,7 @@ export const AdminAnalyticsProfitCard: React.FC<{ byChannel: Record<SalesChannel
           {estimatedOrders > 0 && (
             <p>
               ≈ — оценка: у {estimatedOrders} {pluralRu(estimatedOrders, ['заказа', 'заказов', 'заказов'])} себестоимость
-              взята по сегодняшней закупке товара, потому что цена закупки на момент продажи не сохранена.
+              взята по сегодняшней закупке товара, потому что цена закупки на момент продажи не сохранена (заказы до 9 октября 2026 года).
             </p>
           )}
           {missingLines > 0 && (

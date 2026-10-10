@@ -21,6 +21,13 @@ import {
   periodRangeText,
   resolvePeriod,
 } from '../../src/utils/analyticsPeriods';
+import {
+  buildOrderCostDoc,
+  ORDER_COSTS_SINCE,
+  orderCostsWindowStart,
+  ordersNeedingCostSnapshot,
+  readOrderCostDoc,
+} from '../../src/utils/orderCosts';
 import type { CartItem, Order } from '../../src/types';
 
 // 7 октября 2026 (среда), 15:00 по местному времени
@@ -125,6 +132,19 @@ describe('чистый доход = выручка − себестоимост�
     expect(summarizeProfit([o], costs)).toMatchObject({ revenue: 2500, cogs: 800, netProfit: 1700 });
   });
 
+  test('корректировка заказа с возвратом: возврат уже вычтен из суммы и второй раз не вычитается', () => {
+    // оплачено 5 000 ₽, убрали товар: сумма 3 000 ₽, к возврату 2 000 ₽ (AdminOrderAdjustmentModal)
+    const o = order('cut', at(10, 6), [line('tee', 1000, 3)], {
+      totalPrice: 3000,
+      isAdjusted: true,
+      refundAmount: 2000,
+      adjustmentLogs: [{ id: 'a', date: '', reason: '', previousTotal: 5000, newTotal: 3000, refundAmount: 2000, changedItemsSummary: '' }],
+    });
+    expect(summarizeProfit([o], costs)).toMatchObject({ revenue: 3000, cogs: 1200, netProfit: 1800 });
+    // потом ещё «Возврат средств» на 500 ₽ — он вычитается
+    expect(summarizeProfit([{ ...o, refundAmount: 2500 }], costs).revenue).toBe(2500);
+  });
+
   test('неоплаченные и отменённые не приносят дохода и не тратят себестоимость; частичный возврат вычитается', () => {
     const orders = [
       order('unpaid', at(10, 6), [line('tee', 1000, 1)], { paymentStatus: 'pending' }),
@@ -226,6 +246,9 @@ describe('периоды: день, неделя, месяц, свои даты'
     expect(buckets[0]).toMatchObject({ label: '8 сен', fullDate: '8–13 сентября 2026', weekday: 'Неделя' });
     expect(buckets[3].fullDate).toBe('28 сен – 4 окт 2026');
     expect(buckets[4].end).toBe(new Date(2026, 9, 8).getTime());
+    // неделя из одного дня — одна дата, а не «1–1»
+    const sunday = periodBuckets(resolvePeriod({ from: '2026-03-01', to: '2026-03-03' }, NOW), 'week');
+    expect(sunday[0].fullDate).toBe('1 марта 2026');
   });
 
   test('заказы ложатся в свою неделю и свой месяц', () => {
@@ -263,5 +286,48 @@ describe('периоды: день, неделя, месяц, свои даты'
     expect(computeFirestoreDailySales([], '6m', 'all', null, NOW).dailyData.map((d) => d.dateKey)).toEqual([
       '2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10',
     ]);
+  });
+});
+
+describe('снимок себестоимости заказа (order_costs)', () => {
+  const now = new Date('2026-10-20T12:00:00+03:00');
+  const fresh = order('fresh', new Date('2026-10-19T12:00:00+03:00'), [
+    line('tee', 1000, 2),
+    line('tee', 1000, 1, { selectedSize: 'L' }),
+    line('nocost', 500, 1),
+  ]);
+
+  test('снимок берёт себестоимость каждой строки сейчас; строки без себестоимости не попадают', () => {
+    const entry = buildOrderCostDoc(fresh, costs.current, now)!;
+    expect(entry.orderId).toBe('fresh');
+    expect(entry.capturedAt).toBe(now.toISOString());
+    expect(entry.lines).toEqual([
+      { productId: 'tee', size: 'M', color: 'Синий', unitCost: 400 },
+      { productId: 'tee', size: 'L', color: 'Синий', unitCost: 400 },
+    ]);
+    // заказ без единой себестоимости снимка не получает
+    expect(buildOrderCostDoc(order('n', now, [line('nocost', 500, 1)]), costs.current, now)).toBeNull();
+  });
+
+  test('заказ с нечитаемой датой снимка не получает и не роняет остальные', () => {
+    const broken = { ...fresh, id: 'broken', createdAt: 'x', date: '19.10.2026' };
+    expect(buildOrderCostDoc(broken, costs.current, now)).toBeNull();
+  });
+
+  test('прочитанный снимок считается точно, а не оценкой, даже когда закупка подорожала', () => {
+    const snapshot = readOrderCostDoc(buildOrderCostDoc(fresh, costs.current, now) as unknown as Record<string, unknown>)!;
+    const later: CostSources = { current: new Map([['tee', 900]]), snapshots: new Map([['fresh', snapshot]]) };
+    expect(orderCogs(fresh, later)).toEqual({ cogs: 3 * 400, estimated: false, missingLines: 1 });
+    expect(readOrderCostDoc({ lines: 'испорчено' })).toBeNull();
+  });
+
+  test('снимок нужен только новым заказам окна, у которых его нет и которые ещё не пробовали', () => {
+    const old = order('old', new Date('2026-10-01T12:00:00+03:00'), [line('tee', 1000, 1)]);
+    const done = order('done', new Date('2026-10-18T12:00:00+03:00'), [line('tee', 1000, 1)]);
+    const triedOne = order('tried', new Date('2026-10-18T12:00:00+03:00'), [line('tee', 1000, 1)]);
+    // окно — 30 дней, но не раньше 9 октября 2026: заказ 1 октября остаётся оценкой
+    expect(orderCostsWindowStart(now)).toBe(new Date(ORDER_COSTS_SINCE).toISOString());
+    const need = ordersNeedingCostSnapshot([fresh, old, done, triedOne], new Set(['done']), new Set(['tried']), now);
+    expect(need.map((o) => o.id)).toEqual(['fresh']);
   });
 });

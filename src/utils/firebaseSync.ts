@@ -59,6 +59,8 @@ import { trackRead } from './pendingReads';
 import { googleAvatarUrl } from './googleAvatar';
 import { EXCHANGE_RATES_DOC_ID, readExchangeRates, type ExchangeRates } from './currencyPricing';
 import { costEntryOf, hasCostData, readCostEntry, type ProductCostEntry } from './productCosts';
+import { ORDER_COSTS_COLLECTION, readOrderCostDoc, type OrderCostDoc } from './orderCosts';
+import type { OrderCostSnapshot } from './salesProfit';
 export type { ProductCostEntry } from './productCosts';
 import {
   CATALOG_INDEX_COLLECTION,
@@ -754,6 +756,36 @@ export async function updateProductPrices(changes: ProductPriceChange[]) {
     await commitInChunks(changes, addProductPrice);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'products');
+  }
+}
+
+/**
+ * Admin only: cost snapshots of orders at the moment of sale (`order_costs`, owner's decision 09.10), by order id.
+ * `since` — only orders placed from that ISO time (the admin's session checks recent orders); null — all («Аналитика»)
+ */
+export function subscribeToOrderCosts(since: string | null, onUpdate: (snapshots: Map<string, OrderCostSnapshot>) => void) {
+  const source = collection(db, ORDER_COSTS_COLLECTION);
+  return onSnapshot(
+    since ? query(source, where('orderCreatedAt', '>=', since)) : source,
+    (snapshot) => {
+      const snapshots = new Map<string, OrderCostSnapshot>();
+      snapshot.forEach((snap) => {
+        const read = readOrderCostDoc(snap.data());
+        if (read) snapshots.set(snap.id, read);
+      });
+      onUpdate(snapshots);
+    },
+    (error) => logSubscriptionError('Order costs', error)
+  );
+}
+
+/** Writes cost snapshots of orders; throws when the write is refused */
+export async function saveOrderCosts(docs: OrderCostDoc[]) {
+  if (docs.length === 0) return;
+  try {
+    await commitInChunks(docs, (batch, entry) => batch.set(doc(db, ORDER_COSTS_COLLECTION, entry.orderId), sanitizeForFirestore(entry)));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, ORDER_COSTS_COLLECTION);
   }
 }
 
@@ -2305,7 +2337,7 @@ export const BACKUP_COLLECTIONS = [
   'products', 'product_previews', 'product_photos', 'product_costs', 'promos', 'settings', 'banners', 'banner_images', 'delivery_methods', 'pickup_points',
   'orders', 'users', 'customer_notes', 'admins', 'reviews', 'review_votes',
   'chat_messages', 'chat_images', 'support_threads', 'support_status', STOCK_MOVEMENTS_COLLECTION, 'promo_uses', 'payment_templates',
-  PRICE_CHANGES_COLLECTION,
+  PRICE_CHANGES_COLLECTION, ORDER_COSTS_COLLECTION,
 ] as const;
 
 export interface DatabaseBackup {

@@ -117,7 +117,9 @@ export const AdminAnalyticsPeriodDialog: React.FC<{
             noValidate
             className={`rounded-2xl p-3 space-y-2.5 ${isCustomPeriod(value) ? 'neu-pill-active' : 'neu-flat-sm'}`}
           >
-            <p className="text-xs font-extrabold text-[#2D3A4E]">Свой период</p>
+            <p className="text-xs font-extrabold text-[#2D3A4E]">
+              Свой период{isCustomPeriod(value) && <span className="font-bold text-accent"> · выбран</span>}
+            </p>
             <div className="grid grid-cols-2 gap-2">
               <label className="space-y-1 min-w-0">
                 <span className="block text-[11px] font-bold text-[#4E5C70]">С</span>

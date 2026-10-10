@@ -134,6 +134,7 @@ export interface PeriodBucket {
 }
 
 function weekText(first: Date, last: Date): string {
+  if (first.getTime() === last.getTime()) return `${first.getDate()} ${RU_MONTHS_FULL[first.getMonth()]} ${first.getFullYear()}`;
   const sameYear = first.getFullYear() === last.getFullYear();
   if (first.getMonth() === last.getMonth() && sameYear) {
     return `${first.getDate()}–${last.getDate()} ${RU_MONTHS_FULL[last.getMonth()]} ${last.getFullYear()}`;

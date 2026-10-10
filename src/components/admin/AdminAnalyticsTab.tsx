@@ -44,13 +44,13 @@ import {
   type AnalyticsGrouping,
   type PeriodSelection,
 } from '../../utils/analyticsPeriods';
-import { currentCostMap, profitByChannel, type CostSources } from '../../utils/salesProfit';
+import { currentCostMap, profitByChannel, type CostSources, type OrderCostSnapshot } from '../../utils/salesProfit';
 import { AdminAnalyticsPeriodDialog, periodTitle } from './AdminAnalyticsPeriodDialog';
 import { AdminAnalyticsProfitCard } from './AdminAnalyticsProfitCard';
 import { AdminAnalyticsPromos } from './AdminAnalyticsPromos';
 import { orderTimestamp } from '../../shared/orderDate';
 import { adminStatusLabel } from '../../utils/orderFlow';
-import { subscribeToAnalyticsResetAt, saveAnalyticsResetAt } from '../../utils/firebaseSync';
+import { subscribeToAnalyticsResetAt, saveAnalyticsResetAt, subscribeToOrderCosts } from '../../utils/firebaseSync';
 import { AdminDailySalesInspector } from './AdminDailySalesInspector';
 import { triggerChartHapticFeedback } from './AdminChartNeumorphicShapes';
 import { ConfirmDialog } from '../ConfirmDialog';
@@ -188,8 +188,10 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
 
   useEffect(() => subscribeToAnalyticsResetAt(setResetAt), []);
 
-  // Today's cost of each product: the cost at the moment of sale is not stored yet, so it is an estimate (salesProfit.ts)
-  const costs = useMemo<CostSources>(() => ({ current: currentCostMap(products) }), [products]);
+  // Cost of each order at the moment of sale (order_costs); an order without it — today's cost, an estimate (salesProfit.ts)
+  const [snapshots, setSnapshots] = useState<Map<string, OrderCostSnapshot>>(() => new Map());
+  useEffect(() => subscribeToOrderCosts(null, setSnapshots), []);
+  const costs = useMemo<CostSources>(() => ({ current: currentCostMap(products), snapshots }), [products, snapshots]);
   const { dailyData, summary, periodOrders, undatedCount, grouping } = useMemo(
     () =>
       computeFirestoreDailySales(orders, period, statusFilter, resetAt, new Date(), {
@@ -366,6 +368,9 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       extra: (
         <span className="text-[11px] text-[#4E5C70]">
           Маржа {profit.marginPercent === null ? '—' : `${approx}${profit.marginPercent}%`} · без доставки
+          {profit.missingCostLines > 0 && (
+            <span className="block text-warning font-bold">Завышен: не у всех товаров есть себестоимость</span>
+          )}
         </span>
       ),
     },
@@ -460,7 +465,10 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
                 grid={groupingOptions.length === 3 ? 'grid-cols-3' : groupingOptions.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}
                 value={grouping}
                 options={groupingOptions}
-                onChange={setChosenGrouping}
+                onChange={(g) => {
+                  setChosenGrouping(g);
+                  setSelectedDay(null);
+                }}
               />
             </div>
             <AdminHint label="Группировать">Один столбик графика — день, неделя (с понедельника) или месяц</AdminHint>

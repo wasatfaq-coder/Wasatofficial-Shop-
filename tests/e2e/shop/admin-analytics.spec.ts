@@ -61,7 +61,7 @@ test('опт и розница считаются отдельно, чистый
   await dialog.getByLabel('По', { exact: true }).fill('2026-01-16');
   await dialog.getByRole('button', { name: 'Показать за эти даты' }).click();
   await expect(dialog).toBeHidden();
-  await expect(panel.getByRole('button', { name: /^Свой период/ })).toContainText('10 янв. — 16 янв.');
+  await expect(panel.getByRole('button', { name: /^Свой период/ })).toContainText(/10 янв\.( 2026)? — 16 янв\./);
 
   // обе стороны сразу: розница без доставки, опт — по оптовой цене; себестоимость сегодняшняя — оценка «≈»
   const retail = panel.getByRole('group', { name: 'Розница' });
