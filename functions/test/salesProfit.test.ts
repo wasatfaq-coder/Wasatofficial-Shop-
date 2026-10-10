@@ -28,7 +28,8 @@ import {
   ordersNeedingCostSnapshot,
   readOrderCostDoc,
 } from '../../src/utils/orderCosts';
-import type { CartItem, Order } from '../../src/types';
+import { adjustedOrderTotals, refundedLinesText } from '../../src/utils/orderAdjustment';
+import type { CartItem, Order, PromoCode } from '../../src/types';
 
 // 7 октября 2026 (среда), 15:00 по местному времени
 const NOW = new Date(2026, 9, 7, 15, 0);
@@ -329,5 +330,79 @@ describe('снимок себестоимости заказа (order_costs)', (
     expect(orderCostsWindowStart(now)).toBe(new Date(ORDER_COSTS_SINCE).toISOString());
     const need = ordersNeedingCostSnapshot([fresh, old, done, triedOne], new Set(['done']), new Set(['tried']), now);
     expect(need.map((o) => o.id)).toEqual(['fresh']);
+  });
+});
+
+// Частичный возврат — «Корректировка заказа»: убрать модель или уменьшить её количество (решение владельца 10.10:
+// возврат только по выбранной модели, доставка из дохода второй раз не вычитается). Так сохраняет заказ окно корректировки.
+const refund = (o: Order, items: CartItem[], promos: PromoCode[] = [], refundDelivery = false): Order => {
+  const totals = adjustedOrderTotals(o, items, promos, { refundDelivery });
+  const delta = o.totalPrice - totals.total;
+  return {
+    ...o,
+    items,
+    totalPrice: totals.total,
+    deliveryFee: totals.deliveryFee,
+    discountAmount: totals.discount || undefined,
+    isAdjusted: true,
+    refundAmount: (o.refundAmount || 0) + delta,
+    adjustmentLogs: [{ id: 'a', date: '', reason: 'Возврат', previousTotal: o.totalPrice, newTotal: totals.total, refundAmount: delta, changedItemsSummary: '' }],
+  };
+};
+
+describe('частичный возврат по выбранной модели', () => {
+  const tee = line('tee', 1000, 2);
+  const pants = line('pants', 3000, 1);
+  // 2 футболки по 1 000 + брюки 3 000 + доставка 350
+  const paid = order('pr', at(10, 2), [tee, pants], { totalPrice: 5350, deliveryFee: 350 });
+
+  test('возврат брюк уменьшает выручку и закупку ровно на брюки, футболки не трогает', () => {
+    const before = summarizeProfit([paid], costs);
+    const after = summarizeProfit([refund(paid, [tee])], costs);
+    expect(before.revenue).toBe(5000);
+    expect(after.revenue).toBe(2000);
+    expect(before.cogs - after.cogs).toBe(1500);
+    expect(after.cogs).toBe(800);
+    expect(after.netProfit).toBe(1200);
+  });
+
+  test('возврат одной футболки из двух: минус одна футболка', () => {
+    const after = refund(paid, [line('tee', 1000, 1), pants]);
+    expect(after.refundAmount).toBe(1000);
+    expect(orderGoodsRevenue(after)).toBe(4000);
+    expect(orderCogs(after, costs).cogs).toBe(1900);
+  });
+
+  test('доставка не вычитается второй раз: с «Вернуть и доставку» уходит из суммы один раз, из дохода — ни разу', () => {
+    const withDelivery = refund(paid, [tee], [], true);
+    expect(withDelivery.refundAmount).toBe(3350);
+    expect(withDelivery.deliveryFee).toBe(0);
+    expect(withDelivery.totalPrice).toBe(2000);
+    expect(orderGoodsRevenue(withDelivery)).toBe(2000);
+    // без возврата доставки доход тот же: доставка — деньги перевозчика, не товара
+    expect(orderGoodsRevenue(refund(paid, [tee]))).toBe(2000);
+  });
+
+  test('процентный промокод: возвращается цена модели за вычетом её доли скидки', () => {
+    const promo = { id: 'x', code: 'SALE10', discountType: 'percent', discountValue: 10, discountPercent: 10, active: true, usedCount: 0 } as PromoCode;
+    const withPromo = order('pp', at(10, 2), [tee, pants], { totalPrice: 4850, deliveryFee: 350, discountAmount: 500, promoCode: 'SALE10' });
+    const after = refund(withPromo, [tee], [promo]);
+    expect(after.refundAmount).toBe(2700);
+    expect(orderGoodsRevenue(after)).toBe(1800);
+  });
+
+  test('опт: возврат упаковки по её оптовой цене, розничная строка остаётся', () => {
+    const packLine = line('pants', 3000, 5, { priceKind: 'pack', unitPrice: 2400 });
+    const wholesale = order('wp', at(10, 2), [tee, packLine], { totalPrice: 14000, deliveryFee: 0 });
+    const after = refund(wholesale, [tee, line('pants', 3000, 3, { priceKind: 'pack', unitPrice: 2400 })]);
+    expect(after.refundAmount).toBe(4800);
+    expect(orderGoodsRevenue(after)).toBe(9200);
+    expect(orderCogs(after, costs).cogs).toBe(800 + 3 * 1500);
+  });
+
+  test('в истории заказа — что именно вернули', () => {
+    expect(refundedLinesText([line('pants', 3000, 1, { product: { id: 'pants', title: 'Брюки', price: 3000 } as CartItem['product'] })], 350)).toBe(
+      'Брюки (M, Синий) × 1 — 3\u00a0000 ₽; доставка — 350 ₽'
+    );
   });
 });
