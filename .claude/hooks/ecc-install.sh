@@ -109,11 +109,43 @@ if missing:
 PY
 }
 
+# Несколько скиллов ECC (skill-stocktake, rules-distill, continuous-learning, continuous-learning-v2, ck) запускают свои скрипты
+# по пути ~/.claude/skills/<скилл>/… — так их кладёт ручная установка ECC, а плагин лежит в ~/.claude/plugins/cache/. Чтобы
+# скрипты находились без правки ECC, в ~/.claude/skills/<скилл>/ кладутся файлы скилла из плагина — все, кроме SKILL.md: без
+# него Claude Code папку скиллом не считает, и скилл в списке не задваивается. Скрипты и папки — ссылками (заново при каждом
+# старте: новая версия ECC — новый путь плагина), настройки *.json — копией без перезаписи: SKILL.md велит их править, и правка
+# по ссылке ушла бы в плагин. Скилл выбирается по тексту самого ECC (упоминает ~/.claude/skills/<своё имя>/); чужую установку
+# с настоящим SKILL.md хук не трогает.
+link_skill_files() {
+  local root="$1" skills="$HOME/.claude/skills" dir name target entry dest
+  [ -d "$root/skills" ] || return 0
+  for dir in "$root"/skills/*/; do
+    name="$(basename "$dir")"
+    grep -rqE "(~|\$HOME)/\.claude/skills/$name/" "$dir" 2>/dev/null || continue
+    target="$skills/$name"
+    if [ -e "$target/SKILL.md" ] && [ ! -L "$target/SKILL.md" ]; then continue; fi
+    [ -d "$target" ] && find "$target" -maxdepth 1 -type l -delete
+    for entry in "$dir"*; do
+      [ "$(basename "$entry")" = SKILL.md ] && continue
+      dest="$target/$(basename "$entry")"
+      mkdir -p "$target"
+      if [ -f "$entry" ] && [ "${entry##*.}" = json ]; then
+        [ -e "$dest" ] || cp "$entry" "$dest"
+      elif [ ! -e "$dest" ]; then
+        ln -s "$entry" "$dest"
+      fi
+    done
+  done
+  return 0
+}
+
 if installed_commit | grep -qx "$COMMIT"; then
   # Плагин уже стоит (контейнер не новый): перечитываем скиллы, только если вернули их к выпуску автора.
   sync_rules
   allow_plugin_reads || true
-  if [ "$(restore_pristine "$(install_path)")" != "0" ]; then
+  restored="$(restore_pristine "$(install_path)")"
+  link_skill_files "$(install_path)" || true
+  if [ "$restored" != "0" ]; then
     echo '{"hookSpecificOutput": {"hookEventName": "SessionStart", "reloadSkills": true}}'
   fi
   exit 0
@@ -161,4 +193,5 @@ fi
 
 sync_rules
 allow_plugin_reads || true
+link_skill_files "$(install_path)" || true
 echo '{"hookSpecificOutput": {"hookEventName": "SessionStart", "reloadSkills": true}}'
