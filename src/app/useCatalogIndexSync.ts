@@ -27,6 +27,16 @@ const THUMB_MAX_CHARS = 60_000;
 const SETTLE_MS = 2_000;
 /** A failed subscription to the stored index is opened again after this long (audit 07.10, finding 15) */
 const RESUBSCRIBE_MS = 60_000;
+/**
+ * A miniature that could not be made (the previews not read yet, a photo the canvas could not take) is tried again this
+ * many times in the session: until then the index is saved with an «incomplete» hash, so the next snapshot writes it
+ * again. Before, the index was saved with the full hash and no session ever made the card's photo — a new product
+ * showed the placeholder to customers (owner task 11.10)
+ */
+const THUMB_ATTEMPTS = 3;
+const INCOMPLETE_SUFFIX = '~thumbs';
+const thumbAttempts = new Map<string, number>();
+
 /** How long «Применить» waits for the index with the new prices before it says the catalog is behind */
 const INDEX_WAIT_MS = 20_000;
 
@@ -132,12 +142,24 @@ async function writeIndex(
     const key = thumbKey(product);
     if (!key || storedThumbs.get(product.id) === key) continue;
     // the first preview, from the product or from product_previews (stage 6)
-    const first = product.images[0] || (await loadProductPreviews(product))?.images[0];
-    if (!first) continue;
-    const data = await compressBase64Image(first, THUMB_SIDE, THUMB_SIDE, THUMB_QUALITY);
-    if (data.length <= THUMB_MAX_CHARS) thumbs.push({ productId: product.id, key, data });
+    // one photo that fails no longer stops the whole index: the product stays in the catalog, its card waits for the photo
+    try {
+      const first = product.images[0] || (await loadProductPreviews(product))?.images[0];
+      const data = first ? await compressBase64Image(first, THUMB_SIDE, THUMB_SIDE, THUMB_QUALITY) : '';
+      if (data && data.length <= THUMB_MAX_CHARS) {
+        thumbs.push({ productId: product.id, key, data });
+        thumbAttempts.delete(product.id);
+        continue;
+      }
+    } catch (err) {
+      console.warn(`Miniature of product ${product.id} was not made:`, err);
+    }
+    thumbAttempts.set(product.id, (thumbAttempts.get(product.id) ?? 0) + 1);
   }
   const written = new Set(thumbs.map((t) => t.productId));
+  const retryThumbs = products.some(
+    (p) => thumbKey(p) && !written.has(p.id) && storedThumbs.get(p.id) !== thumbKey(p) && (thumbAttempts.get(p.id) ?? 0) < THUMB_ATTEMPTS
+  );
   // an entry points to a miniature only when there is one made from its current photo
   const indexed = entries.map((e) =>
     e.thumb && !written.has(e.id) && storedThumbs.get(e.id) !== e.thumb ? { ...e, thumb: undefined } : e
@@ -145,6 +167,6 @@ async function writeIndex(
   const ids = new Set(products.map((p) => p.id));
   const removed = stored.entries.filter((e) => e.thumb && !ids.has(e.id)).map((e) => e.id);
   await saveProductThumbs(thumbs);
-  await saveCatalogIndex(await catalogIndexParts(indexed, hash), stored.parts);
+  await saveCatalogIndex(await catalogIndexParts(indexed, retryThumbs ? `${hash}${INCOMPLETE_SUFFIX}` : hash), stored.parts);
   if (removed.length > 0) await saveProductThumbs([], removed);
 }
