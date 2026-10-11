@@ -3,6 +3,7 @@ import type { BannerSlide, CartItem, DeliveryMethod, Order, PickupPoint, Product
 import type { LegalDocId } from '../utils/legalDocs';
 import { saveLocalDeliveryMethods, saveLocalPickupPoints } from '../data/deliveryData';
 import { saveStorefrontSettings } from '../utils/inventory';
+import { changedFields } from '../utils/fieldChanges';
 import { hasHeavyPhotos, removedProductPhotoIds } from '../utils/productPhotos';
 import { hasInlineBannerImage } from '../utils/bannerImages';
 import { hasInlinePreviews } from '../utils/productPreviews';
@@ -326,10 +327,16 @@ export function useAdminActions({
     // Only the changed fields: «Витрина», «Доставка», «Оплата» and «FAQ» each save their own fields of one document,
     // and a section's older copy must not roll back what another one saved meanwhile (этап 6, 59-П3)
     const saved = await persist('настройки витрины', saveStorefrontSettingsToFirestore(upd, storefrontSettings));
-    // The screen shows the new settings only once the database took them: a refusal keeps the saved ones on screen
+    // Only once the database took it, and only what this save changed: a newer snapshot (another section's save or
+    // another device) that arrived meanwhile stays on screen
     if (saved) {
-      setStorefrontSettings(upd);
-      saveStorefrontSettings(upd);
+      const changes = changedFields(storefrontSettings as unknown as Record<string, unknown>, upd as unknown as Record<string, unknown>);
+      setStorefrontSettings((current) => {
+        const next: Record<string, unknown> = { ...current, ...changes.set };
+        for (const key of changes.removed) delete next[key];
+        saveStorefrontSettings(next as unknown as StorefrontSettings);
+        return next as unknown as StorefrontSettings;
+      });
     }
     return saved;
   };

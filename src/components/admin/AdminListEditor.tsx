@@ -104,7 +104,7 @@ export function AdminListEditor<T extends { id: string }>({
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const isShown = (item: T) => visibleKey === undefined || (item as Record<string, unknown>)[visibleKey] !== false;
   const toggleShown = async (item: T, shown: boolean) => {
-    if (!visibleKey || togglingId) return;
+    if (!visibleKey || togglingId || isSaving) return;
     setTogglingId(item.id);
     const next = items.map((it) => (it.id === item.id ? ({ ...it, [visibleKey]: shown } as T) : it));
     await commit(next, shown ? 'Показано покупателям' : 'Скрыто от покупателей', 'info');
@@ -134,7 +134,10 @@ export function AdminListEditor<T extends { id: string }>({
       onShowToast(`Заполните: ${missing.map((f) => f.label.toLowerCase()).join(', ')}`, 'error');
       return;
     }
-    const next = isNew ? [...items, draft] : items.map((it) => (it.id === draft.id ? draft : it));
+    // Visibility is the row's switch, not the form's: the switch may have changed it while the form was open
+    const keepShown = (it: T): T =>
+      visibleKey ? ({ ...draft, [visibleKey]: (it as Record<string, unknown>)[visibleKey] } as T) : draft;
+    const next = isNew ? [...items, draft] : items.map((it) => (it.id === draft.id ? keepShown(it) : it));
     // On a failed write the form stays open so nothing typed is lost
     if (await commit(next, isNew ? 'Добавлено' : 'Изменения сохранены')) setDraft(null);
   };
@@ -303,7 +306,7 @@ export function AdminListEditor<T extends { id: string }>({
                     <NeumorphicSwitch
                       checked={isShown(item)}
                       onChange={(shown) => void toggleShown(item, shown)}
-                      disabled={togglingId !== null}
+                      disabled={togglingId !== null || isSaving}
                       label={`Показывать покупателям: ${nameOf(item)}`}
                     />
                     <span aria-hidden="true" className={`text-xs font-bold ${isShown(item) ? 'text-[#2D3A4E]' : 'text-warning'}`}>

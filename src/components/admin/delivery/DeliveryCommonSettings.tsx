@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import type { StorefrontSettings } from '../../../types';
 import { NeumorphicSwitch } from '../../NeumorphicSwitch';
@@ -32,6 +32,7 @@ export const DeliveryCommonSettings: React.FC<DeliveryCommonSettingsProps> = ({ 
   const saved = settings.freeDeliveryThreshold ? String(settings.freeDeliveryThreshold) : '';
   const [threshold, setThreshold] = useState(saved);
   const [error, setError] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [expressSaving, setExpressSaving] = useState(false);
 
@@ -50,6 +51,7 @@ export const DeliveryCommonSettings: React.FC<DeliveryCommonSettingsProps> = ({ 
     const value = parseThreshold(threshold);
     if (value === null) {
       setError(`Введите сумму в рублях — целое число до ${MAX_THRESHOLD.toLocaleString('ru-RU')}, или оставьте поле пустым`);
+      inputRef.current?.focus();
       return;
     }
     setError('');
@@ -89,6 +91,7 @@ export const DeliveryCommonSettings: React.FC<DeliveryCommonSettingsProps> = ({ 
         </div>
         <div className="flex items-center gap-2">
           <input
+            ref={inputRef}
             id="delivery-free-threshold"
             type="text"
             inputMode="numeric"

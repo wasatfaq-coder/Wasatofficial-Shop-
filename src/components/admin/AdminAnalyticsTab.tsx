@@ -127,13 +127,14 @@ const Growth: React.FC<{ value: number; hasBase: boolean }> = ({ value, hasBase 
 /** What a card counts, by the engine (analyticsEngine.ts, salesProfit.ts) and the «Какие заказы учитывать» filter */
 const kpiCaption = (metric: ActiveMetric, filter: OrderStatusFilter): string => {
   const scope = filter === 'delivered' ? 'полученные' : 'без отменённых';
+  const paidScope = filter === 'delivered' ? 'полученных оплаченных заказов' : 'оплаченных заказов';
   switch (metric) {
     case 'revenue':
-      return filter === 'delivered' ? 'Деньги за полученные оплаченные заказы, с доставкой' : 'Деньги за оплаченные заказы, с доставкой';
+      return `Деньги за ${filter === 'delivered' ? 'полученные оплаченные' : 'оплаченные'} заказы, с доставкой, без возвратов`;
     case 'netProfit':
-      return 'Деньги за товары оплаченных заказов минус закупка';
+      return `Деньги за товары ${paidScope} минус закупка`;
     case 'cogs':
-      return 'Закупка товаров оплаченных заказов';
+      return `Закупка товаров ${paidScope}`;
     case 'orders':
       return filter === 'paid' ? 'Оплаченные заказы, без отменённых' : `Заказы периода, ${scope}, в том числе неоплаченные`;
     case 'avgCheck':
@@ -145,7 +146,7 @@ const kpiCaption = (metric: ActiveMetric, filter: OrderStatusFilter): string => 
 
 const KPI_HINTS: Record<ActiveMetric, string> = {
   revenue: 'Деньги только за заказы с отметкой «Оплачен». Неоплаченные не считаются',
-  orders: 'Все оформленные заказы, кроме отменённых — и неоплаченные тоже',
+  orders: 'Сколько заказов за период. Какие именно — выбирает «Какие заказы учитывать»',
   avgCheck: 'Выручка, делённая на число оплаченных заказов',
   returns: 'Заказы, которые отменили покупатель или магазин',
   cogs: 'Себестоимость: сколько стоили в закупке товары оплаченных заказов',
