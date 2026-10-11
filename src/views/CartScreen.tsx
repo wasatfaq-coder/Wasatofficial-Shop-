@@ -31,6 +31,7 @@ import { linePrice } from '../shared/orderLine';
 import { isWholesaleLine, packSizeOf, wholesaleLineProblems } from '../shared/wholesalePricing';
 import { packsText } from '../utils/wholesaleOffer';
 import { WholesaleMark } from '../components/WholesaleMark';
+import { heldByOtherLines } from '../utils/cartLines';
 
 interface CartScreenProps {
   cartItems: CartItem[];
@@ -89,9 +90,13 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   const [editingVariantItemId, setEditingVariantItemId] = useState<string | null>(null);
   const [isQuickOrderOpen, setIsQuickOrderOpen] = useState(false);
   // Lines whose quantity is no longer available (sold out while in the cart)
-  const unavailableCount = cartItems.filter(
-    (item) => item.quantity > getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode)
-  ).length;
+  // The retail and the wholesale line of one variant share its stock: each can have what the other left
+  const lineStock = (item: CartItem) =>
+    Math.max(
+      0,
+      getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode) - heldByOtherLines(cartItems, item, item.id)
+    );
+  const unavailableCount = cartItems.filter((item) => item.quantity > lineStock(item)).length;
   // Wholesale lines in part packs or under the product's minimum: the checkout would refuse them, so say it here
   const wholesaleProblems = wholesaleLineProblems(cartItems);
   const cartBlocked = unavailableCount > 0 || wholesaleProblems.length > 0;
@@ -215,7 +220,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         {cartItems.map((item, itemIdx) => {
           const isFav = favorites.includes(item.product.id);
           const inStock = getVariantStock(item.product, item.selectedColor, item.selectedSize);
-          const availableStock = getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode);
+          const availableStock = lineStock(item);
           const isPreorder = inStock === 0 && availableStock > 0;
           // A wholesale line changes by whole packs: «−» and «+» take or add one pack
           const wholesale = isWholesaleLine(item);

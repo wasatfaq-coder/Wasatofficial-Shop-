@@ -1,3 +1,9 @@
+import type { Product } from '../types';
+import { sellsRetail } from '../shared/wholesalePricing';
+
+/** What a «Только оптом» check reads: such a product shows its wholesale price, the retail discount is not offered */
+type ChannelFields = Partial<Pick<Product, 'saleChannel' | 'wholesalePrice'>>;
+
 /**
  * Badge style on product photos. Brand badges (Хит, Premium, Limited, Exclusive) are gold,
  * sale badges (Sale, -20%) use the danger tone, the rest (New, Eco, custom text) stay graphite.
@@ -18,7 +24,9 @@ const PERCENT_BADGE = /^[-−–]\s*\d+\s*%$/;
  * The struck-out old price, only when it is above the price: after «Курсы и наценка» or a manual change it may be
  * lower, and «4 800 ₽ ~~4 500 ₽~~» is not a discount (admin audit 09.10, finding 2)
  */
-export function shownOldPrice(product: { price: number; originalPrice?: number }): number | null {
+export function shownOldPrice(product: { price: number; originalPrice?: number } & ChannelFields): number | null {
+  // «Только оптом»: the buyer sees the wholesale price, a struck-out retail price next to it would be a made-up discount
+  if (!sellsRetail(product)) return null;
   const { price, originalPrice } = product;
   return typeof originalPrice === 'number' && originalPrice > price ? originalPrice : null;
 }
@@ -27,7 +35,7 @@ export function shownOldPrice(product: { price: number; originalPrice?: number }
  * The badge a customer sees. A «-N%» badge is written once (the bulk discount) while the price follows the rate: it
  * shows the discount the prices give now, and no badge when there is none (admin audit 09.10, finding 3)
  */
-export function shownBadge(product: { price: number; originalPrice?: number; badge?: string }): string | null {
+export function shownBadge(product: { price: number; originalPrice?: number; badge?: string } & ChannelFields): string | null {
   const badge = product.badge?.trim();
   if (!badge) return null;
   if (!PERCENT_BADGE.test(badge)) return badge;

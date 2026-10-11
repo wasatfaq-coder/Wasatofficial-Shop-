@@ -13,6 +13,7 @@ import { getOrderableStock, isPreorderVariant } from '../utils/inventory';
 import { validatePromo, toPricingLine, appliedPromoFrom, currentAppliedPromo, promoSignInProblem } from '../shared/orderPricing';
 import { promoDiscountText } from '../utils/promoLabel';
 import { packsText } from '../utils/wholesaleOffer';
+import { heldByOtherLines } from '../utils/cartLines';
 import { hasOrderableVariant, needsVariantChoice } from '../utils/variantSelection';
 import type { AddToast } from './useToasts';
 
@@ -136,7 +137,19 @@ export function useCart({
   ): boolean => {
     const asWholesale = sellsWholesale(product) && (wholesale || !sellsRetail(product));
     const step = asWholesale ? packSizeOf(product) : 1;
-    const availableStock = getOrderableStock(product, color, size, preorderMode);
+    const variant = { product, selectedColor: color, selectedSize: size };
+    const existing = cartItems.find(
+      (item) =>
+        item.product.id === product.id &&
+        item.selectedColor === color &&
+        item.selectedSize === size &&
+        isWholesaleLine(item) === asWholesale
+    );
+    // the other line of this variant (retail next to wholesale) takes from the same stock
+    const availableStock = Math.max(
+      0,
+      getOrderableStock(product, color, size, preorderMode) - heldByOtherLines(cartItems, variant, existing?.id ?? '')
+    );
     // only whole packs can be ordered wholesale
     const maxQty = Math.floor(availableStock / step) * step;
     if (maxQty <= 0) {
@@ -151,16 +164,8 @@ export function useCart({
 
     const clampedQuantity = Math.min(Math.max(step, Math.floor(quantity / step) * step), maxQty);
     const variantText = `${product.title} (${color}, ${size})`;
-    const existingIndex = cartItems.findIndex(
-      (item) =>
-        item.product.id === product.id &&
-        item.selectedColor === color &&
-        item.selectedSize === size &&
-        isWholesaleLine(item) === asWholesale
-    );
 
-    if (existingIndex > -1) {
-      const existing = cartItems[existingIndex];
+    if (existing) {
       const currentQty = existing.quantity;
       if (currentQty >= maxQty) {
         addToast(
@@ -170,7 +175,8 @@ export function useCart({
         );
         return false;
       }
-      const newTotalQty = Math.min(currentQty + clampedQuantity, maxQty);
+      // whole packs even when the line was not (the pack size changed since it was added)
+      const newTotalQty = Math.min(Math.floor((currentQty + clampedQuantity) / step) * step, maxQty);
       setCartItems((prev) => prev.map((item) => (item.id === existing.id ? { ...item, quantity: newTotalQty } : item)));
       addToast(
         asWholesale
@@ -222,7 +228,9 @@ export function useCart({
       setCartItems((prev) =>
         prev.map((item) => {
           if (item.id === cartItemId) {
-            const stock = getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode);
+            const stock =
+              getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode) -
+              heldByOtherLines(prev, item, item.id);
             return { ...item, quantity: fitQuantity(newQty, stock, step) };
           }
           return item;
@@ -246,7 +254,9 @@ export function useCart({
     setCartItems((prev) =>
       prev.map((item) => {
         if (item.id === cartItemId) {
-          const availableStock = getOrderableStock(item.product, newColor, newSize, preorderMode);
+          const availableStock =
+            getOrderableStock(item.product, newColor, newSize, preorderMode) -
+            heldByOtherLines(prev, { product: item.product, selectedColor: newColor, selectedSize: newSize }, item.id);
           // none of the new variant left — one pack stays: the checkout names it in «Не хватает на складе»
           const clampedQty = availableStock >= step ? fitQuantity(item.quantity, availableStock, step) : step;
           return {

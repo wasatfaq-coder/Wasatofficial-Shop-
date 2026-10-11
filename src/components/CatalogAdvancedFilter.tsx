@@ -20,6 +20,7 @@ import { useDialogA11y } from '../utils/useDialogA11y';
 import { buildSizeChips, sizeMatches } from '../utils/sizeScale';
 import { sellsWholesale } from '../shared/wholesalePricing';
 import { buyerPrice } from '../utils/wholesaleOffer';
+import { shownOldPrice } from '../utils/productBadge';
 
 export interface FilterState {
   minPrice: number;
@@ -117,7 +118,7 @@ export function matchesCatalogFilters(p: Product, category: string, f: FilterSta
       f.selectedSizes.some((sel) => p.sizes.some((sz) => sizeMatches(sz, sel) && isProductAvailableInSize(p, sz)))) &&
     (!f.onlyInStock || isProductInStock(p)) &&
     (!f.onlyNew || Boolean(p.isNew)) &&
-    (!f.onlyDiscount || Boolean(p.originalPrice && p.originalPrice > p.price)) &&
+    (!f.onlyDiscount || shownOldPrice(p) !== null) &&
     (!f.onlyWholesale || sellsWholesale(p)) &&
     productRatingValue(p) >= f.minRating
   );

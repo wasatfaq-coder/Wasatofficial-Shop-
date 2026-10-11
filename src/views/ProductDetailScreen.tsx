@@ -177,9 +177,16 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     setSelectedSize(initialSize(product));
     setSizeError(false);
     setIsSizeChartOpen(false);
-    setQuantity(offer?.onlyWholesale ? offer.minPacks : 1);
-    setBuyWholesale(Boolean(offer?.onlyWholesale));
   }, [product?.id]);
+
+  // The way of buying and the counter start over with another product, and when the owner changes how it is sold
+  // while the page is open: packs must not silently become items or the other way round
+  const hasOffer = Boolean(offer);
+  const onlyWholesale = Boolean(offer?.onlyWholesale);
+  useEffect(() => {
+    setBuyWholesale(onlyWholesale);
+    setQuantity(onlyWholesale && offer ? offer.minPacks : 1);
+  }, [product?.id, hasOffer, onlyWholesale]);
 
   // Stock of the chosen size; before a size is chosen — of the whole colour
   const sizeChosen = !product.sizes?.length || Boolean(selectedSize);
@@ -223,7 +230,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     if (maxCount > 0) {
       setQuantity((prev) => (prev > maxCount ? maxCount : prev));
     } else {
-      setQuantity(1);
+      // nothing of this size: when another one is picked, wholesale starts again from the product's minimum
+      setQuantity(wholesaleMode && offer ? offer.minPacks : 1);
     }
   }, [selectedColor, selectedSize, maxCount]);
 

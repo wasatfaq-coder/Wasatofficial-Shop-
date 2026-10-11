@@ -4,6 +4,8 @@ import type { ActiveTab, CartItem, ChatMessage, Order, PaymentKind, Product, Use
 import { cancelOrderAsCustomer, confirmOrderReceipt, submitPaymentReceipt, returnCancelledOrderStock } from '../utils/firebaseSync';
 import { getOrderableStock } from '../utils/inventory';
 import type { AddToast } from './useToasts';
+import { goesWholesale, isWholesaleLine, packSizeOf, sellsRetail, sellsWholesale } from '../shared/wholesalePricing';
+import { heldByOtherLines, sameVariant } from '../utils/cartLines';
 
 type SetState<T> = React.Dispatch<React.SetStateAction<T>>;
 
@@ -117,14 +119,22 @@ export function useCustomerOrders({
     }
   }, [orders, currentUser, authLoading]);
 
-  // Repeat a past order: current product data and stock, unavailable items are skipped
+  // Repeat a past order: current product data and stock, unavailable items are skipped. A wholesale line comes back
+  // wholesale, in whole packs, while the product is still sold wholesale; it never merges with a retail line
   const handleRepeatOrder = (items: CartItem[]) => {
     const toAdd: CartItem[] = [];
     let skipped = 0;
     items.forEach((item, idx) => {
       const product = products.find((p) => p.id === item.product?.id);
-      const stock = product ? getOrderableStock(product, item.selectedColor, item.selectedSize, preorderMode) : 0;
-      if (!product || stock <= 0) {
+      if (!product) {
+        skipped += 1;
+        return;
+      }
+      const wholesale = sellsWholesale(product) && (isWholesaleLine(item) || !sellsRetail(product));
+      const step = wholesale ? packSizeOf(product) : 1;
+      const stock = getOrderableStock(product, item.selectedColor, item.selectedSize, preorderMode);
+      const quantity = Math.floor(Math.min(item.quantity, stock) / step) * step;
+      if (quantity <= 0) {
         skipped += 1;
         return;
       }
@@ -133,7 +143,8 @@ export function useCustomerOrders({
         product,
         selectedColor: item.selectedColor,
         selectedSize: item.selectedSize,
-        quantity: Math.min(item.quantity, stock),
+        quantity,
+        ...(wholesale ? { priceKind: 'wholesale' as const } : {}),
       });
     });
 
@@ -145,17 +156,18 @@ export function useCustomerOrders({
     setCartItems((prev) => {
       const next = [...prev];
       for (const add of toAdd) {
-        const i = next.findIndex(
-          (c) =>
-            c.product.id === add.product.id &&
-            c.selectedColor === add.selectedColor &&
-            c.selectedSize === add.selectedSize
-        );
+        const i = next.findIndex((c) => sameVariant(c, add) && goesWholesale(c) === goesWholesale(add));
+        const step = goesWholesale(add) ? packSizeOf(add.product) : 1;
+        // the other line of the variant (retail next to wholesale) takes from the same stock
+        const free =
+          getOrderableStock(add.product, add.selectedColor, add.selectedSize, preorderMode) -
+          heldByOtherLines(next, add, i > -1 ? next[i].id : add.id);
+        const fit = (qty: number) => Math.floor(Math.min(qty, Math.max(0, free)) / step) * step;
         if (i > -1) {
-          const stock = getOrderableStock(add.product, add.selectedColor, add.selectedSize, preorderMode);
-          next[i] = { ...next[i], quantity: Math.min(next[i].quantity + add.quantity, stock) };
-        } else {
-          next.push(add);
+          const quantity = fit(next[i].quantity + add.quantity);
+          if (quantity > 0) next[i] = { ...next[i], quantity };
+        } else if (fit(add.quantity) > 0) {
+          next.push({ ...add, quantity: fit(add.quantity) });
         }
       }
       return next;

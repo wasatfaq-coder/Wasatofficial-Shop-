@@ -100,3 +100,41 @@ describe('«Оптом» in the catalog filter and «Опт» in the admin\'s «
     expect(isWholesaleListed(product())).toBe(false);
   });
 });
+
+describe('«Только оптом» has no retail discount to show', () => {
+  test('no struck-out retail price and no «-N%» badge next to the wholesale price', async () => {
+    const { shownBadge, shownOldPrice } = await import('../../src/utils/productBadge');
+    const tank = { price: 990, originalPrice: 1290, badge: '-23%', saleChannel: 'wholesale' as const, wholesalePrice: 450 };
+    expect(shownOldPrice(tank)).toBeNull();
+    expect(shownBadge(tank)).toBeNull();
+    // sold both ways — the retail discount stays
+    expect(shownOldPrice({ ...tank, saleChannel: 'both' as const })).toBe(1290);
+    const f = { ...DEFAULT_FILTER_STATE, onlyDiscount: true };
+    expect(matchesCatalogFilters(product(tank), 'all', f)).toBe(false);
+  });
+});
+
+describe('the retail and the wholesale line of one variant share its stock', () => {
+  test('each line can have what the other left', async () => {
+    const { heldByOtherLines } = await import('../../src/utils/cartLines');
+    const tee = product({ wholesalePrice: 1500, wholesalePackSize: 5 });
+    const lines = [
+      { id: 'w', product: tee, selectedColor: 'Синий', selectedSize: 'M', quantity: 10, priceKind: 'wholesale' as const },
+      { id: 'r', product: tee, selectedColor: 'Синий', selectedSize: 'M', quantity: 3 },
+      { id: 'x', product: tee, selectedColor: 'Синий', selectedSize: 'L', quantity: 7 },
+    ];
+    expect(heldByOtherLines(lines, lines[0], 'w')).toBe(3);
+    expect(heldByOtherLines(lines, lines[1], 'r')).toBe(10);
+    // a new line of the variant: every line of it counts
+    expect(heldByOtherLines(lines, lines[0], '')).toBe(13);
+  });
+
+  test('a stored line is wholesale as the cart prices it: chosen, or «только оптом»', async () => {
+    const { goesWholesale } = await import('../../src/shared/wholesalePricing');
+    expect(goesWholesale({ product: product({ wholesalePrice: 1500 }), priceKind: 'wholesale' })).toBe(true);
+    expect(goesWholesale({ product: product({ wholesalePrice: 1500 }) })).toBe(false);
+    expect(goesWholesale({ product: product({ saleChannel: 'wholesale', wholesalePrice: 1500 }) })).toBe(true);
+    // no longer sold wholesale — back to retail
+    expect(goesWholesale({ product: product(), priceKind: 'wholesale' })).toBe(false);
+  });
+});
