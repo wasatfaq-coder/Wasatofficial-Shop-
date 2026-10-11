@@ -238,6 +238,27 @@ export const PRODUCTS = {
     sizes: ['S', 'M'],
     stock: 5,
   }), isPopular: false },
+  // «Вес и габариты» (stage 15 of docs/admin-wholesale-plan.md): admin-weight.spec.ts sets the weight, one per screen size
+  parka: { ...product({
+    id: 'e2e-parka',
+    title: 'Парка демисезонная',
+    category: 'tshirts',
+    categoryLabel: 'Футболки',
+    price: 7490,
+    colors: [{ name: 'Хаки', hex: '#556B2F' }],
+    sizes: ['M', 'L'],
+    stock: 5,
+  }), isPopular: false },
+  anorak: { ...product({
+    id: 'e2e-anorak',
+    title: 'Анорак лёгкий',
+    category: 'tshirts',
+    categoryLabel: 'Футболки',
+    price: 6490,
+    colors: [{ name: 'Серый', hex: '#8A8F98' }],
+    sizes: ['M', 'L'],
+    stock: 5,
+  }), isPopular: false },
 };
 
 /** A full photo of a product as `product_photos` keeps it (the product holds a preview) */

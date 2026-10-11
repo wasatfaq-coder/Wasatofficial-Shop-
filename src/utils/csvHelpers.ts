@@ -4,6 +4,7 @@ import { adminStatusLabel } from './orderFlow';
 import { colorHexForName, normalizeColorName, readColorCode, splitColorEntry, UNKNOWN_COLOR_HEX } from './colorCode';
 import { parseDecimal, readPurchase, type ProductPurchase, type PurchaseCurrency } from './currencyPricing';
 import { SUPPLIER_MAX_LENGTH, SUPPLIER_SKU_MAX_LENGTH, supplierText } from './productCosts';
+import { packageCell, packageFromCell, productWeightGrams, weightProblem } from './productShipping';
 
 /**
  * One CSV cell: quoted with doubled quotes. Text starting with = + - @ would run as a formula in Excel
@@ -51,6 +52,9 @@ const PRODUCT_CSV_HEADERS = [
   // where the product is bought (stage 11): for reordering and checking the supplier's invoices
   'Поставщик',
   'Артикул поставщика',
+  // weight and package of one item (stage 15): the invoice sums the order's weight, Post and carriers need the package
+  'Вес, г',
+  'Габариты, см',
 ];
 
 /** «USD», «$», «доллар» — dollars; «CNY», «¥», «юань», «RMB» — yuan */
@@ -97,6 +101,21 @@ export function supplierFromCell(cell = '', maxLength: number): string | null | 
   return supplierText(text, maxLength) ?? undefined;
 }
 
+/** «-», «—», «нет»: the weight is removed */
+const NO_WEIGHT_CELLS = ['-', '—', 'нет'];
+
+/**
+ * The weight from its cell: `undefined` — empty, the product keeps its own; `null` — remove it;
+ * `'invalid'` — not a whole number of grams in range (the row is imported without the weight)
+ */
+export function weightFromCell(cell = ''): number | null | undefined | 'invalid' {
+  const text = cell.trim();
+  if (!text) return undefined;
+  if (NO_WEIGHT_CELLS.includes(text.toLowerCase())) return null;
+  if (weightProblem(text)) return 'invalid';
+  return Number(text.replace(',', '.'));
+}
+
 /**
  * Export catalog products to CSV (the same columns the import reads)
  */
@@ -125,6 +144,8 @@ export function exportProductsToCSV(products: Product[]): void {
     p.purchase?.markupPercent ?? '',
     p.supplier ?? '',
     p.supplierSku ?? '',
+    productWeightGrams(p) ?? '',
+    packageCell(p),
   ]);
   downloadCSV(`catalog_${new Date().toISOString().slice(0, 10)}.csv`, [PRODUCT_CSV_HEADERS, ...rows]);
 }
@@ -169,18 +190,19 @@ export function parseProductsFromCSV(
   csvText: string,
   /** the catalog: a colour of an existing product written without a code keeps its shade */
   catalog: Pick<Product, 'id' | 'colors'>[] = []
-): { products: Partial<Product>[]; skipped: number; badPurchase: number } {
+): { products: Partial<Product>[]; skipped: number; badPurchase: number; badShipping: number } {
   const lines = csvText.split(/\r?\n/).filter((l) => l.trim().length > 0);
-  if (lines.length < 2) return { products: [], skipped: 0, badPurchase: 0 };
+  if (lines.length < 2) return { products: [], skipped: 0, badPurchase: 0, badShipping: 0 };
   // files saved by Excel in the Russian locale use «;»
   const separator = lines[0].split(';').length > lines[0].split(',').length ? ';' : ',';
 
   const products: Partial<Product>[] = [];
   let skipped = 0;
   let badPurchase = 0;
+  let badShipping = 0;
   for (const line of lines.slice(1)) {
     const cells = splitCsvLine(line, separator);
-    const [id, title, category, priceCell, oldPriceCell, inStockCell, , sizesCell, colorsCell, image, description, currencyCell, amountCell, markupCell, supplierCell, supplierSkuCell] =
+    const [id, title, category, priceCell, oldPriceCell, inStockCell, , sizesCell, colorsCell, image, description, currencyCell, amountCell, markupCell, supplierCell, supplierSkuCell, weightCell, boxCell] =
       cells;
     const price = Number(String(priceCell ?? '').replace(/\s/g, '').replace(',', '.'));
     // an existing product may come without a photo: its previews live in product_previews (catalog-scale-plan, stage 6),
@@ -211,6 +233,11 @@ export function parseProductsFromCSV(
     if (purchase === 'invalid') badPurchase++;
     const supplier = supplierFromCell(supplierCell, SUPPLIER_MAX_LENGTH);
     const supplierSku = supplierFromCell(supplierSkuCell, SUPPLIER_SKU_MAX_LENGTH);
+    // weight and package: empty keeps the product's, «-» removes, a wrong value is counted and changes nothing
+    const weight = weightFromCell(weightCell);
+    const box = packageFromCell(boxCell ?? '');
+    // rows, not cells: the toast tells the owner how many products to look at
+    if (weight === 'invalid' || box === null) badShipping++;
     products.push({
       ...(id ? { id } : {}),
       title,
@@ -228,9 +255,11 @@ export function parseProductsFromCSV(
       // the same for the supplier: empty keeps it, «-» removes it
       ...(supplier !== undefined ? { supplier: supplier ?? undefined } : {}),
       ...(supplierSku !== undefined ? { supplierSku: supplierSku ?? undefined } : {}),
+      ...(weight === null ? { weightGrams: undefined } : typeof weight === 'number' ? { weightGrams: weight } : {}),
+      ...(box === 'remove' ? { packageCm: undefined } : typeof box === 'object' && box ? { packageCm: box } : {}),
     });
   }
-  return { products, skipped, badPurchase };
+  return { products, skipped, badPurchase, badShipping };
 }
 
 /**

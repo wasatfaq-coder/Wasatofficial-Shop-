@@ -120,6 +120,13 @@ export interface PriceHistoryEntry {
   until: string;
 }
 
+/** Package of one item, centimetres */
+export interface ProductPackageCm {
+  l: number;
+  w: number;
+  h: number;
+}
+
 export interface Product {
   id: string;
   title: string;
@@ -186,6 +193,13 @@ export interface Product {
   sizes: string[];
   /** Measurements of the model per size; shown on the product page next to the sizes, absent — not shown */
   sizeChart?: ProductSizeChart;
+  /**
+   * Weight of one item in its package, grams (stage 15 of docs/admin-wholesale-plan.md): the order line keeps it
+   * (toOrderLineProduct), the invoice sums the order's weight. Read and checked only via src/utils/productShipping.ts
+   */
+  weightGrams?: number;
+  /** Package of one item, cm: length × width × height (all three or none; src/utils/productShipping.ts) */
+  packageCm?: ProductPackageCm;
   /** «Есть в наличии»: false when sold out (or, in old products without hiddenFromSale, taken off sale with stock left) */
   inStock: boolean;
   /**
