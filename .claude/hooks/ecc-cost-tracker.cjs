@@ -9,10 +9,11 @@
  * cost-tracker.js: если `<tmpdir>/harness-cost-<сессия>.json` ({ts, cost_usd}) свежее 300 с, строка берёт его. Пишет его,
  * по замыслу ECC, строка состояния, но в облачной сессии Claude Code её не вызывает (проверено 11.10).
  *
- * Этот хук (Stop, `.claude/settings.json`) считает стоимость по журналу сессии теми же правилами, что cost-tracker (один
- * раз на message.id), по ценам ниже, пишет файл и сразу запускает cost-tracker ECC с тем же stdin — по очереди, а не
+ * Этот хук (Stop, `.claude/settings.json`) считает стоимость по журналу сессии и журналам её субагентов теми же правилами,
+ * что cost-tracker (один раз на message.id), по ценам ниже, пишет файл и сразу запускает cost-tracker ECC с тем же stdin — по очереди, а не
  * одновременно: штатный запуск cost-tracker выключен в ECC_DISABLED_HOOKS (`stop:cost-tracker`). Файлы ECC не меняются.
- * Модель не из таблицы (или незнакомая скорость) — файл не пишется, и cost-tracker считает по-своему, как без хука.
+ * Модель не из таблицы (или незнакомая скорость) — файл убирается, и cost-tracker считает по-своему, как без хука.
+ * Поиск в интернете (web_search_requests) не считается.
  * Ошибка хука работу не останавливает: Stop всегда завершается кодом 0 и ничего не печатает.
  */
 'use strict';
@@ -35,7 +36,6 @@ const PRICES = {
 };
 // Записи журнала без вызова модели (сообщения, которые Claude Code вставляет сам) — без стоимости.
 const SYNTHETIC_MODELS = new Set(['<synthetic>']);
-const MAX_STDIN = 1024 * 1024;
 
 function count(value) {
   const n = Number(value);
@@ -69,9 +69,8 @@ function messageCost(model, usage) {
     + write5m * rate.write5m + write1h * rate.write1h) / 1e6;
 }
 
-/** Стоимость сессии по журналу: один раз на message.id (последняя строка), как в cost-tracker ECC. */
-function sessionCost(transcriptPath) {
-  const usageById = new Map();
+/** Ответы модели из журнала: один раз на message.id (последняя строка), как в cost-tracker ECC. */
+function collectUsage(transcriptPath, usageById) {
   let line = 0;
   for (const text of fs.readFileSync(transcriptPath, 'utf8').split('\n')) {
     line += 1;
@@ -80,8 +79,23 @@ function sessionCost(transcriptPath) {
     try { entry = JSON.parse(text); } catch { continue; }
     const message = entry.type === 'assistant' && entry.message;
     if (!message || !message.usage) continue;
-    const key = typeof message.id === 'string' && message.id ? message.id : `line_${line}`;
+    const key = typeof message.id === 'string' && message.id ? message.id : `${transcriptPath}:${line}`;
     usageById.set(key, { model: message.model, usage: message.usage });
+  }
+}
+
+/**
+ * Стоимость сессии: основной журнал и журналы субагентов (`<сессия>/subagents/*.jsonl` — в счёт Claude Code они входят,
+ * а в основной журнал не попадают). null — в сессии есть модель или скорость не из таблицы цен.
+ */
+function sessionCost(transcriptPath) {
+  const usageById = new Map();
+  collectUsage(transcriptPath, usageById);
+  const subagents = path.join(transcriptPath.replace(/\.jsonl$/, ''), 'subagents');
+  if (fs.existsSync(subagents)) {
+    for (const name of fs.readdirSync(subagents)) {
+      if (name.endsWith('.jsonl')) collectUsage(path.join(subagents, name), usageById);
+    }
   }
   let total = 0;
   for (const { model, usage } of usageById.values()) {
@@ -98,9 +112,13 @@ function publishCost(root, input) {
   const sessionId = sanitizeSessionId(input.session_id);
   const transcript = typeof input.transcript_path === 'string' ? input.transcript_path : '';
   if (!sessionId || !transcript || !fs.existsSync(transcript)) return;
-  const cost = sessionCost(transcript);
-  if (cost === null) return;
   const file = path.join(os.tmpdir(), `harness-cost-${sessionId}.json`);
+  const cost = sessionCost(transcript);
+  if (cost === null) {
+    // Файл прошлого Stop (свежее 300 с) cost-tracker взял бы вместо своей таблицы — убрать, пусть считает сам.
+    fs.rmSync(file, { force: true });
+    return;
+  }
   fs.writeFileSync(`${file}.tmp`, JSON.stringify({ ts: Math.floor(Date.now() / 1000), cost_usd: cost }));
   fs.renameSync(`${file}.tmp`, file);
 }
@@ -117,7 +135,7 @@ function main() {
   }
   // cost-tracker ECC — тем же stdin; его вывод (эхо stdin по правилам ECC) Claude Code не нужен.
   spawnSync(process.execPath, [path.join(root, 'scripts/hooks/cost-tracker.js')], {
-    input: raw.length > MAX_STDIN ? '' : raw,
+    input: raw, // больше 1 МБ cost-tracker обрежет сам и ничего не напечатает
     stdio: ['pipe', 'ignore', 'inherit'],
     env: { ...process.env, CLAUDE_PLUGIN_ROOT: root },
     timeout: 25000,
