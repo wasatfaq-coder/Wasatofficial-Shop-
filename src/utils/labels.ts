@@ -75,6 +75,13 @@ export interface LabelData {
   barcode: string;
   price: number;
   oldPrice?: number;
+  /**
+   * «Ростовка» (a size pack): its composition «48-50-52 / 1-2-1» instead of the size. It identifies the pack, so every
+   * template prints it (the size has no place on a pack label: `size` is empty).
+   */
+  packLine?: string;
+  /** The pack has no price: the label has no price block, like `showPrice: false` */
+  noPrice?: boolean;
 }
 
 export const hasSaleOldPrice = (data: Pick<LabelData, 'price' | 'oldPrice'>) =>
@@ -430,7 +437,11 @@ export function layoutLabel(
   const code = options.showBarcode && data.barcode ? encodeBarcode(data.barcode) : null;
   const bars = code ? barcodeBlock(c, code) : null;
   const price = formatLabelPrice(data.price);
-  const showPrice = options.showPrice;
+  const showPrice = options.showPrice && !data.noPrice;
+  const pack = (data.packLine ?? '').trim();
+  /** The pack composition (wraps between the sizes and the items, never cut): a pack label shows it in every template */
+  const packBlock = (style: Partial<TextStyle> = {}, extra: Partial<Block> = {}) =>
+    pack ? textBlock(c, pack, { size: 3, weight: 800, maxLines: 2, ...style }, { gap: 0.7, ...extra }) : null;
   const tall = h / w > 1.1;
   const titleLines = tall ? 4 : 2;
   const colorArticle = [data.color, data.article].filter(Boolean).join(' · ');
@@ -442,6 +453,7 @@ export function layoutLabel(
     blocks = [
       textBlock(c, data.title, { size: 3.6, weight: 800, maxLines: titleLines }),
       textBlock(c, data.color ? `Цвет: ${data.color}` : '', { size: 2.5, weight: 700 }, { gap: 0.7, ...opt('цвет', 2) }),
+      packBlock({ size: 2.8 }, { gap: 0.6 }),
       textBlock(c, data.article ? `Арт. ${data.article}` : '', { size: 2.3, weight: 700, mono: true }, { gap: 0.4, ...opt('артикул', 1) }),
       bars ?? spacer(),
       ...(showPrice
@@ -454,6 +466,7 @@ export function layoutLabel(
     blocks = [
       textBlock(c, data.title, { size: 3.3, weight: 800, maxLines: bars ? 1 : titleLines }),
       textBlock(c, data.color, { size: 2.4, weight: 700 }, { gap: 0.5, ...opt('цвет', 1) }),
+      packBlock({ size: 2.6 }, { gap: 0.5 }),
       bars ?? spacer(),
       pairBlock(c, data.article, showPrice ? price : '', { size: 2.2, weight: 700, mono: true }, { size: 4.6 }, { gap: 1 }),
     ];
@@ -463,6 +476,7 @@ export function layoutLabel(
     blocks = [
       textBlock(c, data.title, { size: 3.4, weight: 800, maxLines: titleLines }),
       textBlock(c, colorArticle, { size: 2.4, weight: 700 }, { gap: 0.6, ...opt('цвет и артикул', 1) }),
+      packBlock({ size: 2.8 }, { gap: 0.6 }),
       bars ? null : spacer(),
       showPrice ? shrinkBlock(c, price, { size: 10 }, { gap: 1.2 }) : null,
       ...(bars ? [spacer(), ruleBlock(c, 0), bars] : []),
@@ -472,7 +486,10 @@ export function layoutLabel(
   if (template === 'size-price') {
     const sizeText = data.size || '—';
     blocks = [
-      sizePriceRow(c, sizeText, showPrice ? price : ''),
+      // a pack has no single size for the box: the price and, under it, the composition
+      ...(pack
+        ? [showPrice ? shrinkBlock(c, price, { size: 8 }) : null, packBlock({ size: 4 }, { gap: 0.8 })]
+        : [sizePriceRow(c, sizeText, showPrice ? price : '')]),
       textBlock(c, data.title, { size: 3.4, weight: 800, maxLines: titleLines }, { gap: 1.4 }),
       textBlock(c, data.composition ? `Состав: ${data.composition}` : '', { size: 2.4, weight: 700 }, { gap: 0.6, ...opt('состав', 2) }),
       textBlock(c, data.article ? `Арт. ${data.article}` : '', { size: 2.3, weight: 700, mono: true }, { gap: 0.4, ...opt('артикул', 1) }),
@@ -482,7 +499,8 @@ export function layoutLabel(
 
   if (template === 'card') {
     blocks = [
-      bandBlock(c, data.size ? [`Размер ${data.size}`, data.size] : [], showPrice ? price : '', 'top'),
+      pack && !showPrice ? null : bandBlock(c, data.size ? [`Размер ${data.size}`, data.size] : [], showPrice ? price : '', 'top'),
+      packBlock({ size: 3.8 }, { gap: 1.4 }),
       textBlock(c, data.title, { size: 3.5, weight: 800, maxLines: titleLines }, { gap: 1.4 }),
       textBlock(c, data.composition ? `Состав: ${data.composition}` : '', { size: 2.4, weight: 700 }, { gap: 0.6, ...opt('состав', 2) }),
       textBlock(c, data.article ? `Арт. ${data.article}` : '', { size: 2.3, weight: 700, mono: true }, { gap: 0.4, ...opt('артикул', 1) }),
@@ -495,6 +513,7 @@ export function layoutLabel(
     blocks = [
       bars ? null : spacer(),
       data.size ? shrinkBlock(c, data.size, { size: 7, align: 'center' }) : null,
+      packBlock({ size: 4.2, align: 'center' }),
       showPrice ? shrinkBlock(c, price, { size: 6, align: 'center' }, { gap: 0.6 }) : null,
       textBlock(c, data.title, { size: 3.3, weight: 800, maxLines: titleLines, ...center }, { gap: 1.2 }),
       textBlock(c, data.composition ? `Состав: ${data.composition}` : '', { size: 2.4, weight: 700, ...center }, { gap: 0.6, ...opt('состав', 2) }),
@@ -508,6 +527,7 @@ export function layoutLabel(
     blocks = [
       textBlock(c, data.title, { size: 4.4, weight: 800, maxLines: titleLines + 1 }),
       textBlock(c, [data.color, data.size ? `размер ${data.size}` : ''].filter(Boolean).join(' · '), { size: 2.7, weight: 700 }, { gap: 0.8, ...opt('цвет и размер', 2) }),
+      packBlock({ size: 3.2 }, { gap: 0.6 }),
       textBlock(c, data.composition, { size: 2.4, weight: 600 }, { gap: 0.4, ...opt('состав', 1) }),
       bars ? null : spacer(),
       bars,
@@ -521,6 +541,7 @@ export function layoutLabel(
       showPrice ? shrinkBlock(c, price, { size: 11 }) : null,
       textBlock(c, data.title, { size: 3.6, weight: 800, maxLines: titleLines }, { gap: 0.8 }),
       showPrice ? ruleBlock(c, 1) : null,
+      packBlock({ size: 2.8 }, { gap: 0.8 }),
       tableBlock(
         c,
         [
@@ -547,6 +568,7 @@ export function layoutLabel(
     blocks = [
       textBlock(c, data.title, { size: 3.8, weight: 800, maxLines: titleLines, ...center }),
       textBlock(c, [data.color, data.size].filter(Boolean).join(' · '), { size: 2.5, weight: 700, ...center }, { gap: 0.7, ...opt('цвет и размер', 2) }),
+      packBlock({ size: 3, ...center }, { gap: 0.5 }),
       textBlock(c, data.composition, { size: 2.3, weight: 600, ...center }, { gap: 0.4, ...opt('состав', 1) }),
       spacer(),
       showPrice ? shrinkBlock(c, price, { size: 8.5, align: 'center' }) : null,
@@ -560,6 +582,7 @@ export function layoutLabel(
     blocks = [
       textBlock(c, data.title, { size: 3.4, weight: 800, maxLines: titleLines }),
       textBlock(c, colorArticle, { size: 2.4, weight: 700 }, { gap: 0.6, ...opt('цвет и артикул', 1) }),
+      packBlock({ size: 2.8 }, { gap: 0.6 }),
       bars ? null : spacer(),
       saleRow(c, price, oldPrice, data.price),
       ...(bars ? [spacer(), ruleBlock(c, 0), bars] : []),
