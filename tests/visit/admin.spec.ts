@@ -5,9 +5,10 @@ import fs from 'node:fs';
 import { point, watchFirestore, type Point } from './firestoreTraffic';
 import { ADMIN } from '../e2e/store';
 import { readDoc } from '../e2e/emulator';
+import { PRODUCT_COUNT, productId } from './catalog300';
 
 test.skip(!process.env.VISIT_ORDERS, 'замер админки — bun run measure:admin');
-test.describe.configure({ mode: 'serial', timeout: 300_000 });
+test.describe.configure({ mode: 'serial', timeout: 600_000 });
 
 const results: Record<string, Point[]> = {};
 /** Main-thread work of each step (long tasks over 50 ms, summed): how long the screen is busy drawing */
@@ -43,14 +44,23 @@ async function openSection(page: Page, group: string, section: string) {
   await panel.getByRole('tab', { name: new RegExp(`^${section}( ,|$)`) }).click();
 }
 
-// The owner's first sign-in writes the catalog index and miniatures (docs/catalog-scale-plan.md): done before the
+// The owner's first sign-in writes the catalog index and miniatures (docs/catalog-scale-plan.md) and the orders index
+// (docs/orders-scale-plan.md, stage 4): done before the
 // measure, as on the real site, so that the measured visit reads what the owner reads every day
-test('сессия владельца пишет индекс каталога', async ({ page }) => {
+test('сессия владельца пишет индексы каталога и заказов', async ({ page }) => {
   await page.goto('/');
   await signInOwner(page);
   for (let i = 0; i < 180 && !(await readDoc('catalog_index/p0')); i++) await page.waitForTimeout(1000);
   // the miniatures follow the index; a minute is enough for 300 of them on CI
   await page.waitForTimeout(60_000);
+  // and the session moves the previews out of the products one by one (docs/catalog-scale-plan.md, stage 6): the measured
+  // visit starts after the last one. Otherwise its writes fall into the measure, and the emulator, which sends a listener
+  // the whole result again on every change, turns 300 writes into 90 000 reads that the real database does not make
+  for (let i = 0; i < 300 && !(await readDoc(`product_previews/${productId(PRODUCT_COUNT - 1)}`)); i++) await page.waitForTimeout(1000);
+  // the orders index (docs/orders-scale-plan.md, stage 4) is written from all orders on the first sign-in
+  let index: Record<string, unknown> | null = null;
+  for (let i = 0; i < 60 && !(index = await readDoc('orders_index/p0')); i++) await page.waitForTimeout(1000);
+  console.log(index ? `Индекс заказов записан: частей ${index.parts}` : 'Индекс заказов не записан за минуту');
 });
 
 test('владелец: сайт → панель → «Заказы» → «Клиенты» → «Аналитика»', async ({ page }) => {
