@@ -9,6 +9,30 @@ import { isPromoListed, promoExpiryDate } from '../../../shared/orderPricing';
 import { useChangedSince, useUnsavedChanges } from '../../../utils/unsavedChanges';
 import { normalizedCode, uniquePromoCode } from '../../../utils/promoList';
 import { pluralRu } from '../../../utils/pluralize';
+import { AdminExample } from '../AdminExample';
+
+/** Basket for the example when no minimum is set: a round sample, not store data */
+const EXAMPLE_BASKET_RUB = 5000;
+
+/**
+ * «Пример» под скидкой: сумма корзины — минимум чека, если он задан, иначе 5 000 ₽. Скидка считается как
+ * calcPromoDiscount в shared/orderPricing.ts (процент — округлён, рубли — не больше корзины). Пусто — null.
+ */
+function promoExample(
+  discountType: 'percent' | 'fixed',
+  discountValue: number,
+  minOrderAmount: number
+): { title: string; lines: string[] } | null {
+  const valid = Number.isFinite(discountValue) && discountValue > 0 && (discountType === 'fixed' || discountValue <= 100);
+  if (!valid) return null;
+  const basket = minOrderAmount > 0 ? minOrderAmount : EXAMPLE_BASKET_RUB;
+  const discount = discountType === 'fixed' ? Math.min(basket, discountValue) : Math.round((basket * discountValue) / 100);
+  const money = (n: number) => `${n.toLocaleString('ru-RU')} ₽`;
+  const cut = discountType === 'fixed' ? money(discountValue) : `${discountValue} %`;
+  const lines = [`скидка ${cut} → −${money(discount)}, к оплате ${money(basket - discount)}`];
+  if (minOrderAmount > 0) lines.push(`код сработает от ${money(minOrderAmount)}`);
+  return { title: `заказ на ${money(basket)}`, lines };
+}
 
 type ScopeType = 'all' | 'categories' | 'products';
 
@@ -241,6 +265,8 @@ export const PromoForm: React.FC<PromoFormProps> = ({
     onClose();
   };
 
+  const example = promoExample(discountType, Number(discountValue), Number(minOrderAmount));
+
   const moreSummary = [
     scopeType === 'all'
       ? 'весь каталог'
@@ -378,6 +404,8 @@ export const PromoForm: React.FC<PromoFormProps> = ({
             </button>
           ))}
         </div>
+
+        {example && <AdminExample title={example.title} lines={example.lines} />}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>

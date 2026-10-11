@@ -7,11 +7,13 @@ import {
   PURCHASE_CURRENCIES,
   exchangeRateErrors,
   parseDecimal as num,
+  priceFromRate,
   productsInCurrency,
   repriceProducts,
   workingRate,
   type CurrencyRate,
   type ExchangeRates,
+  type ProductPurchase,
   type PurchaseCurrency,
 } from '../../utils/currencyPricing';
 import { cbrDateLabel, fetchCbrRates } from '../../utils/cbrRates';
@@ -21,6 +23,7 @@ import { useUnsavedChanges } from '../../utils/unsavedChanges';
 import { pluralRu } from '../../utils/pluralize';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { AdminPriceJournal } from './AdminPriceJournal';
+import { AdminExample } from './AdminExample';
 
 interface AdminRatesTabProps {
   /** Products with their cost and purchase (admin products) */
@@ -69,6 +72,28 @@ const fromDraft = (d: Draft): ExchangeRates => {
 };
 
 const rub = (n: number) => `${n.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ₽`;
+/** The example's purchase, in dollars: the owner's form has no product here, only the rates */
+const EXAMPLE_USD_AMOUNT = 10;
+
+/**
+ * «Пример» под курсами: одна закупка в долларах по тем же функциям, что «Применить» (priceFromRate), поэтому цифры
+ * совпадают с ценами после применения. null — курс ЦБ или наценка для розницы ещё не заполнены.
+ */
+function usdRateExample(rates: ExchangeRates): { title: string; lines: string[] } | null {
+  const working = workingRate(rates.usd);
+  const priced = priceFromRate({ currency: 'USD', amount: EXAMPLE_USD_AMOUNT } satisfies ProductPurchase, rates);
+  if (working === null || priced === null || !Number.isFinite(rates.markupPercent)) return null;
+  const num2 = (n: number) => n.toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+  const { usd } = rates;
+  const markup = usd.markupKind === 'percent' ? `${num2(usd.markup)} %` : rub(usd.markup);
+  return {
+    title: `закупка ${EXAMPLE_USD_AMOUNT} $`,
+    lines: [
+      `курс ${rub(usd.official)} + ${markup} = ${rub(working)} → закупка ${rub(priced.costPrice)} → цена ${rub(priced.price)} (наценка ${num2(rates.markupPercent)} %)`,
+    ],
+  };
+}
+
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
@@ -107,6 +132,7 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
 
   const ready = exchangeRateErrors(rates).length === 0;
   const changes = ready ? repriceProducts(products, rates) : [];
+  const example = usdRateExample(rates);
   const inCurrency = PURCHASE_CURRENCIES.reduce((sum, c) => sum + productsInCurrency(products, c.id), 0);
   const wholesaleNotLower = changes.filter(
     (c) => c.after.wholesalePrice !== undefined && c.after.wholesalePrice >= c.after.price
@@ -362,6 +388,8 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
           )}
         </div>
       </div>
+
+      {example && <AdminExample title={example.title} lines={example.lines} />}
 
       <div className="neu-flat rounded-3xl p-4 space-y-3">
         <h4 className="text-sm font-extrabold text-[#2D3A4E]">Что изменится</h4>

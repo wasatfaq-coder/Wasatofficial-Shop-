@@ -4,6 +4,7 @@ import type { StorefrontSettings } from '../../../types';
 import { NeumorphicSwitch } from '../../NeumorphicSwitch';
 import { AdminHint } from '../AdminHint';
 import { useUnsavedChanges } from '../../../utils/unsavedChanges';
+import { AdminExample } from '../AdminExample';
 
 interface DeliveryCommonSettingsProps {
   settings: StorefrontSettings;
@@ -21,6 +22,18 @@ export function parseThreshold(text: string): number | undefined | null {
   if (!/^\d+$/.test(trimmed)) return null;
   const value = Number(trimmed);
   return value > MAX_THRESHOLD ? null : value || undefined;
+}
+
+/**
+ * «Пример» под порогом: заказ ровно на порог и на рубль меньше — что увидит покупатель. Пусто или меньше 2 ₽ — null.
+ */
+function thresholdExample(threshold: number | undefined | null): { title: string; lines: string[] } | null {
+  if (typeof threshold !== 'number' || threshold < 2) return null;
+  const money = (n: number) => `${n.toLocaleString('ru-RU')} ₽`;
+  return {
+    title: `заказ на ${money(threshold)}`,
+    lines: [`доставка бесплатно; на ${money(threshold - 1)} — по цене способа`],
+  };
 }
 
 /**
@@ -62,6 +75,8 @@ export const DeliveryCommonSettings: React.FC<DeliveryCommonSettingsProps> = ({ 
     setThreshold(value ? String(value) : '');
     onShowToast(value ? `Доставка бесплатна от ${value.toLocaleString('ru-RU')} ₽` : 'Порог бесплатной доставки убран', 'success');
   };
+
+  const example = thresholdExample(parseThreshold(threshold));
 
   const expressOn = settings.isExpressEnabled !== false;
   const toggleExpress = async (next: boolean) => {
@@ -127,6 +142,7 @@ export const DeliveryCommonSettings: React.FC<DeliveryCommonSettingsProps> = ({ 
             {error}
           </p>
         )}
+        {example && <AdminExample title={example.title} lines={example.lines} />}
       </div>
 
       <div className="flex items-center justify-between gap-3">
