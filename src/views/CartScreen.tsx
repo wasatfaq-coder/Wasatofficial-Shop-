@@ -28,6 +28,9 @@ import {
 import { promoDiscountText } from '../utils/promoLabel';
 import { useDialogA11y } from '../utils/useDialogA11y';
 import { linePrice } from '../shared/orderLine';
+import { isWholesaleLine, packSizeOf, wholesaleLineProblems } from '../shared/wholesalePricing';
+import { packsText } from '../utils/wholesaleOffer';
+import { WholesaleMark } from '../components/WholesaleMark';
 
 interface CartScreenProps {
   cartItems: CartItem[];
@@ -89,6 +92,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   const unavailableCount = cartItems.filter(
     (item) => item.quantity > getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode)
   ).length;
+  // Wholesale lines in part packs or under the product's minimum: the checkout would refuse them, so say it here
+  const wholesaleProblems = wholesaleLineProblems(cartItems);
+  const cartBlocked = unavailableCount > 0 || wholesaleProblems.length > 0;
   const [isClearCartConfirmOpen, setIsClearCartConfirmOpen] = useState(false);
   const clearDialog = useDialogA11y(isClearCartConfirmOpen, () => setIsClearCartConfirmOpen(false));
 
@@ -211,7 +217,10 @@ export const CartScreen: React.FC<CartScreenProps> = ({
           const inStock = getVariantStock(item.product, item.selectedColor, item.selectedSize);
           const availableStock = getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode);
           const isPreorder = inStock === 0 && availableStock > 0;
-          const isAtMaxStock = item.quantity >= availableStock;
+          // A wholesale line changes by whole packs: «−» and «+» take or add one pack
+          const wholesale = isWholesaleLine(item);
+          const step = wholesale ? packSizeOf(item.product) : 1;
+          const isAtMaxStock = item.quantity + step > availableStock;
           const isEditingVariant = editingVariantItemId === item.id;
           // Buttons of a row name its product: «Удалить товар» eight times does not say which (audit 07.10, finding 37)
           const title = item.product.title;
@@ -291,6 +300,17 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     )}
                   </div>
 
+                  {wholesale && (
+                    <p className="text-xs text-[#4E5C70]">
+                      <WholesaleMark className="mr-1.5" />
+                      {packsText(item.quantity, step)} · {linePrice(item).toLocaleString('ru-RU')} ₽/шт.
+                      {item.volumeDiscountPerUnit ? (
+                        <span className="text-success font-bold">
+                          {' '}· скидка за объём −{item.volumeDiscountPerUnit.toLocaleString('ru-RU')} ₽/шт.
+                        </span>
+                      ) : null}
+                    </p>
+                  )}
                   <p className="text-sm font-extrabold text-[#2D3A4E] pt-0.5">
                     {(linePrice(item) * item.quantity).toLocaleString('ru-RU')} ₽
                   </p>
@@ -300,26 +320,29 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     <div className="neu-inset rounded-full p-0.5 flex items-center gap-1.5">
                       <button
                         onClick={() => {
-                          if (item.quantity === 1) {
+                          if (item.quantity <= step) {
                             setItemToRemove(item);
                           } else {
-                            onUpdateQuantity(item.id, item.quantity - 1);
+                            onUpdateQuantity(item.id, item.quantity - step);
                           }
                         }}
                         type="button"
                         className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent cursor-pointer"
-                        title={item.quantity === 1 ? 'Удалить товар' : 'Уменьшить количество'}
-                        aria-label={`${item.quantity === 1 ? 'Удалить товар' : 'Уменьшить количество'}: ${title}`}
+                        title={item.quantity <= step ? 'Удалить товар' : 'Уменьшить количество'}
+                        aria-label={`${item.quantity <= step ? 'Удалить товар' : 'Уменьшить количество'}: ${title}`}
                       >
                         <Minus className="w-3 h-3 stroke-[2.5]" />
                       </button>
-                      <span className="text-xs font-bold text-[#2D3A4E] w-5 text-center" aria-live="polite">
-                        {item.quantity}
+                      <span
+                        className={`text-xs font-bold text-[#2D3A4E] text-center ${step > 1 ? 'min-w-5 px-0.5 whitespace-nowrap' : 'w-5'}`}
+                        aria-live="polite"
+                      >
+                        {step > 1 ? `${Math.floor(item.quantity / step)} уп.` : item.quantity}
                       </span>
                       <button
                         onClick={() => {
-                          if (item.quantity < availableStock) {
-                            onUpdateQuantity(item.id, item.quantity + 1);
+                          if (item.quantity + step <= availableStock) {
+                            onUpdateQuantity(item.id, item.quantity + step);
                           } else {
                             onShowToast(`Достигнут максимум (${availableStock} шт.)`, 'info');
                           }
@@ -637,6 +660,13 @@ export const CartScreen: React.FC<CartScreenProps> = ({
               Часть товаров закончилась: уменьшите количество или удалите их из корзины ({unavailableCount}).
             </p>
           )}
+          {wholesaleProblems.length > 0 && (
+            <div role="status" className="neu-inset rounded-2xl p-3 text-xs font-bold text-danger space-y-1">
+              {wholesaleProblems.map((problem) => (
+                <p key={problem}>{problem}</p>
+              ))}
+            </div>
+          )}
           {checkoutBlocker && (
             <NotConfigured
               title={checkoutBlocker}
@@ -645,9 +675,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
           )}
           <button
             onClick={() => setActiveTab('checkout')}
-            disabled={Boolean(checkoutBlocker) || unavailableCount > 0}
+            disabled={Boolean(checkoutBlocker) || cartBlocked}
             className={`w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-              !checkoutBlocker && unavailableCount === 0
+              !checkoutBlocker && !cartBlocked
                 ? 'neu-button-accent btn-confirm-order active:neu-inset-deep active:scale-[0.98] cursor-pointer'
                 : 'neu-button-disabled'
             }`}
@@ -659,7 +689,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
           <button
             type="button"
             onClick={() => setIsQuickOrderOpen(true)}
-            disabled={unavailableCount > 0}
+            disabled={cartBlocked}
             className="w-full py-2.5 rounded-2xl neu-button font-bold text-xs text-accent flex items-center justify-center transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span>Заказать в 1 клик</span>

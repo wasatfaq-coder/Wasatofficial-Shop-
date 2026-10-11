@@ -2,6 +2,7 @@ import { Search, Plus, Check, Download, Upload, Sparkles } from 'lucide-react';
 import { Product } from '../../../types';
 import { exportProductsToCSV } from '../../../utils/csvHelpers';
 import { isHiddenFromSale } from '../../../utils/inventory';
+import { isWholesaleListed } from '../../../utils/wholesaleOffer';
 import { NeumorphicSelect } from '../../NeumorphicSelect';
 import type { StoreCategory } from '../../../types';
 
@@ -23,12 +24,16 @@ export function ProductListToolbar({ list, products, categories, handleOpenAddPr
     setCategoryFilter,
     stockFilter,
     setStockFilter,
+    wholesaleFilter,
+    setWholesaleFilter,
     selectedProductIds,
     setIsCSVImportModalOpen,
     isAllFilteredSelected,
     categorySelectOptions,
     handleToggleSelectAll,
   } = list;
+
+  const wholesaleCount = products.filter(isWholesaleListed).length;
 
   return (
     <>
@@ -139,6 +144,22 @@ export function ProductListToolbar({ list, products, categories, handleOpenAddPr
           />
         </div>
       </div>
+
+      {/* «Опт»: only while the store has products offered wholesale */}
+      {(wholesaleCount > 0 || wholesaleFilter) && (
+        <div className="flex">
+          <button
+            type="button"
+            onClick={() => setWholesaleFilter(!wholesaleFilter)}
+            aria-pressed={wholesaleFilter}
+            className={`min-h-8 px-3 py-1.5 rounded-xl text-[11px] transition-all cursor-pointer ${
+              wholesaleFilter ? 'neu-pill-active font-extrabold' : 'neu-button font-bold text-[#4E5C70] hover:text-[#2D3A4E]'
+            }`}
+          >
+            Опт ({wholesaleCount})
+          </button>
+        </div>
+      )}
 
       {/* Selection & Bulk Actions Toolbar (nothing to select in an empty catalog) */}
       {products.length > 0 && (

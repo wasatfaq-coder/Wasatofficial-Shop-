@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Tag } from 'lucide-react';
 import { Product } from '../../../types';
 import { isHiddenFromSale } from '../../../utils/inventory';
+import { isWholesaleListed } from '../../../utils/wholesaleOffer';
 import type { BulkTab } from '../AdminBulkOperationsModal';
 
 import type { AdminProductsTabProps, ProductCategoryOption } from '../AdminProductsTab';
@@ -22,6 +23,8 @@ export function useProductList(
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [stockFilter, setStockFilter] = useState<'all' | 'in_stock' | 'out_of_stock'>('all');
+  /** «Опт»: only products offered wholesale (stages 16–17 of docs/admin-wholesale-plan.md) */
+  const [wholesaleFilter, setWholesaleFilter] = useState(false);
 
   // Selection & Bulk
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
@@ -56,9 +59,9 @@ export function useProductList(
           ? !isHiddenFromSale(p)
           : isHiddenFromSale(p);
 
-      return matchesSearch && matchesCat && matchesStock;
+      return matchesSearch && matchesCat && matchesStock && (!wholesaleFilter || isWholesaleListed(p));
     });
-  }, [products, searchQuery, categoryFilter, stockFilter]);
+  }, [products, searchQuery, categoryFilter, stockFilter, wholesaleFilter]);
 
   const isAllFilteredSelected =
     filteredProducts.length > 0 &&
@@ -165,6 +168,8 @@ export function useProductList(
     setCategoryFilter,
     stockFilter,
     setStockFilter,
+    wholesaleFilter,
+    setWholesaleFilter,
     selectedProductIds,
     setSelectedProductIds,
     isBulkOperationsModalOpen,

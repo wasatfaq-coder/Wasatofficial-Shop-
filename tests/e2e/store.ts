@@ -194,6 +194,40 @@ export const PRODUCTS = {
     sizes: ['S', 'M'],
     stock: 5,
   }), isPopular: false },
+  // Опт у покупателя (stages 16–17 of docs/admin-wholesale-plan.md): the phone buys M, the computer L
+  workTee: {
+    ...product({
+      id: 'e2e-work-tee',
+      title: 'Футболка рабочая',
+      category: 'tshirts',
+      categoryLabel: 'Футболки',
+      price: 1990,
+      colors: [{ name: 'Серый', hex: '#8A8F98' }],
+      sizes: ['M', 'L'],
+      stock: 100,
+    }),
+    isPopular: false,
+    saleChannel: 'both' as const,
+    wholesalePrice: 1200,
+    wholesalePackSize: 5,
+    wholesaleMinPacks: 2,
+  },
+  bulkTank: {
+    ...product({
+      id: 'e2e-bulk-tank',
+      title: 'Майка оптовая',
+      category: 'tshirts',
+      categoryLabel: 'Футболки',
+      price: 990,
+      colors: [{ name: 'Белый', hex: '#FFFFFF' }],
+      sizes: ['M'],
+      stock: 100,
+    }),
+    isPopular: false,
+    saleChannel: 'wholesale' as const,
+    wholesalePrice: 450,
+    wholesalePackSize: 10,
+  },
   vest: { ...product({
     id: 'e2e-vest',
     title: 'Жилет стёганый',
@@ -236,6 +270,8 @@ export function storeDocs(): Record<string, Record<string, unknown>> {
       legalAddress: 'г. Москва, ул. Тверская, д. 7',
       categories,
       labelFormats: [{ id: 'f58x40', name: '58×40 мм', widthMm: 58, heightMm: 40 }],
+      // «Опт»: −10 % from 3 packs of a model
+      wholesale: { volumeDiscount: { kind: 'percent', countBy: 'product', tiers: [{ minPacks: 3, value: 10 }] } },
       paymentMethods: [
         { id: 'transfer', title: 'Перевод по номеру телефона', description: 'Менеджер пришлет номер для перевода.', isActive: true },
         { id: 'cash', title: 'Наличными или картой при получении', onDelivery: true, isActive: true },

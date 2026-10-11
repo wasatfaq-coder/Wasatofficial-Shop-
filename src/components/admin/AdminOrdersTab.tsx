@@ -95,7 +95,10 @@ import { AdminHint } from './AdminHint';
 import { orderPriceIssues, type OrderCheckContext } from '../../utils/orderPriceCheck';
 import type { OrderPaymentDetails } from '../../types';
 import { cancelledByLabel, cancelReasonText, formatCancelledAt, isArchivedOrder, ordersWithPromoToRelease, overdueUnpaidOrders, UNPAID_CANCEL_REASON } from '../../utils/orderCancel';
-import { linePrice } from '../../shared/orderLine';
+import { linePrice, isWholesaleLine, orderSalesChannel, type SalesChannel } from '../../shared/orderLine';
+import { WholesaleMark } from '../WholesaleMark';
+import { packSizeOf } from '../../shared/wholesalePricing';
+import { packsText } from '../../utils/wholesaleOffer';
 
 interface AdminOrdersTabProps {
   orders: Order[];
@@ -264,6 +267,8 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
   const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<'all' | NonNullable<Order['paymentStatus']>>('all');
+  // «Опт / Розница»: counted from the order's lines (`orderSalesChannel`), stages 16–17 of docs/admin-wholesale-plan.md
+  const [channelFilter, setChannelFilter] = useState<'all' | SalesChannel>('all');
 
   // Date filter options for Neumorphic dropdown
   const dateFilterOptions = useMemo(() => [
@@ -299,6 +304,11 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   // «Ждут проверки чека»: the receipts the buyers sent, in one tap instead of «Фильтры» → «Статус оплаты» (stage 5, finding 26)
   const receiptReviewCount = useMemo(() => orders.filter((o) => isReceiptOnReview(o) && !isArchivedOrder(o)).length, [orders]);
   const receiptChipActive = paymentStatusFilter === 'receipt_review';
+  const channelCounts = useMemo(() => {
+    const listed = orders.filter((o) => !isArchivedOrder(o));
+    const wholesale = listed.filter((o) => orderSalesChannel(o) === 'wholesale').length;
+    return { wholesale, retail: listed.length - wholesale };
+  }, [orders]);
 
   const moreFiltersCount = [dateFilter, paymentStatusFilter, deliveryFilter, paymentFilter].filter((v) => v !== 'all').length;
 
@@ -403,13 +413,16 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         if (pStat !== paymentStatusFilter) return false;
       }
 
+      // 7. «Опт / Розница»
+      if (channelFilter !== 'all' && orderSalesChannel(ord) !== channelFilter) return false;
+
       return true;
     });
-  }, [orders, searchQuery, statusFilter, dateFilter, deliveryFilter, paymentFilter, paymentStatusFilter]);
+  }, [orders, searchQuery, statusFilter, dateFilter, deliveryFilter, paymentFilter, paymentStatusFilter, channelFilter]);
   // a new search, chip or filter starts from the first 20
   const orderPage = usePagedList<Order>(
     filteredOrders,
-    [searchQuery, statusFilter, dateFilter, deliveryFilter, paymentFilter, paymentStatusFilter].join('|')
+    [searchQuery, statusFilter, dateFilter, deliveryFilter, paymentFilter, paymentStatusFilter, channelFilter].join('|')
   );
   const visibleOrders = orderPage.visible;
 
@@ -1061,6 +1074,34 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
           </span>
         )}
 
+        {/* «Опт / Розница»: only once there are wholesale orders */}
+        {(channelCounts.wholesale > 0 || channelFilter !== 'all') && (
+          <div role="radiogroup" aria-label="Опт или розница" className="flex flex-wrap gap-1.5">
+            {[
+              { value: 'all' as const, label: 'Опт и розница', count: channelCounts.wholesale + channelCounts.retail },
+              { value: 'wholesale' as const, label: 'Опт', count: channelCounts.wholesale },
+              { value: 'retail' as const, label: 'Розница', count: channelCounts.retail },
+            ].map((chip) => {
+              const active = channelFilter === chip.value;
+              return (
+                <button
+                  key={chip.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setChannelFilter(chip.value)}
+                  className={`h-8 px-3 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                    active ? 'neu-pill-active' : 'neu-button text-[#2D3A4E] hover:text-accent'
+                  }`}
+                >
+                  {chip.label}
+                  <span className={`text-[11px] ${active ? 'text-accent' : 'text-[#4E5C70]'}`}>{chip.count}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Status chips: the common filter in one tap (Hick: 7 controls → chips + «Фильтры») */}
         {/* In rows, not a sideways strip: on a phone the hidden chips («К выдаче», «Отменены») were cut off */}
         <div role="radiogroup" aria-label="Статус заказа" className="flex flex-wrap gap-1.5">
@@ -1336,7 +1377,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         )}
 
         {/* Active Filters Reset Bar */}
-        {(statusFilter !== 'all' || deliveryFilter !== 'all' || paymentFilter !== 'all' || paymentStatusFilter !== 'all' || dateFilter !== 'all') && (
+        {(statusFilter !== 'all' || deliveryFilter !== 'all' || paymentFilter !== 'all' || paymentStatusFilter !== 'all' || dateFilter !== 'all' || channelFilter !== 'all') && (
           <div className="flex items-center justify-between text-xs px-1">
             <span className="text-[11px] text-[#4E5C70] font-medium">
               Применены фильтры заказов
@@ -1348,6 +1389,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                 setDeliveryFilter('all');
                 setPaymentFilter('all');
                 setPaymentStatusFilter('all');
+                setChannelFilter('all');
               }}
               className="py-1 px-2.5 neu-button rounded-xl text-[11px] font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer flex items-center gap-1 transition-all"
             >
@@ -1490,6 +1532,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                 {/* Who, how much and for what sum — what the owner reads in the short card */}
                 <div className="flex items-baseline justify-between gap-3 text-xs">
                   <p className="min-w-0 truncate text-[#2D3A4E]">
+                    {orderSalesChannel(ord) === 'wholesale' && <WholesaleMark className="mr-1.5" />}
                     <strong>{ord.customerName || 'Покупатель'}</strong>
                     <span className="text-[#4E5C70]">
                       {' · '}
@@ -1638,8 +1681,12 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                               <p className="font-bold leading-snug">{it.product?.title || 'Товар каталога'}</p>
                               <p className="text-xs text-[#4E5C70] flex flex-wrap gap-x-2">
                                 <span>{[it.selectedColor, it.selectedSize].filter(Boolean).join(', ')}</span>
+                                {isWholesaleLine(it) && <WholesaleMark />}
                                 <span className="font-bold text-accent whitespace-nowrap">
-                                  {it.quantity} шт. × {linePrice(it).toLocaleString('ru-RU')} ₽
+                                  {isWholesaleLine(it) && packSizeOf(it.product ?? {}) > 1
+                                    ? `${packsText(it.quantity, packSizeOf(it.product ?? {}))} (${it.quantity} шт.)`
+                                    : `${it.quantity} шт.`}{' '}
+                                  × {linePrice(it).toLocaleString('ru-RU')} ₽
                                 </span>
                                 {it.isPreorder && <span className="font-extrabold text-accent">Предзаказ</span>}
                               </p>

@@ -18,6 +18,8 @@ import { pluralRu } from '../utils/pluralize';
 import { NeumorphicSwitch } from './NeumorphicSwitch';
 import { useDialogA11y } from '../utils/useDialogA11y';
 import { buildSizeChips, sizeMatches } from '../utils/sizeScale';
+import { sellsWholesale } from '../shared/wholesalePricing';
+import { buyerPrice } from '../utils/wholesaleOffer';
 
 export interface FilterState {
   minPrice: number;
@@ -27,6 +29,8 @@ export interface FilterState {
   onlyInStock: boolean;
   onlyNew: boolean;
   onlyDiscount: boolean;
+  /** «Оптом»: only products sold wholesale (stages 16–17 of docs/admin-wholesale-plan.md) */
+  onlyWholesale: boolean;
   minRating: number;
 }
 
@@ -41,6 +45,7 @@ export const DEFAULT_FILTER_STATE: FilterState = {
   onlyInStock: false,
   onlyNew: false,
   onlyDiscount: false,
+  onlyWholesale: false,
   minRating: 0,
 };
 
@@ -105,14 +110,15 @@ export function buildPricePresets(prices: number[]): PricePreset[] {
 export function matchesCatalogFilters(p: Product, category: string, f: FilterState): boolean {
   return (
     (category === 'all' || p.category === category) &&
-    p.price >= f.minPrice &&
-    p.price <= f.maxPrice &&
+    buyerPrice(p) >= f.minPrice &&
+    buyerPrice(p) <= f.maxPrice &&
     matchesMaterialFilter(p.material, f.selectedMaterials) &&
     (f.selectedSizes.length === 0 ||
       f.selectedSizes.some((sel) => p.sizes.some((sz) => sizeMatches(sz, sel) && isProductAvailableInSize(p, sz)))) &&
     (!f.onlyInStock || isProductInStock(p)) &&
     (!f.onlyNew || Boolean(p.isNew)) &&
     (!f.onlyDiscount || Boolean(p.originalPrice && p.originalPrice > p.price)) &&
+    (!f.onlyWholesale || sellsWholesale(p)) &&
     productRatingValue(p) >= f.minRating
   );
 }
@@ -197,7 +203,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
   // Min and max price across all products
   const { minPossiblePrice, maxPossiblePrice } = useMemo(() => {
     if (products.length === 0) return { minPossiblePrice: 0, maxPossiblePrice: 35000 };
-    const prices = products.map((p) => p.price);
+    const prices = products.map(buyerPrice);
     return {
       minPossiblePrice: Math.floor(Math.min(...prices) / 500) * 500,
       maxPossiblePrice: Math.ceil(Math.max(...prices) / 1000) * 1000,
@@ -224,7 +230,9 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
     }));
   };
 
-  const pricePresets = useMemo(() => buildPricePresets(products.map((p) => p.price)), [products]);
+  const pricePresets = useMemo(() => buildPricePresets(products.map(buyerPrice)), [products]);
+  // «Оптом» is offered only when the store sells something wholesale
+  const hasWholesale = useMemo(() => products.some(sellsWholesale), [products]);
 
   // Filter content is rendered inline and in the modal: ids get a prefix so they stay unique
   // sections are divided by a line, not cards inside the filter card (design pass 07.10)
@@ -471,6 +479,22 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
           <span>Со скидкой</span>
           {filterState.onlyDiscount && <Check className="w-4 h-4 text-accent stroke-[3]" aria-hidden="true" />}
         </button>
+
+        {hasWholesale && (
+          <button
+            type="button"
+            onClick={() => onChangeFilterState((prev) => ({ ...prev, onlyWholesale: !prev.onlyWholesale }))}
+            aria-pressed={filterState.onlyWholesale}
+            className={`p-3 rounded-2xl text-xs flex items-center justify-between transition-all cursor-pointer ${
+              filterState.onlyWholesale
+                ? 'neu-pill-active font-extrabold'
+                : 'neu-button font-medium text-[#2D3A4E] hover:text-accent'
+            }`}
+          >
+            <span>Оптом</span>
+            {filterState.onlyWholesale && <Check className="w-4 h-4 text-accent stroke-[3]" aria-hidden="true" />}
+          </button>
+        )}
       </div>
     </div>
   );

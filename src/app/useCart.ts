@@ -1,10 +1,18 @@
 import React, { useMemo, useState } from 'react';
 import type { ActiveTab, AppliedPromoInfo, CartItem, Product, PromoCode } from '../types';
-import { priceCartLines, type WholesaleSettings } from '../shared/wholesalePricing';
+import {
+  isWholesaleLine,
+  packSizeOf,
+  priceCartLines,
+  sellsRetail,
+  sellsWholesale,
+  type WholesaleSettings,
+} from '../shared/wholesalePricing';
 import { CART_STORAGE_KEY, loadStoredCart, toStoredCart } from '../utils/cartStorage';
 import { getOrderableStock, isPreorderVariant } from '../utils/inventory';
 import { validatePromo, toPricingLine, appliedPromoFrom, currentAppliedPromo, promoSignInProblem } from '../shared/orderPricing';
 import { promoDiscountText } from '../utils/promoLabel';
+import { packsText } from '../utils/wholesaleOffer';
 import { hasOrderableVariant, needsVariantChoice } from '../utils/variantSelection';
 import type { AddToast } from './useToasts';
 
@@ -97,6 +105,11 @@ export function useCart({
       addToast(`Товар "${product.title}" временно закончился`, 'error');
       return false;
     }
+    // «Только оптом» is bought in whole packs: the product page shows the pack, the minimum and the steps
+    if (!sellsRetail(product)) {
+      onOpenProduct(product);
+      return false;
+    }
     if (needsVariantChoice(product)) {
       setVariantPickerProduct(product);
       return false;
@@ -111,40 +124,61 @@ export function useCart({
     return handleAddToCartWithOptions(product, color, size, 1);
   };
 
-  // Add a chosen variant to the cart. The customer stays on the page: the toast links to the cart
+  // Add a chosen variant to the cart. The customer stays on the page: the toast links to the cart.
+  // `wholesale` — bought wholesale: a line of its own, next to a retail line of the same variant, in whole packs
+  // (`quantity` — items). A product sold only wholesale always goes wholesale
   const handleAddToCartWithOptions = (
     product: Product,
     color: string,
     size: string,
-    quantity: number
+    quantity: number,
+    wholesale = false
   ): boolean => {
+    const asWholesale = sellsWholesale(product) && (wholesale || !sellsRetail(product));
+    const step = asWholesale ? packSizeOf(product) : 1;
     const availableStock = getOrderableStock(product, color, size, preorderMode);
-    if (availableStock <= 0) {
-      addToast(`К сожалению, ${product.title} (${color}, ${size}) нет в наличии`, 'error');
+    // only whole packs can be ordered wholesale
+    const maxQty = Math.floor(availableStock / step) * step;
+    if (maxQty <= 0) {
+      addToast(
+        availableStock > 0
+          ? `${product.title} (${color}, ${size}): целой упаковки нет — в наличии ${availableStock} шт., в упаковке ${step}`
+          : `К сожалению, ${product.title} (${color}, ${size}) нет в наличии`,
+        'error'
+      );
       return false;
     }
 
-    const clampedQuantity = Math.min(quantity, availableStock);
+    const clampedQuantity = Math.min(Math.max(step, Math.floor(quantity / step) * step), maxQty);
+    const variantText = `${product.title} (${color}, ${size})`;
     const existingIndex = cartItems.findIndex(
       (item) =>
         item.product.id === product.id &&
         item.selectedColor === color &&
-        item.selectedSize === size
+        item.selectedSize === size &&
+        isWholesaleLine(item) === asWholesale
     );
 
     if (existingIndex > -1) {
-      const currentQty = cartItems[existingIndex].quantity;
-      if (currentQty >= availableStock) {
-        addToast(`В корзине уже максимум: ${product.title} (${availableStock} шт.)`, 'info', openCartAction);
+      const existing = cartItems[existingIndex];
+      const currentQty = existing.quantity;
+      if (currentQty >= maxQty) {
+        addToast(
+          `В корзине уже максимум: ${product.title} (${asWholesale ? packsText(maxQty, step) : `${maxQty} шт.`})`,
+          'info',
+          openCartAction
+        );
         return false;
       }
-      const newTotalQty = Math.min(currentQty + clampedQuantity, availableStock);
-      setCartItems((prev) =>
-        prev.map((item, idx) =>
-          idx === existingIndex ? { ...item, quantity: newTotalQty } : item
-        )
+      const newTotalQty = Math.min(currentQty + clampedQuantity, maxQty);
+      setCartItems((prev) => prev.map((item) => (item.id === existing.id ? { ...item, quantity: newTotalQty } : item)));
+      addToast(
+        asWholesale
+          ? `Оптом в корзине: ${variantText} — ${packsText(newTotalQty, step)}`
+          : `В корзине ${newTotalQty} шт.: ${variantText}`,
+        'success',
+        openCartAction
       );
-      addToast(`В корзине ${newTotalQty} шт.: ${product.title} (${color}, ${size})`, 'success', openCartAction);
     } else {
       const newItem: CartItem = {
         id: `cart-${Date.now()}`,
@@ -152,10 +186,13 @@ export function useCart({
         selectedColor: color,
         selectedSize: size,
         quantity: clampedQuantity,
+        ...(asWholesale ? { priceKind: 'wholesale' as const } : {}),
       };
       setCartItems((prev) => [...prev, newItem]);
       addToast(
-        `${isPreorderVariant(product, color, size, preorderMode) ? 'Предзаказ добавлен' : 'Добавлено'} в корзину: ${product.title} (${color}, ${size})`,
+        asWholesale
+          ? `Оптом в корзину: ${variantText} — ${packsText(clampedQuantity, step)}`
+          : `${isPreorderVariant(product, color, size, preorderMode) ? 'Предзаказ добавлен' : 'Добавлено'} в корзину: ${variantText}`,
         'success',
         openCartAction
       );
@@ -163,17 +200,30 @@ export function useCart({
     return true;
   };
 
+  /** Items a line is counted in: a whole pack for a wholesale line, one item for a retail one */
+  const lineStep = (cartItemId: string): number => {
+    const priced = cartItems.find((item) => item.id === cartItemId);
+    return priced && isWholesaleLine(priced) ? packSizeOf(priced.product) : 1;
+  };
+
+  /** A line's quantity within the stock, in whole packs for a wholesale line; never below one pack */
+  const fitQuantity = (qty: number, stock: number, step: number): number => {
+    const whole = Math.max(step, Math.floor(qty / step) * step);
+    const max = Math.floor(stock / step) * step;
+    return max > 0 ? Math.min(whole, max) : whole;
+  };
+
   // Update quantity in cart
   const handleUpdateQuantity = (cartItemId: string, newQty: number) => {
     if (newQty <= 0) {
       handleRemoveCartItem(cartItemId);
     } else {
+      const step = lineStep(cartItemId);
       setCartItems((prev) =>
         prev.map((item) => {
           if (item.id === cartItemId) {
             const stock = getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode);
-            const clamped = stock > 0 ? Math.min(newQty, stock) : newQty;
-            return { ...item, quantity: clamped };
+            return { ...item, quantity: fitQuantity(newQty, stock, step) };
           }
           return item;
         })
@@ -192,11 +242,13 @@ export function useCart({
 
   // Update item variant (color / size) directly in cart
   const handleUpdateCartItemVariant = (cartItemId: string, newColor: string, newSize: string) => {
+    const step = lineStep(cartItemId);
     setCartItems((prev) =>
       prev.map((item) => {
         if (item.id === cartItemId) {
           const availableStock = getOrderableStock(item.product, newColor, newSize, preorderMode);
-          const clampedQty = Math.max(1, Math.min(item.quantity, Math.max(1, availableStock)));
+          // none of the new variant left — one pack stays: the checkout names it in «Не хватает на складе»
+          const clampedQty = availableStock >= step ? fitQuantity(item.quantity, availableStock, step) : step;
           return {
             ...item,
             selectedColor: newColor,
