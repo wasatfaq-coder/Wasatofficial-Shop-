@@ -2,6 +2,7 @@ import type { AddressParts } from './shared/personName';
 import type { DeliveryKind, OrderStatusLogEntry } from './shared/orderFlow';
 import type { ProductPurchase } from './utils/currencyPricing';
 import type { SaleChannel, WholesaleSettings } from './shared/wholesalePricing';
+import type { SizePack } from './shared/sizePacks';
 export interface BodyMeasurements {
   height: number;
   weight: number;
@@ -160,6 +161,11 @@ export interface Product {
   wholesalePackSize?: number;
   /** The fewest packs of the product in a wholesale order; absent — 1 */
   wholesaleMinPacks?: number;
+  /**
+   * «Ростовки» — size packs of one colour (stage 18 of docs/admin-wholesale-plan.md): sizes and items of each, price,
+   * colours, a barcode per colour. Apart from `wholesalePackSize`; read only via src/shared/sizePacks.ts
+   */
+  sizePacks?: SizePack[];
   /**
    * The discount, percent, the owner set (bulk «Скидка», kept by «Курсы и наценка»): the price after rounding up to 10 ₽
    * gives a slightly smaller share, and recalculating from it would shrink the discount at every new rate. Trusted only

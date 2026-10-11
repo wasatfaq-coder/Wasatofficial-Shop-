@@ -5,6 +5,7 @@ import { colorHexForName, normalizeColorName, readColorCode, splitColorEntry, UN
 import { parseDecimal, readPurchase, type ProductPurchase, type PurchaseCurrency } from './currencyPricing';
 import { SUPPLIER_MAX_LENGTH, SUPPLIER_SKU_MAX_LENGTH, supplierText } from './productCosts';
 import { packageCell, packageFromCell, productWeightGrams, weightProblem } from './productShipping';
+import { mergeSizePacks, sizePacksCell, sizePacksFromCell } from './sizePackCsv';
 
 /**
  * One CSV cell: quoted with doubled quotes. Text starting with = + - @ would run as a formula in Excel
@@ -55,6 +56,8 @@ const PRODUCT_CSV_HEADERS = [
   // weight and package of one item (stage 15): the invoice sums the order's weight, Post and carriers need the package
   'Вес, г',
   'Габариты, см',
+  // size packs (stage 18): «(Синий) 48:1; 50:2 = 4500 | 46:1; 48:1» — src/utils/sizePackCsv.ts
+  'Ростовки',
 ];
 
 /** «USD», «$», «доллар» — dollars; «CNY», «¥», «юань», «RMB» — yuan */
@@ -146,6 +149,7 @@ export function exportProductsToCSV(products: Product[]): void {
     p.supplierSku ?? '',
     productWeightGrams(p) ?? '',
     packageCell(p),
+    sizePacksCell(p),
   ]);
   downloadCSV(`catalog_${new Date().toISOString().slice(0, 10)}.csv`, [PRODUCT_CSV_HEADERS, ...rows]);
 }
@@ -189,10 +193,10 @@ const listCells = (value: string) =>
 export function parseProductsFromCSV(
   csvText: string,
   /** the catalog: a colour of an existing product written without a code keeps its shade */
-  catalog: Pick<Product, 'id' | 'colors'>[] = []
-): { products: Partial<Product>[]; skipped: number; badPurchase: number; badShipping: number } {
+  catalog: Pick<Product, 'id' | 'colors' | 'sizePacks'>[] = []
+): { products: Partial<Product>[]; skipped: number; badPurchase: number; badShipping: number; badPacks: number } {
   const lines = csvText.split(/\r?\n/).filter((l) => l.trim().length > 0);
-  if (lines.length < 2) return { products: [], skipped: 0, badPurchase: 0, badShipping: 0 };
+  if (lines.length < 2) return { products: [], skipped: 0, badPurchase: 0, badShipping: 0, badPacks: 0 };
   // files saved by Excel in the Russian locale use «;»
   const separator = lines[0].split(';').length > lines[0].split(',').length ? ';' : ',';
 
@@ -200,9 +204,10 @@ export function parseProductsFromCSV(
   let skipped = 0;
   let badPurchase = 0;
   let badShipping = 0;
+  let badPacks = 0;
   for (const line of lines.slice(1)) {
     const cells = splitCsvLine(line, separator);
-    const [id, title, category, priceCell, oldPriceCell, inStockCell, , sizesCell, colorsCell, image, description, currencyCell, amountCell, markupCell, supplierCell, supplierSkuCell, weightCell, boxCell] =
+    const [id, title, category, priceCell, oldPriceCell, inStockCell, , sizesCell, colorsCell, image, description, currencyCell, amountCell, markupCell, supplierCell, supplierSkuCell, weightCell, boxCell, packsCell] =
       cells;
     const price = Number(String(priceCell ?? '').replace(/\s/g, '').replace(',', '.'));
     // an existing product may come without a photo: its previews live in product_previews (catalog-scale-plan, stage 6),
@@ -238,6 +243,9 @@ export function parseProductsFromCSV(
     const box = packageFromCell(boxCell ?? '');
     // rows, not cells: the toast tells the owner how many products to look at
     if (weight === 'invalid' || box === null) badShipping++;
+    // size packs: empty keeps the product's, «-» removes, a pack of the same sizes and colours keeps its barcodes
+    const packs = sizePacksFromCell(packsCell);
+    if (packs === null) badPacks++;
     products.push({
       ...(id ? { id } : {}),
       title,
@@ -257,9 +265,10 @@ export function parseProductsFromCSV(
       ...(supplierSku !== undefined ? { supplierSku: supplierSku ?? undefined } : {}),
       ...(weight === null ? { weightGrams: undefined } : typeof weight === 'number' ? { weightGrams: weight } : {}),
       ...(box === 'remove' ? { packageCm: undefined } : typeof box === 'object' && box ? { packageCm: box } : {}),
+      ...(packs === 'remove' ? { sizePacks: undefined } : Array.isArray(packs) ? { sizePacks: mergeSizePacks(known?.sizePacks, packs) } : {}),
     });
   }
-  return { products, skipped, badPurchase, badShipping };
+  return { products, skipped, badPurchase, badShipping, badPacks };
 }
 
 /**
