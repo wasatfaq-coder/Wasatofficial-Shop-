@@ -7,6 +7,11 @@ import { CircleHelp } from 'lucide-react';
  * docs/admin-wholesale/hints.md, approved by the owner as they are). A small «?» button: a tap opens a short text, a mouse
  * hover opens it too. Base UI Popover portaled above the panel (data-floating-layer): Escape closes only the hint, not
  * the panel. The button names what it explains, so a screen reader hears «Что это: Выручка».
+ *
+ * A press on «?» that the hover has already opened keeps the hint open. Base UI closes such a hint when the press comes
+ * later than 0.5 s after the hover opened it (a «patient click»): the owner who pointed at «?», read and pressed lost the
+ * text, and the CI browser, slower than a laptop, did the same (admin-hints.spec.ts on main, 11.10). The press pins the
+ * hint instead — moving the pointer away no longer closes it — and the next press, Escape or a press outside does.
  */
 export function AdminHint({
   label,
@@ -19,8 +24,30 @@ export function AdminHint({
   children: React.ReactNode;
   className?: string;
 }) {
+  const [open, setOpen] = React.useState(false);
+  const openedByHover = React.useRef(false);
+  // A slow press pinned the hint: Base UI's own closing (the press itself, the pointer leaving «?») is cancelled, so its
+  // state stays open with ours and only the next press, Escape or a press outside close it
+  const pinned = React.useRef(false);
   return (
-    <Popover.Root>
+    <Popover.Root
+      open={open}
+      onOpenChange={(next, details) => {
+        if (!next && details.reason === 'trigger-press' && openedByHover.current) {
+          details.cancel();
+          openedByHover.current = false;
+          pinned.current = true;
+          return;
+        }
+        if (!next && details.reason === 'trigger-hover' && pinned.current) {
+          details.cancel();
+          return;
+        }
+        if (!next) pinned.current = false;
+        openedByHover.current = next && details.reason === 'trigger-hover';
+        setOpen(next);
+      }}
+    >
       <Popover.Trigger
         openOnHover
         delay={250}
