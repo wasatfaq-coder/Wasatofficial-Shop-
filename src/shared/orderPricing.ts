@@ -247,27 +247,78 @@ export function currentAppliedPromo(applied: Pick<AppliedPromoInfo, 'code'>, pro
   return promo ? appliedPromoFrom(promo) : null;
 }
 
+/** Methods a customer can choose: active, and no express ones while «Экспресс-доставка» is off */
+function customerDeliveryMethods(
+  methods: DeliveryMethod[],
+  settings: Partial<DeliverySettings> | null | undefined
+): DeliveryMethod[] {
+  const isExpressAllowed = settings?.isExpressEnabled !== false;
+  return methods
+    .filter((d) => d.isActive !== false)
+    // «Экспресс-доставка» off hides every express method: the first one has id «express», later ones only the type
+    .filter((d) => isExpressAllowed || (d.id !== 'express' && d.type !== 'express'));
+}
+
+/**
+ * From what order sum the method is free: its own threshold («Доставка и ПВЗ»), else the common one («Для всех
+ * способов»); 0 — never free from a sum. The fee (getAvailableDeliveryMethods) and the «до бесплатной доставки»
+ * promise (freeDeliveryOffer) both read it, so the bar never promises what the fee does not give.
+ */
+export function deliveryFreeThreshold(
+  method: Pick<DeliveryMethod, 'freeThreshold'>,
+  settings: Partial<DeliverySettings> | null | undefined
+): number {
+  // No threshold anywhere — no free delivery from a sum (an invented 5 000 ₽ used to zero the fee). As before the
+  // function: a method's null means «never free», a number kept as text («3000») still counts
+  const raw = method.freeThreshold !== undefined ? method.freeThreshold : settings?.freeDeliveryThreshold ?? 0;
+  const threshold = Number(raw);
+  return Number.isFinite(threshold) && threshold > 0 ? threshold : 0;
+}
+
 /**
  * Active delivery methods with the effective price for the given subtotal. The price is the method's own
- * («Доставка и ПВЗ»); free from the method's threshold, or from the storefront one when the method has none.
+ * («Доставка и ПВЗ»); free from deliveryFreeThreshold.
  */
 export function getAvailableDeliveryMethods(
   methods: DeliveryMethod[],
   settings: Partial<DeliverySettings> | null | undefined,
   subtotal: number
 ): DeliveryMethod[] {
-  // No threshold in «Витрина» — no free delivery from a sum (an invented 5 000 ₽ used to zero the fee)
-  const freeThreshold = settings?.freeDeliveryThreshold ?? 0;
-  const isExpressAllowed = settings?.isExpressEnabled !== false;
+  return customerDeliveryMethods(methods, settings).map((d) => {
+    const threshold = deliveryFreeThreshold(d, settings);
+    return { ...d, price: threshold > 0 && subtotal >= threshold ? 0 : d.price };
+  });
+}
 
-  return methods
-    .filter((d) => d.isActive !== false)
-    .map((d) => {
-      const threshold = d.freeThreshold !== undefined ? d.freeThreshold : freeThreshold;
-      return { ...d, price: threshold > 0 && subtotal >= threshold ? 0 : d.price };
-    })
-    // «Экспресс-доставка» off hides every express method: the first one has id «express», later ones only the type
-    .filter((d) => isExpressAllowed || (d.id !== 'express' && d.type !== 'express'));
+/** What the shop promises about free delivery from a sum */
+export interface FreeDeliveryOffer {
+  /** The lowest sum from which some method becomes free */
+  threshold: number;
+  /** Titles of the methods free from that sum, in the methods' order */
+  methodTitles: string[];
+  /** Every method the customer can choose is free from that sum — no need to name them (a method that is free
+   * anyway is still another method: the promise then names the ones it is about) */
+  forAllMethods: boolean;
+}
+
+/**
+ * The free-delivery promise for the cart bar, the home tile, the product page and FAQ: the lowest threshold among
+ * the methods a customer can choose, and which of them it is for. Methods that are free anyway (price 0) do not
+ * count. null — no method becomes free from a sum, nothing to promise.
+ */
+export function freeDeliveryOffer(
+  methods: DeliveryMethod[],
+  settings: Partial<DeliverySettings> | null | undefined
+): FreeDeliveryOffer | null {
+  const available = customerDeliveryMethods(methods, settings);
+  const paid = available.filter((d) => d.price > 0);
+  const withThreshold = paid
+    .map((d) => ({ title: d.title, threshold: deliveryFreeThreshold(d, settings) }))
+    .filter((d) => d.threshold > 0);
+  if (withThreshold.length === 0) return null;
+  const threshold = Math.min(...withThreshold.map((d) => d.threshold));
+  const methodTitles = withThreshold.filter((d) => d.threshold === threshold).map((d) => d.title);
+  return { threshold, methodTitles, forAllMethods: methodTitles.length === available.length };
 }
 
 export interface OrderTotals {

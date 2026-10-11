@@ -46,7 +46,7 @@ import {
   prefetchCustomerScreensWhenIdle,
 } from './customerLoaders';
 import type { CatalogStatus } from './components/CatalogLoadState';
-import { isPromoListed } from './shared/orderPricing';
+import { freeDeliveryOffer, isPromoListed } from './shared/orderPricing';
 import { storeAcceptsOrders } from './shared/orderApi';
 import { getStoreContacts, getStoreName, publicSetting, withStoreName, withStoreNameFields } from './utils/storeContacts';
 import { getCategories } from './utils/categories';
@@ -243,6 +243,11 @@ export default function App() {
   const customerDeliveryMethods = React.useMemo(
     () => deliveryMethods.map((m) => withStoreNameFields(m, storeName)),
     [deliveryMethods, storeName]
+  );
+  // The free-delivery promise of the home tile and the product page: the thresholds the fee uses (stage 6 finding)
+  const freeDelivery = React.useMemo(
+    () => freeDeliveryOffer(customerDeliveryMethods, storefrontSettings),
+    [customerDeliveryMethods, storefrontSettings]
   );
   const customerBannerSlides = React.useMemo(
     () => bannerSlides.map((s) => withStoreNameFields(s, storeName)),
@@ -635,6 +640,7 @@ export default function App() {
               onSearchChange={setCatalogSearch}
               bannerSlides={customerBannerSlides}
               storefrontSettings={customerStorefront}
+              freeDelivery={freeDelivery}
               onApplyPromo={handleApplyPromo}
               onShowToast={addToast}
               userProfile={userProfile}
@@ -680,7 +686,7 @@ export default function App() {
               ordersPaused={!storeAcceptsOrders(storefrontSettings)}
               product={products.find((p) => p.id === selectedProduct.id) ?? selectedProduct}
               returnPeriodDays={storefrontSettings.returnPeriodDays}
-              freeDeliveryThreshold={storefrontSettings.freeDeliveryThreshold}
+              freeDelivery={freeDelivery}
               wholesale={storefrontSettings.wholesale}
               isFavorite={favorites.includes(selectedProduct.id)}
               recentlyViewed={recentlyViewed.filter((p) => p.id !== selectedProduct.id)}

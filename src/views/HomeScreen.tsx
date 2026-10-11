@@ -4,6 +4,8 @@ import { QuickViewModal } from '../components/lazyWindows';
 import { ChevronRight, SlidersHorizontal, Menu, Truck, RotateCcw, AlertCircle, Pause, Play } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Product, ActiveTab, BannerSlide, StorefrontSettings, UserProfile, BodyMeasurements } from '../types';
+import type { FreeDeliveryOffer } from '../shared/orderPricing';
+import { freeDeliveryMethodsText } from '../utils/freeDelivery';
 import { getStoreContacts, getStoreName } from '../utils/storeContacts';
 import { ProductCard } from '../components/ProductCard';
 import { AutocompleteSearch } from '../components/AutocompleteSearch';
@@ -43,6 +45,8 @@ interface HomeScreenProps {
   onOpenDrawer?: () => void;
   bannerSlides?: BannerSlide[];
   storefrontSettings?: StorefrontSettings;
+  /** The free-delivery promise by the delivery methods (freeDeliveryOffer), not the «Витрина» threshold alone */
+  freeDelivery?: FreeDeliveryOffer | null;
   onApplyPromo?: (code: string) => boolean;
   onShowToast?: (msg: string, type?: 'success' | 'info' | 'error') => void;
   userProfile?: UserProfile;
@@ -68,6 +72,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenDrawer,
   bannerSlides = [],
   storefrontSettings,
+  freeDelivery = null,
   onApplyPromo,
   onShowToast,
   userProfile,
@@ -184,7 +189,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   // Settings values with defaults
   const isOnline = storeAcceptsOrders(storefrontSettings);
   // Only conditions the store set in «Витрина»: no invented «от 5 000 ₽» or «14 дней»
-  const freeShippingLimit = storefrontSettings?.freeDeliveryThreshold ?? 0;
+  const freeShippingLimit = freeDelivery?.threshold ?? 0;
+  const freeShippingMethods = freeDelivery ? freeDeliveryMethodsText(freeDelivery) : '';
   const returnPeriod = storefrontSettings?.returnPeriodDays ?? 0;
   // Demo template contacts are never shown to customers (see storeContacts.ts)
   const { phone } = getStoreContacts(storefrontSettings);
@@ -398,7 +404,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <span className="text-[11px] font-extrabold text-[#2D3A4E] block">
             {`Бесплатно от ${freeShippingLimit.toLocaleString('ru-RU')} ₽`}
           </span>
-          <span className="text-[11px] text-[#4E5C70] block">Условия при оформлении</span>
+          <span className="text-[11px] text-[#4E5C70] block line-clamp-2">
+            {freeShippingMethods ? `Доставка: ${freeShippingMethods}` : 'Условия при оформлении'}
+          </span>
         </div>
         )}
 
