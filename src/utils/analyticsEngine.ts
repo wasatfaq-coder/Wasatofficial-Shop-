@@ -85,6 +85,20 @@ function matchesChannel(o: Order, channel: ChannelFilter): boolean {
   return channel === 'all' || orderSalesChannel(o) === channel;
 }
 
+/** The order is still being handled: not cancelled, not handed over and not in «Архив» */
+export const isActiveOrder = (order: Order): boolean => !order.isCancelled && order.status !== 'delivered' && !order.archived;
+
+/**
+ * Whether the statistics reset (settings/analytics.resetAt) leaves this order in the numbers. The reset clears the
+ * history of finished orders — delivered, cancelled, archived — placed before it; an order still being handled stays in
+ * the statistics with its data, whenever it was placed (owner task 11.10: the reset must not touch active orders,
+ * deliveries are still running on them). Undated orders follow the same rule.
+ */
+export function countsAfterReset(order: Order, placedAt: number | null, resetAt: number | null): boolean {
+  if (resetAt === null || isActiveOrder(order)) return true;
+  return placedAt !== null && placedAt >= resetAt;
+}
+
 const growth = (current: number, prev: number) =>
   prev > 0 ? Number((((current - prev) / prev) * 100).toFixed(1)) : 0;
 
@@ -117,10 +131,10 @@ export function computeFirestoreDailySales(
     if (!matchesStatusFilter(order, statusFilter) || !matchesChannel(order, channel)) continue;
     const t = orderTimestamp(order, now);
     if (t === null) {
-      if (resetAt === null) undatedCount++;
+      if (countsAfterReset(order, null, resetAt)) undatedCount++;
       continue;
     }
-    if (resetAt !== null && t < resetAt) continue;
+    if (!countsAfterReset(order, t, resetAt)) continue;
     dated.push({ order, t });
   }
 

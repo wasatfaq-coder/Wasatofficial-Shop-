@@ -6,6 +6,7 @@ import { copyToClipboard } from '../../utils/clipboard';
 import { isCarrierOrder } from '../../utils/orderFlow';
 import { motion, AnimatePresence } from 'motion/react';
 import { useDialogA11y } from '../../utils/useDialogA11y';
+import { ModalPortal } from '../ModalPortal';
 import { linePrice } from '../../shared/orderLine';
 import { orderWeight, orderWeightText } from '../../utils/productShipping';
 
@@ -41,8 +42,25 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
     .filter(Boolean)
     .join(' • ');
 
+  /**
+   * The sheet alone goes to the printer: the window is portaled into <body>, and `body.printing-invoice` hides every
+   * other child of <body> (index.css, @media print). Inside the admin panel (`transform`, `contain: paint`) the window
+   * was clipped by the panel, and the browser printed the panel with an empty or cut sheet.
+   */
   const handlePrint = () => {
-    window.print();
+    const done = () => {
+      document.body.classList.remove('printing-invoice');
+      window.removeEventListener('afterprint', done);
+    };
+    document.body.classList.add('printing-invoice');
+    window.addEventListener('afterprint', done);
+    try {
+      window.print();
+    } catch (err) {
+      done();
+      console.warn('Printing was not started:', err);
+      onShowToast('Браузер не открыл печать. Попробуйте «Печать» в меню браузера', 'error');
+    }
   };
 
   const handleCopyInvoiceNumber = () => {
@@ -60,6 +78,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
     : 0;
 
   return (
+    <ModalPortal>
     <AnimatePresence>
       {isOpen && order && (
         <motion.div
@@ -68,6 +87,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
+          data-print-root
           className="admin-no-glow fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 overflow-y-auto"
         >
           {/* Backdrop */}
@@ -296,5 +316,6 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
     </motion.div>
   )}
 </AnimatePresence>
+    </ModalPortal>
 );
 };
