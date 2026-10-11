@@ -73,6 +73,12 @@ describe('delivery', () => {
   test('hides express when disabled in settings', () => {
     expect(getAvailableDeliveryMethods(methods, { isExpressEnabled: false }, 0).map((m) => m.id)).toEqual(['courier']);
   });
+
+  test('«Экспресс-доставка» off hides an express method added later too (its id is not «express»; stage 6)', () => {
+    const added = { id: 'deliv-17', title: 'Экспресс по городу', duration: '', price: 700, icon: 'Zap', type: 'express' as const };
+    expect(getAvailableDeliveryMethods([...methods, added], { isExpressEnabled: false }, 0).map((m) => m.id)).toEqual(['courier']);
+    expect(getAvailableDeliveryMethods([...methods, added], {}, 0).map((m) => m.id)).toEqual(['courier', 'express', 'deliv-17']);
+  });
 });
 
 test('calcOrderTotals', () => {

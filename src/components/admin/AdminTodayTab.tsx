@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BarChart3, Boxes, ChevronRight, Coins, Headphones, Package, Receipt, type LucideIcon } from 'lucide-react';
+import { BarChart3, Boxes, PowerOff, ChevronRight, Coins, Headphones, Package, Receipt, type LucideIcon } from 'lucide-react';
 import type { ChatMessage, Order, Product } from '../../types';
 import type { LaunchStep } from '../../utils/launchChecklist';
 import { staleRateDays, summarizeAdminToday, TODAY_REVENUE_DAYS, waitingFor } from '../../utils/adminToday';
@@ -16,6 +16,8 @@ interface AdminTodayTabProps {
   products: Product[];
   lowStockThreshold: number;
   launchSteps: LaunchStep[];
+  /** «Принимать заказы на сайте» выключено (settings/storefront.isStoreOnline === false): сайт не принимает заказы */
+  isStoreOffline?: boolean;
   onOpenTab: (tab: AdminTab) => void;
 }
 
@@ -28,27 +30,38 @@ const TodayRow: React.FC<{
   detail: string;
   count: number;
   onOpen: () => void;
-}> = ({ icon: Icon, title, detail, count, onOpen }) => (
+  /** Warning line: no number, the title says it all */
+  tone?: 'warning';
+}> = ({ icon: Icon, title, detail, count, onOpen, tone }) => (
   <button
     type="button"
     onClick={onOpen}
-    className="w-full neu-button rounded-2xl p-3 flex items-center gap-3 text-left cursor-pointer"
+    className={`w-full rounded-2xl p-3 flex items-center gap-3 text-left cursor-pointer ${
+      tone === 'warning' ? 'bg-warning-soft border border-warning/30' : 'neu-button'
+    }`}
   >
-    <span className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0" aria-hidden="true">
+    <span
+      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+        tone === 'warning' ? 'bg-warning/15 text-warning' : 'neu-inset text-accent'
+      }`}
+      aria-hidden="true"
+    >
       <Icon className="w-4 h-4" />
     </span>
     <span className="min-w-0 flex-1">
       <span className="block text-sm font-extrabold text-[#2D3A4E]">{title}</span>
       <span className="block text-xs text-[#4E5C70]">{detail}</span>
     </span>
-    <span
-      className={`min-w-[28px] h-7 px-2 rounded-full text-xs font-extrabold leading-7 text-center shrink-0 ${
-        count > 0 ? 'bg-accent text-white' : 'text-[#4E5C70]'
-      }`}
-    >
-      <span className="sr-only">: </span>
-      {count}
-    </span>
+    {tone !== 'warning' && (
+      <span
+        className={`min-w-[28px] h-7 px-2 rounded-full text-xs font-extrabold leading-7 text-center shrink-0 ${
+          count > 0 ? 'bg-accent text-white' : 'text-[#4E5C70]'
+        }`}
+      >
+        <span className="sr-only">: </span>
+        {count}
+      </span>
+    )}
     <ChevronRight className="w-4 h-4 text-accent shrink-0" aria-hidden="true" />
   </button>
 );
@@ -64,6 +77,7 @@ export const AdminTodayTab: React.FC<AdminTodayTabProps> = ({
   products,
   lowStockThreshold,
   launchSteps,
+  isStoreOffline = false,
   onOpenTab,
 }) => {
   // «Сбросить статистику» of «Аналитики» applies here too: the week's money is the same number there and here
@@ -88,6 +102,16 @@ export const AdminTodayTab: React.FC<AdminTodayTabProps> = ({
       <AdminLaunchChecklist steps={launchSteps} onOpenTab={onOpenTab} />
 
       <section aria-label="Что ждёт" className="grid gap-2 lg:grid-cols-2">
+        {isStoreOffline && (
+          <TodayRow
+            icon={PowerOff}
+            tone="warning"
+            title="Приём заказов выключен"
+            detail="Покупатели не могут оформить заказ. Включить — в «Витрине»"
+            count={0}
+            onOpen={() => onOpenTab('storefront')}
+          />
+        )}
         <TodayRow
           icon={Package}
           title="Новые заказы"

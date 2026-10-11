@@ -124,9 +124,29 @@ const Growth: React.FC<{ value: number; hasBase: boolean }> = ({ value, hasBase 
 };
 
 
+/** What a card counts, by the engine (analyticsEngine.ts, salesProfit.ts) and the «Какие заказы учитывать» filter */
+const kpiCaption = (metric: ActiveMetric, filter: OrderStatusFilter): string => {
+  const scope = filter === 'delivered' ? 'полученные' : 'без отменённых';
+  const paidScope = filter === 'delivered' ? 'полученных оплаченных заказов' : 'оплаченных заказов';
+  switch (metric) {
+    case 'revenue':
+      return `Деньги за ${filter === 'delivered' ? 'полученные оплаченные' : 'оплаченные'} заказы, с доставкой, без возвратов`;
+    case 'netProfit':
+      return `Деньги за товары ${paidScope} минус закупка`;
+    case 'cogs':
+      return `Закупка товаров ${paidScope}`;
+    case 'orders':
+      return filter === 'paid' ? 'Оплаченные заказы, без отменённых' : `Заказы периода, ${scope}, в том числе неоплаченные`;
+    case 'avgCheck':
+      return 'Выручка ÷ число оплаченных заказов';
+    case 'returns':
+      return filter === 'all' ? 'Отменённые заказы периода' : 'Отменённые не входят в выбранный набор заказов';
+  }
+};
+
 const KPI_HINTS: Record<ActiveMetric, string> = {
   revenue: 'Деньги только за заказы с отметкой «Оплачен». Неоплаченные не считаются',
-  orders: 'Все оформленные заказы, кроме отменённых — и неоплаченные тоже',
+  orders: 'Сколько заказов за период. Какие именно — выбирает «Какие заказы учитывать»',
   avgCheck: 'Выручка, делённая на число оплаченных заказов',
   returns: 'Заказы, которые отменили покупатель или магазин',
   cogs: 'Себестоимость: сколько стоили в закупке товары оплаченных заказов',
@@ -357,7 +377,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       icon: TrendingUp,
       value: rub(totalRevenue),
       footer: <Growth value={revenueGrowth} hasBase={prevTotalRevenue > 0} />,
-      extra: <span className="text-[11px] text-[#4E5C70]">Только оплаченные заказы</span>,
+      extra: null,
     },
     {
       metric: 'netProfit',
@@ -379,7 +399,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       title: 'Закупка',
       icon: PackageOpen,
       value: `${approx}${rub(profit.cogs)}`,
-      footer: <span className="text-[11px] text-[#4E5C70]">Себестоимость проданных товаров</span>,
+      footer: null,
       extra: null,
     },
     {
@@ -459,6 +479,12 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
             </AdminHint>
           </div>
           <div className="flex items-center gap-1 min-w-0">
+            <div className="flex-1 sm:w-80">
+              <Segments<OrderStatusFilter> label="Какие заказы учитывать" grid="grid-cols-3" value={statusFilter} options={STATUS_FILTERS} onChange={setStatusFilter} />
+            </div>
+            <AdminHint label="Какие заказы учитывать">Меняет все цифры на странице: всё, только оплаченное или только полученное</AdminHint>
+          </div>
+          <div className="flex items-center gap-1 min-w-0">
             <div className="flex-1 sm:w-64">
               <Segments<AnalyticsGrouping>
                 label="Группировать"
@@ -530,6 +556,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
               </span>
               <span className="block text-[11px] leading-snug">{k.footer}</span>
               {k.extra}
+              <span className="block text-xs leading-snug text-[#4E5C70]">{kpiCaption(k.metric, statusFilter)}</span>
             </button>
             <AdminHint label={k.title} className="absolute top-3 right-[46px]">
               {KPI_HINTS[k.metric]}
@@ -563,8 +590,6 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
             )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <Segments<OrderStatusFilter> label="Какие заказы учитывать" grid="grid-cols-3" value={statusFilter} options={STATUS_FILTERS} onChange={setStatusFilter} />
-            <AdminHint label="Какие заказы учитывать">Меняет все цифры на странице: всё, только оплаченное или только полученное</AdminHint>
             <Segments<ChartType>
               label="Вид графика"
               value={chartType}

@@ -14,6 +14,27 @@ export const RESTORE_SKIPPED: Record<string, string> = {
   admins: 'администраторов добавляют только в Firebase Console',
 };
 
+/**
+ * `settings/backup` — when the owner last downloaded a copy (этап 6 плана админки, находка 20). Only the admin reads it
+ * (firestore.rules); a restore never writes it back: the copy's older date would hide that a newer copy exists.
+ */
+export const BACKUP_MARK_DOC = 'backup';
+
+export interface BackupMark {
+  /** Milliseconds; the database keeps the server time */
+  lastExportAt: number;
+  /** How many documents the file held */
+  documents: number;
+  /** false — some collections were not read, the file is incomplete */
+  complete: boolean;
+}
+
+/** Days since the last copy (0 — today, by the owner's clock); null — never made */
+export function daysSinceBackup(mark: BackupMark | null, now = Date.now()): number | null {
+  if (!mark) return null;
+  return Math.max(0, Math.floor((now - mark.lastExportAt) / 86_400_000));
+}
+
 /** Human names of the collections in the restore window */
 export const BACKUP_COLLECTION_TITLES: Record<string, string> = {
   products: 'Товары',
@@ -142,6 +163,7 @@ export function planRestore(
         if (takes(collection, doc.id)) writes.push({ collection, id: doc.id, data: product });
         continue;
       }
+      if (collection === 'settings' && doc.id === BACKUP_MARK_DOC) continue;
       if (takes(collection, doc.id)) writes.push({ collection, id: doc.id, data });
     }
   }

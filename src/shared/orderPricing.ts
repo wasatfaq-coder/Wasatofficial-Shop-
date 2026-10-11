@@ -266,7 +266,8 @@ export function getAvailableDeliveryMethods(
       const threshold = d.freeThreshold !== undefined ? d.freeThreshold : freeThreshold;
       return { ...d, price: threshold > 0 && subtotal >= threshold ? 0 : d.price };
     })
-    .filter((d) => !(d.id === 'express' && !isExpressAllowed));
+    // «Экспресс-доставка» off hides every express method: the first one has id «express», later ones only the type
+    .filter((d) => isExpressAllowed || (d.id !== 'express' && d.type !== 'express'));
 }
 
 export interface OrderTotals {

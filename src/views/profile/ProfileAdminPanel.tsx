@@ -438,6 +438,7 @@ export const ProfileAdminPanel = ({
                   products={productsList}
                   lowStockThreshold={lowStockThresholdOf(storefrontSettings)}
                   launchSteps={launchSteps(productsList, localDeliveryMethods, storefrontSettings)}
+                  isStoreOffline={storefrontSettings.isStoreOnline === false}
                   onOpenTab={requestAdminTab}
                 />
               )}

@@ -27,7 +27,7 @@ export const AdminServerOrdersCard: React.FC<AdminServerOrdersCardProps> = ({ on
     try {
       if (!(await isPlaceOrderAvailable())) {
         onShowToast(
-          'Функция оформления заказов не отвечает: она еще не развернута. Режим не включен, заказы работают как раньше.',
+          'Проверка заказов на сервере не отвечает: она ещё не настроена. Режим не включён, заказы работают как раньше.',
           'error'
         );
         return;
@@ -87,9 +87,9 @@ export const AdminServerOrdersCard: React.FC<AdminServerOrdersCardProps> = ({ on
 
       {enabled === false && (
         <p className="text-xs text-[#4E5C70] leading-snug neu-inset rounded-2xl p-3">
-          Нужна развернутая функция placeOrder (тариф Firebase Blaze и переменная репозитория
-          DEPLOY_FUNCTIONS = true). Перед включением функция проверяется: если она не отвечает,
-          режим не включится и заказы продолжат работать.
+          Нужен платный тариф Firebase и включённая проверка заказов на сервере — настраивает разработчик.
+          Перед включением проверка пробуется: если сервер не отвечает, режим не включится и заказы
+          продолжат работать.
         </p>
       )}
 

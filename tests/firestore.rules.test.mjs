@@ -319,6 +319,30 @@ describe('catalog', () => {
     await assertFails(getDoc(doc(customer(), 'settings/chat_templates')));
   });
 
+  test('the date of the last backup is read and written only by admins, server time only (admin plan, stage 6)', async () => {
+    const mark = () => ({ lastExportAt: serverTimestamp(), documents: 120, complete: true });
+    await assertFails(setDoc(doc(customer(), 'settings/backup'), mark()));
+    await assertFails(setDoc(doc(guest(), 'settings/backup'), mark()));
+    await assertSucceeds(setDoc(doc(owner(), 'settings/backup'), mark()));
+    await assertSucceeds(setDoc(doc(extraAdmin(), 'settings/backup'), { ...mark(), complete: false }));
+    await assertSucceeds(getDoc(doc(owner(), 'settings/backup')));
+    await assertFails(getDoc(doc(guest(), 'settings/backup')));
+    await assertFails(getDoc(doc(customer(), 'settings/backup')));
+    // the device's clock, another field, a wrong type
+    await assertFails(setDoc(doc(owner(), 'settings/backup'), { ...mark(), lastExportAt: new Date('2030-01-01') }));
+    await assertFails(setDoc(doc(owner(), 'settings/backup'), { ...mark(), note: 'x' }));
+    await assertFails(setDoc(doc(owner(), 'settings/backup'), { ...mark(), documents: -1 }));
+  });
+
+  test('a section of the admin saves only its fields of the storefront settings (admin plan, stage 6)', async () => {
+    await assertSucceeds(setDoc(doc(owner(), 'settings/storefront'), { storeName: 'x', freeDeliveryThreshold: 5000 }));
+    await assertSucceeds(
+      setDoc(doc(owner(), 'settings/storefront'), { freeDeliveryThreshold: deleteField(), storeSlogan: 'y' }, { mergeFields: ['freeDeliveryThreshold', 'storeSlogan'] })
+    );
+    const saved = (await getDoc(doc(owner(), 'settings/storefront'))).data();
+    assert.deepEqual(saved, { storeName: 'x', storeSlogan: 'y' });
+  });
+
   test('a cost price left inside a product can only be removed, and stock still deducts meanwhile', async () => {
     await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'products/p1'), { ...product, costPrice: 4000 }));
     await assertSucceeds(takeStock(guest(), { skus: [{ size: 'M', stock: 1 }] }));

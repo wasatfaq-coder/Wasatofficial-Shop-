@@ -3,6 +3,7 @@ import type { BannerSlide, CartItem, DeliveryMethod, Order, PickupPoint, Product
 import type { LegalDocId } from '../utils/legalDocs';
 import { saveLocalDeliveryMethods, saveLocalPickupPoints } from '../data/deliveryData';
 import { saveStorefrontSettings } from '../utils/inventory';
+import { changedFields } from '../utils/fieldChanges';
 import { hasHeavyPhotos, removedProductPhotoIds } from '../utils/productPhotos';
 import { hasInlineBannerImage } from '../utils/bannerImages';
 import { hasInlinePreviews } from '../utils/productPreviews';
@@ -66,6 +67,8 @@ type AdminActionOptions = {
   setDeliveryMethods: SetState<DeliveryMethod[]>;
   pickupPoints: PickupPoint[];
   setPickupPoints: SetState<PickupPoint[]>;
+  /** The «Витрина» settings as the database last gave them: a save writes only what differs (этап 6, 59-П3) */
+  storefrontSettings: StorefrontSettings;
   setStorefrontSettings: SetState<StorefrontSettings>;
   persist: Persist;
   addToast: AddToast;
@@ -99,6 +102,7 @@ export function useAdminActions({
   setDeliveryMethods,
   pickupPoints,
   setPickupPoints,
+  storefrontSettings,
   setStorefrontSettings,
   persist,
   addToast,
@@ -319,10 +323,22 @@ export function useAdminActions({
     return saved;
   };
 
-  const handleUpdateStorefrontSettings = (upd: StorefrontSettings) => {
-    setStorefrontSettings(upd);
-    saveStorefrontSettings(upd);
-    return persist('настройки витрины', saveStorefrontSettingsToFirestore(upd));
+  const handleUpdateStorefrontSettings = async (upd: StorefrontSettings) => {
+    // Only the changed fields: «Витрина», «Доставка», «Оплата» and «FAQ» each save their own fields of one document,
+    // and a section's older copy must not roll back what another one saved meanwhile (этап 6, 59-П3)
+    const saved = await persist('настройки витрины', saveStorefrontSettingsToFirestore(upd, storefrontSettings));
+    // Only once the database took it, and only what this save changed: a newer snapshot (another section's save or
+    // another device) that arrived meanwhile stays on screen
+    if (saved) {
+      const changes = changedFields(storefrontSettings as unknown as Record<string, unknown>, upd as unknown as Record<string, unknown>);
+      setStorefrontSettings((current) => {
+        const next: Record<string, unknown> = { ...current, ...changes.set };
+        for (const key of changes.removed) delete next[key];
+        saveStorefrontSettings(next as unknown as StorefrontSettings);
+        return next as unknown as StorefrontSettings;
+      });
+    }
+    return saved;
   };
 
   /**

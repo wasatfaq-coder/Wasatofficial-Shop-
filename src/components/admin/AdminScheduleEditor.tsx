@@ -70,7 +70,7 @@ export const AdminScheduleEditor: React.FC<AdminScheduleEditorProps> = ({
           <Clock className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
           График работы (время московское)
           <AdminHint label="График работы">
-            Только показывается покупателям. Заказы он не останавливает — для этого «Онлайн-витрина».
+            Только показывается покупателям. Заказы он не останавливает — для этого «Принимать заказы на сайте» в «Витрине» → «Приём заказов».
           </AdminHint>
         </p>
         <button

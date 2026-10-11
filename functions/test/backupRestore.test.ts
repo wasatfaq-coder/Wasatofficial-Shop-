@@ -1,6 +1,6 @@
 // Находка 19 (аудит 02.10): восстановление базы из файла «Скачать копию базы»
 import { describe, expect, test } from 'bun:test';
-import { chunkWrites, fromBackupValue, parseBackup, planRestore, type ParsedBackup } from '../../src/utils/backupRestore';
+import { chunkWrites, daysSinceBackup, fromBackupValue, parseBackup, planRestore, type ParsedBackup } from '../../src/utils/backupRestore';
 
 const file = (collections: Record<string, unknown>, extra: Record<string, unknown> = {}) =>
   JSON.stringify({ format: 'wasat-shop-backup', version: 1, createdAt: '2026-10-01T10:00:00.000Z', databaseId: 'db1', collections, failed: {}, ...extra });
@@ -63,6 +63,25 @@ describe('planRestore', () => {
     })) as ParsedBackup;
     const writes = planRestore(withCosts, ['products', 'product_costs'], 'overwrite', {}, toDate);
     expect(writes.filter((w) => w.collection === 'product_costs')).toEqual([{ collection: 'product_costs', id: 'p1', data: { costPrice: 1000 } }]);
+  });
+
+  test('the date of the last copy is never restored: the copy\'s older date would hide a newer copy (stage 6)', () => {
+    const withMark = parseBackup(file({
+      settings: [{ id: 'storefront', data: { storeName: 'A' } }, { id: 'backup', data: { documents: 5, complete: true } }],
+    })) as ParsedBackup;
+    const writes = planRestore(withMark, ['settings'], 'overwrite', {}, toDate);
+    expect(writes.map((w) => `${w.collection}/${w.id}`)).toEqual(['settings/storefront']);
+  });
+});
+
+describe('daysSinceBackup', () => {
+  const day = 86_400_000;
+  test('null when no copy was made, whole days otherwise', () => {
+    expect(daysSinceBackup(null)).toBeNull();
+    expect(daysSinceBackup({ lastExportAt: 10 * day, documents: 1, complete: true }, 10 * day + 5_000)).toBe(0);
+    expect(daysSinceBackup({ lastExportAt: 10 * day, documents: 1, complete: true }, 17 * day + 5_000)).toBe(7);
+    // a device clock behind the server's: not «-1 день»
+    expect(daysSinceBackup({ lastExportAt: 10 * day, documents: 1, complete: true }, 9 * day)).toBe(0);
   });
 });
 

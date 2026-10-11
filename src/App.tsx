@@ -403,6 +403,7 @@ export default function App() {
     setDeliveryMethods,
     pickupPoints,
     setPickupPoints,
+    storefrontSettings,
     setStorefrontSettings,
     persist,
     addToast,

@@ -1,14 +1,25 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { DatabaseBackup, Download, Upload } from 'lucide-react';
 import firebaseConfig from '../../../firebase-applet-config.json';
-import { exportDatabase } from '../../utils/firebaseSync';
+import { exportDatabase, loadBackupMark, saveBackupMark } from '../../utils/firebaseSync';
 import { pluralRu } from '../../utils/pluralize';
-import { parseBackup, type ParsedBackup } from '../../utils/backupRestore';
+import { daysSinceBackup, parseBackup, type BackupMark, type ParsedBackup } from '../../utils/backupRestore';
 import { AdminRestoreDialog } from './AdminRestoreDialog';
 import { AdminHint } from './AdminHint';
 
 interface AdminBackupCardProps {
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
+}
+
+/** A copy is due once a week (the hint says so) */
+const BACKUP_DUE_DAYS = 7;
+
+/** «Последняя копия: 3 октября, 14:05 — 8 дней назад» */
+function lastCopyText(mark: BackupMark): string {
+  const days = daysSinceBackup(mark) ?? 0;
+  const when = new Date(mark.lastExportAt).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  const ago = days === 0 ? 'сегодня' : `${days} ${pluralRu(days, ['день', 'дня', 'дней'])} назад`;
+  return `Последняя копия: ${when} — ${ago}${mark.complete ? '' : ' (неполная)'}`;
 }
 
 /**
@@ -18,6 +29,22 @@ interface AdminBackupCardProps {
 export const AdminBackupCard: React.FC<AdminBackupCardProps> = ({ onShowToast }) => {
   const [isExporting, setIsExporting] = useState(false);
   const [lastResult, setLastResult] = useState<string | null>(null);
+  // undefined — still reading; null — no copy yet (этап 6 плана админки, находка 20)
+  const [mark, setMark] = useState<BackupMark | null | undefined>(undefined);
+  const [markFailed, setMarkFailed] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    loadBackupMark()
+      .then((loaded) => alive && setMark(loaded))
+      .catch((err) => {
+        console.warn('The date of the last backup was not read:', err);
+        if (alive) setMarkFailed(true);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [restoring, setRestoring] = useState<{ backup: ParsedBackup; fileName: string } | null>(null);
   const [isReading, setIsReading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -57,6 +84,14 @@ export const AdminBackupCard: React.FC<AdminBackupCardProps> = ({ onShowToast })
         Object.keys(backup.collections).length
       } ${pluralRu(Object.keys(backup.collections).length, ['коллекции', 'коллекций', 'коллекций'])}`;
       setLastResult(`${new Date().toLocaleString('ru-RU')}: ${summary}`);
+      // The file is on the device already; a mark that didn't save only loses the reminder, so it doesn't fail the copy
+      try {
+        await saveBackupMark(docs, failed.length === 0);
+        setMark({ lastExportAt: Date.now(), documents: docs, complete: failed.length === 0 });
+        setMarkFailed(false);
+      } catch (err) {
+        console.warn('The date of the backup was not saved:', err);
+      }
       if (failed.length) onShowToast(`Копия неполная: не прочитано ${failed.join(', ')}`, 'error');
       else onShowToast(`Копия базы скачана: ${summary}`, 'success');
     } catch (err) {
@@ -86,6 +121,7 @@ export const AdminBackupCard: React.FC<AdminBackupCardProps> = ({ onShowToast })
           </p>
         </div>
       </div>
+      <BackupAge mark={mark} failed={markFailed} />
       <div className="flex items-center gap-3 flex-wrap">
         <button
           type="button"
@@ -121,7 +157,7 @@ export const AdminBackupCard: React.FC<AdminBackupCardProps> = ({ onShowToast })
           aria-hidden="true"
           onChange={(e) => handleFile(e.target.files?.[0])}
         />
-        {lastResult && <p className="text-xs text-[#4E5C70]">Последняя: {lastResult}</p>}
+        {lastResult && <p className="text-xs text-[#4E5C70]">Скачано: {lastResult}</p>}
       </div>
       <AdminRestoreDialog
         backup={restoring?.backup ?? null}
@@ -130,5 +166,23 @@ export const AdminBackupCard: React.FC<AdminBackupCardProps> = ({ onShowToast })
         onShowToast={onShowToast}
       />
     </div>
+  );
+};
+
+/** The date of the last copy; a warning when there is none or it's older than a week */
+const BackupAge: React.FC<{ mark: BackupMark | null | undefined; failed: boolean }> = ({ mark, failed }) => {
+  if (failed) return <p className="text-xs text-[#4E5C70]">Не удалось узнать дату последней копии</p>;
+  if (mark === undefined) return null;
+  const days = daysSinceBackup(mark);
+  const due = days === null || days >= BACKUP_DUE_DAYS || mark?.complete === false;
+  const text = mark ? lastCopyText(mark) : 'Копию базы ещё не скачивали';
+  return (
+    <p
+      role="status"
+      className={`text-xs font-bold rounded-2xl px-3 py-2 ${due ? 'bg-warning-soft text-warning border border-warning/30' : 'text-[#4E5C70]'}`}
+    >
+      {text}
+      {due && '. Скачайте свежую копию'}
+    </p>
   );
 };
