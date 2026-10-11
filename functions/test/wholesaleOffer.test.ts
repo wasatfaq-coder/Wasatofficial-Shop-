@@ -8,7 +8,7 @@ import {
   stepThresholdText,
   wholesaleOfferOf,
 } from '../../src/utils/wholesaleOffer';
-import { DEFAULT_FILTER_STATE, matchesCatalogFilters } from '../../src/components/CatalogAdvancedFilter';
+import { DEFAULT_FILTER_STATE, matchesCatalogFilters } from '../../src/utils/catalogFilters';
 import type { Product } from '../../src/types';
 
 const product = (extra: Partial<Product> = {}): Product =>
