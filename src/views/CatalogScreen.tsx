@@ -26,6 +26,7 @@ import { NotConfigured } from '../components/NotConfigured';
 import type { StoreCategory } from '../types';
 import { categoryIcon } from '../utils/categories';
 import { pluralRu } from '../utils/pluralize';
+import { buyerPrice } from '../utils/wholesaleOffer';
 import {
   DEFAULT_CATALOG_VIEW,
   PRODUCTS_PAGE_SIZE,
@@ -128,6 +129,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
     if (filterState.onlyInStock) count++;
     if (filterState.onlyNew) count++;
     if (filterState.onlyDiscount) count++;
+    if (filterState.onlyWholesale) count++;
     if (filterState.minRating > 0) count++;
     return count;
   }, [selectedCategory, filterState]);
@@ -164,8 +166,8 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
         return matchesQuery && matchesCatalogFilters(p, selectedCategory, filterState);
       })
       .sort((a, b) => {
-        if (sortBy === 'price-asc') return a.price - b.price;
-        if (sortBy === 'price-desc') return b.price - a.price;
+        if (sortBy === 'price-asc') return buyerPrice(a) - buyerPrice(b);
+        if (sortBy === 'price-desc') return buyerPrice(b) - buyerPrice(a);
         if (sortBy === 'newest') return (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0);
         return productRatingValue(b) - productRatingValue(a); // popular
       });
@@ -401,6 +403,19 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                 }
                 className="w-6 h-6 rounded-full flex items-center justify-center text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
                 aria-label="Убрать фильтр «Со скидкой»"
+              >
+                <X className="w-3 h-3 stroke-[2.5]" />
+              </button>
+            </span>
+          )}
+
+          {filterState.onlyWholesale && (
+            <span className="neu-inset text-[11px] font-bold text-[#2D3A4E] pl-3 pr-1 py-1 rounded-full flex items-center gap-1 border border-accent/30">
+              Оптом
+              <button
+                onClick={() => setFilterState((prev) => ({ ...prev, onlyWholesale: false }))}
+                className="w-6 h-6 rounded-full flex items-center justify-center text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
+                aria-label="Убрать фильтр «Оптом»"
               >
                 <X className="w-3 h-3 stroke-[2.5]" />
               </button>

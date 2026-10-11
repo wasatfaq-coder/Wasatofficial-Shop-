@@ -41,6 +41,9 @@ import { NotConfigured } from '../components/NotConfigured';
 import { promoDiscountText } from '../utils/promoLabel';
 import { cleanAddressParts, fullName, namePartsOf, requiresFullName, type AddressParts, type PersonName } from '../shared/personName';
 import { deliveryKindOfMethod } from '../shared/orderFlow';
+import { isWholesaleLine, packSizeOf } from '../shared/wholesalePricing';
+import { packsText } from '../utils/wholesaleOffer';
+import { WholesaleMark } from '../components/WholesaleMark';
 import { linePrice } from '../shared/orderLine';
 
 interface CheckoutScreenProps {
@@ -590,6 +593,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-[#2D3A4E] truncate">{item.product.title}</p>
                 <p className="text-xs text-[#4E5C70]">
+                  {isWholesaleLine(item) && <WholesaleMark className="mr-1" />}
                   Размер: {item.selectedSize} / Цвет: {item.selectedColor}
                   {isPreorderVariant(item.product, item.selectedColor, item.selectedSize, storefrontSettings?.isPreorderMode === true) && (
                     <span className="font-bold text-accent"> • Предзаказ</span>
@@ -600,7 +604,11 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
                 <p className="text-xs font-bold text-[#2D3A4E]">
                   {(linePrice(item) * item.quantity).toLocaleString('ru-RU')} ₽
                 </p>
-                <p className="text-xs text-[#4E5C70]">x{item.quantity}</p>
+                <p className="text-xs text-[#4E5C70]">
+                  {isWholesaleLine(item) && packSizeOf(item.product) > 1
+                    ? packsText(item.quantity, packSizeOf(item.product))
+                    : `x${item.quantity}`}
+                </p>
               </div>
             </div>
           ))}

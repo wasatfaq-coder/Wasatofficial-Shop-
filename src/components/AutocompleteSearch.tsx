@@ -8,6 +8,7 @@ import type { StoreCategory } from '../types';
 import { productImage } from '../utils/productImage';
 import { useProductThumbs } from '../utils/productThumbs';
 import { productHref } from '../utils/navigation';
+import { buyerPrice } from '../utils/wholesaleOffer';
 
 interface AutocompleteSearchProps {
   /** From Admin → «Категории» */
@@ -288,7 +289,7 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
                         )}
                       </div>
                       <div className="flex items-baseline gap-1.5 flex-wrap">
-                        <span className="text-xs font-extrabold text-[#2D3A4E]">{product.price.toLocaleString('ru-RU')} ₽</span>
+                        <span className="text-xs font-extrabold text-[#2D3A4E]">{buyerPrice(product).toLocaleString('ru-RU')} ₽</span>
                         {shownOldPrice(product) !== null && (
                           <span className="text-[11px] text-[#4E5C70] line-through">
                             {shownOldPrice(product)!.toLocaleString('ru-RU')} ₽

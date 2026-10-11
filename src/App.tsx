@@ -361,6 +361,7 @@ export default function App() {
     orders,
     products,
     preorderMode,
+    cartItems,
     setCartItems,
     setChatMessages,
     addToast,
@@ -679,6 +680,7 @@ export default function App() {
               product={products.find((p) => p.id === selectedProduct.id) ?? selectedProduct}
               returnPeriodDays={storefrontSettings.returnPeriodDays}
               freeDeliveryThreshold={storefrontSettings.freeDeliveryThreshold}
+              wholesale={storefrontSettings.wholesale}
               isFavorite={favorites.includes(selectedProduct.id)}
               recentlyViewed={recentlyViewed.filter((p) => p.id !== selectedProduct.id)}
               onClearRecentlyViewed={handleClearRecentlyViewed}

@@ -153,8 +153,11 @@ export function volumeDiscountedPrice(base: number, tier: VolumeDiscountTier | n
   return Math.max(0, price);
 }
 
-/** The line goes wholesale: the buyer chose it, or the product is sold only wholesale */
-function goesWholesale(item: PricedLine): boolean {
+/**
+ * The line goes wholesale: the buyer chose it, or the product is sold only wholesale. A stored cart line (before
+ * `priceCartLines`) is read the same way: the cart and «Повторить заказ» match lines by it
+ */
+export function goesWholesale(item: Pick<CartItem, 'product' | 'priceKind'>): boolean {
   const product = item.product;
   if (!product || !sellsWholesale(product)) return false;
   return item.priceKind === 'wholesale' || saleChannelOf(product) === 'wholesale';
