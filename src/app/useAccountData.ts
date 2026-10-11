@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import type { User } from 'firebase/auth';
 import type { Order, UserProfile } from '../types';
-import { subscribeToOrders, subscribeToOwnUserProfile, subscribeToProductCosts, type ProductCostEntry } from '../utils/firebaseSync';
+import { subscribeToOrders, subscribeToOwnUserProfile, subscribeToProductCosts, type ProductCostEntry, type StoredOrders } from '../utils/firebaseSync';
 import { setLoadFailed } from '../utils/loadFailures';
 import { loadGuestOrders } from './guestOrders';
+import { useOrdersIndexSync } from './useOrdersIndexSync';
 
 type AuthState = { authLoading: boolean; isAdmin: boolean; currentUser: User | null };
 
@@ -18,6 +19,8 @@ export function useAccountData({ authLoading, isAdmin, currentUser }: AuthState)
   const [orders, setOrders] = useState<Order[]>([]);
   // Admin only: cost prices and purchases in a currency from `product_costs` (a product is readable by every visitor)
   const [productCosts, setProductCosts] = useState<Record<string, ProductCostEntry>>({});
+  // Admin only: the orders as stored, for the orders index (docs/orders-scale-plan.md, stage 4)
+  const [storedOrders, setStoredOrders] = useState<StoredOrders | null>(null);
 
   React.useEffect(() => {
     if (authLoading) return;
@@ -26,8 +29,9 @@ export function useAccountData({ authLoading, isAdmin, currentUser }: AuthState)
     setLoadFailed('orders', false);
 
     if (isAdmin && currentUser) {
-      const unsubOrders = subscribeToOrders((loadedOrders) => {
+      const unsubOrders = subscribeToOrders((loadedOrders, stored) => {
         setOrders(loadedOrders);
+        setStoredOrders(stored ?? null);
         setLoadFailed('orders', false);
       }, ordersFailed);
       const unsubProfile = subscribeToOwnUserProfile(currentUser.uid, setOwnProfiles);
@@ -37,6 +41,7 @@ export function useAccountData({ authLoading, isAdmin, currentUser }: AuthState)
         unsubProfile();
         unsubCosts();
         setProductCosts({});
+        setStoredOrders(null);
       };
     }
 
@@ -62,6 +67,8 @@ export function useAccountData({ authLoading, isAdmin, currentUser }: AuthState)
     setOrders(loadGuestOrders());
     setOwnProfiles([]);
   }, [authLoading, isAdmin, currentUser]);
+
+  useOrdersIndexSync(isAdmin ? storedOrders : null);
 
   return { ownProfiles, orders, setOrders, productCosts, setProductCosts };
 }

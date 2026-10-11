@@ -2,8 +2,10 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "env": {
     "ECC_SKIP_LLM_SUMMARY": "1",
-    "SLASH_COMMAND_TOOL_CHAR_BUDGET": "30000",
-    "ECC_DISABLED_HOOKS": "pre:edit-write:gateguard-fact-force,pre:bash:gateguard-fact-force,pre:powershell:gateguard-fact-force"
+    "SLASH_COMMAND_TOOL_CHAR_BUDGET": "1000000",
+    "ECC_CONTEXT_WINDOW_TOKENS": "1000000",
+    "ECC_DISABLED_HOOKS": "pre:edit-write:gateguard-fact-force",
+    "GATEGUARD_BASH_ROUTINE_DISABLED": "1"
   },
   "permissions": {
     "ask": [
