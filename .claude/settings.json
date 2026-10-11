@@ -4,7 +4,7 @@
     "ECC_SKIP_LLM_SUMMARY": "1",
     "SLASH_COMMAND_TOOL_CHAR_BUDGET": "1000000",
     "ECC_CONTEXT_WINDOW_TOKENS": "1000000",
-    "ECC_DISABLED_HOOKS": "pre:edit-write:gateguard-fact-force",
+    "ECC_DISABLED_HOOKS": "pre:edit-write:gateguard-fact-force,stop:cost-tracker",
     "GATEGUARD_BASH_ROUTINE_DISABLED": "1"
   },
   "permissions": {
@@ -37,6 +37,17 @@
           {
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/chromium-for-ecc.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/ecc-cost-tracker.cjs",
+            "timeout": 30
           }
         ]
       }
