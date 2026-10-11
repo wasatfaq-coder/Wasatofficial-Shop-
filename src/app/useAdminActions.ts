@@ -322,12 +322,16 @@ export function useAdminActions({
     return saved;
   };
 
-  const handleUpdateStorefrontSettings = (upd: StorefrontSettings) => {
-    setStorefrontSettings(upd);
-    saveStorefrontSettings(upd);
+  const handleUpdateStorefrontSettings = async (upd: StorefrontSettings) => {
     // Only the changed fields: «Витрина», «Доставка», «Оплата» and «FAQ» each save their own fields of one document,
     // and a section's older copy must not roll back what another one saved meanwhile (этап 6, 59-П3)
-    return persist('настройки витрины', saveStorefrontSettingsToFirestore(upd, storefrontSettings));
+    const saved = await persist('настройки витрины', saveStorefrontSettingsToFirestore(upd, storefrontSettings));
+    // The screen shows the new settings only once the database took them: a refusal keeps the saved ones on screen
+    if (saved) {
+      setStorefrontSettings(upd);
+      saveStorefrontSettings(upd);
+    }
+    return saved;
   };
 
   /**

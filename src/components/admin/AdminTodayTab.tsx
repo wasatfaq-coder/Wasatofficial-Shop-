@@ -16,7 +16,7 @@ interface AdminTodayTabProps {
   products: Product[];
   lowStockThreshold: number;
   launchSteps: LaunchStep[];
-  /** «Онлайн-витрина» выключена (settings/storefront.isStoreOnline === false): сайт не принимает заказы */
+  /** «Принимать заказы на сайте» выключено (settings/storefront.isStoreOnline === false): сайт не принимает заказы */
   isStoreOffline?: boolean;
   onOpenTab: (tab: AdminTab) => void;
 }

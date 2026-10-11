@@ -31,7 +31,7 @@ test('«Сегодня» показывает, что ждёт, и ведёт в
   }
 
   await openAdminSection(panel, 'Витрина');
-  await expect(panel.getByRole('heading', { name: /Управление витриной/ })).toBeVisible();
+  await expect(panel.getByRole('heading', { name: 'Витрина', exact: true })).toBeVisible();
   await openAdminSection(panel, 'Сегодня');
   await expect(panel.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
 });
