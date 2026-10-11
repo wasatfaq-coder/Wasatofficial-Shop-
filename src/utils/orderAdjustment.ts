@@ -1,5 +1,5 @@
 import type { CartItem, Order, PromoCode } from '../types';
-import { calcSubtotal, toPricingLine } from '../shared/orderPricing';
+import { calcSubtotal, isQuickOrderDelivery, toPricingLine } from '../shared/orderPricing';
 import { linePrice } from '../shared/orderLine';
 import { extractColorName, extractSizeName } from './inventory';
 
@@ -8,6 +8,35 @@ export interface AdjustedTotals {
   discount: number;
   deliveryFee: number;
   total: number;
+}
+
+type OrderMoney = Pick<Order, 'items' | 'totalPrice' | 'deliveryFee' | 'discountAmount' | 'promoCode'> &
+  Partial<Pick<Order, 'deliveryMethod'>>;
+
+export interface StoredOrderTotals extends AdjustedTotals {
+  /** Delivery and discount are written in the order; false — an old order: print only items and the total */
+  recorded: boolean;
+  /** items − discount + delivery is the total (1 ₽ off is allowed); false — lines changed by hand or a forged order */
+  matches: boolean;
+}
+
+/**
+ * The order's sum for the invoice — only what the order says (a printed document for the customer must not guess):
+ * items — `calcSubtotal` of the lines' own prices (`linePrice`, wholesale too), delivery — `deliveryFee`, discount —
+ * `discountAmount` (the browser writes no field for 0, so an order without a promo code has none), total — `totalPrice`.
+ * A 1-click order has neither delivery nor promo. An old order without `deliveryFee` (or with a promo code and no
+ * `discountAmount`) is not `recorded`: its split is unknown.
+ */
+export function storedOrderTotals(order: OrderMoney): StoredOrderTotals {
+  const subtotal = calcSubtotal((order.items ?? []).map(toPricingLine));
+  const total = Number(order.totalPrice) || 0;
+  const quick = isQuickOrderDelivery(order.deliveryMethod);
+  const deliveryFee = Number(order.deliveryFee ?? (quick ? 0 : NaN));
+  const discount = Number(order.discountAmount ?? (order.promoCode ? NaN : 0));
+  if (!Number.isFinite(deliveryFee) || !Number.isFinite(discount)) {
+    return { subtotal, discount: 0, deliveryFee: 0, total, recorded: false, matches: true };
+  }
+  return { subtotal, discount, deliveryFee, total, recorded: true, matches: Math.abs(subtotal - discount + deliveryFee - total) <= 1 };
 }
 
 /**
