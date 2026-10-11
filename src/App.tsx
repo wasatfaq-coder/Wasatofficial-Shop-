@@ -361,6 +361,7 @@ export default function App() {
     orders,
     products,
     preorderMode,
+    cartItems,
     setCartItems,
     setChatMessages,
     addToast,

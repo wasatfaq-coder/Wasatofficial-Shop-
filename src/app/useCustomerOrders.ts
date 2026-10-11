@@ -16,6 +16,8 @@ type CustomerOrderOptions = {
   orders: Order[];
   products: Product[];
   preorderMode: boolean;
+  /** The cart now: «Повторить заказ» counts what fits next to its lines before saying what was added */
+  cartItems: CartItem[];
   setCartItems: SetState<CartItem[]>;
   setChatMessages: SetState<ChatMessage[]>;
   addToast: AddToast;
@@ -30,6 +32,7 @@ export function useCustomerOrders({
   orders,
   products,
   preorderMode,
+  cartItems,
   setCartItems,
   setChatMessages,
   addToast,
@@ -122,8 +125,12 @@ export function useCustomerOrders({
   // Repeat a past order: current product data and stock, unavailable items are skipped. A wholesale line comes back
   // wholesale, in whole packs, while the product is still sold wholesale; it never merges with a retail line
   const handleRepeatOrder = (items: CartItem[]) => {
-    const toAdd: CartItem[] = [];
+    // counted against the cart as it is: the toast says what really went in (the other line of a variant — retail
+    // next to wholesale — takes from the same stock)
+    const next = [...cartItems];
+    let added = 0;
     let skipped = 0;
+    let cut = 0;
     items.forEach((item, idx) => {
       const product = products.find((p) => p.id === item.product?.id);
       if (!product) {
@@ -131,52 +138,44 @@ export function useCustomerOrders({
         return;
       }
       const wholesale = sellsWholesale(product) && (isWholesaleLine(item) || !sellsRetail(product));
-      const step = wholesale ? packSizeOf(product) : 1;
-      const stock = getOrderableStock(product, item.selectedColor, item.selectedSize, preorderMode);
-      const quantity = Math.floor(Math.min(item.quantity, stock) / step) * step;
-      if (quantity <= 0) {
-        skipped += 1;
-        return;
-      }
-      toAdd.push({
+      const add: CartItem = {
         id: `cart-${Date.now()}-${idx}`,
         product,
         selectedColor: item.selectedColor,
         selectedSize: item.selectedSize,
-        quantity,
+        quantity: item.quantity,
         ...(wholesale ? { priceKind: 'wholesale' as const } : {}),
-      });
+      };
+      const step = wholesale ? packSizeOf(product) : 1;
+      const i = next.findIndex((c) => sameVariant(c, add) && goesWholesale(c) === wholesale);
+      const current = i > -1 ? next[i].quantity : 0;
+      const free =
+        getOrderableStock(product, item.selectedColor, item.selectedSize, preorderMode) -
+        heldByOtherLines(next, add, i > -1 ? next[i].id : add.id);
+      const total = Math.floor(Math.min(current + item.quantity, Math.max(0, free)) / step) * step;
+      const gained = total - current;
+      if (gained <= 0) {
+        skipped += 1;
+        return;
+      }
+      if (gained < item.quantity) cut += 1;
+      added += 1;
+      if (i > -1) next[i] = { ...next[i], quantity: total };
+      else next.push({ ...add, quantity: total });
     });
 
-    if (toAdd.length === 0) {
+    if (added === 0) {
       addToast('Товаров из этого заказа сейчас нет в наличии', 'error');
       return;
     }
-
-    setCartItems((prev) => {
-      const next = [...prev];
-      for (const add of toAdd) {
-        const i = next.findIndex((c) => sameVariant(c, add) && goesWholesale(c) === goesWholesale(add));
-        const step = goesWholesale(add) ? packSizeOf(add.product) : 1;
-        // the other line of the variant (retail next to wholesale) takes from the same stock
-        const free =
-          getOrderableStock(add.product, add.selectedColor, add.selectedSize, preorderMode) -
-          heldByOtherLines(next, add, i > -1 ? next[i].id : add.id);
-        const fit = (qty: number) => Math.floor(Math.min(qty, Math.max(0, free)) / step) * step;
-        if (i > -1) {
-          const quantity = fit(next[i].quantity + add.quantity);
-          if (quantity > 0) next[i] = { ...next[i], quantity };
-        } else if (fit(add.quantity) > 0) {
-          next.push({ ...add, quantity: fit(add.quantity) });
-        }
-      }
-      return next;
-    });
+    setCartItems(next);
+    const notes = [
+      skipped > 0 ? `нет в наличии: ${skipped}` : '',
+      cut > 0 ? `добавлено меньше, чем в заказе: ${cut}` : '',
+    ].filter(Boolean);
     addToast(
-      skipped > 0
-        ? `Товары добавлены в корзину. Нет в наличии: ${skipped}`
-        : 'Товары заказа добавлены в корзину',
-      skipped > 0 ? 'info' : 'success'
+      notes.length ? `Товары добавлены в корзину. ${notes.join('; ')}` : 'Товары заказа добавлены в корзину',
+      notes.length ? 'info' : 'success'
     );
     setActiveTab('cart');
   };

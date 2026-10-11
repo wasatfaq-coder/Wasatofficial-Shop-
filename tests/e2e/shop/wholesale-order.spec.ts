@@ -69,6 +69,19 @@ test('покупатель заказывает оптом: упаковки, с
     quantity: 15,
     selectedSize: size,
   });
+
+  // «Повторить заказ» brings the line back wholesale — 3 packs at 1 080 ₽, not 15 items at the retail 1 990 ₽
+  await page.getByRole('button', { name: 'Профиль' }).first().click();
+  await page.getByRole('button', { name: /^Заказы и трекинг/ }).click();
+  const orders = page.getByRole('dialog', { name: 'История и трекинг заказов' });
+  await expect(orders.getByText(order.id as string)).toBeVisible();
+  await orders.getByRole('button', { name: 'Детали' }).first().click();
+  const details = page.getByRole('dialog', { name: `Заказ № ${order.id}` });
+  await expect(details.getByText('Опт', { exact: true })).toBeVisible();
+  await details.getByRole('button', { name: 'Повторить заказ' }).click();
+  await expect(page.getByRole('heading', { name: tee.title })).toBeVisible();
+  await expect(page.getByText('3 уп. по 5 шт.', { exact: false }).first()).toBeVisible();
+  await expect(page.getByText(rub(16200)).first()).toBeVisible();
 });
 
 test('«Заказы»: чип «Опт / Розница» и отметка «Опт» у заказа', async ({ page, phone, signIn }) => {
@@ -103,3 +116,4 @@ test('«Заказы»: чип «Опт / Розница» и отметка «�
   await channels.getByRole('radio', { name: /^Розница/ }).click();
   await expect(panel.getByText('Оптовый Покупатель')).toHaveCount(0);
 });
+
