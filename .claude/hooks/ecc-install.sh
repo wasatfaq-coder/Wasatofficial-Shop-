@@ -4,6 +4,7 @@
 # контейнере и сама его не скачивает. Версия закреплена тегом и проверяется по коммиту: код этой версии прочитан
 # перед установкой; новую версию — отдельным PR, снова прочитав хуки (scripts/hooks/ в репозитории ECC).
 # Скиллы и команды появляются в этой же сессии (reloadSkills), агенты и хуки ECC — со следующего запуска сессии.
+# Скиллы и команды ECC не правятся (решение владельца 11.10): плагин стоит так, как его выпустил автор.
 # `--now` — поставить и вне облака.
 set -euo pipefail
 
@@ -11,7 +12,7 @@ TAG=v2.2.3
 COMMIT=c05b2d6614f62f6db0047669aa4eefb223d478f9
 INSTALLED="$HOME/.claude/plugins/installed_plugins.json"
 SETTINGS="${CLAUDE_PROJECT_DIR:-$(pwd)}/.claude/settings.json"
-FIXES="$(dirname "$0")/ecc-skill-fixes.py"
+MARKET="$HOME/.claude/plugins/marketplaces/ecc"
 
 if [ "${1:-}" != "--now" ]; then
   [ "${CLAUDE_CODE_REMOTE:-}" = "true" ] || exit 0
@@ -27,10 +28,40 @@ installed_commit() {
   ' "$INSTALLED"
 }
 
-# Форма скиллов ECC по руководству Anthropic (docs/skills.md): плагин ставится заново в каждой сессии, поэтому правка
-# повторяется после установки. В stdout — число изменённых файлов; сбой правки ECC не ломает — скиллы останутся как в $TAG.
-fix_skills() {
-  python3 -I "$FIXES" || { echo "ecc-skill-fixes.py упал — скиллы ECC остались как в версии $TAG." >&2; echo 0; }
+# До 11.10 хук правил скиллы и команды ECC (.claude/hooks/ecc-skill-fixes.py, отпечаток — .wasat-skill-fixes в папке
+# плагина) и убирал большую часть в каталог (….md.catalog). Контейнер облачной сессии бывает прежним, и в нём плагин остался
+# бы правленым — поэтому скиллы и команды берутся заново из клона маркетплейса того же коммита. В stdout — 1, если вернули.
+restore_pristine() {
+  local root="$1"
+  [ -f "$root/.wasat-skill-fixes" ] || [ -n "$(find "$root/skills" "$root/commands" -name '*.md.catalog' -print -quit 2>/dev/null)" ] \
+    || { echo 0; return 0; }
+  if [ "$(git -C "$MARKET" rev-parse HEAD 2>/dev/null)" != "$COMMIT" ] || [ -n "$(git -C "$MARKET" status --porcelain -- skills commands)" ]; then
+    echo "Нет чистого клона ECC $TAG в $MARKET — скиллы ECC остались правлеными; поставь плагин заново." >&2
+    echo 0
+    return 0
+  fi
+  local part
+  for part in skills commands; do
+    rm -rf "${root:?}/$part"
+    cp -R "$MARKET/$part" "$root/$part" || {
+      echo "Не удалось вернуть $part ECC из $MARKET — поставь плагин заново." >&2
+      echo 0
+      return 0
+    }
+  done
+  rm -f "$root/.wasat-skill-fixes"
+  echo "Скиллы и команды ECC возвращены к $TAG без правок." >&2
+  echo 1
+}
+
+install_path() {
+  node -e '
+    try {
+      const data = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+      const entry = ((data.plugins && data.plugins["ecc@ecc"]) || []).find(e => e.installPath);
+      if (entry) process.stdout.write(entry.installPath);
+    } catch { /* нет файла — плагин не стоит */ }
+  ' "$INSTALLED"
 }
 
 # Правила ECC (решение владельца 07.10): плагин их не ставит, README ECC велит копировать rules/common и пакеты своего
@@ -42,13 +73,7 @@ RULE_PACKS="common typescript react web"
 RULES_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}/.claude/rules/ecc"
 sync_rules() {
   local root pack
-  root="$(node -e '
-    try {
-      const data = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
-      const entry = ((data.plugins && data.plugins["ecc@ecc"]) || []).find(e => e.installPath);
-      if (entry) process.stdout.write(entry.installPath);
-    } catch { /* нет файла — плагин не стоит */ }
-  ' "$INSTALLED")"
+  root="$(install_path)"
   [ -d "$root/rules" ] || { echo "Правила ECC не найдены в плагине — копия в репозитории не сверена." >&2; return 0; }
   mkdir -p "$RULES_DIR"
   for pack in $RULE_PACKS; do
@@ -64,8 +89,9 @@ sync_rules() {
 
 # Разрешения для ECC — в настройки пользователя: разрешения из .claude/settings.json проекта в облачной сессии не действуют
 # (проект не отмечен доверенным; правило на ~/.claude к тому же в списке чувствительных путей). Чтение папки плагина — для
-# каталога скиллов (finding-skills); серверы MCP из .mcp.json — для агентов и скиллов ECC (gan-evaluator, knowledge-ops, docs-lookup).
-allow_catalog_reads() {
+# файлов скиллов ECC (references/, примеры, скрипты); серверы MCP из .mcp.json — для агентов и скиллов ECC (gan-evaluator,
+# knowledge-ops, docs-lookup).
+allow_plugin_reads() {
   python3 -I - "$HOME/.claude/settings.json" "Read(/$HOME/.claude/plugins/cache/ecc/**)" \
     mcp__playwright mcp__memory mcp__context7 <<'PY'
 import json, sys
@@ -84,10 +110,10 @@ PY
 }
 
 if installed_commit | grep -qx "$COMMIT"; then
-  # Плагин уже стоит (контейнер не новый): правим и перечитываем скиллы, только если что-то изменилось.
+  # Плагин уже стоит (контейнер не новый): перечитываем скиллы, только если вернули их к выпуску автора.
   sync_rules
-  allow_catalog_reads || true
-  if [ "$(fix_skills)" != "0" ]; then
+  allow_plugin_reads || true
+  if [ "$(restore_pristine "$(install_path)")" != "0" ]; then
     echo '{"hookSpecificOutput": {"hookEventName": "SessionStart", "reloadSkills": true}}'
   fi
   exit 0
@@ -134,6 +160,5 @@ if ! installed_commit | grep -qx "$COMMIT"; then
 fi
 
 sync_rules
-allow_catalog_reads || true
-fix_skills >/dev/null
+allow_plugin_reads || true
 echo '{"hookSpecificOutput": {"hookEventName": "SessionStart", "reloadSkills": true}}'
