@@ -93,7 +93,12 @@ chrome-devtools из ECC ищет Google Chrome, которого в облак�
 (`SLASH_COMMAND_TOOL_CHAR_BUDGET` в `env`); в запрос уходит сам список — ≈ 129 000 знаков, ≈ 34 000 токенов; при 30 000
 описание оставалось у 100 записей из 412, у скиллов Anthropic — ни у одного. Окно контекста для
 хуков ECC — `ECC_CONTEXT_WINDOW_TOKENS` = 1 000 000 (у Opus, Sonnet и Haiku 5.5 окно 1M, а ECC знает его только у Opus,
-Fable и Mythos: без переменной подсказка «сожми контекст» на Sonnet и Haiku шла от 200K). Серверы MCP для агентов и скиллов ECC —
+Fable и Mythos: без переменной подсказка «сожми контекст» на Sonnet и Haiku шла от 200K). Стоимость сессии для ECC (`costs.jsonl`, «COST WARNING»,
+`/ecc:cost-report`) — по ценам, сверенным со счетами Claude Code: таблица `cost-tracker` ECC устарела, поэтому точное число
+по «harness-cost contract» самого ECC пишет `.claude/hooks/ecc-cost-tracker.cjs` (Stop) и сам запускает `cost-tracker`; штатный
+запуск выключен (`stop:cost-tracker` в `ECC_DISABLED_HOOKS`), цены — `PRICES` в хуке (`docs/skills.md`, «Модели в ECC»).
+Скиллы ECC, которые ищут свои скрипты в `~/.claude/skills/<скилл>/`, находят их по ссылкам, которые кладёт `ecc-install.sh`
+(все файлы скилла, кроме `SKILL.md`, — без дублей в списке). Серверы MCP для агентов и скиллов ECC —
 `.mcp.json`: Playwright (агент `gan-evaluator`, Chromium из `/opt/pw-browsers`), memory, Context7 (заработает, когда сеть
 окружения пустит `context7.com`). Разрешения для ECC — чтение папки плагина и эти серверы — хук пишет в
 `~/.claude/settings.json`: разрешения из настроек проекта в облачной сессии не действуют. Новая версия ECC — проверки самого
