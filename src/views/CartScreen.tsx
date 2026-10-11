@@ -27,6 +27,11 @@ import {
 } from '../shared/orderPricing';
 import { promoDiscountText } from '../utils/promoLabel';
 import { useDialogA11y } from '../utils/useDialogA11y';
+import { linePrice } from '../shared/orderLine';
+import { isWholesaleLine, packSizeOf, wholesaleLineProblems } from '../shared/wholesalePricing';
+import { packsText } from '../utils/wholesaleOffer';
+import { WholesaleMark } from '../components/WholesaleMark';
+import { heldByOtherLines } from '../utils/cartLines';
 
 interface CartScreenProps {
   cartItems: CartItem[];
@@ -85,15 +90,22 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   const [editingVariantItemId, setEditingVariantItemId] = useState<string | null>(null);
   const [isQuickOrderOpen, setIsQuickOrderOpen] = useState(false);
   // Lines whose quantity is no longer available (sold out while in the cart)
-  const unavailableCount = cartItems.filter(
-    (item) => item.quantity > getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode)
-  ).length;
+  // The retail and the wholesale line of one variant share its stock: each can have what the other left
+  const lineStock = (item: CartItem) =>
+    Math.max(
+      0,
+      getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode) - heldByOtherLines(cartItems, item, item.id)
+    );
+  const unavailableCount = cartItems.filter((item) => item.quantity > lineStock(item)).length;
+  // Wholesale lines in part packs or under the product's minimum: the checkout would refuse them, so say it here
+  const wholesaleProblems = wholesaleLineProblems(cartItems);
+  const cartBlocked = unavailableCount > 0 || wholesaleProblems.length > 0;
   const [isClearCartConfirmOpen, setIsClearCartConfirmOpen] = useState(false);
   const clearDialog = useDialogA11y(isClearCartConfirmOpen, () => setIsClearCartConfirmOpen(false));
 
   // Calculate totals
   const rawSubtotal = cartItems.reduce(
-    (acc, item) => acc + item.product.price * item.quantity,
+    (acc, item) => acc + linePrice(item) * item.quantity,
     0
   );
 
@@ -140,12 +152,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         <div className="w-24 h-24 rounded-full neu-flat flex items-center justify-center mx-auto text-[#4E5C70]">
           <ShoppingBag className="w-10 h-10 stroke-[1.5]" />
         </div>
-        <div className="space-y-1">
-          <h2 className="text-xl font-bold text-[#2D3A4E]">Ваша корзина пуста</h2>
-          <p className="text-xs text-[#4E5C70] max-w-xs mx-auto">
-            Выберите стильные новинки из нашего каталога мужской одежды
-          </p>
-        </div>
+        <h2 className="text-xl font-bold text-[#2D3A4E]">Ваша корзина пуста</h2>
         <button
           onClick={() => setActiveTab('catalog')}
           className="neu-button-accent rounded-full px-6 py-3 font-bold text-xs inline-flex items-center gap-2 cursor-pointer"
@@ -213,10 +220,16 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         {cartItems.map((item, itemIdx) => {
           const isFav = favorites.includes(item.product.id);
           const inStock = getVariantStock(item.product, item.selectedColor, item.selectedSize);
-          const availableStock = getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode);
+          const availableStock = lineStock(item);
           const isPreorder = inStock === 0 && availableStock > 0;
-          const isAtMaxStock = item.quantity >= availableStock;
+          // A wholesale line changes by whole packs: «−» and «+» take or add one pack
+          const wholesale = isWholesaleLine(item);
+          const step = wholesale ? packSizeOf(item.product) : 1;
+          const isAtMaxStock = item.quantity + step > availableStock;
           const isEditingVariant = editingVariantItemId === item.id;
+          // Buttons of a row name its product: «Удалить товар» eight times does not say which (audit 07.10, finding 37)
+          const title = item.product.title;
+          const variantPanelId = `cart-variant-${itemIdx}`;
 
           return (
             <div
@@ -246,14 +259,17 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     </h3>
                     {/* Favorite Heart Icon */}
                     <button
+                      type="button"
                       onClick={(e) => onToggleFavorite(item.product, e)}
-                      className={`w-7 h-7 rounded-full neu-button flex items-center justify-center transition-colors shrink-0 ${
+                      className={`w-8 h-8 rounded-full neu-button flex items-center justify-center transition-colors shrink-0 ${
                         isFav ? 'text-accent' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
                       }`}
                       title={isFav ? 'В избранном' : 'Добавить в избранное'}
-                      aria-label={isFav ? 'В избранном' : 'Добавить в избранное'}
+                      aria-label={`В избранное: ${title}`}
+                      aria-pressed={isFav}
                     >
                       <Heart
+                        aria-hidden="true"
                         className={`w-3.5 h-3.5 ${
                           isFav ? 'fill-accent stroke-accent' : 'stroke-[2]'
                         }`}
@@ -268,7 +284,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                       onClick={() => setEditingVariantItemId(isEditingVariant ? null : item.id)}
                       className="neu-button min-h-8 px-2.5 py-0.5 rounded-xl flex items-center gap-1.5 text-[11px] font-bold text-accent hover:scale-102 transition-transform cursor-pointer"
                       title="Нажмите, чтобы изменить цвет или размер"
-                      aria-label={`Цвет и размер: ${item.selectedColor}, ${item.selectedSize}. Изменить`}
+                      aria-label={`Цвет и размер: ${item.selectedColor}, ${item.selectedSize}. Изменить — ${title}`}
+                      aria-expanded={isEditingVariant}
+                      aria-controls={isEditingVariant ? variantPanelId : undefined}
                     >
                       <span>{item.selectedColor} • {item.selectedSize}</span>
                       <SlidersHorizontal className="w-3 h-3 text-accent" />
@@ -287,8 +305,19 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     )}
                   </div>
 
+                  {wholesale && (
+                    <p className="text-xs text-[#4E5C70]">
+                      <WholesaleMark className="mr-1.5" />
+                      {packsText(item.quantity, step)} · {linePrice(item).toLocaleString('ru-RU')} ₽/шт.
+                      {item.volumeDiscountPerUnit ? (
+                        <span className="text-success font-bold">
+                          {' '}· скидка за объём −{item.volumeDiscountPerUnit.toLocaleString('ru-RU')} ₽/шт.
+                        </span>
+                      ) : null}
+                    </p>
+                  )}
                   <p className="text-sm font-extrabold text-[#2D3A4E] pt-0.5">
-                    {(item.product.price * item.quantity).toLocaleString('ru-RU')} ₽
+                    {(linePrice(item) * item.quantity).toLocaleString('ru-RU')} ₽
                   </p>
 
                   {/* Quantity Controller & Delete Button */}
@@ -296,26 +325,29 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     <div className="neu-inset rounded-full p-0.5 flex items-center gap-1.5">
                       <button
                         onClick={() => {
-                          if (item.quantity === 1) {
+                          if (item.quantity <= step) {
                             setItemToRemove(item);
                           } else {
-                            onUpdateQuantity(item.id, item.quantity - 1);
+                            onUpdateQuantity(item.id, item.quantity - step);
                           }
                         }}
                         type="button"
                         className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent cursor-pointer"
-                        title={item.quantity === 1 ? 'Удалить товар' : 'Уменьшить количество'}
-                        aria-label={item.quantity === 1 ? 'Удалить товар' : 'Уменьшить количество'}
+                        title={item.quantity <= step ? 'Удалить товар' : 'Уменьшить количество'}
+                        aria-label={`${item.quantity <= step ? 'Удалить товар' : 'Уменьшить количество'}: ${title}`}
                       >
                         <Minus className="w-3 h-3 stroke-[2.5]" />
                       </button>
-                      <span className="text-xs font-bold text-[#2D3A4E] w-5 text-center" aria-live="polite">
-                        {item.quantity}
+                      <span
+                        className={`text-xs font-bold text-[#2D3A4E] text-center ${step > 1 ? 'min-w-5 px-0.5 whitespace-nowrap' : 'w-5'}`}
+                        aria-live="polite"
+                      >
+                        {step > 1 ? `${Math.floor(item.quantity / step)} уп.` : item.quantity}
                       </span>
                       <button
                         onClick={() => {
-                          if (item.quantity < availableStock) {
-                            onUpdateQuantity(item.id, item.quantity + 1);
+                          if (item.quantity + step <= availableStock) {
+                            onUpdateQuantity(item.id, item.quantity + step);
                           } else {
                             onShowToast(`Достигнут максимум (${availableStock} шт.)`, 'info');
                           }
@@ -332,7 +364,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                               : `На складе всего ${availableStock} шт.`
                             : 'Добавить'
                         }
-                        aria-label="Увеличить количество"
+                        aria-label={`Увеличить количество: ${title}`}
                       >
                         <Plus className="w-3 h-3 stroke-[2.5]" />
                       </button>
@@ -340,10 +372,11 @@ export const CartScreen: React.FC<CartScreenProps> = ({
 
                     {/* Trigger removal modal */}
                     <button
+                      type="button"
                       onClick={() => setItemToRemove(item)}
                       className="w-8 h-8 rounded-full neu-button-danger flex items-center justify-center transition-colors cursor-pointer"
                       title="Удалить товар"
-                      aria-label="Удалить товар"
+                      aria-label={`Удалить товар: ${title}`}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -353,7 +386,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
 
               {/* Interactive In-Cart Variant Selector Drawer */}
               {isEditingVariant && onUpdateVariant && (
-                <div className="neu-inset rounded-2xl p-3.5 sm:p-4 space-y-3 border border-white/70 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div id={variantPanelId} className="neu-inset rounded-2xl p-3.5 sm:p-4 space-y-3 border border-white/70 animate-in fade-in slide-in-from-top-2 duration-200">
                   {/* Header */}
                   <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
                     <div className="flex items-center gap-2 min-w-0">
@@ -383,7 +416,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                         {item.selectedColor}
                       </span>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={`Цвет: ${title}`}>
                       {item.product.colors.map((c, cIdx) => {
                         const colorName = typeof c === 'string' ? c : c?.name || '';
                         const colorHex = typeof c === 'object' && c !== null ? (c as any).hex : undefined;
@@ -395,6 +428,8 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                           <button
                             key={`cart-${item.id}-col-${colorName || cIdx}-${cIdx}`}
                             type="button"
+                            role="radio"
+                            aria-checked={isCurrent}
                             disabled={isOutOfStock}
                             onClick={() => {
                               onUpdateVariant(item.id, colorName, item.selectedSize);
@@ -427,7 +462,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                         {item.selectedSize}
                       </span>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={`Размер: ${title}`}>
                       {item.product.sizes.map((sz, szIdx) => {
                         const isCurrent = sz === item.selectedSize;
                         const szStock = getVariantStock(item.product, item.selectedColor, sz);
@@ -437,6 +472,8 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                           <button
                             key={`cart-${item.id}-sz-${sz}-${szIdx}`}
                             type="button"
+                            role="radio"
+                            aria-checked={isCurrent}
                             disabled={isOutOfStock}
                             onClick={() => {
                               onUpdateVariant(item.id, item.selectedColor, sz);
@@ -628,6 +665,13 @@ export const CartScreen: React.FC<CartScreenProps> = ({
               Часть товаров закончилась: уменьшите количество или удалите их из корзины ({unavailableCount}).
             </p>
           )}
+          {wholesaleProblems.length > 0 && (
+            <div role="status" className="neu-inset rounded-2xl p-3 text-xs font-bold text-danger space-y-1">
+              {wholesaleProblems.map((problem) => (
+                <p key={problem}>{problem}</p>
+              ))}
+            </div>
+          )}
           {checkoutBlocker && (
             <NotConfigured
               title={checkoutBlocker}
@@ -636,9 +680,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
           )}
           <button
             onClick={() => setActiveTab('checkout')}
-            disabled={Boolean(checkoutBlocker) || unavailableCount > 0}
+            disabled={Boolean(checkoutBlocker) || cartBlocked}
             className={`w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-              !checkoutBlocker && unavailableCount === 0
+              !checkoutBlocker && !cartBlocked
                 ? 'neu-button-accent btn-confirm-order active:neu-inset-deep active:scale-[0.98] cursor-pointer'
                 : 'neu-button-disabled'
             }`}
@@ -650,7 +694,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
           <button
             type="button"
             onClick={() => setIsQuickOrderOpen(true)}
-            disabled={unavailableCount > 0}
+            disabled={cartBlocked}
             className="w-full py-2.5 rounded-2xl neu-button font-bold text-xs text-accent flex items-center justify-center transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span>Заказать в 1 клик</span>

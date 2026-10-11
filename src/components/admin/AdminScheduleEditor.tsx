@@ -3,6 +3,7 @@ import { CalendarDays, Clock, Copy, Plus, Trash2 } from 'lucide-react';
 import type { StoreSchedule, StoreScheduleException, StoreScheduleHours, StoreWeekday } from '../../types';
 import { NeumorphicSwitch } from '../NeumorphicSwitch';
 import { ConfirmDialog } from '../ConfirmDialog';
+import { AdminHint } from './AdminHint';
 import { useMinuteClock } from '../StoreHours';
 import {
   emptySchedule,
@@ -68,6 +69,9 @@ export const AdminScheduleEditor: React.FC<AdminScheduleEditorProps> = ({
         <p className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider flex items-center gap-1.5">
           <Clock className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
           График работы (время московское)
+          <AdminHint label="График работы">
+            Только показывается покупателям. Заказы он не останавливает — для этого «Онлайн-витрина».
+          </AdminHint>
         </p>
         <button
           type="button"

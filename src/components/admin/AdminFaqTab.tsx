@@ -13,6 +13,10 @@ export const AdminFaqTab: React.FC<AdminFaqTabProps> = ({ settings, onUpdateSett
   <AdminListEditor<StoreFaqItem>
     title="Вопросы и ответы"
     description="Показываются покупателям в окне FAQ в указанном порядке. В тексте можно писать {FREE_DELIVERY} и {RETURN_DAYS} — подставятся порог бесплатной доставки и срок возврата из «Витрины»."
+    descriptionHint={{
+      label: 'Метки {FREE_DELIVERY} и {RETURN_DAYS}',
+      text: 'В ответе замените сумму или срок на метку: числа подставятся из «Витрины».',
+    }}
     emptyTitle="Вопросы и ответы"
     emptyHint="Пока вопросов нет, покупатели видят «Вопросы и ответы: не настроено» и кнопку чата."
     items={settings.faqItems ?? []}

@@ -8,7 +8,8 @@ interface AnimatedFavoriteButtonProps {
   className?: string;
   iconClassName?: string;
   size?: 'sm' | 'md' | 'lg';
-  ariaLabel?: string;
+  /** The product's name in the button's name: eight cards are not eight identical «В избранное» (audit 07.10, finding 34) */
+  productTitle?: string;
 }
 
 export const AnimatedFavoriteButton: React.FC<AnimatedFavoriteButtonProps> = ({
@@ -17,7 +18,7 @@ export const AnimatedFavoriteButton: React.FC<AnimatedFavoriteButtonProps> = ({
   className = '',
   iconClassName = '',
   size = 'md',
-  ariaLabel = 'В избранное',
+  productTitle,
 }) => {
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -29,8 +30,9 @@ export const AnimatedFavoriteButton: React.FC<AnimatedFavoriteButtonProps> = ({
 
   // Dimensional presets
   const sizeMap = {
+    // 32 px: a frequent action of the customer (CLAUDE.md, «Доступность»)
     sm: {
-      btn: 'w-7 h-7',
+      btn: 'w-8 h-8',
       icon: 'w-3.5 h-3.5',
     },
     md: {
@@ -53,7 +55,9 @@ export const AnimatedFavoriteButton: React.FC<AnimatedFavoriteButtonProps> = ({
       // `relative` only when the caller does not position the button itself: with both classes
       // `relative` won and the button left its corner over the photo
       className={`${/(^|\s)(absolute|fixed)(\s|$)/.test(className) ? '' : 'relative '}rounded-full flex items-center justify-center cursor-pointer select-none transition-colors ${currentSize.btn} ${className}`}
-      aria-label={ariaLabel}
+      aria-label={productTitle ? `В избранное: ${productTitle}` : 'В избранное'}
+      // the state is heard, not only seen as a filled heart
+      aria-pressed={isFavorite}
       title={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}
     >
       {/* Pulse Aura Burst on favorite click */}
@@ -92,6 +96,7 @@ export const AnimatedFavoriteButton: React.FC<AnimatedFavoriteButtonProps> = ({
         className="flex items-center justify-center pointer-events-none"
       >
         <Heart
+          aria-hidden="true"
           className={`${currentSize.icon} transition-colors duration-200 ${
             isFavorite
               ? 'fill-danger text-danger stroke-danger drop-shadow-xs'

@@ -1,5 +1,7 @@
 import type { AddressParts } from './shared/personName';
 import type { DeliveryKind, OrderStatusLogEntry } from './shared/orderFlow';
+import type { ProductPurchase } from './utils/currencyPricing';
+import type { SaleChannel, WholesaleSettings } from './shared/wholesalePricing';
 export interface BodyMeasurements {
   height: number;
   weight: number;
@@ -38,6 +40,27 @@ export interface CareInstructionItem {
 export interface ProductFeature {
   title: string;
   text?: string;
+}
+
+/** A measurement of the model's size chart, e.g. «Длина изделия» (cm); `key` ties the values of rows to it */
+export interface SizeChartColumn {
+  key: string;
+  label: string;
+}
+
+/** One size of the model: its measurements by column key, as typed («72», «98–102») */
+export interface SizeChartRow {
+  size: string;
+  values: Record<string, string>;
+}
+
+/**
+ * «Размерная сетка» of a model (docs/wholesale-spec.md, stage 5): measurements in cm per size. In the public product,
+ * not in the catalog index; read through `src/utils/sizeChart.ts` (form: `sizeChartEditing.ts`)
+ */
+export interface ProductSizeChart {
+  columns: SizeChartColumn[];
+  rows: SizeChartRow[];
 }
 
 /** A characteristic row in «Состав и ткань», e.g. «Застежка — молния YKK» */
@@ -91,6 +114,12 @@ export interface ReviewVote {
   uid: string;
 }
 
+/** A price the product had and when it ended (ISO) */
+export interface PriceHistoryEntry {
+  price: number;
+  until: string;
+}
+
 export interface Product {
   id: string;
   title: string;
@@ -98,7 +127,43 @@ export interface Product {
   categoryLabel: string;
   price: number;
   costPrice?: number; // Себестоимость для расчета маржинальности
+  /**
+   * Purchase in dollars or yuan (`product_costs/{id}.purchase`, admin only, like costPrice): «Курсы и наценка»
+   * recalculates price and costPrice from it (src/utils/currencyPricing.ts). Never stored in the product
+   */
+  purchase?: ProductPurchase;
+  /**
+   * Supplier and the supplier's article (`product_costs/{id}`, admin only, like costPrice; src/utils/productCosts.ts):
+   * for reordering and checking invoices. Never stored in the product
+   */
+  supplier?: string;
+  supplierSku?: string;
   originalPrice?: number;
+  /**
+   * Who the product is sold to (src/shared/wholesalePricing.ts): retail and wholesale, only wholesale or only retail;
+   * absent — both. Wholesale needs `wholesalePrice` as well
+   */
+  saleChannel?: SaleChannel;
+  /**
+   * Wholesale price of one item, ₽: already the lowered price — promo codes and the product's discount do not apply to it,
+   * only the volume discount of «Опт» (`settings/storefront.wholesale`). Absent — not sold wholesale
+   */
+  wholesalePrice?: number;
+  /** Items in one wholesale pack; absent — 1 (a pack is one item). Wholesale lines are ordered in whole packs */
+  wholesalePackSize?: number;
+  /** The fewest packs of the product in a wholesale order; absent — 1 */
+  wholesaleMinPacks?: number;
+  /**
+   * The discount, percent, the owner set (bulk «Скидка», kept by «Курсы и наценка»): the price after rounding up to 10 ₽
+   * gives a slightly smaller share, and recalculating from it would shrink the discount at every new rate. Trusted only
+   * while it matches the prices (`repriceProduct`); the struck-out price stays `originalPrice`
+   */
+  discountPercent?: number;
+  /**
+   * Earlier prices with the time each ended (`src/utils/priceHistory.ts`, admin audit 09.10, finding 1): an unpaid order
+   * is compared with the price in effect when it was placed. Written by the admin's saves and «Курсы и наценка»
+   */
+  priceHistory?: PriceHistoryEntry[];
   badge?: string;
   description: string;
   material: string;
@@ -119,6 +184,8 @@ export interface Product {
   previewKey?: string;
   colors: { name: string; hex: string }[];
   sizes: string[];
+  /** Measurements of the model per size; shown on the product page next to the sizes, absent — not shown */
+  sizeChart?: ProductSizeChart;
   /** «Есть в наличии»: false when sold out (or, in old products without hiddenFromSale, taken off sale with stock left) */
   inStock: boolean;
   /**
@@ -148,6 +215,17 @@ export interface CartItem {
   quantity: number;
   /** Ordered while out of stock in preorder mode: not deducted from (or returned to) stock */
   isPreorder?: boolean;
+  /**
+   * Price of one item when it is not the product's (wholesale, a size-run pack — docs/wholesale-spec.md); absent — the
+   * product's price. Read only through `linePrice` (`src/shared/orderLine.ts`); nothing sets it yet
+   */
+  unitPrice?: number;
+  /** Which price `unitPrice` is; absent — retail. The buyer's choice; the price itself is counted by `priceCartLines` */
+  priceKind?: 'retail' | 'wholesale' | 'pack';
+  /** Wholesale line: the volume discount of one item, ₽, already taken off `unitPrice` (for showing it) */
+  volumeDiscountPerUnit?: number;
+  /** Wholesale line: items in one pack at the moment of the order (the quantity is packs × this) */
+  packSize?: number;
 }
 
 export interface SavedAddress {
@@ -371,6 +449,11 @@ export interface Order {
    * is older than the stock journal): «Заказы» then offers «Вернуть на склад».
    */
   stockReturned?: boolean;
+  /**
+   * The promo code use of a cancelled order went back to the code (`usedCount` − 1, `promo_uses/{заказ}` removed by the
+   * admin's session, audit 07.10, finding 6): a one-time code is usable again
+   */
+  promoReleased?: boolean;
   /** «Архив» in «Заказы»: true — moved by the admin, false — taken back (a cancelled order goes there by itself) */
   archived?: boolean;
   /** Delivery kind at order time: its chain of statuses (`src/shared/orderFlow.ts`); older orders — by the method's name */
@@ -585,6 +668,26 @@ export interface StockMovementLog {
   operator: string;
 }
 
+/**
+ * One price change of a product (`price_changes`, admin only; admin audit 09.10, finding 11): who changed the price,
+ * when, from what to what and, for «Курсы и наценка», at which working rate.
+ */
+export interface PriceChangeLog {
+  id: string;
+  createdAt: string;
+  productId: string;
+  productTitle: string;
+  oldPrice: number;
+  newPrice: number;
+  /** «Применить» of the rates, or the admin's own edit (form, list, bulk action, CSV import) */
+  source: 'rates' | 'admin';
+  /** Rates only: the purchase currency and the working rate the price came from */
+  currency?: 'USD' | 'CNY';
+  rate?: number;
+  /** The admin's Google account e-mail */
+  operator: string;
+}
+
 /** Saves storefront settings; resolves to false when the write failed (the error toast is already shown) */
 export type SaveStorefrontSettings = (settings: StorefrontSettings) => Promise<boolean> | void;
 
@@ -689,6 +792,8 @@ export interface StorefrontSettings {
   labelFormats?: LabelFormat[];
   /** Admin → «Категории»: the single list used by the storefront and the admin panel */
   categories?: StoreCategory[];
+  /** Admin → «Опт»: the volume discount of wholesale lines (src/shared/wholesalePricing.ts); absent — none */
+  wholesale?: WholesaleSettings;
 }
 
 /** Label size for the label generator (Admin → «Склад») */

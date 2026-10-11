@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import type { User } from 'firebase/auth';
 import type { Order, UserProfile } from '../types';
-import { subscribeToOrders, subscribeToOwnUserProfile, subscribeToProductCosts, type StoredOrders } from '../utils/firebaseSync';
+import { subscribeToOrders, subscribeToOwnUserProfile, subscribeToProductCosts, type ProductCostEntry, type StoredOrders } from '../utils/firebaseSync';
+import { setLoadFailed } from '../utils/loadFailures';
 import { loadGuestOrders } from './guestOrders';
 import { useOrdersIndexSync } from './useOrdersIndexSync';
 
@@ -16,19 +17,23 @@ type AuthState = { authLoading: boolean; isAdmin: boolean; currentUser: User | n
 export function useAccountData({ authLoading, isAdmin, currentUser }: AuthState) {
   const [ownProfiles, setOwnProfiles] = useState<UserProfile[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  // Admin only: cost prices from `product_costs` (a product document is readable by every visitor)
-  const [productCosts, setProductCosts] = useState<Record<string, number>>({});
+  // Admin only: cost prices and purchases in a currency from `product_costs` (a product is readable by every visitor)
+  const [productCosts, setProductCosts] = useState<Record<string, ProductCostEntry>>({});
   // Admin only: the orders as stored, for the orders index (docs/orders-scale-plan.md, stage 4)
   const [storedOrders, setStoredOrders] = useState<StoredOrders | null>(null);
 
   React.useEffect(() => {
     if (authLoading) return;
+    // a failed subscription is said on «Заказы» and «Мои заказы» (finding 15), not shown as «заказов нет»
+    const ordersFailed = () => setLoadFailed('orders', true);
+    setLoadFailed('orders', false);
 
     if (isAdmin && currentUser) {
       const unsubOrders = subscribeToOrders((loadedOrders, stored) => {
         setOrders(loadedOrders);
         setStoredOrders(stored ?? null);
-      });
+        setLoadFailed('orders', false);
+      }, ordersFailed);
       const unsubProfile = subscribeToOwnUserProfile(currentUser.uid, setOwnProfiles);
       const unsubCosts = subscribeToProductCosts(setProductCosts);
       return () => {
@@ -47,8 +52,9 @@ export function useAccountData({ authLoading, isAdmin, currentUser }: AuthState)
         (loadedOrders) => {
           const own = new Set(loadedOrders.map((o) => o.id));
           setOrders([...loadedOrders, ...loadGuestOrders().filter((o) => !own.has(o.id))]);
+          setLoadFailed('orders', false);
         },
-        undefined,
+        ordersFailed,
         currentUser.uid
       );
       const unsubUsers = subscribeToOwnUserProfile(currentUser.uid, setOwnProfiles);

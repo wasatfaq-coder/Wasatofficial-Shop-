@@ -2,11 +2,13 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, X, Tag, Sparkles, Palette, ArrowRight } from 'lucide-react';
 import { Product } from '../types';
 import { RatingBadge } from './RatingBadge';
-import { photoBadgeClass } from '../utils/productBadge';
+import { photoBadgeClass, shownBadge, shownOldPrice } from '../utils/productBadge';
 import { getProductRating } from '../utils/productRating';
 import type { StoreCategory } from '../types';
 import { productImage } from '../utils/productImage';
 import { useProductThumbs } from '../utils/productThumbs';
+import { productHref } from '../utils/navigation';
+import { buyerPrice } from '../utils/wholesaleOffer';
 
 interface AutocompleteSearchProps {
   /** From Admin → «Категории» */
@@ -249,14 +251,13 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
                 {searchResults.matchedProducts.slice(0, 5).map((product, pIdx) => (
                   <div
                     key={`search-prod-${product.id}-${pIdx}`}
-                    onClick={() => handleProductClick(product)}
-                    className="neu-flat-sm rounded-2xl p-2.5 flex items-center gap-3 border border-white/80 hover:border-accent/60 cursor-pointer transition-all group"
+                    className="relative neu-flat-sm rounded-2xl p-2.5 flex items-center gap-3 border border-white/80 hover:border-accent/60 transition-all group"
                   >
                     {/* Thumbnail */}
                     <div className="w-12 h-12 rounded-xl overflow-hidden neu-inset p-0.5 shrink-0">
                       <img
                         src={photoOf(product) || productImage(product)}
-                        alt={product.title}
+                        alt=""
                         loading="lazy"
                         decoding="async"
                         className="w-full h-full object-cover object-top rounded-lg group-hover:scale-105 transition-transform"
@@ -265,22 +266,33 @@ export const AutocompleteSearch: React.FC<AutocompleteSearchProps> = ({
 
                     {/* Title on its own line (a badge next to it squeezed the title to nothing in a narrow field) */}
                     <div className="flex-1 min-w-0 space-y-1">
+                      {/* The row opens with its title link stretched over it, as a product card (Tab reaches it) */}
                       <p className="text-xs font-extrabold text-[#2D3A4E] leading-snug line-clamp-2 group-hover:text-accent transition-colors">
-                        {product.title}
+                        <a
+                          href={productHref(product.id)}
+                          onClick={(e) => {
+                            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                            e.preventDefault();
+                            handleProductClick(product);
+                          }}
+                          className="rounded-md cursor-pointer after:absolute after:inset-0 after:rounded-2xl after:content-['']"
+                        >
+                          {product.title}
+                        </a>
                       </p>
                       <div className="flex items-center gap-1.5 min-w-0 text-[11px] text-[#4E5C70] font-medium">
                         <span className="truncate">{product.categoryLabel}</span>
-                        {product.badge && (
-                          <span className={`text-[11px] font-extrabold ${photoBadgeClass(product.badge)} px-1.5 py-0.5 rounded-md shrink-0`}>
-                            {product.badge}
+                        {shownBadge(product) && (
+                          <span className={`text-[11px] font-extrabold ${photoBadgeClass(shownBadge(product)!)} px-1.5 py-0.5 rounded-md shrink-0`}>
+                            {shownBadge(product)}
                           </span>
                         )}
                       </div>
                       <div className="flex items-baseline gap-1.5 flex-wrap">
-                        <span className="text-xs font-extrabold text-[#2D3A4E]">{product.price.toLocaleString('ru-RU')} ₽</span>
-                        {product.originalPrice && (
+                        <span className="text-xs font-extrabold text-[#2D3A4E]">{buyerPrice(product).toLocaleString('ru-RU')} ₽</span>
+                        {shownOldPrice(product) !== null && (
                           <span className="text-[11px] text-[#4E5C70] line-through">
-                            {product.originalPrice.toLocaleString('ru-RU')} ₽
+                            {shownOldPrice(product)!.toLocaleString('ru-RU')} ₽
                           </span>
                         )}
                         <RatingBadge rating={getProductRating(product)?.rating} className="ml-auto" />

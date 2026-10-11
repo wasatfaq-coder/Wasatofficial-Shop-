@@ -1,6 +1,6 @@
 import React from 'react';
 import type { User } from 'firebase/auth';
-import type { ActiveTab, Order, UserProfile } from '../types';
+import type { Order, UserProfile } from '../types';
 import type { ToastMessage } from '../components/Toast';
 import {
   playNotificationChime,
@@ -16,14 +16,15 @@ type OrderNotificationOptions = {
   currentUser: User | null;
   userProfile: UserProfile;
   setToasts: React.Dispatch<React.SetStateAction<ToastMessage[]>>;
-  setActiveTab: (tab: ActiveTab) => void;
+  /** «Смотреть статус»: the profile with this order's tracking open (App keeps the order until the profile shows it) */
+  onOpenOrder: (orderId: string) => void;
 };
 
 /**
  * No push server: while the site is open, a change of the customer's order (status, cancellation, tracking number,
  * checked receipt) plays a chime, shows a system notification (if allowed) and a toast «Смотреть статус».
  */
-export function useOrderNotifications({ orders, isAdmin, currentUser, userProfile, setToasts, setActiveTab }: OrderNotificationOptions) {
+export function useOrderNotifications({ orders, isAdmin, currentUser, userProfile, setToasts, onOpenOrder }: OrderNotificationOptions) {
   // Order status changes push notification watcher
   const previousOrdersMapRef = React.useRef<
     Map<string, { status: Order['status']; isCancelled?: boolean; trackingNumber?: string; paymentStatus?: Order['paymentStatus'] }>
@@ -66,16 +67,9 @@ export function useOrderNotifications({ orders, isAdmin, currentUser, userProfil
         duration: 7000,
         action: {
           label: 'Смотреть статус',
-          onClick: () => {
-            setActiveTab('profile');
-            setTimeout(() => {
-              window.dispatchEvent(
-                new CustomEvent('manstyle_open_order_tracking', {
-                  detail: { orderId: order.id },
-                })
-              );
-            }, 100);
-          },
+          // not an event after a timer: the profile is loaded on demand and shown after the screen's animation, so
+          // its listener was not there yet (audit 07.10, finding 23)
+          onClick: () => onOpenOrder(order.id),
         },
       },
     ]);

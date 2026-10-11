@@ -27,8 +27,12 @@ export default defineConfig({
     { name: 'seed', testMatch: 'setup/seed.setup.ts' },
     { name: 'phone', testDir: 'tests/e2e/shop', use: phone, dependencies: ['seed'] },
     { name: 'desktop', testDir: 'tests/e2e/shop', use: desktop, dependencies: ['seed'] },
+    // orders through the placeOrder function (functions emulator): «Проверка заказов на сервере» switches the whole shop,
+    // so these run after the browser-order scenarios (audit 07.10, finding 43)
+    { name: 'server-phone', testDir: 'tests/e2e/server', use: phone, dependencies: ['phone', 'desktop'] },
+    { name: 'server-desktop', testDir: 'tests/e2e/server', use: desktop, dependencies: ['phone', 'desktop'] },
     // the empty shop runs after the rest: it clears the same database
-    { name: 'clear', testMatch: 'setup/clear.setup.ts', dependencies: ['phone', 'desktop'] },
+    { name: 'clear', testMatch: 'setup/clear.setup.ts', dependencies: ['server-phone', 'server-desktop'] },
     { name: 'empty-phone', testDir: 'tests/e2e/empty', use: phone, dependencies: ['clear'] },
     { name: 'empty-desktop', testDir: 'tests/e2e/empty', use: desktop, dependencies: ['clear'] },
   ],

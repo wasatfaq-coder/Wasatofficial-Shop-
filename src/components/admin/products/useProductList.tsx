@@ -2,12 +2,15 @@ import { useState, useMemo } from 'react';
 import { Tag } from 'lucide-react';
 import { Product } from '../../../types';
 import { isHiddenFromSale } from '../../../utils/inventory';
+import { isWholesaleListed } from '../../../utils/wholesaleOffer';
+import type { BulkTab } from '../AdminBulkOperationsModal';
 
 import type { AdminProductsTabProps, ProductCategoryOption } from '../AdminProductsTab';
 
 /**
- * The admin's product list: search, filters, selection and bulk actions (stock, category, discount, delete), and which
- * product the quick view or the delete confirmation shows. Writes go through `onUpdateProducts`.
+ * The admin's product list: search, filters, selection and bulk actions (on sale or not, the bulk window on one of its
+ * tabs, delete), and which product the quick view, the quick price or stock edit or the delete confirmation shows.
+ * Writes go through `onUpdateProducts`.
  */
 export function useProductList(
   products: Product[],
@@ -20,16 +23,22 @@ export function useProductList(
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [stockFilter, setStockFilter] = useState<'all' | 'in_stock' | 'out_of_stock'>('all');
+  /** «Опт»: only products offered wholesale (stages 16–17 of docs/admin-wholesale-plan.md) */
+  const [wholesaleFilter, setWholesaleFilter] = useState(false);
 
   // Selection & Bulk
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [isBulkOperationsModalOpen, setIsBulkOperationsModalOpen] = useState(false);
-  const [isBulkDiscountModalOpen, setIsBulkDiscountModalOpen] = useState(false);
-  const [bulkDiscountPercent, setBulkDiscountPercent] = useState<number>(15);
-  const [isBulkCategoryDropdownOpen, setIsBulkCategoryDropdownOpen] = useState(false);
+  /** The tab the bulk window opens on: the «Ещё» item of the selection bar */
+  const [bulkTab, setBulkTab] = useState<BulkTab>('discounts');
+  /** «Снять с продажи» / «В продажу» on its way: a second press would write twice */
+  const [isBulkSaving, setIsBulkSaving] = useState(false);
 
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [productToInspect, setProductToInspect] = useState<Product | null>(null);
+  /** The quick price and stock edits of one row (finding 28): the id, the product itself is taken fresh from the list */
+  const [priceEditId, setPriceEditId] = useState<string | null>(null);
+  const [stockEditId, setStockEditId] = useState<string | null>(null);
   const [isCSVImportModalOpen, setIsCSVImportModalOpen] = useState(false);
 
   // Filtered Products
@@ -50,9 +59,9 @@ export function useProductList(
           ? !isHiddenFromSale(p)
           : isHiddenFromSale(p);
 
-      return matchesSearch && matchesCat && matchesStock;
+      return matchesSearch && matchesCat && matchesStock && (!wholesaleFilter || isWholesaleListed(p));
     });
-  }, [products, searchQuery, categoryFilter, stockFilter]);
+  }, [products, searchQuery, categoryFilter, stockFilter, wholesaleFilter]);
 
   const isAllFilteredSelected =
     filteredProducts.length > 0 &&
@@ -110,62 +119,42 @@ export function useProductList(
     );
   };
 
-  // Bulk Operations
-  const handleBulkToggleStock = (inStock: boolean) => {
+  // Bulk Operations: the toast and the cleared selection only after the database answered — on a refusal `persist`
+  // shows «Не сохранено», and the selection stays for another try (audit 09.10, finding 3)
+  const saveProducts = async (updated: Product[]) => (await onUpdateProducts(updated)) !== false;
+
+  const handleBulkToggleStock = async (inStock: boolean) => {
+    if (isBulkSaving) return;
     const updated = products.map((p) =>
       selectedProductIds.includes(p.id) ? { ...p, inStock, hiddenFromSale: !inStock } : p
     );
-    onUpdateProducts(updated);
+    const count = selectedProductIds.length;
+    setIsBulkSaving(true);
+    const saved = await saveProducts(updated);
+    setIsBulkSaving(false);
+    if (!saved) return;
     onShowToast(
       inStock
-        ? `Товары (${selectedProductIds.length}) возвращены в продажу`
-        : `Товары (${selectedProductIds.length}) сняты с продажи`,
+        ? `Товары (${count}) возвращены в продажу`
+        : `Товары (${count}) сняты с продажи`,
       'info'
     );
     setSelectedProductIds([]);
   };
 
-  const handleBulkChangeCategory = (newCat: string) => {
-    const catObj = CATEGORY_OPTIONS.find((c) => c.id === newCat);
-    const updated = products.map((p) =>
-      selectedProductIds.includes(p.id)
-        ? { ...p, category: newCat, categoryLabel: catObj?.name || p.categoryLabel || newCat }
-        : p
-    );
-    onUpdateProducts(updated);
-    onShowToast(`Категория обновлена для ${selectedProductIds.length} товаров на "${catObj?.name || newCat}"`, 'success');
-    setSelectedProductIds([]);
-    setIsBulkCategoryDropdownOpen(false);
+  const openBulkOperations = (tab: BulkTab) => {
+    setBulkTab(tab);
+    setIsBulkOperationsModalOpen(true);
   };
 
-  const handleBulkApplyDiscount = () => {
-    if (!bulkDiscountPercent || bulkDiscountPercent <= 0) return;
-    const factor = (100 - bulkDiscountPercent) / 100;
-    const updated = products.map((p) => {
-      if (!selectedProductIds.includes(p.id)) return p;
-      const orig = p.originalPrice || p.price;
-      const newPrice = Math.round(orig * factor);
-      return {
-        ...p,
-        originalPrice: orig,
-        price: newPrice,
-        badge: `-${bulkDiscountPercent}%`,
-      };
-    });
-    onUpdateProducts(updated);
-    onShowToast(`Скидка ${bulkDiscountPercent}% применена к ${selectedProductIds.length} товарам`, 'success');
-    setIsBulkDiscountModalOpen(false);
-    setSelectedProductIds([]);
-  };
-
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (selectedProductIds.length === 0) return;
     const count = selectedProductIds.length;
     const updated = products.filter((p) => !selectedProductIds.includes(p.id));
     if (productToInspect && selectedProductIds.includes(productToInspect.id)) {
       setProductToInspect(null);
     }
-    onUpdateProducts(updated);
+    if (!(await saveProducts(updated))) return;
     onShowToast(`Удалено товаров: ${count}`, 'info');
     setSelectedProductIds([]);
   };
@@ -179,20 +168,23 @@ export function useProductList(
     setCategoryFilter,
     stockFilter,
     setStockFilter,
+    wholesaleFilter,
+    setWholesaleFilter,
     selectedProductIds,
     setSelectedProductIds,
     isBulkOperationsModalOpen,
     setIsBulkOperationsModalOpen,
-    isBulkDiscountModalOpen,
-    setIsBulkDiscountModalOpen,
-    bulkDiscountPercent,
-    setBulkDiscountPercent,
-    isBulkCategoryDropdownOpen,
-    setIsBulkCategoryDropdownOpen,
+    bulkTab,
+    openBulkOperations,
+    isBulkSaving,
     productToDelete,
     setProductToDelete,
     productToInspect,
     setProductToInspect,
+    priceEditId,
+    setPriceEditId,
+    stockEditId,
+    setStockEditId,
     isCSVImportModalOpen,
     setIsCSVImportModalOpen,
     filteredProducts,
@@ -201,8 +193,6 @@ export function useProductList(
     handleToggleSelectAll,
     handleToggleSelectOne,
     handleBulkToggleStock,
-    handleBulkChangeCategory,
-    handleBulkApplyDiscount,
     handleBulkDelete,
   };
 }

@@ -26,7 +26,7 @@ interface AdminSupportInboxProps {
   /** Opened from an order in «Заказы»: select that customer's dialog */
   initialOrderId?: string | null;
   onSend: (thread: { threadId: string; threadName: string }, payload: AdminChatPayload) => void;
-  onUpdateOrders?: (orders: Order[]) => void;
+  onUpdateOrders?: (orders: Order[]) => Promise<boolean> | void;
   /** «Подтвердить оплату» / «Отклонить чек» on a receipt photo («Доработки 5») */
   onReviewReceipt?: ReviewReceipt;
   onClearThread: (threadId: string | null) => void;
@@ -216,9 +216,10 @@ export const AdminSupportInbox: React.FC<AdminSupportInboxProps> = ({
           meta={activeThread.threadId ? threadMeta[activeThread.threadId] : undefined}
           onUpdateMeta={(patch) => {
             if (!activeThread.threadId) return;
-            saveSupportThreadMeta(activeThread.threadId, patch).catch(() =>
-              onShowToast('Не удалось сохранить статус диалога', 'error')
-            );
+            saveSupportThreadMeta(activeThread.threadId, patch).catch((err) => {
+              console.error('Dialog status was not saved:', err);
+              onShowToast('Не удалось сохранить статус диалога', 'error');
+            });
           }}
           orders={activeThread.threadId ? orders.filter((o) => o.customerUid === activeThread.threadId) : []}
           allOrders={orders}

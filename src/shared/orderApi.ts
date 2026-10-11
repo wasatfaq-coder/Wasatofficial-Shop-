@@ -42,6 +42,8 @@ export interface PlaceOrderItem {
   color: string;
   size: string;
   quantity: number;
+  /** The buyer chose the wholesale price (src/shared/wholesalePricing.ts); the server counts the price itself */
+  wholesale?: boolean;
 }
 
 export interface PlaceOrderRequest {

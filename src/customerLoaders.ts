@@ -17,6 +17,9 @@ export const loadSizeCalculatorModal = () => import('./components/SizeCalculator
 export const loadQuickViewModal = () => import('./components/QuickViewModal');
 export const loadProductImageZoomModal = () => import('./components/ProductImageZoomModal');
 export const loadQuickOrderModal = () => import('./components/QuickOrderModal');
+// the review form uses NeumorphicSelect (Base UI): loaded when «Написать отзыв» is pointed at or pressed, not in idle
+// time — few customers write a review (audit 07.10, finding 32)
+export const loadReviewFormModal = () => import('./components/ReviewFormModal');
 
 const ALL = [
   loadCheckoutScreen,

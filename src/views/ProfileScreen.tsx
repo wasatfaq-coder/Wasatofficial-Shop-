@@ -23,6 +23,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { LoadFailedNotice } from '../components/LoadFailedNotice';
 import {
   UserProfile,
   Order,
@@ -39,6 +40,7 @@ import {
   PaymentKind,
 } from '../types';
 import type { LegalDocId } from '../utils/legalDocs';
+import type { ExchangeRates } from '../utils/currencyPricing';
 import type { ChatMessageChange } from '../utils/firebaseSync';
 import { isNotificationSupported, requestNotificationPermission, showSystemNotification } from '../utils/pushNotifications';
 import { NeumorphicSwitch } from '../components/NeumorphicSwitch';
@@ -63,7 +65,8 @@ export interface ProfileScreenProps {
   orders: Order[];
   products?: Product[];
   favoritesCount: number;
-  onUpdateProfile: (updated: UserProfile) => void;
+  /** true once saved (finding 13): the forms close and say «Сохранено» only then */
+  onUpdateProfile: (updated: UserProfile) => Promise<boolean>;
   setActiveTab: (tab: ActiveTab) => void;
   onRepeatOrder?: (items: CartItem[]) => void;
   /** The buyer cancels their own order (App.tsx: cancellation, then the goods back to stock) */
@@ -82,7 +85,7 @@ export interface ProfileScreenProps {
   /** Resolves to false when the database refused the write (the error toast is already shown) */
   onUpdatePromos?: (promos: PromoCode[]) => Promise<boolean> | void;
   bannerSlides?: BannerSlide[];
-  onUpdateBannerSlides?: (banners: BannerSlide[]) => void;
+  onUpdateBannerSlides?: (banners: BannerSlide[]) => Promise<boolean> | void;
   chatMessages?: ChatMessage[];
   onSendMessageAsAdmin?: (
     text: string,
@@ -102,10 +105,16 @@ export interface ProfileScreenProps {
   onUpdateStorefrontSettings?: SaveStorefrontSettings;
   /** Admin → «Документы»: the store's edition of the offer / policy, null — the template */
   onSaveLegalText?: (id: LegalDocId, text: string | null) => Promise<boolean>;
+  /** «Курсы и наценка» → «Применить»: rates and recalculated products in one save */
+  onApplyExchangeRates?: (rates: ExchangeRates, repriced: Product[]) => Promise<boolean>;
   deliveryMethods?: DeliveryMethod[];
-  onUpdateDeliveryMethods?: (methods: DeliveryMethod[]) => void;
+  onUpdateDeliveryMethods?: (methods: DeliveryMethod[]) => Promise<boolean> | void;
   pickupPoints?: PickupPoint[];
-  onUpdatePickupPoints?: (points: PickupPoint[]) => void;
+  onUpdatePickupPoints?: (points: PickupPoint[]) => Promise<boolean> | void;
+  /** «Смотреть статус» in an order notification: this order's tracking opens (App keeps it until then) */
+  openOrderId?: string | null;
+  /** The order asked for in `openOrderId` is open: App forgets it */
+  onOrderOpened?: () => void;
 }
 
 /** Admin panel section for this browser session (internal key, not renamed) */
@@ -137,12 +146,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   storefrontSettings,
   onUpdateStorefrontSettings,
   onSaveLegalText,
+  onApplyExchangeRates,
   deliveryMethods,
   onUpdateDeliveryMethods,
   pickupPoints,
   onUpdatePickupPoints,
+  openOrderId = null,
+  onOrderOpened,
 }) => {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   // Фамилия, имя, отчество (owner's request 02.10); an old single name is split into parts for the buyer to check
   const [lastName, setLastName] = useState(() => namePartsOf(profile).lastName || '');
   const [firstName, setFirstName] = useState(() => namePartsOf(profile).firstName || '');
@@ -156,8 +169,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     'orders' | 'addresses' | 'support' | 'faq' | 'admin' | 'security' | null
   >(null);
 
-  // Keep local state in sync if prop changes
+  // Keep local state in sync if prop changes — not while the form is open: a refused save puts the profile back, and
+  // the form keeps what was typed (finding 13)
   React.useEffect(() => {
+    if (isEditingProfile) return;
     const parts = namePartsOf(profile);
     setLastName(parts.lastName || '');
     setFirstName(parts.firstName || '');
@@ -165,10 +180,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     setEmail(profile.email);
     setPhone(profile.phone);
     setNotifications(profile.notificationsEnabled);
-  }, [profile.name, profile.lastName, profile.firstName, profile.middleName, profile.email, profile.phone, profile.notificationsEnabled]);
+  }, [isEditingProfile, profile.name, profile.lastName, profile.firstName, profile.middleName, profile.email, profile.phone, profile.notificationsEnabled]);
 
   // Admin Authentication & Credentials State
-  const { currentUser, logoutUser, isAdmin: isFirebaseAdmin } = useAuth();
+  const { currentUser, logoutUser, isAdmin: isFirebaseAdmin, adminCheckFailed } = useAuth();
   // «Мои заказы» of the admin are their own, not every order of the shop the admin panel gets (docs/orders-scale-plan.md,
   // finding 5)
   const ownOrders = useMemo(
@@ -206,9 +221,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [adminTab, setAdminTab] = useState<AdminTab>(() => {
     try {
       const saved = sessionStorage.getItem(ADMIN_TAB_STORAGE_KEY);
-      return isAdminTab(saved) ? saved : 'analytics';
+      // «Ещё» is only a list: the panel opens on «Сегодня» instead
+      return isAdminTab(saved) && saved !== 'more' ? saved : 'today';
     } catch {
-      return 'analytics';
+      return 'today';
     }
   });
   useEffect(() => {
@@ -218,17 +234,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   }, [adminTab]);
   // Selected order IDs for detailed tracking & interactive delivery map
   const [selectedOrderIdForTracking, setSelectedOrderIdForTracking] = useState<string | null>(null);
-  // Listen for open order tracking events (from Push Notification click)
+  // «Смотреть статус» in an order notification: the order opens once the profile is on screen (finding 23)
   React.useEffect(() => {
-    const handleOpenTracking = (e: Event) => {
-      const customEvent = e as CustomEvent<{ orderId?: string }>;
-      if (customEvent.detail?.orderId) {
-        setSelectedOrderIdForTracking(customEvent.detail.orderId);
-      }
-    };
-    window.addEventListener('manstyle_open_order_tracking', handleOpenTracking);
-    return () => window.removeEventListener('manstyle_open_order_tracking', handleOpenTracking);
-  }, []);
+    if (!openOrderId) return;
+    setSelectedOrderIdForTracking(openOrderId);
+    onOrderOpened?.();
+  }, [openOrderId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addressBook = useAddressBook(profile, onUpdateProfile, onShowToast);
   const {
@@ -241,10 +252,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const measurementsForm = useMeasurementsForm(profile, onUpdateProfile, onShowToast);
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSavingProfile) return;
     const parts = { lastName: lastName.trim(), firstName: firstName.trim(), middleName: middleName.trim() };
-    onUpdateProfile({
+    setIsSavingProfile(true);
+    const saved = await onUpdateProfile({
       ...profile,
       ...parts,
       // The full name stays in `name`: «Клиенты», the chat and older screens read it
@@ -253,6 +266,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       phone,
       notificationsEnabled: notifications,
     });
+    setIsSavingProfile(false);
+    // not saved: the form stays with what was typed (the toast said why)
+    if (!saved) return;
     setIsEditingProfile(false);
     onShowToast('Профиль успешно обновлен', 'success');
   };
@@ -268,26 +284,29 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const notificationsOn =
     notifications !== false && (notificationPermission === 'granted' || notificationPermission === 'unsupported');
 
-  const saveNotifications = (enabled: boolean) => {
+  /** false — the profile did not save it: the switch goes back */
+  const saveNotifications = async (enabled: boolean): Promise<boolean> => {
+    const before = notifications;
     setNotifications(enabled);
-    onUpdateProfile({ ...profile, notificationsEnabled: enabled });
+    const saved = await onUpdateProfile({ ...profile, notificationsEnabled: enabled });
+    if (!saved) setNotifications(before);
+    return saved;
   };
 
   const toggleNotifications = async () => {
     if (notificationsOn) {
-      saveNotifications(false);
-      onShowToast('Уведомления о заказах выключены', 'info');
+      if (await saveNotifications(false)) onShowToast('Уведомления о заказах выключены', 'info');
       return;
     }
     if (!isNotificationSupported()) {
-      saveNotifications(true);
+      if (!(await saveNotifications(true))) return;
       onShowToast('Этот браузер не показывает системные уведомления: смена статуса будет видна на сайте, пока он открыт', 'info');
       return;
     }
     const perm = await requestNotificationPermission();
     setNotificationPermission(perm);
     if (perm === 'granted') {
-      saveNotifications(true);
+      if (!(await saveNotifications(true))) return;
       const shown = await showSystemNotification(currentStoreName(), { body: 'Уведомления о статусе заказов включены' });
       onShowToast(
         shown
@@ -414,14 +433,23 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
             <button
               type="submit"
-              className="w-full neu-button-accent text-white rounded-xl py-2.5 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+              disabled={isSavingProfile}
+              className="w-full neu-button-accent text-white rounded-xl py-2.5 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-wait"
             >
               <Check className="w-4 h-4" />
-              <span>Сохранить</span>
+              <span>{isSavingProfile ? 'Сохранение…' : 'Сохранить'}</span>
             </button>
           </form>
         )}
       </div>
+
+      {/* The rights were not read (finding 20): said here, where the admin entry would be; it appears once they are */}
+      {!isFirebaseAdmin && adminCheckFailed && (
+        <LoadFailedNotice
+          title="Не удалось проверить права доступа"
+          text="Если это аккаунт администратора, кнопка панели появится, когда база ответит. Проверьте соединение или обновите страницу."
+        />
+      )}
 
       {/* Admin entry at the top of the profile (it was at the very bottom); only for verified admins */}
       {isFirebaseAdmin && (
@@ -772,6 +800,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         onChangeChatMessage={onChangeChatMessage}
         onUpdateStorefrontSettings={onUpdateStorefrontSettings}
         onSaveLegalText={onSaveLegalText}
+        onApplyExchangeRates={onApplyExchangeRates}
         onUpdateDeliveryMethods={onUpdateDeliveryMethods}
         onUpdatePickupPoints={onUpdatePickupPoints}
       />

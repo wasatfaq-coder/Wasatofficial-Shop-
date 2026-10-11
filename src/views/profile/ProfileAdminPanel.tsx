@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, lazy, Suspense, useTransition } from 'react';
 import { IS_PREVIEW_BUILD } from '../../utils/previewBuild';
+import { useLoadFailed } from '../../utils/loadFailures';
+import { LoadFailedNotice } from '../../components/LoadFailedNotice';
 import { launchSteps } from '../../utils/launchChecklist';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import {
@@ -28,6 +30,7 @@ import {
   saveLocalPickupPoints,
 } from '../../data/deliveryData';
 import { getCategories } from '../../utils/categories';
+import { lowStockThresholdOf } from '../../utils/inventory';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { type AdminNavCounts, type AdminTab } from '../../components/admin/adminSections';
 import { loadAdminNav, prefetchAdmin, prefetchAllAdminWhenIdle } from '../../components/admin/adminLoaders';
@@ -37,10 +40,12 @@ import type { ProfileScreenProps } from '../ProfileScreen';
 
 
 // The admin panel is a separate chunk (its sections, Base UI, charts): customers do not download it
+const AdminTodayTab = lazy(() => import('../../components/admin/AdminTodayTab').then((m) => ({ default: m.AdminTodayTab })));
 const AdminAnalyticsTab = lazy(() => import('../../components/admin/AdminAnalyticsTab').then((m) => ({ default: m.AdminAnalyticsTab })));
 const AdminPromoConstructorTab = lazy(() => import('../../components/admin/AdminPromoConstructorTab').then((m) => ({ default: m.AdminPromoConstructorTab })));
 const AdminBannersTab = lazy(() => import('../../components/admin/AdminBannersTab').then((m) => ({ default: m.AdminBannersTab })));
 const AdminSupportInbox = lazy(() => import('../../components/admin/AdminSupportInbox').then((m) => ({ default: m.AdminSupportInbox })));
+const AdminRatesTab = lazy(() => import('../../components/admin/AdminRatesTab').then((m) => ({ default: m.AdminRatesTab })));
 const AdminInventoryTab = lazy(() => import('../../components/admin/AdminInventoryTab').then((m) => ({ default: m.AdminInventoryTab })));
 const AdminProductsTab = lazy(() => import('../../components/admin/AdminProductsTab').then((m) => ({ default: m.AdminProductsTab })));
 const AdminOrdersTab = lazy(() => import('../../components/admin/AdminOrdersTab').then((m) => ({ default: m.AdminOrdersTab })));
@@ -48,6 +53,9 @@ const AdminCustomersTab = lazy(() => import('../../components/admin/AdminCustome
 const AdminStorefrontTab = lazy(() => import('../../components/admin/AdminStorefrontTab').then((m) => ({ default: m.AdminStorefrontTab })));
 const BrandRenameCard = lazy(() => import('../../components/admin/BrandRenameCard').then((m) => ({ default: m.BrandRenameCard })));
 const AdminDeliveryTab = lazy(() => import('../../components/admin/AdminDeliveryTab').then((m) => ({ default: m.AdminDeliveryTab })));
+const AdminWholesaleTab = lazy(() =>
+  import('../../components/admin/AdminWholesaleTab').then((m) => ({ default: m.AdminWholesaleTab }))
+);
 const AdminFaqTab = lazy(() => import('../../components/admin/AdminFaqTab').then((m) => ({ default: m.AdminFaqTab })));
 const AdminLegalTab = lazy(() => import('../../components/admin/AdminLegalTab').then((m) => ({ default: m.AdminLegalTab })));
 const AdminPaymentTab = lazy(() => import('../../components/admin/AdminPaymentTab').then((m) => ({ default: m.AdminPaymentTab })));
@@ -76,6 +84,7 @@ type ProfileAdminPanelProps = Pick<
   | 'storefrontSettings'
   | 'onUpdateStorefrontSettings'
   | 'onSaveLegalText'
+  | 'onApplyExchangeRates'
   | 'deliveryMethods'
   | 'onUpdateDeliveryMethods'
   | 'pickupPoints'
@@ -94,7 +103,7 @@ type ProfileAdminPanelProps = Pick<
 };
 
 /**
- * The admin panel window: 4 groups of sections (each a separate chunk), unsaved edits asked about before closing or
+ * The admin panel window: «Сегодня» and the sections (each a separate chunk), unsaved edits asked about before closing or
  * switching, local copies of the lists the sections edit.
  */
 export const ProfileAdminPanel = ({
@@ -121,6 +130,7 @@ export const ProfileAdminPanel = ({
   onChangeChatMessage,
   onUpdateStorefrontSettings,
   onSaveLegalText,
+  onApplyExchangeRates,
   onUpdateDeliveryMethods,
   onUpdatePickupPoints,
 }: ProfileAdminPanelProps) => {
@@ -179,13 +189,13 @@ export const ProfileAdminPanel = ({
   const handleUpdateDeliveryMethodsList = (updated: DeliveryMethod[]) => {
     setLocalDeliveryMethods(updated);
     saveLocalDeliveryMethods(updated);
-    if (onUpdateDeliveryMethods) onUpdateDeliveryMethods(updated);
+    return onUpdateDeliveryMethods?.(updated);
   };
 
   const handleUpdatePickupPointsList = (updated: PickupPoint[]) => {
     setLocalPickupPoints(updated);
     saveLocalPickupPoints(updated);
-    if (onUpdatePickupPoints) onUpdatePickupPoints(updated);
+    return onUpdatePickupPoints?.(updated);
   };
 
   const handleUpdatePromosList = (updated: PromoCode[]) => {
@@ -195,12 +205,19 @@ export const ProfileAdminPanel = ({
 
   const handleUpdateBannersList = (updated: BannerSlide[]) => {
     setLocalBanners(updated);
-    if (onUpdateBannerSlides) onUpdateBannerSlides(updated);
+    return onUpdateBannerSlides?.(updated);
   };
 
+  // The list shows the change at once and goes back when the save was refused before writing (the catalog is still
+  // loading); a refusal of the database is undone by the next catalog snapshot
   const handleUpdateProductsList = (updated: Product[]) => {
+    const before = productsList;
     setProductsList(updated);
-    return onUpdateProducts?.(updated);
+    const saved = onUpdateProducts?.(updated);
+    void Promise.resolve(saved).then((ok) => {
+      if (ok === false) setProductsList((current) => (current === updated ? before : current));
+    });
+    return saved;
   };
 
   const handleUpdateOrders = (updated: Order[]) => onUpdateOrders?.(updated);
@@ -315,7 +332,7 @@ export const ProfileAdminPanel = ({
       support: { value: awaiting, label: 'ждут ответа' },
     };
   }, [isAdminOpen, orders, localChatMessages]);
-
+  const ordersLoadFailed = useLoadFailed('orders');
 
   return (
     <>
@@ -348,9 +365,9 @@ export const ProfileAdminPanel = ({
               className="neu-modal rounded-none sm:rounded-3xl p-3 sm:p-6 max-w-5xl lg:max-w-none w-full sm:my-auto space-y-3 sm:space-y-4 h-[100dvh] sm:h-auto max-h-none sm:max-h-[92vh] lg:max-h-none lg:h-[calc(100vh-2rem)] flex flex-col sm:border border-white/80 text-[#2D3A4E] min-w-0 overflow-hidden relative z-10"
             >
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3 shrink-0 gap-2">
+            <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-2 sm:pb-3 shrink-0 gap-2">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
+                <div className="hidden sm:flex w-9 h-9 rounded-xl neu-flat-sm items-center justify-center text-accent shrink-0">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
@@ -366,7 +383,7 @@ export const ProfileAdminPanel = ({
                   {IS_PREVIEW_BUILD ? (
                     <p className="text-xs font-bold text-warning">Проверочная версия: изменения попадут в настоящий магазин</p>
                   ) : (
-                    <p className="text-xs font-medium text-[#4E5C70] truncate">Каталог, склад, заказы и витрина</p>
+                    <p className="hidden sm:block text-xs font-medium text-[#4E5C70] truncate">Каталог, склад, заказы и витрина</p>
                   )}
                 </div>
               </div>
@@ -384,7 +401,16 @@ export const ProfileAdminPanel = ({
               </div>
             </div>
 
-            {/* 4 groups → sections → the section; forms report unsaved edits to the panel */}
+            {/* the orders subscription failed: «Заказы», «Клиенты» and «Аналитика» would look empty (finding 15) */}
+            {ordersLoadFailed && (
+              <LoadFailedNotice
+                className="shrink-0"
+                title="Не удалось загрузить заказы"
+                text="«Заказы», «Клиенты» и «Аналитика» сейчас могут быть пустыми или неполными. Проверьте соединение и обновите страницу."
+              />
+            )}
+
+            {/* «Сегодня» and the sections (menu variant A); forms report unsaved edits to the panel */}
             <UnsavedChangesContext.Provider value={unsavedRegistry}>
             <Suspense fallback={<AdminLoading />}>
             <AdminNav
@@ -404,15 +430,26 @@ export const ProfileAdminPanel = ({
                   transition={{ duration: 0.15, ease: 'easeOut' }}
                   className="w-full"
                 >
+              {/* «Сегодня»: what waits for the owner, the launch steps first while the store is not ready */}
+              {adminTab === 'today' && (
+                <AdminTodayTab
+                  orders={orders}
+                  chatMessages={localChatMessages}
+                  products={productsList}
+                  lowStockThreshold={lowStockThresholdOf(storefrontSettings)}
+                  launchSteps={launchSteps(productsList, localDeliveryMethods, storefrontSettings)}
+                  onOpenTab={requestAdminTab}
+                />
+              )}
+
               {/* --- TAB 1: ANALYTICS & FINANCIAL DASHBOARD --- */}
               {adminTab === 'analytics' && (
                 <AdminAnalyticsTab
                   orders={orders}
+                  products={productsList}
                   promos={localPromos}
                   onShowToast={onShowToast}
                   onSelectOrder={(ord) => setSelectedOrderIdForTracking(ord.id)}
-                  launchSteps={launchSteps(productsList, localDeliveryMethods, storefrontSettings)}
-                  onOpenTab={requestAdminTab}
                 />
               )}
 
@@ -423,6 +460,7 @@ export const ProfileAdminPanel = ({
                   products={productsList}
                   onUpdateProducts={handleUpdateProductsList}
                   onShowToast={onShowToast}
+                  lowStockThreshold={lowStockThresholdOf(storefrontSettings)}
                 />
               )}
 
@@ -430,13 +468,38 @@ export const ProfileAdminPanel = ({
               {adminTab === 'inventory' && (
                 <AdminInventoryTab
                   products={productsList}
-                  onUpdateProducts={(upd) => {
-                    setProductsList(upd);
-                    if (onUpdateProducts) onUpdateProducts(upd);
-                  }}
+                  onUpdateProducts={handleUpdateProductsList}
                   onShowToast={onShowToast}
                   settings={storefrontSettings}
                   onUpdateSettings={onUpdateStorefrontSettings}
+                />
+              )}
+
+              {adminTab === 'wholesale' && (
+                <AdminWholesaleTab
+                  settings={storefrontSettings}
+                  onUpdateSettings={onUpdateStorefrontSettings}
+                  products={productsList}
+                  onShowToast={onShowToast}
+                />
+              )}
+
+              {adminTab === 'rates' && (
+                <AdminRatesTab
+                  products={productsList}
+                  onApply={
+                    onApplyExchangeRates &&
+                    (async (rates, repriced) => {
+                      const ok = await onApplyExchangeRates(rates, repriced);
+                      // the list shows new prices only once they are saved (refused or failed — the old ones stay)
+                      if (ok) {
+                        const byId = new Map(repriced.map((p) => [p.id, p]));
+                        setProductsList((list) => list.map((p) => byId.get(p.id) ?? p));
+                      }
+                      return ok;
+                    })
+                  }
+                  onShowToast={onShowToast}
                 />
               )}
 

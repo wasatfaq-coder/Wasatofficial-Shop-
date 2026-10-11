@@ -2,7 +2,7 @@ import React from 'react';
 import { Flame } from 'lucide-react';
 import { DailyDataPoint } from '../../utils/analyticsEngine';
 
-type ActiveMetricType = 'revenue' | 'orders' | 'returns' | 'avgCheck';
+type ActiveMetricType = 'revenue' | 'orders' | 'returns' | 'avgCheck' | 'cogs' | 'netProfit';
 
 interface AdminChartNeumorphicTooltipProps {
   active?: boolean;
@@ -17,9 +17,11 @@ const METRIC_TITLE: Record<ActiveMetricType, string> = {
   orders: 'Заказы',
   avgCheck: 'Средний чек',
   returns: 'Отмены',
+  cogs: 'Закупка',
+  netProfit: 'Чистый доход',
 };
 
-const rub = (value: number) => `${value.toLocaleString('ru-RU')} ₽`;
+const rub = (value: number) => `${value < 0 ? '−' : ''}${Math.abs(value).toLocaleString('ru-RU')} ₽`;
 
 /**
  * Compact tooltip of a chart point: date, the selected metric and a one-line summary.
@@ -35,7 +37,7 @@ export const AdminChartNeumorphicTooltip: React.FC<AdminChartNeumorphicTooltipPr
   if (!active || !data) return null;
 
   const value = data[activeMetric] ?? 0;
-  const formatted = activeMetric === 'revenue' || activeMetric === 'avgCheck' ? rub(value) : `${value} шт.`;
+  const formatted = activeMetric === 'orders' || activeMetric === 'returns' ? `${value} шт.` : rub(value);
 
   return (
     <div

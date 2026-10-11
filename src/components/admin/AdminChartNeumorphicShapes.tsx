@@ -118,17 +118,20 @@ interface NeumorphicBarShapeProps {
 export const NeumorphicBarShape: React.FC<NeumorphicBarShapeProps> = (props) => {
   const {
     x = 0,
-    y = 0,
+    y: rawY = 0,
     width = 0,
-    height = 0,
+    height: rawHeight = 0,
     payload,
     selectedDate,
     activeMetric = 'revenue',
     isPrevious = false,
   } = props;
 
-  // Don't render zero or negative height
-  if (height <= 0 || width <= 0) return null;
+  // A value below zero (a loss in «Чистый доход») comes as a negative height: drawn down from the zero line
+  const isNegative = rawHeight < 0;
+  const height = Math.abs(rawHeight);
+  const y = isNegative ? rawY + rawHeight : rawY;
+  if (height === 0 || width <= 0) return null;
 
   const isSelected = selectedDate && payload?.date === selectedDate;
   const isPeak = payload?.isPeakDay && activeMetric === 'revenue';
@@ -140,9 +143,11 @@ export const NeumorphicBarShape: React.FC<NeumorphicBarShapeProps> = (props) => 
   let barGradient = 'url(#neu-bar-indigo-convex)';
   if (isPrevious) {
     barGradient = 'url(#neu-bar-prev-convex)';
-  } else if (activeMetric === 'orders') {
+  } else if (isNegative) {
+    barGradient = 'url(#neu-bar-amber-convex)';
+  } else if (activeMetric === 'orders' || activeMetric === 'netProfit') {
     barGradient = 'url(#neu-bar-emerald-convex)';
-  } else if (activeMetric === 'avgCheck') {
+  } else if (activeMetric === 'avgCheck' || activeMetric === 'cogs') {
     barGradient = 'url(#neu-bar-sky-convex)';
   } else if (activeMetric === 'returns') {
     barGradient = 'url(#neu-bar-amber-convex)';
@@ -289,7 +294,10 @@ interface NeumorphicAxisTickProps {
   };
   index?: number;
   selectedDate?: string | null;
-  period?: string;
+  /** Months: one line («ОКТ»); days and weeks: the number over the weekday or month */
+  grouping?: 'day' | 'week' | 'month';
+  /** Many bars: a smaller label */
+  dense?: boolean;
   dailyData?: DailyDataPoint[];
 }
 
@@ -300,7 +308,7 @@ interface NeumorphicAxisTickProps {
  * Also highlights the selected or peak day with a soft neumorphic pill.
  */
 export const NeumorphicAxisTick: React.FC<NeumorphicAxisTickProps> = (props) => {
-  const { x = 0, y = 0, payload, index, selectedDate, period = '7d', dailyData = [] } = props;
+  const { x = 0, y = 0, payload, index, selectedDate, grouping = 'day', dense = false, dailyData = [] } = props;
   const rawValue = String(payload?.value || '');
 
   // Retrieve associated day point from data array
@@ -328,7 +336,7 @@ export const NeumorphicAxisTick: React.FC<NeumorphicAxisTickProps> = (props) => 
       secondaryText = spaceParts[1];             // "сен"
     }
   } else if (dayPoint) {
-    if (period === '6m' || period === '1y') {
+    if (grouping === 'month') {
       primaryText = dayPoint.label;
       secondaryText = '';
     } else {
@@ -377,7 +385,7 @@ export const NeumorphicAxisTick: React.FC<NeumorphicAxisTickProps> = (props) => 
         y={secondaryText ? 12 : 12}
         textAnchor="middle"
         fill={textColor}
-        fontSize={period === '30d' ? 10 : 11}
+        fontSize={dense ? 10 : 11}
         fontWeight={isSelected ? 900 : 800}
         className="tracking-tight"
       >

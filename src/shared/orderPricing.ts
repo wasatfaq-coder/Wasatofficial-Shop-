@@ -3,6 +3,8 @@
  * (server-side order validation). Keep this module free of browser APIs.
  */
 import type { AppliedPromoInfo, CartItem, DeliveryMethod, PromoCode, StorefrontSettings } from '../types';
+import { linePrice } from './orderLine';
+import { isWholesaleLine } from './wholesalePricing';
 
 /** Delivery method id used by the one-click "quick order" flow (no fee, no promo). */
 export const QUICK_ORDER_DELIVERY_ID = 'quick-order';
@@ -23,6 +25,11 @@ export interface PricingLine {
   category?: string;
   price: number;
   quantity: number;
+  /**
+   * A wholesale line (src/shared/wholesalePricing.ts): its price is already lowered, so no promo applies to it and it
+   * does not count toward a promo's minimum order amount
+   */
+  wholesale?: boolean;
 }
 
 /** The promo fields pricing needs; satisfied by both PromoCode and AppliedPromoInfo. */
@@ -34,12 +41,13 @@ export type PromoForPricing = Pick<
 type DeliverySettings = Pick<StorefrontSettings, 'freeDeliveryThreshold' | 'isExpressEnabled'>;
 
 /** A storefront cart line as the pricing sees it */
-export function toPricingLine(item: Pick<CartItem, 'product' | 'quantity'>): PricingLine {
+export function toPricingLine(item: Pick<CartItem, 'product' | 'quantity' | 'unitPrice' | 'priceKind'>): PricingLine {
   return {
     productId: item.product.id,
     category: item.product.category,
-    price: item.product.price,
+    price: linePrice(item),
     quantity: item.quantity,
+    ...(isWholesaleLine(item) ? { wholesale: true } : {}),
   };
 }
 
@@ -51,8 +59,17 @@ function isRestricted(promo: Partial<PromoForPricing>): boolean {
   return Boolean(promo.applicableProductIds?.length || promo.applicableCategories?.length);
 }
 
-/** Subtotal of the lines a promo applies to (all lines for unrestricted promos). */
-function calcEligibleSubtotal(lines: PricingLine[], promo: Partial<PromoForPricing>): number {
+/** The lines a promo may touch: retail only — wholesale prices are already lowered (owner's decision 09.10) */
+const retailLines = (lines: PricingLine[]) => lines.filter((l) => !l.wholesale);
+
+/** Subtotal of the retail lines: what a promo's minimum order amount is compared with */
+export function calcRetailSubtotal(lines: PricingLine[]): number {
+  return calcSubtotal(retailLines(lines));
+}
+
+/** Subtotal of the lines a promo applies to (all retail lines for unrestricted promos). */
+function calcEligibleSubtotal(allLines: PricingLine[], promo: Partial<PromoForPricing>): number {
+  const lines = retailLines(allLines);
   if (promo.applicableProductIds && promo.applicableProductIds.length > 0) {
     return calcSubtotal(lines.filter((l) => promo.applicableProductIds!.includes(l.productId)));
   }
@@ -77,7 +94,7 @@ export function promoDiscountKind(promo: Partial<PromoForPricing>): 'fixed' | 'p
  */
 export function calcPromoDiscount(lines: PricingLine[], promo: Partial<PromoForPricing> | null | undefined): number {
   if (!promo) return 0;
-  if (promo.minOrderAmount && calcSubtotal(lines) < promo.minOrderAmount) return 0;
+  if (promo.minOrderAmount && calcRetailSubtotal(lines) < promo.minOrderAmount) return 0;
   const base = calcEligibleSubtotal(lines, promo);
   if (promoDiscountKind(promo) === 'fixed' && promo.discountValue) {
     return Math.min(base, promo.discountValue);
@@ -126,6 +143,12 @@ export function promoExpiryTime(expiresAt: string | undefined | null): number | 
   return Date.UTC(y, m - 1, d + 1) - MSK_OFFSET_MS - 1;
 }
 
+/** The code's last day (Moscow time) has passed; a code without a date never expires */
+export function isPromoExpired(promo: Pick<PromoCode, 'expiresAt'>, now: number = Date.now()): boolean {
+  const end = promoExpiryTime(promo.expiresAt);
+  return end !== null && now > end;
+}
+
 /** «до 31.08.2026» for the customer and admin lists; text that is not a date is shown as written */
 export function formatPromoExpiry(expiresAt: string | undefined | null): string {
   const date = promoExpiryDate(expiresAt);
@@ -163,9 +186,13 @@ export function validatePromo(promo: PromoCode, lines: PricingLine[], now: numbe
   if (expiry !== null && expiry < now) {
     return `Срок действия промокода ${promo.code} истек`;
   }
-  const subtotal = calcSubtotal(lines);
+  if (lines.length > 0 && lines.every((l) => l.wholesale)) {
+    return WHOLESALE_NO_PROMO_TEXT;
+  }
+  const subtotal = calcRetailSubtotal(lines);
   if (promo.minOrderAmount && subtotal < promo.minOrderAmount) {
-    return `Минимальная сумма заказа для промокода ${promo.code}: ${promo.minOrderAmount.toLocaleString('ru-RU')} ₽ (в корзине: ${subtotal.toLocaleString('ru-RU')} ₽)`;
+    const where = lines.some((l) => l.wholesale) ? 'в рознице в корзине' : 'в корзине';
+    return `Минимальная сумма заказа для промокода ${promo.code}: ${promo.minOrderAmount.toLocaleString('ru-RU')} ₽ (${where}: ${subtotal.toLocaleString('ru-RU')} ₽)`;
   }
   if (lines.length > 0 && isRestricted(promo) && calcEligibleSubtotal(lines, promo) === 0) {
     return promo.applicableProductIds?.length
@@ -173,6 +200,24 @@ export function validatePromo(promo: PromoCode, lines: PricingLine[], now: numbe
       : `Промокод ${promo.code} действует только на выбранные категории (рубашки, пиджаки и др.)`;
   }
   return null;
+}
+
+export const WHOLESALE_NO_PROMO_TEXT = 'Промокоды не действуют на оптовые товары: оптовая цена уже снижена';
+
+/** A code with a usage limit (one-time, «первые N»): `usageLimit` above 0, as the rules count it (`withinUsageLimit`) */
+export function isLimitedPromo(promo: Pick<PromoCode, 'usageLimit'>): boolean {
+  return typeof promo.usageLimit === 'number' && promo.usageLimit > 0;
+}
+
+export const PROMO_NEEDS_GOOGLE_TEXT = 'Код действует только после входа через Google';
+
+/**
+ * A code with a limit is applied only by a buyer signed in with Google (owner's decision 08.10, audit 07.10, finding 9):
+ * anonymous sign-ins are free, and fake orders from them burned the limit. Codes without a limit work for guests.
+ * Returns the reason for the buyer, or null
+ */
+export function promoSignInProblem(promo: Pick<PromoCode, 'usageLimit'>, signedInWithGoogle: boolean): string | null {
+  return isLimitedPromo(promo) && !signedInWithGoogle ? PROMO_NEEDS_GOOGLE_TEXT : null;
 }
 
 /** The applied promo as the cart keeps it: the code's values from «Промокоды» */

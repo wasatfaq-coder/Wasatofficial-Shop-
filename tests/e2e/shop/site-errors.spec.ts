@@ -1,6 +1,6 @@
 // Ошибка на экране покупателя попадает владельцу в «Аналитика» → «Ошибки на сайте» без почты покупателя
 // (docs/ops-plan.md, этап 2)
-import { test, expect } from '../fixtures';
+import { test, expect, openAdminSection } from '../fixtures';
 import { queryDocs } from '../emulator';
 import { ADMIN } from '../store';
 
@@ -25,8 +25,7 @@ test('владелец видит ошибку покупателя в «Оши�
   await signIn(ADMIN);
   await page.getByRole('button', { name: /^Панель администратора/ }).click();
   const panel = page.getByRole('dialog', { name: 'Панель администратора' });
-  await panel.getByRole('tab', { name: 'Продажи', exact: true }).click();
-  await panel.getByRole('tab', { name: 'Аналитика', exact: true }).click();
+  await openAdminSection(panel, 'Аналитика');
 
   const card = panel.getByRole('region', { name: 'Ошибки на сайте' });
   const report = card.getByRole('listitem').filter({ hasText: tag });

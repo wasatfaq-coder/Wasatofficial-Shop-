@@ -1,6 +1,6 @@
 // Владелец заводит товар на телефоне: состав и страна — нажатием на чипы, уход — значками с бирки, описание —
 // черновиком из характеристик (быстрое заведение товара, этапы 1–3, docs/fast-product-entry-spec.md)
-import { test, expect } from '../fixtures';
+import { test, expect, openAdminSection } from '../fixtures';
 import { queryDocs } from '../emulator';
 import { ADMIN } from '../store';
 
@@ -12,8 +12,7 @@ test('новый товар: состав и страна чипами, уход
   await signIn(ADMIN);
   await page.getByRole('button', { name: /^Панель администратора/ }).click();
   const panel = page.getByRole('dialog', { name: 'Панель администратора' });
-  await panel.getByRole('tab', { name: 'Каталог', exact: true }).click();
-  await panel.getByRole('tab', { name: 'Товары', exact: true }).click();
+  await openAdminSection(panel, 'Товары');
   await panel.getByRole('button', { name: 'Добавить товар' }).click();
 
   const form = page.getByRole('dialog', { name: 'Новый товар каталога' });
@@ -49,11 +48,11 @@ test('новый товар: состав и страна чипами, уход
   await page.getByRole('option', { name: 'Рубашка' }).click();
   const description = form.getByRole('textbox', { name: /^Описание товара/ });
   await description.fill('Базовая футболка на каждый день.');
-  await form.getByRole('button', { name: 'Черновик из характеристик' }).click();
+  await form.getByRole('button', { name: 'Черновик из характеристик', exact: true }).click();
   await expect(description).toHaveValue(
     'Базовая футболка на каждый день.\n\nСостав: 95% хлопок, 5% эластан. Страна производства — Турция.'
   );
-  await expect(form.getByRole('button', { name: 'Черновик из характеристик' })).toBeDisabled();
+  await expect(form.getByRole('button', { name: 'Черновик из характеристик', exact: true })).toBeDisabled();
   await form.getByRole('spinbutton', { name: /^Цена, ₽/ }).fill('1990');
   await form.getByRole('textbox', { name: 'Ссылка на фото' }).fill('https://img.test/new-tee.jpg');
   await form.getByRole('textbox', { name: 'Ссылка на фото' }).press('Enter');

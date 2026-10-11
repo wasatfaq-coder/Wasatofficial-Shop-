@@ -25,7 +25,8 @@ interface QuickTextEditModalProps {
   config: QuickEditFieldConfig | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (key: string, newValue: string) => void;
+  /** Resolves to false when the database refused: the window stays open with the typed value */
+  onSave: (key: string, newValue: string) => Promise<boolean> | void;
 }
 
 export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
@@ -59,12 +60,20 @@ export const QuickTextEditModal: React.FC<QuickTextEditModalProps> = ({
   useUnsavedChanges(isValueChanged, config?.title || 'Поле витрины');
   const guard = useDiscardGuard(isValueChanged, onClose);
   const dialog = useDialogA11y(isOpen && Boolean(config), guard.requestClose);
+  // A second «Сохранить» while the write is on its way would write twice
+  const saving = useRef(false);
 
   if (!isOpen || !config) return null;
 
-  const handleSave = () => {
-    onSave(config.key, currentValue);
-    onClose();
+  // Closes only after the database accepted the value (audit 09.10, stage 1): on a refusal the text stays to retry
+  const handleSave = async () => {
+    if (saving.current) return;
+    saving.current = true;
+    try {
+      if ((await onSave(config.key, currentValue)) !== false) onClose();
+    } finally {
+      saving.current = false;
+    }
   };
 
   const handleResetToInitial = () => {

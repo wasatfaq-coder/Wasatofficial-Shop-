@@ -15,6 +15,7 @@ import { Firestore, connectFirestoreEmulator, initializeFirestore, getFirestore,
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import firebaseConfig from '../firebase-applet-config.json';
 import { FUNCTIONS_REGION, PLACE_ORDER_FUNCTION, PlaceOrderRequest, PlaceOrderResponse } from './shared/orderApi';
+import { firestoreOperationError } from './utils/firestoreErrors';
 
 const app = initializeApp(firebaseConfig);
 
@@ -123,12 +124,43 @@ function getGuestChat() {
   return guestChat;
 }
 
+// Internal key (CLAUDE.md, «manstyle_*»): this browser has a guest's anonymous sign-in (chat or order). Without it the
+// second Firebase app is not started on every visit (audit 07.10, finding 52)
+const GUEST_SESSION_KEY = 'manstyle_guest_session';
+// A guest of an earlier version has no mark yet: their orders or chat kept in this browser say there is a session
+const GUEST_TRACE_KEYS = ['manstyle_guest_orders', 'manstyle_chat_messages_v2'];
+
+// '1' — there is a guest sign-in; '0' — checked, there is none: the traces below (a signed-in buyer keeps the chat cache too)
+// are read only until the first check
+function hasGuestSession(): boolean {
+  try {
+    const mark = localStorage.getItem(GUEST_SESSION_KEY);
+    if (mark === '1') return true;
+    if (mark === '0') return false;
+    return GUEST_TRACE_KEYS.some((key) => {
+      const saved = localStorage.getItem(key);
+      return Boolean(saved && saved !== '[]');
+    });
+  } catch {
+    // storage closed (private mode): look for the session as before
+    return true;
+  }
+}
+
+function markGuestSession(present: boolean): void {
+  try {
+    localStorage.setItem(GUEST_SESSION_KEY, present ? '1' : '0');
+  } catch {}
+}
+
 /** Restores a previously created guest chat session without creating a new one. */
 export function restoreGuestChatIdentity(): Promise<ChatIdentity | null> {
+  if (!guestChat && !hasGuestSession()) return Promise.resolve(null);
   const guest = getGuestChat();
   return new Promise((resolve) => {
     const unsubscribe = onAuthStateChanged(guest.auth, (user) => {
       unsubscribe();
+      markGuestSession(Boolean(user));
       resolve(user ? { uid: user.uid, db: guest.db, isGuest: true } : null);
     });
   });
@@ -139,12 +171,14 @@ export async function createGuestChatIdentity(): Promise<ChatIdentity> {
   const guest = getGuestChat();
   const credential = guest.auth.currentUser ? null : await signInAnonymously(guest.auth);
   const user = guest.auth.currentUser || credential!.user;
+  markGuestSession(true);
   return { uid: user.uid, db: guest.db, isGuest: true };
 }
 /** The guest's anonymous session ends (its orders and chat went to the account): a later guest gets a new one */
 export async function forgetGuestChatIdentity(): Promise<void> {
   if (!guestChat?.auth.currentUser) return;
   await signOut(guestChat.auth);
+  markGuestSession(false);
 }
 
 const googleProvider = new GoogleAuthProvider();
@@ -158,43 +192,13 @@ export enum OperationType {
   WRITE = 'write',
 }
 
-interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId?: string | null;
-    email?: string | null;
-    emailVerified?: boolean | null;
-    isAnonymous?: boolean | null;
-    tenantId?: string | null;
-    providerInfo?: {
-      providerId?: string | null;
-      email?: string | null;
-    }[];
-  };
-}
-
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo:
-        auth.currentUser?.providerData?.map((provider) => ({
-          providerId: provider.providerId,
-          email: provider.email,
-        })) || [],
-    },
-    operationType,
-    path,
-  };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+/**
+ * A failed write of firebaseSync.ts: thrown again as one error that keeps the database's code and the original
+ * (audit 07.10, finding 21). Not logged here: the caller logs it once (`persist`, the chat, the admin's screens) —
+ * before, every failure was logged twice and took two of the five reports a visit sends to «Ошибки на сайте».
+ */
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): never {
+  throw firestoreOperationError(error, operationType, path);
 }
 
 // Test connection probe as required by Firebase skill

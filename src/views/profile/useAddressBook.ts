@@ -31,6 +31,8 @@ export function useAddressBook(
   const [addrRegion, setAddrRegion] = useState('');
   const [addrComment, setAddrComment] = useState('');
   const [addrIsDefault, setAddrIsDefault] = useState(false);
+  // The form waits for the database (finding 13): it closes and says «добавлен» only after the answer
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
 
   // --- Address Handlers ---
   const handleOpenAddAddress = () => {
@@ -67,8 +69,9 @@ export function useAddressBook(
     setIsAddingAddress(true);
   };
 
-  const handleSaveAddress = (e: React.FormEvent) => {
+  const handleSaveAddress = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSavingAddress) return;
     if (!addrStreet.trim()) {
       onShowToast('Укажите название улицы', 'error');
       return;
@@ -125,24 +128,26 @@ export function useAddressBook(
       updatedAddresses.push(newAddr);
     }
 
-    onUpdateProfile({ ...profile, savedAddresses: updatedAddresses });
+    setIsSavingAddress(true);
+    const saved = await onUpdateProfile({ ...profile, savedAddresses: updatedAddresses });
+    setIsSavingAddress(false);
+    // not saved: the form stays with what was typed (the toast said why)
+    if (!saved) return;
     setIsAddingAddress(false);
     onShowToast(editingAddress ? 'Адрес изменен' : 'Адрес успешно добавлен', 'success');
   };
 
-  const handleDeleteAddress = (id: string) => {
+  const handleDeleteAddress = async (id: string) => {
     const updated = profile.savedAddresses.filter((a) => a.id !== id);
-    onUpdateProfile({ ...profile, savedAddresses: updated });
-    onShowToast('Адрес удален', 'info');
+    if (await onUpdateProfile({ ...profile, savedAddresses: updated })) onShowToast('Адрес удален', 'info');
   };
 
-  const handleSetDefaultAddress = (id: string) => {
+  const handleSetDefaultAddress = async (id: string) => {
     const updated = profile.savedAddresses.map((a) => ({
       ...a,
       isDefault: a.id === id,
     }));
-    onUpdateProfile({ ...profile, savedAddresses: updated });
-    onShowToast('Основной адрес сохранен', 'success');
+    if (await onUpdateProfile({ ...profile, savedAddresses: updated })) onShowToast('Основной адрес сохранен', 'success');
   };
 
   return {
@@ -180,6 +185,7 @@ export function useAddressBook(
     handleOpenAddAddress,
     handleOpenEditAddress,
     handleSaveAddress,
+    isSavingAddress,
     handleDeleteAddress,
     handleSetDefaultAddress,
   };

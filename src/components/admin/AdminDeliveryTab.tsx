@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Truck,
   Store,
@@ -16,7 +16,6 @@ import {
   Phone,
   Info,
   CheckCircle2,
-  AlertCircle,
   Search,
   Sparkles,
 } from 'lucide-react';
@@ -26,16 +25,25 @@ import { NeumorphicSwitch } from '../NeumorphicSwitch';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
 import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
+import { ConfirmDialog } from '../ConfirmDialog';
+import { AdminHint } from './AdminHint';
 
 interface AdminDeliveryTabProps {
   deliveryMethods: DeliveryMethod[];
-  onUpdateDeliveryMethods: (methods: DeliveryMethod[]) => void;
+  onUpdateDeliveryMethods: (methods: DeliveryMethod[]) => Promise<boolean> | void;
   pickupPoints: PickupPoint[];
-  onUpdatePickupPoints: (points: PickupPoint[]) => void;
+  onUpdatePickupPoints: (points: PickupPoint[]) => Promise<boolean> | void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   storefrontSettings?: StorefrontSettings;
-  onUpdateStorefrontSettings?: (settings: StorefrontSettings) => void;
+  onUpdateStorefrontSettings?: (settings: StorefrontSettings) => Promise<boolean> | void;
 }
+
+/**
+ * Every write here waits for the database: «сохранен», «удален» and closing the form come only after `true`;
+ * a refusal shows «Не сохранено» (`persist`), and the form stays with what was typed (audit 09.10, finding 3)
+ */
+const allSaved = async (...writes: (Promise<boolean> | void)[]) =>
+  (await Promise.all(writes)).every((ok) => ok !== false);
 
 /** Icons a delivery method can have (the checkout knows these five) */
 const METHOD_ICONS = [
@@ -71,12 +79,12 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
   const [editingMethod, setEditingMethod] = useState<DeliveryMethod | null>(null);
   const [isMethodModalOpen, setIsMethodModalOpen] = useState(false);
   const [deletingMethodId, setDeletingMethodId] = useState<string | null>(null);
-  const deleteMethodDialog = useDialogA11y(Boolean(deletingMethodId), () => setDeletingMethodId(null));
 
   const [editingPoint, setEditingPoint] = useState<PickupPoint | null>(null);
   const [isPointModalOpen, setIsPointModalOpen] = useState(false);
   const [deletingPointId, setDeletingPointId] = useState<string | null>(null);
-  const deletePointDialog = useDialogA11y(Boolean(deletingPointId), () => setDeletingPointId(null));
+  const deletingMethod = deliveryMethods.find((m) => m.id === deletingMethodId);
+  const deletingPoint = pickupPoints.find((p) => p.id === deletingPointId);
 
   // Method Form State
   const [formMethodTitle, setFormMethodTitle] = useState('');
@@ -186,58 +194,73 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
     setIsMethodModalOpen(true);
   };
 
-  const handleSaveMethod = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formMethodTitle.trim()) {
-      onShowToast('Введите название способа доставки', 'error');
-      return;
+  // A second «Сохранить» while the first write is on its way would add the method or point twice
+  const savingMethod = useRef(false);
+  const savingPoint = useRef(false);
+  const runOnce = async (saving: React.MutableRefObject<boolean>, save: () => Promise<void>) => {
+    if (saving.current) return;
+    saving.current = true;
+    try {
+      await save();
+    } finally {
+      saving.current = false;
     }
-
-    if (editingMethod) {
-      const updated = deliveryMethods.map((m) =>
-        m.id === editingMethod.id
-          ? {
-              ...m,
-              title: formMethodTitle.trim(),
-              duration: formMethodDuration.trim(),
-              price: Number(formMethodPrice) || 0,
-              icon: formMethodIcon,
-              type: formMethodType,
-              description: formMethodDesc.trim(),
-              freeThreshold: formMethodFreeThreshold !== undefined ? Number(formMethodFreeThreshold) : undefined,
-              isActive: formMethodIsActive,
-              highlightBadge: formMethodBadge.trim() || undefined,
-            }
-          : m
-      );
-      onUpdateDeliveryMethods(updated);
-      onShowToast(`Способ «${formMethodTitle}» успешно обновлен`, 'success');
-    } else {
-      const newMethod: DeliveryMethod = {
-        id: `deliv-${Date.now()}`,
-        title: formMethodTitle.trim(),
-        duration: formMethodDuration.trim() || '1-3 дня',
-        price: Number(formMethodPrice) || 0,
-        icon: formMethodIcon,
-        type: formMethodType,
-        description: formMethodDesc.trim(),
-        freeThreshold: formMethodFreeThreshold !== undefined ? Number(formMethodFreeThreshold) : undefined,
-        isActive: formMethodIsActive,
-        highlightBadge: formMethodBadge.trim() || undefined,
-        sortOrder: deliveryMethods.length + 1,
-      };
-      onUpdateDeliveryMethods([...deliveryMethods, newMethod]);
-      onShowToast(`Способ «${formMethodTitle}» успешно добавлен`, 'success');
-    }
-    setIsMethodModalOpen(false);
   };
 
-  const handleToggleMethodActive = (id: string, e: React.MouseEvent) => {
+  const handleSaveMethod = (e: React.FormEvent) => {
+    e.preventDefault();
+    void runOnce(savingMethod, async () => {
+      if (!formMethodTitle.trim()) {
+        onShowToast('Введите название способа доставки', 'error');
+        return;
+      }
+
+      if (editingMethod) {
+        const updated = deliveryMethods.map((m) =>
+          m.id === editingMethod.id
+            ? {
+                ...m,
+                title: formMethodTitle.trim(),
+                duration: formMethodDuration.trim(),
+                price: Number(formMethodPrice) || 0,
+                icon: formMethodIcon,
+                type: formMethodType,
+                description: formMethodDesc.trim(),
+                freeThreshold: formMethodFreeThreshold !== undefined ? Number(formMethodFreeThreshold) : undefined,
+                isActive: formMethodIsActive,
+                highlightBadge: formMethodBadge.trim() || undefined,
+              }
+            : m
+        );
+        if (!(await allSaved(onUpdateDeliveryMethods(updated)))) return;
+        onShowToast(`Способ «${formMethodTitle}» успешно обновлен`, 'success');
+      } else {
+        const newMethod: DeliveryMethod = {
+          id: `deliv-${Date.now()}`,
+          title: formMethodTitle.trim(),
+          duration: formMethodDuration.trim() || '1-3 дня',
+          price: Number(formMethodPrice) || 0,
+          icon: formMethodIcon,
+          type: formMethodType,
+          description: formMethodDesc.trim(),
+          freeThreshold: formMethodFreeThreshold !== undefined ? Number(formMethodFreeThreshold) : undefined,
+          isActive: formMethodIsActive,
+          highlightBadge: formMethodBadge.trim() || undefined,
+          sortOrder: deliveryMethods.length + 1,
+        };
+        if (!(await allSaved(onUpdateDeliveryMethods([...deliveryMethods, newMethod])))) return;
+        onShowToast(`Способ «${formMethodTitle}» успешно добавлен`, 'success');
+      }
+      setIsMethodModalOpen(false);
+    });
+  };
+
+  const handleToggleMethodActive = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const updated = deliveryMethods.map((m) =>
       m.id === id ? { ...m, isActive: m.isActive === false ? true : false } : m
     );
-    onUpdateDeliveryMethods(updated);
+    if (!(await allSaved(onUpdateDeliveryMethods(updated)))) return;
     const target = updated.find((m) => m.id === id);
     onShowToast(
       target?.isActive ? `Способ «${target.title}» активирован` : `Способ «${target?.title}» отключен`,
@@ -245,11 +268,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
     );
   };
 
-  const handleDeleteMethod = (id: string) => {
+  const handleDeleteMethod = async (id: string) => {
     const toDelete = deliveryMethods.find((m) => m.id === id);
     const updated = deliveryMethods.filter((m) => m.id !== id);
-    onUpdateDeliveryMethods(updated);
     setDeletingMethodId(null);
+    if (!(await allSaved(onUpdateDeliveryMethods(updated)))) return;
     onShowToast(`Способ «${toDelete?.title || ''}» удален`, 'info');
   };
 
@@ -284,104 +307,105 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
   const handleSavePoint = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formPointName.trim() || !formPointAddress.trim()) {
-      onShowToast('Укажите название и адрес пункта выдачи', 'error');
-      return;
-    }
-
-    if (editingPoint) {
-      const updated = pickupPoints.map((p) => {
-        if (p.id === editingPoint.id) {
-          return {
-            ...p,
-            name: formPointName.trim(),
-            city: formPointCity.trim(),
-            address: formPointAddress.trim(),
-            metro: formPointMetro.trim() || undefined,
-            schedule: formPointSchedule.trim(),
-            phone: formPointPhone.trim(),
-            note: formPointNote.trim() || undefined,
-            isActive: formPointIsActive,
-            isDefault: formPointIsDefault,
-          };
-        }
-        // If this becomes default, remove default from others
-        if (formPointIsDefault) {
-          return { ...p, isDefault: false };
-        }
-        return p;
-      });
-      onUpdatePickupPoints(updated);
-
-      // If updating the default point, also update storefrontSettings.pickupAddress for consistency
-      if (formPointIsDefault && onUpdateStorefrontSettings && storefrontSettings) {
-        onUpdateStorefrontSettings({
-          ...storefrontSettings,
-          pickupAddress: `${formPointCity.trim()}, ${formPointAddress.trim()}`,
-        });
+    void runOnce(savingPoint, async () => {
+      if (!formPointName.trim() || !formPointAddress.trim()) {
+        onShowToast('Укажите название и адрес пункта выдачи', 'error');
+        return;
       }
 
-      onShowToast(`Пункт «${formPointName}» сохранен`, 'success');
-    } else {
-      const newPoint: PickupPoint = {
-        id: `point-${Date.now()}`,
-        name: formPointName.trim(),
-        city: formPointCity.trim(),
-        address: formPointAddress.trim(),
-        metro: formPointMetro.trim() || undefined,
-        schedule: formPointSchedule.trim(),
-        phone: formPointPhone.trim(),
-        note: formPointNote.trim() || undefined,
-        isActive: formPointIsActive,
-        isDefault: formPointIsDefault || pickupPoints.length === 0,
-      };
-
-      const updated = formPointIsDefault
-        ? [...pickupPoints.map((p) => ({ ...p, isDefault: false })), newPoint]
-        : [...pickupPoints, newPoint];
-
-      onUpdatePickupPoints(updated);
-
-      if (formPointIsDefault && onUpdateStorefrontSettings && storefrontSettings) {
-        onUpdateStorefrontSettings({
-          ...storefrontSettings,
-          pickupAddress: `${formPointCity.trim()}, ${formPointAddress.trim()}`,
+      if (editingPoint) {
+        const updated = pickupPoints.map((p) => {
+          if (p.id === editingPoint.id) {
+            return {
+              ...p,
+              name: formPointName.trim(),
+              city: formPointCity.trim(),
+              address: formPointAddress.trim(),
+              metro: formPointMetro.trim() || undefined,
+              schedule: formPointSchedule.trim(),
+              phone: formPointPhone.trim(),
+              note: formPointNote.trim() || undefined,
+              isActive: formPointIsActive,
+              isDefault: formPointIsDefault,
+            };
+          }
+          // If this becomes default, remove default from others
+          if (formPointIsDefault) {
+            return { ...p, isDefault: false };
+          }
+          return p;
         });
-      }
+        // If updating the default point, also update storefrontSettings.pickupAddress for consistency
+        const saved = await allSaved(
+          onUpdatePickupPoints(updated),
+          formPointIsDefault && onUpdateStorefrontSettings && storefrontSettings
+            ? onUpdateStorefrontSettings({
+                ...storefrontSettings,
+                pickupAddress: `${formPointCity.trim()}, ${formPointAddress.trim()}`,
+              })
+            : undefined
+        );
+        if (!saved) return;
+        onShowToast(`Пункт «${formPointName}» сохранен`, 'success');
+      } else {
+        const newPoint: PickupPoint = {
+          id: `point-${Date.now()}`,
+          name: formPointName.trim(),
+          city: formPointCity.trim(),
+          address: formPointAddress.trim(),
+          metro: formPointMetro.trim() || undefined,
+          schedule: formPointSchedule.trim(),
+          phone: formPointPhone.trim(),
+          note: formPointNote.trim() || undefined,
+          isActive: formPointIsActive,
+          isDefault: formPointIsDefault || pickupPoints.length === 0,
+        };
 
-      onShowToast(`Пункт «${formPointName}» добавлен`, 'success');
-    }
-    setIsPointModalOpen(false);
+        const updated = formPointIsDefault
+          ? [...pickupPoints.map((p) => ({ ...p, isDefault: false })), newPoint]
+          : [...pickupPoints, newPoint];
+
+        const saved = await allSaved(
+          onUpdatePickupPoints(updated),
+          formPointIsDefault && onUpdateStorefrontSettings && storefrontSettings
+            ? onUpdateStorefrontSettings({
+                ...storefrontSettings,
+                pickupAddress: `${formPointCity.trim()}, ${formPointAddress.trim()}`,
+              })
+            : undefined
+        );
+        if (!saved) return;
+        onShowToast(`Пункт «${formPointName}» добавлен`, 'success');
+      }
+      setIsPointModalOpen(false);
+    });
   };
 
-  const handleSetDefaultPoint = (id: string, e: React.MouseEvent) => {
+  const handleSetDefaultPoint = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const updated = pickupPoints.map((p) => ({
       ...p,
       isDefault: p.id === id,
     }));
-    onUpdatePickupPoints(updated);
-
     const target = updated.find((p) => p.id === id);
-    if (target && onUpdateStorefrontSettings && storefrontSettings) {
-      onUpdateStorefrontSettings({
-        ...storefrontSettings,
-        pickupAddress: `${target.city}, ${target.address}`,
-      });
-    }
-
+    const saved = await allSaved(
+      onUpdatePickupPoints(updated),
+      target && onUpdateStorefrontSettings && storefrontSettings
+        ? onUpdateStorefrontSettings({ ...storefrontSettings, pickupAddress: `${target.city}, ${target.address}` })
+        : undefined
+    );
+    if (!saved) return;
     onShowToast(`Пункт «${target?.name}» назначен основным адресом самовывоза`, 'success');
   };
 
-  const handleDeletePoint = (id: string) => {
+  const handleDeletePoint = async (id: string) => {
     const toDelete = pickupPoints.find((p) => p.id === id);
-    const updated = pickupPoints.filter((p) => p.id !== id);
-    // If deleted point was default, set next as default
-    if (toDelete?.isDefault && updated.length > 0) {
-      updated[0].isDefault = true;
-    }
-    onUpdatePickupPoints(updated);
+    const remaining = pickupPoints.filter((p) => p.id !== id);
+    // If deleted point was default, set next as default (a copy: the point object is still the one in the props)
+    const updated =
+      toDelete?.isDefault && remaining.length > 0 ? [{ ...remaining[0], isDefault: true }, ...remaining.slice(1)] : remaining;
     setDeletingPointId(null);
+    if (!(await allSaved(onUpdatePickupPoints(updated)))) return;
     onShowToast(`Пункт «${toDelete?.name || ''}» удален`, 'info');
   };
 
@@ -469,9 +493,12 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
       {/* Subtabs Switcher & Actions */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
         {/* Subtabs */}
-        <div className="p-1 neu-flat-sm rounded-2xl flex items-center gap-1">
+        <div className="flex items-center gap-1">
+        <div role="radiogroup" aria-label="Раздел доставки" className="flex-1 sm:flex-none min-w-0 p-1 neu-flat-sm rounded-2xl flex items-center gap-1">
           <button
             type="button"
+            role="radio"
+            aria-checked={activeSubTab === 'methods'}
             onClick={() => setActiveSubTab('methods')}
             className={`flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeSubTab === 'methods'
@@ -488,6 +515,8 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
           <button
             type="button"
+            role="radio"
+            aria-checked={activeSubTab === 'pickup_points'}
             onClick={() => setActiveSubTab('pickup_points')}
             className={`flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeSubTab === 'pickup_points'
@@ -501,6 +530,10 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               {pickupPoints.length}
             </span>
           </button>
+        </div>
+        <AdminHint label="Пункты выдачи">
+          ПВЗ — место, где покупатель сам забирает заказ: ваш офис или пункт выдачи.
+        </AdminHint>
         </div>
 
         {/* Action Buttons */}
@@ -556,7 +589,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
         </div>
 
         {activeSubTab === 'methods' && (
-          <div className="flex gap-1 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+          <div role="radiogroup" aria-label="Тип способа" className="flex gap-1 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
             {[
               { id: 'all', label: 'Все' },
               { id: 'courier', label: 'Курьер' },
@@ -568,6 +601,8 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               <button
                 key={f.id}
                 type="button"
+                role="radio"
+                aria-checked={typeFilter === f.id}
                 onClick={() => setTypeFilter(f.id as any)}
                 className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all shrink-0 cursor-pointer ${
                   typeFilter === f.id
@@ -642,6 +677,10 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                         {/* Active toggle */}
                         <button
                           type="button"
+                          // a switch with its state and the method's name (audit 07.10, finding 38)
+                          role="switch"
+                          aria-checked={isActive}
+                          aria-label={`Способ «${method.title}» показан покупателям`}
                           onClick={(e) => handleToggleMethodActive(method.id, e)}
                           className={`p-1.5 rounded-xl transition-all cursor-pointer ${
                             isActive
@@ -652,13 +691,16 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                         >
                           <span className={`w-2 h-2 rounded-full block ${isActive ? 'bg-success' : 'bg-[#BAC5D5]'}`} />
                         </button>
+                        <AdminHint label="Показ способа покупателям">
+                          Скрывает способ при оформлении. Сам способ не удаляется.
+                        </AdminHint>
 
                         <button
                           type="button"
                           onClick={() => handleOpenEditMethod(method)}
                           className="p-1.5 neu-button rounded-xl text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
-                          title="Редактировать способ доставки"
-                          aria-label="Редактировать способ доставки"
+                          title={`Изменить способ: ${method.title}`}
+                          aria-label={`Изменить способ: ${method.title}`}
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
@@ -667,8 +709,8 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                           type="button"
                           onClick={() => setDeletingMethodId(method.id)}
                           className="p-1.5 neu-button-danger rounded-xl cursor-pointer"
-                          title="Удалить способ доставки"
-                          aria-label="Удалить способ доставки"
+                          title={`Удалить способ: ${method.title}`}
+                          aria-label={`Удалить способ: ${method.title}`}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -762,6 +804,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                                 Основной адрес
                               </span>
                             )}
+                            {isDefault && (
+                              <AdminHint label="Основной">
+                                Этот пункт покупатель увидит первым, его адрес попадёт на сайт.
+                              </AdminHint>
+                            )}
                           </div>
                           <p className="text-xs font-bold text-accent flex items-center gap-1 mt-0.5">
                             <MapPin className="w-3 h-3" />
@@ -777,7 +824,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                             onClick={(e) => handleSetDefaultPoint(point.id, e)}
                             className="p-1.5 neu-button rounded-xl text-[#4E5C70] hover:text-accent cursor-pointer"
                             title="Сделать основным пунктом самовывоза"
-                            aria-label="Сделать основным пунктом самовывоза"
+                            aria-label={`Сделать основным пунктом самовывоза: ${point.name}`}
                           >
                             <Check className="w-3.5 h-3.5" />
                           </button>
@@ -787,8 +834,8 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                           type="button"
                           onClick={() => handleOpenEditPoint(point)}
                           className="p-1.5 neu-button rounded-xl text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
-                          title="Редактировать пункт выдачи"
-                          aria-label="Редактировать пункт выдачи"
+                          title={`Изменить пункт: ${point.name}`}
+                          aria-label={`Изменить пункт: ${point.name}`}
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
@@ -797,8 +844,8 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                           type="button"
                           onClick={() => setDeletingPointId(point.id)}
                           className="p-1.5 neu-button-danger rounded-xl cursor-pointer"
-                          title="Удалить пункт выдачи"
-                          aria-label="Удалить пункт выдачи"
+                          title={`Удалить пункт: ${point.name}`}
+                          aria-label={`Удалить пункт: ${point.name}`}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -918,9 +965,16 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               </div>
 
               <div>
-                <label htmlFor="delivery-method-type" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
-                  Тип модуля
-                </label>
+                <div className="flex items-center gap-1 mb-1">
+                  <label htmlFor="delivery-method-type" className="block text-[11px] font-bold text-[#2D3A4E]">
+                    Тип модуля
+                  </label>
+                  {formMethodType === 'express' && (
+                    <AdminHint label="Экспресс-доставка">
+                      Показывается, только если включён «Экспресс 2 часа» в «Витрине».
+                    </AdminHint>
+                  )}
+                </div>
                 <NeumorphicSelect
                   id="delivery-method-type"
                   value={formMethodType}
@@ -974,9 +1028,14 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="delivery-method-free" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
-                    Бесплатно при заказе от (₽)
-                  </label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <label htmlFor="delivery-method-free" className="block text-[11px] font-bold text-[#2D3A4E]">
+                      Бесплатно при заказе от (₽)
+                    </label>
+                    <AdminHint label="Бесплатно при заказе от">
+                      Для этого способа. Если пусто — действует общий порог из «Витрины».
+                    </AdminHint>
+                  </div>
                   <input
                     id="delivery-method-free"
                     type="number"
@@ -992,9 +1051,14 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 </div>
 
                 <div>
-                  <label htmlFor="delivery-method-badge" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
-                    Бейдж-метка (опционально)
-                  </label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <label htmlFor="delivery-method-badge" className="block text-[11px] font-bold text-[#2D3A4E]">
+                      Бейдж-метка (опционально)
+                    </label>
+                    <AdminHint label="Бейдж-метка">
+                      Короткая метка на карточке способа: «Быстро», «Хит». Можно оставить пустой.
+                    </AdminHint>
+                  </div>
                   <input
                     id="delivery-method-badge"
                     type="text"
@@ -1077,10 +1141,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
             <form onSubmit={handleSavePoint} className="space-y-3 text-xs">
               <div>
-                <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                <label htmlFor="point-name" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                   Название бутика / пункта *
                 </label>
                 <input
+                  id="point-name"
                   type="text"
                   value={formPointName}
                   onChange={(e) => setFormPointName(e.target.value)}
@@ -1092,10 +1157,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="point-city" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     Город *
                   </label>
                   <input
+                    id="point-city"
                     type="text"
                     value={formPointCity}
                     onChange={(e) => setFormPointCity(e.target.value)}
@@ -1106,10 +1172,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="point-metro" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     Станция метро (опционально)
                   </label>
                   <input
+                    id="point-metro"
                     type="text"
                     value={formPointMetro}
                     onChange={(e) => setFormPointMetro(e.target.value)}
@@ -1120,10 +1187,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                <label htmlFor="point-address" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                   Точный полный адрес для клиента *
                 </label>
                 <textarea
+                  id="point-address"
                   rows={2}
                   value={formPointAddress}
                   onChange={(e) => setFormPointAddress(e.target.value)}
@@ -1135,10 +1203,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="point-schedule" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     График работы
                   </label>
                   <input
+                    id="point-schedule"
                     type="text"
                     value={formPointSchedule}
                     onChange={(e) => setFormPointSchedule(e.target.value)}
@@ -1149,10 +1218,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="point-phone" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                     Контактный телефон
                   </label>
                   <input
+                    id="point-phone"
                     type="text"
                     value={formPointPhone}
                     onChange={(e) => setFormPointPhone(e.target.value)}
@@ -1164,10 +1234,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                <label htmlFor="point-note" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
                   Ориентир, вход и условия примерки
                 </label>
                 <textarea
+                  id="point-note"
                   rows={2}
                   value={formPointNote}
                   onChange={(e) => setFormPointNote(e.target.value)}
@@ -1228,65 +1299,29 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
       <DiscardChangesDialog {...pointGuard.dialogProps} what="Изменения пункта самовывоза" />
 
       {/* ================= CONFIRM DELETE MODALS ================= */}
-      {deletingMethodId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2D3A4E]/40 backdrop-blur-xs animate-in fade-in">
-          <div ref={deleteMethodDialog.ref} {...deleteMethodDialog.props} className="neu-modal rounded-3xl p-5 max-w-sm w-full space-y-4 border border-white/80 text-[#2D3A4E]">
-            <div className="flex items-center gap-2.5 text-danger">
-              <AlertCircle className="w-5 h-5 shrink-0" />
-              <h4 id={deleteMethodDialog.titleId} className="text-sm font-extrabold">Удалить способ доставки?</h4>
-            </div>
-            <p className="text-xs text-[#4E5C70]">
-              Этот способ доставки перестанет отображаться при оформлении заказов на сайте.
-            </p>
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setDeletingMethodId(null)}
-                className="flex-1 py-2 neu-button rounded-xl text-xs font-bold text-[#4E5C70]"
-              >
-                Отмена
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDeleteMethod(deletingMethodId)}
-                className="neu-button-danger flex-1 py-2 rounded-xl text-xs font-extrabold cursor-pointer"
-              >
-                Удалить
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={Boolean(deletingMethodId)}
+        title="Удалить способ доставки?"
+        message="Этот способ доставки перестанет отображаться при оформлении заказов на сайте."
+        preview={
+          deletingMethod ? <span className="text-xs font-bold text-[#2D3A4E]">{deletingMethod.title}</span> : undefined
+        }
+        onConfirm={() => {
+          if (deletingMethodId) void handleDeleteMethod(deletingMethodId);
+        }}
+        onClose={() => setDeletingMethodId(null)}
+      />
 
-      {deletingPointId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2D3A4E]/40 backdrop-blur-xs animate-in fade-in">
-          <div ref={deletePointDialog.ref} {...deletePointDialog.props} className="neu-modal rounded-3xl p-5 max-w-sm w-full space-y-4 border border-white/80 text-[#2D3A4E]">
-            <div className="flex items-center gap-2.5 text-danger">
-              <AlertCircle className="w-5 h-5 shrink-0" />
-              <h4 id={deletePointDialog.titleId} className="text-sm font-extrabold">Удалить пункт самовывоза?</h4>
-            </div>
-            <p className="text-xs text-[#4E5C70]">
-              Пункт выдачи будет удален из списка доступных адресов для самовывоза клиентами.
-            </p>
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setDeletingPointId(null)}
-                className="flex-1 py-2 neu-button rounded-xl text-xs font-bold text-[#4E5C70]"
-              >
-                Отмена
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDeletePoint(deletingPointId)}
-                className="neu-button-danger flex-1 py-2 rounded-xl text-xs font-extrabold cursor-pointer"
-              >
-                Удалить
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={Boolean(deletingPointId)}
+        title="Удалить пункт самовывоза?"
+        message="Пункт выдачи будет удален из списка доступных адресов для самовывоза клиентами."
+        preview={deletingPoint ? <span className="text-xs font-bold text-[#2D3A4E]">{deletingPoint.name}</span> : undefined}
+        onConfirm={() => {
+          if (deletingPointId) void handleDeletePoint(deletingPointId);
+        }}
+        onClose={() => setDeletingPointId(null)}
+      />
     </div>
   );
 };

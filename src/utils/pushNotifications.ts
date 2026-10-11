@@ -1,7 +1,6 @@
 import { Order } from '../types';
-import { isTransportCompanyDelivery } from './deliveryStages';
 import { isQuickOrderDelivery } from '../shared/orderPricing';
-import { customerStatusLabel } from './orderFlow';
+import { customerStatusLabel, isCarrierOrder } from './orderFlow';
 import { currentStoreName } from './storeContacts';
 
 /**
@@ -211,7 +210,7 @@ export function getOrderStatusNotification(
       };
 
     case 'in_transit': {
-      const isTK = isTransportCompanyDelivery(order.deliveryMethod, order.trackingCompany);
+      const isTK = isCarrierOrder(order);
       const dm = (order.deliveryMethod || '').toLowerCase();
       const isPickup = dm.includes('самовывоз') || dm.includes('пункт выдачи') || dm.includes('бутик') || dm.includes('шоурум');
       // not an old 1-click order «Экспресс курьер (1 клик)»: the shop promised no express courier

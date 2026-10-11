@@ -1,6 +1,6 @@
 // Владелец входит в панель, меняет цену товара и скачивает этикетки (аудит UX 03.10, сценарий В)
 import fs from 'node:fs';
-import { test, expect, rub } from '../fixtures';
+import { test, expect, rub, openAdminSection } from '../fixtures';
 import { readDoc } from '../emulator';
 import { ADMIN, PRODUCTS } from '../store';
 
@@ -13,8 +13,7 @@ test('владелец меняет цену и печатает этикетк�
   await signIn(ADMIN);
   await page.getByRole('button', { name: /^Панель администратора/ }).click();
   const panel = page.getByRole('dialog', { name: 'Панель администратора' });
-  await panel.getByRole('tab', { name: 'Каталог', exact: true }).click();
-  await panel.getByRole('tab', { name: 'Товары', exact: true }).click();
+  await openAdminSection(panel, 'Товары');
   await panel.getByRole('textbox', { name: 'Поиск товаров' }).fill(item.title);
   await panel.getByRole('button', { name: 'Редактировать' }).click();
 
@@ -26,7 +25,7 @@ test('владелец меняет цену и печатает этикетк�
   await expect(form).toBeHidden();
   await expect.poll(async () => (await readDoc(`products/${item.id}`))?.price).toBe(newPrice);
 
-  await panel.getByRole('tab', { name: 'Склад и SKU' }).click();
+  await openAdminSection(panel, 'Склад и SKU');
   await panel.getByRole('button', { name: `Этикетки: ${item.title}` }).click();
   const labels = page.getByRole('dialog', { name: 'Этикетки и штрихкоды' });
   const download = page.waitForEvent('download');

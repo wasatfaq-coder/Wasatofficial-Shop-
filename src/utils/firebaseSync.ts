@@ -24,7 +24,9 @@ import {
   Bytes,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { CartItem, Product, ProductSKU, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog, PaymentKind, PaymentTemplate } from '../types';
+import { needsOwnerAttention } from './firestoreErrors';
+import { changedFields, changedSince, hasFieldChanges, holdsChange, orderFieldsToCheck, type FieldChanges } from './fieldChanges';
+import { CartItem, Product, ProductSKU, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog, PaymentKind, PaymentTemplate, PriceHistoryEntry, PriceChangeLog } from '../types';
 import { paymentLogEntry, receiptMessageText } from './paymentDetails';
 import { DEFAULT_STOREFRONT_SETTINGS, generateDefaultSKUs, inStockAfterReturn, inStockAfterStockChange, stockMovementId } from './inventory';
 import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
@@ -36,7 +38,9 @@ import { hasHeavyPhotos, splitProductPhotos, type PhotoDoc } from './productPhot
 import { compressBase64Image } from './imageUpload';
 import { SERVER_CONFIG_DOC_ID, ServerConfig } from '../shared/orderApi';
 import {
+  adjustedOrderShortfall,
   ORDER_MOVEMENT_OPERATOR,
+  orderHeldStock,
   orderLineMovement,
   orderMovementId,
   orderReturnMovementId,
@@ -47,11 +51,18 @@ import {
 } from '../shared/stockMovements';
 import { formatOrderDate } from '../shared/orderDate';
 import { cancelReasonText, formatCancelledAt } from './orderCancel';
-import type { OrderStatusLogEntry } from '../shared/orderFlow';
-import { getDefaultHistorySteps, getSynchronizedDeliveryStages, isTransportCompanyDelivery } from './deliveryStages';
+import { DELIVERY_KINDS, type OrderStatusLogEntry } from '../shared/orderFlow';
+import { isCarrierOrder } from './orderFlow';
+import { getDefaultHistorySteps, getSynchronizedDeliveryStages } from './deliveryStages';
 import { ORDERS_INDEX_COLLECTION, ordersIndexPartId, type OrderIndexRow, type OrdersIndexPart } from './ordersIndex';
 import { CLIENT_ERRORS_COLLECTION, type ClientErrorReport, type StoredClientError } from './clientErrors';
 import { trackRead } from './pendingReads';
+import { googleAvatarUrl } from './googleAvatar';
+import { EXCHANGE_RATES_DOC_ID, readExchangeRates, type ExchangeRates } from './currencyPricing';
+import { costEntryOf, hasCostData, readCostEntry, type ProductCostEntry } from './productCosts';
+import { ORDER_COSTS_COLLECTION, readOrderCostDoc, type OrderCostDoc } from './orderCosts';
+import type { OrderCostSnapshot } from './salesProfit';
+export type { ProductCostEntry } from './productCosts';
 import {
   CATALOG_INDEX_COLLECTION,
   PRODUCT_THUMBS_COLLECTION,
@@ -80,6 +91,15 @@ async function setDocs<T extends { id: string }>(collectionName: string, items: 
   await commitInChunks(items, (batch, item) =>
     batch.set(doc(db, collectionName, item.id), sanitizeForFirestore(item))
   );
+}
+
+/**
+ * A subscription the database ended with an error (audit 07.10, finding 15). A refusal — the rules, the quota, a missing
+ * index — is for the owner: `console.error` reaches «Ошибки на сайте». Anything else stays a warning.
+ */
+function logSubscriptionError(what: string, error: unknown) {
+  if (needsOwnerAttention(error)) console.error(`${what} subscription failed:`, error);
+  else console.warn(`${what} subscription warning:`, error);
 }
 
 /**
@@ -161,7 +181,7 @@ export function subscribeToProducts(
       onUpdate(loaded);
     },
     (error) => {
-      console.warn('Products subscription warning:', error);
+      logSubscriptionError('Products', error);
       if (onError) onError(error);
     }
   );
@@ -169,11 +189,12 @@ export function subscribeToProducts(
 
 
 /**
- * Product as stored in `products`, which every visitor reads: without merged-in reviews and without the cost price
- * (it lives in the admin-only `product_costs`).
+ * Product as stored in `products`, which every visitor reads: without merged-in reviews and without the cost price,
+ * the purchase and the supplier (they live in the admin-only `product_costs`).
  */
 function toStoredProduct(product: Product): Product {
-  const { costPrice: _cost, catalogRating: _rating, ...stored } = withoutCollectionReviews(product);
+  const { costPrice: _cost, purchase: _purchase, supplier: _supplier, supplierSku: _supplierSku, catalogRating: _rating, ...stored } =
+    withoutCollectionReviews(product);
   return stored;
 }
 
@@ -249,11 +270,19 @@ export interface UntakenOrderLines {
  * longer has. Before, only the console knew. Admin only.
  */
 export async function findUntakenOrderLines(
-  orders: Pick<Order, 'id' | 'items' | 'createdAt'>[]
+  orders: Pick<Order, 'id' | 'items' | 'createdAt' | 'isAdjusted'>[]
 ): Promise<UntakenOrderLines> {
   const wanted = new Map<string, { orderId: string; lineIndex: number; line: CartItem }>();
+  const result: UntakenOrderLines = { missing: {}, short: {} };
   for (const order of orders) {
     if (!order.createdAt || order.createdAt < ORDER_JOURNAL_SINCE) continue;
+    if (order.isAdjusted) {
+      // after «Правка состава» the lines no longer match their entries by number: by variant (audit 07.10, finding 2)
+      const { missing, short } = adjustedOrderShortfall(order.items ?? [], orderHeldStock(await readOrderJournal(order.id)));
+      if (missing.length > 0) result.missing[order.id] = missing;
+      if (short.length > 0) result.short[order.id] = short;
+      continue;
+    }
     (order.items ?? []).forEach((line, i) => {
       if (!line.isPreorder) wanted.set(orderMovementId(order.id, i), { orderId: order.id, lineIndex: i, line });
     });
@@ -264,7 +293,6 @@ export async function findUntakenOrderLines(
     const snap = await getDocs(query(collection(db, STOCK_MOVEMENTS_COLLECTION), where(documentId(), 'in', ids.slice(i, i + 30))));
     snap.forEach((d) => found.set(d.id, Number(d.data().changeQuantity) || 0));
   }
-  const result: UntakenOrderLines = { missing: {}, short: {} };
   for (const [id, { orderId, lineIndex, line }] of wanted) {
     if (!found.has(id)) {
       (result.missing[orderId] ??= []).push(lineIndex);
@@ -275,6 +303,57 @@ export async function findUntakenOrderLines(
     if (shortBy > 0) (result.short[orderId] ??= []).push({ lineIndex, taken: -changeQuantity, ordered: line.quantity });
   }
   return result;
+}
+
+/** Every journal entry of an order (write-offs, «Правка состава», returns). Admin only: the rules give lists to the admin */
+async function readOrderJournal(orderId: string, targetDb: Firestore = db): Promise<StockMovementLog[]> {
+  const snap = await getDocs(query(collection(targetDb, STOCK_MOVEMENTS_COLLECTION), where('orderId', '==', orderId)));
+  return snap.docs.map((d) => d.data() as StockMovementLog);
+}
+
+/**
+ * «Списать со склада» for an order after «Правка состава»: the variants nothing was taken for (`adjustedOrderShortfall`),
+ * by the ordered quantity, with journal entries of the order. Throws when a variant was not changed.
+ */
+export async function takeAdjustedOrderStock(order: Pick<Order, 'id' | 'items'>): Promise<void> {
+  const held = orderHeldStock(await readOrderJournal(order.id));
+  const { missing } = adjustedOrderShortfall(order.items ?? [], held);
+  const lines = missing.map((i) => order.items[i]);
+  const changes: AdminStockChange[] = lines.map((line) => ({
+    productId: line.product.id,
+    productTitle: line.product.title,
+    color: line.selectedColor,
+    size: line.selectedSize,
+    delta: -line.quantity,
+  }));
+  const { failed } = await applyAdminStockChanges(changes, { orderId: order.id, reason: `Заказ #${order.id}`, operator: 'Администратор' });
+  if (failed.length > 0) throw new Error(`Stock not taken for ${failed.length} variant(s) of order ${order.id}`);
+}
+
+/**
+ * A cancelled order after «Правка состава» back to stock: what it holds by variant (`orderHeldStock`) — the lines and
+ * their entries `{заказ}_{строка}` no longer match by number, so the per-line return gave back the wrong goods (audit
+ * 07.10, finding 2). The return entries carry the order, so a repeated call finds nothing held and returns nothing.
+ * A removed product or variant gets nothing back. Admin only; resolves to true when the whole order is back.
+ */
+async function returnAdjustedOrderStock(order: Pick<Order, 'id'>, operator: string, targetDb: Firestore = db): Promise<boolean> {
+  const held = [...orderHeldStock(await readOrderJournal(order.id, targetDb)).values()].filter((v) => v.held > 0);
+  const changes: AdminStockChange[] = held.map((v) => ({
+    productId: v.productId,
+    productTitle: v.productTitle,
+    color: v.color,
+    size: v.size,
+    delta: v.held,
+  }));
+  const { failed } = await applyAdminStockChanges(changes, {
+    orderId: order.id,
+    reason: orderReturnReason(order.id),
+    operator,
+    missingIsNothing: true,
+  }, targetDb);
+  if (failed.length > 0) return false;
+  await updateDoc(doc(targetDb, 'orders', order.id), { stockReturned: true, updatedAt: serverTimestamp() });
+  return true;
 }
 
 /** One stock change the admin makes by an order: «+» back to stock, «−» taken from it */
@@ -296,20 +375,25 @@ export interface AdminStockChange {
  * transaction with its journal entry: the stock is read from the database at that moment and changed by the difference.
  * Before, the browser wrote the whole product from its copy and an order placed meanwhile came back as stock (audit
  * 02.10, finding 5 and its kin). A deduction stops at 0; «Снят с витрины» stays off sale. Returns what was not applied.
+ * `targetDb` — another sign-in's database (the rules test calls this code as the admin).
  */
 export async function applyAdminStockChanges(
   changes: AdminStockChange[],
-  meta: { orderId?: string; reason: string; operator: string; at?: Date }
+  meta: { orderId?: string; reason: string; operator: string; at?: Date; missingIsNothing?: boolean },
+  targetDb: Firestore = db
 ): Promise<{ failed: AdminStockChange[] }> {
   const at = meta.at ?? new Date();
   const failed: AdminStockChange[] = [];
   for (const change of changes) {
     if (!change.delta && change.setTo === undefined) continue;
-    const productRef = doc(db, 'products', change.productId);
+    const productRef = doc(targetDb, 'products', change.productId);
     try {
-      await runTransaction(db, async (tx) => {
+      await runTransaction(targetDb, async (tx) => {
         const snap = await tx.get(productRef);
-        if (!snap.exists()) throw new Error('product removed');
+        if (!snap.exists()) {
+          if (meta.missingIsNothing) return;
+          throw new Error('product removed');
+        }
         const data = snap.data();
         const savedSkus: ProductSKU[] = Array.isArray(data.skus) ? data.skus : [];
         const matches = (sku: ProductSKU) => sameVariantName(sku.color, change.color) && sameVariantName(sku.size, change.size);
@@ -318,7 +402,10 @@ export async function applyAdminStockChanges(
         const missing = savedSkus.some(matches)
           ? undefined
           : generateDefaultSKUs({ ...(data as Product), id: change.productId }).find(matches);
-        if (!savedSkus.some(matches) && !missing) throw new Error('variant missing');
+        if (!savedSkus.some(matches) && !missing) {
+          if (meta.missingIsNothing) return;
+          throw new Error('variant missing');
+        }
         const skus = missing ? [...savedSkus, missing] : savedSkus;
         const skuIndex = skus.findIndex(matches);
         const sku = skus[skuIndex];
@@ -343,7 +430,7 @@ export async function applyAdminStockChanges(
           reason: change.reason ?? meta.reason,
           operator: meta.operator,
         };
-        tx.set(doc(db, STOCK_MOVEMENTS_COLLECTION, movement.id), sanitizeForFirestore(movement));
+        tx.set(doc(targetDb, STOCK_MOVEMENTS_COLLECTION, movement.id), sanitizeForFirestore(movement));
         tx.update(productRef, {
           skus: nextSkus,
           inStock: inStockAfterStockChange({ inStock: data.inStock, skus: savedSkus, hiddenFromSale: data.hiddenFromSale }, nextSkus),
@@ -360,10 +447,16 @@ export async function applyAdminStockChanges(
 /**
  * The buyer cancels their own order (profile → order → «Отменить заказ»). The rules allow it only for a signed-in
  * order of their own in «Принят», once, with a reason; then `returnCancelledOrderStock` returns the goods.
- * Throws when the write is refused.
+ * Throws when the write is refused. `targetDb` — the buyer's sign-in (the rules test calls this code as the buyer).
  */
-export async function cancelOrderAsCustomer(orderId: string, reason: string, comment: string, at: Date): Promise<void> {
-  await updateDoc(doc(db, 'orders', orderId), {
+export async function cancelOrderAsCustomer(
+  orderId: string,
+  reason: string,
+  comment: string,
+  at: Date,
+  targetDb: Firestore = db
+): Promise<void> {
+  await updateDoc(doc(targetDb, 'orders', orderId), {
     isCancelled: true,
     cancelledBy: 'customer',
     cancelReason: reason,
@@ -379,9 +472,13 @@ export async function cancelOrderAsCustomer(orderId: string, reason: string, com
  * «Я получил заказ» (заказ у транспортной компании или Почты, «Доработки 4»): «Получен» и запись покупателя в истории.
  * Правило `isCustomerReceiptConfirm` пускает только это. Throws when the write is refused.
  */
-export async function confirmOrderReceipt(order: Pick<Order, 'id' | 'statusLog'>, at: Date): Promise<void> {
+export async function confirmOrderReceipt(
+  order: Pick<Order, 'id' | 'statusLog'>,
+  at: Date,
+  targetDb: Firestore = db
+): Promise<void> {
   const entry: OrderStatusLogEntry = { status: 'delivered', at: at.toISOString(), by: 'customer' };
-  await updateDoc(doc(db, 'orders', order.id), {
+  await updateDoc(doc(targetDb, 'orders', order.id), {
     status: 'delivered',
     statusLog: [...(order.statusLog ?? []), entry],
     updatedAt: serverTimestamp(),
@@ -398,7 +495,8 @@ export async function submitPaymentReceipt(
   kind: PaymentKind,
   imageUrl: string,
   thread: Pick<ChatMessage, 'threadId' | 'threadName'>,
-  at: Date
+  at: Date,
+  targetDb: Firestore = db
 ): Promise<ChatMessage> {
   const message: ChatMessage = {
     id: `msg-${at.getTime()}-receipt-${order.id}`,
@@ -410,8 +508,8 @@ export async function submitPaymentReceipt(
     timestamp: at.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
     ...thread,
   };
-  await saveChatMessageToFirestore(message);
-  await updateDoc(doc(db, 'orders', order.id), {
+  await saveChatMessageToFirestore(message, targetDb);
+  await updateDoc(doc(targetDb, 'orders', order.id), {
     paymentStatus: 'receipt_review',
     paymentReceipt: { method: kind, at: at.toISOString(), messageId: message.id },
     paymentLog: [...(order.paymentLog ?? []), paymentLogEntry('receipt', 'customer', { at })],
@@ -433,7 +531,7 @@ export function subscribeToPaymentTemplates(onUpdate: (templates: PaymentTemplat
       list.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
       onUpdate(list);
     },
-    (error) => console.warn('Payment templates subscription warning:', error)
+    (error) => logSubscriptionError('Payment templates', error)
   );
 }
 
@@ -461,13 +559,14 @@ export async function returnOrderLineStock(
   line: CartItem,
   lineIndex: number,
   at: Date,
-  options: { operator?: string; missingIsNothing?: boolean } = {}
+  options: { operator?: string; missingIsNothing?: boolean } = {},
+  targetDb: Firestore = db
 ): Promise<LineReturn> {
   if (line.isPreorder) return 'nothing';
-  const productRef = doc(db, 'products', line.product.id);
-  const returnRef = doc(db, STOCK_MOVEMENTS_COLLECTION, orderReturnMovementId(orderId, lineIndex));
-  const takenRef = doc(db, STOCK_MOVEMENTS_COLLECTION, orderMovementId(orderId, lineIndex));
-  return runTransaction(db, async (tx) => {
+  const productRef = doc(targetDb, 'products', line.product.id);
+  const returnRef = doc(targetDb, STOCK_MOVEMENTS_COLLECTION, orderReturnMovementId(orderId, lineIndex));
+  const takenRef = doc(targetDb, STOCK_MOVEMENTS_COLLECTION, orderMovementId(orderId, lineIndex));
+  return runTransaction(targetDb, async (tx) => {
     const [returnSnap, takenSnap, productSnap] = await Promise.all([tx.get(returnRef), tx.get(takenRef), tx.get(productRef)]);
     if (returnSnap.exists()) return 'already';
     if (!takenSnap.exists()) return options.missingIsNothing ? 'nothing' : 'unknown';
@@ -515,26 +614,33 @@ export async function returnOrderLineStock(
 /**
  * Every line of a cancelled order back to stock, one transaction per line (as the write-off). Marks the order
  * `stockReturned` when no line is left unknown. Resolves to true when the whole order is back.
+ * `targetDb` — the sign-in that returns (the buyer or the admin; the rules test calls this code with its own).
  */
 export async function returnCancelledOrderStock(
-  order: Pick<Order, 'id' | 'items'>,
-  options: { operator?: string; missingIsNothing?: boolean } = {}
+  order: Pick<Order, 'id' | 'items' | 'isAdjusted'>,
+  options: { operator?: string; missingIsNothing?: boolean } = {},
+  targetDb: Firestore = db
 ): Promise<boolean> {
+  if (order.isAdjusted) {
+    // after «Правка состава» only the admin returns, by variant (the buyer cannot read the order's whole journal);
+    // the buyer's browser leaves it to «Вернуть на склад» in «Заказы»
+    return options.missingIsNothing ? returnAdjustedOrderStock(order, options.operator ?? 'Администратор', targetDb) : false;
+  }
   const at = new Date();
   let complete = true;
   for (let i = 0; i < (order.items ?? []).length; i++) {
     let result: LineReturn;
     try {
-      result = await returnOrderLineStock(order.id, order.items[i], i, at, options);
+      result = await returnOrderLineStock(order.id, order.items[i], i, at, options, targetDb);
     } catch (err) {
       // Another tab (or the admin) returned this line at the same moment: its entry is there now
-      const entry = await getDoc(doc(db, STOCK_MOVEMENTS_COLLECTION, orderReturnMovementId(order.id, i))).catch(() => null);
+      const entry = await getDoc(doc(targetDb, STOCK_MOVEMENTS_COLLECTION, orderReturnMovementId(order.id, i))).catch(() => null);
       if (!entry?.exists()) throw err;
       result = 'already';
     }
     if (result === 'unknown') complete = false;
   }
-  if (complete) await updateDoc(doc(db, 'orders', order.id), { stockReturned: true, updatedAt: serverTimestamp() });
+  if (complete) await updateDoc(doc(targetDb, 'orders', order.id), { stockReturned: true, updatedAt: serverTimestamp() });
   return complete;
 }
 
@@ -542,48 +648,223 @@ export async function returnCancelledOrderStock(
 /**
  * Products without their previews inside (stage 6 of docs/catalog-scale-plan.md, productPreviews.ts): the previews go to
  * `product_previews` first (a product never points to previews that are not there yet), and only changed ones — a
- * product the admin changed without its photos keeps its `previewKey`
+ * product the admin changed without its photos keeps its `previewKey`.
+ * A product in `previous` (what the admin panel showed) gets only the fields the admin changed (`update`): a bulk
+ * action or a new category must not write back stock an order took in the same seconds (admin audit 09.10, finding 6).
+ * A new product, or one whose previous version cannot be compared, is written whole.
  */
-export async function syncAllProductsToFirestore(products: Product[]) {
+export async function syncAllProductsToFirestore(products: Product[], previous: Product[] = []) {
   try {
+    const before = new Map(previous.map((p) => [p.id, p]));
     const split = products.map(splitProductPreviews);
     await saveProductPreviews(
       split.flatMap(({ stored, previews }, i) => (previews && stored.previewKey !== products[i].previewKey ? [previews] : []))
     );
-    await setDocs('products', split.map(({ stored }) => toStoredProduct(stored)));
+    const writes = split.flatMap(({ stored }): ProductWrite[] => {
+      const next = sanitizeForFirestore(toStoredProduct(stored));
+      const prev = storedProductForCompare(before.get(next.id));
+      if (!prev) return [{ id: next.id, whole: next }];
+      const changes = changedFields(prev, next as unknown as Record<string, unknown>);
+      return hasFieldChanges(changes) ? [{ id: next.id, changes }] : [];
+    });
+    await commitInChunks(writes, (batch, write) => {
+      const ref = doc(db, 'products', write.id);
+      if ('whole' in write) batch.set(ref, write.whole);
+      else batch.update(ref, fieldUpdate(write.changes));
+    });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'products');
   }
 }
 
-/** Admin only: cost prices by product id (`product_costs`, closed to customers by firestore.rules) */
-export function subscribeToProductCosts(onUpdate: (costs: Record<string, number>) => void) {
+type ProductWrite = { id: string; whole: Product } | { id: string; changes: FieldChanges };
+
+/** The stored form of the version the admin saw; null — not known or not comparable (previews not read) */
+function storedProductForCompare(product: Product | undefined): Record<string, unknown> | null {
+  if (!product) return null;
+  try {
+    return sanitizeForFirestore(toStoredProduct(splitProductPreviews(product).stored)) as unknown as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+/** `update()` data of changed fields: removed ones are deleted */
+function fieldUpdate(changes: FieldChanges): Record<string, unknown> {
+  return { ...changes.set, ...Object.fromEntries(changes.removed.map((key) => [key, deleteField()])) };
+}
+
+/** Admin only: costs by product id (`product_costs`, closed to customers by firestore.rules) */
+export function subscribeToProductCosts(onUpdate: (costs: Record<string, ProductCostEntry>) => void) {
   return onSnapshot(
     collection(db, 'product_costs'),
     (snapshot) => {
-      const costs: Record<string, number> = {};
+      const costs: Record<string, ProductCostEntry> = {};
       snapshot.forEach((snap) => {
-        const cost = snap.data().costPrice;
-        if (typeof cost === 'number') costs[snap.id] = cost;
+        const entry = readCostEntry(snap.data());
+        if (entry) costs[snap.id] = entry;
       });
       onUpdate(costs);
     },
-    (error) => console.warn('Product costs subscription warning:', error)
+    (error) => logSubscriptionError('Product costs', error)
   );
 }
 
-/** Writes the cost prices the admin changed; `undefined` removes the cost */
-export async function saveProductCosts(changes: { id: string; costPrice?: number }[]) {
+function addProductCost(batch: WriteBatch, { id, ...fields }: { id: string } & ProductCostEntry) {
+  const entry = costEntryOf(fields);
+  if (hasCostData(entry)) {
+    batch.set(doc(db, 'product_costs', id), sanitizeForFirestore({ ...entry, updatedAt: new Date().toISOString() }));
+  } else batch.delete(doc(db, 'product_costs', id));
+}
+
+/** Writes the costs the admin changed; an empty entry removes the document */
+export async function saveProductCosts(changes: ({ id: string } & ProductCostEntry)[]) {
   if (changes.length === 0) return;
   try {
-    await commitInChunks(changes, (batch, { id, costPrice }) =>
-      typeof costPrice === 'number'
-        ? batch.set(doc(db, 'product_costs', id), { costPrice, updatedAt: new Date().toISOString() })
-        : batch.delete(doc(db, 'product_costs', id))
-    );
+    await commitInChunks(changes, addProductCost);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'product_costs');
   }
+}
+
+/**
+ * «Курсы и наценка» → «Применить»: only the price and the old (struck-out) price of each product — stock, photos and
+ * texts stay as the database has them (a whole-document write from the admin's copy could bring back sold stock).
+ * No old price or discount percent (`undefined`) removes the field: an old price not above the price is no discount.
+ */
+export interface ProductPriceChange {
+  id: string;
+  price: number;
+  originalPrice?: number;
+  discountPercent?: number;
+  priceHistory?: PriceHistoryEntry[];
+  /** The wholesale price from the wholesale markup; absent — the wholesale price is not touched */
+  wholesalePrice?: number;
+}
+
+function addProductPrice(
+  batch: WriteBatch,
+  { id, price, originalPrice, discountPercent, priceHistory, wholesalePrice }: ProductPriceChange
+) {
+  const orDelete = (n: number | undefined) => (typeof n === 'number' ? n : deleteField());
+  batch.update(doc(db, 'products', id), {
+    price,
+    originalPrice: orDelete(originalPrice),
+    discountPercent: orDelete(discountPercent),
+    ...(typeof wholesalePrice === 'number' ? { wholesalePrice } : {}),
+    // earlier prices: unpaid orders are checked against the price of their time
+    ...(priceHistory ? { priceHistory } : {}),
+  });
+}
+
+export async function updateProductPrices(changes: ProductPriceChange[]) {
+  if (changes.length === 0) return;
+  try {
+    await commitInChunks(changes, addProductPrice);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'products');
+  }
+}
+
+/**
+ * Admin only: cost snapshots of orders at the moment of sale (`order_costs`, owner's decision 09.10), by order id.
+ * `since` — only orders placed from that ISO time (the admin's session checks recent orders); null — all («Аналитика»)
+ */
+export function subscribeToOrderCosts(since: string | null, onUpdate: (snapshots: Map<string, OrderCostSnapshot>) => void) {
+  const source = collection(db, ORDER_COSTS_COLLECTION);
+  return onSnapshot(
+    since ? query(source, where('orderCreatedAt', '>=', since)) : source,
+    (snapshot) => {
+      const snapshots = new Map<string, OrderCostSnapshot>();
+      snapshot.forEach((snap) => {
+        const read = readOrderCostDoc(snap.data());
+        if (read) snapshots.set(snap.id, read);
+      });
+      onUpdate(snapshots);
+    },
+    (error) => logSubscriptionError('Order costs', error)
+  );
+}
+
+/** Writes cost snapshots of orders; throws when the write is refused */
+export async function saveOrderCosts(docs: OrderCostDoc[]) {
+  if (docs.length === 0) return;
+  try {
+    await commitInChunks(docs, (batch, entry) => batch.set(doc(db, ORDER_COSTS_COLLECTION, entry.orderId), sanitizeForFirestore(entry)));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, ORDER_COSTS_COLLECTION);
+  }
+}
+
+/** The price journal (admin audit 09.10, finding 11; admin only, closed to customers by firestore.rules) */
+export const PRICE_CHANGES_COLLECTION = 'price_changes';
+
+function addPriceChange(batch: WriteBatch, entry: PriceChangeLog) {
+  batch.set(doc(db, PRICE_CHANGES_COLLECTION, entry.id), sanitizeForFirestore(entry));
+}
+
+/** Adds entries to the price journal; throws when the write is refused */
+export async function savePriceChanges(entries: PriceChangeLog[]) {
+  if (entries.length === 0) return;
+  try {
+    await commitInChunks(entries, addPriceChange);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, PRICE_CHANGES_COLLECTION);
+  }
+}
+
+/** Admin only: the newest entries of the price journal, read once when «Журнал цен» is opened */
+export async function loadPriceChanges(max: number): Promise<PriceChangeLog[]> {
+  try {
+    const snapshot = await getDocs(query(collection(db, PRICE_CHANGES_COLLECTION), orderBy('createdAt', 'desc'), limit(max)));
+    return snapshot.docs.map((d) => ({ ...(d.data() as PriceChangeLog), id: d.id }));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, PRICE_CHANGES_COLLECTION);
+  }
+}
+
+/**
+ * «Применить» of the rates: new prices, the costs of those products and the rates — in one batch, so a failure leaves
+ * nothing half applied (admin audit 09.10, finding 13). A catalog too big for one batch goes in parts: costs first,
+ * then prices, the rates last — «Последний раз применено» never shows over old prices, and pressing again finishes it.
+ * The price journal is written after it (`savePriceChanges`): a refused journal must not hold the prices back.
+ */
+export async function applyExchangeRateChanges(
+  prices: ProductPriceChange[],
+  costs: ({ id: string } & ProductCostEntry)[],
+  rates: ExchangeRates
+) {
+  try {
+    if (prices.length + costs.length + 1 <= BATCH_LIMIT) {
+      const batch = writeBatch(db);
+      costs.forEach((c) => addProductCost(batch, c));
+      prices.forEach((p) => addProductPrice(batch, p));
+      addExchangeRates(batch, rates);
+      await batch.commit();
+      return;
+    }
+    await commitInChunks(costs, addProductCost);
+    await commitInChunks(prices, addProductPrice);
+    await commitInChunks([rates], addExchangeRates);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'products');
+  }
+}
+
+/** Admin only: «Курсы и наценка» (`settings/exchange_rates`, closed to customers: the markup shows the margin) */
+export function subscribeToExchangeRates(onUpdate: (rates: ExchangeRates) => void, onError?: (error: unknown) => void) {
+  return onSnapshot(
+    doc(db, 'settings', EXCHANGE_RATES_DOC_ID),
+    (snap) => onUpdate(readExchangeRates(snap.data())),
+    (error) => {
+      logSubscriptionError('Exchange rates', error);
+      onError?.(error);
+    }
+  );
+}
+
+function addExchangeRates(batch: WriteBatch, rates: ExchangeRates) {
+  batch.set(doc(db, 'settings', EXCHANGE_RATES_DOC_ID), sanitizeForFirestore({ ...rates, updatedAt: new Date().toISOString() }));
 }
 
 /** How many newest entries of the stock journal the admin screen loads */
@@ -605,7 +886,7 @@ export function subscribeToStockMovements(
       : query(col, orderBy('createdAt', 'desc'), limit(STOCK_MOVEMENTS_LIMIT)),
     (snapshot) => onUpdate(snapshot.docs.map((d) => ({ ...(d.data() as StockMovementLog), id: d.id }))),
     (error) => {
-      console.warn('Stock journal subscription warning:', error);
+      logSubscriptionError('Stock journal', error);
       onError?.(error);
     }
   );
@@ -722,7 +1003,7 @@ export function subscribeToCatalogIndex(onUpdate: (parts: CatalogIndexPart[]) =>
       );
     },
     (error) => {
-      console.warn('Catalog index subscription warning:', error);
+      logSubscriptionError('Catalog index', error);
       if (onError) onError(error);
     }
   );
@@ -822,7 +1103,7 @@ export function subscribeToProductDoc(productId: string, onUpdate: (product: Pro
     },
     (error) => {
       answered();
-      console.warn('Product subscription warning:', error);
+      logSubscriptionError('Product', error);
     }
   );
   return () => {
@@ -872,7 +1153,8 @@ export async function moveProductCostsToPrivate(products: Product[]) {
     // Two writes per product: half a batch of products at a time
     for (let i = 0; i < legacy.length; i += BATCH_LIMIT / 2) {
       await commitInChunks(legacy.slice(i, i + BATCH_LIMIT / 2), (batch, p) => {
-        batch.set(doc(db, 'product_costs', p.id), { costPrice: p.costPrice, updatedAt: new Date().toISOString() });
+        // merge: a purchase in a currency already kept there stays
+        batch.set(doc(db, 'product_costs', p.id), { costPrice: p.costPrice, updatedAt: new Date().toISOString() }, { merge: true });
         batch.update(doc(db, 'products', p.id), { costPrice: deleteField() });
       });
     }
@@ -980,7 +1262,13 @@ function normalizeOrderFromFirestore(raw: any, docId?: string): Order {
   );
   const rawDeliveryMethod = String(raw.deliveryMethod ?? raw.delivery_method ?? 'Курьерская доставка');
   const rawTrackingCompany = raw.trackingCompany ? String(raw.trackingCompany) : undefined;
-  const isTK = isTransportCompanyDelivery(rawDeliveryMethod, rawTrackingCompany);
+  const rawDeliveryKind = DELIVERY_KINDS.find(kind => kind === raw.deliveryKind);
+  // по типу заказа, а не по названию способа: трек ТК с любым названием не пропадает (аудит 07.10, находка 1)
+  const isTK = isCarrierOrder({
+    deliveryKind: rawDeliveryKind,
+    deliveryMethod: rawDeliveryMethod,
+    trackingCompany: rawTrackingCompany as Order['trackingCompany'],
+  });
   const trackingNumber = isTK && raw.trackingNumber ? String(raw.trackingNumber) : undefined;
   const estimatedDelivery = raw.estimatedDelivery ? String(raw.estimatedDelivery) : undefined;
 
@@ -1138,7 +1426,7 @@ export function subscribeToOrders(
       onUpdate(loaded, stored);
     },
     (error) => {
-      console.warn('Orders subscription warning:', error);
+      logSubscriptionError('Orders', error);
       if (onError) onError(error);
     }
   );
@@ -1148,7 +1436,6 @@ export async function saveOrderToFirestore(order: Order): Promise<void> {
   try {
     await setDoc(doc(db, 'orders', order.id), storedOrder(order));
   } catch (error) {
-    console.error(`Error persisting order "${order.id}":`, error);
     handleFirestoreError(error, OperationType.WRITE, `orders/${order.id}`);
   }
 }
@@ -1181,12 +1468,14 @@ export async function orderRateWaitSeconds(uid: string, targetDb: Firestore = db
  * A guest signed in with Google: the orders and the support chat of the guest's anonymous sign-in go to the account
  * (audit 02.10, finding 26). Both sides agree in this browser (rules: guest_links + account_guests), then the guest's
  * session moves each order (`customerUid`) and each message it sees (`threadId`). Returns what was moved.
+ * `accountDb` — the account's sign-in (the site's own; the rules test passes the account's database).
  */
 export async function handOverGuestData(
   guest: { uid: string; db: Firestore },
-  accountUid: string
+  accountUid: string,
+  accountDb: Firestore = db
 ): Promise<{ orderIds: string[]; messages: number }> {
-  await setDoc(doc(db, 'account_guests', `${accountUid}_${guest.uid}`), { accountUid, guestUid: guest.uid });
+  await setDoc(doc(accountDb, 'account_guests', `${accountUid}_${guest.uid}`), { accountUid, guestUid: guest.uid });
   await setDoc(doc(guest.db, 'guest_links', guest.uid), { accountUid });
 
   const orders = await getDocs(query(collection(guest.db, 'orders'), where('customerUid', '==', guest.uid)));
@@ -1222,7 +1511,7 @@ export function subscribeToAnalyticsResetAt(onUpdate: (resetAt: number | null) =
       const value = snap.data()?.resetAt;
       onUpdate(typeof value === 'number' && value > 0 ? value : null);
     },
-    (error) => console.warn('Analytics settings subscription warning:', error)
+    (error) => logSubscriptionError('Analytics settings', error)
   );
 }
 
@@ -1241,7 +1530,7 @@ export function subscribeToLegalTexts(onUpdate: (texts: LegalTexts) => void) {
       }
       onUpdate(texts);
     },
-    (error) => console.warn('Legal texts subscription warning:', error)
+    (error) => logSubscriptionError('Legal texts', error)
   );
 }
 
@@ -1266,12 +1555,87 @@ export async function saveAnalyticsResetAt(resetAt: number | null) {
   }
 }
 
-export async function syncAllOrdersToFirestore(orders: Order[]) {
+type OrderWrite =
+  | { id: string; whole: Record<string, unknown> }
+  | { id: string; changes: FieldChanges; seen?: Record<string, unknown>; check?: string[] };
+
+/**
+ * Admin changes of orders. An order in `previous` (what «Заказы» showed) gets only the fields the admin changed
+ * (`update`), so a buyer's cancel, receipt or «Я получил» in the same seconds is not written over (admin audit 09.10,
+ * finding 7). A change of a field the buyer also writes (status, payment, cancellation) goes in a transaction and only
+ * while the database still has the order's state the admin saw. Resolves to the orders that changed meanwhile — as
+ * the database has them now; when the read before writing finds one, nothing of the change is written.
+ */
+/** The order as the database has it, when one of `fields` differs from what the admin saw; null — unchanged */
+async function currentOrderIfChanged(
+  id: string,
+  seen: Record<string, unknown>,
+  fields: string[],
+  changes: FieldChanges
+): Promise<Order | null> {
+  const snap = await getDoc(doc(db, 'orders', id));
+  if (!snap.exists()) throw new Error(`Заказ ${id} удалён`);
+  const current = normalizeOrderFromFirestore(snap.data(), snap.id);
+  return orderChangedMeanwhile(current, seen, fields, changes) ? current : null;
+}
+
+/** The database order differs from what the admin saw — unless it already holds exactly this change */
+function orderChangedMeanwhile(current: Order, seen: Record<string, unknown>, fields: string[], changes: FieldChanges): boolean {
+  const now = sanitizeForFirestore(current) as unknown as Record<string, unknown>;
+  return changedSince(seen, now, fields).length > 0 && !holdsChange(now, changes);
+}
+
+export async function syncAllOrdersToFirestore(orders: Order[], previous: Order[] = []): Promise<Order[]> {
+  const before = new Map(previous.map((o) => [o.id, o]));
+  const writes: OrderWrite[] = [];
+  for (const order of orders) {
+    const next = sanitizeForFirestore(order) as unknown as Record<string, unknown>;
+    const seenOrder = before.get(order.id);
+    if (!seenOrder) {
+      writes.push({ id: order.id, whole: next });
+      continue;
+    }
+    const seen = sanitizeForFirestore(seenOrder) as unknown as Record<string, unknown>;
+    const changes = changedFields(seen, next, ['updatedAt']);
+    if (!hasFieldChanges(changes)) continue;
+    const check = orderFieldsToCheck(changes);
+    writes.push(check.length > 0 ? { id: order.id, changes, seen, check } : { id: order.id, changes });
+  }
+  const conflicts: Order[] = [];
   try {
-    await commitInChunks(orders, (batch, order) => batch.set(doc(db, 'orders', order.id), storedOrder(order)));
+    const checked = writes.filter((w): w is Extract<OrderWrite, { changes: FieldChanges }> & { seen: Record<string, unknown>; check: string[] } =>
+      'check' in w && !!w.check && !!w.seen
+    );
+    // All or nothing in practice: if a buyer changed any of the orders meanwhile, none is written, so the admin
+    // screen's follow-up (stock, promo) never runs for a half-saved change
+    for (const { id, seen, check, changes } of checked) {
+      const current = await currentOrderIfChanged(id, seen, check, changes);
+      if (current) conflicts.push(current);
+    }
+    if (conflicts.length > 0) return conflicts;
+    const plain = writes.filter((w) => !checked.includes(w as (typeof checked)[number]));
+    await commitInChunks(plain, (batch, write) => {
+      const ref = doc(db, 'orders', write.id);
+      if ('whole' in write) batch.set(ref, { ...write.whole, updatedAt: serverTimestamp() });
+      else batch.update(ref, { ...fieldUpdate(write.changes), updatedAt: serverTimestamp() });
+    });
+    // the check again inside the transaction: the buyer may act between the read above and the write
+    for (const { id, changes, seen, check } of checked) {
+      const ref = doc(db, 'orders', id);
+      const changedMeanwhile = await runTransaction(db, async (tx) => {
+        const snap = await tx.get(ref);
+        if (!snap.exists()) throw new Error(`Заказ ${id} удалён`);
+        const current = normalizeOrderFromFirestore(snap.data(), snap.id);
+        if (orderChangedMeanwhile(current, seen, check, changes)) return current;
+        tx.update(ref, { ...fieldUpdate(changes), updatedAt: serverTimestamp() });
+        return null;
+      });
+      if (changedMeanwhile) conflicts.push(changedMeanwhile);
+    }
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, 'orders');
   }
+  return conflicts;
 }
 
 /**
@@ -1296,7 +1660,7 @@ export function subscribeToPromos(
       onUpdate(loaded);
     },
     (error) => {
-      console.warn('Promos subscription warning:', error);
+      logSubscriptionError('Promos', error);
       if (onError) onError(error);
     }
   );
@@ -1321,6 +1685,42 @@ export async function recordPromoUsageInFirestore(promo: PromoCode, orderId: str
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `promos/${promo.id}`);
   }
+}
+
+/**
+ * The promo code use of a cancelled order goes back to the code: `promo_uses/{заказ}` is removed and `usedCount` drops
+ * by one, in one transaction (audit 07.10, finding 6). No use recorded — nothing to return. Admin only (the rules let the
+ * buyer only add a use). Resolves to true when a use went back.
+ */
+export async function releaseOrderPromoUse(orderId: string): Promise<boolean> {
+  const useRef = doc(db, 'promo_uses', orderId);
+  return runTransaction(db, async (tx) => {
+    const use = await tx.get(useRef);
+    if (!use.exists()) return false;
+    const promoId = String(use.data().promoId ?? '');
+    const promoRef = promoId ? doc(db, 'promos', promoId) : null;
+    const promo = promoRef ? await tx.get(promoRef) : null;
+    tx.delete(useRef);
+    if (promoRef && promo?.exists()) {
+      tx.update(promoRef, { usedCount: Math.max(0, (Number(promo.data().usedCount) || 0) - 1) });
+    }
+    return true;
+  });
+}
+
+/**
+ * A restored order takes its promo code use again (it was returned on the cancellation): `usedCount` + 1 and
+ * `promo_uses/{заказ}`, like the order did. Admin only; the code's limit is the admin's call here.
+ */
+export async function retakeOrderPromoUse(orderId: string, promoId: string): Promise<boolean> {
+  const useRef = doc(db, 'promo_uses', orderId);
+  const promoRef = doc(db, 'promos', promoId);
+  return runTransaction(db, async (tx) => {
+    if ((await tx.get(useRef)).exists() || !(await tx.get(promoRef)).exists()) return false;
+    tx.set(useRef, { orderId, promoId, createdAt: new Date().toISOString() });
+    tx.update(promoRef, { usedCount: increment(1), lastOrderId: orderId });
+    return true;
+  });
 }
 
 export async function syncAllPromosToFirestore(promos: PromoCode[]) {
@@ -1350,7 +1750,7 @@ export function subscribeToStorefrontSettings(
       onUpdate({ ...DEFAULT_STOREFRONT_SETTINGS, ...(snapshot.data() as StorefrontSettings) });
     },
     (error) => {
-      console.warn('Storefront settings subscription warning:', error);
+      logSubscriptionError('Storefront settings', error);
       if (onError) onError(error);
     }
   );
@@ -1387,7 +1787,7 @@ export function subscribeToBanners(
       onUpdate(loaded);
     },
     (error) => {
-      console.warn('Banners subscription warning:', error);
+      logSubscriptionError('Banners', error);
       if (onError) onError(error);
     }
   );
@@ -1419,7 +1819,7 @@ export function subscribeToServerConfig(onUpdate: (config: ServerConfig) => void
     doc(db, 'settings', SERVER_CONFIG_DOC_ID),
     (snap) => onUpdate(snap.exists() ? (snap.data() as ServerConfig) : {}),
     (error) => {
-      console.warn('Server config subscription warning:', error);
+      logSubscriptionError('Server config', error);
       onUpdate({});
     }
   );
@@ -1440,7 +1840,7 @@ export function subscribeToReviews(onUpdate: (reviews: StoredReview[]) => void, 
   return onSnapshot(
     productId ? query(ref, where('productId', '==', productId)) : ref,
     (snap) => onUpdate(snap.docs.map((d) => ({ ...(d.data() as StoredReview), id: d.id }))),
-    (error) => console.warn('Reviews subscription warning:', error)
+    (error) => logSubscriptionError('Reviews', error)
   );
 }
 
@@ -1449,7 +1849,7 @@ export function subscribeToReviewVotes(onUpdate: (votes: ReviewVote[]) => void, 
   return onSnapshot(
     productId ? query(ref, where('productId', '==', productId)) : ref,
     (snap) => onUpdate(snap.docs.map((d) => d.data() as ReviewVote)),
-    (error) => console.warn('Review votes subscription warning:', error)
+    (error) => logSubscriptionError('Review votes', error)
   );
 }
 
@@ -1549,7 +1949,7 @@ export function subscribeToChatMessages(
         onUpdate(loaded);
       },
       (error) => {
-        console.warn('Chat thread subscription warning:', error);
+        logSubscriptionError('Chat thread', error);
         if (onError) onError(error);
       }
     );
@@ -1572,7 +1972,7 @@ export function subscribeToChatMessages(
       onUpdate(loaded);
     },
     (error) => {
-      console.warn('Chat messages subscription warning:', error);
+      logSubscriptionError('Chat messages', error);
       if (onError) onError(error);
     }
   );
@@ -1712,7 +2112,7 @@ export function subscribeToSupportStatus(
       const data = snap.data() as Partial<SupportStatus> | undefined;
       onUpdate(data?.status ? { status: data.status, updatedAt: Number(data.updatedAt) || 0 } : null);
     },
-    (error) => console.warn('Support status subscription warning:', error)
+    (error) => logSubscriptionError('Support status', error)
   );
 }
 
@@ -1727,7 +2127,7 @@ export function subscribeToSupportThreads(onUpdate: (meta: Record<string, Suppor
       });
       onUpdate(byThread);
     },
-    (error) => console.warn('Support threads subscription warning:', error)
+    (error) => logSubscriptionError('Support threads', error)
   );
 }
 
@@ -1777,7 +2177,7 @@ export function subscribeToUsers(
       notes = new Map(snapshot.docs.map((d) => [d.id, d.data() as Pick<UserProfile, 'managerNotes' | 'tags'>]));
       emit();
     },
-    (error) => console.warn('Customer notes subscription warning:', error)
+    (error) => logSubscriptionError('Customer notes', error)
   );
 
   const colRef = collection(db, 'users');
@@ -1793,7 +2193,7 @@ export function subscribeToUsers(
       emit();
     },
     (error) => {
-      console.warn('Users subscription warning:', error);
+      logSubscriptionError('Users', error);
       if (onError) onError(error);
     }
   );
@@ -1818,7 +2218,7 @@ export function subscribeToOwnUserProfile(
       onUpdate(snap.exists() ? [snap.data() as UserProfile] : []);
     },
     (error) => {
-      console.warn('User profile subscription warning:', error);
+      logSubscriptionError('User profile', error);
       if (onError) onError(error);
     }
   );
@@ -1830,7 +2230,8 @@ const ADMIN_ONLY_PROFILE_FIELDS = ['bonusPoints', 'managerNotes', 'tags'] as con
 
 export async function saveUserProfileToFirestore(uid: string, profile: UserProfile) {
   try {
-    const editable: Record<string, unknown> = { ...profile };
+    // the avatar is only the Google account's photo or none: «Клиенты» show it to the owner (audit 07.10, finding 8)
+    const editable: Record<string, unknown> = { ...profile, avatar: googleAvatarUrl(profile.avatar) };
     for (const field of ADMIN_ONLY_PROFILE_FIELDS) {
       delete editable[field];
     }
@@ -1898,7 +2299,7 @@ export function subscribeToDeliveryMethods(
       onUpdate(loaded);
     },
     (error) => {
-      console.warn('Delivery methods subscription warning:', error);
+      logSubscriptionError('Delivery methods', error);
       if (onError) onError(error);
     }
   );
@@ -1938,7 +2339,7 @@ export function subscribeToPickupPoints(
       onUpdate(loaded);
     },
     (error) => {
-      console.warn('Pickup points subscription warning:', error);
+      logSubscriptionError('Pickup points', error);
       if (onError) onError(error);
     }
   );
@@ -1999,11 +2400,14 @@ export async function deleteClientErrorsBefore(beforeMs: number): Promise<number
 /**
  * 11. DATABASE BACKUP (admin only)
  */
+export const CHAT_TEMPLATES_DOC_ID = 'chat_templates';
+
 /** Every collection of the store; `test` holds only the connection probe */
 export const BACKUP_COLLECTIONS = [
   'products', 'product_previews', 'product_photos', 'product_costs', 'promos', 'settings', 'banners', 'banner_images', 'delivery_methods', 'pickup_points',
   'orders', 'users', 'customer_notes', 'admins', 'reviews', 'review_votes',
   'chat_messages', 'chat_images', 'support_threads', 'support_status', STOCK_MOVEMENTS_COLLECTION, 'promo_uses', 'payment_templates',
+  PRICE_CHANGES_COLLECTION, ORDER_COSTS_COLLECTION,
 ] as const;
 
 export interface DatabaseBackup {
@@ -2026,13 +2430,49 @@ function toBackupValue(value: unknown): unknown {
   return value;
 }
 
+/**
+ * Reply templates of the support chat (`settings/chat_templates`, admin only — admin audit 09.10, stage 7, finding 4):
+ * one list for the phone and the computer. `null` — not saved yet. Items are raw: `normalizeChatTemplates` reads them.
+ */
+export function subscribeToChatTemplates(onData: (items: unknown[] | null) => void, onError?: (error: unknown) => void) {
+  return onSnapshot(
+    doc(db, 'settings', CHAT_TEMPLATES_DOC_ID),
+    (snapshot) => {
+      const items = snapshot.exists() ? (snapshot.data() as { items?: unknown }).items : null;
+      onData(Array.isArray(items) ? items : snapshot.exists() ? [] : null);
+    },
+    (error) => {
+      logSubscriptionError('Firestore Chat Templates', error);
+      onError?.(error);
+    }
+  );
+}
+
+/**
+ * Changes the template list inside a transaction: `change` gets the list as it is in the database now (raw items), so
+ * an edit on the phone and one on the computer in the same seconds both stay (review of stage 7).
+ */
+export async function updateChatTemplates(change: (current: unknown[]) => object[]): Promise<void> {
+  const ref = doc(db, 'settings', CHAT_TEMPLATES_DOC_ID);
+  try {
+    await runTransaction(db, async (tx) => {
+      const snapshot = await tx.get(ref);
+      const items = snapshot.exists() ? (snapshot.data() as { items?: unknown }).items : undefined;
+      const next = change(Array.isArray(items) ? items : []);
+      tx.set(ref, sanitizeForFirestore({ items: next, updatedAt: new Date().toISOString() }));
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `settings/${CHAT_TEMPLATES_DOC_ID}`);
+  }
+}
+
 /** Admin's quick phrases (`settings/quick_phrases`, admin only — finding 49); null — not saved yet (phrasesSync.ts) */
 export function subscribeToQuickPhrasesDoc<T>(onData: (data: Partial<T> | null) => void, onError?: (error: unknown) => void) {
   return onSnapshot(
     doc(db, 'settings', 'quick_phrases'),
     (snapshot) => onData(snapshot.exists() ? (snapshot.data() as Partial<T>) : null),
     (error) => {
-      console.warn('Firestore Quick Phrases subscription warning:', error);
+      logSubscriptionError('Firestore Quick Phrases', error);
       onError?.(error);
     }
   );
