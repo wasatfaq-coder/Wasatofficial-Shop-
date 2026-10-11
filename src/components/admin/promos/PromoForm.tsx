@@ -157,8 +157,9 @@ export const PromoForm: React.FC<PromoFormProps> = ({
     partnerCommissionPercent,
   ]);
   useUnsavedChanges(isDirty, 'Промокод');
-  // «К списку» and «Отмена» ask before dropping edits, as every admin form does
-  const guard = useDiscardGuard(isDirty, onClose);
+  // «К списку» and «Отмена» ask before dropping edits, as every admin form does; not while a save is on its way —
+  // nothing is dropped then, and its toast tells how it ended
+  const guard = useDiscardGuard(isDirty && !isSaving, onClose);
 
   const filteredProductsForSelect = useMemo(() => {
     const q = productSearchQuery.toLowerCase().trim();
