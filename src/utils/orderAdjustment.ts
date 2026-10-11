@@ -1,6 +1,7 @@
 import type { CartItem, Order, PromoCode } from '../types';
 import { calcSubtotal, toPricingLine } from '../shared/orderPricing';
 import { linePrice } from '../shared/orderLine';
+import { extractColorName, extractSizeName } from './inventory';
 
 export interface AdjustedTotals {
   subtotal: number;
@@ -17,19 +18,24 @@ export interface AdjustedTotals {
  * between their total and items as delivery (or, when the total is below the items, as the discount).
  * A percent promo keeps the order's own percent (discount ÷ items when it was placed) for the new items; otherwise the
  * discount stays the same sum, but not above the new items.
+ *
+ * `refundDelivery` gives the delivery back too (owner's decision 10.10): the order keeps no delivery fee, so the money
+ * returned holds it once and «Аналитика» does not take it off the goods a second time.
  */
 export function adjustedOrderTotals(
   order: Pick<Order, 'items' | 'totalPrice' | 'deliveryFee' | 'discountAmount' | 'promoCode'>,
   items: CartItem[],
-  promos: PromoCode[] = []
+  promos: PromoCode[] = [],
+  options: { refundDelivery?: boolean } = {}
 ): AdjustedTotals {
   const oldSubtotal = calcSubtotal((order.items ?? []).map(toPricingLine));
   const subtotal = calcSubtotal(items.map(toPricingLine));
-  const deliveryFee = order.deliveryFee ?? Math.max(0, order.totalPrice - oldSubtotal + (order.discountAmount ?? 0));
-  const oldDiscount = order.discountAmount ?? Math.max(0, oldSubtotal + deliveryFee - order.totalPrice);
+  const paidDelivery = order.deliveryFee ?? Math.max(0, order.totalPrice - oldSubtotal + (order.discountAmount ?? 0));
+  const oldDiscount = order.discountAmount ?? Math.max(0, oldSubtotal + paidDelivery - order.totalPrice);
+  const deliveryFee = options.refundDelivery ? 0 : paidDelivery;
 
   if (subtotal === oldSubtotal && sameLines(order.items ?? [], items)) {
-    return { subtotal, discount: oldDiscount, deliveryFee, total: order.totalPrice };
+    return { subtotal, discount: oldDiscount, deliveryFee, total: order.totalPrice - (paidDelivery - deliveryFee) };
   }
 
   const promo = order.promoCode
@@ -54,4 +60,16 @@ function sameLines(a: CartItem[], b: CartItem[]): boolean {
   if (a.length !== b.length) return false;
   const keys = a.map(lineKey).sort();
   return b.map(lineKey).sort().every((key, i) => key === keys[i]);
+}
+
+/** What the adjustment gives back, model by model: «Чинос (M, синий) × 1 — 3 500 ₽; доставка — 350 ₽» */
+export function refundedLinesText(returned: CartItem[], deliveryRefund = 0): string {
+  const parts = returned.map((it) => {
+    const variant = [extractSizeName(it.selectedSize), extractColorName(it.selectedColor)].filter(Boolean).join(', ');
+    const title = it.product?.title ?? 'Товар';
+    const sum = (linePrice(it) * it.quantity).toLocaleString('ru-RU');
+    return `${title}${variant ? ` (${variant})` : ''} × ${it.quantity} — ${sum} ₽`;
+  });
+  if (deliveryRefund > 0) parts.push(`доставка — ${deliveryRefund.toLocaleString('ru-RU')} ₽`);
+  return parts.join('; ');
 }

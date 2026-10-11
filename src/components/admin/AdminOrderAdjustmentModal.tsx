@@ -14,7 +14,8 @@ import {
   Truck,
 } from 'lucide-react';
 import { Order, CartItem, Product, OrderAdjustmentLog, PromoCode } from '../../types';
-import { adjustedOrderTotals } from '../../utils/orderAdjustment';
+import { adjustedOrderTotals, refundedLinesText } from '../../utils/orderAdjustment';
+import { NeumorphicSwitch } from '../NeumorphicSwitch';
 import { motion, AnimatePresence } from 'motion/react';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import {
@@ -72,6 +73,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
 
   const [reason, setReason] = useState(ADJUSTMENT_REASONS[0]);
   const [customNote, setCustomNote] = useState('');
+  const [refundDelivery, setRefundDelivery] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState(order?.trackingNumber || '');
   const [isAddingItem, setIsAddingItem] = useState(false);
 
@@ -86,7 +88,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
   const isAdjustmentDirty =
     isOpen &&
     Boolean(order) &&
-    (!sameValue(items, order?.items ?? []) || customNote.trim() !== '' || trackingNumber !== (order?.trackingNumber || ''));
+    (!sameValue(items, order?.items ?? []) || refundDelivery || customNote.trim() !== '' || trackingNumber !== (order?.trackingNumber || ''));
   useUnsavedChanges(isAdjustmentDirty, 'Корректировка заказа');
   const guard = useDiscardGuard(isAdjustmentDirty, onClose);
   const dialog = useDialogA11y(isOpen && Boolean(order), guard.requestClose);
@@ -103,6 +105,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
         );
       }
       setTrackingNumber(order.trackingNumber || '');
+      setRefundDelivery(false);
     }
   }, [order]);
 
@@ -116,9 +119,17 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
 
   // Order total before and after: items plus the order's delivery, minus its discount
   const initialTotal = order ? order.totalPrice : 0;
-  const newTotals = order ? adjustedOrderTotals(order, items, promos) : null;
+  // the delivery goes back only with money: a paid order (owner's decision 10.10, it is not taken off the goods twice)
+  const paidDelivery = Number(order?.deliveryFee) || 0;
+  // not for «Возврат средств»: without a sum it counts as refunded in full, and a sum here would bring it back as revenue
+  const canRefundDelivery = paidDelivery > 0 && order?.paymentStatus === 'paid';
+  const newTotals = order
+    ? adjustedOrderTotals(order, items, promos, { refundDelivery: canRefundDelivery && refundDelivery })
+    : null;
   const newItemsTotal = newTotals?.total ?? 0;
   const itemsChanged = Boolean(order) && !sameValue(items, order?.items ?? []);
+  const deliveryRefund = newTotals ? Math.max(0, paidDelivery - newTotals.deliveryFee) : 0;
+  const changed = itemsChanged || deliveryRefund > 0;
   const delta = initialTotal - newItemsTotal;
   const isRefund = delta > 0;
   const isExtraCharge = delta < 0;
@@ -237,7 +248,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
     const effectiveTrackingNumber = isTK ? (trackingNumber.trim() || undefined) : undefined;
 
     // Only the track number changed: the items, the sum and the history stay as they were
-    if (!itemsChanged) {
+    if (!changed) {
       onSaveAdjustment({ ...order, trackingNumber: effectiveTrackingNumber }, null);
       onClose();
       return;
@@ -258,8 +269,11 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
       year: 'numeric',
     })} в ${now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
 
+    const { returnedItems, addedItems } = computeStockDiff();
+
+    // the refund names each model given back, so the order's history says what the money was for
     const summaryText = isRefund
-      ? `Частичный возврат: ${delta.toLocaleString('ru-RU')} ₽ (состав изменен: ${items.length} позиций)`
+      ? `Частичный возврат: ${delta.toLocaleString('ru-RU')} ₽ — ${refundedLinesText(returnedItems, deliveryRefund)}`
       : isExtraCharge
       ? `Добавлены позиции, доплата: ${Math.abs(delta).toLocaleString('ru-RU')} ₽`
       : `Состав скорректирован (${items.length} позиций, сумма осталась неизменной)`;
@@ -293,8 +307,6 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
           { title: 'Заказ принят', date: order.date, completed: true },
           adjustmentHistoryStep,
         ];
-
-    const { returnedItems, addedItems } = computeStockDiff();
 
     // Each change in its own transaction against the stock in the database now (not the browser's copy of the catalog)
     const toChange = (it: CartItem, sign: 1 | -1): AdminStockChange => ({
@@ -573,7 +585,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                         onClick={() => handleRemoveItem(idx)}
                         className="w-8 h-8 rounded-xl neu-button-danger flex items-center justify-center hover:scale-105 transition-transform cursor-pointer shrink-0"
                         title="Удалить позицию из заказа (частичный возврат)"
-                        aria-label="Удалить позицию из заказа (частичный возврат)"
+                        aria-label={`Вернуть модель: ${item.product.title} (${item.selectedSize}, ${item.selectedColor})`}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -736,8 +748,8 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
         {/* Financial Recalculation & Refund Banner */}
         <div className="neu-flat rounded-2xl p-4 space-y-2.5 border border-white/80">
           <div className="flex items-center justify-between text-xs font-bold text-[#4E5C70]">
-            <span>{itemsChanged ? 'Было:' : 'Сумма заказа:'}</span>
-            <span className={`font-bold text-[#2D3A4E] ${itemsChanged ? 'line-through' : ''}`}>
+            <span>{changed ? 'Было:' : 'Сумма заказа:'}</span>
+            <span className={`font-bold text-[#2D3A4E] ${changed ? 'line-through' : ''}`}>
               {initialTotal.toLocaleString('ru-RU')} ₽
             </span>
           </div>
@@ -757,14 +769,31 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
               <div className="flex items-center justify-between">
                 <dt>Доставка</dt>
                 <dd className="font-bold text-[#2D3A4E]">
-                  {newTotals.deliveryFee > 0 ? `${newTotals.deliveryFee.toLocaleString('ru-RU')} ₽` : 'бесплатно'}
+                  {deliveryRefund > 0
+                    ? `возвращается ${deliveryRefund.toLocaleString('ru-RU')} ₽`
+                    : newTotals.deliveryFee > 0
+                    ? `${newTotals.deliveryFee.toLocaleString('ru-RU')} ₽`
+                    : 'бесплатно'}
                 </dd>
               </div>
             </dl>
           )}
 
+          {canRefundDelivery && (
+            <div className="flex items-center justify-between gap-3 text-xs">
+              <span id="adjustment-refund-delivery" className="font-bold text-[#2D3A4E]">
+                Вернуть и доставку ({paidDelivery.toLocaleString('ru-RU')} ₽)
+              </span>
+              <NeumorphicSwitch
+                checked={refundDelivery}
+                onChange={setRefundDelivery}
+                label={`Вернуть и доставку (${paidDelivery.toLocaleString('ru-RU')} ₽)`}
+              />
+            </div>
+          )}
+
           <div className="flex items-center justify-between text-sm font-extrabold text-[#2D3A4E]">
-            <span>{itemsChanged ? 'Станет:' : 'Итого:'}</span>
+            <span>{changed ? 'Станет:' : 'Итого:'}</span>
             <span className="text-accent font-extrabold text-base">
               {newItemsTotal.toLocaleString('ru-RU')} ₽
             </span>
@@ -826,7 +855,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
           >
             <Check className="w-4 h-4 stroke-[3]" />
             <span>
-              {!itemsChanged
+              {!changed
                 ? 'Сохранить'
                 : isRefund
                 ? `Сохранить (к возврату ${delta.toLocaleString('ru-RU')} ₽)`
