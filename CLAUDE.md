@@ -52,7 +52,7 @@ Wasat Shop — SPA интернет-магазина мужской одежды
   вызывает кодом сайта со своей базой (`targetDb`), а не копией (аудит 07.10, находка 40)
 - `bun run test:functions` — тесты Cloud Functions и расчёта цены (сначала `npm ci --prefix functions`)
 - `functions/`: отдельный npm-пакет; `npm run typecheck|build --prefix functions`
-- `bun run test:e2e` — сценарии Playwright в `tests/e2e/` (заказ гостя с курьером и с промокодом, в 1 клик, заказ с входом и чат,
+- `bun run test:e2e` — сценарии Playwright в `tests/e2e/` (заказ гостя с курьером и с промокодом, в 1 клик, оптом, заказ с входом и чат,
   отмена заказа покупателем, ответ владельца в чате, заказ Почтой в админке до отмены, цена и этикетки в админке, серверный
   заказ через `placeOrder` — `tests/e2e/server/`, пустой магазин) на эмуляторах, 390 и 1280 px; эмуляторы auth, firestore
   и functions по `firebase.e2e.json`, нужен `npm ci --prefix functions`. Данные — `tests/e2e/store.ts`, только
@@ -202,7 +202,10 @@ ECC `scripts/ecc-validate.sh` (плагин без правок, проверк�
   (корзина `useCart`, оформление, `placeOrder`, `orderPriceIssues`): строка опта (`priceKind: 'wholesale'`) = оптовая цена минус
   ступень скидки за объём из `settings/storefront.wholesale.volumeDiscount` (% или ₽ с штуки, упаковки — по товару или по заказу;
   раздел «Опт», `AdminWholesaleTab`). Промокоды и скидка товара (`originalPrice`) на строки опта не действуют: `calcPromoDiscount`
-  и порог кода считают только розничные строки. Наценка опта — `wholesaleMarkupPercent` в `settings/exchange_rates` и в
+  и порог кода считают только розничные строки. Покупатель выбирает «Оптом» на странице товара (`ProductWholesaleBlock`, этапы 16–17,
+  часть 2): строка опта в корзине отдельная, количество — целыми упаковками (`useCart`); показ опта — только `src/utils/wholesaleOffer.ts`,
+  цена для сравнения (карточка, фильтр, сортировка, поиск) — `buyerPrice`: у «Только оптом» розничной цены покупатель не видит,
+  «+» и быстрый просмотр открывают товар. Отметка «Опт» у строки — `WholesaleMark`, у заказа — `orderSalesChannel`. Наценка опта — `wholesaleMarkupPercent` в `settings/exchange_rates` и в
   `purchase`; «Применить» пишет `wholesalePrice` только товарам с оптовой ценой, «Только оптом» или своей наценкой опта (не «Только в розницу»). Наценка розницы обязательна
   (пусто — не 0 %), а сохранённая скидка товара не опускает цену ниже себестоимости (`repriceProduct`): урезанный процент сохраняется в товаре и сам не возвращается.
 - Старая цена и значок «-N%» у покупателя — только `shownOldPrice`/`shownBadge` (`src/utils/productBadge.ts`): старая

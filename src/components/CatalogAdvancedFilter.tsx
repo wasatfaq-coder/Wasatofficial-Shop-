@@ -12,39 +12,28 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product } from '../types';
-import { isHiddenFromSale, isProductInStock } from '../utils/inventory';
-import { productRatingValue } from '../utils/productRating';
 import { pluralRu } from '../utils/pluralize';
 import { NeumorphicSwitch } from './NeumorphicSwitch';
 import { useDialogA11y } from '../utils/useDialogA11y';
 import { buildSizeChips, sizeMatches } from '../utils/sizeScale';
+import { sellsWholesale } from '../shared/wholesalePricing';
+import { buyerPrice } from '../utils/wholesaleOffer';
 
-export interface FilterState {
-  minPrice: number;
-  maxPrice: number;
-  selectedSizes: string[];
-  selectedMaterials: string[];
-  onlyInStock: boolean;
-  onlyNew: boolean;
-  onlyDiscount: boolean;
-  minRating: number;
-}
-
-/** No upper price bound: products of any price are shown */
-export const NO_MAX_PRICE = Number.POSITIVE_INFINITY;
-
-export const DEFAULT_FILTER_STATE: FilterState = {
-  minPrice: 0,
-  maxPrice: NO_MAX_PRICE,
-  selectedSizes: [],
-  selectedMaterials: [],
-  onlyInStock: false,
-  onlyNew: false,
-  onlyDiscount: false,
-  minRating: 0,
-};
-
-export const hasPriceFilter = (f: FilterState) => f.minPrice > 0 || Number.isFinite(f.maxPrice);
+export {
+  DEFAULT_FILTER_STATE,
+  MATERIAL_CATEGORIES,
+  NO_MAX_PRICE,
+  hasPriceFilter,
+  matchesCatalogFilters,
+  type FilterState,
+} from '../utils/catalogFilters';
+import {
+  MATERIAL_CATEGORIES,
+  NO_MAX_PRICE,
+  isProductAvailableInSize,
+  matchesMaterialFilter,
+  type FilterState,
+} from '../utils/catalogFilters';
 
 const rub = (value: number) => `${value.toLocaleString('ru-RU')} ₽`;
 
@@ -101,53 +90,6 @@ export function buildPricePresets(prices: number[]): PricePreset[] {
   return ranges.length > 1 ? [all, ...ranges] : [all];
 }
 
-/** Catalog filters (without the search text); the catalog list and the «Показать N товаров» counter use the same check */
-export function matchesCatalogFilters(p: Product, category: string, f: FilterState): boolean {
-  return (
-    (category === 'all' || p.category === category) &&
-    p.price >= f.minPrice &&
-    p.price <= f.maxPrice &&
-    matchesMaterialFilter(p.material, f.selectedMaterials) &&
-    (f.selectedSizes.length === 0 ||
-      f.selectedSizes.some((sel) => p.sizes.some((sz) => sizeMatches(sz, sel) && isProductAvailableInSize(p, sz)))) &&
-    (!f.onlyInStock || isProductInStock(p)) &&
-    (!f.onlyNew || Boolean(p.isNew)) &&
-    (!f.onlyDiscount || Boolean(p.originalPrice && p.originalPrice > p.price)) &&
-    productRatingValue(p) >= f.minRating
-  );
-}
-
-export const MATERIAL_CATEGORIES = [
-  { id: 'cotton', name: 'Хлопок / Пике', keywords: ['хлопок', 'cotton', 'пике'] },
-  { id: 'linen', name: 'Лен', keywords: ['лён', 'лен', 'linen'] },
-  { id: 'wool', name: 'Шерсть / Кашемир', keywords: ['шерсть', 'wool', 'кашемир', 'cashmere'] },
-  { id: 'denim', name: 'Деним', keywords: ['деним', 'джинс', 'эластан'] },
-  { id: 'blend', name: 'Смесовые ткани', keywords: ['полиэстер', 'вискоза', 'смесов', 'polyester'] },
-];
-
-const matchesMaterialFilter = (productMaterial: string, selectedMaterialIds: string[]): boolean => {
-  if (selectedMaterialIds.length === 0) return true;
-  const matLower = (productMaterial || '').toLowerCase();
-  return selectedMaterialIds.some((matId) => {
-    const foundCat = MATERIAL_CATEGORIES.find((c) => c.id === matId);
-    if (!foundCat) {
-      return matLower.includes(matId.toLowerCase());
-    }
-    return foundCat.keywords.some((kw) => matLower.includes(kw));
-  });
-};
-
-const isProductAvailableInSize = (product: Product, size: string): boolean => {
-  if (product.inStock === false || isHiddenFromSale(product)) return false;
-  if (!product.sizes.includes(size)) return false;
-  if (product.skus && product.skus.length > 0) {
-    const matchingSkus = product.skus.filter((sku) => sku.size === size);
-    if (matchingSkus.length > 0) {
-      return matchingSkus.some((sku) => sku.stock > 0);
-    }
-  }
-  return true;
-};
 
 interface CatalogAdvancedFilterProps {
   products: Product[];
@@ -197,7 +139,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
   // Min and max price across all products
   const { minPossiblePrice, maxPossiblePrice } = useMemo(() => {
     if (products.length === 0) return { minPossiblePrice: 0, maxPossiblePrice: 35000 };
-    const prices = products.map((p) => p.price);
+    const prices = products.map(buyerPrice);
     return {
       minPossiblePrice: Math.floor(Math.min(...prices) / 500) * 500,
       maxPossiblePrice: Math.ceil(Math.max(...prices) / 1000) * 1000,
@@ -224,7 +166,9 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
     }));
   };
 
-  const pricePresets = useMemo(() => buildPricePresets(products.map((p) => p.price)), [products]);
+  const pricePresets = useMemo(() => buildPricePresets(products.map(buyerPrice)), [products]);
+  // «Оптом» is offered only when the store sells something wholesale
+  const hasWholesale = useMemo(() => products.some(sellsWholesale), [products]);
 
   // Filter content is rendered inline and in the modal: ids get a prefix so they stay unique
   // sections are divided by a line, not cards inside the filter card (design pass 07.10)
@@ -471,6 +415,22 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
           <span>Со скидкой</span>
           {filterState.onlyDiscount && <Check className="w-4 h-4 text-accent stroke-[3]" aria-hidden="true" />}
         </button>
+
+        {hasWholesale && (
+          <button
+            type="button"
+            onClick={() => onChangeFilterState((prev) => ({ ...prev, onlyWholesale: !prev.onlyWholesale }))}
+            aria-pressed={filterState.onlyWholesale}
+            className={`p-3 rounded-2xl text-xs flex items-center justify-between transition-all cursor-pointer ${
+              filterState.onlyWholesale
+                ? 'neu-pill-active font-extrabold'
+                : 'neu-button font-medium text-[#2D3A4E] hover:text-accent'
+            }`}
+          >
+            <span>Оптом</span>
+            {filterState.onlyWholesale && <Check className="w-4 h-4 text-accent stroke-[3]" aria-hidden="true" />}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -4,6 +4,8 @@ import type { ActiveTab, CartItem, ChatMessage, Order, PaymentKind, Product, Use
 import { cancelOrderAsCustomer, confirmOrderReceipt, submitPaymentReceipt, returnCancelledOrderStock } from '../utils/firebaseSync';
 import { getOrderableStock } from '../utils/inventory';
 import type { AddToast } from './useToasts';
+import { goesWholesale, isWholesaleLine, packSizeOf, sellsRetail, sellsWholesale } from '../shared/wholesalePricing';
+import { heldByOtherLines, sameVariant } from '../utils/cartLines';
 
 type SetState<T> = React.Dispatch<React.SetStateAction<T>>;
 
@@ -14,6 +16,8 @@ type CustomerOrderOptions = {
   orders: Order[];
   products: Product[];
   preorderMode: boolean;
+  /** The cart now: «Повторить заказ» counts what fits next to its lines before saying what was added */
+  cartItems: CartItem[];
   setCartItems: SetState<CartItem[]>;
   setChatMessages: SetState<ChatMessage[]>;
   addToast: AddToast;
@@ -28,6 +32,7 @@ export function useCustomerOrders({
   orders,
   products,
   preorderMode,
+  cartItems,
   setCartItems,
   setChatMessages,
   addToast,
@@ -117,54 +122,60 @@ export function useCustomerOrders({
     }
   }, [orders, currentUser, authLoading]);
 
-  // Repeat a past order: current product data and stock, unavailable items are skipped
+  // Repeat a past order: current product data and stock, unavailable items are skipped. A wholesale line comes back
+  // wholesale, in whole packs, while the product is still sold wholesale; it never merges with a retail line
   const handleRepeatOrder = (items: CartItem[]) => {
-    const toAdd: CartItem[] = [];
+    // counted against the cart as it is: the toast says what really went in (the other line of a variant — retail
+    // next to wholesale — takes from the same stock)
+    const next = [...cartItems];
+    let added = 0;
     let skipped = 0;
+    let cut = 0;
     items.forEach((item, idx) => {
       const product = products.find((p) => p.id === item.product?.id);
-      const stock = product ? getOrderableStock(product, item.selectedColor, item.selectedSize, preorderMode) : 0;
-      if (!product || stock <= 0) {
+      if (!product) {
         skipped += 1;
         return;
       }
-      toAdd.push({
+      const wholesale = sellsWholesale(product) && (isWholesaleLine(item) || !sellsRetail(product));
+      const add: CartItem = {
         id: `cart-${Date.now()}-${idx}`,
         product,
         selectedColor: item.selectedColor,
         selectedSize: item.selectedSize,
-        quantity: Math.min(item.quantity, stock),
-      });
+        quantity: item.quantity,
+        ...(wholesale ? { priceKind: 'wholesale' as const } : {}),
+      };
+      const step = wholesale ? packSizeOf(product) : 1;
+      const i = next.findIndex((c) => sameVariant(c, add) && goesWholesale(c) === wholesale);
+      const current = i > -1 ? next[i].quantity : 0;
+      const free =
+        getOrderableStock(product, item.selectedColor, item.selectedSize, preorderMode) -
+        heldByOtherLines(next, add, i > -1 ? next[i].id : add.id);
+      const total = Math.floor(Math.min(current + item.quantity, Math.max(0, free)) / step) * step;
+      const gained = total - current;
+      if (gained <= 0) {
+        skipped += 1;
+        return;
+      }
+      if (gained < item.quantity) cut += 1;
+      added += 1;
+      if (i > -1) next[i] = { ...next[i], quantity: total };
+      else next.push({ ...add, quantity: total });
     });
 
-    if (toAdd.length === 0) {
+    if (added === 0) {
       addToast('Товаров из этого заказа сейчас нет в наличии', 'error');
       return;
     }
-
-    setCartItems((prev) => {
-      const next = [...prev];
-      for (const add of toAdd) {
-        const i = next.findIndex(
-          (c) =>
-            c.product.id === add.product.id &&
-            c.selectedColor === add.selectedColor &&
-            c.selectedSize === add.selectedSize
-        );
-        if (i > -1) {
-          const stock = getOrderableStock(add.product, add.selectedColor, add.selectedSize, preorderMode);
-          next[i] = { ...next[i], quantity: Math.min(next[i].quantity + add.quantity, stock) };
-        } else {
-          next.push(add);
-        }
-      }
-      return next;
-    });
+    setCartItems(next);
+    const notes = [
+      skipped > 0 ? `нет в наличии: ${skipped}` : '',
+      cut > 0 ? `добавлено меньше, чем в заказе: ${cut}` : '',
+    ].filter(Boolean);
     addToast(
-      skipped > 0
-        ? `Товары добавлены в корзину. Нет в наличии: ${skipped}`
-        : 'Товары заказа добавлены в корзину',
-      skipped > 0 ? 'info' : 'success'
+      notes.length ? `Товары добавлены в корзину. ${notes.join('; ')}` : 'Товары заказа добавлены в корзину',
+      notes.length ? 'info' : 'success'
     );
     setActiveTab('cart');
   };

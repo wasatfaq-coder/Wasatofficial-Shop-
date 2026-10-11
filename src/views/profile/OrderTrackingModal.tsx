@@ -52,6 +52,9 @@ import { useDialogA11y } from '../../utils/useDialogA11y';
 import type { ProfileScreenProps } from '../ProfileScreen';
 
 import { getOrderStatusProgress } from './orderProgress';
+import { isWholesaleLine, packSizeOf } from '../../shared/wholesalePricing';
+import { packsText } from '../../utils/wholesaleOffer';
+import { WholesaleMark } from '../../components/WholesaleMark';
 import { linePrice } from '../../shared/orderLine';
 
 type OrderTrackingModalProps = Pick<
@@ -475,7 +478,11 @@ export const OrderTrackingModal = ({
                           {it.product.title}
                         </p>
                         <p className="text-xs text-[#4E5C70]">
-                          {it.selectedColor}, разм. {it.selectedSize} • {it.quantity} шт.
+                          {isWholesaleLine(it) && <WholesaleMark className="mr-1" />}
+                          {it.selectedColor}, разм. {it.selectedSize} •{' '}
+                          {isWholesaleLine(it) && packSizeOf(it.product ?? {}) > 1
+                            ? packsText(it.quantity, packSizeOf(it.product ?? {}))
+                            : `${it.quantity} шт.`}
                           {it.isPreorder && <span className="font-bold text-accent"> • Предзаказ</span>}
                         </p>
                       </div>

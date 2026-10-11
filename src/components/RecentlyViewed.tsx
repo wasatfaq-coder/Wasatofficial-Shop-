@@ -7,6 +7,7 @@ import { photoBadgeClass, shownBadge, shownOldPrice } from '../utils/productBadg
 import { getProductRating } from '../utils/productRating';
 import { useProductThumbs } from '../utils/productThumbs';
 import { productHref } from '../utils/navigation';
+import { buyerPrice } from '../utils/wholesaleOffer';
 
 interface RecentlyViewedProps {
   recentlyViewed: Product[];
@@ -149,7 +150,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
               <div className="pt-2 mt-1 mx-2.5 mb-2.5 border-t border-[#BAC5D5]/40 flex items-center justify-between">
                 <div>
                   <span className="text-xs font-bold text-[#2D3A4E]">
-                    {product.price.toLocaleString('ru-RU')} ₽
+                    {buyerPrice(product).toLocaleString('ru-RU')} ₽
                   </span>
                   {shownOldPrice(product) !== null && (
                     <span className="text-[11px] text-[#4E5C70] line-through block leading-none">
