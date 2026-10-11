@@ -33,7 +33,7 @@ import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
 import { splitBannerImages, type BannerImagesDoc } from './bannerImages';
 import { previewsMoved, splitProductPreviews, withProductPreviews, type ProductPreviewsDoc } from './productPreviews';
 import type { LegalDocId, LegalTexts } from './legalDocs';
-import type { RestoreWrite } from './backupRestore';
+import { BACKUP_MARK_DOC, type BackupMark, type RestoreWrite } from './backupRestore';
 import { hasHeavyPhotos, splitProductPhotos, type PhotoDoc } from './productPhotos';
 import { compressBase64Image } from './imageUpload';
 import { SERVER_CONFIG_DOC_ID, ServerConfig } from '../shared/orderApi';
@@ -1756,9 +1756,23 @@ export function subscribeToStorefrontSettings(
   );
 }
 
-export async function saveStorefrontSettingsToFirestore(settings: StorefrontSettings) {
+/**
+ * «Витрина» settings. With `before` (what the admin's screen held) only the fields that differ are written, each
+ * field whole (`mergeFields`: a changed schedule or wholesale map replaces the old one, a cleared field is deleted), so
+ * a section saving its own fields can't roll back another section's or tab's save (этап 6 плана админки, 59-П3).
+ */
+export async function saveStorefrontSettingsToFirestore(settings: StorefrontSettings, before?: StorefrontSettings) {
+  const ref = doc(db, 'settings', 'storefront');
   try {
-    await setDoc(doc(db, 'settings', 'storefront'), sanitizeForFirestore(settings));
+    if (!before) {
+      await setDoc(ref, sanitizeForFirestore(settings));
+      return;
+    }
+    const changes = changedFields(before as unknown as Record<string, unknown>, settings as unknown as Record<string, unknown>);
+    if (!hasFieldChanges(changes)) return;
+    const data: Record<string, unknown> = sanitizeForFirestore(changes.set);
+    for (const key of changes.removed) data[key] = deleteField();
+    await setDoc(ref, data, { mergeFields: Object.keys(data) });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'settings/storefront');
   }
@@ -2539,4 +2553,30 @@ export async function exportDatabase(databaseId: string): Promise<DatabaseBackup
     }
   }
   return backup;
+}
+
+/** When the owner last downloaded a copy of the database (`settings/backup`, admin only); null — never. Throws if not read */
+export async function loadBackupMark(): Promise<BackupMark | null> {
+  try {
+    const snapshot = await getDoc(doc(db, 'settings', BACKUP_MARK_DOC));
+    const data = snapshot.data();
+    const at = data?.lastExportAt;
+    if (!(at instanceof Timestamp)) return null;
+    return {
+      lastExportAt: at.toMillis(),
+      documents: typeof data?.documents === 'number' ? data.documents : 0,
+      complete: data?.complete !== false,
+    };
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, `settings/${BACKUP_MARK_DOC}`);
+  }
+}
+
+/** Remembers a downloaded copy: the server's time, so «N дней назад» doesn't depend on the device's clock */
+export async function saveBackupMark(documents: number, complete: boolean): Promise<void> {
+  try {
+    await setDoc(doc(db, 'settings', BACKUP_MARK_DOC), { lastExportAt: serverTimestamp(), documents, complete });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `settings/${BACKUP_MARK_DOC}`);
+  }
 }

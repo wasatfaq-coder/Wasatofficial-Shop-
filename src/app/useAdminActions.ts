@@ -66,6 +66,8 @@ type AdminActionOptions = {
   setDeliveryMethods: SetState<DeliveryMethod[]>;
   pickupPoints: PickupPoint[];
   setPickupPoints: SetState<PickupPoint[]>;
+  /** The «Витрина» settings as the database last gave them: a save writes only what differs (этап 6, 59-П3) */
+  storefrontSettings: StorefrontSettings;
   setStorefrontSettings: SetState<StorefrontSettings>;
   persist: Persist;
   addToast: AddToast;
@@ -99,6 +101,7 @@ export function useAdminActions({
   setDeliveryMethods,
   pickupPoints,
   setPickupPoints,
+  storefrontSettings,
   setStorefrontSettings,
   persist,
   addToast,
@@ -322,7 +325,9 @@ export function useAdminActions({
   const handleUpdateStorefrontSettings = (upd: StorefrontSettings) => {
     setStorefrontSettings(upd);
     saveStorefrontSettings(upd);
-    return persist('настройки витрины', saveStorefrontSettingsToFirestore(upd));
+    // Only the changed fields: «Витрина», «Доставка», «Оплата» and «FAQ» each save their own fields of one document,
+    // and a section's older copy must not roll back what another one saved meanwhile (этап 6, 59-П3)
+    return persist('настройки витрины', saveStorefrontSettingsToFirestore(upd, storefrontSettings));
   };
 
   /**

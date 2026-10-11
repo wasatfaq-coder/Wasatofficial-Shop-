@@ -10,8 +10,15 @@ interface AdminPaymentTabProps {
 }
 
 /** Admin → «Оплата»: the payment methods offered at checkout and the requisites templates for orders */
-export const AdminPaymentTab: React.FC<AdminPaymentTabProps> = ({ settings, onUpdateSettings, onShowToast }) => (
+export const AdminPaymentTab: React.FC<AdminPaymentTabProps> = ({ settings, onUpdateSettings, onShowToast }) => {
+  const noShownMethod = !(settings.paymentMethods ?? []).some((m) => m.title.trim() && m.isActive !== false);
+  return (
   <div className="space-y-4">
+  {noShownMethod && (
+    <p role="status" className="rounded-2xl p-3 text-xs font-bold text-[#2D3A4E] bg-warning-soft border border-warning/30">
+      Покупатели не смогут оформить заказ: нет ни одного показанного способа оплаты
+    </p>
+  )}
   <AdminListEditor<StorePaymentMethod>
     title="Способы оплаты"
     titleHint="Что покупатель выбирает при заказе. Сайт денег не принимает: вы даёте инструкцию."
@@ -37,14 +44,13 @@ export const AdminPaymentTab: React.FC<AdminPaymentTabProps> = ({ settings, onUp
         hint: 'Заказ получит статус «оплата при получении»',
         help: 'Заказ уйдёт в работу без предоплаты, платят курьеру или в пункте.',
       },
-      { key: 'isActive', label: 'Показывать покупателям', type: 'checkbox' },
     ]}
+    visibleKey="isActive"
     renderSummary={(m) => (
       <div className="space-y-0.5">
         <p className="text-xs font-extrabold text-[#2D3A4E] flex items-center gap-2 flex-wrap">
           {m.title}
           {m.onDelivery && <span className="text-[11px] font-bold text-[#4E5C70]">при получении</span>}
-          {m.isActive === false && <span className="text-[11px] font-bold text-warning">скрыт</span>}
         </p>
         <p className="text-xs text-[#4E5C70] line-clamp-2">{m.description || 'Инструкция: не настроено'}</p>
       </div>
@@ -54,4 +60,5 @@ export const AdminPaymentTab: React.FC<AdminPaymentTabProps> = ({ settings, onUp
   />
   <AdminPaymentTemplatesCard onShowToast={onShowToast} />
   </div>
-);
+  );
+};

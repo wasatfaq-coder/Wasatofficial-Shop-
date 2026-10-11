@@ -396,9 +396,19 @@ service cloud.firestore {
     match /settings/{settingId} {
       // шаблоны быстрых ответов поддержки — рабочие тексты сотрудников (аудит 02.10, находка 49 / тест B2);
       // курсы и наценка (exchange_rates) по наценке выдают маржу магазина — только администратору;
-      // шаблоны ответов чата (chat_templates) — тоже рабочие тексты сотрудников (аудит админки 09.10, этап 7)
-      allow read: if !(settingId in ['quick_phrases', 'exchange_rates', 'chat_templates']) || isAdmin();
-      allow write: if isAdmin() && isValidId(settingId);
+      // шаблоны ответов чата (chat_templates) — тоже рабочие тексты сотрудников (аудит админки 09.10, этап 7);
+      // дата последней резервной копии (backup) — служебная отметка владельца (этап 6 плана админки, находка 20)
+      allow read: if !(settingId in ['quick_phrases', 'exchange_rates', 'chat_templates', 'backup']) || isAdmin();
+      allow write: if isAdmin() && isValidId(settingId)
+        && (settingId != 'backup' || isBackupMark(request.resource.data));
+    }
+
+    // settings/backup: время сервера, число документов копии и полная ли она — больше ничего
+    function isBackupMark(data) {
+      return data.keys().hasOnly(['lastExportAt', 'documents', 'complete'])
+        && data.lastExportAt == request.time
+        && data.documents is int && data.documents >= 0
+        && data.complete is bool;
     }
 
     match /delivery_methods/{methodId} {

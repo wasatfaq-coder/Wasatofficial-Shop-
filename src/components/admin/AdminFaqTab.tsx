@@ -25,13 +25,12 @@ export const AdminFaqTab: React.FC<AdminFaqTabProps> = ({ settings, onUpdateSett
     fields={[
       { key: 'question', label: 'Вопрос', type: 'text', required: true, placeholder: 'Как вернуть товар?' },
       { key: 'answer', label: 'Ответ', type: 'textarea', required: true },
-      { key: 'isActive', label: 'Показывать покупателям', type: 'checkbox' },
     ]}
+    visibleKey="isActive"
     renderSummary={(q) => (
       <div className="space-y-0.5">
         <p className="text-xs font-extrabold text-[#2D3A4E]">
           {q.question}
-          {q.isActive === false && <span className="ml-2 text-[11px] font-bold text-warning">скрыт</span>}
         </p>
         <p className="text-xs text-[#4E5C70] line-clamp-2">{q.answer}</p>
       </div>

@@ -27,6 +27,7 @@ import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
 import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { AdminHint } from './AdminHint';
+import { DeliveryCommonSettings } from './delivery/DeliveryCommonSettings';
 
 interface AdminDeliveryTabProps {
   deliveryMethods: DeliveryMethod[];
@@ -489,6 +490,10 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
           </div>
         </div>
       </div>
+
+      {storefrontSettings && onUpdateStorefrontSettings && (
+        <DeliveryCommonSettings settings={storefrontSettings} onUpdateSettings={onUpdateStorefrontSettings} onShowToast={onShowToast} />
+      )}
 
       {/* Subtabs Switcher & Actions */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
@@ -971,7 +976,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                   </label>
                   {formMethodType === 'express' && (
                     <AdminHint label="Экспресс-доставка">
-                      Показывается, только если включён «Экспресс 2 часа» в «Витрине».
+                      Показывается, только если включена «Экспресс-доставка» в «Для всех способов» выше.
                     </AdminHint>
                   )}
                 </div>

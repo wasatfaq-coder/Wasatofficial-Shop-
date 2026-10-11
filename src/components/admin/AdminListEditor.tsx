@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, Check, Pencil, Plus, Trash2, X } from 'lucide-react
 import { ConfirmDialog } from '../ConfirmDialog';
 import { AdminHint } from './AdminHint';
 import { NotConfigured } from '../NotConfigured';
+import { NeumorphicSwitch } from '../NeumorphicSwitch';
 import { NeumorphicSelect, type NeumorphicSelectOption } from '../NeumorphicSelect';
 import { shallowChanged, useUnsavedChanges } from '../../utils/unsavedChanges';
 
@@ -48,6 +49,11 @@ interface AdminListEditorProps<T extends { id: string }> {
   descriptionHint?: { label: string; text: string };
   /** Text of «Удалить запись?» for this item, when deleting it touches more than the list (a category's products) */
   deleteMessage?: (item: T) => string;
+  /**
+   * Boolean field «показан покупателям» (absent = shown): a switch in the row saves at once, without opening the form.
+   * The switch moves only after the database accepted the write.
+   */
+  visibleKey?: keyof T & string;
 }
 
 /**
@@ -70,6 +76,7 @@ export function AdminListEditor<T extends { id: string }>({
   titleHint,
   descriptionHint,
   deleteMessage,
+  visibleKey,
 }: AdminListEditorProps<T>) {
   const [draft, setDraft] = useState<T | null>(null);
   // The item as it was when the form opened: the form has unsaved edits while the draft differs from it
@@ -92,6 +99,16 @@ export function AdminListEditor<T extends { id: string }>({
     if (ok === false) return false;
     onShowToast(successText, type);
     return true;
+  };
+
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const isShown = (item: T) => visibleKey === undefined || (item as Record<string, unknown>)[visibleKey] !== false;
+  const toggleShown = async (item: T, shown: boolean) => {
+    if (!visibleKey || togglingId) return;
+    setTogglingId(item.id);
+    const next = items.map((it) => (it.id === item.id ? ({ ...it, [visibleKey]: shown } as T) : it));
+    await commit(next, shown ? 'Показано покупателям' : 'Скрыто от покупателей', 'info');
+    setTogglingId(null);
   };
 
   const startAdd = () => {
@@ -279,7 +296,22 @@ export function AdminListEditor<T extends { id: string }>({
         <ul className="space-y-2">
           {items.map((item, index) => (
             <li key={item.id} className="neu-flat-sm rounded-2xl p-3 flex items-start gap-3">
-              <div className="flex-1 min-w-0">{renderSummary(item)}</div>
+              <div className="flex-1 min-w-0 space-y-2">
+                {renderSummary(item)}
+                {visibleKey && (
+                  <div className="flex items-center gap-2">
+                    <NeumorphicSwitch
+                      checked={isShown(item)}
+                      onChange={(shown) => void toggleShown(item, shown)}
+                      disabled={togglingId !== null}
+                      label={`Показывать покупателям: ${nameOf(item)}`}
+                    />
+                    <span aria-hidden="true" className={`text-xs font-bold ${isShown(item) ? 'text-[#2D3A4E]' : 'text-warning'}`}>
+                      {isShown(item) ? 'Показан покупателям' : 'Скрыт от покупателей'}
+                    </span>
+                  </div>
+                )}
+              </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
