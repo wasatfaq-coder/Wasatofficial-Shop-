@@ -9,6 +9,7 @@ import { getProductRating } from '../utils/productRating';
 import { productImage } from '../utils/productImage';
 import { useProductPhotos } from '../utils/useProductPhotos';
 import { getOrderableStock, getVariantStock } from '../utils/inventory';
+import { colorImageIndex } from '../utils/colorPhotos';
 import { colorStock, initialColor, initialSize, maxOrderableForColor, profileSizeFor } from '../utils/variantSelection';
 import { useDialogA11y } from '../utils/useDialogA11y';
 import { useLiveProduct } from '../utils/liveProducts';
@@ -242,6 +243,9 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                       aria-label={c.name}
                       onClick={() => {
                         setSelectedColor(c.name);
+                        // optional photo bound to the colour: only on the click
+                        const boundPhoto = colorImageIndex(product, c.name);
+                        if (boundPhoto !== null) setSelectedImageIndex(boundPhoto);
                         if (selectedSize && getOrderableStock(product, c.name, selectedSize, preorderMode) === 0) setSelectedSize(initialSize(product));
                       }}
                       className={`w-8 h-8 rounded-full p-1 transition-all cursor-pointer ${

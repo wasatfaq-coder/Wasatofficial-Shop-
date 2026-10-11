@@ -3,6 +3,8 @@ import { ProductSKU } from '../../../types';
 import { generateSkuCode, generateBarcode, stockLevel } from '../../../utils/inventory';
 import { colorHexForName, normalizeColorName, readColorCode, splitColorEntry } from '../../../utils/colorCode';
 
+import { setColorImage, validImageIndex } from '../../../utils/colorPhotos';
+import { NeumorphicSelect } from '../../NeumorphicSelect';
 import { AdminHint } from '../AdminHint';
 import type { AdminProductsTabProps } from '../AdminProductsTab';
 import type { ProductForm } from './useProductForm';
@@ -27,6 +29,7 @@ export function ProductFormVariants({
     setFormSizes,
     formColors,
     setFormColors,
+    formImages,
     formSkus,
     setFormSkus,
     setPendingRemoval,
@@ -266,6 +269,36 @@ export function ProductFormVariants({
               </div>
             ))}
           </div>
+
+          {/* Optional: the photo shown when the buyer picks a colour */}
+          {formImages.length > 1 && (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1">
+                <span className="text-[11px] font-extrabold text-[#2D3A4E] uppercase tracking-wider">Фото по цвету</span>
+                <AdminHint label="Фото по цвету">
+                  Необязательно. Если выбрать для цвета номер фото из галереи, при выборе этого цвета покупатель сразу увидит это фото. Без выбора фото не меняется.
+                </AdminHint>
+              </div>
+              <div className="grid gap-1.5">
+                {formColors.map((c) => (
+                  <div key={c.name} className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full border border-black/15 shrink-0" style={{ backgroundColor: c.hex }} />
+                    <span className="text-xs font-bold text-[#2D3A4E] min-w-0 flex-1 truncate">{c.name}</span>
+                    <NeumorphicSelect
+                      className="w-32 shrink-0"
+                      ariaLabel={`Фото для цвета «${c.name}»`}
+                      value={validImageIndex(c.imageIndex, formImages.length) ? String(c.imageIndex) : ''}
+                      options={[
+                        { value: '', label: 'Не привязано' },
+                        ...formImages.map((_, i) => ({ value: String(i), label: `Фото ${i + 1}` })),
+                      ]}
+                      onChange={(v) => setFormColors((prev) => setColorImage(prev, c.name, v === '' ? null : Number(v)))}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Add Custom Color */}
           <div className="flex flex-col gap-2.5">
