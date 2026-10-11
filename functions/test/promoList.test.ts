@@ -29,20 +29,20 @@ const batchCode = (run: number, i: number, extra: Partial<PromoCode> = {}) =>
 describe('the list of «Промокоды»', () => {
   const list = [
     promo(),
-    batchCode(1, 0),
-    batchCode(1, 1, { usedCount: 1 }),
-    batchCode(1, 2, { active: false }),
+    batchCode(1000, 0),
+    batchCode(1000, 1, { usedCount: 1 }),
+    batchCode(1000, 2, { active: false }),
     promo({ id: 'promo-2', code: 'BLOG10', isReferral: true, partnerName: '@alex' }),
-    batchCode(2, 0),
+    batchCode(5000, 0),
   ];
 
   test('a batch is one row in its first code\'s place, two runs — two rows', () => {
     const rows = promoListRows(list, 'all', '');
     expect(rows.map((r) => (r.kind === 'batch' ? r.batch.key : r.promo.code))).toEqual([
       'WASAT20',
-      'batch-1',
+      'batch-1000|Пачка SMS- (3 шт.)',
       'BLOG10',
-      'batch-2',
+      'batch-5000|Пачка SMS- (3 шт.)',
     ]);
     const batch = rows[1].kind === 'batch' ? rows[1].batch : null;
     // the prefix the owner typed, from the batch's name, not the longer common start of the random codes
@@ -50,12 +50,12 @@ describe('the list of «Промокоды»', () => {
     expect(batch?.codes).toHaveLength(3);
     expect(batch?.used).toBe(1);
     // the used and the paused code are not worth sending
-    expect(batch?.unused.map((p) => p.id)).toEqual(['batch-1-0']);
+    expect(batch?.unused.map((p) => p.id)).toEqual(['batch-1000-0']);
     expect(batch?.active).toBe(2);
   });
 
   test('the search finds one code of a batch as its own row; by partner too', () => {
-    expect(promoListRows(list, 'all', 'sms-11').map((r) => r.kind === 'promo' && r.promo.id)).toEqual(['batch-1-1']);
+    expect(promoListRows(list, 'all', 'sms-10001x').map((r) => r.kind === 'promo' && r.promo.id)).toEqual(['batch-1000-1']);
     expect(promoListRows(list, 'all', 'ALEX').map((r) => r.kind === 'promo' && r.promo.code)).toEqual(['BLOG10']);
   });
 
@@ -72,13 +72,40 @@ describe('the list of «Промокоды»', () => {
 
   test('a batch from before the run id is grouped by its name', () => {
     const old = [
-      promo({ id: 'a', code: 'VIP-AAAAA', isBatch: true, batchName: 'Пачка без префикса (2 шт.)' }),
-      promo({ id: 'b', code: 'VIP-ABBBB', isBatch: true, batchName: 'Пачка без префикса (2 шт.)' }),
+      promo({ id: 'a', code: 'VIP-AAAAA', isBatch: true, batchName: 'Рассылка' }),
+      promo({ id: 'b', code: 'VIP-ABBBB', isBatch: true, batchName: 'Рассылка' }),
     ];
     const rows = promoListRows(old, 'all', '');
     expect(rows).toHaveLength(1);
     // no prefix in the name: the common start of the codes
     expect(rows[0].kind === 'batch' && rows[0].batch.prefix).toBe('VIP-A');
+  });
+
+  test('the old generator read the clock per code: neighbouring times are one batch, a later run — another', () => {
+    const name = { batchName: 'Пачка SMS- (3 шт.)' };
+    const codes = [
+      batchCode(1000, 0, name),
+      batchCode(1000, 1, name),
+      batchCode(1001, 2, name),
+      batchCode(9000, 0, name),
+    ];
+    const rows = promoListRows(codes, 'all', '');
+    expect(rows.map((r) => (r.kind === 'batch' ? r.batch.codes.length : 0))).toEqual([3, 1]);
+  });
+
+  test('a batch without a prefix is not named by a letter its random codes share', () => {
+    const name = { batchName: 'Пачка без префикса (2 шт.)' };
+    const rows = promoListRows([batchCode(5, 0, { ...name, code: 'KAAAA' }), batchCode(5, 1, { ...name, code: 'KBBBB' })], 'all', '');
+    expect(rows[0].kind === 'batch' && rows[0].batch.prefix).toBe('');
+  });
+
+  test('under a chip a batch is shown whole: its numbers and «Удалить пачку» cover every code', () => {
+    const paused = promoListRows(list, 'paused', '');
+    expect(paused).toHaveLength(1);
+    expect(paused[0].kind === 'batch' && paused[0].batch.codes.map((p) => p.id)).toEqual(['batch-1000-0', 'batch-1000-1', 'batch-1000-2']);
+    const working = promoListRows(list, 'active', '');
+    const batch = working.find((r) => r.kind === 'batch' && r.batch.key.startsWith('batch-1000|'));
+    expect(batch?.kind === 'batch' && batch.batch.used).toBe(1);
   });
 
   test('categories by their names; a removed one keeps its id', () => {

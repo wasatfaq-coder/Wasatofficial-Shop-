@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { DollarSign, Plus, Search, Tag, TrendingUp, Users, Wand2 } from 'lucide-react';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { NotConfigured } from '../NotConfigured';
@@ -63,6 +63,13 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
   const [promoToDelete, setPromoToDelete] = useState<PromoCode | null>(null);
   const [batchToDelete, setBatchToDelete] = useState<PromoBatch | null>(null);
   const [isDisablingExpired, setIsDisablingExpired] = useState(false);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const cameBackRef = useRef(false);
+  // back from the form or «Пачка кодов»: the button that opened them is gone, the list's heading takes the focus
+  useEffect(() => {
+    if (view.kind !== 'list') cameBackRef.current = true;
+    else if (cameBackRef.current) headingRef.current?.focus();
+  }, [view.kind]);
 
   // Referral metrics: from the orders (paid and received), not from the promo counters a visitor can raise
   const partnerCommissions = useMemo(() => computePartnerCommissions(promos, orders), [promos, orders]);
@@ -145,7 +152,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
     <div className="space-y-4 text-[#2D3A4E] w-full min-w-0 max-w-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div className="min-w-0">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+          <h3 ref={headingRef} tabIndex={-1} className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
             <Tag className="w-4 h-4 text-accent shrink-0" aria-hidden="true" />
             <span>Промокоды</span>
           </h3>

@@ -29,14 +29,40 @@ export function isPromoWorking(promo: PromoCode): boolean {
   return promo.active && !isPromoExpired(promo) && !isPromoUsedUp(promo);
 }
 
+/** Codes of one batch can carry neighbouring times: the generator before 11.10 read the clock for every code */
+const BATCH_RUN_GAP_MS = 1000;
+
 /**
- * One generation of the batch generator: its codes share the id «batch-{time}-{n}». Older batches without that id are
- * grouped by their name («Пачка SMS- (20 шт.)»)
+ * Which batch each single-use code belongs to (id → key). Codes with the same name whose ids «batch-{time}-{n}» are at
+ * most a second apart are one generation: the old generator read the clock per code, so a batch of 100 could carry two
+ * times. A batch without such ids is grouped by its name alone
  */
-export function batchKeyOf(promo: PromoCode): string | null {
-  if (!promo.isBatch) return null;
-  const run = /^(batch-\d+)-\d+$/.exec(promo.id);
-  return run ? run[1] : `name:${promo.batchName ?? ''}`;
+export function batchKeys(promos: PromoCode[]): Map<string, string> {
+  const keys = new Map<string, string>();
+  const runs = new Map<string, { id: string; time: number }[]>();
+  for (const promo of promos) {
+    if (!promo.isBatch) continue;
+    const name = promo.batchName ?? '';
+    const run = /^batch-(\d+)-\d+$/.exec(promo.id);
+    if (!run) {
+      keys.set(promo.id, `name:${name}`);
+      continue;
+    }
+    const list = runs.get(name) ?? [];
+    list.push({ id: promo.id, time: Number(run[1]) });
+    runs.set(name, list);
+  }
+  for (const [name, list] of runs) {
+    list.sort((a, b) => a.time - b.time);
+    let start = list[0].time;
+    let previous = start;
+    for (const code of list) {
+      if (code.time - previous > BATCH_RUN_GAP_MS) start = code.time;
+      previous = code.time;
+      keys.set(code.id, `batch-${start}|${name}`);
+    }
+  }
+  return keys;
 }
 
 export interface PromoBatch {
@@ -67,7 +93,11 @@ function namedPrefix(batchName: string | undefined): string | null {
 
 function batchOf(key: string, codes: PromoCode[]): PromoBatch {
   // a batch of one code: the whole code is not a prefix
-  const prefix = namedPrefix(codes[0]?.batchName) ?? (codes.length > 1 ? commonPrefix(codes.map((p) => p.code)) : '');
+  const name = codes[0]?.batchName ?? '';
+  const prefix =
+    namedPrefix(name) ??
+    // a batch without a prefix: the random codes may share a letter by chance
+    (name.startsWith('Пачка без префикса') || codes.length < 2 ? '' : commonPrefix(codes.map((p) => p.code)));
   return {
     key,
     prefix,
@@ -107,29 +137,33 @@ function matchesFilter(promo: PromoCode, filter: PromoListFilter): boolean {
 
 /**
  * The rows of the list: a batch is one row in its first code's place (100 codes of a mailing no longer fill the
- * list); a search finds a single code of a batch and shows it as its own row
+ * list), shown when any of its codes fits the chip, and always counted and acted on as a whole — «Удалить пачку» under
+ * «На паузе» removes every code of it, not only the paused ones. A search finds a single code of a batch and shows it
+ * as its own row
  */
 export function promoListRows(promos: PromoCode[], filter: PromoListFilter, query: string): PromoListRow[] {
   const searching = query.trim() !== '';
+  const keys = searching ? new Map<string, string>() : batchKeys(promos);
   const groups = new Map<string, PromoCode[]>();
-  const rows: (PromoListRow | { kind: 'batchKey'; key: string })[] = [];
   for (const promo of promos) {
-    if (!matchesFilter(promo, filter) || !matchesPromoQuery(promo, query)) continue;
-    const key = searching ? null : batchKeyOf(promo);
+    const key = keys.get(promo.id);
+    if (key) groups.set(key, [...(groups.get(key) ?? []), promo]);
+  }
+  const rows: PromoListRow[] = [];
+  const shown = new Set<string>();
+  for (const promo of promos) {
+    const key = keys.get(promo.id);
     if (!key) {
-      rows.push({ kind: 'promo', promo });
+      if (matchesFilter(promo, filter) && matchesPromoQuery(promo, query)) rows.push({ kind: 'promo', promo });
       continue;
     }
-    const group = groups.get(key);
-    if (group) group.push(promo);
-    else {
-      groups.set(key, [promo]);
-      rows.push({ kind: 'batchKey', key });
-    }
+    if (shown.has(key)) continue;
+    const codes = groups.get(key) ?? [];
+    if (!codes.some((p) => matchesFilter(p, filter))) continue;
+    shown.add(key);
+    rows.push({ kind: 'batch', batch: batchOf(key, codes) });
   }
-  return rows.map((row) =>
-    row.kind === 'batchKey' ? { kind: 'batch', batch: batchOf(row.key, groups.get(row.key) ?? []) } : row
-  );
+  return rows;
 }
 
 /** How many codes each chip would show (a batch counts as its codes) */

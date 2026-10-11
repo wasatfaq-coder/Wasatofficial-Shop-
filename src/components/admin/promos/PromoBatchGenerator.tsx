@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, CheckCircle2, Copy, Wand2 } from 'lucide-react';
 import type { PromoCode } from '../../../types';
 import { AdminHint } from '../AdminHint';
@@ -34,6 +34,9 @@ export const PromoBatchGenerator: React.FC<PromoBatchGeneratorProps> = ({ promos
   const [showErrors, setShowErrors] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const errorsRef = useRef<HTMLDivElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  // the button that opened this screen is gone: the screen's heading takes the focus
+  useEffect(() => headingRef.current?.focus(), []);
 
   const inputErrors = useMemo(
     () => batchInputErrors({ prefix, count, discountType, discountValue, minOrder }),
@@ -89,8 +92,11 @@ export const PromoBatchGenerator: React.FC<PromoBatchGeneratorProps> = ({ promos
     onShowToast(`Создано ${count} ${pluralRu(count, ['одноразовый код', 'одноразовых кода', 'одноразовых кодов'])}`, 'success');
   };
 
-  const handleCopy = () => {
-    copyToClipboard(generated.join('\n'));
+  const handleCopy = async () => {
+    if (!(await copyToClipboard(generated.join('\n')))) {
+      onShowToast('Не удалось скопировать: выделите коды и скопируйте вручную', 'error');
+      return;
+    }
     setIsCopied(true);
     onShowToast('Коды скопированы: вставьте их в рассылку', 'success');
   };
@@ -106,7 +112,9 @@ export const PromoBatchGenerator: React.FC<PromoBatchGeneratorProps> = ({ promos
           <ArrowLeft className="w-4 h-4" aria-hidden="true" />
           <span>К списку</span>
         </button>
-        <h4 className="text-sm font-extrabold text-[#2D3A4E] truncate">Пачка одноразовых кодов</h4>
+        <h4 ref={headingRef} tabIndex={-1} className="text-sm font-extrabold text-[#2D3A4E] truncate">
+          Пачка одноразовых кодов
+        </h4>
       </div>
 
       <div className="neu-inset rounded-2xl p-3.5 sm:p-4 space-y-3">

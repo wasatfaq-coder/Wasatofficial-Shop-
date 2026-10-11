@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Check, ChevronDown, DollarSign, Layers, Percent, Search, Share2 } from 'lucide-react';
 import type { Product, PromoCode, StoreCategory } from '../../../types';
 import { ProductThumbImage } from '../../ProductThumbImage';
+import { DiscardChangesDialog, useDiscardGuard } from '../../DiscardChangesDialog';
 import { NeumorphicSwitch } from '../../NeumorphicSwitch';
 import { AdminHint } from '../AdminHint';
 import { isPromoListed, promoExpiryDate } from '../../../shared/orderPricing';
@@ -156,6 +157,8 @@ export const PromoForm: React.FC<PromoFormProps> = ({
     partnerCommissionPercent,
   ]);
   useUnsavedChanges(isDirty, 'Промокод');
+  // «К списку» and «Отмена» ask before dropping edits, as every admin form does
+  const guard = useDiscardGuard(isDirty, onClose);
 
   const filteredProductsForSelect = useMemo(() => {
     const q = productSearchQuery.toLowerCase().trim();
@@ -224,13 +227,16 @@ export const PromoForm: React.FC<PromoFormProps> = ({
 
     setIsSaving(true);
     const saved = await onUpdatePromos(next);
+    // told even when the owner has already left the form: otherwise they would not know the code was saved
+    if (saved !== false) {
+      onShowToast(editingId ? `Промокод ${cleanCode} обновлен` : `Промокод ${cleanCode} создан и активирован`, 'success');
+    }
     if (closedRef.current) return;
     setIsSaving(false);
     if (saved === false) {
       setSaveError('База не приняла промокод. Введённое осталось в форме: проверьте соединение и нажмите ещё раз');
       return;
     }
-    onShowToast(editingId ? `Промокод ${cleanCode} обновлен` : `Промокод ${cleanCode} создан и активирован`, 'success');
     onClose();
   };
 
@@ -254,13 +260,13 @@ export const PromoForm: React.FC<PromoFormProps> = ({
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={onClose}
+          onClick={guard.requestClose}
           className="h-9 px-3 neu-button rounded-xl text-xs font-bold text-[#2D3A4E] hover:text-accent flex items-center gap-1.5 cursor-pointer shrink-0"
         >
           <ArrowLeft className="w-4 h-4" aria-hidden="true" />
           <span>К списку</span>
         </button>
-        <h4 ref={headingRef} tabIndex={-1} className="text-sm font-extrabold text-[#2D3A4E] truncate outline-none">
+        <h4 ref={headingRef} tabIndex={-1} className="text-sm font-extrabold text-[#2D3A4E] truncate">
           {promo ? `Промокод ${promo.code}` : 'Новый промокод'}
         </h4>
       </div>
@@ -735,7 +741,7 @@ export const PromoForm: React.FC<PromoFormProps> = ({
       <div className="flex items-center justify-end gap-2">
         <button
           type="button"
-          onClick={onClose}
+          onClick={guard.requestClose}
           className="h-10 px-4 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
         >
           Отмена
@@ -749,6 +755,7 @@ export const PromoForm: React.FC<PromoFormProps> = ({
           <span>{isSaving ? 'Сохранение…' : promo ? 'Сохранить изменения' : 'Создать промокод'}</span>
         </button>
       </div>
+      <DiscardChangesDialog {...guard.dialogProps} what="Изменения промокода" />
     </form>
   );
 };

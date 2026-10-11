@@ -5,8 +5,8 @@ import { queryDocs } from '../emulator';
 import { ADMIN } from '../store';
 
 test('владелец создаёт код с лимитом и пачку кодов, находит их в списке', async ({ page, signIn }, info) => {
-  // phone and desktop run at the same time on one database: each its own codes
-  const tag = info.project.name === 'phone' ? 'PH' : 'DT';
+  // phone and desktop run at the same time on one database, and a rerun finds the codes of the last one: unique each run
+  const tag = `${info.project.name === 'phone' ? 'PH' : 'DT'}${Date.now().toString(36).slice(-4).toUpperCase()}`;
   const code = `LIMIT${tag}`;
   const prefix = `B${tag}-`;
 
@@ -28,6 +28,14 @@ test('владелец создаёт код с лимитом и пачку к�
   await panel.getByRole('button', { name: 'Создать промокод' }).click();
   await expect(panel.getByRole('button', { name: 'Новый промокод' })).toBeVisible();
   await expect.poll(async () => (await queryDocs('promos', 'code', code))[0]?.usageLimit).toBe(5);
+
+  // «К списку» with unsaved edits asks first
+  await panel.getByRole('button', { name: 'Новый промокод' }).click();
+  await panel.getByRole('textbox', { name: 'Код промокода *' }).fill('DRAFT');
+  await panel.getByRole('button', { name: 'К списку' }).click();
+  const discard = page.getByRole('alertdialog', { name: 'Закрыть без сохранения?' });
+  await discard.getByRole('button', { name: 'Не сохранять' }).click();
+  await expect(panel.getByRole('button', { name: 'Новый промокод' })).toBeVisible();
 
   // the list: search, the card says the code needs a Google sign-in, pause from the list
   await panel.getByRole('searchbox', { name: 'Найти промокод' }).fill(code.toLowerCase());
