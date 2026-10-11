@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AdminHint } from './AdminHint';
 import { CheckCircle2, KeyRound, Loader2, RefreshCw, X } from 'lucide-react';
 import type { Order } from '../../types';
 import { ModalPortal } from '../ModalPortal';
@@ -94,6 +95,7 @@ export const AdminHandoverDialog: React.FC<AdminHandoverDialogProps> = ({ order,
             </p>
             <p className="text-xs text-[#4E5C70]">Попросите покупателя назвать код и сверьте</p>
             {onNewCode && (
+              <div className="mt-2 flex items-center gap-1">
               <button
                 type="button"
                 onClick={async () => {
@@ -102,11 +104,13 @@ export const AdminHandoverDialog: React.FC<AdminHandoverDialogProps> = ({ order,
                   setReplacing(false);
                 }}
                 disabled={busy || replacing}
-                className="mt-2 h-8 px-3 neu-button rounded-xl text-xs font-bold text-accent inline-flex items-center gap-1.5 cursor-pointer"
+                className="h-8 px-3 neu-button rounded-xl text-xs font-bold text-accent inline-flex items-center gap-1.5 cursor-pointer"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${replacing ? 'animate-spin' : ''}`} aria-hidden="true" />
                 Новый код
               </button>
+              <AdminHint label="Новый код">Старый код перестанет работать. Покупатель увидит новый у себя в заказе</AdminHint>
+              </div>
             )}
           </div>
 

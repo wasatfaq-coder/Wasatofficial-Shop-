@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { AdminHint } from './AdminHint';
 import { usePagedList } from '../../utils/usePagedList';
 import { AdminShowMore } from './AdminShowMore';
 import { useCustomerProfiles } from './useCustomerProfiles';
@@ -34,17 +35,19 @@ import { OrderLineThumbImage } from '../ProductThumbImage';
 import { updateCustomerNotesInFirestore, deleteUserFromFirestore } from '../../utils/firebaseSync';
 import { downloadCSV } from '../../utils/csvHelpers';
 import { copyToClipboard } from '../../utils/clipboard';
-import { isTransportCompanyDelivery } from '../../utils/deliveryStages';
+import { isCarrierOrder } from '../../utils/orderFlow';
 import { NeumorphicSelect, NeumorphicSelectOption } from '../NeumorphicSelect';
 import { orderStatusChip } from '../../utils/orderStatusStyle';
 import { isRevenueOrder, orderRevenue } from '../../utils/analyticsEngine';
 import { formatAddress } from '../../utils/addressFormat';
+import { googleAvatarUrl } from '../../utils/googleAvatar';
 import { ADMIN_EMAIL } from '../../context/AuthContext';
 import { pluralRu } from '../../utils/pluralize';
 import { cancelledByLabel, cancelledShare, cancelReasonText, formatCancelledAt } from '../../utils/orderCancel';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { useUnsavedChanges } from '../../utils/unsavedChanges';
 import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
+import { linePrice } from '../../shared/orderLine';
 
 interface AdminCustomersTabProps {
   orders: Order[];
@@ -215,7 +218,9 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
         name: u.name || 'Пользователь',
         email: u.email || '',
         phone: u.phone || '',
-        avatar: u.avatar,
+        // only a Google account photo: any other link would open here and give away the owner's IP (finding 8);
+        // without it the card shows the letters
+        avatar: googleAvatarUrl(u.avatar) || undefined,
         isRegisteredUser: true,
         registeredAt: displayDate(u.createdAt),
         lastActiveAt: displayDate(u.lastActive),
@@ -441,7 +446,8 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       setSelectedCustomer((prev) => (prev ? { ...prev, tags: updatedTags } : null));
       setNewTagInput('');
       onShowToast(`Тег «${newTagInput.trim()}» добавлен`, 'info');
-    } catch {
+    } catch (err) {
+      console.error('Customer tag was not added:', err);
       onShowToast('Ошибка при добавлении тега', 'error');
     }
   };
@@ -455,7 +461,8 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       await updateCustomerNotesInFirestore(docId, selectedCustomer.managerNotes || '', updatedTags);
       setSelectedCustomer((prev) => (prev ? { ...prev, tags: updatedTags } : null));
       onShowToast(`Тег «${tagToRemove}» удален`, 'info');
-    } catch {
+    } catch (err) {
+      console.error('Customer tag was not removed:', err);
       onShowToast('Ошибка при удалении тега', 'error');
     }
   };
@@ -466,7 +473,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       onShowToast('Список клиентов пуст для экспорта', 'error');
       return;
     }
-    const headers = ['Имя', 'Email', 'Телефон', 'Тип', 'Сумма покупок (₽)', 'Заказов', 'Средний чек (₽)', 'Бонусы', 'Адрес'];
+    const headers = ['Имя', 'Email', 'Телефон', 'Тип', 'Сумма покупок (₽)', 'Заказов', 'Средний чек (₽)', 'Адрес'];
     const rows = filteredCustomers.map((c) => [
       c.name,
       c.email,
@@ -475,7 +482,6 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
       c.totalSpent,
       c.ordersCount,
       c.averageOrderValue,
-      c.bonusPoints,
       c.primaryAddress || '',
     ]);
     downloadCSV(`customers_${new Date().toISOString().slice(0, 10)}.csv`, [headers, ...rows], ';');
@@ -543,7 +549,10 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
             <Users className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <span className="text-[11px] font-semibold text-[#4E5C70] block leading-tight">Всего клиентов</span>
+            <span className="text-[11px] font-semibold text-[#4E5C70] flex items-center gap-0.5 leading-tight">
+              Всего клиентов
+              <AdminHint label="Всего клиентов" className="-my-1">Покупатели с входом через Google и гости, оформившие заказ</AdminHint>
+            </span>
             <div className="flex items-baseline gap-1.5">
               <span className="text-lg font-extrabold text-[#2D3A4E]">{stats.totalClients}</span>
               <span className="text-[11px] text-accent font-bold">{stats.registeredCount} с аккаунтом</span>
@@ -556,7 +565,10 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
             <DollarSign className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <span className="text-[11px] font-semibold text-[#4E5C70] block leading-tight">Сумма покупок</span>
+            <span className="text-[11px] font-semibold text-[#4E5C70] flex items-center gap-0.5 leading-tight">
+              Сумма покупок
+              <AdminHint label="Сумма покупок" className="-my-1">Сколько клиенты заплатили за всё время (только оплаченные заказы)</AdminHint>
+            </span>
             <span className="text-lg font-extrabold text-[#2D3A4E] block truncate">
               {stats.totalLTV.toLocaleString('ru-RU')} ₽
             </span>
@@ -580,7 +592,10 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
             <UserCheck className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <span className="text-[11px] font-semibold text-[#4E5C70] block leading-tight">Постоянные</span>
+            <span className="text-[11px] font-semibold text-[#4E5C70] flex items-center gap-0.5 leading-tight">
+              Постоянные
+              <AdminHint label="Постоянные" className="-my-1">Клиенты, у которых два и больше оплаченных заказов</AdminHint>
+            </span>
             <div className="flex items-baseline gap-1.5">
               <span className="text-lg font-extrabold text-[#2D3A4E]">{stats.repeatClients}</span>
               <span className="text-[11px] text-success font-bold">2+ заказа</span>
@@ -733,12 +748,15 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                             <span>Google</span>
                           </span>
                         ) : (
+                          <>
                           <span
                             className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-[#D8DFE8] text-[#4E5C70]"
                             title="Заказ оформлен без регистрации учетной записи"
                           >
                             <span>Гость</span>
                           </span>
+                          <AdminHint label="Гость" className="-my-0.5">Заказ оформлен без входа. Данные — только из заказов</AdminHint>
+                          </>
                         )}
                       </div>
                       {/* email and phone on their own lines: side by side the email shrank to one letter */}
@@ -777,7 +795,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                 )}
 
                 {/* KPI Matrix Strip */}
-                <div className="grid grid-cols-4 gap-1.5 py-1 text-center border-y border-[#BAC5D5]/30">
+                <div className="grid grid-cols-3 gap-1.5 py-1 text-center border-y border-[#BAC5D5]/30">
                   <div className="px-1">
                     <span className="text-[11px] text-[#4E5C70] block">Покупки</span>
                     <span className="text-xs font-extrabold text-[#2D3A4E]">
@@ -789,14 +807,13 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     <span className="text-xs font-extrabold text-[#2D3A4E]">{customer.ordersCount}</span>
                   </div>
                   <div className="px-1 border-l border-[#BAC5D5]/30">
-                    <span className="text-[11px] text-[#4E5C70] block">Ср. чек</span>
+                    <span className="text-[11px] text-[#4E5C70] flex items-center justify-center gap-0.5">
+                      Ср. чек
+                      <AdminHint label="Ср. чек" className="-my-1">Средняя сумма оплаченного заказа клиента</AdminHint>
+                    </span>
                     <span className="text-xs font-extrabold text-[#2D3A4E]">
                       {customer.averageOrderValue > 0 ? `${Math.round(customer.averageOrderValue / 1000)}k ₽` : '—'}
                     </span>
-                  </div>
-                  <div className="px-1 border-l border-[#BAC5D5]/30">
-                    <span className="text-[11px] text-[#4E5C70] block">Бонусы</span>
-                    <span className="text-xs font-extrabold text-accent">{customer.bonusPoints}</span>
                   </div>
                 </div>
 
@@ -860,23 +877,11 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     <button
                       type="button"
                       onClick={() => onOpenSupportChat(customer.orders[0]?.id, customer.name)}
-                      className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-accent shrink-0 cursor-pointer"
-                      title="Открыть чат с клиентом"
-                      aria-label="Открыть чат с клиентом"
+                      aria-label={`Написать клиенту: ${customer.name}`}
+                      className="h-9 px-3 rounded-xl neu-button text-xs font-extrabold text-[#2D3A4E] hover:text-accent flex items-center gap-1.5 shrink-0 cursor-pointer"
                     >
-                      <MessageSquare className="w-4 h-4" />
-                    </button>
-                  )}
-
-                  {customer.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase() && (
-                    <button
-                      type="button"
-                      onClick={() => setCustomerToDelete(customer)}
-                      className="w-9 h-9 rounded-xl neu-button-danger flex items-center justify-center shrink-0 cursor-pointer"
-                      title="Удалить запись клиента"
-                      aria-label="Удалить запись клиента"
-                    >
-                      <Trash2 className="w-4 h-4" />
+                      <MessageSquare className="w-4 h-4" aria-hidden="true" />
+                      Написать
                     </button>
                   )}
                 </div>
@@ -1096,9 +1101,9 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
               {/* Financial Metrics & Loyalty Card */}
               <div className="neu-inset rounded-2xl p-4 space-y-3">
                 <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider block">
-                  Финансовые показатели и лояльность
+                  Финансовые показатели
                 </span>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3 text-center">
                   <div className="neu-flat-sm p-2.5 rounded-xl">
                     <span className="text-[11px] text-[#4E5C70] block">Сумма покупок</span>
                     <span className="text-sm font-extrabold text-success">
@@ -1115,12 +1120,6 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     <span className="text-[11px] text-[#4E5C70] block">Средний чек</span>
                     <span className="text-sm font-extrabold text-[#2D3A4E]">
                       {selectedCustomer.averageOrderValue.toLocaleString('ru-RU')} ₽
-                    </span>
-                  </div>
-                  <div className="neu-flat-sm p-2.5 rounded-xl">
-                    <span className="text-[11px] text-[#4E5C70] block">Бонусные баллы</span>
-                    <span className="text-sm font-extrabold text-accent">
-                      {selectedCustomer.bonusPoints} Б
                     </span>
                   </div>
                 </div>
@@ -1190,6 +1189,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                   <label htmlFor="customer-manager-notes" className="text-xs font-extrabold text-[#2D3A4E]">
                     Заметки и теги менеджера
                   </label>
+                  <AdminHint label="Заметки и теги">Видны только вам. Теги помогают искать, например «Оптовик»</AdminHint>
                 </div>
 
                 <textarea
@@ -1351,7 +1351,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                                   </span>
                                 </div>
                                 <span className="font-bold shrink-0 whitespace-nowrap">
-                                  {it.quantity} × {Number(it.product.price || 0).toLocaleString('ru-RU')} ₽
+                                  {it.quantity} × {linePrice(it).toLocaleString('ru-RU')} ₽
                                 </span>
                               </div>
                             ))}
@@ -1362,7 +1362,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                             <div className="flex items-center gap-2">
                               <Truck className="w-3.5 h-3.5 text-accent" />
                               <span>{ord.deliveryMethod || 'Доставка'}</span>
-                              {isTransportCompanyDelivery(ord.deliveryMethod, ord.trackingCompany) && ord.trackingNumber && (
+                              {isCarrierOrder(ord) && ord.trackingNumber && (
                                 <span className="font-bold text-[#2D3A4E]">Трек (ТК): {ord.trackingNumber}</span>
                               )}
                             </div>
@@ -1390,6 +1390,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                     <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                     Удалить клиента
                   </button>
+                  <AdminHint label="Удалить клиента" className="ml-1 self-center">Убирает карточку и профиль. Заказы остаются в разделе «Заказы»</AdminHint>
                 </div>
               )}
             </div>

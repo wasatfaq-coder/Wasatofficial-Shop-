@@ -23,11 +23,15 @@ test('владелец видит, что осталось до первой п�
   await signIn(ADMIN);
   await page.getByRole('button', { name: /^Панель администратора/ }).click();
   const panel = page.getByRole('dialog', { name: 'Панель администратора' });
+  // the panel opens on «Сегодня», the launch steps first (stage 2 of docs/admin-wholesale-plan.md)
+  await expect(panel.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible();
   const launch = panel.getByRole('region', { name: 'Запуск магазина' });
   await expect(launch.getByText('осталось 5 шагов из 5')).toBeVisible();
 
   // a step opens its section
   await launch.getByRole('button', { name: /^Первый товар/ }).click();
-  await expect(panel.getByRole('tab', { name: 'Товары', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(
+    panel.getByRole('navigation', { name: 'Разделы панели' }).getByRole('button', { name: 'Товары', exact: true })
+  ).toHaveAttribute('aria-current', 'page');
   await expect(panel.getByRole('button', { name: 'Добавить товар' })).toBeVisible();
 });

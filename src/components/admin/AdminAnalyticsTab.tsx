@@ -1,9 +1,8 @@
 import { pluralRu } from '../../utils/pluralize';
+import { AdminHint } from './AdminHint';
+import { AdminAnalyticsEmptyState as EmptyState } from './AdminAnalyticsPromos';
 import React, { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import { AdminLaunchChecklist } from './AdminLaunchChecklist';
 import { AdminSiteErrorsCard } from './AdminSiteErrorsCard';
-import type { LaunchStep } from '../../utils/launchChecklist';
-import type { AdminTab } from './adminSections';
 import {
   TrendingUp,
   ShoppingBag,
@@ -12,8 +11,9 @@ import {
   BarChart3,
   LineChart as LineChartIcon,
   Loader2,
-  Tag,
   Flame,
+  Coins,
+  PackageOpen,
   Layers,
   Receipt,
   RotateCw,
@@ -21,29 +21,39 @@ import {
   CalendarClock,
   CalendarRange,
   ChevronDown,
-  Check,
   FileDown,
-  X,
 } from 'lucide-react';
-import { Order, PromoCode } from '../../types';
-import { computePartnerCommissions } from '../../utils/partnerCommission';
+import type { Order, Product, PromoCode } from '../../types';
+import { OrderLineThumbImage } from '../ProductThumbImage';
 import { generateAnalyticsPDF, preloadPdfLibraries } from '../../utils/pdfExport';
 import {
   computeFirestoreDailySales,
   computePeriodBreakdown,
   orderRevenue,
-  AnalyticsPeriod,
-  OrderStatusFilter,
-  DailyDataPoint,
+  type ChannelFilter,
+  type OrderStatusFilter,
+  type DailyDataPoint,
 } from '../../utils/analyticsEngine';
+import {
+  allowedGroupings,
+  groupingText,
+  isCustomPeriod,
+  perBucketText,
+  periodRangeText,
+  resolvePeriod,
+  type AnalyticsGrouping,
+  type PeriodSelection,
+} from '../../utils/analyticsPeriods';
+import { currentCostMap, profitByChannel, type CostSources, type OrderCostSnapshot } from '../../utils/salesProfit';
+import { AdminAnalyticsPeriodDialog, periodTitle } from './AdminAnalyticsPeriodDialog';
+import { AdminAnalyticsProfitCard } from './AdminAnalyticsProfitCard';
+import { AdminAnalyticsPromos } from './AdminAnalyticsPromos';
 import { orderTimestamp } from '../../shared/orderDate';
 import { adminStatusLabel } from '../../utils/orderFlow';
-import { subscribeToAnalyticsResetAt, saveAnalyticsResetAt } from '../../utils/firebaseSync';
+import { subscribeToAnalyticsResetAt, saveAnalyticsResetAt, subscribeToOrderCosts } from '../../utils/firebaseSync';
 import { AdminDailySalesInspector } from './AdminDailySalesInspector';
 import { triggerChartHapticFeedback } from './AdminChartNeumorphicShapes';
 import { ConfirmDialog } from '../ConfirmDialog';
-import { ModalPortal } from '../ModalPortal';
-import { useDialogA11y } from '../../utils/useDialogA11y';
 
 // The chart library (recharts, most of this section's code) loads apart: the cards and lists show first
 const AdminAnalyticsChart = lazy(() => import('./AdminAnalyticsChart'));
@@ -58,31 +68,36 @@ const ChartLoading: React.FC = () => (
 
 interface AdminAnalyticsTabProps {
   orders: Order[];
+  /** The catalog: photos of the top products come only from it, never from the order (audit 07.10, finding 7) */
+  products: Product[];
   promos?: PromoCode[];
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
   onSelectOrder?: (order: Order) => void;
-  /** «Запуск магазина» above the numbers while something for the first sale is missing */
-  launchSteps?: LaunchStep[];
-  onOpenTab?: (tab: AdminTab) => void;
 }
 
 export type ChartType = 'area' | 'bar';
-export type ActiveMetric = 'revenue' | 'orders' | 'returns' | 'avgCheck';
-
-const PERIODS: { id: AnalyticsPeriod; label: string; title: string }[] = [
-  { id: '7d', label: '7 дн', title: 'Последние 7 дней' },
-  { id: '14d', label: '14 дн', title: 'Последние 14 дней' },
-  { id: '30d', label: '30 дн', title: 'Последние 30 дней' },
-  { id: '6m', label: '6 мес', title: 'Последние 6 месяцев' },
-  { id: '1y', label: '12 мес', title: 'Последние 12 месяцев' },
-];
+export type ActiveMetric = 'revenue' | 'orders' | 'returns' | 'avgCheck' | 'cogs' | 'netProfit';
 
 /** Chart colours: brand tokens (accent, success, warning) as hex for SVG */
 const METRICS: { id: ActiveMetric; label: string; unit: string; color: string; fill: string }[] = [
   { id: 'revenue', label: 'Выручка', unit: '₽', color: '#2C4A6B', fill: 'url(#colorRevenueArea)' },
+  { id: 'netProfit', label: 'Чистый доход', unit: '₽', color: '#3B6652', fill: 'url(#colorOrdersArea)' },
+  { id: 'cogs', label: 'Закупка', unit: '₽', color: '#5A6F8C', fill: 'url(#colorAvgCheckArea)' },
   { id: 'orders', label: 'Заказы', unit: 'шт', color: '#3B6652', fill: 'url(#colorOrdersArea)' },
   { id: 'avgCheck', label: 'Средний чек', unit: '₽', color: '#5A6F8C', fill: 'url(#colorAvgCheckArea)' },
   { id: 'returns', label: 'Отмены', unit: 'шт', color: '#8C733E', fill: 'url(#colorReturnsArea)' },
+];
+
+const CHANNEL_FILTERS: { id: ChannelFilter; label: string }[] = [
+  { id: 'all', label: 'Все продажи' },
+  { id: 'retail', label: 'Розница' },
+  { id: 'wholesale', label: 'Опт' },
+];
+
+const GROUPINGS: { id: AnalyticsGrouping; label: string }[] = [
+  { id: 'day', label: 'Дни' },
+  { id: 'week', label: 'Недели' },
+  { id: 'month', label: 'Месяцы' },
 ];
 
 const STATUS_FILTERS: { id: OrderStatusFilter; label: string }[] = [
@@ -91,90 +106,7 @@ const STATUS_FILTERS: { id: OrderStatusFilter; label: string }[] = [
   { id: 'delivered', label: 'Полученные' },
 ];
 
-/** «20 сент. — 26 сент.» / «апр. 2026 — сент. 2026»: what the period covers today */
-function periodRangeText(period: AnalyticsPeriod, now = new Date()): string {
-  if (period === '6m' || period === '1y') {
-    const months = period === '6m' ? 6 : 12;
-    const start = new Date(now.getFullYear(), now.getMonth() - months + 1, 1);
-    const fmt = (d: Date) => d.toLocaleDateString('ru-RU', { month: 'short', year: 'numeric' }).replace(/\s*г\.$/, '');
-    return `${fmt(start)} — ${fmt(now)}`;
-  }
-  const days = period === '7d' ? 7 : period === '14d' ? 14 : 30;
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days + 1);
-  const fmt = (d: Date) => d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-  return `${fmt(start)} — ${fmt(now)}`;
-}
-
-/** Period picker: a modal list (on a phone five segments did not fit one row) */
-const PeriodDialog: React.FC<{
-  value: AnalyticsPeriod;
-  onChange: (p: AnalyticsPeriod) => void;
-  onClose: () => void;
-}> = ({ value, onChange, onClose }) => {
-  const dialog = useDialogA11y(true, onClose);
-
-  return (
-    <ModalPortal>
-      <div
-        className="fixed inset-0 z-[160] bg-[#2D3A4E]/45 flex items-end sm:items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
-        onClick={onClose}
-      >
-        <div
-          ref={dialog.ref}
-          {...dialog.props}
-          onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-sm neu-modal rounded-3xl p-4 sm:p-5 space-y-3 animate-in zoom-in-95 fade-in duration-200"
-        >
-          <div className="flex items-center justify-between gap-3">
-            <h4 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E] flex items-center gap-2">
-              <CalendarRange className="w-4 h-4 text-accent" />
-              Период аналитики
-            </h4>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Закрыть"
-              className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="space-y-2" role="radiogroup" aria-label="Период">
-            {PERIODS.map((p) => {
-              const selected = p.id === value;
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  data-autofocus={selected || undefined}
-                  onClick={() => {
-                    onChange(p.id);
-                    onClose();
-                  }}
-                  className={`w-full min-h-12 px-3.5 py-2.5 rounded-2xl flex items-center justify-between gap-3 text-left cursor-pointer transition-all ${
-                    selected ? 'neu-pill-active' : 'neu-button text-[#2D3A4E]'
-                  }`}
-                >
-                  <span className="min-w-0">
-                    <span className="block text-xs font-extrabold">{p.title}</span>
-                    <span className="block text-[11px] text-[#4E5C70]">
-                      {periodRangeText(p.id)} · {p.id === '6m' || p.id === '1y' ? 'по месяцам' : 'по дням'}
-                    </span>
-                  </span>
-                  {selected && <Check className="w-4 h-4 text-accent shrink-0" />}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </ModalPortal>
-  );
-};
-
-const rub = (value: number) => `${value.toLocaleString('ru-RU')} ₽`;
+const rub = (value: number) => `${value < 0 ? '−' : ''}${Math.abs(value).toLocaleString('ru-RU')} ₽`;
 
 const formatMoment = (ms: number) =>
   new Date(ms).toLocaleString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -191,12 +123,15 @@ const Growth: React.FC<{ value: number; hasBase: boolean }> = ({ value, hasBase 
   );
 };
 
-/** Nothing sold in the period: a plain note (not «не настроено» — there is nothing to set up) */
-const EmptyState: React.FC<{ text: string }> = ({ text }) => (
-  <p role="status" className="neu-inset rounded-2xl p-3 text-xs text-[#4E5C70] text-center">
-    {text}
-  </p>
-);
+
+const KPI_HINTS: Record<ActiveMetric, string> = {
+  revenue: 'Деньги только за заказы с отметкой «Оплачен». Неоплаченные не считаются',
+  orders: 'Все оформленные заказы, кроме отменённых — и неоплаченные тоже',
+  avgCheck: 'Выручка, делённая на число оплаченных заказов',
+  returns: 'Заказы, которые отменили покупатель или магазин',
+  cogs: 'Себестоимость: сколько стоили в закупке товары оплаченных заказов',
+  netProfit: 'Деньги за товары оплаченных заказов (со скидками, без доставки) минус их себестоимость',
+};
 
 const Segments = <T extends string>({
   label,
@@ -232,12 +167,16 @@ const Segments = <T extends string>({
 );
 
 /**
- * Admin → «Аналитика»: orders of the period by day or month, KPIs against the previous period, the period's
+ * Admin → «Аналитика»: orders of the period by day, week or month, retail and wholesale together or apart, KPIs (with
+ * the net profit) against the previous period, the period's
  * top products, categories and promo codes, the PDF report. Everything is counted from orders (dated by
  * createdAt) placed after the statistics reset; orders themselves are never deleted here.
  */
-export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, promos = [], onShowToast, onSelectOrder, launchSteps, onOpenTab }) => {
-  const [period, setPeriod] = useState<AnalyticsPeriod>('7d');
+export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, products, promos = [], onShowToast, onSelectOrder }) => {
+  const [period, setPeriod] = useState<PeriodSelection>('7d');
+  // null — the period's own grouping (by day, by month for 6 and 12 months)
+  const [chosenGrouping, setChosenGrouping] = useState<AnalyticsGrouping | null>(null);
+  const [channel, setChannel] = useState<ChannelFilter>('all');
   const [statusFilter, setStatusFilter] = useState<OrderStatusFilter>('all');
   const [activeMetric, setActiveMetric] = useState<ActiveMetric>('revenue');
   const [chartType, setChartType] = useState<ChartType>('bar');
@@ -249,17 +188,33 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
 
   useEffect(() => subscribeToAnalyticsResetAt(setResetAt), []);
 
-  const { dailyData, summary, periodOrders, undatedCount } = useMemo(
-    () => computeFirestoreDailySales(orders, period, statusFilter, resetAt),
-    [orders, period, statusFilter, resetAt]
+  // Cost of each order at the moment of sale (order_costs); an order without it — today's cost, an estimate (salesProfit.ts)
+  const [snapshots, setSnapshots] = useState<Map<string, OrderCostSnapshot>>(() => new Map());
+  useEffect(() => subscribeToOrderCosts(null, setSnapshots), []);
+  const costs = useMemo<CostSources>(() => ({ current: currentCostMap(products), snapshots }), [products, snapshots]);
+  const { dailyData, summary, periodOrders, undatedCount, grouping } = useMemo(
+    () =>
+      computeFirestoreDailySales(orders, period, statusFilter, resetAt, new Date(), {
+        grouping: chosenGrouping ?? undefined,
+        channel,
+        costs,
+      }),
+    [orders, period, statusFilter, resetAt, chosenGrouping, channel, costs]
   );
+  // «Розница и опт» shows both channels whatever channel is chosen above
+  const allChannelOrders = useMemo(
+    () =>
+      channel === 'all'
+        ? periodOrders
+        : computeFirestoreDailySales(orders, period, statusFilter, resetAt, new Date(), { costs }).periodOrders,
+    [channel, periodOrders, orders, period, statusFilter, resetAt, costs]
+  );
+  const byChannel = useMemo(() => profitByChannel(allChannelOrders, costs), [allChannelOrders, costs]);
+  const groupingOptions = useMemo(() => {
+    const allowed = allowedGroupings(resolvePeriod(period));
+    return GROUPINGS.filter((g) => allowed.includes(g.id));
+  }, [period]);
   const breakdown = useMemo(() => computePeriodBreakdown(periodOrders), [periodOrders]);
-  // Partner commission of the period: paid and received orders only, for statistics (the site does not pay it)
-  const periodCommissions = useMemo(
-    () => new Map(computePartnerCommissions(promos, periodOrders).map((c) => [c.code.trim().toUpperCase(), c])),
-    [promos, periodOrders]
-  );
-
   const {
     totalRevenue,
     prevTotalRevenue,
@@ -272,10 +227,16 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
     avgCheck,
     totalReturns,
     returnRate,
+    profit,
+    prevNetProfit,
+    netProfitGrowth,
   } = summary;
 
-  const isMonthly = period === '6m' || period === '1y';
-  const periodInfo = PERIODS.find((p) => p.id === period)!;
+  const bucketName = grouping === 'day' ? 'день' : grouping === 'week' ? 'неделю' : 'месяц';
+  const periodName = periodTitle(period);
+  const channelName = CHANNEL_FILTERS.find((c) => c.id === channel)!.label;
+  // part of the cost is today's purchase price: the numbers are marked «≈»
+  const approx = profit.estimatedOrders > 0 ? '≈ ' : '';
   const metric = METRICS.find((m) => m.id === activeMetric)!;
 
   // What a reset takes out of the statistics (orders placed since the current starting point)
@@ -291,8 +252,9 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
   // keep the open day in sync with fresh orders
   const openDay = selectedDayIndex >= 0 ? dailyData[selectedDayIndex] : null;
 
-  const changePeriod = (next: AnalyticsPeriod) => {
+  const changePeriod = (next: PeriodSelection) => {
     setPeriod(next);
+    setChosenGrouping(null);
     setSelectedDay(null);
     triggerChartHapticFeedback('light');
   };
@@ -315,7 +277,8 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       await saveAnalyticsResetAt(Date.now());
       setSelectedDay(null);
       onShowToast('Статистика сброшена: считается с этого момента. Заказы не удалены', 'success');
-    } catch {
+    } catch (err) {
+      console.error('Analytics reset was not saved:', err);
       onShowToast('Не удалось сбросить статистику', 'error');
     }
   };
@@ -324,7 +287,8 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
     try {
       await saveAnalyticsResetAt(null);
       onShowToast('Статистика снова считается по всей истории заказов', 'success');
-    } catch {
+    } catch (err) {
+      console.error('Analytics history was not restored:', err);
       onShowToast('Не удалось вернуть историю', 'error');
     }
   };
@@ -343,7 +307,9 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
           total: o.totalPrice || 0,
         }));
       await generateAnalyticsPDF({
-        periodLabel: periodInfo.title,
+        periodLabel: isCustomPeriod(period) ? periodRangeText(period) : periodName,
+        channelLabel: channelName,
+        profit: { ...byChannel, estimated: byChannel.retail.estimatedOrders + byChannel.wholesale.estimatedOrders > 0 },
         totalRevenue,
         prevRevenue: prevTotalRevenue,
         revenueGrowthPercent: revenueGrowth,
@@ -367,11 +333,13 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
   };
 
   const formatYAxis = (val: number) => {
+    const sign = val < 0 ? '−' : '';
+    const abs = Math.abs(val);
     if (metric.unit === '₽') {
-      if (val >= 1_000_000) return `${(val / 1_000_000).toFixed(1)}M`;
-      if (val >= 1000) return `${Math.round(val / 1000)}k`;
+      if (abs >= 1_000_000) return `${sign}${(abs / 1_000_000).toFixed(1)}M`;
+      if (abs >= 1000) return `${sign}${Math.round(abs / 1000)}k`;
     }
-    return `${val}`;
+    return `${sign}${abs}`;
   };
 
   // The KPI cards are also the chart's metric switch
@@ -392,6 +360,29 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       extra: <span className="text-[11px] text-[#4E5C70]">Только оплаченные заказы</span>,
     },
     {
+      metric: 'netProfit',
+      title: 'Чистый доход',
+      icon: Coins,
+      value: `${approx}${rub(profit.netProfit)}`,
+      footer: <Growth value={netProfitGrowth} hasBase={prevNetProfit > 0} />,
+      extra: (
+        <span className="text-[11px] text-[#4E5C70]">
+          Маржа {profit.marginPercent === null ? '—' : `${approx}${profit.marginPercent}%`} · без доставки
+          {profit.missingCostLines > 0 && (
+            <span className="block text-warning font-bold">Завышен: не у всех товаров есть себестоимость</span>
+          )}
+        </span>
+      ),
+    },
+    {
+      metric: 'cogs',
+      title: 'Закупка',
+      icon: PackageOpen,
+      value: `${approx}${rub(profit.cogs)}`,
+      footer: <span className="text-[11px] text-[#4E5C70]">Себестоимость проданных товаров</span>,
+      extra: null,
+    },
+    {
       metric: 'orders',
       title: 'Заказы',
       icon: ShoppingBag,
@@ -399,7 +390,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       footer: <Growth value={ordersGrowth} hasBase={prevTotalOrders > 0} />,
       extra: (
         <span className="text-[11px] text-[#4E5C70]">
-          В среднем {(totalOrders / Math.max(1, dailyData.length)).toFixed(1)} {isMonthly ? 'в месяц' : 'в день'}
+          В среднем {(totalOrders / Math.max(1, dailyData.length)).toFixed(1)} {perBucketText(grouping)}
         </span>
       ),
     },
@@ -410,7 +401,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       value: rub(avgCheck),
       footer: (
         <span className="text-[11px] text-[#4E5C70]">
-          Выручка {isMonthly ? 'в месяц' : 'в день'}: {rub(avgDailyRevenue)}
+          Выручка {perBucketText(grouping)}: {rub(avgDailyRevenue)}
         </span>
       ),
       extra: null,
@@ -427,7 +418,6 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
 
   return (
     <div className="space-y-4 sm:space-y-5 text-[#2D3A4E]">
-      {launchSteps && onOpenTab && <AdminLaunchChecklist steps={launchSteps} onOpenTab={onOpenTab} />}
       <AdminSiteErrorsCard onShowToast={onShowToast} />
       {/* 1. Header: title, period, reset state */}
       <section className="neu-flat rounded-3xl p-4 space-y-3">
@@ -438,22 +428,51 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
               Аналитика продаж
             </h3>
             <p className="text-xs text-[#4E5C70]">
-              {isMonthly ? 'По месяцам' : 'По дням'}. Сравнение — с предыдущим периодом той же длины
+              {channel === 'all' ? 'Розница и опт' : channelName}, {groupingText(grouping)}. Сравнение — с предыдущим периодом той
+              же длины
             </p>
           </div>
+          <div className="flex items-center gap-1 self-stretch sm:self-auto min-w-0">
           <button
             type="button"
             onClick={() => setIsPeriodOpen(true)}
             aria-haspopup="dialog"
-            className="min-h-11 px-3.5 py-2 neu-button rounded-2xl flex items-center gap-2.5 text-left cursor-pointer self-stretch sm:self-auto shrink-0"
+            className="min-h-11 px-3.5 py-2 neu-button rounded-2xl flex items-center gap-2.5 text-left cursor-pointer flex-1 sm:flex-none shrink-0"
           >
             <CalendarRange className="w-4 h-4 text-accent shrink-0" />
             <span className="min-w-0 flex-1">
-              <span className="block text-xs font-extrabold">{periodInfo.title}</span>
+              <span className="block text-xs font-extrabold">{periodName}</span>
               <span className="block text-[11px] text-[#4E5C70]">{periodRangeText(period)}</span>
             </span>
             <ChevronDown className="w-4 h-4 text-[#4E5C70] shrink-0" />
           </button>
+          <AdminHint label="Период">За какой срок считать цифры и с каким прошлым сроком сравнивать</AdminHint>
+          </div>
+        </div>
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
+          <div className="flex items-center gap-1 min-w-0">
+            <div className="flex-1 sm:w-72">
+              <Segments<ChannelFilter> label="Продажи" grid="grid-cols-3" value={channel} options={CHANNEL_FILTERS} onChange={setChannel} />
+            </div>
+            <AdminHint label="Продажи">
+              Опт — заказы, в которых есть строка по оптовой цене; остальные — розница. Меняет все цифры на странице
+            </AdminHint>
+          </div>
+          <div className="flex items-center gap-1 min-w-0">
+            <div className="flex-1 sm:w-64">
+              <Segments<AnalyticsGrouping>
+                label="Группировать"
+                grid={groupingOptions.length === 3 ? 'grid-cols-3' : groupingOptions.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}
+                value={grouping}
+                options={groupingOptions}
+                onChange={(g) => {
+                  setChosenGrouping(g);
+                  setSelectedDay(null);
+                }}
+              />
+            </div>
+            <AdminHint label="Группировать">Один столбик графика — день, неделя (с понедельника) или месяц</AdminHint>
+          </div>
         </div>
         {resetAt !== null && (
           <div className="neu-inset rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -477,12 +496,12 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       </section>
 
       {/* 2. KPIs: a card shows its number and puts the metric on the chart (raised → pressed in when chosen) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3" role="radiogroup" aria-label="Показатель на графике">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3" role="radiogroup" aria-label="Показатель на графике">
         {kpis.map((k) => {
           const selected = activeMetric === k.metric;
           return (
+            <div key={k.metric} className="relative min-w-0">
             <button
-              key={k.metric}
               type="button"
               role="radio"
               aria-checked={selected}
@@ -490,12 +509,12 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
                 setActiveMetric(k.metric);
                 triggerChartHapticFeedback('light');
               }}
-              className={`neu-pressable rounded-2xl p-3.5 space-y-1.5 min-w-0 text-left cursor-pointer ${
+              className={`neu-pressable w-full h-full rounded-2xl p-3.5 space-y-1.5 min-w-0 text-left cursor-pointer ${
                 selected ? 'neu-pill-active' : 'neu-flat'
               }`}
             >
               <span className="flex items-center justify-between gap-2">
-                <span className={`text-[11px] font-bold uppercase tracking-wider ${selected ? 'text-accent' : 'text-[#4E5C70]'}`}>
+                <span className={`text-[11px] font-bold uppercase tracking-wider pr-7 ${selected ? 'text-accent' : 'text-[#4E5C70]'}`}>
                   {k.title}
                 </span>
                 <span
@@ -512,6 +531,10 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
               <span className="block text-[11px] leading-snug">{k.footer}</span>
               {k.extra}
             </button>
+            <AdminHint label={k.title} className="absolute top-3 right-[46px]">
+              {KPI_HINTS[k.metric]}
+            </AdminHint>
+            </div>
           );
         })}
       </div>
@@ -522,22 +545,26 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
           <div className="flex items-center justify-between gap-2 min-w-0">
             <h4 className="text-xs font-extrabold uppercase tracking-wider flex items-center gap-1.5 min-w-0">
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: metric.color }} aria-hidden="true" />
-              {metric.label} {isMonthly ? 'по месяцам' : 'по дням'}
+              {metric.label} {groupingText(grouping)}
             </h4>
             {peakDay && (
+              <span className="flex items-center gap-0.5 shrink-0">
               <button
                 type="button"
                 onClick={showPeakDay}
-                title={isMonthly ? 'Открыть лучший месяц' : 'Открыть пиковый день'}
+                title={grouping === 'day' ? 'Открыть пиковый день' : `Открыть лучш${grouping === 'week' ? 'ую неделю' : 'ий месяц'}`}
                 className="h-8 px-2.5 neu-button rounded-xl text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1 cursor-pointer shrink-0"
               >
                 <Flame className="w-3.5 h-3.5 text-accent" />
                 Пик: {peakDay.label} · {rub(peakDay.revenue)}
               </button>
+              <AdminHint label="Пик">День (или месяц) с самой большой выручкой. Нажмите — увидите его заказы</AdminHint>
+              </span>
             )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Segments<OrderStatusFilter> label="Какие заказы учитывать" grid="grid-cols-3" value={statusFilter} options={STATUS_FILTERS} onChange={setStatusFilter} />
+            <AdminHint label="Какие заказы учитывать">Меняет все цифры на странице: всё, только оплаченное или только полученное</AdminHint>
             <Segments<ChartType>
               label="Вид графика"
               value={chartType}
@@ -558,7 +585,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
                 dailyData={dailyData}
                 activeMetric={activeMetric}
                 metric={metric}
-                period={period}
+                grouping={grouping}
                 selectedDate={openDay?.date}
                 onChartClick={handleChartClick}
                 formatYAxis={formatYAxis}
@@ -567,7 +594,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
           </div>
         </div>
         <div className="text-[11px] text-[#4E5C70] space-y-1">
-          <p>Нажмите на {isMonthly ? 'месяц' : 'день'} на графике, чтобы увидеть его заказы.</p>
+          <p>Нажмите на {bucketName} на графике, чтобы увидеть заказы.</p>
           {undatedCount > 0 && (
             <p>
               Без даты (оформлены до обновления магазина): {undatedCount} {pluralRu(undatedCount, ['заказ', 'заказа', 'заказов'])} — в графике
@@ -591,6 +618,8 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
         />
       )}
 
+      <AdminAnalyticsProfitCard byChannel={byChannel} />
+
       {/* 4. Products and categories of the period */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
         <section className="neu-flat rounded-3xl p-4 space-y-3">
@@ -605,11 +634,14 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
               {breakdown.topProducts.map((p, idx) => (
                 <li key={p.id} className="neu-inset rounded-2xl p-2.5 flex items-center justify-between gap-2.5">
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    {p.image ? (
-                      <img src={p.image} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" loading="lazy" />
-                    ) : (
-                      <span className="w-10 h-10 rounded-xl bg-[#BAC5D5]/30 shrink-0" aria-hidden="true" />
-                    )}
+                    {/* only the catalog's photo: a link in the order is written by the visitor (finding 7) */}
+                    <OrderLineThumbImage
+                      line={p}
+                      catalog={products}
+                      alt=""
+                      className="w-10 h-10 rounded-xl object-cover shrink-0"
+                      loading="lazy"
+                    />
                     <div className="min-w-0">
                       <p className="text-xs font-bold truncate">
                         <span className="text-accent font-extrabold mr-1">{idx + 1}.</span>
@@ -653,75 +685,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       </div>
 
       {/* 5. Promo codes of the period */}
-      <section className="neu-flat rounded-3xl p-4 space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <h4 className="text-xs font-extrabold uppercase tracking-wider flex items-center gap-1.5">
-            <Tag className="w-4 h-4 text-accent" />
-            Промокоды за период
-          </h4>
-          {breakdown.promos.length > 0 && (
-            <span className="text-[11px] text-[#4E5C70]">
-              Выручка: <strong className="text-accent">{rub(breakdown.promos.reduce((s, p) => s + p.revenue, 0))}</strong> · скидки:{' '}
-              <strong className="text-[#2D3A4E]">{rub(breakdown.promos.reduce((s, p) => s + p.discount, 0))}</strong>
-            </span>
-          )}
-        </div>
-        {breakdown.promos.length === 0 ? (
-          <EmptyState text="За выбранный период заказов с промокодом нет" />
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-            {breakdown.promos.map((p) => {
-              const promo = promos.find((x) => x.code.toUpperCase() === p.code);
-              return (
-                <div key={p.code} className="neu-inset rounded-2xl p-3 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs font-extrabold tracking-wider break-all">{p.code}</span>
-                    <span
-                      className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                        !promo ? 'text-[#4E5C70] bg-[#4E5C70]/10' : promo.active ? 'text-success bg-success-soft' : 'text-[#4E5C70] bg-[#4E5C70]/10'
-                      }`}
-                    >
-                      {!promo ? 'Удален' : promo.active ? 'Активен' : 'Выключен'}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-1 text-center pt-1 border-t border-[#BAC5D5]/40">
-                    <div>
-                      <span className="text-[11px] text-[#4E5C70] block">Заказов</span>
-                      <span className="text-xs font-extrabold">{p.orders}</span>
-                    </div>
-                    <div>
-                      <span className="text-[11px] text-[#4E5C70] block">Выручка</span>
-                      <span className="text-xs font-extrabold text-accent">{rub(p.revenue)}</span>
-                    </div>
-                    <div>
-                      <span className="text-[11px] text-[#4E5C70] block">Доля заказов</span>
-                      <span className="text-xs font-extrabold">{p.share}%</span>
-                    </div>
-                  </div>
-                  {periodCommissions.has(p.code) && (() => {
-                    const c = periodCommissions.get(p.code)!;
-                    return (
-                      <p className="text-[11px] text-[#4E5C70] pt-1 border-t border-[#BAC5D5]/40">
-                        Партнер{c.partnerName ? ` ${c.partnerName}` : ''}:{' '}
-                        {c.percent === null ? (
-                          'процент не задан'
-                        ) : (
-                          <>
-                            комиссия {c.percent}% —{' '}
-                            <strong className="text-accent">{rub(c.commission)}</strong> с {c.confirmedOrders} оплаченных и
-                            полученных
-                          </>
-                        )}
-                        {c.pendingOrders > 0 && `; ждут оплаты или получения: ${c.pendingOrders}`}
-                      </p>
-                    );
-                  })()}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
+      <AdminAnalyticsPromos promos={breakdown.promos} storePromos={promos} periodOrders={periodOrders} />
 
       {/* 6. Report and reset */}
       <section className="neu-flat rounded-3xl p-4 flex flex-col sm:flex-row sm:items-stretch gap-2.5">
@@ -740,7 +704,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
           <span className="min-w-0">
             <span className="block text-xs font-extrabold">{isExportingPDF ? 'Формируем отчет…' : 'Скачать отчет PDF'}</span>
             <span className="block text-[11px] text-white/80 leading-snug">
-              {periodInfo.title} · {totalOrders} {pluralRu(totalOrders, ['заказ', 'заказа', 'заказов'])} на {rub(totalRevenue)}
+              {periodName}{channel === 'all' ? '' : ` · ${channelName}`} · {totalOrders} {pluralRu(totalOrders, ['заказ', 'заказа', 'заказов'])} на {rub(totalRevenue)}
             </span>
           </span>
         </button>
@@ -754,9 +718,12 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
           <Trash2 className="w-4 h-4" />
           Сбросить статистику
         </button>
+        <AdminHint label="Сбросить статистику" className="self-center">Цифры начнут считаться с нуля. Сами заказы не удаляются, историю можно вернуть</AdminHint>
       </section>
 
-      {isPeriodOpen && <PeriodDialog value={period} onChange={changePeriod} onClose={() => setIsPeriodOpen(false)} />}
+      {isPeriodOpen && (
+        <AdminAnalyticsPeriodDialog value={period} onChange={changePeriod} onClose={() => setIsPeriodOpen(false)} />
+      )}
 
       <ConfirmDialog
         isOpen={isResetConfirmOpen}

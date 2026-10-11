@@ -1,6 +1,7 @@
 // Страницы-превью товаров для мессенджеров и поисковиков (docs/seo-plan.md, этап 1). Запускается после `vite build`
 // (`bun run build:share`, deploy.yml): читает каталог из боевой базы как любой посетитель (без ключей и записи) и пишет
-// в dist/ product/{id}.html (заголовок, описание, фото и цена товара в <head>), sitemap.xml и robots.txt.
+// в dist/ product/{id}.html (заголовок, описание, фото и цена товара в <head>), catalog.html, offer.html и privacy.html
+// (свои заголовок, описание и canonical — аудит 07.10, находка 53), sitemap.xml и robots.txt.
 // Боты Telegram и WhatsApp не выполняют JS: превью товара может быть только в HTML, который отдаёт Hosting. Приложение
 // на этой странице то же (index.html), оно открывает экран товара по адресу (src/utils/navigation.ts). Каталог меняется
 // в админке между деплоями: новый товар до следующей сборки открывается по общей странице магазина (rewrite на
@@ -14,6 +15,13 @@ import type { Product, StorefrontSettings } from '../src/types';
 import { CATALOG_INDEX_COLLECTION, readCatalogIndex, type CatalogEntry, type CatalogIndexPart } from '../src/utils/catalogIndex';
 import { isHiddenFromSale } from '../src/utils/inventory';
 import { getStoreName, withStoreName, withStoreNameFields } from '../src/utils/storeContacts';
+import {
+  INDEXED_SCREENS,
+  homeDocumentTitle,
+  screenDescription,
+  screenDocumentTitle,
+  type IndexedScreen,
+} from '../src/utils/screenMeta';
 
 /** Product ids that are safe as a file name and a path segment; any other product keeps the store's common preview */
 const SAFE_ID = /^[A-Za-z0-9._-]{1,128}$/;
@@ -155,7 +163,7 @@ export function productMeta(p: ShareProduct, site: string, siteName: string, noi
     productJsonLd(p, url),
   ].join('\n    ');
   return metaBlock({
-    title: `${p.title} — ${siteName}`,
+    title: screenDocumentTitle('product-detail', siteName, p.title),
     description: productSummary(p),
     url,
     canonical: true,
@@ -164,6 +172,23 @@ export function productMeta(p: ShareProduct, site: string, siteName: string, noi
     image: p.image ? { url: p.image, alt: p.title } : storeCover(site, siteName),
     noindex,
     extra: priceTags,
+  });
+}
+
+/**
+ * The catalog and the documents (audit 07.10, finding 53): a page of their own (dist/{screen}.html, Hosting serves it
+ * for /{screen}), so search engines do not see them as the main page under another address
+ */
+export function screenMeta(screen: IndexedScreen, site: string, siteName: string, noindex: boolean): string {
+  return metaBlock({
+    title: screenDocumentTitle(screen, siteName),
+    description: screenDescription(screen, siteName),
+    url: `${site}/${screen}`,
+    canonical: true,
+    type: 'website',
+    siteName,
+    image: storeCover(site, siteName),
+    noindex,
   });
 }
 
@@ -502,7 +527,7 @@ async function main() {
   writeFileSync(
     indexPath,
     withMeta(indexHtml, metaBlock({
-      title: `${storeName} — мужская одежда`,
+      title: homeDocumentTitle(storeName),
       description: storeDescription(storeName, slogan),
       url: `${site}/`,
       type: 'website',
@@ -511,6 +536,9 @@ async function main() {
       noindex,
     }))
   );
+  for (const screen of INDEXED_SCREENS) {
+    writeFileSync(path.join(dist, `${screen}.html`), withMeta(indexHtml, screenMeta(screen, site, storeName, noindex)));
+  }
   mkdirSync(path.join(dist, 'product'), { recursive: true });
   for (const p of products) {
     writeFileSync(path.join(dist, 'product', `${p.id}.html`), withMeta(indexHtml, productMeta(p, site, storeName, noindex)));

@@ -26,19 +26,28 @@ function loadCachedBanners(): BannerSlide[] {
 }
 
 /**
- * What every visitor reads about the shop, live from Firestore: «Витрина» settings, banners, delivery methods,
- * pickup points and the server-orders switch. The browser keeps a copy of settings, banners and delivery, so the
+ * What every visitor reads about the shop, live from Firestore: «Витрина» settings, banners, delivery methods and the
+ * server-orders switch. The browser keeps a copy of settings, banners and delivery, so the
  * first screen has them before the database answers.
  *
  * Promos — only once they are needed (docs/catalog-scale-plan.md, stage 4): `wantPromos` (the cart, the checkout, the
  * admin) or `requestPromos()` (a code applied from a banner or the chat). Most visits never open the cart; once read,
  * the promos stay subscribed for the rest of the visit.
+ *
+ * Pickup points — the same way (audit 07.10, finding 51): only the checkout and the admin show them, so the subscription
+ * starts with `wantPickupPoints` (from the cart on, to be ready by the checkout) and stays for the visit; until the
+ * database answers the browser's copy is shown, and `pickupPointsLoaded` tells «not added» from «not read yet».
  */
-export function useStorefrontData(wantPromos: boolean) {
+export function useStorefrontData(wantPromos: boolean, wantPickupPoints: boolean) {
   // Catalog, promos and banners come only from Firestore (Admin panel); no demo data meanwhile
   const [promos, setPromos] = useState<PromoCode[]>([]);
   const [promosLoaded, setPromosLoaded] = useState(false);
   const [promosRequested, setPromosRequested] = useState(false);
+  // The promos subscription ended with an error (finding 15): a code waiting for them is not «checked» forever, and the
+  // next request subscribes again (a failed subscription does not come back by itself)
+  const [promosFailed, setPromosFailed] = useState(false);
+  const [promosAttempt, setPromosAttempt] = useState(0);
+  const promosFailedRef = React.useRef(false);
   const readPromos = wantPromos || promosRequested;
   const [bannerSlides, setBannerSlides] = useState<BannerSlide[]>(loadCachedBanners);
   // false while the banners are the browser's copy: the admin's session moves pictures only from the database's
@@ -48,6 +57,27 @@ export function useStorefrontData(wantPromos: boolean) {
   const [storefrontSettings, setStorefrontSettings] = useState<StorefrontSettings>(loadStorefrontSettings);
   const [deliveryMethods, setDeliveryMethods] = useState<DeliveryMethod[]>(loadLocalDeliveryMethods);
   const [pickupPoints, setPickupPoints] = useState<PickupPoint[]>(loadLocalPickupPoints);
+  const [pickupPointsRequested, setPickupPointsRequested] = useState(false);
+  const [pickupPointsLoaded, setPickupPointsLoaded] = useState(false);
+  const [pickupPointsFailed, setPickupPointsFailed] = useState(false);
+  const readPickupPoints = wantPickupPoints || pickupPointsRequested;
+
+  React.useEffect(() => {
+    if (wantPickupPoints) setPickupPointsRequested(true);
+  }, [wantPickupPoints]);
+
+  React.useEffect(() => {
+    if (!readPickupPoints) return;
+    return subscribeToPickupPoints(
+      (loadedPoints) => {
+        setPickupPoints(loadedPoints);
+        setPickupPointsLoaded(true);
+        setPickupPointsFailed(false);
+        saveLocalPickupPoints(loadedPoints);
+      },
+      () => setPickupPointsFailed(true)
+    );
+  }, [readPickupPoints]);
 
   // Sync storefront settings on custom update event
   React.useEffect(() => {
@@ -64,15 +94,27 @@ export function useStorefrontData(wantPromos: boolean) {
 
   React.useEffect(() => {
     if (!readPromos) return;
-    return subscribeToPromos((loadedPromos) => {
-      if (loadedPromos) {
-        setPromos(loadedPromos);
-        setPromosLoaded(true);
+    return subscribeToPromos(
+      (loadedPromos) => {
+        if (loadedPromos) {
+          setPromos(loadedPromos);
+          setPromosLoaded(true);
+        }
+      },
+      () => {
+        promosFailedRef.current = true;
+        setPromosFailed(true);
       }
-    });
-  }, [readPromos]);
+    );
+  }, [readPromos, promosAttempt]);
 
-  const requestPromos = React.useCallback(() => setPromosRequested(true), []);
+  const requestPromos = React.useCallback(() => {
+    setPromosRequested(true);
+    if (!promosFailedRef.current) return;
+    promosFailedRef.current = false;
+    setPromosFailed(false);
+    setPromosAttempt((n) => n + 1);
+  }, []);
 
   React.useEffect(() => {
     const unsubServerConfig = subscribeToServerConfig((config) => {
@@ -101,17 +143,11 @@ export function useStorefrontData(wantPromos: boolean) {
       saveLocalDeliveryMethods(loadedMethods);
     });
 
-    const unsubPickup = subscribeToPickupPoints((loadedPoints) => {
-      setPickupPoints(loadedPoints);
-      saveLocalPickupPoints(loadedPoints);
-    });
-
     return () => {
       unsubSettings();
       unsubServerConfig();
       unsubBanners();
       unsubDelivery();
-      unsubPickup();
     };
   }, []);
 
@@ -119,6 +155,7 @@ export function useStorefrontData(wantPromos: boolean) {
     promos,
     setPromos,
     promosLoaded,
+    promosFailed,
     requestPromos,
     bannerSlides,
     bannersLoaded,
@@ -129,6 +166,8 @@ export function useStorefrontData(wantPromos: boolean) {
     deliveryMethods,
     setDeliveryMethods,
     pickupPoints,
+    pickupPointsLoaded,
+    pickupPointsFailed,
     setPickupPoints,
   };
 }

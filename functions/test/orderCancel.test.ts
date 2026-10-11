@@ -8,6 +8,7 @@ import {
   cancelledShare,
   customerCancelHint,
   isArchivedOrder,
+  ordersWithPromoToRelease,
 } from '../../src/utils/orderCancel';
 import { inStockAfterReturn, inStockAfterStockChange } from '../../src/utils/inventory';
 import { orderReturnMovementId, orderReturnReason } from '../../src/shared/stockMovements';
@@ -36,6 +37,9 @@ describe('who cancels', () => {
     expect(canCustomerCancel(order({ isCancelled: true }), 'alice')).toBe(false);
     // cancelled by the store and brought back: through the chat
     expect(canCustomerCancel(order({ cancelledAt: '2026-10-01T10:00:00.000Z' }), 'alice')).toBe(false);
+    // the store changed the order: its goods go back by the whole journal, which only the admin reads (audit 07.10, finding 2)
+    expect(canCustomerCancel(order({ isAdjusted: true }), 'alice')).toBe(false);
+    expect(customerCancelHint(order({ isAdjusted: true }), 'alice')).toMatch(/изменил состав/);
   });
 
   test('without the button the buyer is told why; nothing for finished orders', () => {
@@ -101,5 +105,19 @@ describe('back to stock', () => {
   test('the return entry of a line has its own id and the reason the rules expect', () => {
     expect(orderReturnMovementId('WS-1', 0)).toBe('WS-1_0_return');
     expect(orderReturnReason('WS-1')).toBe('Отмена заказа #WS-1');
+  });
+});
+
+// аудит 07.10, находка 6: одноразовый код сгорал при отмене заказа
+describe('promo code use of a cancelled order', () => {
+  test('goes back once: cancelled orders with a code that are not marked yet', () => {
+    const orders = [
+      order({ id: 'A', isCancelled: true, promoCode: 'ONCE' }),
+      order({ id: 'B', isCancelled: true, promoCode: 'ONCE', promoReleased: true }),
+      order({ id: 'C', isCancelled: true }),
+      order({ id: 'D', promoCode: 'ONCE' }),
+      order({ id: 'E', isCancelled: true, promoCode: '  ' }),
+    ];
+    expect(ordersWithPromoToRelease(orders).map((o) => o.id)).toEqual(['A']);
   });
 });

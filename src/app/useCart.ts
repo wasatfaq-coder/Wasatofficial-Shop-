@@ -1,9 +1,19 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { ActiveTab, AppliedPromoInfo, CartItem, Product, PromoCode } from '../types';
+import {
+  isWholesaleLine,
+  packSizeOf,
+  priceCartLines,
+  sellsRetail,
+  sellsWholesale,
+  type WholesaleSettings,
+} from '../shared/wholesalePricing';
 import { CART_STORAGE_KEY, loadStoredCart, toStoredCart } from '../utils/cartStorage';
 import { getOrderableStock, isPreorderVariant } from '../utils/inventory';
-import { validatePromo, toPricingLine, appliedPromoFrom, currentAppliedPromo } from '../shared/orderPricing';
+import { validatePromo, toPricingLine, appliedPromoFrom, currentAppliedPromo, promoSignInProblem } from '../shared/orderPricing';
 import { promoDiscountText } from '../utils/promoLabel';
+import { packsText } from '../utils/wholesaleOffer';
+import { heldByOtherLines } from '../utils/cartLines';
 import { hasOrderableVariant, needsVariantChoice } from '../utils/variantSelection';
 import type { AddToast } from './useToasts';
 
@@ -11,19 +21,30 @@ type CartOptions = {
   promos: PromoCode[];
   /** The promos are read only on demand (useStorefrontData): until they come no code is checked */
   promosLoaded: boolean;
+  /** The promos subscription ended with an error: a code waiting for them is answered, `requestPromos` tries again */
+  promosFailed: boolean;
   requestPromos: () => void;
   preorderMode: boolean;
   addToast: AddToast;
   setActiveTab: (tab: ActiveTab) => void;
   /** A product without a colour or size to add at once: its card opens */
   onOpenProduct: (product: Product) => void;
+  /** Signed in with Google (not a guest): only then a code with a usage limit applies (finding 9) */
+  signedInWithGoogle: boolean;
+  /** «Войти через Google» from the toast about such a code */
+  onSignIn: () => void;
+  /** «Опт» of the storefront settings: the volume discount of wholesale lines */
+  wholesale?: WholesaleSettings;
 };
 
 /**
  * Favorites, the cart and the applied promo, kept in this browser (`manstyle_favorites`, `manstyle_cart`).
  * The catalog subscription refreshes the products in the cart through `setCartItems` (App.tsx).
  */
-export function useCart({ promos, promosLoaded, requestPromos, preorderMode, addToast, setActiveTab, onOpenProduct }: CartOptions) {
+export function useCart({
+  promos, promosLoaded, promosFailed, requestPromos, preorderMode, addToast, setActiveTab, onOpenProduct, signedInWithGoogle,
+  onSignIn, wholesale,
+}: CartOptions) {
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('manstyle_favorites');
@@ -42,21 +63,24 @@ export function useCart({ promos, promosLoaded, requestPromos, preorderMode, add
   }, [favorites]);
 
   // Saved cart (light lines, cartStorage.ts); the full products come from the catalog subscription
-  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+  const [storedCart, setCartItems] = useState<CartItem[]>(() => {
     try {
       return loadStoredCart(localStorage.getItem(CART_STORAGE_KEY));
     } catch {
       return [];
     }
   });
+  // Every screen reads the lines with their prices: wholesale lines — the wholesale price minus the volume step
+  // (priceCartLines, the same as in placeOrder); the stored lines keep only the buyer's choice
+  const cartItems = useMemo(() => priceCartLines(storedCart, wholesale), [storedCart, wholesale]);
 
   React.useEffect(() => {
     try {
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(toStoredCart(cartItems)));
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(toStoredCart(storedCart)));
     } catch (err) {
       console.error('Cart was not saved in the browser:', err);
     }
-  }, [cartItems]);
+  }, [storedCart]);
 
   const [appliedPromo, setAppliedPromo] = useState<AppliedPromoInfo | null>(null);
 
@@ -82,6 +106,11 @@ export function useCart({ promos, promosLoaded, requestPromos, preorderMode, add
       addToast(`Товар "${product.title}" временно закончился`, 'error');
       return false;
     }
+    // «Только оптом» is bought in whole packs: the product page shows the pack, the minimum and the steps
+    if (!sellsRetail(product)) {
+      onOpenProduct(product);
+      return false;
+    }
     if (needsVariantChoice(product)) {
       setVariantPickerProduct(product);
       return false;
@@ -96,40 +125,66 @@ export function useCart({ promos, promosLoaded, requestPromos, preorderMode, add
     return handleAddToCartWithOptions(product, color, size, 1);
   };
 
-  // Add a chosen variant to the cart. The customer stays on the page: the toast links to the cart
+  // Add a chosen variant to the cart. The customer stays on the page: the toast links to the cart.
+  // `wholesale` — bought wholesale: a line of its own, next to a retail line of the same variant, in whole packs
+  // (`quantity` — items). A product sold only wholesale always goes wholesale
   const handleAddToCartWithOptions = (
     product: Product,
     color: string,
     size: string,
-    quantity: number
+    quantity: number,
+    wholesale = false
   ): boolean => {
-    const availableStock = getOrderableStock(product, color, size, preorderMode);
-    if (availableStock <= 0) {
-      addToast(`К сожалению, ${product.title} (${color}, ${size}) нет в наличии`, 'error');
-      return false;
-    }
-
-    const clampedQuantity = Math.min(quantity, availableStock);
-    const existingIndex = cartItems.findIndex(
+    const asWholesale = sellsWholesale(product) && (wholesale || !sellsRetail(product));
+    const step = asWholesale ? packSizeOf(product) : 1;
+    const variant = { product, selectedColor: color, selectedSize: size };
+    const existing = cartItems.find(
       (item) =>
         item.product.id === product.id &&
         item.selectedColor === color &&
-        item.selectedSize === size
+        item.selectedSize === size &&
+        isWholesaleLine(item) === asWholesale
     );
+    // the other line of this variant (retail next to wholesale) takes from the same stock
+    const availableStock = Math.max(
+      0,
+      getOrderableStock(product, color, size, preorderMode) - heldByOtherLines(cartItems, variant, existing?.id ?? '')
+    );
+    // only whole packs can be ordered wholesale
+    const maxQty = Math.floor(availableStock / step) * step;
+    if (maxQty <= 0) {
+      addToast(
+        availableStock > 0
+          ? `${product.title} (${color}, ${size}): целой упаковки нет — в наличии ${availableStock} шт., в упаковке ${step}`
+          : `К сожалению, ${product.title} (${color}, ${size}) нет в наличии`,
+        'error'
+      );
+      return false;
+    }
 
-    if (existingIndex > -1) {
-      const currentQty = cartItems[existingIndex].quantity;
-      if (currentQty >= availableStock) {
-        addToast(`В корзине уже максимум: ${product.title} (${availableStock} шт.)`, 'info', openCartAction);
+    const clampedQuantity = Math.min(Math.max(step, Math.floor(quantity / step) * step), maxQty);
+    const variantText = `${product.title} (${color}, ${size})`;
+
+    if (existing) {
+      const currentQty = existing.quantity;
+      if (currentQty >= maxQty) {
+        addToast(
+          `В корзине уже максимум: ${product.title} (${asWholesale ? packsText(maxQty, step) : `${maxQty} шт.`})`,
+          'info',
+          openCartAction
+        );
         return false;
       }
-      const newTotalQty = Math.min(currentQty + clampedQuantity, availableStock);
-      setCartItems((prev) =>
-        prev.map((item, idx) =>
-          idx === existingIndex ? { ...item, quantity: newTotalQty } : item
-        )
+      // whole packs even when the line was not (the pack size changed since it was added)
+      const newTotalQty = Math.min(Math.floor((currentQty + clampedQuantity) / step) * step, maxQty);
+      setCartItems((prev) => prev.map((item) => (item.id === existing.id ? { ...item, quantity: newTotalQty } : item)));
+      addToast(
+        asWholesale
+          ? `Оптом в корзине: ${variantText} — ${packsText(newTotalQty, step)}`
+          : `В корзине ${newTotalQty} шт.: ${variantText}`,
+        'success',
+        openCartAction
       );
-      addToast(`В корзине ${newTotalQty} шт.: ${product.title} (${color}, ${size})`, 'success', openCartAction);
     } else {
       const newItem: CartItem = {
         id: `cart-${Date.now()}`,
@@ -137,10 +192,13 @@ export function useCart({ promos, promosLoaded, requestPromos, preorderMode, add
         selectedColor: color,
         selectedSize: size,
         quantity: clampedQuantity,
+        ...(asWholesale ? { priceKind: 'wholesale' as const } : {}),
       };
       setCartItems((prev) => [...prev, newItem]);
       addToast(
-        `${isPreorderVariant(product, color, size, preorderMode) ? 'Предзаказ добавлен' : 'Добавлено'} в корзину: ${product.title} (${color}, ${size})`,
+        asWholesale
+          ? `Оптом в корзину: ${variantText} — ${packsText(clampedQuantity, step)}`
+          : `${isPreorderVariant(product, color, size, preorderMode) ? 'Предзаказ добавлен' : 'Добавлено'} в корзину: ${variantText}`,
         'success',
         openCartAction
       );
@@ -148,17 +206,32 @@ export function useCart({ promos, promosLoaded, requestPromos, preorderMode, add
     return true;
   };
 
+  /** Items a line is counted in: a whole pack for a wholesale line, one item for a retail one */
+  const lineStep = (cartItemId: string): number => {
+    const priced = cartItems.find((item) => item.id === cartItemId);
+    return priced && isWholesaleLine(priced) ? packSizeOf(priced.product) : 1;
+  };
+
+  /** A line's quantity within the stock, in whole packs for a wholesale line; never below one pack */
+  const fitQuantity = (qty: number, stock: number, step: number): number => {
+    const whole = Math.max(step, Math.floor(qty / step) * step);
+    const max = Math.floor(stock / step) * step;
+    return max > 0 ? Math.min(whole, max) : whole;
+  };
+
   // Update quantity in cart
   const handleUpdateQuantity = (cartItemId: string, newQty: number) => {
     if (newQty <= 0) {
       handleRemoveCartItem(cartItemId);
     } else {
+      const step = lineStep(cartItemId);
       setCartItems((prev) =>
         prev.map((item) => {
           if (item.id === cartItemId) {
-            const stock = getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode);
-            const clamped = stock > 0 ? Math.min(newQty, stock) : newQty;
-            return { ...item, quantity: clamped };
+            const stock =
+              getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode) -
+              heldByOtherLines(prev, item, item.id);
+            return { ...item, quantity: fitQuantity(newQty, stock, step) };
           }
           return item;
         })
@@ -177,11 +250,15 @@ export function useCart({ promos, promosLoaded, requestPromos, preorderMode, add
 
   // Update item variant (color / size) directly in cart
   const handleUpdateCartItemVariant = (cartItemId: string, newColor: string, newSize: string) => {
+    const step = lineStep(cartItemId);
     setCartItems((prev) =>
       prev.map((item) => {
         if (item.id === cartItemId) {
-          const availableStock = getOrderableStock(item.product, newColor, newSize, preorderMode);
-          const clampedQty = Math.max(1, Math.min(item.quantity, Math.max(1, availableStock)));
+          const availableStock =
+            getOrderableStock(item.product, newColor, newSize, preorderMode) -
+            heldByOtherLines(prev, { product: item.product, selectedColor: newColor, selectedSize: newSize }, item.id);
+          // none of the new variant left — one pack stays: the checkout names it in «Не хватает на складе»
+          const clampedQty = availableStock >= step ? fitQuantity(item.quantity, availableStock, step) : step;
           return {
             ...item,
             selectedColor: newColor,
@@ -211,14 +288,17 @@ export function useCart({ promos, promosLoaded, requestPromos, preorderMode, add
   };
 
   // Apply Promo with full rule validation
-  // A code applied before the promos are read (a banner, the chat): applied as soon as they come
-  const [pendingPromoCode, setPendingPromoCode] = useState<string | null>(null);
+  // A code from a banner or the chat waits: for the promos to be read (`promos`) — applied as soon as they come — or,
+  // with an empty cart, for the first product (`cart`): before, it was «applied» and silently dropped (finding 16)
+  const [pendingPromo, setPendingPromo] = useState<{ code: string; waitFor: 'promos' | 'cart' } | null>(null);
+  // A code with a limit the guest tried: applied once they sign in with Google
+  const [codeAwaitingSignIn, setCodeAwaitingSignIn] = useState<string | null>(null);
 
   const handleApplyPromo = (code: string): boolean => {
     const cleanCode = code.trim().toUpperCase();
     if (!promosLoaded) {
       requestPromos();
-      setPendingPromoCode(cleanCode);
+      setPendingPromo({ code: cleanCode, waitFor: 'promos' });
       addToast('Проверяем промокод…', 'info');
       return false;
     }
@@ -226,6 +306,27 @@ export function useCart({ promos, promosLoaded, requestPromos, preorderMode, add
 
     if (!foundPromo) {
       addToast('Промокод не найден', 'error');
+      return false;
+    }
+
+    // A code with a usage limit — only with a Google sign-in (owner's decision 08.10, audit 07.10, finding 9);
+    // before the empty-cart wait: a guest learns it at once, after the sign-in the code waits for the cart as usual
+    const signInProblem = promoSignInProblem(foundPromo, signedInWithGoogle);
+    if (signInProblem) {
+      setCodeAwaitingSignIn(foundPromo.code);
+      addToast(signInProblem, 'info', { label: 'Войти через Google', onClick: onSignIn });
+      return false;
+    }
+
+    if (cartItems.length === 0) {
+      // the code itself (active, limit, date) is checked now; the cart — when there is one
+      const codeProblem = validatePromo({ ...foundPromo, minOrderAmount: 0 }, cartItems.map(toPricingLine));
+      if (codeProblem) {
+        addToast(codeProblem, 'error');
+        return false;
+      }
+      setPendingPromo({ code: cleanCode, waitFor: 'cart' });
+      addToast(`Промокод ${foundPromo.code} применится, когда вы добавите товар в корзину`, 'info');
       return false;
     }
 
@@ -248,11 +349,27 @@ export function useCart({ promos, promosLoaded, requestPromos, preorderMode, add
   // An applied promo is checked again whenever the cart or the code changes: a shrunk cart, an expired or
   // switched-off code must not reach the order with the discount
   React.useEffect(() => {
-    if (!promosLoaded || !pendingPromoCode) return;
-    setPendingPromoCode(null);
-    handleApplyPromo(pendingPromoCode);
-    // handleApplyPromo is recreated on every render; it runs once, when the promos come
-  }, [promosLoaded, pendingPromoCode]);
+    if (!pendingPromo) return;
+    if (pendingPromo.waitFor === 'promos' && !promosLoaded) {
+      // the promos could not be read (finding 15): say so instead of «Проверяем промокод…» forever
+      if (promosFailed) {
+        setPendingPromo(null);
+        addToast('Не удалось проверить промокод: нет связи с магазином. Проверьте соединение и примените код ещё раз', 'error');
+      }
+      return;
+    }
+    if (pendingPromo.waitFor === 'cart' && cartItems.length === 0) return;
+    setPendingPromo(null);
+    handleApplyPromo(pendingPromo.code);
+    // handleApplyPromo and addToast are recreated on every render; this runs when the promos or the first product come
+  }, [promosLoaded, promosFailed, pendingPromo, cartItems.length]);
+
+  React.useEffect(() => {
+    if (!signedInWithGoogle || !codeAwaitingSignIn) return;
+    setCodeAwaitingSignIn(null);
+    handleApplyPromo(codeAwaitingSignIn);
+    // handleApplyPromo is recreated on every render; it runs once, after the sign-in
+  }, [signedInWithGoogle, codeAwaitingSignIn]);
 
   React.useEffect(() => {
     if (!appliedPromo || !promosLoaded) return;
@@ -261,7 +378,9 @@ export function useCart({ promos, promosLoaded, requestPromos, preorderMode, add
       return;
     }
     const current = promos.find((p) => p.code.toUpperCase() === appliedPromo.code.toUpperCase());
-    const problem = current ? validatePromo(current, cartItems.map(toPricingLine)) : 'Промокод больше не действует';
+    const problem = current
+      ? validatePromo(current, cartItems.map(toPricingLine)) ?? promoSignInProblem(current, signedInWithGoogle)
+      : 'Промокод больше не действует';
     if (problem) {
       setAppliedPromo(null);
       addToast(`Промокод ${appliedPromo.code} снят. ${problem}`, 'info');
@@ -274,7 +393,7 @@ export function useCart({ promos, promosLoaded, requestPromos, preorderMode, add
     const discount = promoDiscountText(now);
     if (discount !== promoDiscountText(appliedPromo)) addToast(`Скидка по промокоду ${now.code} теперь ${discount}`, 'info');
     // addToast is recreated on every render; the check depends only on the cart and the codes
-  }, [cartItems, promos, promosLoaded, appliedPromo]);
+  }, [cartItems, promos, promosLoaded, appliedPromo, signedInWithGoogle]);
 
   const handleRemovePromo = () => {
     setAppliedPromo(null);

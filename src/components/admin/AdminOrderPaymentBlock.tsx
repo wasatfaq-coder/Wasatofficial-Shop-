@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { AdminHint } from './AdminHint';
 import { ChevronDown, Landmark, Loader2, Plus, Save, X } from 'lucide-react';
 import type { Order, OrderPaymentDetails, PaymentKind, PaymentRequisitesByKind, PaymentTemplate } from '../../types';
 import { NeumorphicSelect } from '../NeumorphicSelect';
@@ -128,11 +129,12 @@ export const AdminOrderPaymentBlock: React.FC<AdminOrderPaymentBlockProps> = ({ 
 
   return (
     <div className="neu-inset-deep rounded-2xl border border-white/40">
+      <div className="flex items-center">
       <button
         type="button"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
-        className="w-full min-h-10 px-3 py-2 flex items-center gap-2 text-left cursor-pointer"
+        className="flex-1 min-w-0 min-h-10 px-3 py-2 flex items-center gap-2 text-left cursor-pointer"
       >
         <Landmark className="w-3.5 h-3.5 text-accent shrink-0" aria-hidden="true" />
         <span className="text-xs font-extrabold text-[#2D3A4E]">Реквизиты оплаты</span>
@@ -141,6 +143,8 @@ export const AdminOrderPaymentBlock: React.FC<AdminOrderPaymentBlockProps> = ({ 
         </span>
         <ChevronDown className={`w-3.5 h-3.5 ml-auto text-[#4E5C70] shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
+      <AdminHint label="Реквизиты оплаты" className="mr-2">Куда покупатель переведёт деньги за этот заказ. Видны в его заказе</AdminHint>
+      </div>
 
       {open && (
         <div className="px-3 pb-3 space-y-3">

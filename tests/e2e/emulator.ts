@@ -84,6 +84,11 @@ export async function writeDocs(docs: Record<string, Record<string, unknown>>): 
   await call(`${DOCUMENTS}:commit`, { method: 'POST', body: JSON.stringify({ writes }) });
 }
 
+/** Deletes one document (no error when there is none) */
+export async function deleteDoc(path: string): Promise<void> {
+  await call(`${DOCUMENTS}/${path}`, { method: 'DELETE' });
+}
+
 /** Reads one document, or null when there is none */
 export async function readDoc(path: string): Promise<Record<string, unknown> | null> {
   const res = await fetch(`${DOCUMENTS}/${path}`, { headers: OWNER });

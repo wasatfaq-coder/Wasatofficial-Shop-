@@ -3,6 +3,7 @@ import { Edit3, Landmark, Loader2, Plus, Trash2 } from 'lucide-react';
 import type { PaymentKind, PaymentRequisitesByKind, PaymentTemplate } from '../../types';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { AdminRequisitesFields } from './AdminRequisitesFields';
+import { AdminHint } from './AdminHint';
 import { usePaymentTemplates } from './usePaymentTemplates';
 import { deletePaymentTemplate, savePaymentTemplate } from '../../utils/firebaseSync';
 import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
@@ -95,10 +96,15 @@ export const AdminPaymentTemplatesCard: React.FC<{
     <section className="neu-flat rounded-3xl p-4 space-y-3" aria-labelledby="payment-templates-title">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
-          <h3 id="payment-templates-title" className="text-sm font-extrabold text-[#2D3A4E] flex items-center gap-2">
-            <Landmark className="w-4 h-4 text-accent" aria-hidden="true" />
-            Шаблоны реквизитов
-          </h3>
+          <div className="flex items-center gap-1">
+            <h3 id="payment-templates-title" className="text-sm font-extrabold text-[#2D3A4E] flex items-center gap-2">
+              <Landmark className="w-4 h-4 text-accent" aria-hidden="true" />
+              Шаблоны реквизитов
+            </h3>
+            <AdminHint label="Шаблоны реквизитов">
+              Заготовки СБП, карты и счёта. Выбираете в заказе — покупатель видит реквизиты.
+            </AdminHint>
+          </div>
           <p className="text-xs text-[#4E5C70] mt-0.5">
             СБП, карта и расчётный счёт. В «Заказах» шаблон применяется к заказу, и покупатель видит реквизиты в своём заказе.
           </p>

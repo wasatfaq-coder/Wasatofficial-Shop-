@@ -22,11 +22,12 @@ import { useToasts } from './app/useToasts';
 import { useCart } from './app/useCart';
 import { useSupportChat } from './app/useSupportChat';
 import { useCheckout } from './app/useCheckout';
-import { useScreenHistory, useScreenState } from './app/screenHistory';
+import { useScreenHeadingFocus, useScreenHistory, useScreenState } from './app/screenHistory';
 import { useProfile } from './app/useProfile';
 import { useOrderNotifications } from './app/useOrderNotifications';
 import { useCustomerOrders } from './app/useCustomerOrders';
 import { useAdminActions } from './app/useAdminActions';
+import { useOrderCostSnapshots } from './app/useOrderCostSnapshots';
 
 import { HomeScreen } from './views/HomeScreen';
 import { CatalogScreen } from './views/CatalogScreen';
@@ -49,7 +50,10 @@ import { isPromoListed } from './shared/orderPricing';
 import { storeAcceptsOrders } from './shared/orderApi';
 import { getStoreContacts, getStoreName, publicSetting, withStoreName, withStoreNameFields } from './utils/storeContacts';
 import { getCategories } from './utils/categories';
+import { screenDocumentTitle } from './utils/screenMeta';
 import { VariantPickerSheet } from './components/VariantPickerSheet';
+import { DEFAULT_CATALOG_VIEW, type CatalogView } from './utils/productListing';
+import { linePrice } from './shared/orderLine';
 
 // Legal documents: a separate chunk with the templates, loaded when a document is opened
 const LegalDocumentScreen = lazy(() => import('./views/LegalDocumentScreen'));
@@ -70,7 +74,7 @@ const PromoModal = lazy(() => loadPromoModal().then((m) => ({ default: m.PromoMo
 const BrandRequisitesModal = lazy(() => loadBrandRequisitesModal().then((m) => ({ default: m.BrandRequisitesModal })));
 
 export default function App() {
-  const { currentUser, isAdmin, loading: authLoading } = useAuth();
+  const { currentUser, isAdmin, loading: authLoading, loginWithGoogle } = useAuth();
   // Toasts and `persist` for writes that must not fail silently (useToasts.ts)
   const { toasts, setToasts, addToast, removeToast, persist } = useToasts();
   // The screen on show; the address follows it below (screenHistory.ts)
@@ -84,6 +88,7 @@ export default function App() {
     promos,
     setPromos,
     promosLoaded,
+    promosFailed,
     requestPromos,
     bannerSlides,
     bannersLoaded,
@@ -94,8 +99,13 @@ export default function App() {
     deliveryMethods,
     setDeliveryMethods,
     pickupPoints,
+    pickupPointsLoaded,
+    pickupPointsFailed,
     setPickupPoints,
-  } = useStorefrontData(isAdmin || activeTab === 'cart' || activeTab === 'checkout');
+  } = useStorefrontData(
+    isAdmin || activeTab === 'cart' || activeTab === 'checkout',
+    isAdmin || activeTab === 'cart' || activeTab === 'checkout'
+  );
 
   // The removed local admin password was kept here in plain text: erase it
   React.useEffect(() => {
@@ -122,6 +132,17 @@ export default function App() {
     setActiveTab('product-detail');
   };
 
+  // A code with a usage limit asks for a Google sign-in (finding 9): the toast's button opens the Google window
+  const signInForPromo = () => {
+    loginWithGoogle().catch((err: unknown) => {
+      console.warn('Google sign-in for a promo code did not finish:', err);
+      const code = (err as { code?: string })?.code ?? '';
+      // the buyer closed the Google window: nothing to report
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return;
+      addToast('Не удалось войти через Google. Попробуйте ещё раз или войдите в «Профиле»', 'error');
+    });
+  };
+
   // Favorites, the cart and the applied promo (useCart.ts)
   const {
     favorites,
@@ -142,10 +163,22 @@ export default function App() {
     handleClearCart,
     handleApplyPromo,
     handleRemovePromo,
-  } = useCart({ promos, promosLoaded, requestPromos, preorderMode, addToast, setActiveTab, onOpenProduct: handleSelectProduct });
+  } = useCart({
+    promos,
+    promosLoaded,
+    promosFailed,
+    requestPromos,
+    preorderMode,
+    addToast,
+    setActiveTab,
+    onOpenProduct: handleSelectProduct,
+    signedInWithGoogle: Boolean(currentUser && !currentUser.isAnonymous),
+    onSignIn: signInForPromo,
+    wholesale: storefrontSettings?.wholesale,
+  });
   // Catalog with its reviews (useCatalog.ts). Every snapshot brings the cart's stock and prices up to date and
   // refreshes the open product
-  const { products, setProducts, productsLoaded, productsError } = useCatalog((loadedProds) => {
+  const { products, setProducts, productsLoaded, productsError, fullCatalog, waitForCatalogIndex } = useCatalog((loadedProds) => {
     setCartItems((prevCart) =>
       prevCart
         .filter((ci) => loadedProds.some((p) => p.id === ci.product.id))
@@ -189,6 +222,8 @@ export default function App() {
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
   const [catalogFilterState, setCatalogFilterState] = useState<FilterState>(DEFAULT_FILTER_STATE);
+  // The catalog's sort and «Показать ещё» outlive the screen: «Назад» from a product returns to the same list (finding 22)
+  const [catalogView, setCatalogView] = useState<CatalogView>(DEFAULT_CATALOG_VIEW);
   // Customers see the current store name even while Firestore still holds the template brand.
   // The admin panel gets the raw data, so the rename in «Витрина» can find and fix it.
   const storeName = getStoreName(storefrontSettings);
@@ -196,11 +231,15 @@ export default function App() {
     () => ({ ...withStoreNameFields(storefrontSettings, storeName), storeName }),
     [storefrontSettings, storeName]
   );
-  // Tab title: a product's name on its screen (the browser's history, bookmarks and search results show it)
+  // Tab title of the screen: «Каталог — …», a product's name on its screen (screenMeta.ts; WCAG 2.4.2, finding 31)
   const productTitle = activeTab === 'product-detail' ? selectedProduct?.title : undefined;
   React.useEffect(() => {
-    document.title = productTitle ? `${productTitle} — ${storeName}` : `${storeName} — мужская одежда`;
-  }, [productTitle, storeName]);
+    document.title = screenDocumentTitle(activeTab, storeName, productTitle);
+  }, [activeTab, productTitle, storeName]);
+  // A new screen moves the focus to its heading: a screen reader reads it, Tab goes on from the new screen
+  useScreenHeadingFocus(
+    activeTab === 'product-detail' ? (selectedProduct ? `product-detail:${selectedProduct.id}` : null) : activeTab
+  );
   const customerDeliveryMethods = React.useMemo(
     () => deliveryMethods.map((m) => withStoreNameFields(m, storeName)),
     [deliveryMethods, storeName]
@@ -234,12 +273,24 @@ export default function App() {
     pendingChatIds,
     failedChatMessages,
     customerChatMessages,
+    chatThreadLoading,
+    chatThreadFailed,
     handleSendMessageFromUser,
     handleRetryChatMessage,
     handleChangeChatMessage,
     handleSendMessageAsAdmin,
     handleClearChat,
-  } = useSupportChat({ authLoading, isAdmin, currentUser, userProfile, promos, setPromos, addToast, persist });
+  } = useSupportChat({
+    authLoading,
+    isAdmin,
+    currentUser,
+    userProfile,
+    promos,
+    setPromos,
+    addToast,
+    persist,
+    chatOpen: isSupportChatOpen,
+  });
 
   // Placing an order and the confirmation screen (useCheckout.ts)
   const { latestOrder, checkoutStockProblems, handleCompleteOrder } = useCheckout({
@@ -249,7 +300,6 @@ export default function App() {
     userProfile,
     products,
     setProducts,
-    selectedProduct,
     setSelectedProduct,
     cartItems,
     setCartItems,
@@ -294,8 +344,14 @@ export default function App() {
     return () => window.removeEventListener('pointerdown', handleGlobalClick);
   }, []);
 
-  // A change of the customer's order while the site is open (useOrderNotifications.ts)
-  useOrderNotifications({ orders, isAdmin, currentUser, userProfile, setToasts, setActiveTab });
+  // A change of the customer's order while the site is open (useOrderNotifications.ts). «Смотреть статус» opens the
+  // profile, and the profile opens the order once it is on screen (finding 23)
+  const [orderToOpen, setOrderToOpen] = useState<string | null>(null);
+  const openOrderStatus = (orderId: string) => {
+    setOrderToOpen(orderId);
+    setActiveTab('profile');
+  };
+  useOrderNotifications({ orders, isAdmin, currentUser, userProfile, setToasts, onOpenOrder: openOrderStatus });
 
   // Cancel, «Я получил заказ», a receipt and «Повторить заказ» in the profile (useCustomerOrders.ts)
   const { handleCancelOwnOrder, handleConfirmReceipt, handleSubmitPaymentReceipt, handleRepeatOrder } = useCustomerOrders({
@@ -305,6 +361,7 @@ export default function App() {
     orders,
     products,
     preorderMode,
+    cartItems,
     setCartItems,
     setChatMessages,
     addToast,
@@ -322,11 +379,14 @@ export default function App() {
     handleUpdatePickupPoints,
     handleUpdateStorefrontSettings,
     handleSaveLegalText,
+    handleApplyExchangeRates,
   } = useAdminActions({
     isAdmin,
     products,
     setProducts,
     productsLoaded,
+    fullCatalog,
+    waitForCatalogIndex,
     productCosts,
     setProductCosts,
     selectedProduct,
@@ -347,6 +407,8 @@ export default function App() {
     persist,
     addToast,
   });
+  // the cost of each new order at the moment of sale, for the net profit in «Аналитика» (order_costs)
+  useOrderCostSnapshots(isAdmin, orders, adminProducts, productsLoaded && fullCatalog);
 
   const hasActivePromos = promos.some((p) => isPromoListed(p));
   const catalogStatus: CatalogStatus = productsLoaded ? 'ready' : productsError ? 'error' : 'loading';
@@ -429,6 +491,8 @@ export default function App() {
             setChatDraft('');
           }}
           messages={customerChatMessages}
+          loading={chatThreadLoading}
+          loadFailed={chatThreadFailed}
           onSendMessage={handleSendMessageFromUser}
           pendingIds={pendingChatIds}
           failedIds={new Set(failedChatMessages.map((m) => m.id))}
@@ -474,7 +538,7 @@ export default function App() {
           appliedPromo={appliedPromo}
           onApplyPromo={handleApplyPromo}
           onRemovePromo={handleRemovePromo}
-          cartSubtotal={cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0)}
+          cartSubtotal={cartItems.reduce((acc, item) => acc + linePrice(item) * item.quantity, 0)}
           cartItems={cartItems}
           promos={promos}
         />
@@ -604,6 +668,8 @@ export default function App() {
               onOpenFilters={() => setIsAdvancedFilterOpen(true)}
               searchQuery={catalogSearch}
               onSearchChange={setCatalogSearch}
+              view={catalogView}
+              onViewChange={setCatalogView}
             />
           )}
 
@@ -614,6 +680,7 @@ export default function App() {
               product={products.find((p) => p.id === selectedProduct.id) ?? selectedProduct}
               returnPeriodDays={storefrontSettings.returnPeriodDays}
               freeDeliveryThreshold={storefrontSettings.freeDeliveryThreshold}
+              wholesale={storefrontSettings.wholesale}
               isFavorite={favorites.includes(selectedProduct.id)}
               recentlyViewed={recentlyViewed.filter((p) => p.id !== selectedProduct.id)}
               onClearRecentlyViewed={handleClearRecentlyViewed}
@@ -674,6 +741,8 @@ export default function App() {
               onShowToast={addToast}
               deliveryMethods={customerDeliveryMethods}
               pickupPoints={customerPickupPoints}
+              pickupPointsLoaded={pickupPointsLoaded}
+              pickupPointsFailed={pickupPointsFailed}
             />
           )}
 
@@ -715,10 +784,13 @@ export default function App() {
               storefrontSettings={storefrontSettings}
               onUpdateStorefrontSettings={handleUpdateStorefrontSettings}
               onSaveLegalText={handleSaveLegalText}
+              onApplyExchangeRates={handleApplyExchangeRates}
               deliveryMethods={deliveryMethods}
               onUpdateDeliveryMethods={handleUpdateDeliveryMethods}
               pickupPoints={pickupPoints}
               onUpdatePickupPoints={handleUpdatePickupPoints}
+              openOrderId={orderToOpen}
+              onOrderOpened={() => setOrderToOpen(null)}
             />
           )}
 
@@ -729,6 +801,7 @@ export default function App() {
               deliveryMethod={latestOrder.deliveryMethod}
               deliveryAddress={latestOrder.deliveryAddress}
               paymentMethod={latestOrder.paymentMethod}
+              notSavedInBrowser={latestOrder.notSavedInBrowser}
               paymentInstructions={
                 (storefrontSettings.paymentMethods ?? []).find(
                   (m) => m.title.trim() && latestOrder.paymentMethod?.startsWith(m.title.trim())

@@ -7,6 +7,7 @@ import {
   customerStepLabel,
   flowStatuses,
   isAwaitingReceipt,
+  isCarrierOrder,
   orderDeliveryKind,
   showsPickupCode,
 } from '../../utils/orderFlow';
@@ -41,7 +42,6 @@ import { Order, Product } from '../../types';
 import { isQuickOrderDelivery, QUICK_ORDER_DELIVERY_TITLE } from '../../shared/orderPricing';
 import { copyToClipboard } from '../../utils/clipboard';
 import {
-  isTransportCompanyDelivery,
   isRussianPostDelivery,
   isCourierDelivery,
   isPickupDelivery,
@@ -52,6 +52,10 @@ import { useDialogA11y } from '../../utils/useDialogA11y';
 import type { ProfileScreenProps } from '../ProfileScreen';
 
 import { getOrderStatusProgress } from './orderProgress';
+import { isWholesaleLine, packSizeOf } from '../../shared/wholesalePricing';
+import { packsText } from '../../utils/wholesaleOffer';
+import { WholesaleMark } from '../../components/WholesaleMark';
+import { linePrice } from '../../shared/orderLine';
 
 type OrderTrackingModalProps = Pick<
   ProfileScreenProps,
@@ -141,7 +145,7 @@ export const OrderTrackingModal = ({
             {/* Tracking Code Banner OR Clean Delivery Info Notice */}
             {(() => {
               const isPost = isRussianPostDelivery(selectedOrderForTracking.deliveryMethod, selectedOrderForTracking.trackingCompany);
-              const isTK = isTransportCompanyDelivery(selectedOrderForTracking.deliveryMethod, selectedOrderForTracking.trackingCompany);
+              const isTK = isCarrierOrder(selectedOrderForTracking);
               const isPickup = isPickupDelivery(selectedOrderForTracking.deliveryMethod);
               const isQuick = isQuickOrderDelivery(selectedOrderForTracking.deliveryMethod);
               const isExpress = !isQuick && ((selectedOrderForTracking.deliveryMethod || '').toLowerCase().includes('экспресс') || (selectedOrderForTracking.deliveryMethod || '').toLowerCase().includes('express'));
@@ -474,13 +478,17 @@ export const OrderTrackingModal = ({
                           {it.product.title}
                         </p>
                         <p className="text-xs text-[#4E5C70]">
-                          {it.selectedColor}, разм. {it.selectedSize} • {it.quantity} шт.
+                          {isWholesaleLine(it) && <WholesaleMark className="mr-1" />}
+                          {it.selectedColor}, разм. {it.selectedSize} •{' '}
+                          {isWholesaleLine(it) && packSizeOf(it.product ?? {}) > 1
+                            ? packsText(it.quantity, packSizeOf(it.product ?? {}))
+                            : `${it.quantity} шт.`}
                           {it.isPreorder && <span className="font-bold text-accent"> • Предзаказ</span>}
                         </p>
                       </div>
                     </div>
                     <span className="text-xs font-extrabold text-[#2D3A4E]">
-                      {(((it.product?.price ?? 0) * (it.quantity ?? 1))).toLocaleString('ru-RU')} ₽
+                      {(linePrice(it) * (it.quantity ?? 1)).toLocaleString('ru-RU')} ₽
                     </span>
                   </div>
                 ))}

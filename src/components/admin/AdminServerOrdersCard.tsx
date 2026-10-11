@@ -3,6 +3,7 @@ import { ServerCog, ShieldCheck } from 'lucide-react';
 import { isPlaceOrderAvailable } from '../../firebase';
 import { saveServerConfigToFirestore, subscribeToServerConfig } from '../../utils/firebaseSync';
 import { ConfirmDialog } from '../ConfirmDialog';
+import { AdminHint } from './AdminHint';
 
 interface AdminServerOrdersCardProps {
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
@@ -60,7 +61,12 @@ export const AdminServerOrdersCard: React.FC<AdminServerOrdersCardProps> = ({ on
             <ServerCog className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <h4 className="text-sm font-extrabold text-[#2D3A4E]">Проверка заказов на сервере</h4>
+            <div className="flex items-center gap-1">
+              <h4 className="text-sm font-extrabold text-[#2D3A4E]">Проверка заказов на сервере</h4>
+              <AdminHint label="Проверка заказов на сервере">
+                Сервер сам считает цену и склад, подделать заказ из браузера нельзя.
+              </AdminHint>
+            </div>
             <p className="text-xs text-[#4E5C70] leading-snug">
               Сервер пересчитывает цену, проверяет остатки и промокоды. Покупатель не сможет изменить
               сумму заказа или остатки на складе из своего браузера.
@@ -87,7 +93,10 @@ export const AdminServerOrdersCard: React.FC<AdminServerOrdersCardProps> = ({ on
         </p>
       )}
 
-      <div className="flex justify-end">
+      <div className="flex items-center justify-end gap-1">
+        <AdminHint label="Что нужно для проверки на сервере">
+          Нужен платный тариф Firebase; если сервер не ответит, включение не пройдёт.
+        </AdminHint>
         {enabled ? (
           <button
             type="button"

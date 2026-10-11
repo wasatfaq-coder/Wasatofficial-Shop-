@@ -137,7 +137,15 @@ export function useCatalog(onCatalog: (products: Product[]) => void) {
 
   // the admin's session writes the light index customers read (docs/catalog-scale-plan.md, stage 2); never from
   // index lines — they have no photos, and the index made of them would lose its miniatures
-  useCatalogIndexSync(products, loaded?.source === 'full');
+  const waitForCatalogIndex = useCatalogIndexSync(products, loaded?.source === 'full');
 
-  return { products, setProducts, productsLoaded: delivered, productsError };
+  // the full catalog (not index lines without photos and texts) — what whole-catalog admin writes need
+  return {
+    products,
+    setProducts,
+    productsLoaded: delivered,
+    productsError,
+    fullCatalog: delivered && loaded?.source === 'full',
+    waitForCatalogIndex,
+  };
 }

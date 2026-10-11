@@ -1,0 +1,400 @@
+<title>Макеты админки и опта</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&display=swap">
+<style>
+/* Layout: page of side-by-side phone frames (variant A | variant B) per screen; stacks to one column on a phone */
+:root {
+  --bg: #E3E8EF;          /* фон магазина (--neu-bg) */
+  --surface: #EDF1F6;
+  --line: #C9D2DD;
+  --fg: #1E2A38;
+  --muted: #4E5C70;       /* вторичный текст магазина */
+  --accent: #2C4A6B;      /* accent магазина */
+  --accent-soft: rgba(44, 74, 107, .10);
+  --ink: #2B3038;         /* графит главной кнопки */
+  --ink-fg: #F3F5F8;
+  --success: #3B6652; --success-soft: #E4EDE8;
+  --warning: #6F5B31; --warning-soft: #F0ECE2;
+  --danger: #7E525E;
+  --font-display: 'Manrope', 'Segoe UI', system-ui, sans-serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #161B22; --surface: #1F2630; --line: #333E4C; --fg: #E6EBF1; --muted: #A3B0C0;
+  --accent: #8FB0D4; --accent-soft: rgba(143, 176, 212, .14); --ink: #E6EBF1; --ink-fg: #161B22;
+  --success: #8CC2A6; --success-soft: #1E2D27; --warning: #D3BC86; --warning-soft: #2D281C; --danger: #D49AA8;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #161B22; --surface: #1F2630; --line: #333E4C; --fg: #E6EBF1; --muted: #A3B0C0;
+  --accent: #8FB0D4; --accent-soft: rgba(143, 176, 212, .14); --ink: #E6EBF1; --ink-fg: #161B22;
+  --success: #8CC2A6; --success-soft: #1E2D27; --warning: #D3BC86; --warning-soft: #2D281C; --danger: #D49AA8;
+  color-scheme: dark; }
+
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); line-height: 1.45; }
+.page { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 64px; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 800; text-wrap: balance; margin: 0; }
+h1 { font-size: 1.75rem; }
+h2 { font-size: 1.35rem; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+p { margin: 0; }
+.lead { color: var(--muted); max-width: 65ch; margin-top: 8px; }
+.note { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; color: var(--muted); font-size: .9rem; max-width: 72ch; }
+nav.jump { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+nav.jump a { color: var(--accent); text-decoration: none; font-weight: 600; border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px; }
+nav.jump a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+section.screen { margin-top: 40px; display: grid; gap: 16px; }
+.variants { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; align-items: start; }
+.variant { display: grid; gap: 12px; min-width: 0; }
+.variant > header { display: grid; gap: 4px; }
+.tag { color: var(--accent); font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.pros { display: grid; gap: 4px; font-size: .9rem; color: var(--muted); padding-left: 18px; margin: 0; }
+
+/* Phone frame */
+.phone { width: min(360px, 100%); border: 1px solid var(--line); border-radius: 28px; background: var(--bg); overflow: hidden;
+  display: flex; flex-direction: column; min-height: 640px; box-shadow: 0 10px 30px rgba(20, 30, 45, .12); }
+.phone .bar { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 6px; font-size: .9rem; }
+.phone .bar a, .linkish { color: var(--accent); font-weight: 600; }
+.phone .body { padding: 4px 16px 16px; display: grid; gap: 12px; flex: 1; align-content: start; }
+.big { font-family: var(--font-display); font-size: 1.6rem; font-weight: 800; }
+.group { background: var(--surface); border-radius: 14px; overflow: hidden; }
+.group-title { font-size: .78rem; color: var(--muted); letter-spacing: .05em; text-transform: uppercase; margin: 4px 4px -6px; }
+.row { display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.row .ic { width: 30px; height: 30px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-weight: 800; font-size: .8rem; }
+.row .t { font-weight: 600; }
+.row .s { color: var(--muted); font-size: .8rem; }
+.row .end { color: var(--muted); font-size: .85rem; display: flex; gap: 6px; align-items: center; }
+.count { background: var(--accent); color: var(--bg); border-radius: 8px; padding: 0 7px; font-size: .78rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.chev::after { content: '›'; font-size: 1.2rem; color: var(--muted); }
+.search { background: var(--surface); border-radius: 12px; padding: 10px 12px; color: var(--muted); font-size: .9rem; }
+.tabbar { display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--line); background: var(--surface); padding: 8px 4px 10px; }
+.tabbar span { display: grid; justify-items: center; gap: 2px; font-size: .7rem; color: var(--muted); }
+.tabbar span b { width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid currentColor; display: block; }
+.tabbar span.on { color: var(--accent); font-weight: 700; }
+.card { background: var(--surface); border-radius: 14px; padding: 12px; display: grid; gap: 8px; }
+.card.warn { background: var(--warning-soft); }
+.card .k { font-size: .8rem; color: var(--muted); }
+.num { font-family: var(--font-display); font-weight: 800; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.btn { display: block; text-align: center; border-radius: 12px; padding: 12px; font-weight: 700; border: 0; font: inherit; font-weight: 700; }
+.btn.main { background: var(--ink); color: var(--ink-fg); }
+.btn.second { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+.btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--surface); border-radius: 10px; padding: 3px; gap: 3px; font-size: .85rem; }
+.seg span { text-align: center; padding: 7px 4px; border-radius: 8px; color: var(--muted); }
+.seg span.on { background: var(--bg); color: var(--fg); font-weight: 700; box-shadow: inset 0 0 0 1px var(--accent); }
+.field { display: grid; gap: 4px; }
+.field label { font-size: .8rem; font-weight: 600; }
+.input { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; font-size: .9rem; display: flex; justify-content: space-between; gap: 8px; }
+.input.calc { background: var(--accent-soft); border-color: transparent; font-weight: 700; }
+.hint { font-size: .78rem; color: var(--muted); display: flex; gap: 6px; }
+.hint::before { content: 'i'; flex: none; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--muted); display: grid; place-items: center; font-size: .65rem; font-weight: 700; line-height: 1; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.block { background: var(--surface); border-radius: 14px; }
+.block > .head { display: flex; justify-content: space-between; align-items: center; padding: 12px; gap: 8px; }
+.block > .head .s { color: var(--muted); font-size: .8rem; }
+.block > .inner { padding: 0 12px 12px; display: grid; gap: 10px; }
+.steps { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.steps i { height: 4px; border-radius: 2px; background: var(--line); }
+.steps i.done { background: var(--accent); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); border-radius: 9px; padding: 6px 10px; font-size: .85rem; background: var(--bg); }
+.chip.on { box-shadow: inset 0 0 0 1.5px var(--accent); font-weight: 700; color: var(--accent); }
+.chip.off { color: var(--muted); }
+.swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--line); display: inline-block; }
+.swatch.on { box-shadow: 0 0 0 2px var(--accent); }
+table.pack { width: 100%; border-collapse: collapse; font-size: .85rem; font-variant-numeric: tabular-nums; }
+table.pack th { text-align: left; color: var(--muted); font-weight: 600; font-size: .75rem; padding: 4px 0; }
+table.pack td { padding: 6px 0; border-top: 1px solid var(--line); }
+.stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+.stepper span { padding: 3px 10px; }
+.stepper span:nth-child(2) { font-weight: 700; border-inline: 1px solid var(--line); min-width: 18px; text-align: center; }
+.photo { aspect-ratio: 4 / 3; max-width: 100%; border-radius: 14px; background: linear-gradient(135deg, #5B7593, #2C4A6B); }
+.price { font-family: var(--font-display); font-weight: 800; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+.ok { color: var(--success); font-size: .82rem; font-weight: 600; }
+.progress { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.progress i { display: block; height: 100%; width: 23%; background: var(--accent); }
+.switch { width: 36px; height: 22px; border-radius: 11px; background: var(--accent); position: relative; flex: none; }
+.switch::after { content: ''; position: absolute; right: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--bg); }
+.sep { border: 0; border-top: 1px solid var(--line); margin: 0; }
+.desk { border: 1px solid var(--line); border-radius: 16px; background: var(--bg); display: grid; grid-template-columns: 200px 1fr; min-height: 300px; overflow: hidden; }
+.desk aside { background: var(--surface); padding: 12px; display: grid; gap: 4px; align-content: start; font-size: .88rem; }
+.desk aside span { white-space: nowrap; padding: 6px 8px; border-radius: 8px; color: var(--muted); }
+.desk aside span.on { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.desk main { padding: 16px; display: grid; gap: 12px; align-content: start; }
+.desk .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.scroll-x { overflow-x: auto; }
+@media (max-width: 640px) { .desk { grid-template-columns: 1fr; } .desk aside { grid-auto-flow: column; overflow-x: auto; } }
+</style>
+
+<div class="page">
+  <h1>Макеты админки и опта</h1>
+  <p class="lead">Три экрана, по два варианта каждого. Выберите вариант на каждом экране, можно смешать: например, меню из варианта А и форму товара из варианта Б. Ни одна функция админки в макетах не убирается, редкие уходят на шаг глубже.</p>
+  <p class="note">Цифры — пример, не данные магазина: закупка 4,20 USD × курс 82,10 = 344,82 ₽; розница с наценкой 180 % = 965,50 → 970 ₽ (округление до 10 ₽); опт с наценкой 100 % = 689,64 → 690 ₽ за штуку; упаковка 48–56 по 1 шт. = 5 × 690 = 3 450 ₽. Цвета и шрифт заголовков — как в магазине. Неоморфные тени здесь заменены плоскими плитками: так проще сравнивать структуру, стиль решается отдельно.</p>
+  <nav class="jump" aria-label="Экраны">
+    <a href="#menu">Меню и главный экран</a>
+    <a href="#form">Форма товара</a>
+    <a href="#pack">Товар и корзина с упаковкой</a>
+  </nav>
+
+  <!-- ============ МЕНЮ ============ -->
+  <section class="screen" id="menu">
+    <div>
+      <h2>Меню и главный экран админки</h2>
+      <p class="lead">Сейчас на телефоне шапка и два ряда вкладок занимают около 240 px из 844, а 14 разделов разложены по 4 группам. Оба варианта открывают админку на том, что ждёт владельца.</p>
+    </div>
+    <div class="variants">
+      <article class="variant">
+        <header><span class="tag">Вариант А</span><h3>«Сегодня» и вкладки внизу</h3></header>
+        <div class="phone" aria-label="Макет: главный экран, вариант А">
+          <div class="bar"><span>Админка</span><a>Закрыть</a></div>
+          <div class="body">
+            <div class="big">Сегодня</div>
+            <div class="group">
+              <div class="row"><span class="ic">З</span><div><div class="t">Новые заказы</div><div class="s">Принять и собрать</div></div><span class="end"><span class="count">8</span><span class="chev"></span></span></div>
+              <div class="row"><span class="ic">Ч</span><div><div class="t">Ждут ответа в чате</div><div class="s">Самый старый — 40 мин</div></div><span class="end"><span class="count">2</span><span class="chev"></span></span></div>
+              <div class="row"><span class="ic">С</span><div><div class="t">Заканчивается на складе</div><div class="s">Остаток 2 шт. и меньше</div></div><span class="end">3<span class="chev"></span></span></div>
+            </div>
+            <div class="card warn">
+              <div class="k">Курс ЦБ на 09.10</div>
+              <div><b>USD 81,40 → 82,10</b>. Розничные цены 42 товаров вырастут в среднем на 0,9 %.</div>
+              <div class="btns"><span class="btn second">Посмотреть</span><span class="btn main">Пересчитать</span></div>
+            </div>
+            <div class="card">
+              <div class="k">Выручка за 7 дней, только оплаченные</div>
+              <div class="num">25 440 ₽</div>
+              <span class="linkish">Вся аналитика</span>
+            </div>
+          </div>
+          <div class="tabbar" aria-hidden="true">
+            <span class="on"><b></b>Сегодня</span><span><b></b>Заказы</span><span><b></b>Товары</span><span><b></b>Чат</span><span><b></b>Ещё</span>
+          </div>
+        </div>
+        <ul class="pros">
+          <li>Четыре частых раздела — одно нажатие; остальные десять — в «Ещё» списком с пояснениями.</li>
+          <li>Счётчики «новые заказы» и «ждут ответа» те же, что сейчас на вкладках.</li>
+          <li>На компьютере те же пункты слева, «Сегодня» — первым.</li>
+        </ul>
+      </article>
+
+      <article class="variant">
+        <header><span class="tag">Вариант Б</span><h3>Список разделов, как в «Настройках» iPhone</h3></header>
+        <div class="phone" aria-label="Макет: главный экран, вариант Б">
+          <div class="bar"><span>Админка</span><a>Закрыть</a></div>
+          <div class="body">
+            <div class="big">Магазин</div>
+            <div class="search">Найти раздел или настройку</div>
+            <div class="group-title">Продажи</div>
+            <div class="group">
+              <div class="row"><span class="ic">З</span><div><div class="t">Заказы</div><div class="s">Статусы, оплата, отправка</div></div><span class="end"><span class="count">8</span><span class="chev"></span></span></div>
+              <div class="row"><span class="ic">Ч</span><div><div class="t">Чат поддержки</div><div class="s">Вопросы покупателей</div></div><span class="end"><span class="count">2</span><span class="chev"></span></span></div>
+              <div class="row"><span class="ic">К</span><div><div class="t">Клиенты</div><div class="s">Покупатели и оптовики</div></div><span class="end chev"></span></div>
+              <div class="row"><span class="ic">А</span><div><div class="t">Аналитика</div><div class="s">Выручка, отмены, ошибки сайта</div></div><span class="end chev"></span></div>
+            </div>
+            <div class="group-title">Каталог и цены</div>
+            <div class="group">
+              <div class="row"><span class="ic">Т</span><div><div class="t">Товары</div><div class="s">Карточки, фото, цены</div></div><span class="end chev"></span></div>
+              <div class="row"><span class="ic">С</span><div><div class="t">Склад</div><div class="s">Остатки, этикетки, упаковки</div></div><span class="end chev"></span></div>
+              <div class="row"><span class="ic">$</span><div><div class="t">Курсы и опт</div><div class="s">USD 82,10 · CNY 11,30 · опт от 30 000 ₽</div></div><span class="end chev"></span></div>
+            </div>
+            <div class="group-title">Ещё</div>
+            <div class="group">
+              <div class="row"><span class="ic">М</span><div><div class="t">Маркетинг</div><div class="s">Промокоды, баннеры</div></div><span class="end chev"></span></div>
+              <div class="row"><span class="ic">Н</span><div><div class="t">Настройки магазина</div><div class="s">Доставка, оплата, витрина, документы</div></div><span class="end chev"></span></div>
+            </div>
+          </div>
+        </div>
+        <ul class="pros">
+          <li>Все разделы на одном экране, у каждого строка «для чего он».</li>
+          <li>Поиск находит и настройку внутри раздела («реквизиты», «курс»).</li>
+          <li>Раздел открывается своим экраном с «Назад», вкладок над ним нет.</li>
+        </ul>
+      </article>
+    </div>
+
+    <div class="variant">
+      <header><span class="tag">Компьютер, оба варианта</span><h3>Слева — разделы, справа — то, что ждёт</h3></header>
+      <div class="desk" aria-label="Макет: админка на компьютере">
+        <aside>
+          <span class="on">Сегодня</span><span>Заказы · 8</span><span>Чат · 2</span><span>Товары</span><span>Склад</span><span>Клиенты</span><span>Курсы и опт</span><span>Аналитика</span><span>Маркетинг</span><span>Настройки магазина</span>
+        </aside>
+        <main>
+          <div class="big">Сегодня</div>
+          <div class="tiles">
+            <div class="card"><div class="k">Новые заказы</div><div class="num">8</div></div>
+            <div class="card"><div class="k">Ждут ответа</div><div class="num">2</div></div>
+            <div class="card"><div class="k">Мало на складе</div><div class="num">3</div></div>
+            <div class="card"><div class="k">Выручка за 7 дней</div><div class="num">25 440 ₽</div></div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ФОРМА ТОВАРА ============ -->
+  <section class="screen" id="form">
+    <div>
+      <h2>Форма товара: цена от курса и ростовка</h2>
+      <p class="lead">Сейчас форма нового товара открывается на «Структуре карточки», в ней 76 полей и кнопок одним столбцом. В обоих вариантах порядок такой: Основное → Цены → Фото → Варианты и ростовки → Характеристики → Доставка.</p>
+    </div>
+    <div class="variants">
+      <article class="variant">
+        <header><span class="tag">Вариант А</span><h3>Одна страница, блоки сворачиваются</h3></header>
+        <div class="phone" aria-label="Макет: форма товара, вариант А">
+          <div class="bar"><a>Отмена</a><b>Новый товар</b><a>Готово</a></div>
+          <div class="body">
+            <div class="seg"><span class="on">В продаже</span><span>Снят с витрины</span></div>
+            <div class="block">
+              <div class="head"><h3>Основное</h3><span class="s">заполнено</span></div>
+              <div class="inner">
+                <div class="field"><label>Название</label><div class="input">Футболка базовая хлопок</div></div>
+                <div class="field"><label>Категория</label><div class="input">Футболки <span class="chev"></span></div>
+                  <span class="hint">В этой категории покупатель найдёт товар в каталоге</span></div>
+              </div>
+            </div>
+            <div class="block">
+              <div class="head"><h3>Цены</h3><span class="s">от курса USD</span></div>
+              <div class="inner">
+                <div class="two">
+                  <div class="field"><label>Закупка</label><div class="input">4,20 <b>USD</b></div></div>
+                  <div class="field"><label>Наценка, розница</label><div class="input">180 %</div></div>
+                </div>
+                <div class="field"><label>Розничная цена</label><div class="input calc">970 ₽ <span>курс 82,10</span></div>
+                  <span class="hint">Пересчитается при новом курсе, только после вашего подтверждения</span></div>
+                <div class="two">
+                  <div class="field"><label>Наценка, опт</label><div class="input">100 %</div></div>
+                  <div class="field"><label>Оптовая, за шт.</label><div class="input calc">690 ₽</div></div>
+                </div>
+                <span class="hint">Закупку и наценку видите только вы, покупатель видит цену</span>
+              </div>
+            </div>
+            <div class="block"><div class="head"><h3>Фото</h3><span class="s">3 фото <span class="chev"></span></span></div></div>
+            <div class="block"><div class="head"><h3>Варианты и ростовки</h3><span class="s">синий · 48–56 · упаковка 5 шт. <span class="chev"></span></span></div></div>
+            <div class="block"><div class="head"><h3>Характеристики</h3><span class="s">хлопок 100 % <span class="chev"></span></span></div></div>
+            <div class="block"><div class="head"><h3>Доставка</h3><span class="s">0,9 кг · 30×25×10 см <span class="chev"></span></span></div></div>
+          </div>
+        </div>
+        <ul class="pros">
+          <li>Правка цены — открыть товар и сразу поле «Цены», без прокрутки.</li>
+          <li>У свёрнутого блока видно, что в нём заполнено.</li>
+          <li>Подсказка «i» под каждым неочевидным полем.</li>
+        </ul>
+      </article>
+
+      <article class="variant">
+        <header><span class="tag">Вариант Б</span><h3>Новый товар — по шагам, правка — списком блоков</h3></header>
+        <div class="phone" aria-label="Макет: форма товара, вариант Б">
+          <div class="bar"><a>Отмена</a><b>Шаг 4 из 6</b><span></span></div>
+          <div class="body">
+            <div class="steps" aria-hidden="true"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i></i><i></i></div>
+            <h3>Варианты и ростовки</h3>
+            <div class="field"><label>Цвет</label>
+              <div class="chips"><span class="chip on"><span class="swatch" style="background:#2C4A6B;width:12px;height:12px;vertical-align:-1px"></span> Синий</span><span class="chip">+ цвет</span></div></div>
+            <div class="field"><label>Размеры</label>
+              <div class="chips"><span class="chip off">46</span><span class="chip on">48</span><span class="chip on">50</span><span class="chip on">52</span><span class="chip on">54</span><span class="chip on">56</span><span class="chip off">58</span></div></div>
+            <div class="card">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>Продавать упаковкой</b><span class="switch" role="img" aria-label="включено"></span></div>
+              <span class="hint">Оптовик берёт сразу весь размерный ряд одного цвета одной строкой</span>
+              <div class="scroll-x">
+                <table class="pack">
+                  <thead><tr><th>Размер</th><th>В упаковке</th><th>На складе</th></tr></thead>
+                  <tbody>
+                    <tr><td>48</td><td><span class="stepper"><span>−</span><span>1</span><span>+</span></span></td><td>12</td></tr>
+                    <tr><td>50</td><td><span class="stepper"><span>−</span><span>1</span><span>+</span></span></td><td>9</td></tr>
+                    <tr><td>52</td><td><span class="stepper"><span>−</span><span>1</span><span>+</span></span></td><td>7</td></tr>
+                    <tr><td>54</td><td><span class="stepper"><span>−</span><span>1</span><span>+</span></span></td><td>11</td></tr>
+                    <tr><td>56</td><td><span class="stepper"><span>−</span><span>1</span><span>+</span></span></td><td>8</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <hr class="sep">
+              <div style="display:flex;justify-content:space-between"><span>5 шт. в упаковке</span><b>3 450 ₽</b></div>
+              <span class="ok">Можно собрать 7 упаковок — меньше всего размера 52</span>
+            </div>
+            <div class="btns"><span class="btn second">Назад</span><span class="btn main">Далее</span></div>
+          </div>
+        </div>
+        <ul class="pros">
+          <li>Новый товар не забудется наполовину: шаг не пройти без обязательного.</li>
+          <li>Знакомый товар открывается списком блоков, как вариант А.</li>
+          <li>Сколько упаковок можно собрать — считается по самому малому размеру.</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============ ТОВАР И КОРЗИНА ============ -->
+  <section class="screen" id="pack">
+    <div>
+      <h2>Товар и корзина с упаковкой, 390 px</h2>
+      <p class="lead">Оптовик выбирает модель и цвет, упаковка 48–56 собирается сама и ложится в корзину одной строкой. Склад списывает по штуке с каждого размера.</p>
+    </div>
+    <div class="variants">
+      <article class="variant">
+        <header><span class="tag">Вариант А</span><h3>Переключатель «Поштучно / Упаковкой»</h3></header>
+        <div class="phone" aria-label="Макет: товар и корзина, вариант А">
+          <div class="bar"><a>Назад</a><span></span><span></span></div>
+          <div class="body">
+            <div class="photo" role="img" aria-label="Фото товара"></div>
+            <h3>Футболка базовая хлопок</h3>
+            <div style="display:flex;gap:8px;align-items:center"><span class="swatch on" style="background:#2C4A6B"></span><span class="swatch" style="background:#E8ECF1"></span><span class="swatch" style="background:#3A3F46"></span><span class="s" style="color:var(--muted);font-size:.85rem">Синий</span></div>
+            <div class="seg"><span>Поштучно</span><span class="on">Упаковкой</span></div>
+            <div class="chips"><span class="chip">48 ×1</span><span class="chip">50 ×1</span><span class="chip">52 ×1</span><span class="chip">54 ×1</span><span class="chip">56 ×1</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:end;gap:8px">
+              <div><div class="price">3 450 ₽</div><div style="color:var(--muted);font-size:.82rem">за упаковку · 5 шт. по 690 ₽</div></div>
+              <span class="stepper"><span>−</span><span>2</span><span>+</span></span>
+            </div>
+            <span class="ok">В наличии 7 упаковок</span>
+            <span class="btn main">В корзину — 6 900 ₽</span>
+            <hr class="sep">
+            <div class="k" style="font-size:.8rem;color:var(--muted)">В корзине</div>
+            <div class="card">
+              <div style="display:flex;justify-content:space-between;gap:8px"><b>Футболка базовая · синий</b><b>6 900 ₽</b></div>
+              <div style="color:var(--muted);font-size:.85rem">Упаковка 48–56, 5 шт. × 2</div>
+              <span class="linkish" style="font-size:.85rem">Состав упаковки</span>
+            </div>
+          </div>
+        </div>
+        <ul class="pros">
+          <li>Розничный покупатель видит обычный выбор размера — переключатель есть, только если у товара есть упаковка и покупателю виден опт.</li>
+          <li>Упаковка недоступна, если не хватает хотя бы одного размера.</li>
+        </ul>
+      </article>
+
+      <article class="variant">
+        <header><span class="tag">Вариант Б</span><h3>Блок «Купить упаковкой» под размерами</h3></header>
+        <div class="phone" aria-label="Макет: товар и корзина, вариант Б">
+          <div class="bar"><a>Назад</a><span></span><span></span></div>
+          <div class="body">
+            <h3>Футболка базовая хлопок</h3>
+            <div style="display:flex;gap:8px;align-items:center"><span class="swatch on" style="background:#2C4A6B"></span><span class="swatch" style="background:#E8ECF1"></span><span class="swatch" style="background:#3A3F46"></span></div>
+            <div class="price">970 ₽ <span style="font-size:.85rem;color:var(--muted);font-weight:600">за шт.</span></div>
+            <div class="chips"><span class="chip">48</span><span class="chip">50</span><span class="chip">52</span><span class="chip">54</span><span class="chip">56</span></div>
+            <div class="card">
+              <b>Оптом: упаковка 48–56</b>
+              <div class="scroll-x">
+                <table class="pack">
+                  <thead><tr><th>Размер</th><th>48</th><th>50</th><th>52</th><th>54</th><th>56</th></tr></thead>
+                  <tbody><tr><td>Штук</td><td>1</td><td>1</td><td>1</td><td>1</td><td>1</td></tr></tbody>
+                </table>
+              </div>
+              <div style="display:flex;justify-content:space-between;gap:8px"><span>690 ₽ за шт. вместо 970 ₽</span><b>3 450 ₽</b></div>
+              <span class="btn main">Добавить упаковку</span>
+            </div>
+            <hr class="sep">
+            <div class="k" style="font-size:.8rem;color:var(--muted)">Корзина · опт</div>
+            <div class="card">
+              <div style="display:flex;justify-content:space-between;gap:8px"><b>Футболка базовая · синий</b><b>6 900 ₽</b></div>
+              <div style="color:var(--muted);font-size:.85rem">Упаковка 48–56 × 2 · 10 шт.</div>
+              <div class="progress" role="img" aria-label="23 % от минимального оптового заказа"><i></i></div>
+              <div style="font-size:.82rem;color:var(--muted)">До оптового заказа от 30 000 ₽ осталось 23 100 ₽</div>
+            </div>
+          </div>
+        </div>
+        <ul class="pros">
+          <li>Розница и опт видны рядом: выгода понятна без переключения.</li>
+          <li>Корзина подсказывает, сколько осталось до минимальной суммы опта.</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+</div>

@@ -13,6 +13,8 @@ import { colorStock, initialColor, initialSize, maxOrderableForColor, profileSiz
 import { useDialogA11y } from '../utils/useDialogA11y';
 import { useLiveProduct } from '../utils/liveProducts';
 import { useProductThumb } from '../utils/productThumbs';
+import { shownOldPrice } from '../utils/productBadge';
+import { sellsRetail, sellsWholesale } from '../shared/wholesalePricing';
 
 interface QuickViewModalProps {
   product: Product | null;
@@ -74,8 +76,16 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
     ? getOrderableStock(product, selectedColor, selectedSize, preorderMode)
     : maxOrderableForColor(product, selectedColor, preorderMode);
 
+  // «Только оптом» is bought in whole packs: the product page shows the pack, the minimum and the steps
+  const wholesaleOnly = Boolean(product && sellsWholesale(product) && !sellsRetail(product));
+
   const handleAdd = () => {
     if (!product) return;
+    if (wholesaleOnly) {
+      onClose();
+      onSelectFullProduct(product);
+      return;
+    }
     if (!sizeChosen) {
       setSizeError(true);
       sizesRef.current?.querySelector<HTMLButtonElement>('button:not([disabled])')?.focus();
@@ -143,6 +153,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                 <AnimatedFavoriteButton
                   isFavorite={isFavorite}
                   onToggle={(e) => onToggleFavorite(product, e)}
+                  productTitle={product.title}
                   size="md"
                   className="absolute top-3 right-3 neu-photo-btn"
                 />
@@ -196,11 +207,12 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
             <div className="flex items-center justify-between py-1">
               <div className="flex items-baseline gap-2">
                 <span className="text-xl font-bold text-[#2D3A4E]">
-                  {product.price.toLocaleString('ru-RU')} ₽
+                  {(wholesaleOnly ? (product.wholesalePrice as number) : product.price).toLocaleString('ru-RU')} ₽
+                  {wholesaleOnly && <span className="text-xs text-[#4E5C70]">/шт. оптом</span>}
                 </span>
-                {product.originalPrice && (
+                {!wholesaleOnly && shownOldPrice(product) !== null && (
                   <span className="text-xs text-[#4E5C70] line-through">
-                    {product.originalPrice.toLocaleString('ru-RU')} ₽
+                    {shownOldPrice(product)!.toLocaleString('ru-RU')} ₽
                   </span>
                 )}
               </div>
@@ -328,7 +340,13 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                 ) : (
                   <>
                     <ShoppingBag className="w-4 h-4" />
-                    <span>{sizeChosen ? `В корзину (${product.price.toLocaleString('ru-RU')} ₽)` : 'Выберите размер'}</span>
+                    <span>
+                      {wholesaleOnly
+                        ? 'Выбрать упаковки'
+                        : sizeChosen
+                        ? `В корзину (${product.price.toLocaleString('ru-RU')} ₽)`
+                        : 'Выберите размер'}
+                    </span>
                   </>
                 )}
               </button>

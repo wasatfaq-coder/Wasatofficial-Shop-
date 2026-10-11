@@ -19,6 +19,9 @@ import { ProductListGrid } from './products/ProductListGrid';
 import { ProductCsvImportModal } from './products/ProductCsvImportModal';
 import { ProductInspectModal } from './products/ProductInspectModal';
 import { ProductListDialogs } from './products/ProductListDialogs';
+import { ProductSelectionBar } from './products/ProductSelectionBar';
+import { ProductQuickPriceDialog } from './products/ProductQuickPriceDialog';
+import { ProductQuickStockDialog } from './products/ProductQuickStockDialog';
 import { useProductForm } from './products/useProductForm';
 import { ProductFormModal } from './products/ProductFormModal';
 
@@ -29,6 +32,8 @@ export interface AdminProductsTabProps {
   /** Resolves to false when the database refused the write (the error toast is already shown) */
   onUpdateProducts: (updated: Product[]) => Promise<boolean> | void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
+  /** «Мало на складе» of the shop (`lowStockThresholdOf`): the same as in «Склад и SKU» */
+  lowStockThreshold: number;
 }
 
 
@@ -40,6 +45,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   products,
   onUpdateProducts,
   onShowToast,
+  lowStockThreshold,
 }) => {
   // «Все категории» for the filter + the categories from Admin → «Категории»
   const CATEGORY_OPTIONS = useMemo(() => [{ id: 'all', name: 'Все категории' }, ...categories], [categories]);
@@ -51,8 +57,16 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     setSelectedProductIds,
     isBulkOperationsModalOpen,
     setIsBulkOperationsModalOpen,
+    bulkTab,
     handleBulkDelete,
+    priceEditId,
+    setPriceEditId,
+    stockEditId,
+    setStockEditId,
   } = list;
+  // the quick edits show the product as the list has it now (a sale or a save meanwhile)
+  const priceEditProduct = priceEditId ? products.find((p) => p.id === priceEditId) : undefined;
+  const stockEditProduct = stockEditId ? products.find((p) => p.id === stockEditId) : undefined;
 
   const form = useProductForm({ categories, products, onUpdateProducts, onShowToast, CATEGORY_OPTIONS });
   const {
@@ -136,7 +150,6 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         list={list}
         products={products}
         categories={categories}
-        CATEGORY_OPTIONS={CATEGORY_OPTIONS}
         handleOpenAddProduct={handleOpenAddProduct}
         setTextEditModal={setTextEditModal}
       />
@@ -148,10 +161,19 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         duplicatingId={duplicatingId}
         handleDuplicateProduct={handleDuplicateProduct}
         handleOpenEditProduct={handleOpenEditProduct}
+        lowStockThreshold={lowStockThreshold}
       />
 
+      <ProductSelectionBar list={list} />
+
       {/* ================= MODAL: CREATE / EDIT PRODUCT ================= */}
-      <ProductFormModal form={form} categories={categories} products={products} onShowToast={onShowToast} />
+      <ProductFormModal
+        form={form}
+        categories={categories}
+        products={products}
+        lowStockThreshold={lowStockThreshold}
+        onShowToast={onShowToast}
+      />
 
       {/* ================= MODAL: CSV IMPORT ================= */}
       <ProductCsvImportModal
@@ -167,6 +189,26 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
       {/* ================= MODAL: DELETE PRODUCT CONFIRMATION, BULK DISCOUNT ================= */}
       <ProductListDialogs list={list} products={products} onUpdateProducts={onUpdateProducts} onShowToast={onShowToast} />
+
+      {/* ================= QUICK PRICE AND STOCK OF ONE ROW ================= */}
+      {priceEditProduct && (
+        <ProductQuickPriceDialog
+          key={priceEditProduct.id}
+          product={priceEditProduct}
+          products={products}
+          onClose={() => setPriceEditId(null)}
+          onUpdateProducts={onUpdateProducts}
+          onShowToast={onShowToast}
+        />
+      )}
+      {stockEditProduct && (
+        <ProductQuickStockDialog
+          key={stockEditProduct.id}
+          product={stockEditProduct}
+          onClose={() => setStockEditId(null)}
+          onShowToast={onShowToast}
+        />
+      )}
 
       {/* Photo Zoom Modal */}
       {previewZoomImage && (
@@ -204,15 +246,16 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
         onClose={() => setIsBulkOperationsModalOpen(false)}
         categories={categories}
         selectedProducts={products.filter((p) => selectedProductIds.includes(p.id))}
-        onApplyBulkChanges={(updatedList, summary) => {
+        initialTab={bulkTab}
+        onApplyBulkChanges={async (updatedList, summary) => {
           const map = new Map(updatedList.map((p) => [p.id, p]));
-          const merged = products.map((p) => (map.has(p.id) ? map.get(p.id)! : p));
-          setIsBulkOperationsModalOpen(false);
+          const merged = products.map((p) => map.get(p.id) ?? p);
+          // «applied» and the cleared selection only after the database answered; a refusal already showed
+          // «Не сохранено: …», and the window and the selection stay to retry (admin audit 09.10, finding 3)
+          if ((await onUpdateProducts(merged)) === false) return false;
+          onShowToast(summary || 'Изменения применены', 'success');
           setSelectedProductIds([]);
-          // «applied» only after the database answered; a failure already showed «Не сохранено: …»
-          void Promise.resolve(onUpdateProducts(merged)).then((saved) => {
-            if (saved !== false) onShowToast(summary || 'Изменения применены', 'success');
-          });
+          return true;
         }}
       />
 

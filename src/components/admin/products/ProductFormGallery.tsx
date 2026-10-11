@@ -3,6 +3,7 @@ import { Trash2, Image as ImageIcon, ImagePlus, ArrowLeft, ArrowRight, Maximize2
 import { processImageFiles } from '../../../utils/imageUpload';
 import { formatMegabytes, PRODUCT_SIZE_BUDGET_BYTES } from '../../../utils/productSize';
 
+import { AdminHint } from '../AdminHint';
 import type { AdminProductsTabProps } from '../AdminProductsTab';
 import type { ProductForm } from './useProductForm';
 
@@ -132,14 +133,17 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
             <div className="w-5 h-5 rounded-md neu-inset flex items-center justify-center text-accent">
               <ImageIcon className="w-3 h-3" />
             </div>
-            <span className="text-[11px] font-extrabold text-[#2D3A4E]">Галерея фото</span>
+            <span className="text-[11px] font-extrabold text-[#2D3A4E]">Галерея фото *</span>
             <span className="text-[11px] font-extrabold px-1.5 py-0.2 rounded-md neu-inset text-accent">
               {formImages.length}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-[#4E5C70]">Первое фото — обложка</span>
+            <span className="inline-flex items-center gap-0.5">
+              <span className="text-[11px] font-bold text-[#4E5C70]">Первое фото — обложка</span>
+              <AdminHint label="Первое фото">Первое фото — обложка: его видят в каталоге и в ссылке.</AdminHint>
+            </span>
             {formImages.length > 0 && (
               <button
                 type="button"
@@ -158,7 +162,10 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
         {formImages.length > 0 && (
           <div className="space-y-1">
             <div className="flex items-center justify-between text-[11px] font-bold">
-              <span className="text-[#4E5C70]">Место под фото и описание</span>
+              <span className="inline-flex items-center gap-0.5 text-[#4E5C70]">
+                Место под фото и описание
+                <AdminHint label="Место под фото и описание">Сколько места товар занимает в базе. Если заполнено, уберите часть фото.</AdminHint>
+              </span>
               <span className={formSizeBytes > PRODUCT_SIZE_BUDGET_BYTES ? 'text-danger' : formSizeBytes > PRODUCT_SIZE_BUDGET_BYTES * 0.8 ? 'text-warning' : 'text-[#2D3A4E]'}>
                 {formatMegabytes(formSizeBytes)} из {formatMegabytes(PRODUCT_SIZE_BUDGET_BYTES)}
               </span>

@@ -43,7 +43,13 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
   totalDays,
 }) => {
   if (!dayData) return null;
-
+  // a bar of the chart is a day, a week or a month (src/utils/analyticsPeriods.ts)
+  const unit =
+    dayData.weekday === 'Неделя'
+      ? { name: 'Неделя', of: 'недели' }
+      : dayData.weekday === 'Месяц'
+        ? { name: 'Месяц', of: 'месяца' }
+        : { name: 'День', of: 'дня' };
 
   return (
     <div className="neu-flat rounded-3xl p-4 sm:p-5 space-y-4 animate-in fade-in duration-200">
@@ -57,17 +63,17 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-accent">
-                Срез дня
+                Срез {unit.of}
               </span>
               {dayIndex !== undefined && totalDays !== undefined && (
                 <span className="text-[11px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-full">
-                  День {dayIndex + 1} из {totalDays}
+                  {unit.name} {dayIndex + 1} из {totalDays}
                 </span>
               )}
               {dayData.isPeakDay && (
                 <span className="text-[11px] font-extrabold text-warning bg-warning-soft px-2 py-0.5 rounded-full flex items-center gap-1">
                   <Flame className="w-3 h-3 text-warning fill-warning" />
-                  Пиковый день периода
+                  Пик периода
                 </span>
               )}
               {dayData.hasRealOrders && (
@@ -138,7 +144,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
         {/* Card 1: Revenue */}
         <div className="neu-inset rounded-2xl p-3 space-y-1">
           <div className="flex items-center justify-between text-[#4E5C70]">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Выручка за сутки</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider">Выручка</span>
             <div className="w-5 h-5 flex items-center justify-center text-accent">
               <DollarSign className="w-3 h-3" />
             </div>
@@ -146,9 +152,12 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
           <p className="text-base sm:text-lg font-extrabold text-accent tracking-tight">
             {dayData.revenue.toLocaleString('ru-RU')} ₽
           </p>
-          <div className="text-[11px] text-[#4E5C70] flex items-center justify-between">
-            <span>Пред. период:</span>
-            <strong className="text-[#2D3A4E]">{dayData.prevRevenue.toLocaleString('ru-RU')} ₽</strong>
+          <div className="text-[11px] text-[#4E5C70] flex items-center justify-between gap-1">
+            <span>Чистый доход:</span>
+            <strong className={dayData.netProfit < 0 ? 'text-danger' : 'text-[#2D3A4E]'}>
+              {dayData.netProfit < 0 ? '−' : ''}
+              {Math.abs(dayData.netProfit).toLocaleString('ru-RU')} ₽
+            </strong>
           </div>
         </div>
 
@@ -172,7 +181,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
         {/* Card 3: Average Check */}
         <div className="neu-inset rounded-2xl p-3 space-y-1">
           <div className="flex items-center justify-between text-[#4E5C70]">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Средний чек дня</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider">Средний чек</span>
             <div className="w-5 h-5 flex items-center justify-center text-success">
               <TrendingUp className="w-3 h-3" />
             </div>
@@ -216,7 +225,7 @@ export const AdminDailySalesInspector: React.FC<AdminDailySalesInspectorProps> =
           <span className="text-[11px] bg-accent/10 text-accent px-2.5 py-1 rounded-lg font-extrabold">
             {dayData.realOrdersList.length > 0
               ? `Заказов: ${dayData.realOrdersList.length}`
-              : 'Заказов за день нет'}
+              : 'Заказов нет'}
           </span>
         </div>
 

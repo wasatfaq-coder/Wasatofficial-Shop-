@@ -11,6 +11,8 @@ interface OrderSuccessScreenProps {
   paymentMethod?: string;
   /** Instructions of the chosen method from Admin → «Оплата» (e.g. transfer details) */
   paymentInstructions?: string;
+  /** A guest's order the browser did not keep (a private window, no room): it will not be in the profile */
+  notSavedInBrowser?: boolean;
   setActiveTab: (tab: ActiveTab) => void;
 }
 
@@ -21,6 +23,7 @@ export const OrderSuccessScreen: React.FC<OrderSuccessScreenProps> = ({
   deliveryAddress,
   paymentMethod,
   paymentInstructions,
+  notSavedInBrowser = false,
   setActiveTab,
 }) => {
   return (
@@ -44,6 +47,17 @@ export const OrderSuccessScreen: React.FC<OrderSuccessScreenProps> = ({
           Спасибо за выбор {currentStoreName()}! Мы получили заказ: менеджер свяжется с вами, чтобы подтвердить его и оплату.
         </p>
       </div>
+
+      {/* audit 07.10, finding 19: the guest's order history lives in this browser, and it did not keep this one */}
+      {notSavedInBrowser && (
+        <div role="status" className="rounded-2xl p-3.5 bg-warning-soft border border-warning/40 text-left space-y-1">
+          <p className="text-xs font-extrabold text-[#2D3A4E]">Запишите номер заказа: {orderId}</p>
+          <p className="text-xs text-[#2D3A4E] leading-relaxed">
+            Браузер не сохранил заказ (приватный режим или не хватило места), поэтому в профиле его не будет. Заказ в магазине
+            есть: назовите номер менеджеру или в чате поддержки.
+          </p>
+        </div>
+      )}
 
       {paymentInstructions?.trim() && (
         <div className="neu-inset rounded-3xl p-4 text-left space-y-1.5">

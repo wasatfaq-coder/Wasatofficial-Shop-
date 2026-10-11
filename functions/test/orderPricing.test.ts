@@ -4,13 +4,15 @@ import {
   calcPromoDiscount,
   formatPromoExpiry,
   getAvailableDeliveryMethods,
+  isPromoExpired,
   isPromoListed,
   promoExpiryDate,
   promoExpiryTime,
+  toPricingLine,
   validatePromo,
   type PricingLine,
 } from '../../src/shared/orderPricing';
-import type { DeliveryMethod, PromoCode } from '../../src/types';
+import type { CartItem, DeliveryMethod, PromoCode } from '../../src/types';
 
 const lines: PricingLine[] = [
   { productId: 'shirt', category: 'shirts', price: 3000, quantity: 2 },
@@ -102,6 +104,14 @@ describe('promo expiry', () => {
     expect(validatePromo(p, lines, new Date('2026-10-01T00:00:00+03:00').getTime())).toMatch(/истек/);
   });
 
+  test('expired only after the last day; a code without a date never expires', () => {
+    expect(isPromoExpired({ expiresAt: '2026-09-30' }, new Date('2026-09-30T23:59:00+03:00').getTime())).toBe(false);
+    expect(isPromoExpired({ expiresAt: '2026-09-30' }, new Date('2026-10-01T00:00:00+03:00').getTime())).toBe(true);
+    expect(isPromoExpired({ expiresAt: '15 сентября 2026 г.' }, new Date('2026-10-06T12:00:00+03:00').getTime())).toBe(true);
+    expect(isPromoExpired({ expiresAt: undefined })).toBe(false);
+    expect(isPromoExpired({ expiresAt: 'Бессрочно' })).toBe(false);
+  });
+
   test('shown as a date, text that is not a date as written', () => {
     expect(formatPromoExpiry('2026-08-31')).toBe('31.08.2026');
     expect(formatPromoExpiry('31 августа 2026 г.')).toBe('31.08.2026');
@@ -124,5 +134,14 @@ describe('isPromoListed', () => {
     expect(isPromoListed(promo({ discountPercent: 10, expiresAt: '2026-09-29' }), now)).toBe(false);
     expect(isPromoListed(promo({ discountPercent: 10, active: false }), now)).toBe(false);
     expect(isPromoListed(promo({ discountPercent: 10, usageLimit: 1, usedCount: 1 }), now)).toBe(false);
+  });
+});
+
+describe('toPricingLine (docs/wholesale-spec.md, stage 1)', () => {
+  const product = { id: 'p1', category: 'shirts', price: 2990 } as CartItem['product'];
+
+  test('the product\'s price for an ordinary line, the line\'s own price when it has one', () => {
+    expect(toPricingLine({ product, quantity: 2 })).toEqual({ productId: 'p1', category: 'shirts', price: 2990, quantity: 2 });
+    expect(toPricingLine({ product, quantity: 2, unitPrice: 1900 }).price).toBe(1900);
   });
 });

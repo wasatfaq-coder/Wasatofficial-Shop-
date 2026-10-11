@@ -10,11 +10,11 @@ interface BrandRenameCardProps {
   pickupPoints: PickupPoint[];
   bannerSlides: BannerSlide[];
   promos: PromoCode[];
-  onUpdateSettings?: (settings: StorefrontSettings) => void;
-  onUpdateDeliveryMethods?: (methods: DeliveryMethod[]) => void;
-  onUpdatePickupPoints?: (points: PickupPoint[]) => void;
-  onUpdateBannerSlides?: (banners: BannerSlide[]) => void;
-  onUpdatePromos?: (promos: PromoCode[]) => void;
+  onUpdateSettings?: (settings: StorefrontSettings) => Promise<boolean> | void;
+  onUpdateDeliveryMethods?: (methods: DeliveryMethod[]) => Promise<boolean> | void;
+  onUpdatePickupPoints?: (points: PickupPoint[]) => Promise<boolean> | void;
+  onUpdateBannerSlides?: (banners: BannerSlide[]) => Promise<boolean> | void;
+  onUpdatePromos?: (promos: PromoCode[]) => Promise<boolean> | void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
@@ -59,20 +59,24 @@ export const BrandRenameCard: React.FC<BrandRenameCardProps> = ({
     found.promos > 0 && `описания промокодов: ${found.promos}`,
   ].filter(Boolean) as string[];
 
-  const handleRename = () => {
+  // «Заменено» only when every write was accepted; a refusal shows «Не сохранено» (`persist`) and the card keeps
+  // listing what is left (audit 09.10, finding 3)
+  const handleRename = async () => {
+    const writes: (Promise<boolean> | void)[] = [];
     if (found.settings && onUpdateSettings) {
-      onUpdateSettings({
+      writes.push(onUpdateSettings({
         ...withStoreNameFields(settings, newName),
         storeName: newName,
         // Template demo contacts are hidden from customers anyway; clear them so the owner fills real ones
         email: publicSetting(settings.email),
         telegram: publicSetting(settings.telegram),
-      });
+      }));
     }
-    if (found.deliveryMethods > 0) onUpdateDeliveryMethods?.(deliveryMethods.map((m) => withStoreNameFields(m, newName)));
-    if (found.pickupPoints > 0) onUpdatePickupPoints?.(pickupPoints.map((pt) => withStoreNameFields(pt, newName)));
-    if (found.bannerSlides > 0) onUpdateBannerSlides?.(bannerSlides.map((b) => withStoreNameFields(b, newName)));
-    if (found.promos > 0) onUpdatePromos?.(promos.map((p) => withStoreNameFields(p, newName)));
+    if (found.deliveryMethods > 0) writes.push(onUpdateDeliveryMethods?.(deliveryMethods.map((m) => withStoreNameFields(m, newName))));
+    if (found.pickupPoints > 0) writes.push(onUpdatePickupPoints?.(pickupPoints.map((pt) => withStoreNameFields(pt, newName))));
+    if (found.bannerSlides > 0) writes.push(onUpdateBannerSlides?.(bannerSlides.map((b) => withStoreNameFields(b, newName))));
+    if (found.promos > 0) writes.push(onUpdatePromos?.(promos.map((p) => withStoreNameFields(p, newName))));
+    if ((await Promise.all(writes)).some((ok) => ok === false)) return;
     onShowToast(`Старое название заменено на «${newName}»`, 'success');
   };
 

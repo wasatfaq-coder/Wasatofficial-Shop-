@@ -42,10 +42,17 @@ service cloud.firestore {
       return request.resource.data.updatedAt == request.time;
     }
 
-    // Себестоимость живёт в закрытой product_costs: в товар её не добавить и не поменять, старое значение — только удалить
+    // Себестоимость живёт в закрытой product_costs: в товар её не добавить и не поменять, старое значение — только удалить.
+    // Закупка в валюте (purchase), поставщик и его артикул (supplier, supplierSku) — там же: в товаре их не было никогда,
+    // поэтому их нет и в записи товара
     function keepsCostPriceOut() {
-      return !('costPrice' in request.resource.data)
-        || request.resource.data.costPrice == resource.data.get('costPrice', null);
+      return (!('costPrice' in request.resource.data)
+        || request.resource.data.costPrice == resource.data.get('costPrice', null))
+        && hasNoPurchaseData();
+    }
+
+    function hasNoPurchaseData() {
+      return !request.resource.data.keys().hasAny(['purchase', 'supplier', 'supplierSku']);
     }
 
     // settings/server.serverOrdersEnabled: заказы оформляет Cloud Function placeOrder
@@ -67,7 +74,8 @@ service cloud.firestore {
 
     match /products/{productId} {
       allow read: if true;
-      allow create: if isAdmin() && isValidId(productId) && !('costPrice' in request.resource.data);
+      allow create: if isAdmin() && isValidId(productId) && !('costPrice' in request.resource.data)
+        && hasNoPurchaseData();
       allow delete: if isAdmin() && isValidId(productId);
       // Пока заказы не оформляются на сервере, покупатели списывают остатки — только своим заказом.
       // Остальные поля (в том числе старые отзывы внутри товара) — только администратор.
@@ -209,9 +217,42 @@ service cloud.firestore {
     }
 
     // Имя автора отзыва и диалога чата не выдаёт себя за магазин: «Wasat Shop (официально)», «Администратор»,
-    // «Служба поддержки» (аудит 02.10, находка 31). (?i) в RE2 сравнивает и кириллицу без учёта регистра
+    // «Служба поддержки» (аудит 02.10, находка 31), название магазина из «Витрины». Сравнивается вид имени после
+    // нормализации (решение владельца 08.10, аудит 07.10, находка 10): без невидимых знаков и диакритики, латинские
+    // двойники кириллицы — кириллицей, так «Аdmin» с кириллической «А» и «Wasat​Shop» с невидимым пробелом не проходят.
+    // Имя из двух алфавитов («Ivan Петров») проходит. Слова из латиницы в шаблоне записаны в том же виде: admin → аdмin,
+    // support → suрроrт, official → оffiсiаi. lower() кириллицу не меняет — её регистр снимает (?i)
     function isHonestName(name) {
-      return !name.matches('(?i).*(официальн|служба (поддержки|заботы)|поддержка магазина|(^|[^а-яёa-z])(администратор|админ|модератор|admin|support|official)([^а-яёa-z]|$)).*');
+      let form = honestForm(name);
+      let store = storeNameKey();
+      return !form.matches('(?i).*(официальн|служба (поддержки|заботы)|поддержка магазина|(^|[^а-яa-z])(администратор|админ|модератор|аdмin|suрроrт|оffiсiаi)([^а-яa-z]|$)).*')
+        // название магазина целиком (без пробелов и знаков); короче 4 букв — не сравнивается, иначе запретило бы
+        // обычные имена
+        && (store.size() < 4 || !honestKey(form).matches('(?i).*' + store + '.*'));
+    }
+
+    // Строчные латинские, без невидимых знаков (Cf: U+200B–U+200F, U+2060, U+FEFF, мягкий перенос) и диакритики (Mn, Me),
+    // «ё» — «е», латинские двойники — кириллицей, i/l/1/| и украинская «і» — одной «i», ноль — «о»
+    function honestForm(text) {
+      return text.lower().replace('[\\p{Cf}\\p{Mn}\\p{Me}]', '')
+        .replace('ё', 'е').replace('Ё', 'Е')
+        .replace('a', 'а').replace('b', 'в').replace('c', 'с').replace('e', 'е').replace('h', 'н').replace('k', 'к')
+        .replace('m', 'м').replace('o', 'о').replace('p', 'р').replace('t', 'т').replace('x', 'х').replace('y', 'у')
+        .replace('0', 'о').replace('[l1|і]', 'i');
+    }
+
+    // Только буквы и цифры: «W a s a t-Shop» и «WasatShop» — одно и то же. Результат годится в регулярное выражение
+    function honestKey(form) {
+      return form.replace('[^a-zа-яА-Я0-9]', '');
+    }
+
+    // Название магазина — как его показывает сайт (getStoreName): из «Витрины», без него или «MANSTYLE» шаблона —
+    // «Wasat Shop»
+    function storeNameKey() {
+      let path = /databases/$(database)/documents/settings/storefront;
+      let saved = exists(path) ? get(path).data.get('storeName', '') : '';
+      let name = saved is string && saved.trim() != '' && saved.trim().lower() != 'manstyle' ? saved : 'Wasat Shop';
+      return honestKey(honestForm(name));
     }
 
     function isValidReview(data, reviewId) {
@@ -274,7 +315,10 @@ service cloud.firestore {
           && request.resource.data.lastOrderId is string
           && request.resource.data.lastOrderId.matches('^[A-Za-z0-9-]{1,40}$')
           && !exists(/databases/$(database)/documents/promo_uses/$(request.resource.data.lastOrderId))
-          && existsAfter(/databases/$(database)/documents/promo_uses/$(request.resource.data.lastOrderId)));
+          && existsAfter(/databases/$(database)/documents/promo_uses/$(request.resource.data.lastOrderId))
+          // отметка — об этом коде: иначе в том же пакете отметка кода без лимита поднимала счётчик кода с лимитом
+          // с анонимного входа (аудит 07.10, находка 9, ревью второго PR этапа 2)
+          && getAfter(/databases/$(database)/documents/promo_uses/$(request.resource.data.lastOrderId)).data.promoId == promoId);
     }
 
     // Лимит использований: без лимита (нет поля, 0 или null) — не ограничено
@@ -308,7 +352,15 @@ service cloud.firestore {
         && get(orderPath).data.get('promoCode', '') is string
         && get(orderPath).data.get('promoCode', '').size() > 0
         && get(orderPath).data.promoCode.upper() == get(promoPath).data.code.upper()
-        && getAfter(promoPath).data.get('lastOrderId', '') == orderId;
+        && getAfter(promoPath).data.get('lastOrderId', '') == orderId
+        // код с лимитом списывает только вход Google (решение владельца 08.10, аудит 07.10, находка 9): анонимных
+        // входов посторонний заведёт сколько угодно и поддельными заказами сжёг бы лимит
+        && (signInProvider() != 'anonymous' || !isLimitedPromoDoc(get(promoPath).data));
+    }
+
+    // Как isLimitedPromo (src/shared/orderPricing.ts): лимит — usageLimit больше 0
+    function isLimitedPromoDoc(promo) {
+      return promo.get('usageLimit', 0) is number && promo.get('usageLimit', 0) > 0;
     }
 
     match /banners/{bannerId} {
@@ -329,8 +381,10 @@ service cloud.firestore {
     }
 
     match /settings/{settingId} {
-      // шаблоны быстрых ответов поддержки — рабочие тексты сотрудников (аудит 02.10, находка 49 / тест B2)
-      allow read: if settingId != 'quick_phrases' || isAdmin();
+      // шаблоны быстрых ответов поддержки — рабочие тексты сотрудников (аудит 02.10, находка 49 / тест B2);
+      // курсы и наценка (exchange_rates) по наценке выдают маржу магазина — только администратору;
+      // шаблоны ответов чата (chat_templates) — тоже рабочие тексты сотрудников (аудит админки 09.10, этап 7)
+      allow read: if !(settingId in ['quick_phrases', 'exchange_rates', 'chat_templates']) || isAdmin();
       allow write: if isAdmin() && isValidId(settingId);
     }
 
@@ -737,6 +791,7 @@ service cloud.firestore {
         && isOptionalText(data, 'middleName', 60)
         && isOptionalText(data, 'phone', 40)
         && isOptionalText(data, 'avatar', 2000)
+        && (!('avatar' in changed) || isGoogleAvatar(data.avatar))
         && isOptionalText(data, 'updatedAt', 40)
         && isOptionalText(data, 'createdAt', 40)
         && isOptionalText(data, 'lastActive', 40)
@@ -744,6 +799,14 @@ service cloud.firestore {
         && (!('savedAddresses' in changed) || isSavedAddressList(data.savedAddresses))
         && (!('bodyMeasurements' in changed) || isBodyMeasurements(data.bodyMeasurements))
         && (!('notificationsEnabled' in changed) || data.notificationsEnabled is bool);
+    }
+
+    // Аватар — только фото Google-аккаунта или пусто (аудит 07.10, находка 8): «Клиенты» показывают его владельцу, и ссылка
+    // на чужой сервер выдала бы его IP. Тот же шаблон, что googleAvatarUrl (src/utils/googleAvatar.ts): без пробелов.
+    // Неизменённый аватар не проверяется — старый профиль со ссылкой из прошлых версий сохраняет остальные поля
+    function isGoogleAvatar(avatar) {
+      return avatar == ''
+        || avatar.matches('https://[a-z0-9-]+([.][a-z0-9-]+)*[.]googleusercontent[.]com/\\S*');
     }
 
     // Тексты адреса вместе — не длиннее 2 000 знаков (комментарий курьеру — до 300), флажок «по умолчанию» не в счёт.
@@ -888,6 +951,24 @@ service cloud.firestore {
       allow list: if isAdmin();
       allow create: if isAdmin() || isOrderStockMovement(movementId) || isOrderStockReturnMovement(movementId);
       allow update, delete: if isAdmin() && isValidId(movementId);
+    }
+
+    // Себестоимость строк заказа на момент продажи (решение владельца 09.10, src/utils/orderCosts.ts): заказ читает
+    // покупатель, поэтому себестоимость — отдельно и только для администратора. Пишет сессия администратора.
+    match /order_costs/{orderId} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && isValidId(orderId)
+        && request.resource.data.orderId == orderId
+        && request.resource.data.lines is list && request.resource.data.lines.size() <= 60;
+      allow delete: if isAdmin();
+    }
+
+    // Журнал цен (аудит админки 09.10, находка 11): было, стало, курс и кто — пишет и читает только администратор.
+    // Записи не удаляются: журнал нужен, чтобы разобрать спор о цене с оптовым покупателем.
+    match /price_changes/{changeId} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && isValidId(changeId);
+      allow delete: if false;
     }
 
     // ------------------------------------------------------------------

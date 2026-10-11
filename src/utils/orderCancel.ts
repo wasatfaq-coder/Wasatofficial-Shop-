@@ -54,13 +54,24 @@ export const CANCEL_COMMENT_MAX = 500;
  * the store cancelled and brought back is cancelled through the chat (its goods were already returned once).
  */
 export function canCustomerCancel(order: Order, uid: string | undefined): boolean {
-  return Boolean(uid) && order.customerUid === uid && !order.isCancelled && order.status === 'accepted' && !order.cancelledAt;
+  return (
+    Boolean(uid) &&
+    order.customerUid === uid &&
+    !order.isCancelled &&
+    order.status === 'accepted' &&
+    !order.cancelledAt &&
+    // after «Правка состава» the goods go back by the order's whole journal, which only the admin reads (audit 07.10, finding 2)
+    !order.isAdjusted
+  );
 }
 
 /** Why the buyer cannot cancel an order that is not finished yet; '' when the button is there or nothing is due */
 export function customerCancelHint(order: Order, uid: string | undefined): string {
   if (order.isCancelled || order.status === 'delivered' || canCustomerCancel(order, uid)) return '';
   if (!uid || order.customerUid !== uid) return 'Чтобы отменить заказ, напишите в чат магазина: заказ оформлен без входа в аккаунт.';
+  if (order.status === 'accepted' && order.isAdjusted) {
+    return 'Магазин изменил состав заказа — чтобы отменить его, напишите в чат магазина.';
+  }
   if (order.status === 'accepted') return 'Этот заказ уже отменяли — чтобы отменить его снова, напишите в чат магазина.';
   return 'Заказ уже собирают или везут — отменить его можно только через чат магазина.';
 }
@@ -128,4 +139,13 @@ export function isArchivedOrder(order: Order, now: number = Date.now()): boolean
 export function cancelledShare(orders: Pick<Order, 'isCancelled'>[]): number | null {
   if (orders.length === 0) return null;
   return Math.round((orders.filter((o) => o.isCancelled).length / orders.length) * 100);
+}
+
+/**
+ * Cancelled orders whose promo code use has not gone back to the code yet: the admin's session returns it
+ * (`releaseOrderPromoUse`), so a one-time code from a newsletter or the chat is usable again and cancelled orders do
+ * not hold places of a shared limit (audit 07.10, finding 6)
+ */
+export function ordersWithPromoToRelease(orders: Order[]): Order[] {
+  return orders.filter((o) => o.isCancelled && Boolean(o.promoCode?.trim()) && !o.promoReleased);
 }

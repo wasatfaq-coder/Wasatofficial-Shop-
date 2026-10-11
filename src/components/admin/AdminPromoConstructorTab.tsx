@@ -25,8 +25,9 @@ import {
 import { Order, PromoCode, Product, StoreCategory } from '../../types';
 import { copyToClipboard } from '../../utils/clipboard';
 import { NotConfigured } from '../NotConfigured';
+import { AdminHint } from './AdminHint';
 import { NeumorphicSwitch } from '../NeumorphicSwitch';
-import { formatPromoExpiry, isPromoListed, promoExpiryDate } from '../../shared/orderPricing';
+import { formatPromoExpiry, isPromoExpired, isPromoListed, promoExpiryDate } from '../../shared/orderPricing';
 import { useChangedSince, useUnsavedChanges } from '../../utils/unsavedChanges';
 import { computePartnerCommissions } from '../../utils/partnerCommission';
 import { pluralRu } from '../../utils/pluralize';
@@ -45,6 +46,13 @@ interface AdminPromoConstructorTabProps {
 
 /** A code as the checkout compares it: case and outer spaces do not matter */
 const normalizedCode = (code: string | undefined) => (code ?? '').trim().toUpperCase();
+
+/** «A, B, C и ещё 97»: a batch of single-use codes expires at once, and its codes would fill the phone screen */
+function expiredCodesPreview(promos: PromoCode[]): string {
+  const shown = promos.slice(0, 3).map((p) => p.code).join(', ');
+  const rest = promos.length - 3;
+  return rest > 0 ? `${shown} и ещё ${rest}` : shown;
+}
 
 export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> = ({
   promos,
@@ -343,6 +351,25 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
     );
   };
 
+  // Active codes whose last day has passed: customers no longer see or apply them, but they stay «активные» here
+  // computed on every render, not memoized by `promos`: a code expires at midnight while the list stays the same
+  const expiredActivePromos = promos.filter((p) => p.active && isPromoExpired(p));
+  const [isDisablingExpired, setIsDisablingExpired] = useState(false);
+
+  const handleDisableExpired = async () => {
+    const ids = new Set(expiredActivePromos.map((p) => p.id));
+    if (ids.size === 0) return;
+    setIsDisablingExpired(true);
+    const updated = promos.map((p) => (ids.has(p.id) ? { ...p, active: false } : p));
+    const saved = await onUpdatePromos(updated);
+    setIsDisablingExpired(false);
+    if (saved === false) return;
+    onShowToast(
+      `Выключено ${ids.size} ${pluralRu(ids.size, ['промокод', 'промокода', 'промокодов'])} с прошедшим сроком`,
+      'success'
+    );
+  };
+
   const handleDelete = async (id: string) => {
     const target = promos.find((p) => p.id === id);
     const updated = promos.filter((p) => p.id !== id);
@@ -577,7 +604,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 Создание уникальных кодов для массовой рассылки в SMS, Telegram или Email
               </p>
             </div>
-            <div className="shrink-0 self-start sm:self-center">
+            <div className="shrink-0 self-start sm:self-center flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => onShowToast('Каждый купон из пачки может быть активирован покупателем только 1 раз', 'info')}
@@ -587,14 +614,18 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 <Sparkles className="w-3.5 h-3.5 text-accent shrink-0" />
                 <span>1 использование на код</span>
               </button>
+              <AdminHint label="1 использование на код">Каждый код из пачки можно применить один раз. Работают только после входа через Google.</AdminHint>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div>
-              <label htmlFor="batch-prefix" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
-                Префикс кодов
-              </label>
+              <div className="flex items-center gap-1 mb-1">
+                <label htmlFor="batch-prefix" className="text-[11px] font-bold text-[#4E5C70] block">
+                  Префикс кодов
+                </label>
+                <AdminHint label="Префикс">Начало каждого кода, например SMS-. Дальше идут 5 случайных символов.</AdminHint>
+              </div>
               <input
                 id="batch-prefix"
                 type="text"
@@ -606,9 +637,12 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             </div>
 
             <div>
-              <label htmlFor="batch-count" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
-                Количество кодов
-              </label>
+              <div className="flex items-center gap-1 mb-1">
+                <label htmlFor="batch-count" className="text-[11px] font-bold text-[#4E5C70] block">
+                  Количество кодов
+                </label>
+                <AdminHint label="Количество">От 1 до 100 кодов за раз. Они сразу сохраняются и включены.</AdminHint>
+              </div>
               <input
                 id="batch-count"
                 type="number"
@@ -621,12 +655,14 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+              <p id="batch-discount-type-label" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
                 Тип скидки
-              </label>
-              <div className="flex rounded-xl neu-flat-sm p-1">
+              </p>
+              <div role="radiogroup" aria-labelledby="batch-discount-type-label" className="flex rounded-xl neu-flat-sm p-1">
                 <button
                   type="button"
+                  role="radio"
+                  aria-checked={batchDiscountType === 'fixed'}
                   onClick={() => setBatchDiscountType('fixed')}
                   className={`flex-1 py-1 text-[11px] font-extrabold rounded-lg transition-all ${
                     batchDiscountType === 'fixed' ? 'neu-pill-active' : 'text-[#4E5C70]'
@@ -636,6 +672,8 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 </button>
                 <button
                   type="button"
+                  role="radio"
+                  aria-checked={batchDiscountType === 'percent'}
                   onClick={() => setBatchDiscountType('percent')}
                   className={`flex-1 py-1 text-[11px] font-extrabold rounded-lg transition-all ${
                     batchDiscountType === 'percent' ? 'neu-pill-active' : 'text-[#4E5C70]'
@@ -723,6 +761,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     </>
                   )}
                 </button>
+                <AdminHint label="Скопировать список">Список виден только сейчас. После выхода из раздела коды ищите в «Все промокоды».</AdminHint>
               </div>
             )}
           </div>
@@ -788,12 +827,19 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
-                Тип скидки *
-              </label>
-              <div className="flex rounded-xl neu-flat-sm p-1">
+              <div className="flex items-center gap-1 mb-1">
+                <p id="promo-discount-type-label" className="text-[11px] font-bold text-[#4E5C70] block">
+                  Тип скидки *
+                </p>
+                <AdminHint label="Тип скидки">
+                  Процент — скидка в процентах от суммы подходящих товаров. Например, 15 % от 4 000 ₽ = 600 ₽. Фикс — вычитается одна сумма из заказа, но не больше стоимости подходящих товаров.
+                </AdminHint>
+              </div>
+              <div role="radiogroup" aria-labelledby="promo-discount-type-label" className="flex rounded-xl neu-flat-sm p-1">
                 <button
                   type="button"
+                  role="radio"
+                  aria-checked={discountType === 'percent'}
                   onClick={() => {
                     setDiscountType('percent');
                     if (discountValue > 100) setDiscountValue(15);
@@ -809,6 +855,8 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 </button>
                 <button
                   type="button"
+                  role="radio"
+                  aria-checked={discountType === 'fixed'}
                   onClick={() => {
                     setDiscountType('fixed');
                     if (discountValue <= 100) setDiscountValue(500);
@@ -826,9 +874,12 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             </div>
 
             <div>
-              <label htmlFor="promo-discount-value" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
-                Размер скидки ({discountType === 'fixed' ? '₽' : '%'}) *
-              </label>
+              <div className="flex items-center gap-1 mb-1">
+                <label htmlFor="promo-discount-value" className="text-[11px] font-bold text-[#4E5C70] block">
+                  Размер скидки ({discountType === 'fixed' ? '₽' : '%'}) *
+                </label>
+                <AdminHint label="Размер скидки">Процент — от 1 до 90, рубли — от 1 до 50 000.</AdminHint>
+              </div>
               <input
                 id="promo-discount-value"
                 type="number"
@@ -913,9 +964,12 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
               <div className="flex items-center gap-2">
                 <Share2 className="w-4 h-4 text-accent" />
                 <div>
-                  <span className="text-[11px] font-extrabold text-[#2D3A4E] block">
-                    Партнерский промокод (Инфлюенсер / Блогер)
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11px] font-extrabold text-[#2D3A4E] block">
+                      Партнерский промокод (Инфлюенсер / Блогер)
+                    </span>
+                    <AdminHint label="Партнёрский промокод">Считает продажи по коду и комиссию блогера. Деньги сайт не выплачивает.</AdminHint>
+                  </div>
                   <span className="text-[11px] text-[#4E5C70]">
                     Учет привлеченной выручки и автоматический расчет комиссии
                   </span>
@@ -955,9 +1009,12 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                 </div>
 
                 <div>
-                  <label htmlFor="promo-partner-percent" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
-                    Комиссия партнера (% от оплаченных и полученных заказов, без доставки)
-                  </label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <label htmlFor="promo-partner-percent" className="text-[11px] font-bold text-[#4E5C70] block">
+                      Комиссия партнера (% от оплаченных и полученных заказов, без доставки)
+                    </label>
+                    <AdminHint label="Комиссия партнёра">Процент от оплаченных и полученных заказов с этим кодом, без доставки.</AdminHint>
+                  </div>
                   <input
                     id="promo-partner-percent"
                     type="number"
@@ -983,9 +1040,12 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <div>
-                <label htmlFor="promo-min-order" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
-                  Мин. сумма чека (₽)
-                </label>
+                <div className="flex items-center gap-1 mb-1">
+                  <label htmlFor="promo-min-order" className="text-[11px] font-bold text-[#4E5C70] block">
+                    Мин. сумма чека (₽)
+                  </label>
+                  <AdminHint label="Мин. сумма чека">Код сработает, только если товаров в корзине на эту сумму или больше. 0 — без условий.</AdminHint>
+                </div>
                 <input
                   id="promo-min-order"
                   type="number"
@@ -999,9 +1059,12 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
               </div>
 
               <div>
-                <label htmlFor="promo-expires-at" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
-                  Действует до (включительно)
-                </label>
+                <div className="flex items-center gap-1 mb-1">
+                  <label htmlFor="promo-expires-at" className="text-[11px] font-bold text-[#4E5C70] block">
+                    Действует до (включительно)
+                  </label>
+                  <AdminHint label="Действует до">Последний день действия по Москве. После полуночи код перестаёт работать.</AdminHint>
+                </div>
                 <input
                   id="promo-expires-at"
                   type="date"
@@ -1016,9 +1079,12 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
               </div>
 
               <div>
-                <label htmlFor="promo-usage-limit" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
-                  Лимит использований (шт)
-                </label>
+                <div className="flex items-center gap-1 mb-1">
+                  <label htmlFor="promo-usage-limit" className="text-[11px] font-bold text-[#4E5C70] block">
+                    Лимит использований (шт)
+                  </label>
+                  <AdminHint label="Лимит использований">Сколько заказов можно оформить с кодом. Код с лимитом работает только после входа Google.</AdminHint>
+                </div>
                 <input
                   id="promo-usage-limit"
                   type="number"
@@ -1034,13 +1100,18 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             {/* Scope Targeting: All vs Categories vs Specific Products */}
             <div className="pt-2 border-t border-[#BAC5D5]/40 space-y-2.5">
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <label className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-accent shrink-0" />
-                  <span>Область действия скидки:</span>
-                </label>
-                <div className="flex items-center gap-1 neu-flat-sm p-1 rounded-xl">
+                <div className="flex items-center gap-1">
+                  <p id="promo-scope-label" className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-accent shrink-0" />
+                    <span>Область действия скидки:</span>
+                  </p>
+                  <AdminHint label="Область действия">Скидка считается только с выбранных категорий или товаров, остальное в корзине без скидки.</AdminHint>
+                </div>
+                <div role="radiogroup" aria-labelledby="promo-scope-label" className="flex items-center gap-1 neu-flat-sm p-1 rounded-xl">
                   <button
                     type="button"
+                    role="radio"
+                    aria-checked={scopeType === 'all'}
                     onClick={() => setScopeType('all')}
                     className={`py-1 px-2.5 rounded-lg text-[11px] font-bold transition-all ${
                       scopeType === 'all'
@@ -1052,6 +1123,8 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                   </button>
                   <button
                     type="button"
+                    role="radio"
+                    aria-checked={scopeType === 'categories'}
                     onClick={() => setScopeType('categories')}
                     className={`py-1 px-2.5 rounded-lg text-[11px] font-bold transition-all ${
                       scopeType === 'categories'
@@ -1063,6 +1136,8 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                   </button>
                   <button
                     type="button"
+                    role="radio"
+                    aria-checked={scopeType === 'products'}
                     onClick={() => setScopeType('products')}
                     className={`py-1 px-2.5 rounded-lg text-[11px] font-bold transition-all ${
                       scopeType === 'products'
@@ -1152,10 +1227,14 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     {filteredProductsForSelect.map((prod) => {
                       const isSelected = selectedProductIds.includes(prod.id);
                       return (
-                        <div
+                        // The whole row is a checkbox: Tab reaches it, its state is heard (audit 07.10, finding 38)
+                        <button
                           key={prod.id}
+                          type="button"
+                          role="checkbox"
+                          aria-checked={isSelected}
                           onClick={() => handleToggleProduct(prod.id)}
-                          className={`p-2 rounded-xl flex items-center justify-between gap-2 transition-all cursor-pointer ${
+                          className={`w-full text-left p-2 rounded-xl flex items-center justify-between gap-2 transition-all cursor-pointer ${
                             isSelected
                               ? 'neu-pill-active'
                               : 'hover:bg-white/40 border border-transparent'
@@ -1165,7 +1244,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                             <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 neu-inset">
                               <ProductThumbImage
                                 product={prod}
-                                alt={prod.title}
+                                alt=""
                                 className="w-full h-full object-cover"
                                 referrerPolicy="no-referrer"
                               />
@@ -1178,7 +1257,8 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                             </div>
                           </div>
 
-                          <div
+                          <span
+                            aria-hidden="true"
                             className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all ${
                               isSelected
                                 ? 'neu-fill-accent text-white'
@@ -1186,8 +1266,8 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                             }`}
                           >
                             <Check className="w-3 h-3 stroke-[3]" />
-                          </div>
-                        </div>
+                          </span>
+                        </button>
                       );
                     })}
                   </div>
@@ -1198,9 +1278,12 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             {/* Badges & Popular tag */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-[#BAC5D5]/40">
               <div>
-                <label htmlFor="promo-badge-text" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
-                  Текст бейджа (наклейка)
-                </label>
+                <div className="flex items-center gap-1 mb-1">
+                  <label htmlFor="promo-badge-text" className="text-[11px] font-bold text-[#4E5C70] block">
+                    Текст бейджа (наклейка)
+                  </label>
+                  <AdminHint label="Текст бейджа">Короткая наклейка рядом с кодом в окне «Промокоды» у покупателя.</AdminHint>
+                </div>
                 <input
                   id="promo-badge-text"
                   type="text"
@@ -1232,7 +1315,10 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
               </div>
               <div className="flex items-center justify-between gap-3 pt-2 sm:pt-4 sm:col-span-2">
                 <span id="promo-is-public-label" className="text-[11px] font-bold text-[#2D3A4E]">
-                  Показывать покупателям в «Промокодах»
+                  <span className="flex items-center gap-1">
+                    Показывать покупателям в «Промокодах»
+                    <AdminHint label="Показывать покупателям">Включено — код виден всем в «Промокодах». Выключено — работает только у того, кому дали код.</AdminHint>
+                  </span>
                   <span className="block font-normal text-[#4E5C70]">
                     Выключите для личных кодов: их знает только тот, кому вы их дали
                   </span>
@@ -1283,6 +1369,28 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
 
       {/* Promos List */}
       <div className="space-y-3 w-full min-w-0">
+        {expiredActivePromos.length > 0 && (
+          <div className="bg-warning-soft border border-warning/30 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center gap-2.5">
+            <p className="text-xs text-[#2D3A4E] flex-1 min-w-0">
+              <strong>
+                {expiredActivePromos.length} {pluralRu(expiredActivePromos.length, ['промокод', 'промокода', 'промокодов'])}{' '}
+                с прошедшим сроком
+              </strong>{' '}
+              ({expiredCodesPreview(expiredActivePromos)}) ещё включены. Покупатель их уже не видит и не применит;
+              выключите, чтобы список совпадал с тем, что действует.
+            </p>
+            <button
+              type="button"
+              onClick={handleDisableExpired}
+              disabled={isDisablingExpired}
+              className={`h-9 px-4 rounded-xl text-xs font-extrabold shrink-0 self-start sm:self-auto ${
+                isDisablingExpired ? 'neu-button-disabled' : 'neu-button text-[#2D3A4E] cursor-pointer'
+              }`}
+            >
+              {isDisablingExpired ? 'Выключение…' : `Выключить ${expiredActivePromos.length}`}
+            </button>
+          </div>
+        )}
         <div className="flex items-center justify-between px-0.5">
           <p className="text-xs font-bold text-[#4E5C70]">
             Отображается: <strong className="text-[#2D3A4E]">{filteredPromos.length}</strong> (активных:{' '}
@@ -1329,6 +1437,12 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                       </span>
                     )}
 
+                    {isPromoExpired(promo) && (
+                      <span className="text-[11px] font-bold bg-warning-soft text-warning border border-warning/30 px-2 py-0.5 rounded-full">
+                        Срок истёк
+                      </span>
+                    )}
+
                     {promo.isBatch && (
                       <span className="text-[11px] font-bold neu-flat-sm text-accent px-2 py-0.5 rounded-full">
                         Одноразовый
@@ -1354,6 +1468,9 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     >
                       {promo.active ? 'Активен' : 'Пауза'}
                     </button>
+                    {prIdx === 0 && (
+                      <AdminHint label="Активен / Пауза">Пауза: код остаётся в списке, но покупатель его не применит.</AdminHint>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleOpenEdit(promo)}

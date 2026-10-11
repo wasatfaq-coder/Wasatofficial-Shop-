@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AdminHint } from './AdminHint';
 import { Check, ChevronDown, Copy, MapPin, UserRound } from 'lucide-react';
 import type { Order } from '../../types';
 import { copyToClipboard } from '../../utils/clipboard';
@@ -69,16 +70,19 @@ export const AdminOrderCopyCards: React.FC<{ order: Order }> = ({ order }) => {
 
   return (
     <div className="space-y-2">
+      <div className="flex items-center gap-1">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={panelId}
-        className="w-full min-h-8 px-2.5 rounded-xl neu-button text-[11px] font-bold text-[#2D3A4E] hover:text-accent flex items-center justify-between gap-2 cursor-pointer"
+        className="flex-1 min-w-0 min-h-8 px-2.5 rounded-xl neu-button text-[11px] font-bold text-[#2D3A4E] hover:text-accent flex items-center justify-between gap-2 cursor-pointer"
       >
         <span>ФИО и адрес для отправки</span>
         <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
+      <AdminHint label="ФИО и адрес для отправки">Данные по частям — копируйте в кабинет службы доставки</AdminHint>
+      </div>
       {open && (
         <div id={panelId} className="space-y-2">
           <section className="neu-flat-sm rounded-xl p-2.5 space-y-2" aria-label="ФИО клиента">

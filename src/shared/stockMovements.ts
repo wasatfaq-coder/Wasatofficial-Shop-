@@ -100,3 +100,68 @@ export function orderStockMovements(
   });
   return movements;
 }
+
+/** Вариант товара в журнале и в заказе: товар, цвет и размер без учёта регистра и пробелов по краям */
+export function variantKey(productId: string, color: unknown, size: unknown): string {
+  return [productId, String(color ?? '').trim().toLowerCase(), String(size ?? '').trim().toLowerCase()].join('|');
+}
+
+/** Сколько товара держит заказ в одном варианте */
+export interface HeldVariant {
+  productId: string;
+  productTitle: string;
+  color: string;
+  size: string;
+  /** Взято со склада и не возвращено: минус сумма записей журнала заказа по варианту */
+  held: number;
+}
+
+/**
+ * Что заказ держит на складе по вариантам — минус сумма всех записей журнала с его номером: списание строк
+ * `{заказ}_{строка}`, изменения «Правки состава», возвраты. После правки состава строки сдвигаются и меняют количество,
+ * а запись `{заказ}_{строка}` остаётся прежней, поэтому такой заказ сверяется со складом по вариантам, а не по номеру
+ * строки (аудит 07.10, находка 2).
+ */
+export function orderHeldStock(
+  entries: Pick<StockMovementLog, 'productId' | 'productTitle' | 'color' | 'size' | 'changeQuantity'>[]
+): Map<string, HeldVariant> {
+  const held = new Map<string, HeldVariant>();
+  for (const entry of entries) {
+    const key = variantKey(entry.productId, entry.color, entry.size);
+    const current = held.get(key) ?? {
+      productId: entry.productId,
+      productTitle: entry.productTitle,
+      color: entry.color,
+      size: entry.size,
+      held: 0,
+    };
+    held.set(key, { ...current, held: current.held - (Number(entry.changeQuantity) || 0) });
+  }
+  return held;
+}
+
+/**
+ * Строки заказа после «Правки состава», которые склад не покрывает, — по вариантам (`orderHeldStock`): вариант, за
+ * которым ничего не взято, — «Товар не списан со склада» (все его строки), взято меньше заказанного — «Не хватило на
+ * складе» (на первой строке варианта). Предзаказ со склада не берётся.
+ */
+export function adjustedOrderShortfall(
+  items: Pick<CartItem, 'product' | 'selectedColor' | 'selectedSize' | 'quantity' | 'isPreorder'>[],
+  held: Map<string, HeldVariant>
+): { missing: number[]; short: { lineIndex: number; taken: number; ordered: number }[] } {
+  const variants = new Map<string, { ordered: number; lines: number[] }>();
+  items.forEach((line, lineIndex) => {
+    if (line.isPreorder) return;
+    const key = variantKey(line.product.id, line.selectedColor, line.selectedSize);
+    const current = variants.get(key) ?? { ordered: 0, lines: [] };
+    variants.set(key, { ordered: current.ordered + (Number(line.quantity) || 0), lines: [...current.lines, lineIndex] });
+  });
+  const missing: number[] = [];
+  const short: { lineIndex: number; taken: number; ordered: number }[] = [];
+  for (const [key, { ordered, lines }] of variants) {
+    const taken = Math.max(0, held.get(key)?.held ?? 0);
+    if (taken <= 0) missing.push(...lines);
+    else if (taken < ordered) short.push({ lineIndex: lines[0], taken, ordered });
+  }
+  return { missing: missing.sort((a, b) => a - b), short };
+}

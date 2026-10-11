@@ -178,7 +178,7 @@ export const PAYMENT_STATUS_LABELS: Record<NonNullable<Order['paymentStatus']>, 
   receipt_review: 'Чек на проверке',
   paid: 'Оплачен',
   paid_on_delivery: 'Оплата при получении',
-  refunded: 'Оформлен возврат',
+  refunded: 'Возврат средств',
 };
 
 /**

@@ -85,7 +85,15 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      # the placeOrder function runs in the functions emulator (tests/e2e/server, audit 07.10, finding 43)
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
       - run: bun install --frozen-lockfile
+      - run: npm ci
+        working-directory: functions
       # the runner's Chrome is used (playwright.config.ts), no browser download; data goes only to the emulators
       - run: bun run test:e2e
       - name: Screenshots and traces of failed scenarios

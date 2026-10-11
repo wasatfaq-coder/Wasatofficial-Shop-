@@ -34,6 +34,14 @@ describe('orderPriceIssues', () => {
     expect(issues).toContain('скидка без промокода');
   });
 
+  test('a line\'s own price below the catalog is flagged too (docs/wholesale-spec.md, stage 1)', () => {
+    const fake = order({
+      items: [{ id: 'l1', product: { id: 'p1', title: 'Рубашка', price: 4000 }, unitPrice: 1, quantity: 2 }] as Order['items'],
+      totalPrice: 302,
+    });
+    expect(orderPriceIssues(fake, catalog)[0]).toContain('в заказе 1 ₽, в каталоге 4');
+  });
+
   test('not checked: placed by the server, paid, cancelled; an order without a fee is checked with the fee 0 (check 04.10)', () => {
     const cheap = { items: [{ id: 'l1', product: { id: 'p1', title: 'Рубашка', price: 1 }, quantity: 1 }] as Order['items'] };
     expect(orderPriceIssues(order({ ...cheap, placedVia: 'server' }), catalog)).toEqual([]);
@@ -43,6 +51,20 @@ describe('orderPriceIssues', () => {
     expect(orderPriceIssues(order({ deliveryFee: undefined, totalPrice: 5 }), catalog)).toHaveLength(1);
     // a product deleted from the catalog is not compared
     expect(orderPriceIssues(order({ items: [{ id: 'l1', product: { id: 'gone', title: 'X', price: 4000 }, quantity: 2 }] as Order['items'] }), catalog)).toEqual([]);
+  });
+
+  test('an order placed before a price change (rates) is checked against the price of its time (admin audit 09.10, finding 1)', () => {
+    // the price went from 4000 to 4200 a day after the order
+    const repriced = [
+      { id: 'p1', title: 'Рубашка', price: 4200, priceHistory: [{ price: 4000, until: '2026-10-02T10:00:00.000Z' }] },
+    ] as unknown as Product[];
+    expect(orderPriceIssues(order(), repriced)).toEqual([]);
+    // a price the product never had at that time is still flagged
+    const later = order({ createdAt: '2026-10-03T10:00:00.000Z' });
+    expect(orderPriceIssues(later, repriced)[0]).toMatch(/^«Рубашка»: в заказе 4.000 ₽, в каталоге 4.200 ₽/);
+    // a back-dated createdAt does not buy the old price: the server time of the write (updatedAt) decides
+    const backdated = order({ updatedAt: Date.parse('2026-10-03T10:00:00.000Z'), statusLog: [] } as Partial<Order>);
+    expect(orderPriceIssues(backdated, repriced)).toHaveLength(1);
   });
 });
 

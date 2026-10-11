@@ -26,7 +26,16 @@ import { NotConfigured } from '../components/NotConfigured';
 import type { StoreCategory } from '../types';
 import { categoryIcon } from '../utils/categories';
 import { pluralRu } from '../utils/pluralize';
-import { PRODUCTS_PAGE_SIZE } from '../utils/productListing';
+import { buyerPrice } from '../utils/wholesaleOffer';
+import {
+  DEFAULT_CATALOG_VIEW,
+  PRODUCTS_PAGE_SIZE,
+  catalogListKey,
+  shownProductCount,
+  withNextPortion,
+  type CatalogSort,
+  type CatalogView,
+} from '../utils/productListing';
 import { CatalogLoadState, type CatalogStatus } from '../components/CatalogLoadState';
 
 interface CatalogScreenProps {
@@ -59,6 +68,9 @@ interface CatalogScreenProps {
   /** Search shared with the top bar and the home screen (App); local when not given */
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
+  /** The sort and the portions opened (App): «Назад» from a product returns to the same list; local when not given */
+  view?: CatalogView;
+  onViewChange?: (updater: (prev: CatalogView) => CatalogView) => void;
 }
 
 export const CatalogScreen: React.FC<CatalogScreenProps> = ({
@@ -83,11 +95,17 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
   onFiltersClosed,
   searchQuery: externalSearchQuery,
   onSearchChange: externalOnSearchChange,
+  view: externalView,
+  onViewChange: externalOnViewChange,
 }) => {
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const searchQuery = externalSearchQuery ?? localSearchQuery;
   const setSearchQuery = externalOnSearchChange ?? setLocalSearchQuery;
-  const [sortBy, setSortBy] = useState<'popular' | 'price-asc' | 'price-desc' | 'newest'>('popular');
+  const [localView, setLocalView] = useState<CatalogView>(DEFAULT_CATALOG_VIEW);
+  const view = externalView ?? localView;
+  const setView = externalOnViewChange ?? setLocalView;
+  const sortBy = view.sortBy;
+  const setSortBy = (next: CatalogSort) => setView((prev) => ({ ...prev, sortBy: next }));
   const [showSortMenu, setShowSortMenu] = useState(false);
   
   // Local fallback filter state if not provided from parent
@@ -111,6 +129,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
     if (filterState.onlyInStock) count++;
     if (filterState.onlyNew) count++;
     if (filterState.onlyDiscount) count++;
+    if (filterState.onlyWholesale) count++;
     if (filterState.minRating > 0) count++;
     return count;
   }, [selectedCategory, filterState]);
@@ -147,8 +166,8 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
         return matchesQuery && matchesCatalogFilters(p, selectedCategory, filterState);
       })
       .sort((a, b) => {
-        if (sortBy === 'price-asc') return a.price - b.price;
-        if (sortBy === 'price-desc') return b.price - a.price;
+        if (sortBy === 'price-asc') return buyerPrice(a) - buyerPrice(b);
+        if (sortBy === 'price-desc') return buyerPrice(b) - buyerPrice(a);
         if (sortBy === 'newest') return (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0);
         return productRatingValue(b) - productRatingValue(a); // popular
       });
@@ -160,16 +179,16 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
     sortBy,
   ]);
 
-  // The catalog opens with one portion; a new search, filter or sort starts from the first portion again
-  const [visibleCount, setVisibleCount] = useState(PRODUCTS_PAGE_SIZE);
-  React.useEffect(() => setVisibleCount(PRODUCTS_PAGE_SIZE), [selectedCategory, searchQuery, filterState, sortBy]);
-  const visibleProducts = filteredProducts.slice(0, visibleCount);
+  // The catalog opens with one portion; a new search, filter or sort starts from the first portion again, and the
+  // way back from a product keeps the portions opened (finding 22)
+  const listKey = catalogListKey(selectedCategory, searchQuery, filterState, sortBy);
+  const visibleProducts = filteredProducts.slice(0, shownProductCount(view, listKey));
   const hiddenCount = filteredProducts.length - visibleProducts.length;
 
   return (
     <div className="space-y-4 pb-32 lg:pb-10 animate-in fade-in duration-300">
       {/* Computer (lg): filters in a column on the left, applied at once; search is in the top bar */}
-      <div className={products.length > 0 ? 'lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-6 lg:items-start' : ''}>
+      <div className={products.length > 0 ? 'lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-6 lg:items-start' : ''}>
       {/* an empty store has nothing to filter: no made-up price scale and materials with 0 (finding 40) */}
       {products.length > 0 && (
       <aside aria-label="Фильтры каталога" className="hidden lg:block lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto no-scrollbar p-1 -m-1">
@@ -390,6 +409,19 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
             </span>
           )}
 
+          {filterState.onlyWholesale && (
+            <span className="neu-inset text-[11px] font-bold text-[#2D3A4E] pl-3 pr-1 py-1 rounded-full flex items-center gap-1 border border-accent/30">
+              Оптом
+              <button
+                onClick={() => setFilterState((prev) => ({ ...prev, onlyWholesale: false }))}
+                className="w-6 h-6 rounded-full flex items-center justify-center text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
+                aria-label="Убрать фильтр «Оптом»"
+              >
+                <X className="w-3 h-3 stroke-[2.5]" />
+              </button>
+            </span>
+          )}
+
           <button
             onClick={handleResetAll}
             className="text-xs font-bold text-danger hover:text-danger flex items-center gap-1.5 ml-auto cursor-pointer active:scale-95 transition-transform py-1 px-2.5 rounded-xl hover:neu-inset"
@@ -541,7 +573,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                 </p>
                 <button
                   type="button"
-                  onClick={() => setVisibleCount((count) => count + PRODUCTS_PAGE_SIZE)}
+                  onClick={() => setView((prev) => withNextPortion(prev, listKey))}
                   className="neu-button rounded-2xl h-11 px-6 text-sm font-extrabold text-accent cursor-pointer"
                 >
                   Показать ещё {Math.min(PRODUCTS_PAGE_SIZE, hiddenCount)}

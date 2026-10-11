@@ -41,15 +41,32 @@ export const PRODUCTS = {
     colors: [{ name: 'Бежевый', hex: '#D8C8A8' }],
     sizes: ['S', 'M', 'L'],
   }),
-  polo: product({
-    id: 'e2e-polo',
-    title: 'Поло классическое',
-    category: 'polo',
-    categoryLabel: 'Поло',
-    price: 2490,
-    colors: [{ name: 'Темно-синий', hex: '#1F2A44' }],
-    sizes: ['M', 'L', 'XL'],
-  }),
+  polo: {
+    ...product({
+      id: 'e2e-polo',
+      title: 'Поло классическое',
+      category: 'polo',
+      categoryLabel: 'Поло',
+      price: 2490,
+      colors: [{ name: 'Темно-синий', hex: '#1F2A44' }],
+      sizes: ['M', 'L', 'XL'],
+    }),
+    // «Размерная сетка»: wider than a phone; «Обхват талии» has no values and is not shown (size-chart.spec.ts)
+    sizeChart: {
+      columns: [
+        { key: 'm1', label: 'Длина изделия' },
+        { key: 'm2', label: 'Ширина по груди' },
+        { key: 'm3', label: 'Ширина плеч' },
+        { key: 'm4', label: 'Длина рукава' },
+        { key: 'm5', label: 'Обхват талии' },
+      ],
+      rows: [
+        { size: 'M', values: { m1: '70', m2: '52', m3: '45', m4: '21' } },
+        { size: 'L', values: { m1: '72', m2: '55', m3: '47', m4: '22' } },
+        { size: 'XL', values: { m1: '74', m2: '58', m3: '49', m4: '23' } },
+      ],
+    },
+  },
   chinos: product({
     id: 'e2e-chinos',
     title: 'Брюки чинос',
@@ -106,6 +123,121 @@ export const PRODUCTS = {
     colors: [{ name: 'Темно-синий', hex: '#1F2A44' }],
     sizes: ['Единый'],
   }), isPopular: false, photoIds: ['e2e-tie_full'] },
+  // the buyer orders and cancels: the cap on the phone, these on the computer — each run writes off its own product
+  gloves: { ...product({
+    id: 'e2e-gloves',
+    title: 'Перчатки кожаные',
+    category: 'accessories',
+    categoryLabel: 'Аксессуары',
+    price: 2490,
+    colors: [{ name: 'Черный', hex: '#111111' }],
+    sizes: ['Единый'],
+  }), isPopular: false },
+  // the owner takes an order through and cancels it with a return to stock: one product per screen size
+  wallet: { ...product({
+    id: 'e2e-wallet',
+    title: 'Кошелёк кожаный',
+    category: 'accessories',
+    categoryLabel: 'Аксессуары',
+    price: 1890,
+    colors: [{ name: 'Черный', hex: '#111111' }],
+    sizes: ['Единый'],
+  }), isPopular: false },
+  umbrella: { ...product({
+    id: 'e2e-umbrella',
+    title: 'Зонт складной',
+    category: 'accessories',
+    categoryLabel: 'Аксессуары',
+    price: 2190,
+    colors: [{ name: 'Черный', hex: '#111111' }],
+    sizes: ['Единый'],
+  }), isPopular: false },
+  // «Курсы и наценка» (09.10): its price goes after the dollar rate; only rates.spec.ts changes it
+  tshirt: { ...product({
+    id: 'e2e-tshirt',
+    title: 'Футболка из Китая',
+    category: 'tshirts',
+    categoryLabel: 'Футболки',
+    price: 1000,
+    colors: [{ name: 'Синий', hex: '#2C4A6B' }],
+    sizes: ['48', '50', '52'],
+  }), isPopular: false },
+  // «Склад и SKU» → «Оформить операцию»: a receipt of several sizes at once (warehouse.spec.ts), one per screen size
+  hoodie: { ...product({
+    id: 'e2e-hoodie',
+    title: 'Худи на молнии',
+    category: 'tshirts',
+    categoryLabel: 'Футболки',
+    price: 3990,
+    colors: [{ name: 'Серый', hex: '#8A8F98' }],
+    sizes: ['S', 'M', 'L'],
+    stock: 4,
+  }), isPopular: false },
+  sweater: { ...product({
+    id: 'e2e-sweater',
+    title: 'Свитер вязаный',
+    category: 'tshirts',
+    categoryLabel: 'Футболки',
+    price: 4490,
+    colors: [{ name: 'Серый', hex: '#8A8F98' }],
+    sizes: ['S', 'M', 'L'],
+    stock: 4,
+  }), isPopular: false },
+  // «Товары»: the price and the stock right in the list (stage 4 of docs/admin-wholesale-plan.md), one per screen size
+  overshirt: { ...product({
+    id: 'e2e-overshirt',
+    title: 'Куртка-рубашка',
+    category: 'tshirts',
+    categoryLabel: 'Футболки',
+    price: 5990,
+    colors: [{ name: 'Хаки', hex: '#556B2F' }],
+    sizes: ['S', 'M'],
+    stock: 5,
+  }), isPopular: false },
+  // Опт у покупателя (stages 16–17 of docs/admin-wholesale-plan.md): the phone buys M, the computer L
+  workTee: {
+    ...product({
+      id: 'e2e-work-tee',
+      title: 'Футболка рабочая',
+      category: 'tshirts',
+      categoryLabel: 'Футболки',
+      price: 1990,
+      colors: [{ name: 'Серый', hex: '#8A8F98' }],
+      sizes: ['M', 'L'],
+      stock: 100,
+    }),
+    isPopular: false,
+    saleChannel: 'both' as const,
+    wholesalePrice: 1200,
+    wholesalePackSize: 5,
+    wholesaleMinPacks: 2,
+  },
+  bulkTank: {
+    ...product({
+      id: 'e2e-bulk-tank',
+      title: 'Майка оптовая',
+      category: 'tshirts',
+      categoryLabel: 'Футболки',
+      price: 990,
+      colors: [{ name: 'Белый', hex: '#FFFFFF' }],
+      sizes: ['M'],
+      stock: 100,
+    }),
+    isPopular: false,
+    saleChannel: 'wholesale' as const,
+    wholesalePrice: 450,
+    wholesalePackSize: 10,
+  },
+  vest: { ...product({
+    id: 'e2e-vest',
+    title: 'Жилет стёганый',
+    category: 'tshirts',
+    categoryLabel: 'Футболки',
+    price: 5490,
+    colors: [{ name: 'Хаки', hex: '#556B2F' }],
+    sizes: ['S', 'M'],
+    stock: 5,
+  }), isPopular: false },
 };
 
 /** A full photo of a product as `product_photos` keeps it (the product holds a preview) */
@@ -138,6 +270,8 @@ export function storeDocs(): Record<string, Record<string, unknown>> {
       legalAddress: 'г. Москва, ул. Тверская, д. 7',
       categories,
       labelFormats: [{ id: 'f58x40', name: '58×40 мм', widthMm: 58, heightMm: 40 }],
+      // «Опт»: −10 % from 3 packs of a model
+      wholesale: { volumeDiscount: { kind: 'percent', countBy: 'product', tiers: [{ minPacks: 3, value: 10 }] } },
       paymentMethods: [
         { id: 'transfer', title: 'Перевод по номеру телефона', description: 'Менеджер пришлет номер для перевода.', isActive: true },
         { id: 'cash', title: 'Наличными или картой при получении', onDelivery: true, isActive: true },

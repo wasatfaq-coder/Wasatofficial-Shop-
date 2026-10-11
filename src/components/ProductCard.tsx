@@ -5,9 +5,10 @@ import { needsVariantChoice } from '../utils/variantSelection';
 import { productHref } from '../utils/navigation';
 import { NeumorphicImage } from './NeumorphicImage';
 import { AnimatedFavoriteButton } from './AnimatedFavoriteButton';
-import { photoBadgeClass } from '../utils/productBadge';
+import { photoBadgeClass, shownBadge, shownOldPrice } from '../utils/productBadge';
 import { getProductRating } from '../utils/productRating';
 import { useProductThumb } from '../utils/productThumbs';
+import { sellsRetail, sellsWholesale } from '../shared/wholesalePricing';
 
 /** Whether the element is on the screen: null until it is laid out, then true once it has been seen */
 function useOnScreen(ref: React.RefObject<HTMLElement | null>): boolean | null {
@@ -70,11 +71,24 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   // From real reviews only; hidden until the product has any
   const ratingInfo = getProductRating(product);
 
-  // Calculate discount percentage if old price exists
-  const discountPercent =
-    product.originalPrice && product.originalPrice > product.price
-      ? Math.round((1 - product.price / product.originalPrice) * 100)
-      : null;
+  // Discount percentage when the old price is above the price
+  const oldPrice = shownOldPrice(product);
+  const badge = shownBadge(product);
+  const discountPercent = oldPrice !== null ? Math.round((1 - product.price / oldPrice) * 100) : null;
+  // «Только оптом»: the card shows the wholesale price, the retail one is not sold; «+» opens the product (packs)
+  const wholesaleOnly = sellsWholesale(product) && !sellsRetail(product);
+  const wholesaleNote = !sellsWholesale(product)
+    ? null
+    : wholesaleOnly
+    ? 'Только оптом, за шт.'
+    : `Опт — ${(product.wholesalePrice as number).toLocaleString('ru-RU')} ₽/шт.`;
+  const addLabel = justAdded
+    ? 'Добавлено в корзину'
+    : wholesaleOnly
+    ? `Купить оптом: ${product.title}`
+    : needsChoice
+    ? `Выбрать размер: ${product.title}`
+    : 'Добавить в корзину';
 
   return (
     // The title link is stretched over the card (after:inset-0): one Tab stop and Enter opens the product;
@@ -95,10 +109,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         />
 
         {/* Badge in top-left corner */}
-        {product.badge && (
+        {badge && (
           <div className="absolute top-2.5 left-2.5 z-10">
-            <span className={`h-6 px-2.5 rounded-full ${photoBadgeClass(product.badge)} text-[11px] tracking-wider uppercase font-bold inline-flex items-center justify-center leading-none`}>
-              {product.badge}
+            <span className={`h-6 px-2.5 rounded-full ${photoBadgeClass(badge)} text-[11px] tracking-wider uppercase font-bold inline-flex items-center justify-center leading-none`}>
+              {badge}
             </span>
           </div>
         )}
@@ -122,6 +136,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           <AnimatedFavoriteButton
             isFavorite={isFavorite}
             onToggle={(e) => onToggleFavorite(product, e)}
+            productTitle={product.title}
             size="sm"
             className="neu-photo-btn"
           />
@@ -166,19 +181,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           <div className="flex flex-col min-h-[36px] justify-end">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="font-display text-[15px] font-extrabold text-[#2D3A4E] leading-none">
-                {product.price.toLocaleString('ru-RU')} ₽
+                {(wholesaleOnly ? (product.wholesalePrice as number) : product.price).toLocaleString('ru-RU')} ₽
               </span>
-              {discountPercent ? (
+              {!wholesaleOnly && discountPercent ? (
                 <span className="text-[11px] font-bold text-accent bg-[#E3E8EF] px-1.5 py-0.5 rounded-md border border-white/60 leading-none">
                   -{discountPercent}%
                 </span>
               ) : null}
             </div>
-            {product.originalPrice && product.originalPrice > product.price ? (
+            {!wholesaleOnly && oldPrice !== null && (
               <span className="text-[12px] text-[#4E5C70] line-through font-normal leading-tight mt-0.5">
-                {product.originalPrice.toLocaleString('ru-RU')} ₽
+                {oldPrice.toLocaleString('ru-RU')} ₽
               </span>
-            ) : (
+            )}
+            {wholesaleNote ? (
+              <span className="text-[11px] font-bold text-accent leading-tight mt-0.5">{wholesaleNote}</span>
+            ) : oldPrice === null && (
               <span className="text-[12px] opacity-0 font-normal leading-tight mt-0.5 select-none" aria-hidden="true">
                 0 ₽
               </span>
@@ -194,9 +212,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 ? 'neu-inset text-success'
                 : 'neu-button text-accent'
             }`}
-            aria-label={justAdded ? 'Добавлено в корзину' : needsChoice ? `Выбрать размер: ${product.title}` : 'Добавить в корзину'}
-            aria-haspopup={needsChoice ? 'dialog' : undefined}
-            title={justAdded ? 'Добавлено в корзину' : needsChoice ? 'Выбрать размер и добавить в корзину' : 'Добавить в корзину'}
+            aria-label={addLabel}
+            aria-haspopup={needsChoice && !wholesaleOnly ? 'dialog' : undefined}
+            title={
+              justAdded
+                ? 'Добавлено в корзину'
+                : wholesaleOnly
+                ? 'Выбрать упаковки на странице товара'
+                : needsChoice
+                ? 'Выбрать размер и добавить в корзину'
+                : 'Добавить в корзину'
+            }
           >
             {justAdded ? (
               <Check className="w-4 h-4 stroke-[3] animate-in zoom-in-50 duration-200" />

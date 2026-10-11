@@ -18,6 +18,7 @@ import { subscribeToLegalTexts } from '../../utils/firebaseSync';
 import { useUnsavedChanges } from '../../utils/unsavedChanges';
 import { LegalText } from '../LegalText';
 import { ConfirmDialog } from '../ConfirmDialog';
+import { AdminHint } from './AdminHint';
 import { siteUrl } from '../../views/LegalDocumentScreen';
 
 interface AdminLegalTabProps {
@@ -185,7 +186,8 @@ export const AdminLegalTab: React.FC<AdminLegalTabProps> = ({ settings, onSaveLe
               </div>
             )}
 
-            <details className="neu-inset rounded-2xl p-3 text-[11px] text-[#2D3A4E]">
+            <div className="flex items-start gap-1">
+            <details className="flex-1 min-w-0 neu-inset rounded-2xl p-3 text-[11px] text-[#2D3A4E]">
               <summary className="font-bold cursor-pointer">Метки и их значения</summary>
               <dl className="mt-2 grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-x-3 gap-y-1">
                 {placeholders.map((p) => (
@@ -198,6 +200,10 @@ export const AdminLegalTab: React.FC<AdminLegalTabProps> = ({ settings, onSaveLe
                 ))}
               </dl>
             </details>
+            <AdminHint label="Метки {{…}}" className="mt-2">
+              Метка заменяется вашими реквизитами из «Витрины» в тексте для покупателя.
+            </AdminHint>
+            </div>
 
             <div className="flex flex-wrap gap-2 justify-end">
               {edition && (
@@ -209,6 +215,11 @@ export const AdminLegalTab: React.FC<AdminLegalTabProps> = ({ settings, onSaveLe
                 >
                   <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" /> Вернуть шаблон
                 </button>
+              )}
+              {edition && (
+                <AdminHint label="Вернуть шаблон" className="self-center">
+                  Выбросит ваш текст и вернёт готовый шаблон. Отменить нельзя.
+                </AdminHint>
               )}
               {dirty && (
                 <button

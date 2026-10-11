@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { AdminHint } from './AdminHint';
 import { Bug, Trash2 } from 'lucide-react';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { deleteClientErrors, deleteClientErrorsBefore, subscribeToClientErrors } from '../../utils/firebaseSync';
@@ -83,9 +84,12 @@ export const AdminSiteErrorsCard: React.FC<{
           <Bug className="w-4 h-4" aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 id="site-errors-title" className="text-sm font-extrabold text-[#2D3A4E]">
-            Ошибки на сайте
-          </h3>
+          <div className="flex items-center gap-1">
+            <h3 id="site-errors-title" className="text-sm font-extrabold text-[#2D3A4E]">
+              Ошибки на сайте
+            </h3>
+            <AdminHint label="Ошибки на сайте">Сбои, которые случились у покупателей. Если пусто — всё работает</AdminHint>
+          </div>
           <p className="text-xs text-[#4E5C70]" aria-live="polite">
             {summary}
           </p>

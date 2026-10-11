@@ -1,0 +1,37 @@
+# Скиллы и команды ECC, которые Claude видит в списке скиллов и вызывает сам (по одному имени без ecc: в строке).
+# Остальные уходят в каталог (.claude/hooks/ecc-skill-fixes.py): Claude Code их не грузит, а Claude подбирает и выполняет
+# их по просьбе через скилл finding-skills (.claude/skills/finding-skills/catalog.md). Список скиллов ограничен ~30 000
+# знаков: без этого описания не влезали у 300+ скиллов, в том числе у всех скиллов Anthropic (docx, pdf, xlsx…).
+# Добавляя имя, проверь замер (docs/skills.md, «Список скиллов»): у всех записей должно остаться описание.
+
+security-review
+react-patterns
+react-performance
+react-testing
+e2e-testing
+frontend-a11y
+accessibility
+vite-patterns
+browser-qa
+seo
+code-review
+review-pr
+react-review
+security-scan
+verification-loop
+search-first
+error-handling
+frontend-patterns
+make-interfaces-feel-better
+design-system
+frontend-design-direction
+click-path-audit
+production-audit
+react-build
+build-fix
+plan
+tdd-workflow
+react-test
+# В каталоге, а не здесь: documentation-lookup — нужен сервер Context7, сеть окружения его не пускает (07.10);
+# deep-research — нужны серверы firecrawl и exa, исследование ведёт anthropic-skills:deep-research.
+# Запас списка 07.10 — ≈ 580 знаков (замер в docs/skills.md): описания скиллов Anthropic обновляются сами и могут вырасти.

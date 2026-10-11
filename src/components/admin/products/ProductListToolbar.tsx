@@ -1,55 +1,39 @@
-import {
-  Search,
-  Plus,
-  Trash2,
-  Tag,
-  Check,
-  X,
-  SlidersHorizontal,
-  Download,
-  Upload,
-  Layers,
-  Sparkles,
-  ChevronDown,
-} from 'lucide-react';
+import { Search, Plus, Check, Download, Upload, Sparkles } from 'lucide-react';
 import { Product } from '../../../types';
 import { exportProductsToCSV } from '../../../utils/csvHelpers';
 import { isHiddenFromSale } from '../../../utils/inventory';
+import { isWholesaleListed } from '../../../utils/wholesaleOffer';
 import { NeumorphicSelect } from '../../NeumorphicSelect';
 import type { StoreCategory } from '../../../types';
 
-import type { ProductCategoryOption } from '../AdminProductsTab';
+import { AdminHint } from '../AdminHint';
 import type { ProductList } from './useProductList';
 
-/** Search, CSV, quick phrases and «Добавить товар»; the stock and category filters; selection and bulk actions */
-export function ProductListToolbar({ list, products, categories, CATEGORY_OPTIONS, handleOpenAddProduct, setTextEditModal }: {
+/** Search, CSV, quick phrases and «Добавить товар»; the stock and category filters; «Выбрать все» (the actions — `ProductSelectionBar`) */
+export function ProductListToolbar({ list, products, categories, handleOpenAddProduct, setTextEditModal }: {
   list: ProductList;
   products: Product[];
   categories: StoreCategory[];
-  CATEGORY_OPTIONS: ProductCategoryOption[];
   handleOpenAddProduct: () => void;
   setTextEditModal: (modal: { isOpen: boolean; category?: string; title: string; subtitle: string; value: string } | null) => void;
 }) {
   const {
     searchQuery,
     setSearchQuery,
-    setIsBulkDeleteConfirmOpen,
     categoryFilter,
     setCategoryFilter,
     stockFilter,
     setStockFilter,
+    wholesaleFilter,
+    setWholesaleFilter,
     selectedProductIds,
-    setIsBulkOperationsModalOpen,
-    setIsBulkDiscountModalOpen,
-    isBulkCategoryDropdownOpen,
-    setIsBulkCategoryDropdownOpen,
     setIsCSVImportModalOpen,
     isAllFilteredSelected,
     categorySelectOptions,
     handleToggleSelectAll,
-    handleBulkToggleStock,
-    handleBulkChangeCategory,
   } = list;
+
+  const wholesaleCount = products.filter(isWholesaleListed).length;
 
   return (
     <>
@@ -67,7 +51,7 @@ export function ProductListToolbar({ list, products, categories, CATEGORY_OPTION
           />
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
           <button
             onClick={() => exportProductsToCSV(products)}
             className="py-2 px-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-accent flex items-center gap-1 cursor-pointer transition-colors"
@@ -76,6 +60,7 @@ export function ProductListToolbar({ list, products, categories, CATEGORY_OPTION
             <Download className="w-3.5 h-3.5 text-accent" />
             <span className="hidden sm:inline">Экспорт CSV</span>
           </button>
+          <AdminHint label="Экспорт CSV">Скачать весь каталог таблицей, чтобы править в Excel.</AdminHint>
 
           <button
             onClick={() => setIsCSVImportModalOpen(true)}
@@ -85,6 +70,7 @@ export function ProductListToolbar({ list, products, categories, CATEGORY_OPTION
             <Upload className="w-3.5 h-3.5 text-accent" />
             <span className="hidden sm:inline">Импорт</span>
           </button>
+          <AdminHint label="Импорт CSV">Загрузить таблицу: новые товары добавятся, у старых поменяются цены и данные.</AdminHint>
 
           <button
             onClick={() =>
@@ -102,6 +88,7 @@ export function ProductListToolbar({ list, products, categories, CATEGORY_OPTION
             <Sparkles className="w-3.5 h-3.5 text-accent" />
             <span className="hidden sm:inline">Быстрые фразы</span>
           </button>
+          <AdminHint label="Быстрые фразы">Готовые фразы для описаний: вставляете их в товар одним нажатием.</AdminHint>
 
           <button
             onClick={handleOpenAddProduct}
@@ -158,6 +145,22 @@ export function ProductListToolbar({ list, products, categories, CATEGORY_OPTION
         </div>
       </div>
 
+      {/* «Опт»: only while the store has products offered wholesale */}
+      {(wholesaleCount > 0 || wholesaleFilter) && (
+        <div className="flex">
+          <button
+            type="button"
+            onClick={() => setWholesaleFilter(!wholesaleFilter)}
+            aria-pressed={wholesaleFilter}
+            className={`min-h-8 px-3 py-1.5 rounded-xl text-[11px] transition-all cursor-pointer ${
+              wholesaleFilter ? 'neu-pill-active font-extrabold' : 'neu-button font-bold text-[#4E5C70] hover:text-[#2D3A4E]'
+            }`}
+          >
+            Опт ({wholesaleCount})
+          </button>
+        </div>
+      )}
+
       {/* Selection & Bulk Actions Toolbar (nothing to select in an empty catalog) */}
       {products.length > 0 && (
       <div className="neu-inset rounded-2xl p-3 space-y-2">
@@ -184,79 +187,10 @@ export function ProductListToolbar({ list, products, categories, CATEGORY_OPTION
             </span>
           </button>
 
-          <span className="text-xs font-bold text-[#4E5C70]">
-            Выбрано: <strong className="text-accent">{selectedProductIds.length}</strong>
-          </span>
+          {selectedProductIds.length === 0 && (
+            <span className="text-xs text-[#4E5C70] text-right">Действия с отмеченными — внизу списка</span>
+          )}
         </div>
-
-        {selectedProductIds.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 pt-1.5 animate-in fade-in duration-150">
-            <button
-              onClick={() => setIsBulkOperationsModalOpen(true)}
-              className="h-8 px-3 neu-button rounded-xl text-[11px] font-extrabold text-accent flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-all"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              Массовые операции
-            </button>
-
-            <button
-              onClick={() => setIsBulkDiscountModalOpen(true)}
-              className="h-8 px-3 neu-button rounded-xl text-[11px] font-extrabold text-[#4E5C70] hover:text-accent flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-all"
-            >
-              <Tag className="w-3.5 h-3.5 text-accent" />
-              Скидка
-            </button>
-
-            <div className="relative">
-              <button
-                onClick={() => setIsBulkCategoryDropdownOpen(!isBulkCategoryDropdownOpen)}
-                className="h-8 px-3 neu-button rounded-xl text-[11px] font-extrabold text-[#4E5C70] hover:text-[#2D3A4E] flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-all"
-              >
-                <Layers className="w-3.5 h-3.5 text-accent" />
-                Сменить категорию
-                <ChevronDown className="w-3 h-3 ml-0.5" />
-              </button>
-
-              {isBulkCategoryDropdownOpen && (
-                <div className="absolute left-0 top-full mt-1.5 z-40 neu-dropdown rounded-2xl p-1.5 space-y-1 min-w-[160px] animate-in fade-in border border-white/80">
-                  {CATEGORY_OPTIONS.filter((c) => c.id !== 'all').map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => handleBulkChangeCategory(cat.id)}
-                      className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-[#2D3A4E] hover:bg-white/40 cursor-pointer transition-colors"
-                    >
-                      {cat.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={() => handleBulkToggleStock(false)}
-              className="h-8 px-3 neu-button rounded-xl text-[11px] font-extrabold text-[#4E5C70] hover:text-warning flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-all"
-            >
-              <X className="w-3.5 h-3.5 text-warning" />
-              Снять с продажи
-            </button>
-
-            <button
-              onClick={() => handleBulkToggleStock(true)}
-              className="h-8 px-3 neu-button rounded-xl text-[11px] font-extrabold text-[#4E5C70] hover:text-success flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-all"
-            >
-              <Check className="w-3.5 h-3.5 text-success" />
-              В продажу
-            </button>
-
-            <button
-              onClick={() => setIsBulkDeleteConfirmOpen(true)}
-              className="h-8 px-3 neu-button-danger rounded-xl text-[11px] font-extrabold flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-all"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              Удалить
-            </button>
-          </div>
-        )}
       </div>
       )}
     </>
