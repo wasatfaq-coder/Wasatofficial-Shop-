@@ -6,6 +6,7 @@ import type {
   PaymentKind,
   PaymentLogEntry,
   PaymentRequisitesByKind,
+  TransferCommentSetting,
 } from '../types';
 
 export const PAYMENT_KINDS: PaymentKind[] = ['sbp', 'card', 'account'];
@@ -165,6 +166,46 @@ export function validateRequisites<K extends PaymentKind>(kind: K, fields: Payme
 
 export const isValidRequisites = <K extends PaymentKind>(kind: K, fields: PaymentRequisitesByKind[K] | undefined): boolean =>
   Boolean(fields) && Object.keys(validateRequisites(kind, fields as PaymentRequisitesByKind[K])).length === 0;
+
+export const TRANSFER_COMMENT_MAX = 140;
+export const TRANSFER_COMMENT_PLACEHOLDER = '{номер}';
+/** Sample order id for the admin's live preview */
+export const TRANSFER_COMMENT_SAMPLE_ID = 'WS-12345678';
+
+export const TRANSFER_COMMENT_MODE_LABELS: Record<TransferCommentSetting['mode'], string> = {
+  order: 'Номер заказа',
+  custom: 'Свой текст',
+  none: 'Без комментария',
+};
+
+/** Reads a stored setting: anything unknown falls back to the old behaviour («Заказ № …») */
+export function normalizeTransferComment(value: unknown): TransferCommentSetting {
+  const v = (value ?? {}) as { mode?: unknown; text?: unknown };
+  if (v.mode === 'none') return { mode: 'none' };
+  if (v.mode === 'custom') return { mode: 'custom', text: typeof v.text === 'string' ? v.text.trim().slice(0, TRANSFER_COMMENT_MAX) : '' };
+  return { mode: 'order' };
+}
+
+/** The setting as it is written to the database: no empty text, trimmed */
+export function storedTransferComment(setting: TransferCommentSetting | undefined): TransferCommentSetting {
+  const s = normalizeTransferComment(setting);
+  return s.mode === 'custom' ? { mode: 'custom', text: s.text ?? '' } : { mode: s.mode };
+}
+
+/** Error text for the custom comment; null — valid (the text may be empty: the buyer then sees «не нужен») */
+export function validateTransferComment(setting: TransferCommentSetting | undefined): string | null {
+  if (setting?.mode !== 'custom') return null;
+  const length = (setting.text ?? '').trim().length;
+  return length > TRANSFER_COMMENT_MAX ? `Комментарий — не больше ${TRANSFER_COMMENT_MAX} знаков (сейчас ${length})` : null;
+}
+
+/** The comment the buyer must write in the transfer; '' — no comment is needed */
+export function resolveTransferComment(setting: TransferCommentSetting | undefined, orderId: string): string {
+  const s = normalizeTransferComment(setting);
+  if (s.mode === 'none') return '';
+  if (s.mode === 'custom') return (s.text ?? '').split(TRANSFER_COMMENT_PLACEHOLDER).join(orderId).trim();
+  return `Заказ № ${orderId}`;
+}
 
 /** The ways the buyer sees: only those the admin filled for the order (brief §5.2) */
 export function filledPaymentKinds(details: OrderPaymentDetails | undefined): PaymentKind[] {
