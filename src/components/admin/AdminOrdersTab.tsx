@@ -59,6 +59,7 @@ import {
   getEstimatedDeliveryForStatus,
 } from '../../utils/deliveryStages';
 import { AdminOrderInvoiceModal } from './AdminOrderInvoiceModal';
+import { orderWeight, orderWeightText } from '../../utils/productShipping';
 import { AdminOrderAdjustmentModal } from './AdminOrderAdjustmentModal';
 import { AdminHandoverDialog } from './AdminHandoverDialog';
 import { OrderTimeline } from '../OrderTimeline';
@@ -1775,6 +1776,16 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                           <strong>Адрес:</strong> {ord.deliveryAddress || 'не указан'}
                         </p>
 
+                        {(() => {
+                          // Weight of the goods (stage 15): for the Post and carriers; silent without weights
+                          const weightText = orderWeightText(orderWeight(ord.items, products));
+                          return weightText ? (
+                            <p className="text-[#2D3A4E]">
+                              <strong>Вес товаров:</strong> {weightText}
+                            </p>
+                          ) : null;
+                        })()}
+
                         <AdminOrderCopyCards order={ord} />
 
                         {!ord.isCancelled && ord.paymentStatus !== 'paid_on_delivery' && ord.paymentStatus !== 'refunded' && (
@@ -2171,6 +2182,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         onClose={() => setSelectedOrderForInvoice(null)}
         order={selectedOrderForInvoice}
         storefrontSettings={storefrontSettings}
+        products={products}
         onShowToast={onShowToast}
       />
 

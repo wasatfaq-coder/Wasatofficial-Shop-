@@ -2,7 +2,7 @@ import React from 'react';
 import { ChevronDown } from 'lucide-react';
 
 /** Blocks of the product form, top to bottom (stage 4 of docs/admin-wholesale-plan.md, variant A) */
-export const PRODUCT_FORM_BLOCKS = ['main', 'prices', 'photos', 'variants', 'card'] as const;
+export const PRODUCT_FORM_BLOCKS = ['main', 'prices', 'photos', 'variants', 'card', 'shipping'] as const;
 export type ProductFormBlockId = (typeof PRODUCT_FORM_BLOCKS)[number];
 /** An existing product opens on what is changed most: the name and the prices; the rest shows its summary */
 export const EDITED_PRODUCT_OPEN_BLOCKS: ProductFormBlockId[] = ['main', 'prices'];

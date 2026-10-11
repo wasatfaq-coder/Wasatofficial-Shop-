@@ -1,18 +1,21 @@
 import React from 'react';
 import { X, Printer, FileText, CreditCard, Truck } from 'lucide-react';
-import { Order, StorefrontSettings } from '../../types';
+import { Order, Product, StorefrontSettings } from '../../types';
 import { currentStoreName, getLegalDetails, getStoreContacts } from '../../utils/storeContacts';
 import { copyToClipboard } from '../../utils/clipboard';
 import { isCarrierOrder } from '../../utils/orderFlow';
 import { motion, AnimatePresence } from 'motion/react';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { linePrice } from '../../shared/orderLine';
+import { orderWeight, orderWeightText } from '../../utils/productShipping';
 
 interface AdminOrderInvoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
   order: Order | null;
   storefrontSettings?: StorefrontSettings;
+  /** The catalog: weight of lines ordered before the order kept it (src/utils/productShipping.ts) */
+  products?: Product[];
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
@@ -21,6 +24,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
   onClose,
   order,
   storefrontSettings,
+  products = [],
   onShowToast,
 }) => {
   const dialog = useDialogA11y(isOpen && Boolean(order), onClose);
@@ -49,6 +53,8 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
   };
 
   const totalQuantity = (order?.items || []).reduce((sum, it) => sum + (it.quantity || 1), 0);
+  // Weight of the goods for the Post and carriers (stage 15); not shown when the products have no weights
+  const weightText = order ? orderWeightText(orderWeight(order.items, products)) : null;
   const discountAmount = order?.originalTotalPrice
     ? Math.max(0, order.originalTotalPrice - order.totalPrice)
     : 0;
@@ -188,6 +194,11 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
             <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 mb-2">
               Состав отправления ({totalQuantity} шт.)
             </h4>
+            {weightText && (
+              <p className="text-xs text-slate-700 mb-2">
+                <strong>Вес товаров:</strong> {weightText}
+              </p>
+            )}
             <div className="border border-slate-200 rounded-xl overflow-hidden">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-100 text-slate-600 font-bold border-b border-slate-200 text-[11px]">

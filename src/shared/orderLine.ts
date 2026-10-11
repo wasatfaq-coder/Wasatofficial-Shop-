@@ -23,6 +23,8 @@ export function toOrderLineProduct(product: Product): Product {
     ...(typeof product.wholesalePrice === 'number' ? { wholesalePrice: product.wholesalePrice } : {}),
     ...(typeof product.wholesalePackSize === 'number' ? { wholesalePackSize: product.wholesalePackSize } : {}),
     ...(typeof product.wholesaleMinPacks === 'number' ? { wholesaleMinPacks: product.wholesaleMinPacks } : {}),
+    // the weight of the order in the invoice (stage 15): the weight the item had when it was ordered
+    ...(typeof product.weightGrams === 'number' ? { weightGrams: product.weightGrams } : {}),
     // Links to photos are small; photos embedded in the document (or moved out of it, '') are not copied
     images: (product.images ?? []).filter((src) => src && !src.startsWith('data:')),
   };

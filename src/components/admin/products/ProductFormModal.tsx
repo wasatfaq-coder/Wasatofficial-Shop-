@@ -18,6 +18,8 @@ import { ProductFormPrices } from './ProductFormPrices';
 import { ProductFormSupplier } from './ProductFormSupplier';
 import { ProductFormVariants } from './ProductFormVariants';
 import { ProductFormSizeChart } from './ProductFormSizeChart';
+import { ProductFormShipping } from './ProductFormShipping';
+import { formatPackage, formatWeight, productPackageCm, productWeightGrams } from '../../../utils/productShipping';
 
 const PRESET_BADGES = ['ХИТ', 'NEW', 'SALE', '-20%', 'PREMIUM', 'LIMITED', 'ECO', 'EXCLUSIVE'];
 const rub = (value: number) => `${value.toLocaleString('ru-RU')} ₽`;
@@ -72,6 +74,10 @@ export function ProductFormModal({
     setFormSkus,
     formCard,
     setFormCard,
+    formWeight,
+    formPackageL,
+    formPackageW,
+    formPackageH,
     formErrors,
     productFormGuard,
     productFormDialog,
@@ -111,6 +117,18 @@ export function ProductFormModal({
   const material = compositionToMaterial(formCard.composition);
   const cardSummary =
     [material, formDescription.trim() ? 'есть описание' : ''].filter(Boolean).join(' · ') || 'Состав и описание не заполнены';
+  // the summary shows only what the product would be saved with: a half-typed package is not shown
+  const summaryGrams = productWeightGrams({ weightGrams: Number(formWeight.trim().replace(',', '.')) });
+  const packageBox = productPackageCm({
+    packageCm: {
+      l: Number(formPackageL.replace(',', '.')),
+      w: Number(formPackageW.replace(',', '.')),
+      h: Number(formPackageH.replace(',', '.')),
+    },
+  });
+  const shippingSummary =
+    [summaryGrams ? formatWeight(summaryGrams) : '', packageBox ? formatPackage(packageBox) : ''].filter(Boolean).join(' · ') ||
+    'Не заполнено';
   const blockProps = (id: Parameters<typeof toggleFormBlock>[0]) => ({
     id,
     open: openFormBlocks.has(id),
@@ -398,6 +416,10 @@ export function ProductFormModal({
                     );
                   })()}
                 </div>
+              </ProductFormBlock>
+
+              <ProductFormBlock {...blockProps('shipping')} title="Вес и габариты" summary={shippingSummary}>
+                <ProductFormShipping form={form} />
               </ProductFormBlock>
 
               {/* Form Action Buttons & Summaries */}

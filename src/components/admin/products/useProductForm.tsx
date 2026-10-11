@@ -37,6 +37,7 @@ import { wholeNumber, wholesaleFormErrors } from '../../../utils/wholesaleEditin
 import { normalizeSizeChart } from '../../../utils/sizeChart';
 import { EMPTY_SIZE_CHART, sizeChartErrors, sizeChartForForm } from '../../../utils/sizeChartEditing';
 import type { ProductSizeChart } from '../../../types';
+import { packageFromFields, packageProblem, productPackageCm, productWeightGrams, weightProblem } from '../../../utils/productShipping';
 
 import type { AdminProductsTabProps, ProductCategoryOption } from '../AdminProductsTab';
 import { SUPPLIER_MAX_LENGTH, SUPPLIER_SKU_MAX_LENGTH, supplierText } from '../../../utils/productCosts';
@@ -109,6 +110,11 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
   // Where the product is bought (stage 11): kept in product_costs with the cost, the customer never sees it
   const [formSupplier, setFormSupplier] = useState('');
   const [formSupplierSku, setFormSupplierSku] = useState('');
+  // Weight of one item in grams and its package in cm (stage 15): the invoice sums the weight, Post and carriers need both
+  const [formWeight, setFormWeight] = useState('');
+  const [formPackageL, setFormPackageL] = useState('');
+  const [formPackageW, setFormPackageW] = useState('');
+  const [formPackageH, setFormPackageH] = useState('');
   const [formBadge, setFormBadge] = useState<string>('');
   // Open blocks of the form: a new product — all, an existing one — «Основное» and «Цены» (stage 4, variant A)
   const [openFormBlocks, setOpenFormBlocks] = useState<ReadonlySet<ProductFormBlockId>>(new Set());
@@ -192,6 +198,12 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     };
   };
 
+  /** Weight and package of the product; empty fields remove them (undefined is written as «no field») */
+  const shippingFields = (): Pick<Product, 'weightGrams' | 'packageCm'> => ({
+    weightGrams: formWeight.trim() ? Number(formWeight.trim().replace(',', '.')) : undefined,
+    packageCm: packageFromFields([formPackageL, formPackageW, formPackageH]),
+  });
+
   // Checked on «Сохранить» and then live, so a fixed field drops out of the list at once
   const validationErrors = useMemo(() => {
     const numPrice = Number(formPrice);
@@ -221,11 +233,13 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
       fibers.length > 0 && fiberTotal !== 100 &&
         `Сумма состава ткани — ${fiberTotal}%, а должна быть 100% («Структура карточки»)`,
       ...sizeChartErrors(formSizeChart, formSizes),
+      weightProblem(formWeight),
+      packageProblem([formPackageL, formPackageW, formPackageH]),
       formSizeBytes > PRODUCT_SIZE_BUDGET_BYTES &&
         `Товар занимает ${formatMegabytes(formSizeBytes)} из ${formatMegabytes(PRODUCT_SIZE_BUDGET_BYTES)}: база его не примет. Уберите часть фото`,
     ].filter((m): m is string => Boolean(m));
 
-  }, [formTitle, formCategory, formPrice, formColors, formSizes, formImages, formOldPrice, formCard, formSizeChart, formSizeBytes, formPurchaseCurrency, formPurchaseAmount, formPurchaseMarkup, formSaleChannel, formWholesalePrice, formWholesalePackSize, formWholesaleMinPacks, formWholesaleMarkup]);
+  }, [formTitle, formCategory, formPrice, formColors, formSizes, formImages, formOldPrice, formCard, formSizeChart, formSizeBytes, formPurchaseCurrency, formPurchaseAmount, formPurchaseMarkup, formSaleChannel, formWholesalePrice, formWholesalePackSize, formWholesaleMinPacks, formWholesaleMarkup, formWeight, formPackageL, formPackageW, formPackageH]);
   const formErrors = [
     ...(showFormErrors ? validationErrors : []),
     ...(photoError ? [photoError] : []),
@@ -273,6 +287,10 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     formSkus,
     formCard,
     formSizeChart,
+    formWeight,
+    formPackageL,
+    formPackageW,
+    formPackageH,
     customSizeInput,
     customColorName,
   ]);
@@ -367,6 +385,10 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormSkusOpened([]);
     setFormCard(EMPTY_CARD_STRUCTURE);
     setFormSizeChart(EMPTY_SIZE_CHART);
+    setFormWeight('');
+    setFormPackageL('');
+    setFormPackageW('');
+    setFormPackageH('');
     setShowFormErrors(false);
     setPhotoError(null);
     setSaveError(null);
@@ -423,6 +445,13 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormSkusOpened(openedSkus);
     setFormCard(cardStructureFromProduct(prod));
     setFormSizeChart(sizeChartForForm(prod));
+    const weight = productWeightGrams(prod);
+    const box = productPackageCm(prod);
+    const side = (n: number | undefined) => (n === undefined ? '' : String(n).replace('.', ','));
+    setFormWeight(side(weight));
+    setFormPackageL(side(box?.l));
+    setFormPackageW(side(box?.w));
+    setFormPackageH(side(box?.h));
     setShowFormErrors(false);
     setPhotoError(null);
     setSaveError(null);
@@ -530,6 +559,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
         costPrice: formCostPrice ? Number(formCostPrice) : undefined,
         purchase: formPurchase(),
         ...wholesaleFields(),
+        ...shippingFields(),
         supplier: supplierText(formSupplier, SUPPLIER_MAX_LENGTH),
         supplierSku: supplierText(formSupplierSku, SUPPLIER_SKU_MAX_LENGTH),
         originalPrice: formOldPrice ? Number(formOldPrice) : undefined,
@@ -571,6 +601,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
         costPrice: formCostPrice ? Number(formCostPrice) : undefined,
         purchase: formPurchase(),
         ...wholesaleFields(),
+        ...shippingFields(),
         supplier: supplierText(formSupplier, SUPPLIER_MAX_LENGTH),
         supplierSku: supplierText(formSupplierSku, SUPPLIER_SKU_MAX_LENGTH),
         originalPrice: formOldPrice ? Number(formOldPrice) : undefined,
@@ -711,6 +742,14 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormCard,
     formSizeChart,
     setFormSizeChart,
+    formWeight,
+    setFormWeight,
+    formPackageL,
+    setFormPackageL,
+    formPackageW,
+    setFormPackageW,
+    formPackageH,
+    setFormPackageH,
     formSizeBytes,
     validationErrors,
     formErrors,
