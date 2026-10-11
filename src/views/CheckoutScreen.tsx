@@ -34,8 +34,10 @@ import {
   calcPromoDiscount,
   toPricingLine,
   calcSubtotal,
+  freeDeliveryOffer,
   getAvailableDeliveryMethods,
 } from '../shared/orderPricing';
+import { freeDeliveryMethodsText } from '../utils/freeDelivery';
 import { STORE_PAUSED_TEXT, storeAcceptsOrders } from '../shared/orderApi';
 import { NotConfigured } from '../components/NotConfigured';
 import { promoDiscountText } from '../utils/promoLabel';
@@ -286,9 +288,10 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   const rawSubtotal = calcSubtotal(pricingLines);
   const discountAmount = calcPromoDiscount(pricingLines, appliedPromo);
 
-  const freeThreshold = storefrontSettings?.freeDeliveryThreshold ?? 0;
-
   const baseDeliveryMethods = deliveryMethods ?? [];
+  // The same thresholds as the method prices below (stage 6 finding)
+  const freeDelivery = freeDeliveryOffer(baseDeliveryMethods, storefrontSettings);
+  const freeDeliveryReached = freeDelivery !== null && rawSubtotal >= freeDelivery.threshold;
   const availableDeliveryMethods = getAvailableDeliveryMethods(baseDeliveryMethods, storefrontSettings, rawSubtotal);
 
   // Keep selected delivery valid
@@ -830,13 +833,15 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
 
         {/* Shipping Methods */}
         <div id="checkout-delivery" className="neu-flat rounded-3xl p-4 space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase">
               Способ доставки
             </h3>
-            {freeThreshold > 0 && rawSubtotal >= freeThreshold && !noDeliveryMethods && (
+            {freeDelivery && freeDeliveryReached && !noDeliveryMethods && (
               <span className="neu-inset text-success text-[11px] font-extrabold px-2 py-0.5 rounded-full">
-                Бесплатная доставка активна
+                {freeDeliveryMethodsText(freeDelivery)
+                  ? `Бесплатно: ${freeDeliveryMethodsText(freeDelivery)}`
+                  : 'Бесплатная доставка активна'}
               </span>
             )}
           </div>

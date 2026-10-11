@@ -22,9 +22,11 @@ import { NotConfigured } from '../components/NotConfigured';
 import {
   QUICK_ORDER_DELIVERY_TITLE,
   calcPromoDiscount,
+  freeDeliveryOffer,
   getAvailableDeliveryMethods,
   toPricingLine,
 } from '../shared/orderPricing';
+import { freeDeliveryMethodsText } from '../utils/freeDelivery';
 import { promoDiscountText } from '../utils/promoLabel';
 import { useDialogA11y } from '../utils/useDialogA11y';
 import { linePrice } from '../shared/orderLine';
@@ -112,7 +114,10 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   // Same calculation as checkout and placeOrder (promo limited to categories/products included)
   const discountAmount = calcPromoDiscount(cartItems.map(toPricingLine), appliedPromo);
 
-  const freeThreshold = storefrontSettings?.freeDeliveryThreshold ?? 0;
+  // The same thresholds as the fee below: a method's own one, else the common one (stage 6 finding)
+  const freeDelivery = freeDeliveryOffer(deliveryMethods, storefrontSettings);
+  const freeThreshold = freeDelivery?.threshold ?? 0;
+  const freeDeliveryMethods = freeDelivery ? freeDeliveryMethodsText(freeDelivery) : '';
   const totalItemsCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
   // The method is chosen at checkout: the cart shows what the store's methods cost for this order
   // (same prices as checkout) and adds a fee to «Итого» only when every method costs the same
@@ -169,7 +174,8 @@ export const CartScreen: React.FC<CartScreenProps> = ({
       {/* Computer (lg): items on the left, promo code and totals on the right, in view while the list scrolls */}
       <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start">
       <div className="space-y-4 lg:col-span-7">
-      {/* Free Delivery Threshold Dynamic Progress Banner: only when the store set a threshold */}
+      {/* Free Delivery Threshold Dynamic Progress Banner: only when some method becomes free from a sum; names the
+          methods when not all of them do */}
       {freeThreshold > 0 && (
       <div className="neu-flat rounded-2xl p-3.5 border border-white/60 space-y-2">
         <div className="flex items-center justify-between text-xs font-bold">
@@ -177,8 +183,10 @@ export const CartScreen: React.FC<CartScreenProps> = ({
             <Sparkles className="w-3.5 h-3.5 text-accent" />
             <span className="text-[#2D3A4E]">
               {remainingForFreeDelivery === 0
-                ? 'Бесплатная доставка получена!'
-                : `До бесплатной доставки: ${remainingForFreeDelivery.toLocaleString('ru-RU')} ₽`}
+                ? freeDeliveryMethods
+                  ? `Бесплатная доставка: ${freeDeliveryMethods}`
+                  : 'Бесплатная доставка получена!'
+                : `До бесплатной доставки${freeDeliveryMethods ? ` (${freeDeliveryMethods})` : ''}: ${remainingForFreeDelivery.toLocaleString('ru-RU')} ₽`}
             </span>
           </div>
           <span className="text-[11px] font-extrabold text-accent">

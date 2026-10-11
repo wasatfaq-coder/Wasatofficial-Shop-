@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import {
   calcOrderTotals,
   calcPromoDiscount,
+  deliveryFreeThreshold,
   formatPromoExpiry,
+  freeDeliveryOffer,
   getAvailableDeliveryMethods,
   isPromoExpired,
   isPromoListed,
@@ -78,6 +80,48 @@ describe('delivery', () => {
     const added = { id: 'deliv-17', title: 'Экспресс по городу', duration: '', price: 700, icon: 'Zap', type: 'express' as const };
     expect(getAvailableDeliveryMethods([...methods, added], { isExpressEnabled: false }, 0).map((m) => m.id)).toEqual(['courier']);
     expect(getAvailableDeliveryMethods([...methods, added], {}, 0).map((m) => m.id)).toEqual(['courier', 'express', 'deliv-17']);
+  });
+
+  test("a method's own threshold wins over the common one; 0 — never free; none anywhere — never free", () => {
+    expect(deliveryFreeThreshold({ freeThreshold: 3000 }, { freeDeliveryThreshold: 5000 })).toBe(3000);
+    expect(deliveryFreeThreshold({}, { freeDeliveryThreshold: 5000 })).toBe(5000);
+    expect(deliveryFreeThreshold({ freeThreshold: 0 }, { freeDeliveryThreshold: 5000 })).toBe(0);
+    expect(deliveryFreeThreshold({}, {})).toBe(0);
+    // Old documents edited by hand: null — never free, a number as text — that number (the fee did so before)
+    expect(deliveryFreeThreshold({ freeThreshold: null as unknown as number }, { freeDeliveryThreshold: 5000 })).toBe(0);
+    expect(deliveryFreeThreshold({ freeThreshold: '3000' as unknown as number }, {})).toBe(3000);
+    expect(deliveryFreeThreshold({}, { freeDeliveryThreshold: '5000' as unknown as number })).toBe(5000);
+  });
+
+  // The bar «до бесплатной доставки» used the common threshold while the fee used the method's (stage 6 finding)
+  test('the free-delivery promise follows the thresholds the fee uses', () => {
+    const courier: DeliveryMethod = { id: 'c', title: 'Курьер', duration: '', price: 350, icon: 'Truck', freeThreshold: 3000 };
+    const post: DeliveryMethod = { id: 'p', title: 'Почта', duration: '', price: 300, icon: 'Box' };
+    // Courier is free from its own 3 000, post from the common 5 000: the promise is 3 000, for the courier only
+    const offer = freeDeliveryOffer([courier, post], { freeDeliveryThreshold: 5000 });
+    expect(offer).toEqual({ threshold: 3000, methodTitles: ['Курьер'], forAllMethods: false });
+    // …and at 3 000 the fee of the courier really is 0
+    expect(getAvailableDeliveryMethods([courier, post], { freeDeliveryThreshold: 5000 }, 3000).map((m) => m.price)).toEqual([0, 300]);
+    // The common threshold alone, every method free from it
+    expect(freeDeliveryOffer([post], { freeDeliveryThreshold: 5000 })).toEqual({ threshold: 5000, methodTitles: ['Почта'], forAllMethods: true });
+    // A threshold only in «Для всех способов», but every method opted out with 0 — nothing to promise
+    expect(freeDeliveryOffer([{ ...post, freeThreshold: 0 }], { freeDeliveryThreshold: 5000 })).toBeNull();
+    // No thresholds, no methods, an inactive or hidden express method — nothing to promise
+    expect(freeDeliveryOffer([post], {})).toBeNull();
+    expect(freeDeliveryOffer([], { freeDeliveryThreshold: 5000 })).toBeNull();
+    expect(freeDeliveryOffer([{ ...courier, isActive: false }, post], {})).toBeNull();
+    expect(freeDeliveryOffer([{ ...courier, type: 'express' }], { isExpressEnabled: false })).toBeNull();
+  });
+
+  test('a method that is free anyway is not promised, but it makes the promise name its methods', () => {
+    const pickup: DeliveryMethod = { id: 's', title: 'Самовывоз', duration: '', price: 0, icon: 'Store' };
+    const courier: DeliveryMethod = { id: 'c', title: 'Курьер', duration: '', price: 350, icon: 'Truck' };
+    expect(freeDeliveryOffer([pickup, courier], { freeDeliveryThreshold: 5000 })).toEqual({
+      threshold: 5000,
+      methodTitles: ['Курьер'],
+      forAllMethods: false,
+    });
+    expect(freeDeliveryOffer([pickup], { freeDeliveryThreshold: 5000 })).toBeNull();
   });
 });
 

@@ -90,11 +90,12 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
   // Method Form State
   const [formMethodTitle, setFormMethodTitle] = useState('');
   const [formMethodDuration, setFormMethodDuration] = useState('');
-  const [formMethodPrice, setFormMethodPrice] = useState<number>(0);
+  // No invented price, term or threshold for a new method (CLAUDE.md, «Демо-данных нет»): the owner fills them in
+  const [formMethodPrice, setFormMethodPrice] = useState<number | undefined>(undefined);
   const [formMethodIcon, setFormMethodIcon] = useState('Bike');
   const [formMethodType, setFormMethodType] = useState<DeliveryMethod['type']>('courier');
   const [formMethodDesc, setFormMethodDesc] = useState('');
-  const [formMethodFreeThreshold, setFormMethodFreeThreshold] = useState<number | undefined>(5000);
+  const [formMethodFreeThreshold, setFormMethodFreeThreshold] = useState<number | undefined>(undefined);
   const [formMethodIsActive, setFormMethodIsActive] = useState(true);
   const [formMethodBadge, setFormMethodBadge] = useState('');
 
@@ -170,12 +171,12 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
   const handleOpenAddMethod = () => {
     setEditingMethod(null);
     setFormMethodTitle('');
-    setFormMethodDuration('1–2 дня');
-    setFormMethodPrice(350);
+    setFormMethodDuration('');
+    setFormMethodPrice(undefined);
     setFormMethodIcon('Truck');
     setFormMethodType('courier');
     setFormMethodDesc('');
-    setFormMethodFreeThreshold(5000);
+    setFormMethodFreeThreshold(undefined);
     setFormMethodIsActive(true);
     setFormMethodBadge('');
     setIsMethodModalOpen(true);
@@ -215,6 +216,11 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
         onShowToast('Введите название способа доставки', 'error');
         return;
       }
+      // An empty price would be saved as 0 ₽ — a free method the owner did not mean
+      if (formMethodPrice === undefined) {
+        onShowToast('Укажите стоимость доставки: 0 — бесплатно', 'error');
+        return;
+      }
 
       if (editingMethod) {
         const updated = deliveryMethods.map((m) =>
@@ -223,7 +229,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 ...m,
                 title: formMethodTitle.trim(),
                 duration: formMethodDuration.trim(),
-                price: Number(formMethodPrice) || 0,
+                price: Number(formMethodPrice),
                 icon: formMethodIcon,
                 type: formMethodType,
                 description: formMethodDesc.trim(),
@@ -239,8 +245,8 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
         const newMethod: DeliveryMethod = {
           id: `deliv-${Date.now()}`,
           title: formMethodTitle.trim(),
-          duration: formMethodDuration.trim() || '1-3 дня',
-          price: Number(formMethodPrice) || 0,
+          duration: formMethodDuration.trim(),
+          price: Number(formMethodPrice),
           icon: formMethodIcon,
           type: formMethodType,
           description: formMethodDesc.trim(),
@@ -962,8 +968,10 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                     type="number"
                     min="0"
                     step="50"
-                    value={formMethodPrice}
-                    onChange={(e) => setFormMethodPrice(Number(e.target.value))}
+                    value={formMethodPrice ?? ''}
+                    onChange={(e) => setFormMethodPrice(e.target.value ? Number(e.target.value) : undefined)}
+                    placeholder="0 — бесплатно"
+                    required
                     className="w-full neu-inset rounded-xl py-2 px-3 text-[#2D3A4E] font-bold"
                   />
                 </div>
@@ -1038,7 +1046,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                       Бесплатно при заказе от (₽)
                     </label>
                     <AdminHint label="Бесплатно при заказе от">
-                      Для этого способа. Если пусто — действует общий порог из «Витрины».
+                      Для этого способа. Пусто — порог из «Для всех способов», 0 — без бесплатной доставки.
                     </AdminHint>
                   </div>
                   <input

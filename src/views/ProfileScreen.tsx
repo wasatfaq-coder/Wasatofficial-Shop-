@@ -5,6 +5,7 @@ import { AccountDataModal } from '../components/AccountDataModal';
 import { currentStoreName, getStoreContacts, getStoreName } from '../utils/storeContacts';
 import { fullName, namePartsOf } from '../shared/personName';
 import { FAQModal } from '../components/FAQModal';
+import { freeDeliveryOffer } from '../shared/orderPricing';
 import {
   User,
   ShoppingBag,
@@ -808,7 +809,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       {/* ================= MODAL: FAQ ACCORDION ================= */}
       <FAQModal
         isOpen={activeModal === 'faq'}
-        freeDeliveryThreshold={storefrontSettings?.freeDeliveryThreshold}
+        freeDeliveryThreshold={freeDeliveryOffer(deliveryMethods ?? [], storefrontSettings)?.threshold}
         returnPeriodDays={storefrontSettings?.returnPeriodDays}
         storePhone={storePhone}
         storeEmail={storeEmail}

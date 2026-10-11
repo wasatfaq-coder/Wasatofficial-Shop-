@@ -44,7 +44,8 @@ import { getProductRating } from '../utils/productRating';
 import { productImage } from '../utils/productImage';
 import { useProductPhotos } from '../utils/useProductPhotos';
 import { useLiveReviews } from '../utils/liveReviews';
-import { QUICK_ORDER_DELIVERY_TITLE } from '../shared/orderPricing';
+import { QUICK_ORDER_DELIVERY_TITLE, type FreeDeliveryOffer } from '../shared/orderPricing';
+import { freeDeliveryMethodsText } from '../utils/freeDelivery';
 import { sellsRetail, type WholesaleSettings } from '../shared/wholesalePricing';
 import { wholesaleOfferOf } from '../utils/wholesaleOffer';
 import { ProductWholesaleBlock } from '../components/ProductWholesaleBlock';
@@ -84,7 +85,8 @@ interface ProductDetailScreenProps {
   onShowToast?: (msg: string, type?: 'success' | 'info' | 'error') => void;
   /** Store policies from Admin → «Витрина» */
   returnPeriodDays?: number;
-  freeDeliveryThreshold?: number;
+  /** The free-delivery promise by the delivery methods (freeDeliveryOffer) */
+  freeDelivery?: FreeDeliveryOffer | null;
   /** «Опт» of the storefront settings: the volume-discount steps shown with the wholesale price */
   wholesale?: WholesaleSettings;
 }
@@ -105,7 +107,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   onCompleteOrder,
   onShowToast,
   returnPeriodDays,
-  freeDeliveryThreshold,
+  freeDelivery = null,
   wholesale,
 }) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -907,7 +909,11 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               <div>
                 <p className="text-sm font-bold text-[#2D3A4E]">Доставка</p>
                 <p className="text-xs text-[#4E5C70]">
-                  {freeDeliveryThreshold ? `Бесплатная доставка от ${freeDeliveryThreshold.toLocaleString('ru-RU')} ₽` : 'Способы и цены — при оформлении'}
+                  {freeDelivery
+                    ? `Бесплатная доставка от ${freeDelivery.threshold.toLocaleString('ru-RU')} ₽${
+                        freeDeliveryMethodsText(freeDelivery) ? `: ${freeDeliveryMethodsText(freeDelivery)}` : ''
+                      }`
+                    : 'Способы и цены — при оформлении'}
                 </p>
               </div>
             </div>
