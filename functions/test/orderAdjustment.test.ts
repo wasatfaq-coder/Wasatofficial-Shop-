@@ -1,6 +1,6 @@
 // «Корректировка заказа» (находка 11) и восстановление отменённого заказа (находка 15), этап 4 обзора рисков
 import { describe, expect, test } from 'bun:test';
-import { adjustedOrderTotals } from '../../src/utils/orderAdjustment';
+import { adjustedOrderTotals, storedOrderTotals } from '../../src/utils/orderAdjustment';
 import { stockShortages } from '../../src/utils/inventory';
 import type { CartItem, Product, PromoCode } from '../../src/types';
 
@@ -36,6 +36,39 @@ describe('adjustedOrderTotals', () => {
   test('an old order without stored delivery keeps the difference between its total and items', () => {
     const order = { items: [line(shirt, 1)], totalPrice: 4350 };
     expect(adjustedOrderTotals(order, [line(shirt, 2)]).total).toBe(8350);
+  });
+});
+
+describe('storedOrderTotals (накладная)', () => {
+  test('a paid delivery and a promo discount are the order\'s own, not «Бесплатно»', () => {
+    const order = { items: [line(shirt, 1), line(polo, 1)], totalPrice: 5850, deliveryFee: 350, discountAmount: 500, promoCode: 'SALE' };
+    expect(storedOrderTotals(order)).toEqual({ subtotal: 6000, discount: 500, deliveryFee: 350, total: 5850, recorded: true, matches: true });
+  });
+
+  test('after «Корректировка заказа» the earlier total is not a discount', () => {
+    // originalTotalPrice — the sum before the adjustment removed the polo
+    const order = { items: [line(shirt, 1)], totalPrice: 4350, deliveryFee: 350, discountAmount: 0, originalTotalPrice: 6350 };
+    expect(storedOrderTotals(order)).toMatchObject({ subtotal: 4000, discount: 0, deliveryFee: 350, total: 4350, matches: true });
+  });
+
+  test('no promo code — no discount: a total below the lines is flagged, not printed as a discount', () => {
+    // the browser writes no discountAmount for 0; a forged total of 1 ₽ must not become «Скидка −4 349 ₽»
+    expect(storedOrderTotals({ items: [line(shirt, 1)], totalPrice: 1, deliveryFee: 350 })).toMatchObject({ discount: 0, recorded: true, matches: false });
+  });
+
+  test('an old order without stored delivery is not split: only items and the total', () => {
+    expect(storedOrderTotals({ items: [line(shirt, 1)], totalPrice: 4350 })).toMatchObject({ recorded: false, total: 4350 });
+    expect(storedOrderTotals({ items: [line(shirt, 1)], totalPrice: 3950, deliveryFee: 350, promoCode: 'SALE' })).toMatchObject({ recorded: false });
+  });
+
+  test('a 1-click order has no delivery and no discount', () => {
+    const order = { items: [line(shirt, 1)], totalPrice: 4000, deliveryMethod: 'Заказ в 1 клик' };
+    expect(storedOrderTotals(order)).toMatchObject({ deliveryFee: 0, discount: 0, recorded: true, matches: true });
+  });
+
+  test('wholesale lines count by their own price', () => {
+    const pack = { ...line(polo, 10), unitPrice: 1500, priceKind: 'wholesale' } as CartItem;
+    expect(storedOrderTotals({ items: [pack], totalPrice: 15000, deliveryFee: 0 })).toMatchObject({ subtotal: 15000, matches: true });
   });
 });
 
