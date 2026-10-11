@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Star, ThumbsUp, CheckCircle2, Plus } from 'lucide-react';
+import { Star, ThumbsUp, CheckCircle2, Plus, BadgeCheck } from 'lucide-react';
 import { Product, ProductReview, UserProfile } from '../types';
 import { getProductRating } from '../utils/productRating';
 import { helpfulCount } from '../utils/reviews';
-import { deleteReviewFromFirestore, setReviewVoteInFirestore } from '../utils/firebaseSync';
+import { deleteReviewAsAdmin, deleteReviewFromFirestore, setReviewVoteInFirestore } from '../utils/firebaseSync';
+import { isPublicReview, moderationNote, REVIEW_NEEDS_ORDER_TEXT, reviewableOrders } from '../utils/reviewModeration';
+import { useReviewOrders } from '../utils/reviewOrdersContext';
 import { useAuth } from '../context/AuthContext';
 import { ConfirmDialog } from './ConfirmDialog';
 import { pluralRu } from '../utils/pluralize';
@@ -42,15 +44,26 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
   const { currentUser, isAdmin } = useAuth();
   const uid = currentUser && !currentUser.isAnonymous ? currentUser.uid : null;
   const myReview = uid ? product.reviews?.find((r) => r.fromCollection && r.uid === uid) : undefined;
+  const customerOrders = useReviewOrders();
+  // a review is written for a received order with this product (the rules check it too)
+  const orderChoices = React.useMemo(
+    () => (uid ? reviewableOrders(customerOrders, product.id, uid) : []),
+    [customerOrders, product.id, uid]
+  );
+  // a review from before orders were required can still be edited
+  const mayWrite = orderChoices.length > 0 || Boolean(myReview && !myReview.orderId);
   const [reviewToDelete, setReviewToDelete] = useState<ProductReview | null>(null);
   const [isWriteReviewOpen, setIsWriteReviewOpen] = useState(false);
   const [sortBy, setSortBy] = useState<'newest' | 'helpful'>('newest');
 
   // Only real reviews; the summary is computed from them (stored rating fields may be template numbers)
+  // The author's own review that the store has not published (or rejected) is shown to the author only, with a note,
+  // and does not count
   const reviews: ProductReview[] = product.reviews ?? [];
+  const publicReviews = reviews.filter(isPublicReview);
   const ratingInfo = getProductRating(product);
-  const recommendShare = reviews.length > 0
-    ? Math.round((reviews.filter((r) => r.rating >= 4).length / reviews.length) * 100)
+  const recommendShare = publicReviews.length > 0
+    ? Math.round((publicReviews.filter((r) => r.rating >= 4).length / publicReviews.length) * 100)
     : 0;
 
   const handleToggleHelpful = async (review: ProductReview) => {
@@ -77,13 +90,18 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
       onShowToast('Войдите через Google в профиле, чтобы оставить отзыв', 'info');
       return;
     }
+    if (!mayWrite) {
+      onShowToast(REVIEW_NEEDS_ORDER_TEXT, 'info');
+      return;
+    }
     setIsWriteReviewOpen(true);
   };
 
   const handleDeleteReview = async () => {
     if (!reviewToDelete) return;
     try {
-      await deleteReviewFromFirestore(reviewToDelete.id);
+      // the owner removes the decision with the review; the author's own deletion leaves it (the owner's to remove)
+      await (isAdmin ? deleteReviewAsAdmin(reviewToDelete.id) : deleteReviewFromFirestore(reviewToDelete.id));
       onShowToast('Отзыв удален', 'info');
     } catch (err) {
       console.error('Review delete failed:', err);
@@ -110,7 +128,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
           <h3 className="text-base font-extrabold text-[#2D3A4E] flex items-center gap-2">
             <span>Отзывы покупателей</span>
             <span className="neu-inset px-2.5 py-0.5 rounded-full text-xs font-bold text-accent">
-              {reviews.length}
+              {publicReviews.length}
             </span>
           </h3>
         </div>
@@ -126,6 +144,10 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
           <span>{myReview ? 'Изменить мой отзыв' : 'Написать отзыв'}</span>
         </button>
       </div>
+
+      {uid && !mayWrite && (
+        <p className="text-xs text-[#4E5C70]">{REVIEW_NEEDS_ORDER_TEXT}</p>
+      )}
 
       {!ratingInfo && (
         <p className="py-2 text-xs font-bold text-[#4E5C70] text-center">
@@ -206,6 +228,25 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                 <RatingStars rating={rev.rating} className="w-3.5 h-3.5" />
               </div>
 
+              {/* The author's own review that others do not see yet (or any more) */}
+              {rev.moderation && (
+                <p
+                  role="status"
+                  className={`rounded-xl border px-3 py-2 text-xs font-bold text-[#2D3A4E] ${
+                    rev.moderation === 'rejected' ? 'bg-danger-soft border-danger/30' : 'bg-warning-soft border-warning/30'
+                  }`}
+                >
+                  {moderationNote(rev)}
+                </p>
+              )}
+
+              {rev.orderId && (
+                <p className="text-[11px] font-bold text-success flex items-center gap-1">
+                  <BadgeCheck className="w-3.5 h-3.5" aria-hidden="true" />
+                  Покупка подтверждена
+                </p>
+              )}
+
               {/* Purchase specs */}
               {(rev.sizePurchased || rev.colorPurchased) && (
                 <div className="flex items-center gap-2 text-[11px] text-[#4E5C70]">
@@ -275,6 +316,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
             onClose={() => setIsWriteReviewOpen(false)}
             product={product}
             myReview={myReview}
+            orders={orderChoices}
             uid={uid}
             userProfile={userProfile}
             onShowToast={onShowToast}

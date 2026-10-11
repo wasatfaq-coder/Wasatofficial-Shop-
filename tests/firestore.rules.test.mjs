@@ -1243,6 +1243,73 @@ describe('reviews', () => {
   });
 });
 
+// Moderation of reviews (задание владельца 11.10): the owner's decision in review_moderation, the order a review is for
+describe('review moderation and purchase check', () => {
+  const decision = (overrides = {}) => ({ productId: 'p1', status: 'rejected', reason: 'Не по теме', at: Date.now(), by: 'owner@example.com', ...overrides });
+  const seed = (path, data) => env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), path), data));
+
+  test('anyone reads decisions; only the admin writes them', async () => {
+    await seed('review_moderation/p1_alice', decision());
+    await assertSucceeds(getDocs(collection(guest(), 'review_moderation')));
+    await assertSucceeds(getDocs(query(collection(guest(), 'review_moderation'), where('productId', '==', 'p1'))));
+    await assertSucceeds(setDoc(doc(owner(), 'review_moderation/p1_bob'), decision({ status: 'published', reason: '' })));
+    await assertSucceeds(updateDoc(doc(owner(), 'review_moderation/p1_alice'), { status: 'published', at: Date.now() }));
+    await assertSucceeds(deleteDoc(doc(owner(), 'review_moderation/p1_bob')));
+    // the author, another customer and a guest cannot decide on their own review
+    await assertFails(setDoc(doc(customer('alice'), 'review_moderation/p1_alice'), decision({ status: 'published' })));
+    await assertFails(updateDoc(doc(customer('alice'), 'review_moderation/p1_alice'), { status: 'published' }));
+    await assertFails(deleteDoc(doc(customer('alice'), 'review_moderation/p1_alice')));
+    await assertFails(setDoc(doc(customer('bob'), 'review_moderation/p1_carol'), decision()));
+    await assertFails(setDoc(doc(guest(), 'review_moderation/p1_carol'), decision()));
+  });
+
+  test('a decision has its shape: status, reason up to 300, the product of the review id', async () => {
+    const db = owner();
+    await assertFails(setDoc(doc(db, 'review_moderation/p1_alice'), decision({ status: 'spam' })));
+    await assertFails(setDoc(doc(db, 'review_moderation/p1_alice'), decision({ reason: 'я'.repeat(301) })));
+    await assertSucceeds(setDoc(doc(db, 'review_moderation/p1_alice'), decision({ reason: 'я'.repeat(300) })));
+    await assertFails(setDoc(doc(db, 'review_moderation/p1_alice'), decision({ at: 'вчера' })));
+    await assertFails(setDoc(doc(db, 'review_moderation/p1_alice'), decision({ extra: 1 })));
+    await assertFails(setDoc(doc(db, 'review_moderation/p1_alice'), decision({ productId: 'p2' })));
+    await assertFails(setDoc(doc(db, 'review_moderation/other'), decision()));
+  });
+
+  test('a review for an order: own delivered order passes, foreign, undelivered and cancelled do not', async () => {
+    await seed('orders/WS-D1', order({ id: 'WS-D1', status: 'delivered', customerUid: 'alice' }));
+    await seed('orders/WS-D2', order({ id: 'WS-D2', status: 'delivered', customerUid: 'bob' }));
+    await seed('orders/WS-D3', order({ id: 'WS-D3', status: 'in_transit', customerUid: 'alice' }));
+    await seed('orders/WS-D4', order({ id: 'WS-D4', status: 'delivered', isCancelled: true, customerUid: 'alice' }));
+    const db = customer('alice');
+    await assertSucceeds(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { orderId: 'WS-D1' })));
+    await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { orderId: 'WS-D2' })));
+    await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { orderId: 'WS-D3' })));
+    await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { orderId: 'WS-D4' })));
+    await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { orderId: 'WS-NOPE' })));
+    await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { orderId: 'WS-D1/x' })));
+    await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { orderId: 'W'.repeat(41) })));
+    await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { orderId: 7 })));
+    // still optional: the review of an open tab of the previous site
+    await assertSucceeds(setDoc(doc(db, 'reviews/p1_alice'), review('alice')));
+  });
+
+  test('the save time of a review is the server\'s', async () => {
+    const db = customer('alice');
+    await assertSucceeds(setDoc(doc(db, 'reviews/p1_alice'), { ...review('alice'), updatedAt: serverTimestamp() }));
+    await assertFails(setDoc(doc(db, 'reviews/p1_alice'), { ...review('alice'), updatedAt: Timestamp.fromMillis(1) }));
+    await assertFails(setDoc(doc(db, 'reviews/p1_alice'), { ...review('alice'), updatedAt: 1 }));
+  });
+
+  test('with «Проверять отзывы» on, an edit without a new save time is refused', async () => {
+    await seed('reviews/p1_alice', review('alice'));
+    await seed('settings/storefront', { reviewPremoderation: true });
+    const db = customer('alice');
+    await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { comment: 'Изменил текст' })));
+    await assertSucceeds(setDoc(doc(db, 'reviews/p1_alice'), { ...review('alice', { comment: 'Изменил текст' }), updatedAt: serverTimestamp() }));
+    // a new review waits for the owner anyway
+    await assertSucceeds(setDoc(doc(customer('bob'), 'reviews/p1_bob'), review('bob')));
+  });
+});
+
 describe('server-side orders enabled (settings/server)', () => {
   beforeEach(async () => {
     await env.withSecurityRulesDisabled((ctx) =>

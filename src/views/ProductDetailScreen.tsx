@@ -29,6 +29,8 @@ import { NeumorphicImage } from '../components/NeumorphicImage';
 import { AnimatedFavoriteButton } from '../components/AnimatedFavoriteButton';
 import { ProductReviewsSection } from '../components/ProductReviewsSection';
 import { getVariantStock, getProductSKU, getOrderableStock } from '../utils/inventory';
+import { colorImageIndex } from '../utils/colorPhotos';
+import { formatPackage, formatWeight, productPackageCm, productWeightGrams } from '../utils/productShipping';
 import { colorStock, initialColor, initialSize, maxOrderableForColor, profileSizeFor } from '../utils/variantSelection';
 import {
   getProductFabricComposition,
@@ -89,6 +91,16 @@ interface ProductDetailScreenProps {
   freeDelivery?: FreeDeliveryOffer | null;
   /** «Опт» of the storefront settings: the volume-discount steps shown with the wholesale price */
   wholesale?: WholesaleSettings;
+}
+
+/** «Вес» and «Габариты упаковки» rows of the product's specs; none when the owner left them empty */
+function shippingSpecRows(product: Product): { label: string; value: string }[] {
+  const weight = productWeightGrams(product);
+  const box = productPackageCm(product);
+  return [
+    ...(weight !== undefined ? [{ label: 'Вес', value: formatWeight(weight) }] : []),
+    ...(box ? [{ label: 'Габариты упаковки', value: formatPackage(box) }] : []),
+  ];
 }
 
 export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
@@ -202,7 +214,12 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   const cardFeatures = getProductFeatures(product);
   const cardComposition = getProductFabricComposition(product);
   const cardCertifications = getProductCertifications(product);
-  const cardSpecRows = getProductSpecRows(product);
+  // Weight of one item and its package (stage 15): shown in «Характеристики» when the owner filled them (owner task
+  // 11.10); the supplier and its article stay admin-only (owner's decision 11.10: a buyer could go round the shop)
+  const cardSpecRows = [
+    ...getProductSpecRows(product),
+    ...shippingSpecRows(product),
+  ];
   const cardCare = getProductCareInstructions(product);
   const detailTabs = [
     { id: 'description' as const, label: 'Описание', icon: FileText, show: Boolean(product.description?.trim()) || cardFeatures.length > 0 },
@@ -493,7 +510,12 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 return (
                   <button
                     key={c.name}
-                    onClick={() => setSelectedColor(c.name)}
+                    onClick={() => {
+                      setSelectedColor(c.name);
+                      // optional photo bound to the colour: only on the click, manual swiping stays free afterwards
+                      const boundPhoto = colorImageIndex(product, c.name);
+                      if (boundPhoto !== null) setSelectedImageIndex(boundPhoto);
+                    }}
                     className={`w-9 h-9 rounded-full p-0.5 flex items-center justify-center transition-all cursor-pointer ${
                       isSelected
                         ? 'neu-inset ring-2 ring-accent scale-105'
@@ -618,9 +640,16 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           <div className="flex flex-col items-start gap-2">
             <div className="flex items-baseline gap-x-2 flex-wrap">
               <span className="text-2xl font-extrabold text-[#2D3A4E] whitespace-nowrap">
-                {(wholesaleMode && offer ? offer.unitPrice : product.price).toLocaleString('ru-RU')} ₽
-                {wholesaleMode && <span className="text-sm font-bold text-[#4E5C70]">/шт. оптом</span>}
+                {(wholesaleMode && offer ? (offer.packSize > 1 ? offer.packPrice : offer.unitPrice) : product.price).toLocaleString('ru-RU')} ₽
+                {wholesaleMode && offer && (
+                  <span className="text-sm font-bold text-[#4E5C70]">{offer.packSize > 1 ? '/уп. оптом' : '/шт. оптом'}</span>
+                )}
               </span>
+              {wholesaleMode && offer && offer.packSize > 1 && (
+                <span className="text-xs font-semibold text-[#4E5C70] whitespace-nowrap">
+                  {offer.packSize} шт. × {offer.unitPrice.toLocaleString('ru-RU')} ₽
+                </span>
+              )}
               {!wholesaleMode && shownOldPrice(product) !== null && (
                 <span className="text-sm text-[#4E5C70] line-through whitespace-nowrap">
                   {shownOldPrice(product)!.toLocaleString('ru-RU')} ₽

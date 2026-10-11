@@ -38,7 +38,10 @@ import {
   Landmark,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { Order, Product } from '../../types';
+import { Order, Product, UserProfile } from '../../types';
+import { isReceivedOrderOf } from '../../utils/reviewModeration';
+import { useOwnReviews } from '../../utils/useOwnReviews';
+import { OrderLineReviewButton } from './OrderLineReviewButton';
 import { isQuickOrderDelivery, QUICK_ORDER_DELIVERY_TITLE } from '../../shared/orderPricing';
 import { copyToClipboard } from '../../utils/clipboard';
 import {
@@ -68,6 +71,8 @@ type OrderTrackingModalProps = Pick<
   products: Product[];
   storeName: string;
   storePhone: string;
+  /** The customer's profile: the name offered in the review form */
+  profile?: UserProfile;
 };
 
 /** The order's window: progress, history, payment, delivery, lines, and the customer's actions with the order */
@@ -79,6 +84,7 @@ export const OrderTrackingModal = ({
   products,
   storeName,
   storePhone,
+  profile,
   onCancelOrder,
   onConfirmReceipt,
   onOpenSupportChat,
@@ -101,6 +107,10 @@ export const OrderTrackingModal = ({
     [orders, selectedOrderIdForTracking]
   );
   const linePhoto = useOrderLinePhotos(selectedOrderForTracking?.items.map((it) => it.product) ?? [], products);
+  // A received order: «Оставить отзыв» under its lines; the customer's reviews are read only while that window is open
+  const reviewerUid = currentUser && !currentUser.isAnonymous ? currentUser.uid : null;
+  const canReview = Boolean(reviewerUid && selectedOrderForTracking && isReceivedOrderOf(selectedOrderForTracking, reviewerUid));
+  const ownReviews = useOwnReviews(reviewerUid, canReview);
 
 
 
@@ -485,6 +495,17 @@ export const OrderTrackingModal = ({
                             : `${it.quantity} шт.`}
                           {it.isPreorder && <span className="font-bold text-accent"> • Предзаказ</span>}
                         </p>
+                        {canReview && reviewerUid && (
+                          <OrderLineReviewButton
+                            order={selectedOrderForTracking}
+                            product={products.find((p) => p.id === it.product.id)}
+                            uid={reviewerUid}
+                            orders={orders}
+                            ownReview={ownReviews.get(it.product.id)}
+                            userProfile={profile}
+                            onShowToast={onShowToast}
+                          />
+                        )}
                       </div>
                     </div>
                     <span className="text-xs font-extrabold text-[#2D3A4E]">

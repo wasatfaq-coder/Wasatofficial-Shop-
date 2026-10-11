@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, lazy, Suspense, useTransition } from 'react';
+import React, { useState, useMemo, useEffect, useRef, Suspense, useTransition } from 'react';
 import { IS_PREVIEW_BUILD } from '../../utils/previewBuild';
 import { useLoadFailed } from '../../utils/loadFailures';
 import { LoadFailedNotice } from '../../components/LoadFailedNotice';
@@ -34,33 +34,38 @@ import { lowStockThresholdOf } from '../../utils/inventory';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { type AdminNavCounts, type AdminTab } from '../../components/admin/adminSections';
 import { loadAdminNav, prefetchAdmin, prefetchAllAdminWhenIdle } from '../../components/admin/adminLoaders';
+import { lazyWithRetry } from '../../utils/lazyWithRetry';
+import { SectionErrorBoundary } from '../../components/SectionErrorBoundary';
 import { UnsavedChangesContext, useUnsavedRegistry } from '../../utils/unsavedChanges';
 import { summarizeSupportThreads } from '../../utils/supportThreads';
+import { useAdminReviews } from '../../utils/useAdminReviews';
+import { countPendingReviews } from '../../utils/adminReviews';
 import type { ProfileScreenProps } from '../ProfileScreen';
 
 
 // The admin panel is a separate chunk (its sections, Base UI, charts): customers do not download it
-const AdminTodayTab = lazy(() => import('../../components/admin/AdminTodayTab').then((m) => ({ default: m.AdminTodayTab })));
-const AdminAnalyticsTab = lazy(() => import('../../components/admin/AdminAnalyticsTab').then((m) => ({ default: m.AdminAnalyticsTab })));
-const AdminPromoConstructorTab = lazy(() => import('../../components/admin/AdminPromoConstructorTab').then((m) => ({ default: m.AdminPromoConstructorTab })));
-const AdminBannersTab = lazy(() => import('../../components/admin/AdminBannersTab').then((m) => ({ default: m.AdminBannersTab })));
-const AdminSupportInbox = lazy(() => import('../../components/admin/AdminSupportInbox').then((m) => ({ default: m.AdminSupportInbox })));
-const AdminRatesTab = lazy(() => import('../../components/admin/AdminRatesTab').then((m) => ({ default: m.AdminRatesTab })));
-const AdminInventoryTab = lazy(() => import('../../components/admin/AdminInventoryTab').then((m) => ({ default: m.AdminInventoryTab })));
-const AdminProductsTab = lazy(() => import('../../components/admin/AdminProductsTab').then((m) => ({ default: m.AdminProductsTab })));
-const AdminOrdersTab = lazy(() => import('../../components/admin/AdminOrdersTab').then((m) => ({ default: m.AdminOrdersTab })));
-const AdminCustomersTab = lazy(() => import('../../components/admin/AdminCustomersTab').then((m) => ({ default: m.AdminCustomersTab })));
-const AdminStorefrontTab = lazy(() => import('../../components/admin/AdminStorefrontTab').then((m) => ({ default: m.AdminStorefrontTab })));
-const BrandRenameCard = lazy(() => import('../../components/admin/BrandRenameCard').then((m) => ({ default: m.BrandRenameCard })));
-const AdminDeliveryTab = lazy(() => import('../../components/admin/AdminDeliveryTab').then((m) => ({ default: m.AdminDeliveryTab })));
-const AdminWholesaleTab = lazy(() =>
+const AdminTodayTab = lazyWithRetry(() => import('../../components/admin/AdminTodayTab').then((m) => ({ default: m.AdminTodayTab })));
+const AdminAnalyticsTab = lazyWithRetry(() => import('../../components/admin/AdminAnalyticsTab').then((m) => ({ default: m.AdminAnalyticsTab })));
+const AdminPromoConstructorTab = lazyWithRetry(() => import('../../components/admin/AdminPromoConstructorTab').then((m) => ({ default: m.AdminPromoConstructorTab })));
+const AdminBannersTab = lazyWithRetry(() => import('../../components/admin/AdminBannersTab').then((m) => ({ default: m.AdminBannersTab })));
+const AdminSupportInbox = lazyWithRetry(() => import('../../components/admin/AdminSupportInbox').then((m) => ({ default: m.AdminSupportInbox })));
+const AdminRatesTab = lazyWithRetry(() => import('../../components/admin/AdminRatesTab').then((m) => ({ default: m.AdminRatesTab })));
+const AdminInventoryTab = lazyWithRetry(() => import('../../components/admin/AdminInventoryTab').then((m) => ({ default: m.AdminInventoryTab })));
+const AdminProductsTab = lazyWithRetry(() => import('../../components/admin/AdminProductsTab').then((m) => ({ default: m.AdminProductsTab })));
+const AdminOrdersTab = lazyWithRetry(() => import('../../components/admin/AdminOrdersTab').then((m) => ({ default: m.AdminOrdersTab })));
+const AdminCustomersTab = lazyWithRetry(() => import('../../components/admin/AdminCustomersTab').then((m) => ({ default: m.AdminCustomersTab })));
+const AdminStorefrontTab = lazyWithRetry(() => import('../../components/admin/AdminStorefrontTab').then((m) => ({ default: m.AdminStorefrontTab })));
+const BrandRenameCard = lazyWithRetry(() => import('../../components/admin/BrandRenameCard').then((m) => ({ default: m.BrandRenameCard })));
+const AdminDeliveryTab = lazyWithRetry(() => import('../../components/admin/AdminDeliveryTab').then((m) => ({ default: m.AdminDeliveryTab })));
+const AdminWholesaleTab = lazyWithRetry(() =>
   import('../../components/admin/AdminWholesaleTab').then((m) => ({ default: m.AdminWholesaleTab }))
 );
-const AdminFaqTab = lazy(() => import('../../components/admin/AdminFaqTab').then((m) => ({ default: m.AdminFaqTab })));
-const AdminLegalTab = lazy(() => import('../../components/admin/AdminLegalTab').then((m) => ({ default: m.AdminLegalTab })));
-const AdminPaymentTab = lazy(() => import('../../components/admin/AdminPaymentTab').then((m) => ({ default: m.AdminPaymentTab })));
-const AdminCategoriesTab = lazy(() => import('../../components/admin/AdminCategoriesTab').then((m) => ({ default: m.AdminCategoriesTab })));
-const AdminNav = lazy(() => loadAdminNav().then((m) => ({ default: m.AdminNav })));
+const AdminReviewsTab = lazyWithRetry(() => import('../../components/admin/AdminReviewsTab').then((m) => ({ default: m.AdminReviewsTab })));
+const AdminFaqTab = lazyWithRetry(() => import('../../components/admin/AdminFaqTab').then((m) => ({ default: m.AdminFaqTab })));
+const AdminLegalTab = lazyWithRetry(() => import('../../components/admin/AdminLegalTab').then((m) => ({ default: m.AdminLegalTab })));
+const AdminPaymentTab = lazyWithRetry(() => import('../../components/admin/AdminPaymentTab').then((m) => ({ default: m.AdminPaymentTab })));
+const AdminCategoriesTab = lazyWithRetry(() => import('../../components/admin/AdminCategoriesTab').then((m) => ({ default: m.AdminCategoriesTab })));
+const AdminNav = lazyWithRetry(() => loadAdminNav().then((m) => ({ default: m.AdminNav })));
 
 /** While a section of the admin panel (a separate chunk) is loading */
 const AdminLoading: React.FC = () => (
@@ -321,6 +326,12 @@ export const ProfileAdminPanel = ({
   }, [isAdminOpen, hasUnsaved]);
   const adminDialog = useDialogA11y(isAdminOpen, requestCloseAdmin);
   // What waits for the admin: new orders and dialogs where the customer wrote last
+  // reviews waiting for the owner's check: «Сегодня» and the badge of «Отзывы» (the same queries the catalog listens to)
+  const adminReviews = useAdminReviews(isAdminOpen);
+  const pendingReviews = useMemo(
+    () => countPendingReviews(adminReviews.reviews, adminReviews.decisions, storefrontSettings.reviewPremoderation === true),
+    [adminReviews.reviews, adminReviews.decisions, storefrontSettings.reviewPremoderation]
+  );
   const adminCounts = useMemo<AdminNavCounts>(() => {
     if (!isAdminOpen) return {};
     const newOrders = orders.filter((o) => o.status === 'accepted' && !o.isCancelled).length;
@@ -330,8 +341,9 @@ export const ProfileAdminPanel = ({
     return {
       orders: { value: newOrders + receipts, label: receipts > 0 ? 'новых заказов и чеков на проверке' : 'новых заказов' },
       support: { value: awaiting, label: 'ждут ответа' },
+      reviews: { value: pendingReviews, label: 'ждут проверки' },
     };
-  }, [isAdminOpen, orders, localChatMessages]);
+  }, [isAdminOpen, orders, localChatMessages, pendingReviews]);
   const ordersLoadFailed = useLoadFailed('orders');
 
   return (
@@ -412,6 +424,7 @@ export const ProfileAdminPanel = ({
 
             {/* «Сегодня» and the sections (menu variant A); forms report unsaved edits to the panel */}
             <UnsavedChangesContext.Provider value={unsavedRegistry}>
+            <SectionErrorBoundary title="Панель не открылась">
             <Suspense fallback={<AdminLoading />}>
             <AdminNav
               tab={adminTab}
@@ -422,6 +435,7 @@ export const ProfileAdminPanel = ({
             >
               {/* One boundary for all sections, above the keyed wrapper: during a switch (a transition) it keeps
                   the current section instead of showing «Загрузка раздела…» */}
+              <SectionErrorBoundary key={adminTab}>
               <Suspense fallback={<AdminLoading />}>
                 <motion.div
                   key={adminTab}
@@ -439,6 +453,7 @@ export const ProfileAdminPanel = ({
                   lowStockThreshold={lowStockThresholdOf(storefrontSettings)}
                   launchSteps={launchSteps(productsList, localDeliveryMethods, storefrontSettings)}
                   isStoreOffline={storefrontSettings.isStoreOnline === false}
+                  pendingReviews={pendingReviews}
                   onOpenTab={requestAdminTab}
                 />
               )}
@@ -473,6 +488,15 @@ export const ProfileAdminPanel = ({
                   onShowToast={onShowToast}
                   settings={storefrontSettings}
                   onUpdateSettings={onUpdateStorefrontSettings}
+                />
+              )}
+
+              {adminTab === 'reviews' && (
+                <AdminReviewsTab
+                  settings={storefrontSettings}
+                  onUpdateSettings={onUpdateStorefrontSettings}
+                  products={productsList}
+                  onShowToast={onShowToast}
                 />
               )}
 
@@ -653,8 +677,10 @@ export const ProfileAdminPanel = ({
               )}
                 </motion.div>
               </Suspense>
+              </SectionErrorBoundary>
             </AdminNav>
             </Suspense>
+            </SectionErrorBoundary>
             </UnsavedChangesContext.Provider>
           </motion.div>
         </motion.div>

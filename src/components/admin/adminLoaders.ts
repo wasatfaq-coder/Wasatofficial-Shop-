@@ -13,6 +13,7 @@ export const ADMIN_SECTION_LOADERS: Record<AdminTab, () => Promise<unknown>> = {
   analytics: () => Promise.all([import('./AdminAnalyticsTab'), import('./AdminAnalyticsChart')]),
   orders: () => import('./AdminOrdersTab'),
   customers: () => import('./AdminCustomersTab'),
+  reviews: () => import('./AdminReviewsTab'),
   support: () => import('./AdminSupportInbox'),
   products: () => import('./AdminProductsTab'),
   categories: () => import('./AdminCategoriesTab'),

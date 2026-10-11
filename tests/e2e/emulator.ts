@@ -111,3 +111,10 @@ export async function queryDocs(collection: string, field: string, value: unknow
   const rows = (await res.json()) as { document?: { fields?: Record<string, Value> } }[];
   return rows.filter((r) => r.document).map((r) => fromFields(r.document!.fields ?? {}));
 }
+
+/** The uid the Auth emulator gave to a signed-in e-mail (for data written under the user's own id) */
+export async function emulatorUidOf(email: string): Promise<string | undefined> {
+  const res = await call(`${AUTH}/identitytoolkit.googleapis.com/v1/projects/${PROJECT}/accounts:batchGet?maxResults=500`);
+  const users = ((await res.json()) as { users?: { localId: string; email?: string }[] }).users ?? [];
+  return users.find((u) => u.email === email)?.localId;
+}

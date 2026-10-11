@@ -12,6 +12,7 @@ import {
   Home,
   Image as ImageIcon,
   Layers,
+  MessageSquareText,
   Loader2,
   MoreHorizontal,
   Package,
@@ -34,6 +35,7 @@ const TABS: Record<SectionTab, { label: string; short?: string; icon: LucideIcon
   support: { label: 'Чат поддержки', short: 'Чат', icon: Headphones },
   products: { label: 'Товары', icon: Layers },
   customers: { label: 'Клиенты', icon: Users, about: 'Покупатели, их заказы и заметки' },
+  reviews: { label: 'Отзывы', icon: MessageSquareText, about: 'Проверка и публикация отзывов покупателей' },
   analytics: { label: 'Аналитика', icon: BarChart3, about: 'Выручка, отмены, ошибки на сайте' },
   categories: { label: 'Категории', icon: FolderTree, about: 'Разделы каталога и их порядок' },
   inventory: { label: 'Склад и SKU', icon: Boxes, about: 'Остатки, приход и списание, этикетки' },
@@ -53,7 +55,7 @@ const PRIMARY: SectionTab[] = ['today', 'orders', 'products', 'support'];
 
 /** The rest — in «Ещё», a list with a line about each section, in the old groups */
 const MORE_GROUPS: { label: string; tabs: SectionTab[] }[] = [
-  { label: 'Продажи', tabs: ['customers', 'analytics'] },
+  { label: 'Продажи', tabs: ['customers', 'reviews', 'analytics'] },
   { label: 'Каталог', tabs: ['categories', 'inventory', 'rates', 'wholesale'] },
   { label: 'Маркетинг', tabs: ['promos', 'banners'] },
   { label: 'Магазин', tabs: ['delivery', 'payment', 'faq', 'legal', 'storefront'] },

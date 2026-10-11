@@ -268,9 +268,34 @@ service cloud.firestore {
       return honestKey(honestForm(name));
     }
 
+    // Заказ, по которому написан отзыв: заказ автора, полученный («Получен») и не отменённый (задание владельца 11.10).
+    // orderId необязателен: открытая вкладка прежнего сайта пишет отзыв без него; обязательным он станет вторым PR.
+    // get() заказа один: его же читают обе проверки
+    function isReceivedOrderOf(orderId, uid) {
+      let path = /databases/$(database)/documents/orders/$(orderId);
+      return orderId is string && orderId.size() > 0 && orderId.size() <= 40
+        && orderId.matches('^[A-Za-z0-9_-]+$')
+        && exists(path)
+        && get(path).data.get('customerUid', '') == uid
+        && get(path).data.get('status', '') == 'delivered'
+        && get(path).data.get('isCancelled', false) != true;
+    }
+
+    // «Проверять отзывы перед публикацией» (settings/storefront.reviewPremoderation)
+    function reviewPremoderationOn() {
+      let path = /databases/$(database)/documents/settings/storefront;
+      return exists(path) && get(path).data.get('reviewPremoderation', false) == true;
+    }
+
+    // Время последнего сохранения отзыва — серверное, иначе автор поставил бы старое и обошёл повторную проверку
+    // (решение по отзыву старше updatedAt считается устаревшим, src/utils/reviewModeration.ts)
+    function isReviewStamp(data) {
+      return !('updatedAt' in data) || data.updatedAt == request.time;
+    }
+
     function isValidReview(data, reviewId) {
       return data.keys().hasOnly(['id', 'productId', 'uid', 'authorName', 'rating', 'comment', 'pros', 'cons',
-          'sizePurchased', 'colorPurchased', 'date', 'createdAt'])
+          'sizePurchased', 'colorPurchased', 'date', 'createdAt', 'orderId', 'updatedAt'])
         && data.id == reviewId
         && data.uid == request.auth.uid
         && data.productId is string
@@ -285,17 +310,41 @@ service cloud.firestore {
         && isOptionalText(data, 'pros', 500)
         && isOptionalText(data, 'cons', 500)
         && isOptionalText(data, 'sizePurchased', 40)
-        && isOptionalText(data, 'colorPurchased', 60);
+        && isOptionalText(data, 'colorPurchased', 60)
+        && isReviewStamp(data)
+        && (!('orderId' in data) || isReceivedOrderOf(data.orderId, request.auth.uid));
     }
 
     match /reviews/{reviewId} {
       allow read: if true;
       allow create: if isCustomer() && isValidReview(request.resource.data, reviewId);
+      // С проверкой отзывов правка без нового updatedAt не проходит: иначе опубликованный отзыв менялся бы мимо проверки
       allow update: if isCustomer()
         && resource.data.uid == request.auth.uid
         && isValidReview(request.resource.data, reviewId)
-        && request.resource.data.createdAt == resource.data.createdAt;
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (!reviewPremoderationOn() || 'updatedAt' in request.resource.data);
       allow delete: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    // Решение владельца по отзыву: review_moderation/{reviewId} (пишет только администратор, читают все: отзыв
+    // скрывается у всех, кроме автора). Нет документа — решения нет. productId — чтобы страница товара читала решения
+    // только своих отзывов.
+    function isReviewModeration(data, id) {
+      return data.keys().hasOnly(['productId', 'status', 'reason', 'at', 'by'])
+        && data.productId is string && data.productId.size() > 0
+        && id.size() > data.productId.size() + 1
+        && id[0:data.productId.size() + 1] == data.productId + '_'
+        && data.status in ['published', 'rejected']
+        && data.at is number
+        && isOptionalText(data, 'reason', 300)
+        && isOptionalText(data, 'by', 200);
+    }
+
+    match /review_moderation/{reviewId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isReviewModeration(request.resource.data, reviewId);
+      allow delete: if isAdmin();
     }
 
     match /review_votes/{voteId} {
