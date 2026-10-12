@@ -10,6 +10,7 @@
  */
 import type { CartItem, Order, Product } from '../types';
 import { linePrice } from './orderLine';
+import { isCartPackLine, pricePackLine } from './packLines';
 
 /** Who a product is sold to; absent — both */
 export type SaleChannel = 'both' | 'retail' | 'wholesale';
@@ -170,13 +171,16 @@ export function goesWholesale(item: Pick<CartItem, 'product' | 'priceKind'>): bo
  */
 export function priceCartLines<T extends PricedLine>(items: T[], settings?: WholesaleSettings | null): T[] {
   const scale = readVolumeDiscount(settings?.volumeDiscount);
-  const wholesale = items.map(goesWholesale);
+  // a size pack is priced by its own price (stage 20); it is not a pack of `wholesalePackSize` and gets no volume step
+  const sizePack = items.map((item) => isCartPackLine(item as unknown as CartItem));
+  const wholesale = items.map((item, i) => !sizePack[i] && goesWholesale(item));
   const keyOf = (item: T) => (scale?.countBy === 'order' ? '*' : item.product.id);
   const packs = new Map<string, number>();
   items.forEach((item, i) => {
     if (wholesale[i]) packs.set(keyOf(item), (packs.get(keyOf(item)) ?? 0) + linePacks(item));
   });
   return items.map((item, i) => {
+    if (sizePack[i]) return pricePackLine(item as unknown as CartItem) as unknown as T;
     const { unitPrice: _price, priceKind: _kind, volumeDiscountPerUnit: _discount, packSize: _size, ...rest } = item;
     if (!wholesale[i]) return rest as T;
     const base = item.product.wholesalePrice as number;
@@ -198,7 +202,8 @@ export function priceCartLines<T extends PricedLine>(items: T[], settings?: Whol
 export function wholesaleLineProblems(items: PricedLine[]): string[] {
   const byProduct = new Map<string, { product: PricedLine['product']; packs: number; uneven: boolean }>();
   for (const item of items) {
-    if (!isWholesaleLine(item) || !item.product) continue;
+    // size packs are whole by construction (one line = whole packs) and have no minimum
+    if (!isWholesaleLine(item) || !item.product || item.priceKind === 'pack') continue;
     const entry = byProduct.get(item.product.id) ?? { product: item.product, packs: 0, uneven: false };
     entry.packs += linePacks(item);
     if ((Number(item.quantity) || 0) % packSizeOf(item.product) !== 0) entry.uneven = true;

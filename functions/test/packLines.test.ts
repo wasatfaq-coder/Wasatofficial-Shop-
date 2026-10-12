@@ -144,3 +144,42 @@ describe('«Аналитика»: items and packs', () => {
     expect(top.revenue).toBe(3000 + 20_000);
   });
 });
+
+describe('stage 20: a size pack in the cart', () => {
+  const packProduct = {
+    ...product,
+    wholesalePrice: 2000,
+    sizePacks: [{ id: 'pack-1', sizes: [{ size: '48', qty: 1 }, { size: '50', qty: 2 }, { size: '52', qty: 1 }] }],
+  } as unknown as Product;
+  const cartPack = (over: Partial<CartItem> = {}): CartItem => ({
+    id: 'c1', product: packProduct, selectedColor: 'Синий', selectedSize: '', quantity: 2, priceKind: 'pack', packId: 'pack-1', ...over,
+  });
+
+  test('the price of a pack comes from the product: wholesale × pieces, no volume step', async () => {
+    const { priceCartLines } = await import('../../src/shared/wholesalePricing');
+    const settings = { volumeDiscount: { kind: 'percent' as const, countBy: 'order' as const, tiers: [{ minPacks: 1, value: 50 }] } };
+    const [line] = priceCartLines([cartPack()], settings);
+    expect(line.unitPrice).toBe(8000);
+    expect(line.packPrice).toBe(8000);
+    expect(line.packTitle).toBe('Ростовка 48–52');
+    expect(line.packSizes).toEqual([{ size: '48', qty: 1 }, { size: '50', qty: 2 }, { size: '52', qty: 1 }]);
+    expect(line.volumeDiscountPerUnit).toBeUndefined();
+    // the cart total is packs × pack price; the order lines add up to the same
+    const order = expandPackLines([line]);
+    expect(calcSubtotal(order.map(toPricingLine))).toBe(16_000);
+  });
+
+  test('a pack the product no longer has is not ordered', async () => {
+    const { priceCartLines } = await import('../../src/shared/wholesalePricing');
+    const { packLineProblems } = await import('../../src/shared/packLines');
+    const [gone] = priceCartLines([cartPack({ packId: 'pack-x' })]);
+    expect(packLineProblems([gone]).length).toBe(1);
+    const [ok] = priceCartLines([cartPack()]);
+    expect(packLineProblems([ok])).toEqual([]);
+  });
+
+  test('a pack line does not count toward wholesale packs or their minimum', async () => {
+    const { wholesaleLineProblems, priceCartLines } = await import('../../src/shared/wholesalePricing');
+    expect(wholesaleLineProblems(priceCartLines([cartPack({ quantity: 3 })]))).toEqual([]);
+  });
+});

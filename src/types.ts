@@ -297,6 +297,10 @@ export interface CartItem {
   packCount?: number;
   packPieces?: number;
   packPrice?: number;
+  /** A cart line of a size pack: its composition (one pack), set by `pricePackLine`; the order line has `packPieces` */
+  packSizes?: { size: string; qty: number }[];
+  /** A cart line of a size pack the product no longer sells (or without a price): not ordered */
+  packUnavailable?: boolean;
 }
 
 export interface SavedAddress {

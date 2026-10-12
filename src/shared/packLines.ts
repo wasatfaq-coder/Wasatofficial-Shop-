@@ -4,8 +4,9 @@
  * return per line, the stock journal `{order}_{line}`, sums, invoices and the price check work without special cases.
  * Screens show those lines as one pack (`groupOrderLines`). Code shared with Cloud Functions (`placeOrder`, stage 20).
  */
-import type { CartItem } from '../types';
+import type { CartItem, Product } from '../types';
 import { linePrice } from './orderLine';
+import { productSizePacks, sizePackPrice, sizePackTitle } from './sizePacks';
 
 /** Lines of one client order after packs are expanded (firestore.rules `isClientOrderShape`, `placeOrder`) */
 export const ORDER_LINES_MAX = 60;
@@ -44,7 +45,7 @@ export interface CartPackLine extends CartItem {
   packSizes: PackLineSize[];
 }
 
-const isCartPackLine = (item: CartItem): item is CartPackLine =>
+const hasPackComposition = (item: CartItem): item is CartPackLine =>
   typeof item.packId === 'string' && Array.isArray((item as Partial<CartPackLine>).packSizes);
 
 /**
@@ -53,7 +54,7 @@ const isCartPackLine = (item: CartItem): item is CartPackLine =>
  */
 export function expandPackLines(items: CartItem[]): CartItem[] {
   return items.flatMap((item) => {
-    if (!isCartPackLine(item)) return [item];
+    if (!hasPackComposition(item)) return [item];
     const { packSizes, ...line } = item;
     const count = Math.max(1, Math.floor(item.quantity));
     return splitPackPrice(item.packPrice, packSizes).map((part, i) => ({
@@ -180,3 +181,39 @@ export function setPackGroupCount(items: CartItem[], packGroup: string, count: n
 /** Removes every line of the pack: one size of a pack is not removed alone */
 export const removePackGroup = (items: CartItem[], packGroup: string): CartItem[] =>
   items.filter((item) => item.packGroup !== packGroup);
+
+/** A cart line of a size pack: `priceKind: 'pack'` with the pack's id */
+export const isCartPackLine = (item: Pick<CartItem, 'priceKind' | 'packId'>): boolean =>
+  item.priceKind === 'pack' && typeof item.packId === 'string' && item.packId.length > 0;
+
+/**
+ * The price of a cart line of a size pack (stage 20): one pack — its own price or the wholesale price × pieces
+ * (`sizePackPrice`), composition and name from the product's pack; the volume discount does not apply to packs.
+ * A product copy without `sizePacks` (the stored cart before the live document came) keeps what the line has; a product
+ * that no longer has the pack, or a pack without a price, gives a line `packUnavailable` — it is not ordered
+ * (`packLineProblems`, `placeOrder` refuses it)
+ */
+export function pricePackLine<T extends CartItem>(item: T): T {
+  const product = item.product as Product | undefined;
+  if (!product || !Array.isArray(product.sizePacks)) return { ...item, unitPrice: item.packPrice ?? item.unitPrice };
+  const pack = productSizePacks(product).find((p) => p.id === item.packId);
+  const price = pack ? sizePackPrice(product, pack) : undefined;
+  if (!pack || price === undefined) return { ...item, packUnavailable: true };
+  const { packUnavailable: _gone, ...rest } = item as T & { packUnavailable?: boolean };
+  return {
+    ...rest,
+    priceKind: 'pack',
+    unitPrice: price,
+    packPrice: price,
+    packTitle: sizePackTitle(pack),
+    packSizes: pack.sizes.map((s) => ({ size: s.size, qty: s.qty })),
+  } as T;
+}
+
+/** Packs of a cart line can be ordered: the line has its composition and a price */
+export function packLineProblems(items: CartItem[]): string[] {
+  return items
+    .filter(isCartPackLine)
+    .filter((item) => (item as CartItem & { packUnavailable?: boolean }).packUnavailable || !(Number(item.packPrice) > 0))
+    .map((item) => `«${item.product?.title ?? 'Товар'}»: ростовка «${item.packTitle || 'Ростовка'}» больше не продаётся — уберите её из корзины`);
+}
