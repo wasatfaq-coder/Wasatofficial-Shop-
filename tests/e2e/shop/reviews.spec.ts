@@ -6,6 +6,9 @@ import { deleteDoc, emulatorUidOf, readDoc, writeDocs } from '../emulator';
 import { ADMIN, PRODUCTS } from '../store';
 
 test('отзыв по полученному заказу: покупатель пишет, владелец отклоняет и публикует', async ({ page, secondPage, browser, baseURL, phone, signIn }, info) => {
+  // three decisions of the owner in a row, each followed by the owner's session marking the review (it waits 2 s for the
+  // lists to settle, then writes in a transaction): longer than the usual 30 s on the CI runner
+  test.setTimeout(60_000);
   const run = info.project.name;
   const buyer = { sub: `review-${run}`, email: `vera-${run}@example.ru`, name: `Вера Отзыв ${run}` };
   // phone and desktop run at the same time on one database: each its own product, order and review
