@@ -499,7 +499,7 @@ service cloud.firestore {
           'deliveryStages', 'customerLastName', 'customerFirstName', 'customerMiddleName', 'deliveryAddressParts', 'deliveryKind', 'statusLog',
           'updatedAt'])
         && isOrderStampFresh()
-        && data.items.size() <= 30
+        && data.items.size() <= 60
         && data.customerName is string && data.customerName.size() > 0 && data.customerName.size() <= 100
         && data.customerPhone is string && data.customerPhone.size() > 0 && data.customerPhone.size() <= 40
         && data.deliveryAddress is string && data.deliveryAddress.size() <= 500
