@@ -173,7 +173,9 @@ export function priceCartLines<T extends PricedLine>(items: T[], settings?: Whol
   const scale = readVolumeDiscount(settings?.volumeDiscount);
   // a size pack is priced by its own price (stage 20); it is not a pack of `wholesalePackSize` and gets no volume step
   const sizePack = items.map((item) => isCartPackLine(item as unknown as CartItem));
-  const wholesale = items.map((item, i) => !sizePack[i] && goesWholesale(item));
+  // a line of an order that came from a pack keeps its price per item (the pack's price split by `splitPackPrice`)
+  const orderPack = items.map((item) => item.priceKind === 'pack' && Boolean((item as unknown as CartItem).packGroup));
+  const wholesale = items.map((item, i) => !sizePack[i] && !orderPack[i] && goesWholesale(item));
   const keyOf = (item: T) => (scale?.countBy === 'order' ? '*' : item.product.id);
   const packs = new Map<string, number>();
   items.forEach((item, i) => {
@@ -181,6 +183,7 @@ export function priceCartLines<T extends PricedLine>(items: T[], settings?: Whol
   });
   return items.map((item, i) => {
     if (sizePack[i]) return pricePackLine(item as unknown as CartItem) as unknown as T;
+    if (orderPack[i]) return item;
     const { unitPrice: _price, priceKind: _kind, volumeDiscountPerUnit: _discount, packSize: _size, ...rest } = item;
     if (!wholesale[i]) return rest as T;
     const base = item.product.wholesalePrice as number;

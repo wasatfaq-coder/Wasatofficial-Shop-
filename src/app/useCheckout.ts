@@ -17,8 +17,7 @@ import { pluralRu } from '../utils/pluralize';
 import { QUICK_ORDER_DELIVERY_ID, promoSignInProblem } from '../shared/orderPricing';
 import { linePrice, toOrderLineProduct } from '../shared/orderLine';
 import { isWholesaleLine, priceCartLines, wholesaleLineProblems } from '../shared/wholesalePricing';
-import { expandPackLines, isCartPackLine, ORDER_LINES_MAX, packLineProblems } from '../shared/packLines';
-import { productSizePacks } from '../shared/sizePacks';
+import { expandPackLines, isCartPackLine, ORDER_LINES_MAX, packLineProblems, soldPack } from '../shared/packLines';
 import { STORE_PAUSED_TEXT, storeAcceptsOrders } from '../shared/orderApi';
 import { cleanAddressParts, fullName, hasNameParts, namePartsOf, type AddressParts, type PersonName } from '../shared/personName';
 import { useLiveProducts } from '../utils/liveProducts';
@@ -252,7 +251,7 @@ export function useCheckout({
       ...packLineProblems(priced),
       ...priced
         .filter((item) => isCartPackLine(item))
-        .filter((item) => !productSizePacks(products.find((p) => p.id === item.product.id)).some((p) => p.id === item.packId))
+        .filter((item) => !soldPack(products.find((p) => p.id === item.product.id), item.packId, item.selectedColor))
         .map((item) => `«${item.product.title}»: ростовка «${item.packTitle || 'Ростовка'}» больше не продаётся — уберите её из корзины`),
     ];
     if (packProblems.length > 0) {

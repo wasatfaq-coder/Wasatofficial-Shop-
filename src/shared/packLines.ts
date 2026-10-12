@@ -6,7 +6,7 @@
  */
 import type { CartItem, Product } from '../types';
 import { linePrice } from './orderLine';
-import { productSizePacks, sizePackPrice, sizePackTitle } from './sizePacks';
+import { productSizePacks, sameColor, sizePackColors, sizePackPrice, sizePackTitle } from './sizePacks';
 
 /** Lines of one client order after packs are expanded (firestore.rules `isClientOrderShape`, `placeOrder`) */
 export const ORDER_LINES_MAX = 60;
@@ -182,9 +182,19 @@ export function setPackGroupCount(items: CartItem[], packGroup: string, count: n
 export const removePackGroup = (items: CartItem[], packGroup: string): CartItem[] =>
   items.filter((item) => item.packGroup !== packGroup);
 
-/** A cart line of a size pack: `priceKind: 'pack'` with the pack's id */
-export const isCartPackLine = (item: Pick<CartItem, 'priceKind' | 'packId'>): boolean =>
-  item.priceKind === 'pack' && typeof item.packId === 'string' && item.packId.length > 0;
+/**
+ * A cart line of a size pack: `priceKind: 'pack'` with the pack's id, quantity — packs. A line of an order that came from
+ * a pack has `packGroup` and a price per item: it is not a cart line and is never priced as one (review 12.10)
+ */
+export const isCartPackLine = (item: Pick<CartItem, 'priceKind' | 'packId' | 'packGroup'>): boolean =>
+  item.priceKind === 'pack' && typeof item.packId === 'string' && item.packId.length > 0 && !item.packGroup;
+
+/** The product sells the pack in this colour: the pack, or null (a pack the owner removed or a colour taken off it) */
+export function soldPack(product: Product | undefined, packId: string | undefined, color: string) {
+  const pack = productSizePacks(product).find((p) => p.id === packId);
+  if (!pack || !product) return null;
+  return sizePackColors(product, pack).some((c) => sameColor(c, color)) ? pack : null;
+}
 
 /**
  * The price of a cart line of a size pack (stage 20): one pack — its own price or the wholesale price × pieces
@@ -196,7 +206,8 @@ export const isCartPackLine = (item: Pick<CartItem, 'priceKind' | 'packId'>): bo
 export function pricePackLine<T extends CartItem>(item: T): T {
   const product = item.product as Product | undefined;
   if (!product || !Array.isArray(product.sizePacks)) return { ...item, unitPrice: item.packPrice ?? item.unitPrice };
-  const pack = productSizePacks(product).find((p) => p.id === item.packId);
+  // the colour too: a pack the owner no longer sells in this colour has no barcode and the server refuses it
+  const pack = soldPack(product, item.packId, String(item.selectedColor ?? ''));
   const price = pack ? sizePackPrice(product, pack) : undefined;
   if (!pack || price === undefined) return { ...item, packUnavailable: true };
   const { packUnavailable: _gone, ...rest } = item as T & { packUnavailable?: boolean };

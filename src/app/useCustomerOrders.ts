@@ -144,6 +144,9 @@ export function useCustomerOrders({
             quantity: group.packCount,
             priceKind: 'pack',
             packId: group.item.packId,
+            packTitle: group.title,
+            packPrice: group.packPrice,
+            packSizes: group.sizes,
           }
     );
     lines.forEach((item, idx) => {
@@ -153,6 +156,8 @@ export function useCustomerOrders({
         return;
       }
       if (isCartPackLine(item)) {
+        // the buyer's catalog is the index without packs: the line keeps the order's composition and price for showing,
+        // the cart prices it from the product's document and the checkout refuses a pack no longer sold (review 12.10)
         const pack = pricePackLine<CartItem>({ ...item, id: `cart-${Date.now()}-${idx}`, product });
         if (pack.packUnavailable || !pack.packSizes?.length) {
           skipped += 1;

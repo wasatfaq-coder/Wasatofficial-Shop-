@@ -209,3 +209,44 @@ describe('stage 20: a size pack shares the stock with the other cart lines', () 
     expect('packGroup' in plain || 'packCount' in plain).toBe(false);
   });
 });
+
+describe('review 12.10: a pack order in «Цены не совпадают с каталогом» and the colour', () => {
+  const catalogProduct = {
+    ...product,
+    sizePacks: [{ id: 'pack-1', price: 10_002, colors: ['Синий'], sizes: [{ size: '48', qty: 1 }, { size: '50', qty: 2 }, { size: '52', qty: 1 }] }],
+  } as unknown as Product;
+  const orderOf = (items: CartItem[]) =>
+    ({ id: 'WS-1', items, totalPrice: items.reduce((s, l) => s + (l.unitPrice ?? 0) * l.quantity, 0), paymentStatus: 'pending' }) as never;
+
+  test('an honest pack order raises nothing; a made-up price or composition is named', async () => {
+    const { orderPriceIssues } = await import('../../src/utils/orderPriceCheck');
+    const honest = expandPackLines([packLine(10_002, 2)]);
+    expect(orderPriceIssues(orderOf(honest), [catalogProduct])).toEqual([]);
+    const cheap = expandPackLines([packLine(5_000, 2)]);
+    expect(orderPriceIssues(orderOf(cheap), [catalogProduct]).join(' ')).toContain('за упаковку');
+    const short = expandPackLines([{ ...packLine(10_002, 1), packSizes: [{ size: '48', qty: 1 }] } as CartPackLine]);
+    expect(orderPriceIssues(orderOf(short), [catalogProduct]).join(' ')).toContain('состав');
+  });
+
+  test('order lines of a pack keep their prices in priceCartLines', async () => {
+    const { priceCartLines } = await import('../../src/shared/wholesalePricing');
+    const lines = expandPackLines([packLine(10_002, 1)]);
+    expect(priceCartLines(lines.map((l) => ({ ...l, product: catalogProduct }))).map((l) => l.unitPrice)).toEqual(lines.map((l) => l.unitPrice));
+  });
+
+  test('a pack not sold in the colour is not a pack', async () => {
+    const { soldPack, pricePackLine } = await import('../../src/shared/packLines');
+    expect(soldPack(catalogProduct, 'pack-1', 'Синий')?.id).toBe('pack-1');
+    expect(soldPack({ ...catalogProduct, colors: [...catalogProduct.colors, { name: 'Красный', hex: '#f00' }] } as Product, 'pack-1', 'Красный')).toBeNull();
+    const red = pricePackLine({ id: 'c', product: catalogProduct, selectedColor: 'Красный', selectedSize: '', quantity: 1, priceKind: 'pack', packId: 'pack-1' } as CartItem);
+    expect(red.packUnavailable).toBe(true);
+  });
+
+  test('without the product\'s packs (the buyer\'s catalog index) the line keeps the order\'s composition', async () => {
+    const { pricePackLine } = await import('../../src/shared/packLines');
+    const line = pricePackLine({
+      id: 'c', product, selectedColor: 'Синий', selectedSize: '', quantity: 1, priceKind: 'pack', packId: 'pack-1', packPrice: 10_002, packSizes: sizes,
+    } as CartItem);
+    expect([line.unitPrice, line.packSizes, line.packUnavailable]).toEqual([10_002, sizes, undefined]);
+  });
+});
