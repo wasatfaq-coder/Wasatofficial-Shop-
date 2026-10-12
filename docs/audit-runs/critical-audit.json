@@ -1,0 +1,91 @@
+{
+ "run": "wf_00712200-5ff",
+ "results": {
+  "aeed2d7963cb5fb18": {
+   "findings": [
+    {
+     "title": "Скидка за объём в рублях может сделать оптовую цену 0 ₽: проверка есть только при сохранении шкалы",
+     "kind": "ошибка",
+     "file": "src/shared/wholesalePricing.ts",
+     "line": 151,
+     "what_happens": "Владелец задаёт в «Опт» шкалу «Рублей с каждой штуки», например «от 10 уп. — 300 ₽ с шт.». Проверка «цена станет 0 ₽» срабатывает только в момент сохранения шкалы (AdminWholesaleTab.tsx:111–122). Потом появляется товар с оптовой ценой не выше 300 ₽: его добавили, или ему снизили цену в форме, через CSV, массовые операции или «Курсы и наценка» → «Применить». Тогда на этой ступени `volumeDiscountedPrice` даёт ровно 0 ₽ за штуку. Покупатель видит в корзине и оформлении 0 ₽, заказ уходит на 0 ₽ (или только за доставку) и в браузерном режиме, и через `placeOrder`. «Цены не совпадают с каталогом» молчит: ожидаемую цену оно считает той же функцией и тоже получает 0. Проба: носки по 250 ₽ опт, упаковка 10, 100 шт. — `unitPrice 0`, итог 0.",
+     "owner_impact": "Товар уходит бесплатно, а проверка цен в «Заказах» этого не замечает",
+     "evidence": "const price = kind === 'fixed' ? base - tier.value : Math.round((base * (100 - tier.value)) / 100);\n  return Math.max(0, price);\n\n// AdminWholesaleTab.tsx:111 — проверка только при сохранении шкалы:\n// a fixed step larger than a product's wholesale price would give it away: that is never meant, so it is not saved",
+     "severity": "P1",
+     "proposed_fix": "В `volumeDiscountedPrice` (общий код, работает и в `placeOrder`) не применять рублёвую ступень, если цена после неё не выше нуля: брать предыдущую ступень или цену без скидки. Можно ещё ограничить скидку снизу, например ценой не ниже 1 ₽ или долей оптовой цены. В «Опт» показывать список «цена станет 0 ₽» при каждом открытии, а не только при сохранении. В форме товара и после «Применить» предупреждать, если новая оптовая цена не выше самой глубокой рублёвой ступени. Добавить тест в functions/test/wholesalePricing.test.ts.",
+     "needs_browser": true
+    },
+    {
+     "title": "Ростовку можно заказать у товара, который больше не продаётся оптом («Только в розницу» или без оптовой цены)",
+     "kind": "ошибка",
+     "file": "src/shared/packLines.ts",
+     "line": 206,
+     "what_happens": "Страница товара предлагает «Ростовкой» только при `sellsWholesale(product)` (ProductDetailScreen.tsx:193–195). Но цена строки ростовки (`pricePackLine`), проверка корзины и оформления (`packLineProblems`, `soldPack`), `placeOrder` (ветка `item.packId`, placeOrder.ts:205–210) и «Цены не совпадают» (orderPriceCheck.ts:113–130) канал продажи не проверяют. Пример: ростовка лежит в корзине (корзина хранится в браузере без срока), а владелец переключил товар на «Только в розницу» или убрал оптовую цену. У ростовки со своей ценой заказ проходит по цене ростовки. Проба: рубашка «Только в розницу» за 3 000 ₽, ростовка 48+50 за 2 000 ₽ — строки по 1 000 ₽ за штуку, `packLineProblems` пустой. Обычную оптовую строку в этой ситуации код переводит в розницу (`goesWholesale`), а проверка цен пишет «товар оптом не продаётся». Для ростовки нет ни того, ни другого.",
+     "owner_impact": "Товар уходит по оптовой цене ростовки, хотя владелец закрыл опт, и проверка цен этого не показывает",
+     "evidence": "export function pricePackLine<T extends CartItem>(item: T): T {\n  const product = item.product as Product | undefined;\n  if (!product || !Array.isArray(product.sizePacks)) return { ...item, unitPrice: item.packPrice ?? item.unitPrice };\n  const pack = soldPack(product, item.packId, String(item.selectedColor ?? ''));\n  const price = pack ? sizePackPrice(product, pack) : undefined;\n  if (!pack || price === undefined) return { ...item, packUnavailable: true };",
+     "severity": "P1",
+     "proposed_fix": "В `pricePackLine` (или в `soldPack`) у товара с `!sellsWholesale(product)` ставить `packUnavailable: true`. Тогда корзина и оформление покажут «ростовка больше не продаётся», а `placeOrder` откажет, потому что ходит через тот же `packLineProblems`. В `orderPriceIssues` для группы ростовки добавить замечание «товар оптом не продаётся», как у оптовых строк. Тест — в functions/test/packLines.test.ts и placeOrder.test.ts.",
+     "needs_browser": true
+    },
+    {
+     "title": "placeOrder не пишет promo_uses: после отмены серверного заказа использование кода не возвращается, а после восстановления считается второй раз",
+     "kind": "данные",
+     "file": "functions/src/placeOrder.ts",
+     "line": 370,
+     "what_happens": "Браузерный заказ пишет `usedCount + 1` вместе с отметкой `promo_uses/{заказ}` (`recordPromoUsageInFirestore`). Серверный `placeOrder` увеличивает только `usedCount`, отметку не создаёт. Когда администратор отменяет такой заказ, `releaseOrderPromoUse` не находит `promo_uses/{заказ}` и счётчик не уменьшает. При этом `releasePromoUses` (AdminOrdersTab.tsx:826–835) всё равно помечает заказ `promoReleased: true`. При восстановлении `retakeOrderPromoUse` создаёт отметку и ещё раз прибавляет к `usedCount` (AdminOrdersTab.tsx:598–603). Итог: одноразовый код покупателя после отмены заказа так и остаётся использованным, а каждый цикл «отмена → восстановление» добавляет коду лишнее использование. Проявится, когда включат серверные заказы.",
+     "owner_impact": "Коды с лимитом сгорают на отменённых заказах, счётчик использований растёт сам",
+     "evidence": "if (promo) {\n      const commissionPercent = promo.data.partnerCommissionPercent || 0;\n      tx.update(promo.ref, stripUndefined({\n        usedCount: (promo.data.usedCount || 0) + 1,\n        ...\n      }));\n    }\n// promo_uses/{orderId} не создаётся; releaseOrderPromoUse: if (!use.exists()) return false;",
+     "severity": "P1",
+     "proposed_fix": "В транзакции `placeOrderCore` вместе с `usedCount + 1` создавать `tx.create(db.collection('promo_uses').doc(orderRef.id), { orderId, promoId: promo.ref.id, createdAt })`, как это делает браузер. В `releasePromoUses` ставить `promoReleased` только когда `releaseOrderPromoUse` вернул `true` (или хранить отдельный признак «нечего возвращать»), чтобы восстановление не прибавляло лишнего. Тест — в functions/test/placeOrder.test.ts: после заказа с кодом есть `promo_uses/{id}`.",
+     "needs_browser": false
+    },
+    {
+     "title": "Серверный заказ отклоняет строку больше 99 штук, а оптовая строка считается в штуках: крупный опт не оформить",
+     "kind": "ошибка",
+     "file": "functions/src/placeOrder.ts",
+     "line": 77,
+     "what_happens": "`parsePlaceOrderRequest` пропускает в строке только от 1 до 99 штук (`MAX_QUANTITY = 99`, строка 48). Оптовая строка в корзине хранит штуки, а не упаковки: страница товара кладёт `quantity * step` (ProductDetailScreen.tsx:402), и `completeOrderOnServer` отправляет это число как есть (useCheckout.ts:171–177). Корзина и браузерный режим такого предела не знают. При включённых серверных заказах заказ 10 упаковок по 12 шт. (120 шт. одного варианта) отклоняется тостом «Некорректное количество товара». У товара, где минимальная партия сама больше 99 шт. (например, упаковка 20 × минимум 5 уп.), оптом нельзя оформить ни одного заказа. Сейчас серверные заказы выключены (нет Blaze): проблема проявится, как только их включат.",
+     "owner_impact": "После включения серверных заказов оптовики не смогут заказать крупную партию",
+     "evidence": "const MAX_QUANTITY = 99;\n...\nif (typeof quantity !== 'number' || !Number.isInteger(quantity) || quantity < 1 || quantity > MAX_QUANTITY) {\n  throw new OrderError('invalid-argument', 'Некорректное количество товара');\n}\n// useCheckout.ts: quantity: item.quantity, ...(isWholesaleLine(item) ? { wholesale: true } : {})",
+     "severity": "P1",
+     "proposed_fix": "Для строк с `wholesale: true` проверять число упаковок, а не штук (≤ 99 упаковок, предел штук — упаковка × 99), либо поднять общий предел до разумного для опта (например 10 000) с проверкой кратности упаковке на сервере. Текст ошибки должен называть товар и предел. Одинаковый предел — в корзине (`handleAddToCartWithOptions`, `handleUpdateQuantity`), чтобы покупатель не собирал заказ, который сервер отклонит. Тест — в placeOrder.test.ts: оптовая строка на 120 шт. проходит.",
+     "needs_browser": true
+    }
+   ]
+  },
+  "a4fa4ab7e4889af82": {
+   "findings": [
+    {
+     "title": "Покупатель может отметить «товар вернулся на склад», ничего не вернув: склад обнуляется, а владелец этого не видит",
+     "kind": "безопасность",
+     "file": "/home/user/Wasatofficial-Shop-/firestore.rules",
+     "line": 728,
+     "what_happens": "Покупатель со входом Google оформляет заказ: до 60 строк, количество любое, потому что строки правила не проверяют. Его браузер списывает остаток по каждой строке (deductOrderLineStock). Затем покупатель напрямую через API отменяет заказ (isCustomerOrderCancel) и следующей записью ставит stockReturned: true. Записей возврата {заказ}_{строка}_return он не создаёт. Правило проверяет только, что заказ его и отменён им самим; вернулся ли товар, оно не проверяет. Тест правил (tests/firestore.rules.test.mjs:963) сам показывает: отметка проходит сразу после отмены, без возврата. В «Заказах» у такого заказа нет плашки «Товары этого заказа ещё не вернулись на склад» и кнопки «Вернуть на склад»: они показываются только при stockReturned === false. Автоотмена неоплаченных его не трогает, потому что он уже отменён. Через 3 дня заказ уходит в «Архив». Товар так и остаётся списанным, на витрине — «нет в наличии». Повтор раз в 30 с с одного аккаунта (лимит order_rate) обнуляет остатки всего каталога. Владелец видит только обычные отмены покупателем.",
+     "owner_impact": "Склад тихо обнуляется, продажи встают. В админке это выглядит как обычные отмены, а единственная защита от поддельных заказов (автоотмена неоплаченных, тест A11) здесь не срабатывает.",
+     "evidence": "firestore.rules:728–736:\nfunction isCustomerStockReturnedMark() {\n  return isCustomer()\n    && resource.data.get('customerUid', null) == request.auth.uid\n    && resource.data.get('isCancelled', false) == true\n    && resource.data.get('cancelledBy', '') == 'customer'\n    && onlyChanges(['stockReturned', 'updatedAt'])\n    && isOrderStockReturnedMark... request.resource.data.stockReturned == true;\n(записи возврата не проверяются)\nsrc/components/admin/AdminOrdersTab.tsx:1587: {ord.stockReturned === false && ( … «Вернуть на склад»\nsrc/utils/orderCancel.ts:42 (автоотмена): if (o.isCancelled || …) return false;\ntests/firestore.rules.test.mjs:959–963: assertSucceeds(cancel(...)); … assertSucceeds(updateDoc(... { stockReturned: true, updatedAt: serverTimestamp() }))",
+     "severity": "P1",
+     "proposed_fix": "Не доверять отметке покупателя. В «Заказах» для заказов, отменённых покупателем, определять «держит товар» по журналу склада: orderHeldStock(readOrderJournal(id)) > 0 — так уже делается для isAdjusted. Сессия администратора возвращает это сама, как ordersWithPromoToRelease возвращает промокоды. В правилах ветку isCustomerStockReturnedMark убрать, и тогда отметку пишет сессия администратора по журналу. Или пускать stockReturned: true от покупателя только в одном пакете с записью возврата (existsAfter записи {заказ}_{строка}_return) и не отдельной записью. Вариант с журналом надёжнее: цикла по строкам в правилах нет. Атаку записать тестом с пометкой todo в tests/audit-attacks.test.mjs: отмена, потом stockReturned: true без возврата — отказ.",
+     "needs_browser": false
+    },
+    {
+     "title": "Отмену заказа после «Правки состава» запрещает только сайт: правила её пускают, и возврат по старым строкам завышает остаток",
+     "kind": "данные",
+     "file": "/home/user/Wasatofficial-Shop-/firestore.rules",
+     "line": 645,
+     "what_happens": "CLAUDE.md и аудит 07.10 (находка 2) обещают: заказ после «Правки состава» покупатель не отменяет, а возвращает товар только администратор, по вариантам. Но проверяет это только сайт — canCustomerCancel в момент нажатия. В правилах isCustomerOrderCancel и isOrderStockReturnMovement поле isAdjusted не проверяется. Окно отмены держит снимок заказа на момент нажатия: setOrderToCancel(selectedOrderForTracking) в src/views/profile/OrderTrackingModal.tsx:759, затем handleCancelOwnOrder(orderToCancel). Сценарий: покупатель открыл «Отменить заказ» и выбирает причину. В это время владелец уменьшил количество в строке, например с 5 до 2, и «Правка состава» вернула 3 шт. на склад отдельной записью журнала. Покупатель подтверждает отмену — правила её пускают. returnCancelledOrderStock(старый снимок без isAdjusted) возвращает по строке столько, сколько списала исходная запись {заказ}_0, то есть 5 шт. Правило isOrderStockReturnMovement это пропускает: changeQuantity == -taken.changeQuantity, товар и вариант строки те же. В итоге 3 шт. возвращаются на склад второй раз. То же можно сделать напрямую через API без всякой гонки. Позже returnAdjustedOrderStock у администратора уже ничего не находит: журнал «держит» отрицательное количество.",
+     "owner_impact": "Остаток завышен на уменьшенное количество, и магазин продаёт штуки, которых нет на полке. Ни карточка заказа, ни склад об этом не говорят.",
+     "evidence": "firestore.rules:645–661 — isCustomerOrderCancel проверяет status == 'accepted', isCancelled, cancelledAt и поля отмены; isAdjusted не проверяется.\nfirestore.rules:1018–1025 — isOrderStockReturnMovement: order.get('cancelledBy','') == 'customer' && … && data.changeQuantity == -get(takenPath).data.changeQuantity; isAdjusted не проверяется.\nsrc/utils/firebaseSync.ts:625: if (order.isAdjusted) { … } — решение по копии заказа из браузера.\nsrc/views/profile/OrderTrackingModal.tsx:759: onClick={() => setOrderToCancel(selectedOrderForTracking)}",
+     "severity": "P1",
+     "proposed_fix": "В правилах добавить && resource.data.get('isAdjusted', false) != true в isCustomerOrderCancel и && order.get('isAdjusted', false) != true в isOrderStockReturnMovement. Сайт такие заказы уже не отменяет, поэтому старые вкладки не ломаются, и хватит одного PR. В handleCancelOwnOrder (src/app/useCustomerOrders.ts) брать заказ по id из свежего orders, а не снимок окна. Тест правил: отмена и возврат по строке у заказа с isAdjusted: true — отказ.",
+     "needs_browser": false
+    }
+   ]
+  }
+ },
+ "started": [
+  "поиск:orders",
+  "поиск:security",
+  "поиск:silent",
+  "поиск:react"
+ ]
+}
