@@ -253,6 +253,52 @@ describe('placeOrderCore', () => {
     );
   });
 
+  test('size pack: priced and stocked by the server, a line per size, journal per size (stage 20)', async () => {
+    await db.doc('products/shirt').update({
+      wholesalePrice: 2000,
+      sizePacks: [{ id: 'pack-1', sizes: [{ size: 'M', qty: 2 }, { size: 'L', qty: 1 }] }],
+      skus: [
+        { id: 'shirt-w-m', color: 'Белый', size: 'M', stock: 4 },
+        { id: 'shirt-w-l', color: 'Белый', size: 'L', stock: 2 },
+      ],
+    });
+    await db.doc('settings/storefront').set({ freeDeliveryThreshold: 0, isExpressEnabled: true });
+    const order = await placeOrderCore(
+      db,
+      request({ items: [{ productId: 'shirt', color: 'Белый', size: '', quantity: 2, packId: 'pack-1' }] }),
+      null
+    );
+    // 2 packs × (2000 × 3 pcs) = 12 000 ₽, lines M ×4 and L ×2
+    expect(order.items.map((l) => [l.selectedSize, l.quantity, l.priceKind, l.packCount])).toEqual([
+      ['M', 4, 'pack', 2],
+      ['L', 2, 'pack', 2],
+    ]);
+    expect(order.totalPrice).toBe(12_000 + 350);
+    expect(order.items.some((l) => 'sizePacks' in l.product || 'packSizes' in l)).toBe(false);
+    const skus = (await db.doc('products/shirt').get()).data()!.skus as { size: string; stock: number }[];
+    expect(skus.map((s) => s.stock)).toEqual([0, 0]);
+    const journal = (await db.collection('stock_movements').get()).docs.map((d) => d.data().size).sort();
+    expect(journal).toEqual(['L', 'M']);
+  });
+
+  test('size pack: a missing size refuses the order even in preorder mode; an unknown pack is refused', async () => {
+    await db.doc('products/shirt').update({ sizePacks: [{ id: 'pack-1', price: 9000, sizes: [{ size: 'M', qty: 1 }, { size: 'L', qty: 1 }] }] });
+    await db.doc('settings/storefront').set({ freeDeliveryThreshold: 0, isExpressEnabled: true, isPreorderMode: true });
+    // L is sold out (stock 0)
+    await expectOrderError(
+      placeOrderCore(db, request({ items: [{ productId: 'shirt', color: 'Белый', size: '', quantity: 1, packId: 'pack-1' }] }), null),
+      'failed-precondition',
+      /Недостаточно товара/
+    );
+    await expectOrderError(
+      placeOrderCore(db, request({ items: [{ productId: 'shirt', color: 'Белый', size: '', quantity: 1, packId: 'pack-x' }] }), null),
+      'failed-precondition',
+      /Ростовка/
+    );
+    const skus = (await db.doc('products/shirt').get()).data()!.skus as { stock: number }[];
+    expect(skus.map((s) => s.stock)).toEqual([2, 0]);
+  });
+
   test('parses the wholesale choice and nothing else from the request', () => {
     const parsed = parsePlaceOrderRequest({
       ...request(),
