@@ -1,7 +1,7 @@
 // Отзывы: кто что видит после решения владельца, «Покупка подтверждена» и отзыв только по полученному заказу
 // (задание владельца 11.10; src/utils/reviewModeration.ts, src/utils/adminReviews.ts, src/utils/reviews.ts)
 import { describe, expect, test } from 'bun:test';
-import type { Order, Product, ReviewModeration, StoredReview } from '../../src/types';
+import type { CartItem, Order, Product, ReviewModeration, StoredReview } from '../../src/types';
 import {
   buildAdminReviewRows,
   countByStatus,
@@ -124,7 +124,8 @@ describe('viewReview: who sees what', () => {
 });
 
 describe('a review is written for a received order', () => {
-  const line = (id: string) => ({ id: `l-${id}`, product: { id }, selectedColor: 'Чёрный', selectedSize: 'M', quantity: 1 });
+  const line = (id: string) =>
+    ({ id: `l-${id}`, product: { id }, selectedColor: 'Чёрный', selectedSize: 'M', quantity: 1 }) as unknown as CartItem;
   const order = (id: string, overrides: Partial<Order> = {}) =>
     ({ id, status: 'delivered', customerUid: 'alice', items: [line('p1')], ...overrides }) as unknown as Order;
 
