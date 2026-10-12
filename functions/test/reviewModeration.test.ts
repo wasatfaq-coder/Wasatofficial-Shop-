@@ -147,6 +147,17 @@ describe('a review is written for a received order', () => {
     expect(reviewableOrders(orders, 'p1', 'alice').map((o) => o.id)).toEqual(['A', 'E']);
     expect(reviewableOrders(orders, 'p9', 'alice')).toEqual([]);
   });
+
+  test('an order with its products listed must name this one: the rules check the list (owner\'s decision 12.10)', () => {
+    const orders = [
+      order('A', { productIds: ['p1'] }),
+      // the list not yet in step with the lines: the rules would refuse it, the form does not offer it
+      order('B', { productIds: ['p2'] }),
+      // before 12.10, no list yet: by its lines, as before
+      order('C'),
+    ];
+    expect(reviewableOrders(orders, 'p1', 'alice').map((o) => o.id)).toEqual(['A', 'C']);
+  });
 });
 
 describe('«Отзывы» in the admin panel', () => {

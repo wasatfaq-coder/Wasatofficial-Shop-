@@ -84,9 +84,17 @@ export function isReceivedOrderOf(order: Pick<Order, 'status' | 'isCancelled' | 
   return order.customerUid === uid && order.status === 'delivered' && !order.isCancelled;
 }
 
-/** The customer's received orders (newest first as given) that contain this product */
+/**
+ * The customer's received orders (newest first as given) that contain this product. An order with `productIds` must name
+ * it there too: the rules check the list, not the lines (owner's decision 12.10), and the form offers only what passes
+ */
 export function reviewableOrders(orders: readonly Order[], productId: string, uid: string): Order[] {
-  return orders.filter((o) => isReceivedOrderOf(o, uid) && o.items.some((line) => line.product.id === productId));
+  return orders.filter(
+    (o) =>
+      isReceivedOrderOf(o, uid) &&
+      o.items.some((line) => line.product.id === productId) &&
+      (!Array.isArray(o.productIds) || o.productIds.includes(productId))
+  );
 }
 
 /** The first line of the order with this product: the size and colour for the review's form */

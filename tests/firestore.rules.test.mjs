@@ -1286,10 +1286,11 @@ describe('review moderation and purchase check', () => {
   });
 
   test('a review for an order: own delivered order passes, foreign, undelivered and cancelled do not', async () => {
-    await seed('orders/WS-D1', order({ id: 'WS-D1', status: 'delivered', customerUid: 'alice' }));
-    await seed('orders/WS-D2', order({ id: 'WS-D2', status: 'delivered', customerUid: 'bob' }));
-    await seed('orders/WS-D3', order({ id: 'WS-D3', status: 'in_transit', customerUid: 'alice' }));
-    await seed('orders/WS-D4', order({ id: 'WS-D4', status: 'delivered', isCancelled: true, customerUid: 'alice' }));
+    const withP1 = { productIds: ['p1'] };
+    await seed('orders/WS-D1', order({ id: 'WS-D1', status: 'delivered', customerUid: 'alice', ...withP1 }));
+    await seed('orders/WS-D2', order({ id: 'WS-D2', status: 'delivered', customerUid: 'bob', ...withP1 }));
+    await seed('orders/WS-D3', order({ id: 'WS-D3', status: 'in_transit', customerUid: 'alice', ...withP1 }));
+    await seed('orders/WS-D4', order({ id: 'WS-D4', status: 'delivered', isCancelled: true, customerUid: 'alice', ...withP1 }));
     const db = customer('alice');
     await assertSucceeds(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { orderId: 'WS-D1' })));
     await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { orderId: 'WS-D2' })));
@@ -1303,12 +1304,19 @@ describe('review moderation and purchase check', () => {
     await assertSucceeds(setDoc(doc(db, 'reviews/p1_alice'), review('alice')));
   });
 
-  // Review 11.10, finding 2: rules cannot look into the order's lines (a list of maps), so a received order of another
-  // product still passes and gets «Покупка подтверждена»; the site offers only orders with the product (reviewableOrders).
-  // Closes with a list of product ids in the order (buildClientOrder, placeOrder, isClientOrderShape) — a later PR
-  test('a review for an order without this product is refused', { todo: 'ревью 11.10, находка 2: правило не видит товары заказа' }, async () => {
-    await seed('orders/WS-D9', order({ id: 'WS-D9', status: 'delivered', customerUid: 'alice', items: [] }));
+  // Review 11.10, finding 2: rules cannot look into the order's lines (a list of maps); the order names its products in
+  // productIds (buildClientOrder, placeOrder, «Правка состава»; old orders — the admin's session, owner's decision 12.10)
+  test('a review for an order without this product is refused, on an edit too', async () => {
+    await seed('orders/WS-D9', order({ id: 'WS-D9', status: 'delivered', customerUid: 'alice', items: [], productIds: ['p2'] }));
     await assertFails(setDoc(doc(customer('alice'), 'reviews/p1_alice'), review('alice', { orderId: 'WS-D9' })));
+    // an order without the list (before 12.10, not yet written by the admin's session) confirms nothing
+    await seed('orders/WS-D8', order({ id: 'WS-D8', status: 'delivered', customerUid: 'alice' }));
+    await assertFails(setDoc(doc(customer('alice'), 'reviews/p1_alice'), review('alice', { orderId: 'WS-D8' })));
+    // the product left the order by «Правка состава»: the review of it is not saved again with that order
+    await seed('orders/WS-D7', order({ id: 'WS-D7', status: 'delivered', customerUid: 'alice', productIds: ['p1'] }));
+    await assertSucceeds(setDoc(doc(customer('alice'), 'reviews/p1_alice'), review('alice', { orderId: 'WS-D7' })));
+    await seed('orders/WS-D7', order({ id: 'WS-D7', status: 'delivered', customerUid: 'alice', productIds: ['p2'] }));
+    await assertFails(setDoc(doc(customer('alice'), 'reviews/p1_alice'), review('alice', { orderId: 'WS-D7', comment: 'Правка' })));
   });
 
   test('the save time of a review is the server\'s', async () => {

@@ -257,7 +257,12 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
                 <p id={fieldId('order')} className="text-xs text-[#4E5C70]">{REVIEW_NEEDS_ORDER_TEXT}</p>
               )}
               {orderMissing && (
-                <p role="alert" className="text-xs font-bold text-danger">Выберите заказ, по которому пишете отзыв</p>
+                <p role="alert" className="text-xs font-bold text-danger">
+                  {/* the review's order no longer has the product («Правка состава»): the rules refuse it (owner's decision 12.10) */}
+                  {myReview && orders.length === 0
+                    ? 'Отзыв можно изменить только по заказу с этим товаром'
+                    : 'Выберите заказ, по которому пишете отзыв'}
+                </p>
               )}
             </div>
           )}
