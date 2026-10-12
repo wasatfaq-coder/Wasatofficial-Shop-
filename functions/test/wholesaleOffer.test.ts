@@ -41,6 +41,7 @@ describe('the wholesale offer on the product page', () => {
     expect(offer).toEqual({
       unitPrice: 1500,
       packSize: 5,
+      packPrice: 7500,
       minPacks: 2,
       onlyWholesale: false,
       countBy: 'product',

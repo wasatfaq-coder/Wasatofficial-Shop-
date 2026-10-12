@@ -577,3 +577,29 @@ input[type="range"].neu-range::-moz-range-thumb {
     font-size: 16px;
   }
 }
+
+/* Printing the invoice (AdminOrderInvoiceModal): only its sheet goes to paper. The window is portaled into <body>;
+   everything else in <body> is hidden, and the window loses its fixed position, scroll box and shadows so a long
+   order continues on the next page instead of being cut at the screen height. */
+@media print {
+  body.printing-invoice > *:not([data-print-root]) {
+    display: none !important;
+  }
+  body.printing-invoice [data-print-root] {
+    position: static !important;
+    display: block !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  body.printing-invoice [data-print-root] > .fixed {
+    display: none !important;
+  }
+  body.printing-invoice [data-print-root] .neu-modal {
+    max-height: none !important;
+    overflow: visible !important;
+    transform: none !important;
+    contain: none !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+}

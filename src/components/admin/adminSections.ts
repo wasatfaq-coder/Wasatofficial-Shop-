@@ -10,6 +10,7 @@ export const ADMIN_TAB_IDS = [
   'analytics',
   'orders',
   'customers',
+  'reviews',
   'support',
   'products',
   'categories',

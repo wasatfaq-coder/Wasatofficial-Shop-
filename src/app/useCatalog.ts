@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import type { Product, ReviewVote, StoredReview } from '../types';
+import type { Product, ReviewModeration, ReviewVote, StoredReview } from '../types';
 import { useAuth } from '../context/AuthContext';
 import {
   subscribeToCatalogIndex,
   subscribeToProducts,
+  subscribeToReviewModeration,
   subscribeToReviewVotes,
   subscribeToReviews,
 } from '../utils/firebaseSync';
@@ -12,6 +13,7 @@ import { liveProducts, setLiveProductsEnabled, useLiveProductsVersion } from '..
 import { liveReviews, setLiveReviewsEnabled, useLiveReviewsVersion } from '../utils/liveReviews';
 import { setThumbKeys } from '../utils/productThumbs';
 import { mergeProductReviews } from '../utils/reviews';
+import { decisionsById } from '../utils/reviewModeration';
 import { useCatalogIndexSync } from './useCatalogIndexSync';
 
 /** Where the catalog comes from: the light index (customers, stage 3 of docs/catalog-scale-plan.md) or every product */
@@ -26,15 +28,20 @@ type Source = 'index' | 'full';
  * keeps the index in step (`useCatalogIndexSync`). No index yet, a broken one or a browser without gzip — every
  * product, as before. Reviews and votes the same way: from the index the cards take the rating of their line, and only
  * the open product page reads its reviews (`useLiveReviews`, stage 4); the whole catalog comes with every review.
+ * `reviewPremoderation` — «Проверять отзывы перед публикацией»: reviews the owner has not published are left out of
+ * the rating and the product page (the author sees their own with «На проверке»; `src/utils/reviewModeration.ts`).
  */
-export function useCatalog(onCatalog: (products: Product[]) => void) {
-  const { isAdmin } = useAuth();
+export function useCatalog(onCatalog: (products: Product[]) => void, reviewPremoderation = false) {
+  const { isAdmin, currentUser } = useAuth();
+  // the owner's catalog (and so the index customers read) counts only reviews everybody sees; a customer — also their own
+  const viewerUid = !isAdmin && currentUser && !currentUser.isAnonymous ? currentUser.uid : null;
   const [indexFailed, setIndexFailed] = useState(() => !canReadCatalogIndex());
   const source: Source = isAdmin || indexFailed ? 'full' : 'index';
   const [loaded, setLoaded] = useState<{ source: Source; products: Product[] } | null>(null);
   // Reviews live in their own collections and are merged into the products for display
   const [storedReviews, setStoredReviews] = useState<StoredReview[]>([]);
   const [reviewVotes, setReviewVotes] = useState<ReviewVote[]>([]);
+  const [reviewDecisions, setReviewDecisions] = useState<ReviewModeration[]>([]);
   // The catalog subscription failed (rules, network): the screens say so instead of «Товары появятся здесь»
   const [productsError, setProductsError] = useState(false);
   const liveVersion = useLiveProductsVersion();
@@ -83,11 +90,15 @@ export function useCatalog(onCatalog: (products: Product[]) => void) {
     if (source !== 'full') return;
     const unsubReviews = subscribeToReviews(setStoredReviews);
     const unsubReviewVotes = subscribeToReviewVotes(setReviewVotes);
+    // a refused read (rules not published yet) means no decisions
+    const unsubDecisions = subscribeToReviewModeration(setReviewDecisions, undefined, () => setReviewDecisions([]));
     return () => {
       unsubReviews();
       unsubReviewVotes();
+      unsubDecisions();
       setStoredReviews([]);
       setReviewVotes([]);
+      setReviewDecisions([]);
     };
   }, [source]);
 
@@ -106,16 +117,26 @@ export function useCatalog(onCatalog: (products: Product[]) => void) {
   }, [loaded, liveVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const products = React.useMemo(() => {
-    if (loaded?.source !== 'index') return mergeProductReviews(catalogProducts, storedReviews, reviewVotes);
+    if (loaded?.source !== 'index') {
+      return mergeProductReviews(catalogProducts, storedReviews, reviewVotes, {
+        decisions: decisionsById(reviewDecisions),
+        premoderation: reviewPremoderation,
+        viewerUid,
+      });
+    }
     const read = liveReviews();
     if (read.size === 0) return catalogProducts;
     return catalogProducts.map((p) => {
       const own = read.get(p.id);
       if (!own) return p;
       const { catalogRating: _line, ...product } = p;
-      return mergeProductReviews([product], own.reviews, own.votes)[0];
+      return mergeProductReviews([product], own.reviews, own.votes, {
+        decisions: decisionsById(own.moderation),
+        premoderation: reviewPremoderation,
+        viewerUid,
+      })[0];
     });
-  }, [loaded?.source, catalogProducts, storedReviews, reviewVotes, reviewsVersion]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loaded?.source, catalogProducts, storedReviews, reviewVotes, reviewDecisions, reviewPremoderation, viewerUid, reviewsVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The latest callback is read when the catalog changes. The catalog counts as loaded only once App has it: the open
   // product is restored from it in the same render, so a link is not taken for a product that is gone

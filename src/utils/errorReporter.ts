@@ -74,6 +74,9 @@ export function reportClientError(kind: ClientErrorKind, raw: { message: string;
 
 /** A screen failed to draw (createRoot's onCaughtError / onUncaughtError in main.tsx) */
 export function reportRenderError(error: unknown, componentStack?: string) {
+  // The dev server (AI Studio preview, `vite`) is the developer's own: its errors (a second React after dependency
+  // re-optimisation, a chunk of a rebuilt module) are not the customers' and are not written into the owner's log
+  if (!import.meta.env.PROD) return;
   const { message, stack } = errorText(error);
   reportClientError('render', { message, stack: [stack, componentStack].filter(Boolean).join('\n') });
 }

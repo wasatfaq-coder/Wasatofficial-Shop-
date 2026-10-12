@@ -1,23 +1,27 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AdminHint } from './AdminHint';
 import { ChevronDown, Landmark, Loader2, Plus, Save, X } from 'lucide-react';
-import type { Order, OrderPaymentDetails, PaymentKind, PaymentRequisitesByKind, PaymentTemplate } from '../../types';
+import type { Order, OrderPaymentDetails, PaymentKind, PaymentRequisitesByKind, PaymentTemplate, TransferCommentSetting } from '../../types';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import { AdminRequisitesFields } from './AdminRequisitesFields';
+import { AdminTransferCommentField } from './AdminTransferCommentField';
 import { savePaymentTemplate } from '../../utils/firebaseSync';
 import { useUnsavedChanges } from '../../utils/unsavedChanges';
 import {
   emptyRequisites,
   filledPaymentKinds,
   normalizeRequisites,
+  normalizeTransferComment,
   PAYMENT_KIND_SHORT,
   PAYMENT_KIND_TITLES,
   PAYMENT_KINDS,
+  storedTransferComment,
   toFormRequisites,
   validateRequisites,
+  validateTransferComment,
 } from '../../utils/paymentDetails';
 
-type FormState = Partial<Record<PaymentKind, PaymentRequisitesByKind[PaymentKind]>>;
+type FormState = Partial<Record<PaymentKind, PaymentRequisitesByKind[PaymentKind]>> & { transferComment?: TransferCommentSetting };
 
 const formOf = (details: OrderPaymentDetails | undefined): FormState => {
   const out: FormState = {};
@@ -25,6 +29,7 @@ const formOf = (details: OrderPaymentDetails | undefined): FormState => {
     const fields = details?.[kind];
     if (fields) out[kind] = toFormRequisites(kind, fields as PaymentRequisitesByKind[typeof kind]);
   }
+  if (details?.transferComment) out.transferComment = normalizeTransferComment(details.transferComment);
   return out;
 };
 
@@ -49,6 +54,7 @@ export const AdminOrderPaymentBlock: React.FC<AdminOrderPaymentBlockProps> = ({ 
   const [picked, setPicked] = useState<Partial<Record<PaymentKind, string>>>({});
   const [errors, setErrors] = useState<Partial<Record<PaymentKind, Record<string, string>>>>({});
   const [saving, setSaving] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
   const [templateName, setTemplateName] = useState<Partial<Record<PaymentKind, string>>>({});
   const [savingTemplate, setSavingTemplate] = useState<PaymentKind | null>(null);
 
@@ -79,6 +85,9 @@ export const AdminOrderPaymentBlock: React.FC<AdminOrderPaymentBlockProps> = ({ 
       return;
     }
     setKind(kind, toFormRequisites(kind, template.fields as PaymentRequisitesByKind[typeof kind]));
+    // the template's comment goes to the order together with its requisites
+    setForm((prev) => ({ ...prev, transferComment: normalizeTransferComment(template.transferComment) }));
+    setCommentError(null);
   };
 
   const saveForOrder = async () => {
@@ -91,12 +100,15 @@ export const AdminOrderPaymentBlock: React.FC<AdminOrderPaymentBlockProps> = ({ 
       if (Object.keys(e).length > 0) nextErrors[kind] = e;
       else (details as Record<string, unknown>)[kind] = normalizeRequisites(kind, fields);
     }
+    const nextCommentError = validateTransferComment(form.transferComment);
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) {
+    setCommentError(nextCommentError);
+    if (Object.keys(nextErrors).length > 0 || nextCommentError) {
       onShowToast('Проверьте реквизиты: есть ошибки в полях', 'error');
       return;
     }
     setSaving(true);
+    if (Object.keys(details).length > 0 && form.transferComment) details.transferComment = storedTransferComment(form.transferComment);
     const ok = await onSave(Object.keys(details).length > 0 ? details : undefined);
     setSaving(false);
     if (ok) onShowToast(`Реквизиты заказа № ${order.id} сохранены — покупатель видит их в заказе`, 'success');
@@ -241,6 +253,20 @@ export const AdminOrderPaymentBlock: React.FC<AdminOrderPaymentBlockProps> = ({ 
               </section>
             );
           })}
+
+          {filled.length > 0 || PAYMENT_KINDS.some((k) => form[k]) ? (
+            <section className="neu-flat-sm rounded-xl p-2.5" aria-label="Комментарий к переводу">
+              <AdminTransferCommentField
+                value={form.transferComment ?? { mode: 'order' }}
+                onChange={(transferComment) => {
+                  setForm((prev) => ({ ...prev, transferComment }));
+                  setCommentError(null);
+                }}
+                error={commentError}
+                idPrefix={`order-${order.id}`}
+              />
+            </section>
+          ) : null}
 
           <div className="flex items-center justify-end gap-2">
             {dirty && (

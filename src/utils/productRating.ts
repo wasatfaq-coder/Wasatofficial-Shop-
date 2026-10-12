@@ -8,7 +8,7 @@ import type { Product } from '../types';
 export function getProductRating(product: Pick<Product, 'reviews' | 'catalogRating'>): { rating: number; count: number } | null {
   // a product from the catalog index: its reviews are read only on its page, the rating comes with the index line
   if (product.catalogRating !== undefined) return product.catalogRating;
-  const reviews = (product.reviews ?? []).filter((r) => typeof r.rating === 'number' && r.rating > 0);
+  const reviews = (product.reviews ?? []).filter((r) => typeof r.rating === 'number' && r.rating > 0 && !r.moderation);
   if (reviews.length === 0) return null;
   const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
   return { rating: Math.round((sum / reviews.length) * 10) / 10, count: reviews.length };

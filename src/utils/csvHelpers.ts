@@ -224,9 +224,12 @@ export function parseProductsFromCSV(
       const known = knownColors.find((c) => normalizeColorName(extractColorName(c)) === normalizeColorName(colorName));
       const knownHex = known && typeof known === 'object' ? readColorCode(String(known.hex ?? ''), { bare: true }) : null;
       // the product's own spelling stays: its variations are written with it («Тёмно-синий», not «темно-синий»)
+      const knownImage = known && typeof known === 'object' ? known.imageIndex : undefined;
       return {
         name: known ? extractColorName(known) : colorName,
         hex: hex ?? knownHex ?? colorHexForName(colorName) ?? UNKNOWN_COLOR_HEX,
+        // the photo binding is not in the CSV: an update keeps the one the product has
+        ...(typeof knownImage === 'number' ? { imageIndex: knownImage } : {}),
       };
     });
     const purchase = purchaseFromCells(currencyCell, amountCell, markupCell);

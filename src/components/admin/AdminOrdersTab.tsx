@@ -69,6 +69,8 @@ import {
   canHandOver,
   flowStatuses,
   generatePickupCode,
+  needsPickupCode,
+  withPaymentStatus,
   isCarrierOrder,
   ORDER_STEP_LABELS,
   orderMainAction,
@@ -570,7 +572,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       const updatedPaymentStatus = newStatus === 'delivered' && ord.paymentStatus === 'paid_on_delivery'
         ? 'paid'
         : ord.paymentStatus;
-      const needsCode = usesPickupCode(ord) && (newStatus === 'in_transit' || newStatus === 'ready') && !ord.pickupCode;
+      const needsCode = needsPickupCode({ ...ord, status: newStatus, isCancelled: false, paymentStatus: updatedPaymentStatus });
       const entryNote = [ord.isCancelled ? 'Восстановлен после отмены' : '', note ?? ''].filter(Boolean).join('. ');
 
       return {
@@ -670,7 +672,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     }
     if (skipped.length > 0) onShowToast(`Не изменены: ${skipped.join('; ')}`, 'error');
     if (allowed.size === 0) return;
-    const updated = orders.map((ord) => (allowed.has(ord.id) ? { ...ord, paymentStatus: newStatus } : ord));
+    const updated = orders.map((ord) => (allowed.has(ord.id) ? withPaymentStatus(ord, newStatus) : ord));
     if ((await onUpdateOrders(updated)) === false) return;
     onShowToast(
       `Статус оплаты ${allowed.size} ${pluralRu(allowed.size, ['заказа', 'заказов', 'заказов'])}: «${PAYMENT_STATUS_CONFIG[newStatus].label}»`,
@@ -756,7 +758,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       setPaidDespitePrices(target);
       return;
     }
-    const updated = orders.map((ord) => (ord.id === orderId ? { ...ord, paymentStatus: newStatus } : ord));
+    const updated = orders.map((ord) => (ord.id === orderId ? withPaymentStatus(ord, newStatus) : ord));
     if ((await onUpdateOrders(updated)) === false) return;
     onShowToast(`Статус оплаты заказа ${orderId}: "${PAYMENT_STATUS_CONFIG[newStatus].label}"`, 'success');
   };

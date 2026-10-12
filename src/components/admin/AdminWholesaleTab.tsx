@@ -17,6 +17,7 @@ import { wholeNumber } from '../../utils/wholesaleEditing';
 import { useUnsavedChanges } from '../../utils/unsavedChanges';
 import { pluralRu } from '../../utils/pluralize';
 import { AdminHint } from './AdminHint';
+import { AdminExample } from './AdminExample';
 
 interface AdminWholesaleTabProps {
   settings: StorefrontSettings;
@@ -261,20 +262,18 @@ export const AdminWholesaleTab: React.FC<AdminWholesaleTabProps> = ({ settings, 
         </fieldset>
 
         {valid && sample && scale.tiers.length > 0 && (
-          <div className="rounded-2xl p-3 neu-inset space-y-1">
-            <p className="text-xs font-bold text-[#2D3A4E]">
-              Пример: «{sample.title}», опт {rub(sample.wholesalePrice as number)} за штуку
-            </p>
-            <ul className="text-xs text-[#4E5C70] space-y-0.5">
-              {[...scale.tiers]
+          <AdminExample
+            title={sample.title}
+            lines={[
+              `опт ${rub(sample.wholesalePrice as number)} за штуку`,
+              ...[...scale.tiers]
                 .sort((a, b) => a.minPacks - b.minPacks)
-                .map((t) => (
-                  <li key={t.minPacks}>
-                    {tierText(t.minPacks, t.value, scale.kind)} → {rub(volumeDiscountedPrice(sample.wholesalePrice as number, t, scale.kind))} за штуку
-                  </li>
-                ))}
-            </ul>
-          </div>
+                .map(
+                  (t) =>
+                    `${tierText(t.minPacks, t.value, scale.kind)} → ${rub(volumeDiscountedPrice(sample.wholesalePrice as number, t, scale.kind))} за штуку`,
+                ),
+            ]}
+          />
         )}
 
         {belowCost.length > 0 && (

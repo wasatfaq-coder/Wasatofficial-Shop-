@@ -33,6 +33,8 @@ export interface WholesaleOffer {
   /** The wholesale price of one item before the volume discount */
   unitPrice: number;
   packSize: number;
+  /** One pack at the wholesale price before the volume discount: `unitPrice` × `packSize` */
+  packPrice: number;
   minPacks: number;
   /** The product is not sold by the item at its retail price */
   onlyWholesale: boolean;
@@ -52,9 +54,11 @@ export function wholesaleOfferOf(product: OfferProduct, settings?: WholesaleSett
   if (!sellsWholesale(product)) return null;
   const unitPrice = product.wholesalePrice as number;
   const scale = readVolumeDiscount(settings?.volumeDiscount);
+  const packSize = packSizeOf(product);
   return {
     unitPrice,
-    packSize: packSizeOf(product),
+    packSize,
+    packPrice: unitPrice * packSize,
     minPacks: minPacksOf(product),
     onlyWholesale: !sellsRetail(product),
     countBy: scale?.countBy ?? 'product',

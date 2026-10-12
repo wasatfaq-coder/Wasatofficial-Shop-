@@ -53,6 +53,7 @@ export const BACKUP_COLLECTION_TITLES: Record<string, string> = {
   admins: 'Администраторы',
   reviews: 'Отзывы',
   review_votes: 'Голоса «Полезно»',
+  review_moderation: 'Решения по отзывам',
   chat_messages: 'Сообщения чата',
   chat_images: 'Фото из чата',
   support_threads: 'Диалоги поддержки',

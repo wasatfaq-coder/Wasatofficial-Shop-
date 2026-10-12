@@ -754,6 +754,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         products={products}
         storeName={storeName}
         storePhone={storePhone}
+        profile={profile}
         onCancelOrder={onCancelOrder}
         onConfirmReceipt={onConfirmReceipt}
         onOpenSupportChat={onOpenSupportChat}

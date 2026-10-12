@@ -184,14 +184,30 @@ export function orderMainAction(order: Order): OrderMainAction | null {
   return statusChangeBlocker(order, next) ? { kind: 'track' } : { kind: 'status', status: next };
 }
 
-/** Код показывается покупателю, когда заказ передан курьеру или ждёт в пункте выдачи */
+/** Курьер везёт заказ или он ждёт в пункте выдачи — время кода выдачи */
+const isHandoverStatus = (order: Order) => order.status === 'in_transit' || order.status === 'ready';
+
+/**
+ * Код показывается покупателю, когда заказ передан курьеру или ждёт в пункте выдачи — и только оплаченный
+ * (или «Оплата при получении»): без оплаты заказ не выдают, и код не должен быть на руках (задача владельца 11.10, п. 1).
+ */
 export function showsPickupCode(order: Order): boolean {
-  return (
-    Boolean(order.pickupCode) &&
-    !order.isCancelled &&
-    usesPickupCode(order) &&
-    (order.status === 'in_transit' || order.status === 'ready')
-  );
+  return Boolean(order.pickupCode) && !order.isCancelled && usesPickupCode(order) && isHandoverStatus(order) && canHandOver(order);
+}
+
+/** Нужен ли заказу новый код выдачи: курьер или пункт, статус выдачи, оплачен, кода ещё нет */
+export function needsPickupCode(order: Order): boolean {
+  return !order.pickupCode && !order.isCancelled && usesPickupCode(order) && isHandoverStatus(order) && canHandOver(order);
+}
+
+/**
+ * Заказ с новым статусом оплаты и кодом выдачи под него: оплата снята («Ждёт оплаты», чек на проверке, возврат) —
+ * код удаляется из заказа, и прежний больше не действует; заказ оплачен в пути или в пункте — код создаётся.
+ */
+export function withPaymentStatus(order: Order, paymentStatus: NonNullable<Order['paymentStatus']>): Order {
+  const next: Order = { ...order, paymentStatus };
+  if (!canHandOver(next)) return { ...next, pickupCode: undefined };
+  return needsPickupCode(next) ? { ...next, pickupCode: generatePickupCode() } : next;
 }
 
 /** Запись истории о смене статуса сейчас */

@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MessageSquarePlus, Star, X } from 'lucide-react';
-import type { Product, ProductReview, StoredReview, UserProfile } from '../types';
+import type { Order, Product, ProductReview, StoredReview, UserProfile } from '../types';
 import { initialSize } from '../utils/variantSelection';
 import { reviewDocId } from '../utils/reviews';
+import { orderLineOfProduct, REVIEW_NEEDS_ORDER_TEXT } from '../utils/reviewModeration';
 import { saveReviewToFirestore } from '../utils/firebaseSync';
 import { useDialogA11y } from '../utils/useDialogA11y';
 import { NeumorphicSelect } from './NeumorphicSelect';
@@ -14,6 +15,10 @@ interface ReviewFormModalProps {
   /** The customer's own review: the form edits it (one review per customer and product) */
   myReview?: ProductReview;
   uid: string;
+  /** The customer's received orders with this product («По заказу № …»): the review is written for one of them */
+  orders: readonly Order[];
+  /** The order to preselect (opened from the order's window) */
+  initialOrderId?: string;
   userProfile?: UserProfile;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
@@ -37,6 +42,8 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
   product,
   myReview,
   uid,
+  orders,
+  initialOrderId,
   userProfile,
   onShowToast,
 }) => {
@@ -51,23 +58,58 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
   // The size the customer bought: not guessed (a default «M» went into reviews unnoticed)
   const [selectedSize, setSelectedSize] = useState(() => initialSize(product));
   const [selectedColor, setSelectedColor] = useState(product.colors[0]?.name || '');
+  const [selectedOrderId, setSelectedOrderId] = useState('');
+  const [orderMissing, setOrderMissing] = useState(false);
   const starRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // Opening the form for one's own review fills it in — only on opening: `myReview` is a new object on every render
   // of the product, and the text being typed must stay
   const myReviewRef = useRef(myReview);
   myReviewRef.current = myReview;
+  const ordersRef = useRef(orders);
+  ordersRef.current = orders;
   useEffect(() => {
+    if (!isOpen) return;
     const myReview = myReviewRef.current;
-    if (!isOpen || !myReview) return;
-    setSelectedRating(myReview.rating);
-    setAuthorName(myReview.authorName);
-    setCommentText(myReview.comment);
-    setProsText(myReview.pros ?? '');
-    setConsText(myReview.cons ?? '');
-    if (myReview.sizePurchased) setSelectedSize(myReview.sizePurchased);
-    if (myReview.colorPurchased) setSelectedColor(myReview.colorPurchased);
-  }, [isOpen]);
+    const reviewable = ordersRef.current;
+    setOrderMissing(false);
+    // the order: the review's own, the one the form was opened from, the only one there is
+    const orderId =
+      (myReview?.orderId && reviewable.some((o) => o.id === myReview.orderId) ? myReview.orderId : undefined) ??
+      (initialOrderId && reviewable.some((o) => o.id === initialOrderId) ? initialOrderId : undefined) ??
+      (reviewable.length === 1 ? reviewable[0].id : '');
+    setSelectedOrderId(orderId);
+    if (myReview) {
+      setSelectedRating(myReview.rating);
+      setAuthorName(myReview.authorName);
+      setCommentText(myReview.comment);
+      setProsText(myReview.pros ?? '');
+      setConsText(myReview.cons ?? '');
+      if (myReview.sizePurchased) setSelectedSize(myReview.sizePurchased);
+      if (myReview.colorPurchased) setSelectedColor(myReview.colorPurchased);
+    } else {
+      const order = reviewable.find((o) => o.id === orderId);
+      const line = order && orderLineOfProduct(order, product.id);
+      if (line) {
+        if (product.sizes.includes(line.selectedSize)) setSelectedSize(line.selectedSize);
+        if (product.colors.some((c) => c.name === line.selectedColor)) setSelectedColor(line.selectedColor);
+      }
+    }
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Another order chosen: the size and colour of its line (the customer can still change them) */
+  const chooseOrder = (orderId: string) => {
+    setSelectedOrderId(orderId);
+    setOrderMissing(false);
+    const order = orders.find((o) => o.id === orderId);
+    const line = order && orderLineOfProduct(order, product.id);
+    if (!line) return;
+    if (product.sizes.includes(line.selectedSize)) setSelectedSize(line.selectedSize);
+    if (product.colors.some((c) => c.name === line.selectedColor)) setSelectedColor(line.selectedColor);
+  };
+
+  // A review of the time before orders were required, and no received order to link it to: it can still be edited
+  const orderOptional = Boolean(myReview && !myReview.orderId && orders.length === 0);
 
   /** Radio group keys: arrows move the choice (and the focus) to the next star, Home/End — to 1 and 5 */
   const handleRatingKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
@@ -88,6 +130,10 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedOrderId && !orderOptional) {
+      setOrderMissing(true);
+      return;
+    }
     if (!commentText.trim()) {
       onShowToast('Пожалуйста, напишите текст отзыва', 'error');
       return;
@@ -106,6 +152,7 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
       colorPurchased: selectedColor,
       date: myReview?.date ?? new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }),
       createdAt: myReview?.createdAt ?? new Date().toISOString(),
+      ...(selectedOrderId ? { orderId: selectedOrderId } : {}),
     };
 
     setIsSaving(true);
@@ -115,7 +162,7 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
       setCommentText('');
       setProsText('');
       setConsText('');
-      onShowToast(myReview ? 'Отзыв обновлен' : 'Отзыв опубликован! Спасибо за обратную связь', 'success');
+      onShowToast(myReview ? 'Отзыв сохранён' : 'Спасибо за отзыв!', 'success');
     } catch (err) {
       console.error('Review save failed:', err);
       onShowToast('Не удалось сохранить отзыв. Попробуйте еще раз', 'error');
@@ -142,7 +189,7 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
               <MessageSquarePlus className="w-5 h-5 stroke-[2.2]" />
             </div>
             <div>
-              <h3 id={dialog.titleId} className="text-base font-extrabold text-[#2D3A4E]">Оставить отзыв</h3>
+              <h3 id={dialog.titleId} className="text-base font-extrabold text-[#2D3A4E]">{myReview ? 'Изменить отзыв' : 'Оставить отзыв'}</h3>
               <p className="text-xs text-[#4E5C70] truncate max-w-[220px]">{product.title}</p>
             </div>
           </div>
@@ -193,6 +240,27 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
               {RATING_WORDS[selectedRating]}
             </span>
           </div>
+
+          {/* The review is for a received order: its number is required */}
+          {(orders.length > 0 || !orderOptional) && (
+            <div className="space-y-1">
+              <label htmlFor={fieldId('order')} className="block font-bold text-[#2D3A4E]">По заказу № *:</label>
+              {orders.length > 0 ? (
+                <NeumorphicSelect
+                  id={fieldId('order')}
+                  value={selectedOrderId}
+                  options={orders.map((o) => ({ value: o.id, label: `№ ${o.id}`, sublabel: o.date }))}
+                  onChange={chooseOrder}
+                  placeholder="Выберите заказ"
+                />
+              ) : (
+                <p id={fieldId('order')} className="text-xs text-[#4E5C70]">{REVIEW_NEEDS_ORDER_TEXT}</p>
+              )}
+              {orderMissing && (
+                <p role="alert" className="text-xs font-bold text-danger">Выберите заказ, по которому пишете отзыв</p>
+              )}
+            </div>
+          )}
 
           <div className="space-y-1">
             <label htmlFor={fieldId('name')} className="block font-bold text-[#2D3A4E]">Ваше имя:</label>

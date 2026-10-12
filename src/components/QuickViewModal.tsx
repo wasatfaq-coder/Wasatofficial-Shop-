@@ -9,12 +9,13 @@ import { getProductRating } from '../utils/productRating';
 import { productImage } from '../utils/productImage';
 import { useProductPhotos } from '../utils/useProductPhotos';
 import { getOrderableStock, getVariantStock } from '../utils/inventory';
+import { colorImageIndex } from '../utils/colorPhotos';
 import { colorStock, initialColor, initialSize, maxOrderableForColor, profileSizeFor } from '../utils/variantSelection';
 import { useDialogA11y } from '../utils/useDialogA11y';
 import { useLiveProduct } from '../utils/liveProducts';
 import { useProductThumb } from '../utils/productThumbs';
 import { shownOldPrice } from '../utils/productBadge';
-import { sellsRetail, sellsWholesale } from '../shared/wholesalePricing';
+import { packSizeOf, sellsRetail, sellsWholesale } from '../shared/wholesalePricing';
 
 interface QuickViewModalProps {
   product: Product | null;
@@ -207,8 +208,11 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
             <div className="flex items-center justify-between py-1">
               <div className="flex items-baseline gap-2">
                 <span className="text-xl font-bold text-[#2D3A4E]">
-                  {(wholesaleOnly ? (product.wholesalePrice as number) : product.price).toLocaleString('ru-RU')} ₽
-                  {wholesaleOnly && <span className="text-xs text-[#4E5C70]">/шт. оптом</span>}
+                  {/* a pack of several items is priced per pack, as on the product page (owner task 11.10, item 3) */}
+                  {(wholesaleOnly ? (product.wholesalePrice as number) * packSizeOf(product) : product.price).toLocaleString('ru-RU')} ₽
+                  {wholesaleOnly && (
+                    <span className="text-xs text-[#4E5C70]">{packSizeOf(product) > 1 ? `/уп. (${packSizeOf(product)} шт.) оптом` : '/шт. оптом'}</span>
+                  )}
                 </span>
                 {!wholesaleOnly && shownOldPrice(product) !== null && (
                   <span className="text-xs text-[#4E5C70] line-through">
@@ -242,6 +246,9 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                       aria-label={c.name}
                       onClick={() => {
                         setSelectedColor(c.name);
+                        // optional photo bound to the colour: only on the click
+                        const boundPhoto = colorImageIndex(product, c.name);
+                        if (boundPhoto !== null) setSelectedImageIndex(boundPhoto);
                         if (selectedSize && getOrderableStock(product, c.name, selectedSize, preorderMode) === 0) setSelectedSize(initialSize(product));
                       }}
                       className={`w-8 h-8 rounded-full p-1 transition-all cursor-pointer ${

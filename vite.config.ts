@@ -21,7 +21,16 @@ export default defineConfig(() => {
     define: {
       'import.meta.env.VITE_RELEASE': JSON.stringify(process.env.GITHUB_SHA?.slice(0, 7) || 'local'),
     },
+    // Dev server only: packages that are imported only from lazy chunks (admin, profile) are pre-bundled at the start.
+    // Otherwise Vite finds them on the first open, re-optimises «new dependencies optimized» and reloads: a module that
+    // was already loaded keeps the old React copy («Cannot read properties of null (reading 'useRef')»), and chunk
+    // addresses with the old ?v= hash fail with «Failed to fetch dynamically imported module».
+    optimizeDeps: {
+      include: ['react', 'react-dom', 'react-dom/client', 'motion/react', '@base-ui/react', 'recharts', 'lucide-react'],
+    },
     resolve: {
+      // one copy of React for all packages (Base UI, recharts, motion)
+      dedupe: ['react', 'react-dom'],
       alias: {
         '@': path.resolve(import.meta.dirname, '.'),
         // Firestore pipelines' regular expressions are not used: −43 КБ gzip of the main chunk (finding 36)
