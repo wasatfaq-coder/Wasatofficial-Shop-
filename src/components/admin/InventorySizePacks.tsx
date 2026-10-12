@@ -53,7 +53,7 @@ export const InventorySizePacks: React.FC<InventorySizePacksProps> = ({ product,
                   return (
                     <React.Fragment key={color}>
                       {i > 0 && ', '}
-                      <span className={`font-extrabold ${available > 0 ? 'text-success' : 'text-danger'}`}>
+                      <span className={`font-extrabold whitespace-nowrap ${available > 0 ? 'text-success' : 'text-danger'}`}>
                         {color} {available}
                       </span>
                     </React.Fragment>

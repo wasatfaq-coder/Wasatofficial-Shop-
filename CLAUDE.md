@@ -361,6 +361,12 @@ ECC `scripts/ecc-validate.sh` (плагин без правок, проверк�
   читается только через `src/utils/sizeChart.ts` (`productSizeChart`/`normalizeSizeChart`: размеры товара по порядку,
   пустые замеры не показываются и не сохраняются), правка в форме — `sizeChartEditing.ts` (только админка). Покупатель —
   «Размерная сетка» под размерами на странице товара (`SizeChartTable`), в индекс каталога не входит.
+- Ростовка — `product.sizePacks` (этап 18 `docs/admin-wholesale-plan.md`, решение владельца 11.10: отдельно от `wholesalePackSize`):
+  упаковка одного цвета из размеров товара по N штук, цвета, своя цена (без неё — опт × штук), штрихкод на цвет. Читается только
+  через `src/shared/sizePacks.ts` (`productSizePacks`, `sizePackPrice`, `sizePacksAvailable`), штрихкоды — `withSizePackBarcodes`
+  и `findSizePackBarcodeProblems` (`src/shared/barcode.ts`, уникальны вместе со штрихкодами вариантов). Форма — «Варианты
+  и остатки» → «Ростовки», CSV — «Ростовки» (`src/utils/sizePackCsv.ts`), склад — «можно собрать N» и этикетка ростовки.
+  В индекс каталога не входит, покупатель её пока не видит.
 - Вес и габариты — поля товара `weightGrams` (г, штука в упаковке) и `packageCm` ({ l, w, h }, см; этап 15 `docs/admin-wholesale-plan.md`):
   читаются и проверяются только через `src/utils/productShipping.ts`, форма — блок «Вес и габариты», CSV — «Вес, г», «Габариты, см».
   Вес штуки копируется в строку заказа (`toOrderLineProduct`), вес заказа — `orderWeight` (у строки без веса — вес из каталога, «≈»),
