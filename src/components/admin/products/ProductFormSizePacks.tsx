@@ -249,7 +249,7 @@ export function ProductFormSizePacks({ form }: { form: ProductForm }) {
                 <>
                   {' · '}
                   {colors.map((color, i) => {
-                    const code = draft.barcodes.find((b) => sameColor(b.color, color))?.code;
+                    const code = pack.barcodes?.find((b) => sameColor(b.color, color))?.code;
                     return (
                       <span key={color}>
                         {i > 0 && ' · '}

@@ -1,15 +1,13 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Barcode, ChevronLeft, ChevronRight, FileDown, Plus, RefreshCw, Trash2, X } from 'lucide-react';
-import type { LabelFormat, Product, ProductSKU, SaveStorefrontSettings, StorefrontSettings } from '../../types';
+import type { LabelFormat, Product, SaveStorefrontSettings, StorefrontSettings } from '../../types';
 import { ModalPortal } from '../ModalPortal';
-import { compositionToMaterial, getProductFabricComposition } from '../../utils/productAttributes';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import {
   canvasMeasure,
   downloadLabelsPdf,
   LABEL_COPIES_MAX,
-  drawLabel,
   layoutLabel,
   loadLabelFonts,
   LABEL_FORMAT_PRESETS,
@@ -18,12 +16,10 @@ import {
   LABEL_TEMPLATE_GROUPS,
   hasSaleOldPrice,
   templateInfo,
-  type LabelData,
   type LabelOptions,
   type LabelTemplate,
 } from '../../utils/labels';
 import {
-  articleCode,
   articleGroupKey,
   findBarcodeProblems,
   findSizePackBarcodeProblems,
@@ -35,34 +31,25 @@ import {
 } from '../../shared/barcode';
 import {
   productSizePacks,
-  sizePackBarcode,
   sizePackColors,
-  sizePackLabelLine,
-  sizePackPrice,
-  sizePackTitle,
   sameColor,
-  type SizePack,
 } from '../../shared/sizePacks';
 import { pluralRu } from '../../utils/pluralize';
 import { AdminHint } from './AdminHint';
 
-/** One variation (colour × size) of a product */
-export interface SkuLabelTarget {
-  productId: string;
-  skuId: string;
-  packId?: undefined;
-  color?: undefined;
-}
+import {
+  entryName,
+  labelData,
+  packLabelData,
+  PROBLEM_TEXT,
+  type LabelEntry,
+  type LabelTarget,
+  type PackPrintItem,
+  type PrintItem,
+} from './labelEntries';
+import { FormatThumb, LabelCanvas, Switch } from './LabelGeneratorParts';
 
-/** One colour of a size pack («ростовка») of a product: its own label with the pack's barcode */
-export interface PackLabelTarget {
-  productId: string;
-  packId: string;
-  color: string;
-  skuId?: undefined;
-}
-
-export type LabelTarget = SkuLabelTarget | PackLabelTarget;
+export type { LabelTarget, PackLabelTarget, SkuLabelTarget } from './labelEntries';
 
 interface AdminLabelGeneratorProps {
   targets: LabelTarget[];
@@ -75,27 +62,7 @@ interface AdminLabelGeneratorProps {
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
-const PROBLEM_TEXT: Record<BarcodeProblem, string> = {
-  missing: 'нет штрихкода',
-  duplicate: 'штрихкод повторяется',
-  invalid: 'штрихкод с ошибкой',
-  mismatch: 'у размеров разные штрихкоды',
-};
-
 const sizeText = (f: Pick<LabelFormat, 'widthMm' | 'heightMm'>) => `${f.widthMm}×${f.heightMm} мм`;
-
-/** Label data straight from the catalog: the product card and its variation */
-const labelData = (product: Product, sku: ProductSKU): LabelData => ({
-  title: product.title,
-  color: sku.color,
-  size: sku.size,
-  article: articleCode(product, sku.color) || sku.skuCode || '',
-  // the card's fibres first; product.material is the same text saved from them
-  composition: compositionToMaterial(getProductFabricComposition(product)) || (product.material ?? '').trim(),
-  barcode: sku.barcode ?? '',
-  price: product.price,
-  oldPrice: product.originalPrice,
-});
 
 const PREF_KEY = 'manstyle_label_prefs';
 function readPref(key: 'format' | 'template'): string | undefined {
@@ -117,103 +84,6 @@ function writePref(key: 'format' | 'template', value: string) {
 /** Display size of a label inside a box, keeping its proportions */
 const fitBox = (f: Pick<LabelFormat, 'widthMm' | 'heightMm'>, maxW: number, maxH: number) =>
   Math.min(maxW, (maxH * f.widthMm) / f.heightMm);
-
-/** Label data of a pack colour: the pack's name as the article, its composition instead of the size, its own barcode */
-const packLabelData = (product: Product, pack: SizePack, color: string): LabelData => {
-  const price = sizePackPrice(product, pack);
-  return {
-    title: product.title,
-    color,
-    size: '',
-    article: sizePackTitle(pack),
-    packLine: sizePackLabelLine(pack),
-    composition: compositionToMaterial(getProductFabricComposition(product)) || (product.material ?? '').trim(),
-    barcode: sizePackBarcode(pack, color),
-    price: price ?? 0,
-    noPrice: price === undefined,
-  };
-};
-
-type PrintItem = { target: SkuLabelTarget; product: Product; sku: ProductSKU };
-type PackPrintItem = { target: PackLabelTarget; product: Product; pack: SizePack; color: string };
-
-/** A label to print: a variation or a pack colour, with the data drawn on it */
-interface LabelEntry {
-  key: string;
-  /** Labels of one article are the same without a size; a pack colour is an article of its own */
-  articleKey: string;
-  product: Product;
-  /** Set for a variation */
-  sku?: ProductSKU;
-  /** Set for a pack colour */
-  pack?: SizePack;
-  data: LabelData;
-}
-
-/** «Футболка · Синий / 48» or «Футболка · Ростовка 48–52, Синий» */
-const entryName = (e: LabelEntry) =>
-  e.sku ? `${e.product.title} · ${e.sku.color} / ${e.sku.size}` : `${e.product.title} · ${sizePackTitle(e.pack!)}, ${e.data.color}`;
-
-/** Canvas preview drawn by the same layout as the PDF */
-const LabelCanvas: React.FC<{
-  format: Pick<LabelFormat, 'widthMm' | 'heightMm'>;
-  template: LabelTemplate;
-  data: LabelData;
-  options: LabelOptions;
-  displayWidth: number;
-  fontsReady: boolean;
-  className?: string;
-}> = ({ format, template, data, options, displayWidth, fontsReady, className }) => {
-  const ref = useRef<HTMLCanvasElement | null>(null);
-  const measure = useMemo(() => canvasMeasure(), []);
-  const displayHeight = (displayWidth * format.heightMm) / format.widthMm;
-
-  useEffect(() => {
-    if (!ref.current) return;
-    const pxPerMm = (displayWidth / format.widthMm) * (window.devicePixelRatio || 1);
-    drawLabel(ref.current, layoutLabel(template, format, data, options, measure), pxPerMm);
-  }, [format, template, data, options, displayWidth, fontsReady, measure]);
-
-  return (
-    <canvas
-      ref={ref}
-      style={{ width: displayWidth, height: displayHeight }}
-      className={className}
-      aria-hidden="true"
-    />
-  );
-};
-
-/** Proportional outline of a format, for the delete confirmation */
-const FormatThumb: React.FC<{ format: Pick<LabelFormat, 'widthMm' | 'heightMm'>; size?: number }> = ({ format, size = 44 }) => {
-  const scale = size / Math.max(format.widthMm, format.heightMm);
-  return (
-    <span
-      aria-hidden="true"
-      className="block rounded-[3px] bg-white border border-[#2D3A4E]/60 shrink-0"
-      style={{ width: format.widthMm * scale, height: format.heightMm * scale }}
-    />
-  );
-};
-
-const Switch: React.FC<{ checked: boolean; onChange: (v: boolean) => void; label: string }> = ({ checked, onChange, label }) => (
-  <button
-    type="button"
-    role="switch"
-    aria-checked={checked}
-    onClick={() => onChange(!checked)}
-    className="w-full h-11 px-3 rounded-xl neu-button flex items-center justify-between gap-3 text-xs font-bold text-[#2D3A4E] cursor-pointer"
-  >
-    <span>{label}</span>
-    <span className="w-10 h-6 rounded-full neu-inset p-0.5 flex items-center shrink-0">
-      <span
-        className={`w-5 h-5 rounded-full transition-transform duration-200 ${
-          checked ? 'translate-x-4 neu-fill-accent' : 'translate-x-0 neu-button'
-        }`}
-      />
-    </span>
-  </button>
-);
 
 /**
  * Admin → «Склад» → labels: the store's label formats, ten templates, a PDF with one page per label

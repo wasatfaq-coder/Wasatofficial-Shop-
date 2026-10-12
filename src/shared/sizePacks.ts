@@ -102,11 +102,23 @@ export function productSizePacks(product: PackOwner | null | undefined): SizePac
   return packs;
 }
 
+/**
+ * Id of a new pack: never one the product has, and not the number of a deleted pack either — orders will keep `packId`
+ * (stage 19), and an old order line must not point at another pack
+ */
+export function newSizePackId(taken: Set<string>, now: number = Date.now()): string {
+  const base = `pack-${now.toString(36)}`;
+  let id = base;
+  for (let n = 2; taken.has(id); n++) id = `${base}-${n}`;
+  taken.add(id);
+  return id;
+}
+
 /** Items in one pack */
 export const sizePackPieces = (pack: Pick<SizePack, 'sizes'>) => pack.sizes.reduce((sum, line) => sum + line.qty, 0);
 
 /** The colours the pack is sold in: its own, or every colour of the product */
-export function sizePackColors(product: Pick<PackOwner, 'colors'>, pack: Pick<SizePack, 'colors'>): string[] {
+export function sizePackColors(product: Pick<PackOwner, 'colors'>, pack: Pick<SizePack, 'colors' | 'sizes'>): string[] {
   const colors = productColorNames(product);
   if (!pack.colors?.length) return colors;
   return colors.filter((c) => pack.colors!.some((n) => sameColor(n, c)));

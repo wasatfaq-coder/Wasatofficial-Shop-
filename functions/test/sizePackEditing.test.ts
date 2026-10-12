@@ -27,9 +27,10 @@ const product = (extra: Partial<Product> = {}): Product =>
   ({ id: 'p1', title: 'Футболка', price: 1500, sizes: SIZES, colors: COLORS, skus: [], ...extra }) as Product;
 
 describe('черновики', () => {
-  test('новая ростовка получает pack-N, которого ещё нет', () => {
-    expect(newPackDraft([]).id).toBe('pack-1');
-    expect(newPackDraft([draft({ id: 'pack-1' }), draft({ id: 'pack-3' })]).id).toBe('pack-2');
+  test('новая ростовка получает новый id, а не номер удалённой', () => {
+    const first = newPackDraft([]);
+    expect(first.id).toMatch(/^pack-/);
+    expect(newPackDraft([first]).id).not.toBe(first.id);
   });
 
   test('черновик из товара хранит id, штрихкоды, цвета и штуки по размерам', () => {
@@ -144,12 +145,18 @@ describe('товар с ростовками', () => {
     expect(codes.some((c) => c.code === '2000000000015')).toBe(false);
   });
 
-  test('правка ростовки оставляет её штрихкоды', () => {
+  test('правка цены и названия оставляет штрихкоды, новый состав получает новые', () => {
     const first = productWithSizePacks(product(), [draft()], []);
-    const reopened = packDraftsFromProduct(first);
-    reopened[0].qty = { '48': '2', '50': '2' };
-    const second = productWithSizePacks(first, reopened, []);
-    expect(second.sizePacks![0].barcodes).toEqual(first.sizePacks![0].barcodes);
+    const renamed = packDraftsFromProduct(first);
+    renamed[0].title = 'Летняя';
+    renamed[0].price = '4000';
+    expect(productWithSizePacks(first, renamed, []).sizePacks![0].barcodes).toEqual(first.sizePacks![0].barcodes);
+
+    // a label already stuck on a 1-2 pack must not describe a 2-2 one
+    const recomposed = packDraftsFromProduct(first);
+    recomposed[0].qty = { '48': '2', '50': '2' };
+    const codes = productWithSizePacks(first, recomposed, []).sizePacks![0].barcodes!.map((b) => b.code);
+    expect(codes.some((code) => first.sizePacks![0].barcodes!.some((b) => b.code === code))).toBe(false);
   });
 
   test('цвет убрали из ростовки — штрихкод его уходит, новый цвет получает свой', () => {

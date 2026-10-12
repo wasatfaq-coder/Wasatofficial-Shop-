@@ -1,5 +1,6 @@
 import type { Product } from '../types';
 import {
+  newSizePackId,
   productSizePacks,
   sameColor,
   SIZE_PACK_PRICE_MAX,
@@ -77,12 +78,7 @@ const sameColors = (a: string[] = [], b: string[] = []) =>
 export function mergeSizePacks(own: SizePack[] | undefined, imported: ImportedSizePack[]): SizePack[] {
   const left = [...(own ?? [])];
   const ids = new Set(left.map((p) => p.id));
-  let n = 1;
-  const newId = () => {
-    while (ids.has(`pack-${n}`)) n++;
-    ids.add(`pack-${n}`);
-    return `pack-${n}`;
-  };
+  const newId = () => newSizePackId(ids);
   return imported.map((pack) => {
     const i = left.findIndex((p) => sameSizes(p.sizes, pack.sizes) && sameColors(p.colors, pack.colors));
     const match = i >= 0 ? left.splice(i, 1)[0] : undefined;

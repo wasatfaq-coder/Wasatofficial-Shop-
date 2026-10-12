@@ -1,13 +1,16 @@
 import type { Product } from '../types';
 import { withSizePackBarcodes } from '../shared/barcode';
+import { pluralRu } from './pluralize';
 import {
   SIZE_PACKS_MAX,
   SIZE_PACK_PRICE_MAX,
   SIZE_PACK_QTY_MAX,
   SIZE_PACK_TITLE_MAX,
+  newSizePackId,
   productColorNames,
   productSizePacks,
   sameColor,
+  sizePackLabelLine,
   sizePackPieces,
   type SizePack,
   type SizePackBarcode,
@@ -33,6 +36,11 @@ export interface SizePackDraft {
   price: string;
   /** Codes the pack has now: shown read-only, kept on save, missing ones are issued by `withSizePackBarcodes` */
   barcodes: SizePackBarcode[];
+  /**
+   * The composition the codes were issued for («48-50-52 / 1-2-1»): another composition gets new codes, so a label
+   * already stuck on a pack never describes a different one
+   */
+  codedFor: string;
 }
 
 const INTEGER = /^\d+$/;
@@ -48,15 +56,14 @@ export function packDraftsFromProduct(product: Pick<Product, 'sizes' | 'colors' 
     qty: Object.fromEntries(pack.sizes.map((line) => [line.size, String(line.qty)])),
     price: pack.price ? String(pack.price) : '',
     barcodes: pack.barcodes ?? [],
+    codedFor: sizePackLabelLine(pack),
   }));
 }
 
-/** An empty pack: `pack-N` with the smallest N no pack has (a deleted number is taken again) */
+/** An empty pack with a new id (`newSizePackId`: not the id of a deleted pack) */
 export function newPackDraft(drafts: SizePackDraft[]): SizePackDraft {
-  const taken = new Set(drafts.map((d) => d.id));
-  let n = 1;
-  while (taken.has(`pack-${n}`)) n++;
-  return { id: `pack-${n}`, title: '', allColors: true, colors: [], qty: {}, price: '', barcodes: [] };
+  const id = newSizePackId(new Set(drafts.map((d) => d.id)));
+  return { id, title: '', allColors: true, colors: [], qty: {}, price: '', barcodes: [], codedFor: '' };
 }
 
 const filledSizes = (draft: SizePackDraft, sizes: string[]) => sizes.filter((size) => (draft.qty[size] ?? '').trim() !== '');
@@ -109,13 +116,16 @@ export function packFromDraft(draft: SizePackDraft, sizes: string[], colors: ({ 
   const chosen = chosenColors(draft, colorNames);
   const price = Number(compact(draft.price));
   const title = draft.title.trim().slice(0, SIZE_PACK_TITLE_MAX);
+  const lines = sizes.map((size) => ({ size, qty: lenientQty(draft.qty[size] ?? '') })).filter((line) => line.qty > 0);
+  // the codes belong to the composition they were issued for: a changed pack gets new ones on save
+  const keepCodes = draft.barcodes.length > 0 && draft.codedFor === sizePackLabelLine({ sizes: lines });
   return {
     id: draft.id,
     ...(title ? { title } : {}),
     ...(!draft.allColors && chosen.length > 0 && chosen.length < colorNames.length ? { colors: chosen } : {}),
-    sizes: sizes.map((size) => ({ size, qty: lenientQty(draft.qty[size] ?? '') })).filter((line) => line.qty > 0),
+    sizes: lines,
     ...(INTEGER.test(compact(draft.price)) && price >= 1 && price <= SIZE_PACK_PRICE_MAX ? { price } : {}),
-    ...(draft.barcodes.length > 0 ? { barcodes: draft.barcodes } : {}),
+    ...(keepCodes ? { barcodes: draft.barcodes } : {}),
   };
 }
 
@@ -140,7 +150,7 @@ export function productWithSizePacks<T extends Product>(product: T, drafts: Size
 export function sizePacksSummary(drafts: SizePackDraft[], sizes: string[], colors: ({ name: string } | string)[]): string {
   const packs = drafts.map((draft) => packFromDraft(draft, sizes, colors)).filter((pack) => pack.sizes.length > 0);
   if (packs.length === 0) return '';
-  const word = packs.length === 1 ? 'ростовка' : packs.length < 5 ? 'ростовки' : 'ростовок';
+  const word = pluralRu(packs.length, ['ростовка', 'ростовки', 'ростовок']);
   const range = (pack: SizePack) =>
     pack.sizes.length > 1 ? `${pack.sizes[0].size}–${pack.sizes[pack.sizes.length - 1].size}` : pack.sizes[0].size;
   return `${packs.length} ${word}: ${packs.map((pack) => `${range(pack)} (${sizePackPieces(pack)} шт.)`).join(', ')}`;

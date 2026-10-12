@@ -16,6 +16,7 @@ import {
   findSizePackBarcodeProblems,
   isValidEan13,
   sizePackBarcodeKey,
+  unifyArticleBarcodes,
   withSizePackBarcodes,
 } from '../../src/shared/barcode';
 import { mergeSizePacks, sizePacksCell, sizePacksFromCell } from '../../src/utils/sizePackCsv';
@@ -103,17 +104,35 @@ describe('pack barcodes', () => {
     expect(findSizePackBarcodeProblems([p]).size).toBe(0);
   });
 
-  test('a saved code stays; a code of a variation or of another pack is replaced', () => {
+  test('a saved code stays; a code of another pack colour is replaced', () => {
     const [once] = withSizePackBarcodes([packed]);
     const [again] = withSizePackBarcodes([once]);
     expect(again.sizePacks).toEqual(once.sizePacks);
 
+    const twice = product({
+      sizePacks: [
+        { id: 'a', colors: ['Синий'], sizes: [{ size: '48', qty: 1 }], barcodes: [{ color: 'Синий', code: '2000000000039' }] },
+        { id: 'b', colors: ['Синий'], sizes: [{ size: '50', qty: 1 }], barcodes: [{ color: 'Синий', code: '2000000000039' }] },
+      ],
+    });
+    expect(findSizePackBarcodeProblems([twice]).get(sizePackBarcodeKey('p1', 'b', 'Синий'))).toBe('duplicate');
+    const [fixed] = withSizePackBarcodes([twice]);
+    expect(fixed.sizePacks![0].barcodes![0].code).toBe('2000000000039');
+    expect(fixed.sizePacks![1].barcodes![0].code).not.toBe('2000000000039');
+  });
+
+  test('a pack and a variation with one code: the pack keeps it, the variation gets a new one', () => {
     const clash = product({
       sizePacks: [{ id: 'a', colors: ['Синий'], sizes: [{ size: '48', qty: 1 }], barcodes: [{ color: 'Синий', code: '2000000000015' }] }],
     });
-    expect(findSizePackBarcodeProblems([clash]).get(sizePackBarcodeKey('p1', 'a', 'Синий'))).toBe('duplicate');
-    const [fixed] = withSizePackBarcodes([clash]);
-    expect(fixed.sizePacks![0].barcodes![0].code).not.toBe('2000000000015');
+    expect(findSizePackBarcodeProblems([clash]).size).toBe(0);
+    expect(findBarcodeProblems([clash]).get('p1::s1')).toBe('duplicate');
+    const [kept] = withSizePackBarcodes([clash]);
+    expect(kept.sizePacks![0].barcodes![0].code).toBe('2000000000015');
+    const [unified] = unifyArticleBarcodes([clash]);
+    const blue = unified.skus!.filter((s) => s.color === 'Синий').map((s) => s.barcode);
+    expect(new Set(blue).size).toBe(1);
+    expect(blue[0]).not.toBe('2000000000015');
   });
 
   test('a variation given a pack\'s code is the duplicate: the pack keeps it', () => {
@@ -157,6 +176,7 @@ describe('CSV «Ростовки»', () => {
 
   test('a new pack in the file gets a new id and no barcode yet', () => {
     const merged = mergeSizePacks([{ id: 'pack-1', sizes: [{ size: '48', qty: 1 }] }], [{ sizes: [{ size: '50', qty: 1 }] }]);
-    expect(merged).toEqual([{ id: 'pack-2', sizes: [{ size: '50', qty: 1 }] }]);
+    expect(merged).toEqual([{ id: expect.stringMatching(/^pack-/), sizes: [{ size: '50', qty: 1 }] }]);
+    expect(merged[0].id).not.toBe('pack-1');
   });
 });

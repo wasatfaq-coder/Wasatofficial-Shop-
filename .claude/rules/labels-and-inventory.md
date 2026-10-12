@@ -3,6 +3,10 @@ paths:
   - "src/components/admin/AdminLabelGenerator.tsx"
   - "src/components/admin/AdminInventoryTab.tsx"
   - "src/components/admin/InventoryGroupedList.tsx"
+  - "src/components/admin/InventorySizePacks.tsx"
+  - "src/components/admin/labelEntries.ts"
+  - "src/components/admin/LabelGeneratorParts.tsx"
+  - "src/shared/sizePacks.ts"
   - "src/components/admin/AdminProductsTab.tsx"
   - "src/components/admin/products/**"
   - "src/utils/labels.ts"
@@ -46,4 +50,6 @@ paths:
   что варианты); «Списком» ростовок нет. `LabelTarget` — вариант `{ productId, skuId }` или цвет ростовки
   `{ productId, packId, color }`. Этикетка ростовки: состав `packLine` («48-50-52 / 1-2-1») вместо размера, название ростовки
   вместо артикула, цена упаковки (без цены — `noPrice`), штрихкод цвета ростовки; с этикетками вариантов не сливается.
-  Код ростовки уникален вместе с кодами вариантов (`collectBarcodes`, `findBarcodeProblems` их считают).
+  Код ростовки уникален вместе с кодами вариантов (`collectBarcodes`, `findBarcodeProblems` их считают); совпал с кодом
+  варианта — код остаётся у ростовки (её этикетка уже наклеена), новый получает вариант (`unifyArticleBarcodes`). Другой
+  состав ростовки (размеры или штуки) — новые коды. Цели и данные этикеток — `labelEntries.ts`, превью — `LabelGeneratorParts.tsx`.
