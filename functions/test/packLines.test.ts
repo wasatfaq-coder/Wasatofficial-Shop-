@@ -1,0 +1,88 @@
+// Size packs in an order (stage 19): the pack price split into lines, lines back into one pack
+import { describe, expect, test } from 'bun:test';
+import { expandPackLines, groupOrderLines, orderPackCounts, splitPackPrice, type CartPackLine } from '../../src/shared/packLines';
+import { calcSubtotal, toPricingLine } from '../../src/shared/orderPricing';
+import type { CartItem, Product } from '../../src/types';
+
+const product = { id: 'p1', title: 'Рубашка', price: 3000, sizes: ['48', '50', '52'], colors: [{ name: 'Синий', hex: '#2F5DA8' }] } as unknown as Product;
+const sizes = [
+  { size: '48', qty: 1 },
+  { size: '50', qty: 2 },
+  { size: '52', qty: 1 },
+];
+const packLine = (price: number, quantity: number): CartPackLine => ({
+  id: 'c1',
+  product,
+  selectedColor: 'Синий',
+  selectedSize: '',
+  quantity,
+  priceKind: 'pack',
+  packId: 'pack-1',
+  packTitle: 'Ростовка 48–52',
+  packPrice: price,
+  packSizes: sizes,
+});
+const sum = (lines: { qty?: number; quantity?: number; unitPrice?: number }[]) =>
+  lines.reduce((s, l) => s + (l.unitPrice ?? 0) * (l.qty ?? l.quantity ?? 0), 0);
+
+describe('splitPackPrice', () => {
+  test('an even price gives one price per item', () => {
+    const parts = splitPackPrice(10_000, sizes);
+    expect(parts.map((p) => p.unitPrice)).toEqual([2500, 2500, 2500]);
+    expect(sum(parts)).toBe(10_000);
+  });
+  test('the remainder goes to the first items, a size split at the boundary', () => {
+    const parts = splitPackPrice(10_002, sizes);
+    expect(sum(parts)).toBe(10_002);
+    expect(parts).toEqual([
+      { size: '48', qty: 1, unitPrice: 2501 },
+      { size: '50', qty: 1, unitPrice: 2501 },
+      { size: '50', qty: 1, unitPrice: 2500 },
+      { size: '52', qty: 1, unitPrice: 2500 },
+    ]);
+  });
+  test('no items — no parts', () => {
+    expect(splitPackPrice(100, [])).toEqual([]);
+  });
+});
+
+describe('expandPackLines', () => {
+  test('a pack line becomes lines of its sizes; the sum is price × packs', () => {
+    const plain: CartItem = { id: 'c0', product, selectedColor: 'Синий', selectedSize: '48', quantity: 2 };
+    const lines = expandPackLines([plain, packLine(10_002, 3)]);
+    expect(lines[0]).toBe(plain);
+    const pack = lines.slice(1);
+    expect(pack.every((l) => l.packGroup === 'c1' && l.packCount === 3 && l.priceKind === 'pack')).toBe(true);
+    expect(pack.reduce((s, l) => s + l.quantity, 0)).toBe(12);
+    expect(sum(pack)).toBe(30_006);
+    expect(calcSubtotal(lines.map(toPricingLine))).toBe(30_006 + 2 * 3000);
+    expect(new Set(lines.map((l) => l.id)).size).toBe(lines.length);
+    expect(pack.some((l) => 'packSizes' in l)).toBe(false);
+  });
+});
+
+describe('groupOrderLines', () => {
+  test('the lines of a pack come back as one pack with its composition and price', () => {
+    const lines = expandPackLines([{ id: 'c0', product, selectedColor: 'Синий', selectedSize: '48', quantity: 1 }, packLine(10_002, 2)]);
+    const groups = groupOrderLines(lines);
+    expect(groups.length).toBe(2);
+    expect(groups[0].kind).toBe('line');
+    const pack = groups[1];
+    if (pack.kind !== 'pack') throw new Error('pack expected');
+    expect(pack.packCount).toBe(2);
+    expect(pack.packPrice).toBe(10_002);
+    expect(pack.total).toBe(20_004);
+    expect(pack.pieces).toBe(8);
+    expect(pack.sizes).toEqual(sizes);
+    expect(pack.indexes).toEqual([1, 2, 3, 4]);
+    expect(pack.title).toBe('Ростовка 48–52');
+  });
+  test('an old order without groups is single lines', () => {
+    const items: CartItem[] = [{ id: 'a', product, selectedColor: 'Синий', selectedSize: '50', quantity: 1 }];
+    expect(groupOrderLines(items)).toEqual([{ kind: 'line', item: items[0], index: 0 }]);
+  });
+  test('packs and items of an order', () => {
+    const lines = expandPackLines([{ id: 'c0', product, selectedColor: 'Синий', selectedSize: '48', quantity: 2 }, packLine(10_000, 3)]);
+    expect(orderPackCounts(lines)).toEqual({ packs: 3, pieces: 14 });
+  });
+});

@@ -284,6 +284,19 @@ export interface CartItem {
   volumeDiscountPerUnit?: number;
   /** Wholesale line: items in one pack at the moment of the order (the quantity is packs × this) */
   packSize?: number;
+  /**
+   * A size pack («ростовка», `product.sizePacks`) in an order is several lines, one per size (`expandPackLines`,
+   * src/shared/packLines.ts; stage 19 of docs/admin-wholesale-plan.md): they share `packGroup` and are shown, edited and
+   * counted as one pack. `packId` — the pack of the product, `packTitle` — its name when ordered, `packCount` — packs
+   * ordered (the same on every line of the group), `packPieces` — items of this size the line holds in one pack
+   * (quantity = packCount × packPieces), `packPrice` — price of one pack when ordered
+   */
+  packGroup?: string;
+  packId?: string;
+  packTitle?: string;
+  packCount?: number;
+  packPieces?: number;
+  packPrice?: number;
 }
 
 export interface SavedAddress {
