@@ -2,6 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 import { colorImageIndex, moveMap, remapColorImages, removalMap, setColorImage } from '../../src/utils/colorPhotos';
 import { normalizeProductColors } from '../../src/utils/colorCode';
+import { parseProductsFromCSV } from '../../src/utils/csvHelpers';
 
 const colors = [
   { name: 'Красный', hex: '#C62828', imageIndex: 2 },
@@ -57,5 +58,21 @@ describe('normalizeProductColors keeps the binding', () => {
     expect(out[0].imageIndex).toBe(2);
     expect('imageIndex' in out[1]).toBe(false);
     expect('imageIndex' in out[2]).toBe(false);
+  });
+});
+
+describe('CSV import and the colour photo', () => {
+  const header = 'ID;Название;Категория;Цена;Старая цена;В наличии;Остаток;Размеры;Цвета;Фото;Описание';
+  const catalog = [{ id: 'p1', colors }];
+  test('a row without photos keeps the binding', () => {
+    const { products } = parseProductsFromCSV(`${header}\np1;Рубашка;shirts;1000;;да;;;Красный;;`, catalog);
+    expect(products[0].colors?.[0].imageIndex).toBe(2);
+  });
+  test('a row with a new photo list drops the bindings, with or without a colours cell', () => {
+    const withColors = parseProductsFromCSV(`${header}\np1;Рубашка;shirts;1000;;да;;;Красный;https://x/1.jpg;`, catalog);
+    expect('imageIndex' in (withColors.products[0].colors?.[0] ?? {})).toBe(false);
+    const noColors = parseProductsFromCSV(`${header}\np1;Рубашка;shirts;1000;;да;;;;https://x/1.jpg;`, catalog);
+    expect(noColors.products[0].colors?.map((c) => c.name)).toEqual(['Красный', 'Синий']);
+    expect(noColors.products[0].colors?.some((c) => 'imageIndex' in c)).toBe(false);
   });
 });

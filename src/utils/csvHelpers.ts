@@ -1,7 +1,7 @@
 import { Product, Order } from '../types';
 import { extractColorName, getProductTotalStock } from './inventory';
 import { adminStatusLabel } from './orderFlow';
-import { colorHexForName, normalizeColorName, readColorCode, splitColorEntry, UNKNOWN_COLOR_HEX } from './colorCode';
+import { colorHexForName, normalizeColorName, normalizeProductColors, readColorCode, splitColorEntry, UNKNOWN_COLOR_HEX } from './colorCode';
 import { parseDecimal, readPurchase, type ProductPurchase, type PurchaseCurrency } from './currencyPricing';
 import { SUPPLIER_MAX_LENGTH, SUPPLIER_SKU_MAX_LENGTH, supplierText } from './productCosts';
 import { packageCell, packageFromCell, productWeightGrams, weightProblem } from './productShipping';
@@ -229,14 +229,20 @@ export function parseProductsFromCSV(
       const known = knownColors.find((c) => normalizeColorName(extractColorName(c)) === normalizeColorName(colorName));
       const knownHex = known && typeof known === 'object' ? readColorCode(String(known.hex ?? ''), { bare: true }) : null;
       // the product's own spelling stays: its variations are written with it («Тёмно-синий», not «темно-синий»)
-      const knownImage = known && typeof known === 'object' ? known.imageIndex : undefined;
+      // the photo binding is not in the CSV: an update keeps the one the product has, unless the row brings new photos
+      const knownImage = !image && known && typeof known === 'object' ? known.imageIndex : undefined;
       return {
         name: known ? extractColorName(known) : colorName,
         hex: hex ?? knownHex ?? colorHexForName(colorName) ?? UNKNOWN_COLOR_HEX,
-        // the photo binding is not in the CSV: an update keeps the one the product has
         ...(typeof knownImage === 'number' ? { imageIndex: knownImage } : {}),
       };
     });
+    // a new photo list makes the product's bindings point at other photos: an empty colours cell keeps the colours,
+    // but without their photo numbers
+    const unboundColors =
+      image && colors.length === 0 && knownColors.some((c) => typeof c === 'object' && c.imageIndex !== undefined)
+        ? normalizeProductColors(knownColors).map(({ imageIndex: _old, ...rest }) => rest)
+        : [];
     const purchase = purchaseFromCells(currencyCell, amountCell, markupCell);
     if (purchase === 'invalid') badPurchase++;
     const supplier = supplierFromCell(supplierCell, SUPPLIER_MAX_LENGTH);
@@ -258,7 +264,7 @@ export function parseProductsFromCSV(
       inStock: inStockText !== 'нет' && inStockText !== 'false',
       // an empty cell leaves the sizes and colours of an existing product as they are
       ...(sizes.length ? { sizes } : {}),
-      ...(colors.length ? { colors } : {}),
+      ...(colors.length ? { colors } : unboundColors.length ? { colors: unboundColors } : {}),
       ...(image ? { images: [image] } : {}),
       description: description || '',
       // empty cells keep the product's purchase; «₽» removes it (the key with undefined replaces the old one)
