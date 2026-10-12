@@ -29,7 +29,7 @@ import { ConfirmDialog } from '../ConfirmDialog';
 import { applyAdminStockChanges, type AdminStockChange } from '../../utils/firebaseSync';
 import { adminStatusLabel, isCarrierOrder } from '../../utils/orderFlow';
 import { OrderLineThumbImage } from '../ProductThumbImage';
-import { toOrderLineProduct, linePrice } from '../../shared/orderLine';
+import { toOrderLineProduct, linePrice, orderProductIds } from '../../shared/orderLine';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { sameValue, useUnsavedChanges } from '../../utils/unsavedChanges';
 import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
@@ -305,6 +305,8 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
     const updatedOrder: Order = {
       ...order,
       items,
+      // a product added or removed here: «Покупка подтверждена» of a review follows the lines
+      productIds: orderProductIds(items),
       trackingNumber: effectiveTrackingNumber,
       totalPrice: newItemsTotal,
       deliveryFee: newTotals?.deliveryFee,

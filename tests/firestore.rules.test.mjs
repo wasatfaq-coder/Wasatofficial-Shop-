@@ -605,6 +605,17 @@ describe('orders', () => {
     await assertFails(guestOrder(order({ id: 'WS-STAMP-4', updatedAt: 'вчера' })));
   });
 
+  // Ревью 11.10, находка 2: товары строк по разу — по ним правило отзыва проверит «Покупка подтверждена»
+  test('an order from the browser may carry its product ids: a list of at most 60', async () => {
+    await assertSucceeds(placeOrder(customer('alice'), 'alice', order({ id: 'MS-PIDS-1', customerUid: 'alice', productIds: ['p1'] })));
+    await assertFails(placeOrder(customer('carol'), 'carol', order({ id: 'MS-PIDS-2', customerUid: 'carol', productIds: 'p1' })));
+    const many = Array.from({ length: 61 }, (_, i) => `p${i}`);
+    await assertFails(placeOrder(customer('dave'), 'dave', order({ id: 'MS-PIDS-3', customerUid: 'dave', productIds: many })));
+    // the buyer does not change the list of a saved order; the admin's session does (orders before 12.10)
+    await assertFails(updateDoc(doc(customer('alice'), 'orders/MS-PIDS-1'), { productIds: ['p1', 'p2'], updatedAt: serverTimestamp() }));
+    await assertSucceeds(updateDoc(doc(owner(), 'orders/MS-PIDS-1'), { productIds: ['p1', 'p2'], updatedAt: serverTimestamp() }));
+  });
+
   test('customer cannot place an order in someone else\'s name', async () => {
     await assertFails(placeOrder(customer('alice'), 'alice', order({ id: 'MS-5', customerUid: 'bob' })));
     await assertSucceeds(placeOrder(customer('alice'), 'alice', order({ id: 'MS-6', customerUid: 'alice' })));

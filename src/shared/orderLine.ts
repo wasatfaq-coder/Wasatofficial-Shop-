@@ -32,6 +32,27 @@ export function toOrderLineProduct(product: Product): Product {
 }
 
 /**
+ * Ids of the products of an order's lines, each once, in the order of the lines (`Order.productIds`). Firestore rules
+ * cannot look into the lines, so the review rule checks «Покупка подтверждена» by this list (ревью 11.10, находка 2).
+ * Written by the browser (`buildClientOrder`), `placeOrder` and «Правка состава»; old orders get it from the admin's session
+ */
+export function orderProductIds(items: ReadonlyArray<{ product?: { id?: unknown } }>): string[] {
+  const ids: string[] = [];
+  for (const line of items) {
+    const id = line.product?.id;
+    if (typeof id === 'string' && id !== '' && !ids.includes(id)) ids.push(id);
+  }
+  return ids;
+}
+
+/** The order's `productIds` is there and names exactly the products of its lines */
+export function hasCurrentProductIds(order: { items: ReadonlyArray<{ product?: { id?: unknown } }>; productIds?: unknown }): boolean {
+  const saved = order.productIds;
+  const current = orderProductIds(order.items);
+  return Array.isArray(saved) && saved.length === current.length && current.every((id, i) => saved[i] === id);
+}
+
+/**
  * Price of one item of a cart or order line: its own `unitPrice` (wholesale, a pack) or the product's price. Every
  * screen and sum of a cart or an order reads the line price only here (docs/wholesale-spec.md, stage 1); old orders
  * and carts have no `unitPrice` and count as before. The product's own price on its card stays `product.price`

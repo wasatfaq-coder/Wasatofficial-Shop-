@@ -494,6 +494,11 @@ export interface Order {
   id: string;
   date: string;
   items: CartItem[];
+  /**
+   * Ids of the products of the lines, each once (`orderProductIds`): the rule of a review reads it — rules cannot look
+   * into the lines (ревью 11.10, находка 2). Orders before 12.10 get it from the admin's session (`useOrderProductIds`)
+   */
+  productIds?: string[];
   status: 'accepted' | 'assembling' | 'in_transit' | 'ready' | 'delivered';
   totalPrice: number;
   originalTotalPrice?: number;

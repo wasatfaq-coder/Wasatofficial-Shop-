@@ -90,6 +90,8 @@ describe('placeOrderCore', () => {
     expect(order.paymentStatus).toBe('pending');
     // The order keeps a light product copy: no stock, card texts or embedded photos
     expect(order.items[0].product.skus).toBeUndefined();
+    // the review rule checks «Покупка подтверждена» by it (ревью 11.10, находка 2)
+    expect(order.productIds).toEqual(['shirt']);
 
     const stored = (await db.doc(`orders/${order.id}`).get()).data()!;
     expect(stored.totalPrice).toBe(3350);

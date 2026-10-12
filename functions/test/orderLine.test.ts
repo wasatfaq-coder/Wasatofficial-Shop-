@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { linePrice, toOrderLineProduct } from '../../src/shared/orderLine';
+import { hasCurrentProductIds, linePrice, orderProductIds, toOrderLineProduct } from '../../src/shared/orderLine';
 import type { Product } from '../../src/types';
 
 // A product like the one in the live store on 29.09: three photos of ~170 KB embedded in the document
@@ -49,5 +49,30 @@ describe('linePrice', () => {
     expect(linePrice({ product: { price: 2990 }, unitPrice: -5 })).toBe(2990);
     expect(linePrice({ product: { price: 2990 }, unitPrice: Number.NaN })).toBe(2990);
     expect(linePrice({ product: { price: 2990 }, unitPrice: '100' as unknown as number })).toBe(2990);
+  });
+});
+
+// Ревью 11.10, находка 2: the review rule checks «Покупка подтверждена» by the order's product ids
+describe('orderProductIds', () => {
+  const line = (id: unknown) => ({ product: { id } });
+
+  test('each product once, in the order of the lines (sizes and pack lines of one product are one id)', () => {
+    expect(orderProductIds([line('p2'), line('p1'), line('p2'), line('p1')])).toEqual(['p2', 'p1']);
+    expect(orderProductIds([])).toEqual([]);
+  });
+
+  test('a line without a product id adds nothing', () => {
+    expect(orderProductIds([line(''), line(undefined), line(7), {}, line('p1')])).toEqual(['p1']);
+  });
+
+  test('an order needs the list when it has none or it does not match the lines', () => {
+    const items = [line('p1'), line('p2')];
+    expect(hasCurrentProductIds({ items, productIds: ['p1', 'p2'] })).toBe(true);
+    expect(hasCurrentProductIds({ items })).toBe(false);
+    expect(hasCurrentProductIds({ items, productIds: ['p1'] })).toBe(false);
+    expect(hasCurrentProductIds({ items, productIds: ['p2', 'p1'] })).toBe(false);
+    expect(hasCurrentProductIds({ items, productIds: 'p1,p2' })).toBe(false);
+    // a product added by «Правка состава» outdates the list
+    expect(hasCurrentProductIds({ items: [...items, line('p3')], productIds: ['p1', 'p2'] })).toBe(false);
   });
 });
