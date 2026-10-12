@@ -162,3 +162,21 @@ export function orderPackCounts(items: CartItem[]): { packs: number; pieces: num
   }
   return { packs, pieces };
 }
+
+/**
+ * «Правка состава» changes a pack only whole (spec, stage 10): every line of the group gets `count` packs. A line
+ * without `packPieces` (written before the field) keeps its share: quantity ÷ old count
+ */
+export function setPackGroupCount(items: CartItem[], packGroup: string, count: number): CartItem[] {
+  const packs = Math.max(1, Math.floor(count));
+  return items.map((item) => {
+    if (item.packGroup !== packGroup) return item;
+    const oldCount = Math.max(1, Math.floor(Number(item.packCount) || 1));
+    const perPack = Number(item.packPieces) > 0 ? Number(item.packPieces) : Math.max(1, Math.round(item.quantity / oldCount));
+    return { ...item, packCount: packs, packPieces: perPack, quantity: perPack * packs };
+  });
+}
+
+/** Removes every line of the pack: one size of a pack is not removed alone */
+export const removePackGroup = (items: CartItem[], packGroup: string): CartItem[] =>
+  items.filter((item) => item.packGroup !== packGroup);

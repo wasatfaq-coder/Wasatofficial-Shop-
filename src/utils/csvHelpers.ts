@@ -1,4 +1,5 @@
 import { Product, Order } from '../types';
+import { groupOrderLines, packGroupCompositionText } from '../shared/packLines';
 import { extractColorName, getProductTotalStock } from './inventory';
 import { adminStatusLabel } from './orderFlow';
 import { colorHexForName, normalizeColorName, normalizeProductColors, readColorCode, splitColorEntry, UNKNOWN_COLOR_HEX } from './colorCode';
@@ -318,8 +319,16 @@ export function exportOrdersToCSV(orders: Order[]): void {
     ord.paymentMethod || '',
     ord.trackingNumber || '',
     (ord.items || []).reduce((sum, it) => sum + (it.quantity || 1), 0),
-    (ord.items || [])
-      .map((it) => `${it.product?.title || 'Товар'} (${[it.selectedColor, it.selectedSize].filter(Boolean).join(', ')}) x${it.quantity}`)
+    groupOrderLines(ord.items || [])
+      .map((group) => {
+        if (group.kind === 'pack') {
+          const it = group.item;
+          const details = [it.selectedColor, packGroupCompositionText(group.sizes)].filter(Boolean).join('; ');
+          return `${it.product?.title || 'Товар'} ${group.title} (${details}) x${group.packCount} уп.`;
+        }
+        const it = group.item;
+        return `${it.product?.title || 'Товар'} (${[it.selectedColor, it.selectedSize].filter(Boolean).join(', ')}) x${it.quantity}`;
+      })
       .join('; '),
   ]);
   downloadCSV(`orders_${new Date().toISOString().slice(0, 10)}.csv`, [headers, ...rows]);

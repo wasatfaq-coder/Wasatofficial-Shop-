@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { groupOrderLines, packGroupCompositionText } from '../../shared/packLines';
 import { AdminHint } from './AdminHint';
 import { OrderLineThumbImage, ProductThumbImage } from '../ProductThumbImage';
 import { thumbOf } from '../../utils/productThumbs';
@@ -794,7 +795,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               </span>
             </div>
             <p className="text-xs text-[#4E5C70] leading-snug">
-              {(order.totalPrice || 0).toLocaleString('ru-RU')} ₽ · {order.items?.length || 0} поз.
+              {(order.totalPrice || 0).toLocaleString('ru-RU')} ₽ · {groupOrderLines(order.items || []).length} поз.
               {order.deliveryAddress ? ` · ${order.deliveryAddress}` : ''}
             </p>
             {order.trackingNumber && (
@@ -813,17 +814,29 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             </button>
             {showOrderItems && (
               <ul className="space-y-1.5 pt-1">
-                {(order.items || []).map((item, idx) => (
-                  <li key={`${item.id || idx}-${idx}`} className="flex items-center gap-2 min-w-0">
-                    {item.product && (
-                      <OrderLineThumbImage line={item.product} catalog={products} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" />
-                    )}
-                    <span className="text-[11px] text-[#2D3A4E] min-w-0 flex-1 leading-snug">
-                      {item.product?.title || 'Товар'} · {[item.selectedColor, item.selectedSize].filter(Boolean).join(' / ')} ·{' '}
-                      {item.quantity} шт.
-                    </span>
-                  </li>
-                ))}
+                {groupOrderLines(order.items || []).map((group, idx) => {
+                  const item = group.item;
+                  return (
+                    <li key={group.kind === 'pack' ? `pack-${group.packGroup}` : `${item.id || idx}-${idx}`} className="flex items-center gap-2 min-w-0">
+                      {item.product && (
+                        <OrderLineThumbImage line={item.product} catalog={products} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" />
+                      )}
+                      <span className="text-[11px] text-[#2D3A4E] min-w-0 flex-1 leading-snug">
+                        {group.kind === 'pack' ? (
+                          <>
+                            {item.product?.title || 'Товар'} · {[item.selectedColor, `${group.title} · ${group.packCount} уп.`].filter(Boolean).join(' / ')} ·{' '}
+                            {packGroupCompositionText(group.sizes)}
+                          </>
+                        ) : (
+                          <>
+                            {item.product?.title || 'Товар'} · {[item.selectedColor, item.selectedSize].filter(Boolean).join(' / ')} ·{' '}
+                            {item.quantity} шт.
+                          </>
+                        )}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>

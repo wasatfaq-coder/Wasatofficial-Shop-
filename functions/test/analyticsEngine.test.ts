@@ -201,8 +201,8 @@ describe('computePeriodBreakdown — товары, категории и про�
     // a, b and c — 2 pieces each: the larger sum first, the top is cut to 2; no picture from the order line — the
     // screen takes the photo from the catalog (audit 07.10, finding 7)
     expect(topProducts).toEqual([
-      { id: 'b', title: 'Товар b', quantity: 2, revenue: 6000 },
-      { id: 'a', title: 'Товар a', quantity: 2, revenue: 2000 },
+      { id: 'b', title: 'Товар b', quantity: 2, revenue: 6000, packs: 0 },
+      { id: 'a', title: 'Товар a', quantity: 2, revenue: 2000, packs: 0 },
     ]);
     // items total 9000: Брюки 6000, Рубашки 2000, «Без категории» 1000
     expect(categories).toEqual([

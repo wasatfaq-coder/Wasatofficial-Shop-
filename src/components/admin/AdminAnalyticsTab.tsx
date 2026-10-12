@@ -671,7 +671,9 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
                         <span className="text-accent font-extrabold mr-1">{idx + 1}.</span>
                         {p.title}
                       </p>
-                      <p className="text-xs text-[#4E5C70]">Продано: {p.quantity} шт.</p>
+                      <p className="text-xs text-[#4E5C70]">
+                        Продано: {p.quantity} шт.{p.packs > 0 ? `, из них ростовок: ${p.packs} уп.` : ''}
+                      </p>
                     </div>
                   </div>
                   <span className="text-xs font-extrabold text-accent tabular-nums shrink-0">{rub(p.revenue)}</span>

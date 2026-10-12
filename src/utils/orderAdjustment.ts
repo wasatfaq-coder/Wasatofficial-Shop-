@@ -102,3 +102,38 @@ export function refundedLinesText(returned: CartItem[], deliveryRefund = 0): str
   if (deliveryRefund > 0) parts.push(`доставка — ${deliveryRefund.toLocaleString('ru-RU')} ₽`);
   return parts.join('; ');
 }
+
+/**
+ * What an adjustment gives back to stock and takes from it, by variant (product, colour, size; preorder apart — it is
+ * not on stock): the sum of every line of the variant before and after. A size pack has a line per size and a size
+ * whose price was split into roubles has two (src/shared/packLines.ts) — matching line to line took the first of them.
+ * A returned variant carries the price of what left the order, for the refund text
+ */
+export function variantStockDiff(before: CartItem[], after: CartItem[]): { returnedItems: CartItem[]; addedItems: CartItem[] } {
+  const key = (it: CartItem) =>
+    `${it.product.id}|${extractColorName(it.selectedColor).toLowerCase()}|${extractSizeName(it.selectedSize).toLowerCase()}|${it.isPreorder ? 1 : 0}`;
+  const totals = new Map<string, { template: CartItem; before: number; after: number; beforeSum: number; afterSum: number }>();
+  const add = (it: CartItem, side: 'before' | 'after') => {
+    const k = key(it);
+    const entry = totals.get(k) ?? { template: it, before: 0, after: 0, beforeSum: 0, afterSum: 0 };
+    const qty = Math.max(0, Number(it.quantity) || 0);
+    entry[side] += qty;
+    entry[side === 'before' ? 'beforeSum' : 'afterSum'] += linePrice(it) * qty;
+    totals.set(k, entry);
+  };
+  before.forEach((it) => add(it, 'before'));
+  after.forEach((it) => add(it, 'after'));
+  const returnedItems: CartItem[] = [];
+  const addedItems: CartItem[] = [];
+  for (const entry of totals.values()) {
+    const diff = entry.after - entry.before;
+    if (diff < 0) {
+      const qty = -diff;
+      const unitPrice = Math.round(Math.max(0, entry.beforeSum - entry.afterSum) / qty);
+      returnedItems.push({ ...entry.template, quantity: qty, unitPrice });
+    } else if (diff > 0) {
+      addedItems.push({ ...entry.template, quantity: diff });
+    }
+  }
+  return { returnedItems, addedItems };
+}

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { groupOrderLines } from '../../shared/packLines';
 import { telHref } from '../../utils/storeContacts';
 import {
   ShoppingBag,
@@ -55,7 +56,7 @@ export const ProfileOrdersModal = ({
   const ordersDialog = useDialogA11y(isOpen, onCloseModals);
   // the orders subscription failed (finding 15): said instead of «Заказов не найдено»
   const ordersLoadFailed = useLoadFailed('orders');
-  const linePhoto = useOrderLinePhotos(isOpen ? orders.flatMap((o) => o.items.slice(0, 4).map((it) => it.product)) : [], products);
+  const linePhoto = useOrderLinePhotos(isOpen ? orders.flatMap((o) => groupOrderLines(o.items).slice(0, 4).map((g) => g.item.product)) : [], products);
 
   const filteredOrders = orders.filter((ord) => {
     if (orderFilter === 'active') return !ord.isCancelled && ord.status !== 'delivered';
@@ -256,17 +257,17 @@ export const ProfileOrdersModal = ({
                       {/* Items previews thumbnails & quick actions */}
                       <div className="flex items-center justify-between pt-1 gap-2 flex-wrap sm:flex-nowrap">
                         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                          {ord.items.slice(0, 4).map((it, idx) => (
+                          {groupOrderLines(ord.items).slice(0, 4).map((group, idx) => (
                             <img
                               key={idx}
-                              src={linePhoto(it.product)}
+                              src={linePhoto(group.item.product)}
                               alt=""
                               className="w-10 h-10 rounded-xl object-cover neu-flat p-0.5 shrink-0"
                             />
                           ))}
-                          {ord.items.length > 4 && (
+                          {groupOrderLines(ord.items).length > 4 && (
                             <span className="text-[11px] font-extrabold text-[#4E5C70] neu-inset px-2 py-1 rounded-xl">
-                              +{ord.items.length - 4}
+                              +{groupOrderLines(ord.items).length - 4}
                             </span>
                           )}
                         </div>

@@ -16,7 +16,7 @@ const fakeOrder = {
 describe('top products of the period', () => {
   test('carry no picture from the order: only id, title and numbers', () => {
     const { topProducts } = computePeriodBreakdown([fakeOrder]);
-    expect(topProducts).toEqual([{ id: 'p1', title: 'Пальто', quantity: 2, revenue: 20000 }]);
+    expect(topProducts).toEqual([{ id: 'p1', title: 'Пальто', quantity: 2, revenue: 20000, packs: 0 }]);
     expect(JSON.stringify(topProducts)).not.toContain('attacker.example');
   });
 

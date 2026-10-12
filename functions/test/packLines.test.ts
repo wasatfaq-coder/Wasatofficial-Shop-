@@ -1,6 +1,7 @@
 // Size packs in an order (stage 19): the pack price split into lines, lines back into one pack
 import { describe, expect, test } from 'bun:test';
-import { expandPackLines, groupOrderLines, orderPackCounts, splitPackPrice, type CartPackLine } from '../../src/shared/packLines';
+import { expandPackLines, groupOrderLines, orderPackCounts, removePackGroup, setPackGroupCount, splitPackPrice, type CartPackLine } from '../../src/shared/packLines';
+import { variantStockDiff } from '../../src/utils/orderAdjustment';
 import { calcSubtotal, toPricingLine } from '../../src/shared/orderPricing';
 import type { CartItem, Product } from '../../src/types';
 
@@ -84,5 +85,59 @@ describe('groupOrderLines', () => {
   test('packs and items of an order', () => {
     const lines = expandPackLines([{ id: 'c0', product, selectedColor: 'Синий', selectedSize: '48', quantity: 2 }, packLine(10_000, 3)]);
     expect(orderPackCounts(lines)).toEqual({ packs: 3, pieces: 14 });
+  });
+});
+
+describe('whole packs in «Правка состава»', () => {
+  test('a pack changes its count on every size line; removing takes all its lines', () => {
+    const lines = expandPackLines([{ id: 'c0', product, selectedColor: 'Синий', selectedSize: '48', quantity: 1 }, packLine(10_002, 1)]);
+    const two = setPackGroupCount(lines, 'c1', 2);
+    expect(two[0]).toBe(lines[0]);
+    expect(two.slice(1).map((l) => l.quantity)).toEqual([2, 2, 2, 2]);
+    expect(two.slice(1).every((l) => l.packCount === 2)).toBe(true);
+    const groups = groupOrderLines(two);
+    expect(groups[1].kind === 'pack' && groups[1].total).toBe(20_004);
+    expect(removePackGroup(two, 'c1')).toEqual([lines[0]]);
+  });
+});
+
+describe('variantStockDiff', () => {
+  test('two lines of one size count as one variant', () => {
+    const lines = expandPackLines([packLine(10_002, 1)]);
+    const { returnedItems, addedItems } = variantStockDiff(lines, setPackGroupCount(lines, 'c1', 3));
+    expect(returnedItems).toEqual([]);
+    expect(addedItems.map((l) => [l.selectedSize, l.quantity])).toEqual([
+      ['48', 2],
+      ['50', 4],
+      ['52', 2],
+    ]);
+  });
+  test('a removed pack returns each size with the money it left with', () => {
+    const lines = expandPackLines([packLine(10_002, 1)]);
+    const { returnedItems, addedItems } = variantStockDiff(lines, []);
+    expect(addedItems).toEqual([]);
+    expect(returnedItems.map((l) => [l.selectedSize, l.quantity, l.unitPrice])).toEqual([
+      ['48', 1, 2501],
+      ['50', 2, 2501],
+      ['52', 1, 2500],
+    ]);
+  });
+  test('a preorder line is a separate variant', () => {
+    const plain: CartItem = { id: 'a', product, selectedColor: 'Синий', selectedSize: '50', quantity: 1 };
+    const pre: CartItem = { ...plain, id: 'b', isPreorder: true };
+    const { returnedItems, addedItems } = variantStockDiff([plain], [plain, pre]);
+    expect(returnedItems).toEqual([]);
+    expect(addedItems.map((l) => [l.id, l.isPreorder])).toEqual([['b', true]]);
+  });
+});
+
+describe('«Аналитика»: items and packs', () => {
+  test('a pack counts its items and one pack per pack ordered', async () => {
+    const { computePeriodBreakdown } = await import('../../src/utils/analyticsEngine');
+    const items = expandPackLines([{ id: 'c0', product, selectedColor: 'Синий', selectedSize: '48', quantity: 1 }, packLine(10_000, 2)]);
+    const [top] = computePeriodBreakdown([{ id: 'WS-1', items } as never]).topProducts;
+    expect(top.quantity).toBe(9);
+    expect(top.packs).toBe(2);
+    expect(top.revenue).toBe(3000 + 20_000);
   });
 });
