@@ -29,13 +29,22 @@ const SETTLE_MS = 2_000;
 const RESUBSCRIBE_MS = 60_000;
 /**
  * A miniature that could not be made (the previews not read yet, a photo the canvas could not take) is tried again this
- * many times in the session: until then the index is saved with an «incomplete» hash, so the next snapshot writes it
- * again. Before, the index was saved with the full hash and no session ever made the card's photo — a new product
- * showed the placeholder to customers (owner task 11.10)
+ * many times in the session, THUMB_RETRY_MS apart. A try writes nothing until the miniature is made: then the miniature
+ * and the index that points to it. Before 11.10 no session ever made it again — a new product showed the placeholder to
+ * customers (owner task 11.10); then each failed try rewrote the whole index (finding of 11.10)
  */
 const THUMB_ATTEMPTS = 3;
-const INCOMPLETE_SUFFIX = '~thumbs';
+const THUMB_RETRY_MS = 30_000;
 const thumbAttempts = new Map<string, number>();
+
+/** Products whose card has no miniature of their current photo yet and that still have tries left in this session */
+const pendingThumbs = (products: Product[], storedEntries: CatalogEntry[]) => {
+  const storedThumbs = new Map(storedEntries.map((e) => [e.id, e.thumb ?? '']));
+  return products.filter((p) => {
+    const key = thumbKey(p);
+    return key && storedThumbs.get(p.id) !== key && (thumbAttempts.get(p.id) ?? 0) < THUMB_ATTEMPTS;
+  });
+};
 
 /** How long «Применить» waits for the index with the new prices before it says the catalog is behind */
 const INDEX_WAIT_MS = 20_000;
@@ -67,6 +76,8 @@ export function useCatalogIndexSync(products: Product[], productsLoaded: boolean
   const productsRef = React.useRef(products);
   productsRef.current = products;
   const waiters = React.useRef<IndexWaiter[]>([]);
+  // a miniature that failed is tried again a little later, without a new snapshot of the products
+  const [thumbRetry, setThumbRetry] = React.useState(0);
 
   React.useEffect(() => {
     if (!isAdmin) return;
@@ -96,23 +107,31 @@ export function useCatalogIndexSync(products: Product[], productsLoaded: boolean
   React.useEffect(() => {
     if (!isAdmin || !productsLoaded || !storedRead || !stored) return;
     const { entries, hash } = buildCatalogIndex(products);
-    if (hash === stored.hash) {
+    const upToDate = hash === stored.hash;
+    if (upToDate) {
       const done = waiters.current.filter((w) => w.after !== products);
       waiters.current = waiters.current.filter((w) => w.after === products);
       done.forEach((w) => w.resolve(true));
-      return;
+      if (pendingThumbs(products, stored.entries).length === 0) return;
     }
+    let retry: number | undefined;
     const timer = window.setTimeout(() => {
       if (running.current) return;
       running.current = true;
-      void writeIndex(products, entries, hash, stored)
+      void writeIndex(products, entries, hash, stored, upToDate)
+        .then((retryLater) => {
+          if (retryLater) retry = window.setTimeout(() => setThumbRetry((n) => n + 1), THUMB_RETRY_MS);
+        })
         .catch((err) => console.error('Catalog index was not saved:', err))
         .finally(() => {
           running.current = false;
         });
     }, SETTLE_MS);
-    return () => window.clearTimeout(timer);
-  }, [isAdmin, productsLoaded, storedRead, stored, products]);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearTimeout(retry);
+    };
+  }, [isAdmin, productsLoaded, storedRead, stored, products, thumbRetry]);
 
   return React.useCallback(
     () =>
@@ -129,18 +148,26 @@ export function useCatalogIndexSync(products: Product[], productsLoaded: boolean
   );
 }
 
-/** Miniatures first (new photo or new product), then the index that points to them, then miniatures of removed products */
+/**
+ * Miniatures first (new photo or new product), then the index that points to them, then miniatures of removed products.
+ * `onlyThumbs`: the stored index matches the products, only miniatures are missing — nothing is written unless one is
+ * made. Resolves true when a miniature failed and has tries left
+ */
 async function writeIndex(
   products: Product[],
   entries: CatalogEntry[],
   hash: string,
-  stored: { parts: number; entries: CatalogEntry[] }
-) {
+  stored: { parts: number; entries: CatalogEntry[] },
+  onlyThumbs: boolean
+): Promise<boolean> {
   const storedThumbs = new Map(stored.entries.map((e) => [e.id, e.thumb ?? '']));
   const thumbs: ProductThumb[] = [];
+  const pending = new Set(pendingThumbs(products, stored.entries).map((p) => p.id));
   for (const product of products) {
     const key = thumbKey(product);
     if (!key || storedThumbs.get(product.id) === key) continue;
+    // a miniature out of tries is not made again in this session; the index still writes the product without it
+    if (!pending.has(product.id)) continue;
     // the first preview, from the product or from product_previews (stage 6)
     // one photo that fails no longer stops the whole index: the product stays in the catalog, its card waits for the photo
     try {
@@ -157,9 +184,8 @@ async function writeIndex(
     thumbAttempts.set(product.id, (thumbAttempts.get(product.id) ?? 0) + 1);
   }
   const written = new Set(thumbs.map((t) => t.productId));
-  const retryThumbs = products.some(
-    (p) => thumbKey(p) && !written.has(p.id) && storedThumbs.get(p.id) !== thumbKey(p) && (thumbAttempts.get(p.id) ?? 0) < THUMB_ATTEMPTS
-  );
+  const retryLater = pendingThumbs(products, stored.entries).some((p) => !written.has(p.id));
+  if (onlyThumbs && thumbs.length === 0) return retryLater;
   // an entry points to a miniature only when there is one made from its current photo
   const indexed = entries.map((e) =>
     e.thumb && !written.has(e.id) && storedThumbs.get(e.id) !== e.thumb ? { ...e, thumb: undefined } : e
@@ -167,6 +193,7 @@ async function writeIndex(
   const ids = new Set(products.map((p) => p.id));
   const removed = stored.entries.filter((e) => e.thumb && !ids.has(e.id)).map((e) => e.id);
   await saveProductThumbs(thumbs);
-  await saveCatalogIndex(await catalogIndexParts(indexed, retryThumbs ? `${hash}${INCOMPLETE_SUFFIX}` : hash), stored.parts);
+  await saveCatalogIndex(await catalogIndexParts(indexed, hash), stored.parts);
   if (removed.length > 0) await saveProductThumbs([], removed);
+  return retryLater;
 }
