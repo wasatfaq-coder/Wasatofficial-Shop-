@@ -52,7 +52,7 @@ test('отзыв по полученному заказу: покупатель 
   await expect.poll(async () => (await readDoc(`reviews/${reviewId}`))?.orderId).toBe(orderId);
 
   // from the order in the profile: «Изменить отзыв» for the product already reviewed
-  await page.goto('/profile');
+  await page.getByRole('button', { name: 'Профиль' }).first().click();
   await page.getByRole('button', { name: /^Заказы и трекинг/ }).click();
   await page.getByRole('dialog', { name: 'История и трекинг заказов' }).getByRole('button', { name: 'Детали' }).first().click();
   const details = page.getByRole('dialog', { name: `Заказ № ${orderId}` });

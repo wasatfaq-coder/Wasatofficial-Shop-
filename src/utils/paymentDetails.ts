@@ -1,5 +1,6 @@
 // Реквизиты оплаты заказа и чек («Доработки 5», бриф владельца 02.10): поля и проверки по типам оплаты, копирование
 // только цифр, какие способы видит покупатель, причины отклонения чека, требования к фото чека.
+import { withPaymentStatus } from './orderFlow';
 import type {
   Order,
   OrderPaymentDetails,
@@ -304,9 +305,10 @@ export function reviewedOrder(
     at: options.at,
   });
   const { paymentRejectReason: _previous, ...rest } = order;
+  // the pickup code follows the payment (withPaymentStatus): a confirmed receipt of an order already on its way makes
+  // it, a rejected one takes it back
   return {
-    ...rest,
-    paymentStatus: decision === 'confirm' ? 'paid' : 'pending',
+    ...withPaymentStatus(rest, decision === 'confirm' ? 'paid' : 'pending'),
     ...(decision === 'reject' && options.reason ? { paymentRejectReason: options.reason } : {}),
     paymentLog: [...(order.paymentLog ?? []), entry],
   };

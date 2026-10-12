@@ -1045,8 +1045,10 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           <div className="max-w-md md:max-w-lg mx-auto neu-flat rounded-2xl p-2 flex items-center gap-3 pointer-events-auto">
             <div className="min-w-0 pl-1.5">
               <p className="text-base font-extrabold text-[#2D3A4E] leading-tight whitespace-nowrap">
-                {(wholesaleMode && offer ? offer.unitPrice : product.price).toLocaleString('ru-RU')} ₽
-                {wholesaleMode && <span className="text-xs font-bold text-[#4E5C70]">/шт.</span>}
+                {(wholesaleMode && offer ? (offer.packSize > 1 ? offer.packPrice : offer.unitPrice) : product.price).toLocaleString('ru-RU')} ₽
+                {wholesaleMode && offer && (
+                  <span className="text-xs font-bold text-[#4E5C70]">{offer.packSize > 1 ? '/уп.' : '/шт.'}</span>
+                )}
               </p>
               <p className="text-xs text-[#4E5C70] leading-tight">
                 {selectedSize ? `Размер ${selectedSize}` : 'Размер не выбран'}

@@ -15,7 +15,7 @@ import { useDialogA11y } from '../utils/useDialogA11y';
 import { useLiveProduct } from '../utils/liveProducts';
 import { useProductThumb } from '../utils/productThumbs';
 import { shownOldPrice } from '../utils/productBadge';
-import { sellsRetail, sellsWholesale } from '../shared/wholesalePricing';
+import { packSizeOf, sellsRetail, sellsWholesale } from '../shared/wholesalePricing';
 
 interface QuickViewModalProps {
   product: Product | null;
@@ -208,8 +208,11 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
             <div className="flex items-center justify-between py-1">
               <div className="flex items-baseline gap-2">
                 <span className="text-xl font-bold text-[#2D3A4E]">
-                  {(wholesaleOnly ? (product.wholesalePrice as number) : product.price).toLocaleString('ru-RU')} ₽
-                  {wholesaleOnly && <span className="text-xs text-[#4E5C70]">/шт. оптом</span>}
+                  {/* a pack of several items is priced per pack, as on the product page (owner task 11.10, item 3) */}
+                  {(wholesaleOnly ? (product.wholesalePrice as number) * packSizeOf(product) : product.price).toLocaleString('ru-RU')} ₽
+                  {wholesaleOnly && (
+                    <span className="text-xs text-[#4E5C70]">{packSizeOf(product) > 1 ? `/уп. (${packSizeOf(product)} шт.) оптом` : '/шт. оптом'}</span>
+                  )}
                 </span>
                 {!wholesaleOnly && shownOldPrice(product) !== null && (
                   <span className="text-xs text-[#4E5C70] line-through">

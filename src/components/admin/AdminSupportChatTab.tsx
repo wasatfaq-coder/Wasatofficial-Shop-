@@ -55,9 +55,9 @@ import {
   flowStatuses,
   generatePickupCode,
   isCarrierOrder,
+  needsPickupCode,
   statusChangeBlocker,
   statusLogEntry,
-  usesPickupCode,
 } from '../../utils/orderFlow';
 import { useAuth } from '../../context/AuthContext';
 import { PRIORITY_LABELS, STATUS_LABELS, type SupportThreadSummary } from '../../utils/supportThreads';
@@ -436,7 +436,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
       return;
     }
     const label = adminStatusLabel(withTracking, newStatus);
-    const needsCode = usesPickupCode(order) && (newStatus === 'in_transit' || newStatus === 'ready') && !order.pickupCode;
+    // a code only for a paid order (owner task 11.10, item 1), as in «Заказы»
+    const needsCode = needsPickupCode({ ...withTracking, status: newStatus });
     const updated: Order = {
       ...withTracking,
       status: newStatus,

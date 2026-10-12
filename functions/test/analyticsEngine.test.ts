@@ -162,6 +162,22 @@ describe('сброс статистики (resetAt) и заказы без да�
     expect(countsAfterReset(orders[0], null, resetAt)).toBe(false);
   });
 
+  test('заказ, активный при сбросе и выданный после него, остаётся в цифрах', () => {
+    const resetAt = at(10, 3, 10, 0).getTime();
+    const handedLater = order('later', at(10, 2), {
+      status: 'delivered',
+      statusLog: [{ status: 'delivered', at: at(10, 4).toISOString(), by: 'admin' }],
+    });
+    const handedBefore = order('before', at(10, 2), {
+      status: 'delivered',
+      statusLog: [{ status: 'delivered', at: at(10, 2, 18).toISOString(), by: 'admin' }],
+    });
+    const cancelledLater = order('cancel', at(10, 2), { isCancelled: true, cancelledAt: at(10, 5).toISOString() });
+    expect(countsAfterReset(handedLater, at(10, 2).getTime(), resetAt)).toBe(true);
+    expect(countsAfterReset(handedBefore, at(10, 2).getTime(), resetAt)).toBe(false);
+    expect(countsAfterReset(cancelledLater, at(10, 2).getTime(), resetAt)).toBe(true);
+  });
+
   test('сброс отрезает и прошлый период: рост не считается от удалённой истории', () => {
     const orders = [order('prev', at(9, 28), { totalPrice: 4000, status: 'delivered' }), order('now', at(10, 6))];
     const reset = computeFirestoreDailySales(orders, '7d', 'all', at(10, 1, 0, 0).getTime(), NOW);

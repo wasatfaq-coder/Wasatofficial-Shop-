@@ -149,6 +149,17 @@ describe('receipt and handover', () => {
     expect(withPaymentStatus({ ...unpaid, status: 'assembling' }, 'paid').pickupCode).toBeUndefined();
   });
 
+  test('the receipt check makes or takes back the code (reviewedOrder)', async () => {
+    const { reviewedOrder } = await import('../../src/utils/paymentDetails');
+    const onReview = order({ deliveryKind: 'courier', status: 'in_transit', paymentStatus: 'receipt_review' });
+    const confirmed = reviewedOrder(onReview, 'confirm');
+    expect(confirmed.paymentStatus).toBe('paid');
+    expect(confirmed.pickupCode).toMatch(/^\d{3}-\d{3}$/);
+    const rejected = reviewedOrder({ ...confirmed, paymentStatus: 'receipt_review' }, 'reject', { reason: 'Нет суммы' });
+    expect(rejected.paymentStatus).toBe('pending');
+    expect(rejected.pickupCode).toBeUndefined();
+  });
+
   test('the code is six random digits «842-190»', () => {
     const codes = new Set(Array.from({ length: 50 }, generatePickupCode));
     for (const code of codes) expect(code).toMatch(/^\d{3}-\d{3}$/);

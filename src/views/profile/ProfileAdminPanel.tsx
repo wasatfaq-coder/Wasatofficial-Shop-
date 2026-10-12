@@ -433,10 +433,11 @@ export const ProfileAdminPanel = ({
               pendingTab={isTabPending ? requestedTab : null}
               counts={adminCounts}
             >
-              {/* One boundary for all sections, above the keyed wrapper: during a switch (a transition) it keeps
-                  the current section instead of showing «Загрузка раздела…» */}
-              <SectionErrorBoundary key={adminTab}>
+              {/* One Suspense for all sections, above the keyed wrapper and the keyed error boundary: during a switch
+                  (a transition) it keeps the current section instead of showing «Загрузка раздела…»; a keyed boundary
+                  above it would remount it and show the fallback on every first open */}
               <Suspense fallback={<AdminLoading />}>
+              <SectionErrorBoundary key={adminTab}>
                 <motion.div
                   key={adminTab}
                   initial={{ opacity: 0, y: 6 }}
@@ -676,8 +677,8 @@ export const ProfileAdminPanel = ({
                 </div>
               )}
                 </motion.div>
-              </Suspense>
               </SectionErrorBoundary>
+              </Suspense>
             </AdminNav>
             </Suspense>
             </SectionErrorBoundary>

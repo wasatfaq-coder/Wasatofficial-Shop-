@@ -91,12 +91,28 @@ export const isActiveOrder = (order: Order): boolean => !order.isCancelled && or
 /**
  * Whether the statistics reset (settings/analytics.resetAt) leaves this order in the numbers. The reset clears the
  * history of finished orders — delivered, cancelled, archived — placed before it; an order still being handled stays in
- * the statistics with its data, whenever it was placed (owner task 11.10: the reset must not touch active orders,
- * deliveries are still running on them). Undated orders follow the same rule.
+ * the statistics with its data, whenever it was placed, and keeps counting after it is handed over or cancelled (owner
+ * task 11.10: the reset must not touch active orders, deliveries are still running on them). An archived order counts as
+ * finished at its last «delivered»/«cancelled» entry. Undated orders follow the same rule.
  */
 export function countsAfterReset(order: Order, placedAt: number | null, resetAt: number | null): boolean {
   if (resetAt === null || isActiveOrder(order)) return true;
-  return placedAt !== null && placedAt >= resetAt;
+  if (placedAt !== null && placedAt >= resetAt) return true;
+  // an order that was still active at the reset and finished after it stays: it did not stop counting when it was handed
+  // over or cancelled (the reset cleared only what had already finished by then)
+  const finished = orderFinishedAt(order);
+  return finished !== null && finished >= resetAt;
+}
+
+/** When the order finished: its cancellation or the last «delivered» / «cancelled» entry of its history; unknown — null */
+export function orderFinishedAt(order: Order): number | null {
+  const times: number[] = [];
+  if (order.isCancelled && order.cancelledAt) times.push(Date.parse(order.cancelledAt));
+  for (const entry of order.statusLog ?? []) {
+    if (entry.status === 'delivered' || entry.status === 'cancelled') times.push(Date.parse(entry.at));
+  }
+  const known = times.filter((t) => Number.isFinite(t));
+  return known.length ? Math.max(...known) : null;
 }
 
 const growth = (current: number, prev: number) =>
