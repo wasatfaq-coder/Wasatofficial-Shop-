@@ -116,7 +116,12 @@ export function useCatalogIndexSync(products: Product[], productsLoaded: boolean
     }
     let retry: number | undefined;
     const timer = window.setTimeout(() => {
-      if (running.current) return;
+      // a try that writes nothing does not change `stored`: a change made while it runs would wait for no snapshot
+      // (review 12.10) — this run is tried again once the running one is over
+      if (running.current) {
+        retry = window.setTimeout(() => setThumbRetry((n) => n + 1), SETTLE_MS);
+        return;
+      }
       running.current = true;
       void writeIndex(products, entries, hash, stored, upToDate)
         .then((retryLater) => {
