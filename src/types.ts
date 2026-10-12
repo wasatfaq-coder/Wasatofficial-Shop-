@@ -90,6 +90,16 @@ export interface ProductReview {
   fromCollection?: boolean;
   /** Who marked the review «Полезно» (from `review_votes`) */
   voterUids?: string[];
+  /** The order the review is for (a delivered order of the author with this product): «Покупка подтверждена» */
+  orderId?: string;
+  /** When the author last changed the review (ms): a moderation decision older than this is out of date */
+  updatedAt?: number;
+  /**
+   * Set only on the author's own review that other customers do not see: «На проверке» or «Отклонён»
+   * (`reviewVisibility`); such a review is not counted in the rating
+   */
+  moderation?: 'pending' | 'rejected';
+  moderationReason?: string;
 }
 
 /** A document of the `reviews` collection: id = `${productId}_${uid}` */
@@ -106,6 +116,33 @@ export interface StoredReview {
   colorPurchased?: string;
   date: string;
   createdAt: string;
+  /** A delivered order of the author with this product; the rules check it (firestore.rules, isValidReview) */
+  orderId?: string;
+  /** Server time of the author's last save (ms in memory); a moderation decision older than this is out of date */
+  updatedAt?: number;
+}
+
+/**
+ * A document of `review_moderation/{reviewId}` (admin writes, everyone reads): the owner's decision on a review.
+ * No document — no decision yet (shown, or waiting, by `settings/storefront.reviewPremoderation`).
+ */
+export interface ReviewModeration {
+  id: string;
+  /** For reading the decisions of one product page */
+  productId: string;
+  status: 'published' | 'rejected';
+  /** Why the review was rejected; the author sees it */
+  reason?: string;
+  /** When the decision was made (ms) */
+  at: number;
+  /**
+   * The version of the review the owner judged: its `updatedAt` (server time, ms), 0 for a review saved without one.
+   * The decision holds only while the review still has that version: an edit or a review deleted and written again is a
+   * new text (review audit 11.10, finding 1). Absent in decisions made before — compared by time then
+   */
+  reviewedVersion?: number;
+  /** Who decided (the admin's email) */
+  by?: string;
 }
 
 /** A document of the `review_votes` collection: id = `${reviewId}_${uid}` */
@@ -195,7 +232,8 @@ export interface Product {
   photoIds?: string[];
   /** The data: previews of `images` are in `product_previews/{id}` ('' here in their place): a hash of them (stage 6) */
   previewKey?: string;
-  colors: { name: string; hex: string }[];
+  /** `imageIndex` — optional 0-based position in `images` shown when the buyer picks the colour (colorPhotos.ts) */
+  colors: { name: string; hex: string; imageIndex?: number }[];
   sizes: string[];
   /** Measurements of the model per size; shown on the product page next to the sizes, absent — not shown */
   sizeChart?: ProductSizeChart;
@@ -408,12 +446,22 @@ export interface PaymentRequisitesByKind {
   card: CardRequisites;
   account: AccountRequisites;
 }
-/** Requisites of one order: only the ways the admin filled */
-export type OrderPaymentDetails = { [K in PaymentKind]?: PaymentRequisitesByKind[K] };
+/**
+ * «Комментарий к переводу»: `order` — «Заказ № {номер}» from the order, `custom` — the owner's text (`{номер}` is replaced
+ * by the order id), `none` — the store asks for no comment. Missing field = `order` (old templates and orders).
+ */
+export type TransferCommentMode = 'order' | 'custom' | 'none';
+export interface TransferCommentSetting {
+  mode: TransferCommentMode;
+  /** Text of the `custom` mode, up to 140 characters */
+  text?: string;
+}
+/** Requisites of one order: only the ways the admin filled, and one comment for all of them */
+export type OrderPaymentDetails = { [K in PaymentKind]?: PaymentRequisitesByKind[K] } & { transferComment?: TransferCommentSetting };
 
 /** A named set of requisites («Сбербанк — ИП Иванов»): `payment_templates/{id}`, admin only */
 export type PaymentTemplate = {
-  [K in PaymentKind]: { id: string; name: string; kind: K; fields: PaymentRequisitesByKind[K]; updatedAt?: string };
+  [K in PaymentKind]: { id: string; name: string; kind: K; fields: PaymentRequisitesByKind[K]; transferComment?: TransferCommentSetting; updatedAt?: string };
 }[PaymentKind];
 
 export interface PaymentLogEntry {
@@ -761,6 +809,8 @@ export interface StorefrontSettings {
    * поддельный заказ не держит товар); без значения — автоотмены нет. Срабатывает в «Заказах» у администратора.
    */
   unpaidOrderCancelDays?: number;
+  /** «Проверять отзывы перед публикацией»: a new or changed review is shown to others only after «Опубликовать» */
+  reviewPremoderation?: boolean;
   /** @deprecated Не используется: цена доставки — только у способа в «Доставка и ПВЗ». Поле осталось в старых документах. */
   courierDeliveryPrice?: number;
   /** @deprecated см. courierDeliveryPrice */

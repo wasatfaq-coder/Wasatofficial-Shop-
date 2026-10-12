@@ -2,7 +2,7 @@
 // computePeriodBreakdown (src/utils/analyticsEngine.ts). Время — местное время браузера владельца, поэтому даты
 // заказов и «сейчас» строятся местным конструктором Date: тест не зависит от часового пояса машины.
 import { describe, expect, test } from 'bun:test';
-import { computeFirestoreDailySales, computePeriodBreakdown } from '../../src/utils/analyticsEngine';
+import { computeFirestoreDailySales, computePeriodBreakdown, countsAfterReset } from '../../src/utils/analyticsEngine';
 import type { CartItem, Order } from '../../src/types';
 
 // 7 октября 2026, 15:00 по местному времени
@@ -130,10 +130,11 @@ describe('какие заказы приносят выручку', () => {
 });
 
 describe('сброс статистики (resetAt) и заказы без даты', () => {
-  const undated = order('old', at(10, 7), { createdAt: undefined, date: 'Сегодня, 14:30' });
+  // finished orders: the reset leaves active ones in the numbers (the test below)
+  const undated = order('old', at(10, 7), { createdAt: undefined, date: 'Сегодня, 14:30', status: 'delivered' });
 
   test('заказы до сброса не считаются; заказ без даты — отдельно, пока сброса нет', () => {
-    const orders = [order('before', at(10, 3, 9, 59), { totalPrice: 5000 }), order('after', at(10, 3, 10, 0)), undated];
+    const orders = [order('before', at(10, 3, 9, 59), { totalPrice: 5000, status: 'delivered' }), order('after', at(10, 3, 10, 0)), undated];
     const all = computeFirestoreDailySales(orders, '7d', 'all', null, NOW);
     expect(all.summary.totalRevenue).toBe(6000);
     expect(all.undatedCount).toBe(1);
@@ -145,8 +146,40 @@ describe('сброс статистики (resetAt) и заказы без да�
     expect(reset.undatedCount).toBe(0);
   });
 
+  test('сброс убирает только завершённые заказы: активный заказ до сброса остаётся в цифрах (задача владельца 11.10)', () => {
+    const resetAt = at(10, 3, 10, 0).getTime();
+    const orders = [
+      order('done', at(10, 2), { status: 'delivered', totalPrice: 5000 }),
+      order('cancelled', at(10, 2), { isCancelled: true, totalPrice: 7000 }),
+      order('in-transit', at(10, 2), { status: 'in_transit', totalPrice: 2000 }),
+      order('archived', at(10, 2), { status: 'accepted', archived: true, totalPrice: 9000 }),
+      order('after', at(10, 4)),
+    ];
+    const reset = computeFirestoreDailySales(orders, '7d', 'all', resetAt, NOW);
+    expect(reset.periodOrders.map((o) => o.id).sort()).toEqual(['after', 'in-transit']);
+    expect(reset.summary.totalRevenue).toBe(3000);
+    expect(countsAfterReset(orders[2], null, resetAt)).toBe(true);
+    expect(countsAfterReset(orders[0], null, resetAt)).toBe(false);
+  });
+
+  test('заказ, активный при сбросе и выданный после него, остаётся в цифрах', () => {
+    const resetAt = at(10, 3, 10, 0).getTime();
+    const handedLater = order('later', at(10, 2), {
+      status: 'delivered',
+      statusLog: [{ status: 'delivered', at: at(10, 4).toISOString(), by: 'admin' }],
+    });
+    const handedBefore = order('before', at(10, 2), {
+      status: 'delivered',
+      statusLog: [{ status: 'delivered', at: at(10, 2, 18).toISOString(), by: 'admin' }],
+    });
+    const cancelledLater = order('cancel', at(10, 2), { isCancelled: true, cancelledAt: at(10, 5).toISOString() });
+    expect(countsAfterReset(handedLater, at(10, 2).getTime(), resetAt)).toBe(true);
+    expect(countsAfterReset(handedBefore, at(10, 2).getTime(), resetAt)).toBe(false);
+    expect(countsAfterReset(cancelledLater, at(10, 2).getTime(), resetAt)).toBe(true);
+  });
+
   test('сброс отрезает и прошлый период: рост не считается от удалённой истории', () => {
-    const orders = [order('prev', at(9, 28), { totalPrice: 4000 }), order('now', at(10, 6))];
+    const orders = [order('prev', at(9, 28), { totalPrice: 4000, status: 'delivered' }), order('now', at(10, 6))];
     const reset = computeFirestoreDailySales(orders, '7d', 'all', at(10, 1, 0, 0).getTime(), NOW);
     expect(reset.summary.prevTotalRevenue).toBe(0);
     expect(reset.summary.revenueGrowth).toBe(0);

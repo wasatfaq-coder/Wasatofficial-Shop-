@@ -16,14 +16,16 @@ test('покупатель заказывает оптом: упаковки, с
   await expect(page.getByText('Только оптом, за шт.').first()).toBeVisible();
   await page.getByRole('button', { name: `Купить оптом: ${PRODUCTS.bulkTank.title}` }).first().click();
   await expect(page).toHaveURL(new RegExp(`/product/${PRODUCTS.bulkTank.id}$`));
-  await expect(page.getByText('/шт. оптом').first()).toBeVisible();
+  // a pack of 10: the price is per pack, the item price under it (owner task 11.10, item 3)
+  await expect(page.getByText('/уп. оптом').first()).toBeVisible();
+  await expect(page.getByText('10 шт. × 450 ₽').first()).toBeVisible();
   await expect(page.getByRole('radiogroup', { name: 'Как покупаете' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Заказать в 1 клик' })).toHaveCount(0);
 
   await page.goto(`/product/${tee.id}`);
   await page.getByRole('radio', { name: /^Оптом/ }).click();
   await expect(page.getByText('Упаковка — 5 шт. · от 2 уп.')).toBeVisible();
-  await expect(page.getByText('1 080 ₽/шт. (−10 %)')).toBeVisible();
+  await expect(page.getByText('1 080 ₽/шт. · 5 400 ₽/уп. (−10 %)')).toBeVisible();
   await chooseSize(page, new RegExp(`^${size}\\b`));
   // «Оптом» starts at the product's minimum: 2 packs
   await expect(page.getByText('2 уп.', { exact: true }).first()).toBeVisible();

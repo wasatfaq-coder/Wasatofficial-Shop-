@@ -26,7 +26,7 @@ import {
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { needsOwnerAttention } from './firestoreErrors';
 import { changedFields, changedSince, hasFieldChanges, holdsChange, orderFieldsToCheck, type FieldChanges } from './fieldChanges';
-import { CartItem, Product, ProductSKU, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog, PaymentKind, PaymentTemplate, PriceHistoryEntry, PriceChangeLog } from '../types';
+import { CartItem, Product, ProductSKU, ReviewModeration, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog, PaymentKind, PaymentTemplate, PriceHistoryEntry, PriceChangeLog } from '../types';
 import { paymentLogEntry, receiptMessageText } from './paymentDetails';
 import { DEFAULT_STOREFRONT_SETTINGS, generateDefaultSKUs, inStockAfterReturn, inStockAfterStockChange, stockMovementId } from './inventory';
 import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
@@ -1849,12 +1849,55 @@ export async function saveServerConfigToFirestore(config: ServerConfig) {
  * `review_votes/{reviewId}_{uid}` (one «Полезно» per person). Not stored inside products.
  */
 /** Every review, or one product's (`productId`: the customer reads only the reviews of the product page, stage 4) */
-export function subscribeToReviews(onUpdate: (reviews: StoredReview[]) => void, productId?: string) {
+export function subscribeToReviews(
+  onUpdate: (reviews: StoredReview[]) => void,
+  productId?: string,
+  onError?: (error: unknown) => void
+) {
   const ref = collection(db, 'reviews');
   return onSnapshot(
     productId ? query(ref, where('productId', '==', productId)) : ref,
-    (snap) => onUpdate(snap.docs.map((d) => ({ ...(d.data() as StoredReview), id: d.id }))),
-    (error) => logSubscriptionError('Reviews', error)
+    (snap) => onUpdate(snap.docs.map(storedReviewOf)),
+    (error) => {
+      logSubscriptionError('Reviews', error);
+      onError?.(error);
+    }
+  );
+}
+
+function storedReviewOf(d: QueryDocumentSnapshot): StoredReview {
+  const data = d.data({ serverTimestamps: 'estimate' });
+  // `updatedAt` is the server's time of the author's save: milliseconds in memory
+  const updatedAt = data.updatedAt instanceof Timestamp ? data.updatedAt.toMillis() : undefined;
+  return { ...(data as StoredReview), id: d.id, updatedAt };
+}
+
+/** The customer's own reviews (the order window: «Оставить отзыв» or «Изменить отзыв» per product) */
+export function subscribeToOwnReviews(uid: string, onUpdate: (reviews: StoredReview[]) => void) {
+  return onSnapshot(
+    query(collection(db, 'reviews'), where('uid', '==', uid)),
+    (snap) => onUpdate(snap.docs.map(storedReviewOf)),
+    (error) => logSubscriptionError('Own reviews', error)
+  );
+}
+
+/**
+ * The owner's decisions on reviews: `review_moderation/{reviewId}` (admin writes, everyone reads). All of them, or one
+ * product's (`productId`: the product page reads only its own).
+ */
+export function subscribeToReviewModeration(
+  onUpdate: (decisions: ReviewModeration[]) => void,
+  productId?: string,
+  onError?: (error: unknown) => void
+) {
+  const ref = collection(db, 'review_moderation');
+  return onSnapshot(
+    productId ? query(ref, where('productId', '==', productId)) : ref,
+    (snap) => onUpdate(snap.docs.map((d) => ({ ...(d.data() as ReviewModeration), id: d.id }))),
+    (error) => {
+      logSubscriptionError('Review moderation', error);
+      onError?.(error);
+    }
   );
 }
 
@@ -1886,12 +1929,28 @@ export function loadBannerImages(banner: Pick<BannerSlide, 'id' | 'imageKey'>): 
   return pending;
 }
 
+/** The author saves a review; `updatedAt` is the server's time (a changed review is checked again, `reviewVisibility`) */
 export async function saveReviewToFirestore(review: StoredReview) {
-  await setDoc(doc(db, 'reviews', review.id), sanitizeForFirestore(review));
+  const { updatedAt: _stamp, ...fields } = review;
+  await setDoc(doc(db, 'reviews', review.id), { ...sanitizeForFirestore(fields), updatedAt: serverTimestamp() });
 }
 
 export async function deleteReviewFromFirestore(reviewId: string) {
   await deleteDoc(doc(db, 'reviews', reviewId));
+}
+
+/** «Опубликовать» / «Отклонить» in «Отзывы» (admin): the owner's decision on one review */
+export async function saveReviewModerationToFirestore(decision: ReviewModeration) {
+  const { id, ...fields } = decision;
+  await setDoc(doc(db, 'review_moderation', id), sanitizeForFirestore(fields));
+}
+
+/** The owner deletes a review: its decision goes with it (the author may write the review again, a new one) */
+export async function deleteReviewAsAdmin(reviewId: string) {
+  const batch = writeBatch(db);
+  batch.delete(doc(db, 'reviews', reviewId));
+  batch.delete(doc(db, 'review_moderation', reviewId));
+  await batch.commit();
 }
 
 export async function setReviewVoteInFirestore(vote: ReviewVote, voted: boolean) {
@@ -2419,7 +2478,7 @@ export const CHAT_TEMPLATES_DOC_ID = 'chat_templates';
 /** Every collection of the store; `test` holds only the connection probe */
 export const BACKUP_COLLECTIONS = [
   'products', 'product_previews', 'product_photos', 'product_costs', 'promos', 'settings', 'banners', 'banner_images', 'delivery_methods', 'pickup_points',
-  'orders', 'users', 'customer_notes', 'admins', 'reviews', 'review_votes',
+  'orders', 'users', 'customer_notes', 'admins', 'reviews', 'review_votes', 'review_moderation',
   'chat_messages', 'chat_images', 'support_threads', 'support_status', STOCK_MOVEMENTS_COLLECTION, 'promo_uses', 'payment_templates',
   PRICE_CHANGES_COLLECTION, ORDER_COSTS_COLLECTION,
 ] as const;

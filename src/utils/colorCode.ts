@@ -134,14 +134,18 @@ export function colorHexForName(name: string): string | null {
 }
 
 /** Colours of a product as the form keeps them: an old string colour («Черный») gets a shade by its name */
-export function normalizeProductColors(colors: unknown): { name: string; hex: string }[] {
+export function normalizeProductColors(colors: unknown): { name: string; hex: string; imageIndex?: number }[] {
   if (!Array.isArray(colors)) return [];
   return colors
     .map((c) => {
       if (typeof c === 'string') return { name: c.trim(), hex: colorHexForName(c) ?? UNKNOWN_COLOR_HEX };
-      const raw = (c ?? {}) as { name?: unknown; hex?: unknown };
+      const raw = (c ?? {}) as { name?: unknown; hex?: unknown; imageIndex?: unknown };
       const name = String(raw.name ?? '').trim();
-      return { name, hex: readColorCode(String(raw.hex ?? ''), { bare: true }) ?? colorHexForName(name) ?? UNKNOWN_COLOR_HEX };
+      const hex = readColorCode(String(raw.hex ?? ''), { bare: true }) ?? colorHexForName(name) ?? UNKNOWN_COLOR_HEX;
+      // optional photo binding (colorPhotos.ts): kept only as a whole non-negative number
+      return typeof raw.imageIndex === 'number' && Number.isInteger(raw.imageIndex) && raw.imageIndex >= 0
+        ? { name, hex, imageIndex: raw.imageIndex }
+        : { name, hex };
     })
     .filter((c) => c.name);
 }

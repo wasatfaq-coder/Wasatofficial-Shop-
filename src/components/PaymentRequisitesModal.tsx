@@ -13,6 +13,7 @@ import {
   RECEIPT_ACCEPT,
   receiptFileError,
   REQUISITE_FIELDS,
+  resolveTransferComment,
 } from '../utils/paymentDetails';
 
 interface PaymentRequisitesModalProps {
@@ -95,6 +96,7 @@ export const PaymentRequisitesModal: React.FC<PaymentRequisitesModalProps> = ({ 
   const fields = kind ? (order.paymentDetails?.[kind] as PaymentRequisitesByKind[PaymentKind] | undefined) : undefined;
   const values = (fields ?? {}) as unknown as Record<string, string | undefined>;
   const total = order.totalPrice ?? 0;
+  const transferComment = resolveTransferComment(order.paymentDetails?.transferComment, order.id);
 
   return (
     <ModalPortal>
@@ -177,7 +179,13 @@ export const PaymentRequisitesModal: React.FC<PaymentRequisitesModalProps> = ({ 
                     copyText={copyValue(field, values[field.key])}
                   />
                 ))}
-                <CopyValueRow label="Комментарий к переводу" value={`Заказ № ${order.id}`} />
+                {transferComment ? (
+                  <CopyValueRow label="Комментарий к переводу" value={transferComment} />
+                ) : (
+                  <p className="rounded-xl bg-warning-soft border border-warning/30 px-3 py-2 text-xs font-bold text-[#2D3A4E]" role="note">
+                    Комментарий к переводу не нужен — магазин его не указал
+                  </p>
+                )}
                 <p className="text-xs text-[#4E5C70] leading-relaxed">
                   Переведите сумму заказа по этим реквизитам, затем нажмите «Оплачено» и приложите фото чека.
                 </p>

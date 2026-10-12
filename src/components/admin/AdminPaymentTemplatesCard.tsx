@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Edit3, Landmark, Loader2, Plus, Trash2 } from 'lucide-react';
-import type { PaymentKind, PaymentRequisitesByKind, PaymentTemplate } from '../../types';
+import type { PaymentKind, PaymentRequisitesByKind, PaymentTemplate, TransferCommentSetting } from '../../types';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { AdminRequisitesFields } from './AdminRequisitesFields';
+import { AdminTransferCommentField } from './AdminTransferCommentField';
 import { AdminHint } from './AdminHint';
 import { usePaymentTemplates } from './usePaymentTemplates';
 import { deletePaymentTemplate, savePaymentTemplate } from '../../utils/firebaseSync';
@@ -11,12 +12,15 @@ import {
   displayValue,
   emptyRequisites,
   normalizeRequisites,
+  normalizeTransferComment,
   PAYMENT_KIND_SHORT,
   PAYMENT_KIND_TITLES,
   PAYMENT_KINDS,
   REQUISITE_FIELDS,
+  storedTransferComment,
   toFormRequisites,
   validateRequisites,
+  validateTransferComment,
 } from '../../utils/paymentDetails';
 
 interface Draft {
@@ -25,6 +29,7 @@ interface Draft {
   name: string;
   kind: PaymentKind;
   fields: PaymentRequisitesByKind[PaymentKind];
+  transferComment: TransferCommentSetting;
 }
 
 /** First field of a template for the list: the phone, the card or the account */
@@ -47,21 +52,26 @@ export const AdminPaymentTemplatesCard: React.FC<{
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [toDelete, setToDelete] = useState<PaymentTemplate | null>(null);
-  useUnsavedChanges(useChangedSince(draft?.id ?? null, [draft?.name, draft?.kind, JSON.stringify(draft?.fields)]), 'Шаблон реквизитов');
+  useUnsavedChanges(useChangedSince(draft?.id ?? null, [draft?.name, draft?.kind, JSON.stringify(draft?.fields), JSON.stringify(draft?.transferComment)]), 'Шаблон реквизитов');
 
   const startNew = () => {
     setErrors({});
-    setDraft({ id: `tpl-${Date.now()}`, isNew: true, name: '', kind: 'sbp', fields: emptyRequisites('sbp') });
+    setDraft({ id: `tpl-${Date.now()}`, isNew: true, name: '', kind: 'sbp', fields: emptyRequisites('sbp'), transferComment: { mode: 'order' } });
   };
   const startEdit = (t: PaymentTemplate) => {
     setErrors({});
-    setDraft({ id: t.id, isNew: false, name: t.name, kind: t.kind, fields: toFormRequisites(t.kind, t.fields) });
+    setDraft({ id: t.id, isNew: false, name: t.name, kind: t.kind, fields: toFormRequisites(t.kind, t.fields), transferComment: normalizeTransferComment(t.transferComment) });
   };
 
   const save = async () => {
     if (!draft) return;
     const fieldErrors = validateRequisites(draft.kind, draft.fields);
-    const next = { ...fieldErrors, ...(draft.name.trim() ? {} : { name: 'Назовите шаблон' }) };
+    const commentError = validateTransferComment(draft.transferComment);
+    const next = {
+      ...fieldErrors,
+      ...(draft.name.trim() ? {} : { name: 'Назовите шаблон' }),
+      ...(commentError ? { transferComment: commentError } : {}),
+    };
     setErrors(next);
     if (Object.keys(next).length > 0) return;
     setSaving(true);
@@ -71,6 +81,7 @@ export const AdminPaymentTemplatesCard: React.FC<{
         name: draft.name.trim(),
         kind: draft.kind,
         fields: normalizeRequisites(draft.kind, draft.fields),
+        transferComment: storedTransferComment(draft.transferComment),
       } as PaymentTemplate);
       onShowToast(`Шаблон «${draft.name.trim()}» сохранён`, 'success');
       setDraft(null);
@@ -171,6 +182,12 @@ export const AdminPaymentTemplatesCard: React.FC<{
             value={draft.fields}
             onChange={(fields) => setDraft({ ...draft, fields })}
             errors={errors}
+            idPrefix="payment-template"
+          />
+          <AdminTransferCommentField
+            value={draft.transferComment}
+            onChange={(transferComment) => setDraft({ ...draft, transferComment })}
+            error={errors.transferComment}
             idPrefix="payment-template"
           />
           <div className="flex items-center justify-end gap-2">

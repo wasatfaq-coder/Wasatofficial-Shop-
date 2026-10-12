@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BarChart3, Boxes, PowerOff, ChevronRight, Coins, Headphones, Package, Receipt, type LucideIcon } from 'lucide-react';
+import { BarChart3, Boxes, PowerOff, ChevronRight, Coins, Headphones, MessageSquareText, Package, Receipt, type LucideIcon } from 'lucide-react';
 import type { ChatMessage, Order, Product } from '../../types';
 import type { LaunchStep } from '../../utils/launchChecklist';
 import { staleRateDays, summarizeAdminToday, TODAY_REVENUE_DAYS, waitingFor } from '../../utils/adminToday';
@@ -18,6 +18,8 @@ interface AdminTodayTabProps {
   launchSteps: LaunchStep[];
   /** «Принимать заказы на сайте» выключено (settings/storefront.isStoreOnline === false): сайт не принимает заказы */
   isStoreOffline?: boolean;
+  /** Reviews waiting for the owner's check (the row is shown only when there are some) */
+  pendingReviews?: number;
   onOpenTab: (tab: AdminTab) => void;
 }
 
@@ -78,6 +80,7 @@ export const AdminTodayTab: React.FC<AdminTodayTabProps> = ({
   lowStockThreshold,
   launchSteps,
   isStoreOffline = false,
+  pendingReviews = 0,
   onOpenTab,
 }) => {
   // «Сбросить статистику» of «Аналитики» applies here too: the week's money is the same number there and here
@@ -141,6 +144,15 @@ export const AdminTodayTab: React.FC<AdminTodayTabProps> = ({
           count={today.awaitingChats}
           onOpen={() => onOpenTab('support')}
         />
+        {pendingReviews > 0 && (
+          <TodayRow
+            icon={MessageSquareText}
+            title="Отзывы на проверке"
+            detail="Опубликуйте отзыв или отклоните его"
+            count={pendingReviews}
+            onOpen={() => onOpenTab('reviews')}
+          />
+        )}
         <TodayRow
           icon={Boxes}
           title="Заканчивается на складе"

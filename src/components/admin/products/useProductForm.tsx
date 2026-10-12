@@ -147,7 +147,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
   } | null>(null);
   const [formDescription, setFormDescription] = useState('');
   const [formSizes, setFormSizes] = useState<string[]>([]);
-  const [formColors, setFormColors] = useState<{ name: string; hex: string }[]>([]);
+  const [formColors, setFormColors] = useState<{ name: string; hex: string; imageIndex?: number }[]>([]);
   const [formSkus, setFormSkus] = useState<ProductSKU[]>([]);
   /** The variants as the form opened them: a stock not changed in the form is saved as it is in the database now */
   const [formSkusOpened, setFormSkusOpened] = useState<ProductSKU[]>([]);

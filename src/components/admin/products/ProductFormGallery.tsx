@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trash2, Image as ImageIcon, ImagePlus, ArrowLeft, ArrowRight, Maximize2, Loader2 } from 'lucide-react';
 import { processImageFiles } from '../../../utils/imageUpload';
+import { moveMap, remapColorImages, removalMap } from '../../../utils/colorPhotos';
 import { formatMegabytes, PRODUCT_SIZE_BUDGET_BYTES } from '../../../utils/productSize';
 
 import { AdminHint } from '../AdminHint';
@@ -12,6 +13,7 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
   const {
     formImages,
     setFormImages,
+    setFormColors,
     newImageUrlInput,
     setNewImageUrlInput,
     galleryFileInputRef,
@@ -86,6 +88,7 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
       preview: src ? photoPreview(src, indexToDelete === 0 ? 'Обложка' : `Фото ${indexToDelete + 1}`) : undefined,
       run: () => {
         setFormImages((prev) => prev.filter((_, idx) => idx !== indexToDelete));
+        setFormColors((prev) => remapColorImages(prev, removalMap(formImages.length, indexToDelete)));
         onShowToast('Фото удалено из галереи', 'info');
       },
     });
@@ -98,6 +101,7 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
       const rest = prev.filter((_, idx) => idx !== indexToCover);
       return [target, ...rest];
     });
+    setFormColors((prev) => remapColorImages(prev, moveMap(formImages.length, indexToCover, 0)));
     onShowToast('Фото назначено главной обложкой', 'success');
   };
 
@@ -109,6 +113,7 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
       copy.splice(toIdx, 0, item);
       return copy;
     });
+    setFormColors((prev) => remapColorImages(prev, moveMap(formImages.length, fromIdx, toIdx)));
   };
 
   const handleClearAllImages = () => {
@@ -119,6 +124,7 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
       confirmLabel: 'Удалить все',
       run: () => {
         setFormImages([]);
+        setFormColors((prev) => remapColorImages(prev, []));
         onShowToast('Все фото товара удалены', 'info');
       },
     });

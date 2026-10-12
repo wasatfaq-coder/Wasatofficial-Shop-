@@ -1,6 +1,6 @@
 import React from 'react';
-import type { ReviewVote, StoredReview } from '../types';
-import { subscribeToReviewVotes, subscribeToReviews } from './firebaseSync';
+import type { ReviewModeration, ReviewVote, StoredReview } from '../types';
+import { subscribeToReviewModeration, subscribeToReviewVotes, subscribeToReviews } from './firebaseSync';
 
 /**
  * Reviews and «Полезно» votes of the products whose page is open (docs/catalog-scale-plan.md, stage 4). A customer
@@ -15,6 +15,8 @@ const KEEP_MS = 10_000;
 interface Entry {
   reviews?: StoredReview[];
   votes?: ReviewVote[];
+  /** The owner's decisions on this product's reviews (`review_moderation`) */
+  moderation?: ReviewModeration[];
   unsub: () => void;
 }
 
@@ -41,9 +43,22 @@ function start(id: string) {
     entry.votes = votes;
     notify();
   }, id);
+  // a refused read (the rules of the collection are not published yet) leaves the reviews as they were: no decisions
+  const unsubModeration = subscribeToReviewModeration(
+    (decisions) => {
+      entry.moderation = decisions;
+      notify();
+    },
+    id,
+    () => {
+      entry.moderation = [];
+      notify();
+    }
+  );
   entry.unsub = () => {
     unsubReviews();
     unsubVotes();
+    unsubModeration();
   };
 }
 
@@ -63,10 +78,18 @@ export function setLiveReviewsEnabled(on: boolean) {
   for (const [id, n] of counts) if (n > 0) (on ? start : stop)(id);
 }
 
-/** Products whose reviews and votes are both read, with them */
-export function liveReviews(): Map<string, { reviews: StoredReview[]; votes: ReviewVote[] }> {
-  const read = new Map<string, { reviews: StoredReview[]; votes: ReviewVote[] }>();
-  for (const [id, e] of entries) if (e.reviews && e.votes) read.set(id, { reviews: e.reviews, votes: e.votes });
+export interface LiveReviewsOfProduct {
+  reviews: StoredReview[];
+  votes: ReviewVote[];
+  moderation: ReviewModeration[];
+}
+
+/** Products whose reviews, votes and moderation decisions are all read, with them */
+export function liveReviews(): Map<string, LiveReviewsOfProduct> {
+  const read = new Map<string, LiveReviewsOfProduct>();
+  for (const [id, e] of entries) {
+    if (e.reviews && e.votes && e.moderation) read.set(id, { reviews: e.reviews, votes: e.votes, moderation: e.moderation });
+  }
   return read;
 }
 

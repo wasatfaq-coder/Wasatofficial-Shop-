@@ -26,7 +26,8 @@ export const ProductWholesaleBlock: React.FC<ProductWholesaleBlockProps> = ({
   const terms = packTermsText(offer);
   const choices = [
     { wholesale: false, title: 'В розницу', price: rub(retailPrice) },
-    { wholesale: true, title: 'Оптом', price: `${rub(offer.unitPrice)}/шт.` },
+    // a pack of several items is priced per pack, the item price is in the block below (owner task 11.10, item 3)
+    { wholesale: true, title: 'Оптом', price: offer.packSize > 1 ? `${rub(offer.packPrice)}/уп.` : `${rub(offer.unitPrice)}/шт.` },
   ];
   return (
     <div className="space-y-2.5">
@@ -57,8 +58,17 @@ export const ProductWholesaleBlock: React.FC<ProductWholesaleBlockProps> = ({
         <div className="neu-flat-sm rounded-2xl p-3 border border-white/60 space-y-2 text-xs text-[#4E5C70]">
           <p className="flex items-center gap-1.5 font-bold text-[#2D3A4E]">
             <Boxes className="w-4 h-4 text-accent shrink-0" aria-hidden="true" />
-            <span>Оптовая цена — {rub(offer.unitPrice)} за штуку</span>
+            <span>
+              {offer.packSize > 1
+                ? `Упаковка — ${rub(offer.packPrice)}`
+                : `Оптовая цена — ${rub(offer.unitPrice)} за штуку`}
+            </span>
           </p>
+          {offer.packSize > 1 && (
+            <p>
+              {offer.packSize} шт. одного размера и цвета × {rub(offer.unitPrice)} = {rub(offer.packPrice)}
+            </p>
+          )}
           {terms && <p>{terms}{offer.minPacks > 1 ? ' — все цвета и размеры модели вместе' : ''}</p>}
           {offer.steps.length > 0 && (
             <div className="space-y-1">
@@ -68,7 +78,8 @@ export const ProductWholesaleBlock: React.FC<ProductWholesaleBlockProps> = ({
                   <li key={step.minPacks} className="flex justify-between gap-3">
                     <span>{stepThresholdText(step.minPacks, offer.packSize)}</span>
                     <span className="font-bold text-[#2D3A4E] whitespace-nowrap">
-                      {rub(step.unitPrice)}/шт. ({step.discount})
+                      {rub(step.unitPrice)}/шт.
+                      {offer.packSize > 1 ? ` · ${rub(step.unitPrice * offer.packSize)}/уп.` : ''} ({step.discount})
                     </span>
                   </li>
                 ))}

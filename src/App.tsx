@@ -1,5 +1,7 @@
 import { SizeCalculatorModal } from './components/lazyWindows';
-import React, { Suspense, lazy, useState } from 'react';
+import React, { Suspense, useState } from 'react';
+import { lazyWithRetry } from './utils/lazyWithRetry';
+import { SectionErrorBoundary } from './components/SectionErrorBoundary';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product } from './types';
 import { DeviceFrameWrapper } from './components/DeviceFrameWrapper';
@@ -16,6 +18,7 @@ import {
 } from './components/CatalogAdvancedFilter';
 import { useAuth } from './context/AuthContext';
 import { useCatalog } from './app/useCatalog';
+import { ReviewOrdersContext } from './utils/reviewOrdersContext';
 import { useStorefrontData } from './app/useStorefrontData';
 import { useAccountData } from './app/useAccountData';
 import { useToasts } from './app/useToasts';
@@ -56,7 +59,7 @@ import { DEFAULT_CATALOG_VIEW, type CatalogView } from './utils/productListing';
 import { linePrice } from './shared/orderLine';
 
 // Legal documents: a separate chunk with the templates, loaded when a document is opened
-const LegalDocumentScreen = lazy(() => import('./views/LegalDocumentScreen'));
+const LegalDocumentScreen = lazyWithRetry(() => import('./views/LegalDocumentScreen'));
 /** A screen loaded on demand (usually already prefetched): a quiet line instead of an empty page */
 const ScreenLoading: React.FC = () => (
   <p className="px-4 py-10 text-center text-xs text-[#4E5C70]" role="status">
@@ -65,13 +68,13 @@ const ScreenLoading: React.FC = () => (
 );
 
 // Not needed on the first screen: loaded on demand and prefetched in idle time (customerLoaders.ts)
-const ProfileScreen = lazy(() => loadProfileScreen().then((m) => ({ default: m.ProfileScreen })));
-const CheckoutScreen = lazy(() => loadCheckoutScreen().then((m) => ({ default: m.CheckoutScreen })));
-const OrderSuccessScreen = lazy(() => loadOrderSuccessScreen().then((m) => ({ default: m.OrderSuccessScreen })));
-const FavoritesScreen = lazy(() => loadFavoritesScreen().then((m) => ({ default: m.FavoritesScreen })));
-const SupportChatModal = lazy(() => loadSupportChatModal().then((m) => ({ default: m.SupportChatModal })));
-const PromoModal = lazy(() => loadPromoModal().then((m) => ({ default: m.PromoModal })));
-const BrandRequisitesModal = lazy(() => loadBrandRequisitesModal().then((m) => ({ default: m.BrandRequisitesModal })));
+const ProfileScreen = lazyWithRetry(() => loadProfileScreen().then((m) => ({ default: m.ProfileScreen })));
+const CheckoutScreen = lazyWithRetry(() => loadCheckoutScreen().then((m) => ({ default: m.CheckoutScreen })));
+const OrderSuccessScreen = lazyWithRetry(() => loadOrderSuccessScreen().then((m) => ({ default: m.OrderSuccessScreen })));
+const FavoritesScreen = lazyWithRetry(() => loadFavoritesScreen().then((m) => ({ default: m.FavoritesScreen })));
+const SupportChatModal = lazyWithRetry(() => loadSupportChatModal().then((m) => ({ default: m.SupportChatModal })));
+const PromoModal = lazyWithRetry(() => loadPromoModal().then((m) => ({ default: m.PromoModal })));
+const BrandRequisitesModal = lazyWithRetry(() => loadBrandRequisitesModal().then((m) => ({ default: m.BrandRequisitesModal })));
 
 export default function App() {
   const { currentUser, isAdmin, loading: authLoading, loginWithGoogle } = useAuth();
@@ -196,7 +199,7 @@ export default function App() {
       if (!wantedId) return null;
       return loadedProds.find((p) => p.id === wantedId) || null;
     });
-  });
+  }, storefrontSettings?.reviewPremoderation === true);
   // Orders, profiles and cost prices: whose depends on the sign-in (useAccountData.ts)
   const { ownProfiles, orders, setOrders, productCosts, setProductCosts } = useAccountData({ authLoading, isAdmin, currentUser });
 
@@ -436,6 +439,7 @@ export default function App() {
   };
 
   return (
+    <ReviewOrdersContext.Provider value={orders}>
     <DeviceFrameWrapper>
       <div className="relative min-h-full flex flex-col justify-between">
         <ToastContainer toasts={toasts} onDismiss={removeToast} />
@@ -621,6 +625,7 @@ export default function App() {
               transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
               className="w-full h-full"
             >
+              <SectionErrorBoundary key={activeTab} title="Экран не открылся">
               <Suspense fallback={<ScreenLoading />}>
               {activeTab === 'home' && (
             <HomeScreen
@@ -830,6 +835,7 @@ export default function App() {
             </Suspense>
           )}
               </Suspense>
+              </SectionErrorBoundary>
             </motion.div>
           </AnimatePresence>
         </main>
@@ -845,5 +851,6 @@ export default function App() {
         )}
       </div>
     </DeviceFrameWrapper>
+    </ReviewOrdersContext.Provider>
   );
 }

@@ -15,6 +15,7 @@ import {
   orderMainAction,
   orderTimeline,
   showsPickupCode,
+  withPaymentStatus,
   statusChangeBlocker,
   usesPickupCode,
 } from '../../src/utils/orderFlow';
@@ -132,8 +133,31 @@ describe('receipt and handover', () => {
     expect(canHandOver(order({ paymentStatus: 'paid' }))).toBe(true);
     expect(canHandOver(order({ paymentStatus: 'paid_on_delivery' }))).toBe(true);
     expect(canHandOver(order({ paymentStatus: 'pending' }))).toBe(false);
-    expect(showsPickupCode(order({ deliveryKind: 'pickup', status: 'ready', pickupCode: '842-190' }))).toBe(true);
-    expect(showsPickupCode(order({ deliveryKind: 'pickup', status: 'delivered', pickupCode: '842-190' }))).toBe(false);
+    expect(showsPickupCode(order({ deliveryKind: 'pickup', status: 'ready', paymentStatus: 'paid', pickupCode: '842-190' }))).toBe(true);
+    expect(showsPickupCode(order({ deliveryKind: 'pickup', status: 'delivered', paymentStatus: 'paid', pickupCode: '842-190' }))).toBe(false);
+  });
+
+  test('the code is shown and kept only while the order is paid (owner task 11.10, item 1)', () => {
+    const ready = order({ deliveryKind: 'pickup', status: 'ready', paymentStatus: 'paid', pickupCode: '842-190' });
+    expect(showsPickupCode({ ...ready, paymentStatus: 'pending' })).toBe(false);
+    expect(showsPickupCode({ ...ready, paymentStatus: 'receipt_review' })).toBe(false);
+    expect(withPaymentStatus(ready, 'pending').pickupCode).toBeUndefined();
+    expect(withPaymentStatus(ready, 'refunded').pickupCode).toBeUndefined();
+    expect(withPaymentStatus(ready, 'paid_on_delivery').pickupCode).toBe('842-190');
+    const unpaid = order({ deliveryKind: 'courier', status: 'in_transit', paymentStatus: 'pending' });
+    expect(withPaymentStatus(unpaid, 'paid').pickupCode).toMatch(/^\d{3}-\d{3}$/);
+    expect(withPaymentStatus({ ...unpaid, status: 'assembling' }, 'paid').pickupCode).toBeUndefined();
+  });
+
+  test('the receipt check makes or takes back the code (reviewedOrder)', async () => {
+    const { reviewedOrder } = await import('../../src/utils/paymentDetails');
+    const onReview = order({ deliveryKind: 'courier', status: 'in_transit', paymentStatus: 'receipt_review' });
+    const confirmed = reviewedOrder(onReview, 'confirm');
+    expect(confirmed.paymentStatus).toBe('paid');
+    expect(confirmed.pickupCode).toMatch(/^\d{3}-\d{3}$/);
+    const rejected = reviewedOrder({ ...confirmed, paymentStatus: 'receipt_review' }, 'reject', { reason: 'Нет суммы' });
+    expect(rejected.paymentStatus).toBe('pending');
+    expect(rejected.pickupCode).toBeUndefined();
   });
 
   test('the code is six random digits «842-190»', () => {

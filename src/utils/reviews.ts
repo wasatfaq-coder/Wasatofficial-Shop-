@@ -1,4 +1,5 @@
 import type { Product, ProductReview, ReviewVote, StoredReview } from '../types';
+import { viewReview, type ReviewViewContext } from './reviewModeration';
 
 /** One review per customer and product: the document id is fixed */
 export function reviewDocId(productId: string, uid: string): string {
@@ -29,8 +30,15 @@ export function helpfulCount(review: ProductReview): number {
 /**
  * Products with the reviews of the `reviews` collection (newest first) followed by the reviews
  * stored inside the product before the collection existed; «Полезно» counts come from `review_votes`.
+ * `view` — the owner's decisions (`review_moderation`): a review the viewer must not see is left out, the author's own
+ * hidden one comes with `moderation` set; without it every review is shown.
  */
-export function mergeProductReviews(products: Product[], reviews: StoredReview[], votes: ReviewVote[]): Product[] {
+export function mergeProductReviews(
+  products: Product[],
+  reviews: StoredReview[],
+  votes: ReviewVote[],
+  view?: ReviewViewContext
+): Product[] {
   if (reviews.length === 0 && votes.length === 0) return products;
 
   const votersByReview = new Map<string, string[]>();
@@ -56,7 +64,11 @@ export function mergeProductReviews(products: Product[], reviews: StoredReview[]
     const legacy = stripped.reviews ?? [];
     const fresh = [...(reviewsByProduct.get(product.id) ?? [])]
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .map((r): ProductReview => ({ ...r, fromCollection: true }));
+      .flatMap((r): ProductReview[] => {
+        if (!view) return [{ ...r, fromCollection: true }];
+        const shown = viewReview(r, view);
+        return shown ? [shown] : [];
+      });
     if (fresh.length === 0 && !legacy.some((r) => votersByReview.has(r.id))) {
       return stripped;
     }

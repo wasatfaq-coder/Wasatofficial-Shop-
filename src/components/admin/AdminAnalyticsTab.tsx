@@ -29,6 +29,8 @@ import { generateAnalyticsPDF, preloadPdfLibraries } from '../../utils/pdfExport
 import {
   computeFirestoreDailySales,
   computePeriodBreakdown,
+  countsAfterReset,
+  isActiveOrder,
   orderRevenue,
   type ChannelFilter,
   type OrderStatusFilter,
@@ -259,12 +261,9 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
   const approx = profit.estimatedOrders > 0 ? '≈ ' : '';
   const metric = METRICS.find((m) => m.id === activeMetric)!;
 
-  // What a reset takes out of the statistics (orders placed since the current starting point)
+  // What a reset takes out of the statistics: finished orders counted now; active orders stay in the numbers
   const countedNow = useMemo(() => {
-    const counted = orders.filter((o) => {
-      const t = orderTimestamp(o);
-      return resetAt === null || (t !== null && t >= resetAt);
-    });
+    const counted = orders.filter((o) => !isActiveOrder(o) && countsAfterReset(o, orderTimestamp(o), resetAt));
     return { count: counted.length, revenue: counted.reduce((sum, o) => sum + orderRevenue(o), 0) };
   }, [orders, resetAt]);
 
@@ -296,7 +295,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
     try {
       await saveAnalyticsResetAt(Date.now());
       setSelectedDay(null);
-      onShowToast('Статистика сброшена: считается с этого момента. Заказы не удалены', 'success');
+      onShowToast('Статистика сброшена: выполненные и отменённые заказы больше не учитываются, активные — остаются. Заказы не удалены', 'success');
     } catch (err) {
       console.error('Analytics reset was not saved:', err);
       onShowToast('Не удалось сбросить статистику', 'error');
@@ -505,8 +504,8 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
             <p className="text-xs text-[#2D3A4E] flex items-start gap-2">
               <CalendarClock className="w-4 h-4 text-accent shrink-0 mt-0.5" />
               <span>
-                Статистика считается с <strong>{formatMoment(resetAt)}</strong>. Более ранние заказы сохранены, но в
-                аналитике не учитываются
+                Статистика считается с <strong>{formatMoment(resetAt)}</strong>. Выполненные и отменённые заказы до этого
+                момента сохранены, но в аналитике не учитываются; активные заказы учитываются всегда
               </span>
             </p>
             <button
@@ -737,13 +736,13 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
           type="button"
           onClick={() => setIsResetConfirmOpen(true)}
           disabled={countedNow.count === 0}
-          title={countedNow.count === 0 ? 'С момента последнего сброса заказов нет' : undefined}
+          title={countedNow.count === 0 ? 'С момента последнего сброса нет выполненных или отменённых заказов' : undefined}
           className="w-full sm:w-auto min-h-14 px-4 neu-button-danger rounded-2xl font-extrabold text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Trash2 className="w-4 h-4" />
           Сбросить статистику
         </button>
-        <AdminHint label="Сбросить статистику" className="self-center">Цифры начнут считаться с нуля. Сами заказы не удаляются, историю можно вернуть</AdminHint>
+        <AdminHint label="Сбросить статистику" className="self-center">Убирает из цифр выполненные и отменённые заказы. Активные остаются, заказы не удаляются</AdminHint>
       </section>
 
       {isPeriodOpen && (
@@ -760,7 +759,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
             <p className="text-[#4E5C70]">на сумму {rub(countedNow.revenue)}</p>
           </div>
         }
-        message="Графики, показатели, топ товаров, категории и промокоды начнут считаться с этого момента. Заказы не удаляются — они остаются у покупателей и в разделе «Заказы», а всю историю можно вернуть."
+        message="Выполненные, отменённые и архивные заказы перестанут учитываться в графиках, показателях, топе товаров, категориях и промокодах. Активные заказы — которые собирают, везут или ждут в пункте — остаются в статистике со всеми данными, их статусы не меняются. Сами заказы не удаляются, всю историю можно вернуть."
         onConfirm={handleReset}
         onClose={() => setIsResetConfirmOpen(false)}
       />
