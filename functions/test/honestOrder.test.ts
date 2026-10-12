@@ -113,3 +113,9 @@ describe('«Заказ в 1 клик» (UX audit 03.10, finding 22)', () => {
     expect(JSON.stringify(getSynchronizedDeliveryStages(express))).toMatch(/экспресс/i);
   });
 });
+
+describe('the products of an order from the browser', () => {
+  test('the order names its products: the review rule checks «Покупка подтверждена» by them (ревью 11.10, находка 2)', () => {
+    expect(order().productIds).toEqual(['p1']);
+  });
+});

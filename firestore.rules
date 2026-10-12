@@ -487,7 +487,7 @@ service cloud.firestore {
     // ------------------------------------------------------------------
 
     // Заказ из браузера (completeOrderLocally в App.tsx): только его поля, контакты и тексты разумной длины,
-    // не больше 30 строк, суммы в разумных границах. Строки поштучно не проверяются: даже 3 сравнения на строку
+    // не больше 60 строк, суммы в разумных границах. Строки поштучно не проверяются: даже 3 сравнения на строку
     // не укладываются в лимит 1000 выражений на 20+ строках. Поддельные количество и цена строки не трогают склад
     // и журнал (списание сверяется со строкой и только уменьшает остаток), а ссылку на фото из строки экраны не
     // показывают (orderLineImage). Цены строк сверяет placeOrder (серверные заказы, этап 5).
@@ -497,9 +497,11 @@ service cloud.firestore {
           'deliveryMethod', 'customerName', 'customerPhone', 'customerEmail', 'customerUid', 'paymentMethod',
           'paymentStatus', 'deliveryFee', 'discountAmount', 'promoCode', 'estimatedDelivery', 'historySteps',
           'deliveryStages', 'customerLastName', 'customerFirstName', 'customerMiddleName', 'deliveryAddressParts', 'deliveryKind', 'statusLog',
-          'updatedAt'])
+          'updatedAt', 'productIds'])
         && isOrderStampFresh()
         && data.items.size() <= 60
+        // товары строк по разу (orderProductIds): по нему правило отзыва проверяет «Покупка подтверждена»
+        && (!('productIds' in data) || (data.productIds is list && data.productIds.size() <= 60))
         && data.customerName is string && data.customerName.size() > 0 && data.customerName.size() <= 100
         && data.customerPhone is string && data.customerPhone.size() > 0 && data.customerPhone.size() <= 40
         && data.deliveryAddress is string && data.deliveryAddress.size() <= 500

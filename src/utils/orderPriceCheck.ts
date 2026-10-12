@@ -23,15 +23,25 @@ const rub = (value: number) => `${value.toLocaleString('ru-RU')} ₽`;
 const SERVER_CLOCK_SLACK_MS = 10 * 60 * 1000;
 
 /**
+ * Nobody has changed the order since it was placed: still «Принят», one entry of the history, no payment or cancellation.
+ * Its server `updatedAt` is then the moment it was written, and the price check leans on it — so a write that only adds
+ * a field (`productIds` by the admin's session) must leave such an order alone (review 12.10)
+ */
+export function isUntouchedSincePlaced(
+  order: Pick<Order, 'status' | 'statusLog' | 'paymentLog' | 'cancelledAt' | 'paymentReceipt'>
+): boolean {
+  return order.status === 'accepted' && (order.statusLog?.length ?? 0) <= 1 && !order.paymentLog?.length
+    && !order.cancelledAt && !order.paymentReceipt;
+}
+
+/**
  * The moment the order's prices are checked at. `createdAt` is written by the buyer's browser, and an order dated back
  * would pass with a lower price the product had weeks ago; while nobody has changed the order since it was placed, its
  * server `updatedAt` is the moment it was written, and the order is not older than that (review of finding 1)
  */
 function checkedOrderTime(order: Order): number | null {
   const created = orderTimestamp(order);
-  const untouched =
-    (order.statusLog?.length ?? 0) <= 1 && !order.paymentLog?.length && !order.cancelledAt && !order.paymentReceipt;
-  if (created === null || !untouched || typeof order.updatedAt !== 'number') return created;
+  if (created === null || !isUntouchedSincePlaced(order) || typeof order.updatedAt !== 'number') return created;
   return Math.max(created, order.updatedAt - SERVER_CLOCK_SLACK_MS);
 }
 

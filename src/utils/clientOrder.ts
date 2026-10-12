@@ -1,5 +1,6 @@
 import type { CartItem, DeliveryMethod, Order } from '../types';
 import { formatOrderDate } from '../shared/orderDate';
+import { orderProductIds } from '../shared/orderLine';
 import { initialPaymentStatus } from '../shared/orderApi';
 import { deliveryKindOfMethod, estimatedDeliveryOf, initialStatusLog } from '../shared/orderFlow';
 import type { AddressParts, PersonName } from '../shared/personName';
@@ -40,6 +41,8 @@ export function buildClientOrder(input: ClientOrderInput): Order {
     createdAt: input.placedAt.toISOString(),
     date: formatOrderDate(input.placedAt),
     items: input.items,
+    // the review rule checks «Покупка подтверждена» by it (ревью 11.10, находка 2)
+    productIds: orderProductIds(input.items),
     status: 'accepted' as const,
     totalPrice: input.totalPrice,
     deliveryAddress: input.deliveryAddress,

@@ -4,6 +4,7 @@ import type { Order, UserProfile } from '../types';
 import { subscribeToOrders, subscribeToOwnUserProfile, subscribeToProductCosts, type ProductCostEntry, type StoredOrders } from '../utils/firebaseSync';
 import { setLoadFailed } from '../utils/loadFailures';
 import { loadGuestOrders } from './guestOrders';
+import { useOrderProductIds } from './useOrderProductIds';
 import { useOrdersIndexSync } from './useOrdersIndexSync';
 
 type AuthState = { authLoading: boolean; isAdmin: boolean; currentUser: User | null };
@@ -69,6 +70,7 @@ export function useAccountData({ authLoading, isAdmin, currentUser }: AuthState)
   }, [authLoading, isAdmin, currentUser]);
 
   useOrdersIndexSync(isAdmin ? storedOrders : null);
+  useOrderProductIds(isAdmin, orders);
 
   return { ownProfiles, orders, setOrders, productCosts, setProductCosts };
 }

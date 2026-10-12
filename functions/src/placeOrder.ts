@@ -12,7 +12,7 @@ import {
   type PlaceOrderRequest,
 } from '../../src/shared/orderApi';
 import { formatOrderDate } from '../../src/shared/orderDate';
-import { toOrderLineProduct } from '../../src/shared/orderLine';
+import { orderProductIds, toOrderLineProduct } from '../../src/shared/orderLine';
 import { expandPackLines, ORDER_LINES_MAX, packLineProblems } from '../../src/shared/packLines';
 import { productSizePacks, sameColor, sizePackColors } from '../../src/shared/sizePacks';
 import { ADDRESS_PART_KEYS, cleanAddressParts, fullName, type AddressParts } from '../../src/shared/personName';
@@ -326,6 +326,8 @@ export async function placeOrderCore(
       date: formatOrderDate(now),
       createdAt: now.toISOString(),
       items: cartItems,
+      // the review rule checks «Покупка подтверждена» by it (ревью 11.10, находка 2)
+      productIds: orderProductIds(cartItems),
       status: 'accepted',
       totalPrice: totals.total,
       deliveryAddress: request.deliveryAddress,

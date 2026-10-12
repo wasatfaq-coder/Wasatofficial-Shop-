@@ -1,6 +1,6 @@
 // Этап 5 аудита 02.10 без Blaze: «Цены не совпадают с каталогом» и автоотмена неоплаченных заказов
 import { describe, expect, test } from 'bun:test';
-import { orderPriceIssues } from '../../src/utils/orderPriceCheck';
+import { isUntouchedSincePlaced, orderPriceIssues } from '../../src/utils/orderPriceCheck';
 import { overdueUnpaidOrders } from '../../src/utils/orderCancel';
 import type { Order, Product } from '../../src/types';
 
@@ -65,6 +65,18 @@ describe('orderPriceIssues', () => {
     // a back-dated createdAt does not buy the old price: the server time of the write (updatedAt) decides
     const backdated = order({ updatedAt: Date.parse('2026-10-03T10:00:00.000Z'), statusLog: [] } as Partial<Order>);
     expect(orderPriceIssues(backdated, repriced)).toHaveLength(1);
+    // the admin moved the order on: a later write (status, productIds by the admin's session) is not the moment it was
+    // placed, and the order keeps the price of its time (review 12.10)
+    const movedOn = order({ status: 'assembling', updatedAt: Date.parse('2026-10-12T10:00:00.000Z'), statusLog: [] } as Partial<Order>);
+    expect(orderPriceIssues(movedOn, repriced)).toEqual([]);
+  });
+
+  test('an order nobody changed since it was placed: «Принят», one history entry, no payment or cancellation', () => {
+    expect(isUntouchedSincePlaced(order())).toBe(true);
+    expect(isUntouchedSincePlaced(order({ status: 'in_transit' }))).toBe(false);
+    expect(isUntouchedSincePlaced(order({ cancelledAt: '2026-10-02T10:00:00.000Z' }))).toBe(false);
+    expect(isUntouchedSincePlaced(order({ paymentLog: [{ at: 'x' }] } as unknown as Partial<Order>))).toBe(false);
+    expect(isUntouchedSincePlaced(order({ statusLog: [{}, {}] } as unknown as Partial<Order>))).toBe(false);
   });
 });
 

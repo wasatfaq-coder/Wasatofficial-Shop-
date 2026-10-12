@@ -1432,6 +1432,22 @@ export function subscribeToOrders(
   );
 }
 
+/**
+ * Writes `productIds` into orders that have none or an outdated one (the admin's session, `useOrderProductIds`; owner's
+ * decision 12.10): only this field and `updatedAt`, so nothing else of the order changes and the orders index picks it up.
+ * Throws when refused.
+ */
+export async function saveOrderProductIds(entries: { orderId: string; productIds: string[] }[]): Promise<void> {
+  if (entries.length === 0) return;
+  try {
+    await commitInChunks(entries, (batch, entry) =>
+      batch.update(doc(db, 'orders', entry.orderId), { productIds: entry.productIds, updatedAt: serverTimestamp() })
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, 'orders');
+  }
+}
+
 export async function saveOrderToFirestore(order: Order): Promise<void> {
   try {
     await setDoc(doc(db, 'orders', order.id), storedOrder(order));
