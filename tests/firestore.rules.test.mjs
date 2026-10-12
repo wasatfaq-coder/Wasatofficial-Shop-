@@ -1292,6 +1292,14 @@ describe('review moderation and purchase check', () => {
     await assertSucceeds(setDoc(doc(db, 'reviews/p1_alice'), review('alice')));
   });
 
+  // Review 11.10, finding 2: rules cannot look into the order's lines (a list of maps), so a received order of another
+  // product still passes and gets «Покупка подтверждена»; the site offers only orders with the product (reviewableOrders).
+  // Closes with a list of product ids in the order (buildClientOrder, placeOrder, isClientOrderShape) — a later PR
+  test('a review for an order without this product is refused', { todo: 'ревью 11.10, находка 2: правило не видит товары заказа' }, async () => {
+    await seed('orders/WS-D9', order({ id: 'WS-D9', status: 'delivered', customerUid: 'alice', items: [] }));
+    await assertFails(setDoc(doc(customer('alice'), 'reviews/p1_alice'), review('alice', { orderId: 'WS-D9' })));
+  });
+
   test('the save time of a review is the server\'s', async () => {
     const db = customer('alice');
     await assertSucceeds(setDoc(doc(db, 'reviews/p1_alice'), { ...review('alice'), updatedAt: serverTimestamp() }));
@@ -1305,8 +1313,11 @@ describe('review moderation and purchase check', () => {
     const db = customer('alice');
     await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { comment: 'Изменил текст' })));
     await assertSucceeds(setDoc(doc(db, 'reviews/p1_alice'), { ...review('alice', { comment: 'Изменил текст' }), updatedAt: serverTimestamp() }));
-    // a new review waits for the owner anyway
-    await assertSucceeds(setDoc(doc(customer('bob'), 'reviews/p1_bob'), review('bob')));
+    // a new review carries its server save time too: deleted and written again, it is a new version for the decision
+    await assertFails(setDoc(doc(customer('bob'), 'reviews/p1_bob'), review('bob')));
+    await assertSucceeds(setDoc(doc(customer('bob'), 'reviews/p1_bob'), { ...review('bob'), updatedAt: serverTimestamp() }));
+    await assertSucceeds(setDoc(doc(owner(), 'review_moderation/p1_bob'), decision({ status: 'published', reviewedVersion: 1 })));
+    await assertFails(setDoc(doc(owner(), 'review_moderation/p1_bob'), decision({ status: 'published', reviewedVersion: 'v1' })));
   });
 });
 

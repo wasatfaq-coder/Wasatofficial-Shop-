@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { BadgeCheck, Search, Star, X } from 'lucide-react';
+import { BadgeCheck, Check, Search, Star, X } from 'lucide-react';
 import type { StorefrontSettings } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { ConfirmDialog } from '../ConfirmDialog';
@@ -16,6 +16,7 @@ import {
   type AdminReviewStatusFilter,
 } from '../../utils/adminReviews';
 import { deleteReviewAsAdmin, saveReviewModerationToFirestore } from '../../utils/firebaseSync';
+import { reviewVersion } from '../../utils/reviewModeration';
 import { MODERATION_REASON_MAX, type ReviewVisibility } from '../../utils/reviewModeration';
 import { pluralRu } from '../../utils/pluralize';
 import { useAdminReviews } from '../../utils/useAdminReviews';
@@ -151,6 +152,7 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({ settings, onUp
   const [toReject, setToReject] = useState<AdminReviewRow | null>(null);
   const [toDelete, setToDelete] = useState<AdminReviewRow | null>(null);
   const [savingSwitch, setSavingSwitch] = useState(false);
+  const [confirmPremoderation, setConfirmPremoderation] = useState(false);
 
   const rows = useMemo(
     () => buildAdminReviewRows(reviews, decisions, products, premoderation),
@@ -171,6 +173,8 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({ settings, onUp
         status: next,
         ...(reason ? { reason } : {}),
         at: decisionTime(row.review),
+        // the decision is for the text the owner sees now: another version of the review waits again
+        reviewedVersion: reviewVersion(row.review),
         ...(currentUser?.email ? { by: currentUser.email } : {}),
       });
       onShowToast(next === 'published' ? 'Отзыв опубликован' : 'Отзыв отклонён', 'success');
@@ -198,10 +202,39 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({ settings, onUp
     }
   };
 
+  // Reviews customers see now without the owner's decision: with checking on they would all hide at once (review 11.10,
+  // finding 3), so turning it on publishes them first — only new and changed reviews wait for the owner
+  const undecidedShown = useMemo(() => rows.filter((row) => !row.decision && row.status === 'published'), [rows]);
+
   const handleSwitch = async (next: boolean) => {
     if (!onUpdateSettings) return;
+    if (next && undecidedShown.length > 0 && !confirmPremoderation) {
+      setConfirmPremoderation(true);
+      return;
+    }
+    setConfirmPremoderation(false);
     setSavingSwitch(true);
     try {
+      if (next && undecidedShown.length > 0) {
+        try {
+          await Promise.all(
+            undecidedShown.map((row) =>
+              saveReviewModerationToFirestore({
+                id: row.review.id,
+                productId: row.review.productId,
+                status: 'published',
+                at: decisionTime(row.review),
+                reviewedVersion: reviewVersion(row.review),
+                ...(currentUser?.email ? { by: currentUser.email } : {}),
+              })
+            )
+          );
+        } catch (err) {
+          console.error('Publishing the shown reviews before checking failed:', err);
+          onShowToast('Не сохранено: проверка не включена — не удалось отметить показанные отзывы опубликованными', 'error');
+          return;
+        }
+      }
       const saved = await onUpdateSettings({ ...settings, reviewPremoderation: next });
       if (saved !== false) {
         onShowToast(next ? 'Отзывы будут появляться после вашей проверки' : 'Отзывы будут появляться сразу', 'success');
@@ -222,7 +255,7 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({ settings, onUp
           </label>
           <p className="text-xs text-[#4E5C70]">
             {premoderation
-              ? 'Новый или изменённый отзыв видит только его автор, пока вы не нажмёте «Опубликовать».'
+              ? 'Новый или изменённый отзыв видит только его автор, пока вы не нажмёте «Опубликовать». Уже опубликованные остаются.'
               : 'Отзывы появляются у покупателей сразу. Любой можно скрыть кнопкой «Отклонить».'}
           </p>
         </div>
@@ -412,6 +445,17 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({ settings, onUp
           setToReject(null);
           void decide(row, 'rejected', reason);
         }}
+      />
+
+      <ConfirmDialog
+        isOpen={confirmPremoderation}
+        title="Включить проверку отзывов?"
+        tone="neutral"
+        confirmIcon={<Check className="w-3.5 h-3.5" aria-hidden="true" />}
+        confirmLabel="Включить"
+        message={`Отзывы, которые покупатели видят сейчас (${undecidedShown.length}), останутся на сайте — они будут отмечены «Опубликован». Новые и изменённые отзывы появятся после вашей проверки.`}
+        onConfirm={() => void handleSwitch(true)}
+        onClose={() => setConfirmPremoderation(false)}
       />
 
       <ConfirmDialog

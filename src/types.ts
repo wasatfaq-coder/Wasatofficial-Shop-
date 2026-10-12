@@ -134,6 +134,12 @@ export interface ReviewModeration {
   reason?: string;
   /** When the decision was made (ms) */
   at: number;
+  /**
+   * The version of the review the owner judged: its `updatedAt` (server time, ms), 0 for a review saved without one.
+   * The decision holds only while the review still has that version: an edit or a review deleted and written again is a
+   * new text (review audit 11.10, finding 1). Absent in decisions made before — compared by time then
+   */
+  reviewedVersion?: number;
   /** Who decided (the admin's email) */
   by?: string;
 }

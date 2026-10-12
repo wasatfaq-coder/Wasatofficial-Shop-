@@ -18,10 +18,16 @@ export const MODERATION_REASON_MAX = 300;
  */
 export function isModerationStale(
   review: Pick<StoredReview, 'updatedAt'>,
-  decision: Pick<ReviewModeration, 'at'>
+  decision: Pick<ReviewModeration, 'at' | 'reviewedVersion'>
 ): boolean {
+  // the version the owner saw: the decision of another version (an edit, a review written again) is out of date
+  if (typeof decision.reviewedVersion === 'number') return reviewVersion(review) !== decision.reviewedVersion;
   return typeof review.updatedAt === 'number' && decision.at < review.updatedAt;
 }
+
+/** The version of a review a decision is tied to: its server save time, 0 for a review saved without one */
+export const reviewVersion = (review: Pick<StoredReview, 'updatedAt'>): number =>
+  typeof review.updatedAt === 'number' ? review.updatedAt : 0;
 
 /**
  * Where a review stands:

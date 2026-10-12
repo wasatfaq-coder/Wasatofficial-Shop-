@@ -317,7 +317,10 @@ service cloud.firestore {
 
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if isCustomer() && isValidReview(request.resource.data, reviewId);
+      // С проверкой отзывов и новый отзыв — с серверным updatedAt: удалённый и написанный заново отзыв иначе получил бы
+      // решение по прежнему тексту (ревью 11.10, находка 1: решение привязано к версии отзыва, reviewedVersion)
+      allow create: if isCustomer() && isValidReview(request.resource.data, reviewId)
+        && (!reviewPremoderationOn() || 'updatedAt' in request.resource.data);
       // С проверкой отзывов правка без нового updatedAt не проходит: иначе опубликованный отзыв менялся бы мимо проверки
       allow update: if isCustomer()
         && resource.data.uid == request.auth.uid
@@ -331,12 +334,13 @@ service cloud.firestore {
     // скрывается у всех, кроме автора). Нет документа — решения нет. productId — чтобы страница товара читала решения
     // только своих отзывов.
     function isReviewModeration(data, id) {
-      return data.keys().hasOnly(['productId', 'status', 'reason', 'at', 'by'])
+      return data.keys().hasOnly(['productId', 'status', 'reason', 'at', 'by', 'reviewedVersion'])
         && data.productId is string && data.productId.size() > 0
         && id.size() > data.productId.size() + 1
         && id[0:data.productId.size() + 1] == data.productId + '_'
         && data.status in ['published', 'rejected']
         && data.at is number
+        && (!('reviewedVersion' in data) || data.reviewedVersion is number)
         && isOptionalText(data, 'reason', 300)
         && isOptionalText(data, 'by', 200);
     }

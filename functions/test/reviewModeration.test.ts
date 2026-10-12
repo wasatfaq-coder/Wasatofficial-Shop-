@@ -69,6 +69,20 @@ describe('reviewVisibility', () => {
   });
 });
 
+describe('a decision holds for the version of the review the owner saw (review 11.10, finding 1)', () => {
+  test('an edit or a review written again is a new version: the decision is out of date', () => {
+    const judged = decision('p1_alice', { reviewedVersion: 5000 });
+    expect(reviewVisibility(review('alice', { updatedAt: 5000 }), judged, true)).toBe('published');
+    expect(reviewVisibility(review('alice', { updatedAt: 9000 }), judged, true)).toBe('pending');
+    // deleted and written again without a save time: not the version the owner saw
+    expect(reviewVisibility(review('alice'), judged, true)).toBe('pending');
+    // a rejected decision of another version waits again, whatever the setting
+    expect(reviewVisibility(review('alice', { updatedAt: 9000 }), { ...judged, status: 'rejected' }, false)).toBe('pending');
+    // a review saved without a save time, judged as it is
+    expect(reviewVisibility(review('alice'), decision('p1_alice', { reviewedVersion: 0 }), true)).toBe('published');
+  });
+});
+
 describe('viewReview: who sees what', () => {
   const rejected = decision('p1_a', { status: 'rejected', reason: 'Не по теме' });
   const ctx = (viewerUid: string | null, premoderation = false) => ({

@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { resetFailedLazies } from '../utils/lazyWithRetry';
+import { errorText, isStaleBuildError } from '../utils/clientErrors';
 
 interface Props {
   children: React.ReactNode;
@@ -28,6 +29,29 @@ export class SectionErrorBoundary extends React.Component<Props, { error: unknow
 
   render() {
     if (!this.state.error) return this.props.children;
+    // the chunk is gone after a new publication even after the retry and one reload: only a page reload helps, say so
+    const updated = isStaleBuildError(errorText(this.state.error).message);
+    if (updated) {
+      return (
+        <div role="alert" className="neu-flat rounded-3xl p-5 text-center space-y-3 my-4">
+          <div className="w-11 h-11 rounded-2xl neu-inset mx-auto flex items-center justify-center text-warning">
+            <RefreshCw className="w-5 h-5" aria-hidden="true" />
+          </div>
+          <h2 className="font-display text-base font-extrabold text-[#2D3A4E]">Сайт обновился</h2>
+          <p className="text-sm text-[#4E5C70]">
+            Пока страница была открыта, вышла новая версия магазина. Обновите страницу, корзина и избранное сохранятся.
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="neu-button-accent rounded-full px-5 h-11 font-bold text-sm inline-flex items-center gap-2 cursor-pointer"
+          >
+            <RefreshCw className="w-4 h-4" aria-hidden="true" />
+            Обновить страницу
+          </button>
+        </div>
+      );
+    }
     return (
       <div role="alert" className="neu-flat rounded-3xl p-5 text-center space-y-3 my-4">
         <div className="w-11 h-11 rounded-2xl neu-inset mx-auto flex items-center justify-center text-warning">
