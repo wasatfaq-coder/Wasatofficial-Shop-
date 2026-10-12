@@ -324,7 +324,12 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     setBuyChoice(mode);
     if (mode === 'pack') {
       setPackCount(1);
-      if (!packColorNames.some((c) => sameColor(c, selectedColor)) && packColorNames[0]) setSelectedColor(packColorNames[0]);
+      if (!packColorNames.some((c) => sameColor(c, selectedColor)) && packColorNames[0]) {
+        setSelectedColor(packColorNames[0]);
+        // the photo of the colour, as a click on the colour shows it
+        const boundPhoto = colorImageIndex(product, packColorNames[0]);
+        if (boundPhoto !== null) setSelectedImageIndex(boundPhoto);
+      }
       return;
     }
     const packs = offer ? Math.floor(orderableStock / offer.packSize) : 0;
@@ -783,11 +788,13 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             <div className="flex items-baseline gap-x-2 flex-wrap">
               {packMode ? (
                 <>
-                  <span className="text-2xl font-extrabold text-[#2D3A4E] whitespace-nowrap">
-                    {activePackPrice === undefined && packFrom ? 'от ' : ''}
-                    {(activePackPrice ?? packFrom?.price ?? 0).toLocaleString('ru-RU')} ₽
-                    <span className="text-sm font-bold text-[#4E5C70]">/уп.</span>
-                  </span>
+                  {/* no pack in this colour: no price of another colour's pack (review 12.10) */}
+                  {activePack && activePackPrice !== undefined ? (
+                    <span className="text-2xl font-extrabold text-[#2D3A4E] whitespace-nowrap">
+                      {activePackPrice.toLocaleString('ru-RU')} ₽
+                      <span className="text-sm font-bold text-[#4E5C70]">/уп.</span>
+                    </span>
+                  ) : null}
                   {activePack && activePackPrice !== undefined && (
                     <span className="text-xs font-semibold text-[#4E5C70] whitespace-nowrap">
                       {perPieceText(activePackPrice, activePackPieces)}
@@ -921,7 +928,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               {counterMax === 0 ? (
                 <>
                   <X className="w-4 h-4" />
-                  <span>{!packMode && orderableStock > 0 ? 'Нет целой упаковки' : 'Нет в наличии'}</span>
+                  <span>{packMode && !activePack ? 'Нет в этом цвете' : !packMode && orderableStock > 0 ? 'Нет целой упаковки' : 'Нет в наличии'}</span>
                 </>
               ) : isAdded ? (
                 <>
@@ -938,7 +945,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           </div>
 
           {/* A size pack that cannot be taken: the missing sizes are named right under the button */}
-          {packMode && counterMax === 0 && (
+          {packMode && activePack && counterMax === 0 && (
             <p role="status" className="text-xs font-bold text-danger">
               {packUnavailableText}
             </p>
