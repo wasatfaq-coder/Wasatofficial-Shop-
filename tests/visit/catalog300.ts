@@ -180,6 +180,8 @@ export function* catalogBatches(
       authorName: `Покупатель ${r}`,
       rating: 4 + (r % 2),
       comment: 'Хорошая ткань, размер подошёл, после стирки не села. Доставка быстрая.',
+      // open to customers, as after the admin's session marked the reviews (owner's decision 12.10)
+      hidden: false,
       sizePurchased: 'M',
       colorPurchased: 'Белый',
       date: '2026-09-01',

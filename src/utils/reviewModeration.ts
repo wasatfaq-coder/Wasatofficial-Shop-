@@ -68,6 +68,29 @@ export function viewReview(review: StoredReview, ctx: ReviewViewContext): Produc
     : { ...base, moderation: 'pending' };
 }
 
+/**
+ * The `hidden` mark the author writes with a review (owner's decision 12.10): the saved text is a new version, so the
+ * owner's earlier decision is out of date — it waits when checking is on or the review was rejected (`reviewVisibility`)
+ */
+export function authorReviewHidden(decision: Pick<ReviewModeration, 'status'> | undefined, premoderation: boolean): boolean {
+  return premoderation || decision?.status === 'rejected';
+}
+
+/**
+ * Reviews whose `hidden` mark differs from what customers should see (a decision, the switch «Проверять отзывы», a review
+ * before 12.10 without the mark): the admin's session writes these (`useReviewHiddenSync`)
+ */
+export function reviewHiddenChanges(
+  reviews: readonly StoredReview[],
+  decisions: ReadonlyMap<string, ReviewModeration>,
+  premoderation: boolean
+): { id: string; hidden: boolean }[] {
+  return reviews.flatMap((review) => {
+    const hidden = reviewVisibility(review, decisions.get(review.id), premoderation) !== 'published';
+    return review.hidden === hidden ? [] : [{ id: review.id, hidden }];
+  });
+}
+
 /** Reviews that count in the rating and the number of reviews: everything but the author's own hidden ones */
 export const isPublicReview = (review: Pick<ProductReview, 'moderation'>) => !review.moderation;
 

@@ -39,6 +39,7 @@ import { SectionErrorBoundary } from '../../components/SectionErrorBoundary';
 import { UnsavedChangesContext, useUnsavedRegistry } from '../../utils/unsavedChanges';
 import { summarizeSupportThreads } from '../../utils/supportThreads';
 import { useAdminReviews } from '../../utils/useAdminReviews';
+import { useReviewHiddenSync } from '../../utils/useReviewHiddenSync';
 import { countPendingReviews } from '../../utils/adminReviews';
 import type { ProfileScreenProps } from '../ProfileScreen';
 
@@ -328,6 +329,8 @@ export const ProfileAdminPanel = ({
   // What waits for the admin: new orders and dialogs where the customer wrote last
   // reviews waiting for the owner's check: «Сегодня» and the badge of «Отзывы» (the same queries the catalog listens to)
   const adminReviews = useAdminReviews(isAdminOpen);
+  // the `hidden` mark customers' reads go by: decisions, the switch and reviews before 12.10 (owner's decision 12.10)
+  useReviewHiddenSync(adminReviews, storefrontSettings.reviewPremoderation === true);
   const pendingReviews = useMemo(
     () => countPendingReviews(adminReviews.reviews, adminReviews.decisions, storefrontSettings.reviewPremoderation === true),
     [adminReviews.reviews, adminReviews.decisions, storefrontSettings.reviewPremoderation]

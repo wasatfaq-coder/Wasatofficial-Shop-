@@ -76,6 +76,8 @@ test('отзыв по полученному заказу: покупатель 
   await reject.getByRole('button', { name: 'Отклонить', exact: true }).click();
   await expect.poll(async () => (await readDoc(`review_moderation/${reviewId}`))?.status).toBe('rejected');
   await expect(card).toContainText('Отклонён');
+  // the owner's session hides it from customers' reads (owner's decision 12.10)
+  await expect.poll(async () => (await readDoc(`reviews/${reviewId}`))?.hidden).toBe(true);
 
   // the author sees the reason, nobody else sees the review
   await page.goto(`/product/${item.id}`);
@@ -91,6 +93,13 @@ test('отзыв по полученному заказу: покупатель 
   // published again
   await card.getByRole('button', { name: /^Опубликовать отзыв/ }).click();
   await expect.poll(async () => (await readDoc(`review_moderation/${reviewId}`))?.status).toBe('published');
+  await expect.poll(async () => (await readDoc(`reviews/${reviewId}`))?.hidden).toBe(false);
   await expect(page.getByText(`Отзыв отклонён: ${reason}`)).toBeHidden();
   await expect(page.getByRole('paragraph').filter({ hasText: comment })).toBeVisible();
+
+  // rejected once more in the same session: the mark follows again (review 12.10 — a value written before is not skipped)
+  await card.getByRole('button', { name: /^Отклонить отзыв/ }).click();
+  await owner.getByRole('dialog', { name: 'Отклонить отзыв?' }).getByRole('textbox', { name: /^Причина/ }).fill(reason);
+  await owner.getByRole('dialog', { name: 'Отклонить отзыв?' }).getByRole('button', { name: 'Отклонить', exact: true }).click();
+  await expect.poll(async () => (await readDoc(`reviews/${reviewId}`))?.hidden).toBe(true);
 });
