@@ -5,7 +5,8 @@ import { cancelOrderAsCustomer, confirmOrderReceipt, submitPaymentReceipt, retur
 import { getOrderableStock } from '../utils/inventory';
 import type { AddToast } from './useToasts';
 import { goesWholesale, isWholesaleLine, packSizeOf, sellsRetail, sellsWholesale } from '../shared/wholesalePricing';
-import { heldByOtherLines, sameVariant } from '../utils/cartLines';
+import { heldByOtherLines, packsLeft, sameVariant } from '../utils/cartLines';
+import { groupOrderLines, isCartPackLine, pricePackLine } from '../shared/packLines';
 
 type SetState<T> = React.Dispatch<React.SetStateAction<T>>;
 
@@ -131,10 +132,49 @@ export function useCustomerOrders({
     let added = 0;
     let skipped = 0;
     let cut = 0;
-    items.forEach((item, idx) => {
+    // a size pack of the order (a line per size) comes back as one pack line (stage 20)
+    const lines: CartItem[] = groupOrderLines(items).map((group) =>
+      group.kind === 'line'
+        ? group.item
+        : {
+            id: group.packGroup,
+            product: group.item.product,
+            selectedColor: group.item.selectedColor,
+            selectedSize: '',
+            quantity: group.packCount,
+            priceKind: 'pack',
+            packId: group.item.packId,
+          }
+    );
+    lines.forEach((item, idx) => {
       const product = products.find((p) => p.id === item.product?.id);
       if (!product) {
         skipped += 1;
+        return;
+      }
+      if (isCartPackLine(item)) {
+        const pack = pricePackLine<CartItem>({ ...item, id: `cart-${Date.now()}-${idx}`, product });
+        if (pack.packUnavailable || !pack.packSizes?.length) {
+          skipped += 1;
+          return;
+        }
+        const i = next.findIndex((c) => isCartPackLine(c) && c.product.id === product.id && c.packId === pack.packId && c.selectedColor === pack.selectedColor);
+        const current = i > -1 ? next[i].quantity : 0;
+        const max = packsLeft(
+          next,
+          { product, selectedColor: pack.selectedColor, packSizes: pack.packSizes },
+          (size) => getOrderableStock(product, pack.selectedColor, size, false),
+          i > -1 ? next[i].id : pack.id
+        );
+        const total = Math.min(current + item.quantity, max);
+        if (total - current <= 0) {
+          skipped += 1;
+          return;
+        }
+        if (total - current < item.quantity) cut += 1;
+        added += 1;
+        if (i > -1) next[i] = { ...next[i], quantity: total };
+        else next.push({ ...pack, quantity: total });
         return;
       }
       const wholesale = sellsWholesale(product) && (isWholesaleLine(item) || !sellsRetail(product));

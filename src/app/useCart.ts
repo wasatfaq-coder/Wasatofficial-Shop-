@@ -13,7 +13,9 @@ import { getOrderableStock, isPreorderVariant } from '../utils/inventory';
 import { validatePromo, toPricingLine, appliedPromoFrom, currentAppliedPromo, promoSignInProblem } from '../shared/orderPricing';
 import { promoDiscountText } from '../utils/promoLabel';
 import { packsText } from '../utils/wholesaleOffer';
-import { heldByOtherLines } from '../utils/cartLines';
+import { heldByOtherLines, packsLeft } from '../utils/cartLines';
+import { isCartPackLine, pricePackLine } from '../shared/packLines';
+import { sizePackPieces } from '../shared/sizePacks';
 import { hasOrderableVariant, needsVariantChoice } from '../utils/variantSelection';
 import type { AddToast } from './useToasts';
 
@@ -206,10 +208,52 @@ export function useCart({
     return true;
   };
 
+  /**
+   * Add a size pack («ростовка», stage 20): one line of the pack in the colour, `packs` — whole packs, as many as every
+   * size of the pack allows after the other lines of the cart (no preorder for packs, owner's decision 12.10)
+   */
+  const handleAddPackToCart = (product: Product, packId: string, color: string, packs: number): boolean => {
+    const draft = pricePackLine<CartItem>({
+      id: `cart-${Date.now()}`,
+      product,
+      selectedColor: color,
+      selectedSize: '',
+      quantity: 1,
+      priceKind: 'pack',
+      packId,
+    });
+    if (draft.packUnavailable || !draft.packSizes?.length) {
+      addToast(`${product.title}: эта ростовка больше не продаётся`, 'error');
+      return false;
+    }
+    const existing = cartItems.find((item) => isCartPackLine(item) && item.product.id === product.id && item.packId === packId && item.selectedColor === color);
+    const stockOf = (size: string) => getOrderableStock(product, color, size, false);
+    const max = packsLeft(cartItems, { product, selectedColor: color, packSizes: draft.packSizes }, stockOf, existing?.id);
+    const name = `${product.title}, ${draft.packTitle} (${color})`;
+    if (max <= 0) {
+      addToast(`${name}: на складе не хватает размеров для целой ростовки`, 'error');
+      return false;
+    }
+    const current = existing?.quantity ?? 0;
+    if (current >= max) {
+      addToast(`В корзине уже максимум: ${name} — ${max} уп.`, 'info', openCartAction);
+      return false;
+    }
+    const next = Math.min(current + Math.max(1, Math.floor(packs)), max);
+    if (existing) {
+      setCartItems((prev) => prev.map((item) => (item.id === existing.id ? { ...item, quantity: next } : item)));
+    } else {
+      setCartItems((prev) => [...prev, { ...draft, quantity: next }]);
+    }
+    addToast(`Ростовка в корзине: ${name} — ${next} уп.`, 'success', openCartAction);
+    return true;
+  };
+
   /** Items a line is counted in: a whole pack for a wholesale line, one item for a retail one */
   const lineStep = (cartItemId: string): number => {
     const priced = cartItems.find((item) => item.id === cartItemId);
-    return priced && isWholesaleLine(priced) ? packSizeOf(priced.product) : 1;
+    // a size pack is counted in packs: its quantity is packs already
+    return priced && isWholesaleLine(priced) && !isCartPackLine(priced) ? packSizeOf(priced.product) : 1;
   };
 
   /** A line's quantity within the stock, in whole packs for a wholesale line; never below one pack */
@@ -227,6 +271,16 @@ export function useCart({
       const step = lineStep(cartItemId);
       setCartItems((prev) =>
         prev.map((item) => {
+          if (item.id === cartItemId && isCartPackLine(item)) {
+            const priced = cartItems.find((line) => line.id === cartItemId) ?? item;
+            const max = packsLeft(
+              prev,
+              { product: item.product, selectedColor: item.selectedColor, packSizes: priced.packSizes ?? [] },
+              (size) => getOrderableStock(item.product, item.selectedColor, size, false),
+              item.id
+            );
+            return { ...item, quantity: Math.max(1, Math.min(Math.floor(newQty), max)) };
+          }
           if (item.id === cartItemId) {
             const stock =
               getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode) -
@@ -400,7 +454,11 @@ export function useCart({
     addToast('Промокод отменен', 'info');
   };
 
-  const totalCartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
+  // items, as the badge says: a size pack counts its items (packs × items in a pack)
+  const totalCartCount = cartItems.reduce(
+    (acc, item) => acc + (isCartPackLine(item) && item.packSizes ? item.quantity * sizePackPieces({ sizes: item.packSizes }) : item.quantity),
+    0
+  );
 
 
   return {
@@ -415,6 +473,7 @@ export function useCart({
     handleToggleFavorite,
     handleAddToCartQuick,
     handleAddToCartWithOptions,
+    handleAddPackToCart,
     handleUpdateQuantity,
     handleRemoveCartItem,
     handleUpdateCartItemVariant,

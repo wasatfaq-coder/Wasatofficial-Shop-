@@ -17,6 +17,8 @@ import { pluralRu } from '../utils/pluralize';
 import { QUICK_ORDER_DELIVERY_ID, promoSignInProblem } from '../shared/orderPricing';
 import { linePrice, toOrderLineProduct } from '../shared/orderLine';
 import { isWholesaleLine, priceCartLines, wholesaleLineProblems } from '../shared/wholesalePricing';
+import { expandPackLines, isCartPackLine, ORDER_LINES_MAX, packLineProblems } from '../shared/packLines';
+import { productSizePacks } from '../shared/sizePacks';
 import { STORE_PAUSED_TEXT, storeAcceptsOrders } from '../shared/orderApi';
 import { cleanAddressParts, fullName, hasNameParts, namePartsOf, type AddressParts, type PersonName } from '../shared/personName';
 import { useLiveProducts } from '../utils/liveProducts';
@@ -163,13 +165,18 @@ export function useCheckout({
     const details = resolveOrderDetails(orderData);
     try {
       const { order } = await placeOrderOnServer({
-        items: orderData.items.map((item) => ({
-          productId: item.product.id,
-          color: extractColorName(item.selectedColor),
-          size: extractSizeName(item.selectedSize),
-          quantity: item.quantity,
-          ...(isWholesaleLine(item) ? { wholesale: true } : {}),
-        })),
+        items: orderData.items.map((item) =>
+          // a size pack: the server takes its sizes and price from the product (stage 20)
+          isCartPackLine(item)
+            ? { productId: item.product.id, color: extractColorName(item.selectedColor), size: '', quantity: item.quantity, packId: item.packId }
+            : {
+                productId: item.product.id,
+                color: extractColorName(item.selectedColor),
+                size: extractSizeName(item.selectedSize),
+                quantity: item.quantity,
+                ...(isWholesaleLine(item) ? { wholesale: true } : {}),
+              }
+        ),
         deliveryMethodId: orderData.deliveryMethodId || QUICK_ORDER_DELIVERY_ID,
         deliveryAddress: details.deliveryAddress,
         paymentMethod: details.paymentMethod,
@@ -203,7 +210,7 @@ export function useCheckout({
 
   /** What the cart has beyond the stock now: the checkout lists it and does not send the order */
   const checkoutStockProblems = React.useMemo(
-    () => (activeTab === 'checkout' ? orderStockProblems(cartItems, products, preorderMode) : []),
+    () => (activeTab === 'checkout' ? orderStockProblems(expandPackLines(cartItems), products, preorderMode) : []),
     [activeTab, cartItems, products, preorderMode]
   );
 
@@ -240,6 +247,23 @@ export function useCheckout({
       addToast(`${wholesaleProblems.join('; ')}. Измените корзину.`, 'error');
       return Promise.resolve(false);
     }
+    // a size pack: the product in the catalog must still have it (the stored cart may keep one the owner removed)
+    const packProblems = [
+      ...packLineProblems(priced),
+      ...priced
+        .filter((item) => isCartPackLine(item))
+        .filter((item) => !productSizePacks(products.find((p) => p.id === item.product.id)).some((p) => p.id === item.packId))
+        .map((item) => `«${item.product.title}»: ростовка «${item.packTitle || 'Ростовка'}» больше не продаётся — уберите её из корзины`),
+    ];
+    if (packProblems.length > 0) {
+      addToast([...new Set(packProblems)].join('; '), 'error');
+      return Promise.resolve(false);
+    }
+    // a size pack is a line per size in the order: the rules take up to ORDER_LINES_MAX lines from a browser
+    if (expandPackLines(priced).length > ORDER_LINES_MAX) {
+      addToast(`В заказе больше ${ORDER_LINES_MAX} позиций (ростовка — строка на каждый размер). Разделите корзину на два заказа.`, 'error');
+      return Promise.resolve(false);
+    }
     if (priced.some((item, i) => linePrice(item) !== linePrice(orderData.items[i]))) {
       addToast('Оптовые цены изменились, пока открыто оформление. Проверьте сумму и подтвердите заказ снова.', 'error');
       return Promise.resolve(false);
@@ -251,7 +275,9 @@ export function useCheckout({
   const completeOrderLocally = async (orderData: CompleteOrderData): Promise<boolean> => {
     // The stock as the catalog has it now (finding 4): the checkout shows the same list next to «Подтвердить», this
     // stops a 1-click order and a catalog that changed after the page was opened
-    const stockProblems = orderStockProblems(orderData.items, products, preorderMode);
+    // a size pack becomes a line per size here (stage 19): the stock, the order and the journal go line by line
+    const orderLines = expandPackLines(orderData.items);
+    const stockProblems = orderStockProblems(orderLines, products, preorderMode);
     if (stockProblems.length > 0) {
       addToast(`Не хватает на складе: ${stockProblems.map(stockProblemText).join('; ')}. Измените корзину.`, 'error');
       return false;
@@ -288,10 +314,10 @@ export function useCheckout({
     // Sold-out variants ordered in preorder mode are marked and not taken from stock; the order keeps a light
     // copy of the product (toOrderLineProduct) without photo links: the rules refuse links in a browser's order
     // (an outside picture would open at the staff's screen), and order screens take photos from the catalog
-    const orderItems: CartItem[] = orderData.items.map((item) => ({
+    const orderItems: CartItem[] = orderLines.map(({ packSizes: _sizes, packUnavailable: _gone, ...item }) => ({
       ...item,
       product: { ...toOrderLineProduct(item.product), images: [] },
-      ...(isPreorderVariant(item.product, item.selectedColor, item.selectedSize, preorderMode) ? { isPreorder: true } : {}),
+      ...(!item.packGroup && isPreorderVariant(item.product, item.selectedColor, item.selectedSize, preorderMode) ? { isPreorder: true } : {}),
     }));
 
     const orderMethod = orderData.deliveryMethodId
