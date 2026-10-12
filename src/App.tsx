@@ -159,6 +159,7 @@ export default function App() {
     handleToggleFavorite,
     handleAddToCartQuick,
     handleAddToCartWithOptions,
+    handleAddPackToCart,
     handleUpdateQuantity,
     handleRemoveCartItem,
     handleUpdateCartItemVariant,
@@ -701,6 +702,8 @@ export default function App() {
               onSaveMeasurements={handleSaveMeasurements}
               onToggleFavorite={handleToggleFavorite}
               onAddToCartWithOptions={handleAddToCartWithOptions}
+              onAddPackToCart={handleAddPackToCart}
+              cartItems={cartItems}
               onSelectProduct={handleSelectProduct}
               onCompleteOrder={handleCompleteOrder}
               onShowToast={addToast}

@@ -33,7 +33,9 @@ import { linePrice } from '../shared/orderLine';
 import { isWholesaleLine, packSizeOf, wholesaleLineProblems } from '../shared/wholesalePricing';
 import { packsText } from '../utils/wholesaleOffer';
 import { WholesaleMark } from '../components/WholesaleMark';
-import { heldByOtherLines } from '../utils/cartLines';
+import { heldByOtherLines, packsLeft } from '../utils/cartLines';
+import { isCartPackLine, packLineProblems } from '../shared/packLines';
+import { cartLinePieces, packLineCountText, packLineInfo } from '../utils/cartPackLine';
 
 interface CartScreenProps {
   cartItems: CartItem[];
@@ -93,14 +95,24 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   const [isQuickOrderOpen, setIsQuickOrderOpen] = useState(false);
   // Lines whose quantity is no longer available (sold out while in the cart)
   // The retail and the wholesale line of one variant share its stock: each can have what the other left
+  // A size pack line (stage 20) counts in packs: the most packs it can have, as every size of the pack allows after the
+  // other lines of the cart; no preorder for packs
   const lineStock = (item: CartItem) =>
-    Math.max(
-      0,
-      getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode) - heldByOtherLines(cartItems, item, item.id)
-    );
+    isCartPackLine(item)
+      ? packsLeft(
+          cartItems,
+          { product: item.product, selectedColor: item.selectedColor, packSizes: item.packSizes ?? [] },
+          (size) => getOrderableStock(item.product, item.selectedColor, size, false),
+          item.id
+        )
+      : Math.max(
+          0,
+          getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode) - heldByOtherLines(cartItems, item, item.id)
+        );
   const unavailableCount = cartItems.filter((item) => item.quantity > lineStock(item)).length;
-  // Wholesale lines in part packs or under the product's minimum: the checkout would refuse them, so say it here
-  const wholesaleProblems = wholesaleLineProblems(cartItems);
+  // Wholesale lines in part packs or under the product's minimum, a size pack the shop no longer sells: the checkout
+  // would refuse them, so say it here
+  const wholesaleProblems = [...wholesaleLineProblems(cartItems), ...packLineProblems(cartItems)];
   const cartBlocked = unavailableCount > 0 || wholesaleProblems.length > 0;
   const [isClearCartConfirmOpen, setIsClearCartConfirmOpen] = useState(false);
   const clearDialog = useDialogA11y(isClearCartConfirmOpen, () => setIsClearCartConfirmOpen(false));
@@ -118,7 +130,8 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   const freeDelivery = freeDeliveryOffer(deliveryMethods, storefrontSettings);
   const freeThreshold = freeDelivery?.threshold ?? 0;
   const freeDeliveryMethods = freeDelivery ? freeDeliveryMethodsText(freeDelivery) : '';
-  const totalItemsCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
+  // items, not lines: a size pack counts its items
+  const totalItemsCount = cartItems.reduce((acc, item) => acc + cartLinePieces(item), 0);
   // The method is chosen at checkout: the cart shows what the store's methods cost for this order
   // (same prices as checkout) and adds a fee to «Итого» only when every method costs the same
   const deliveryPrices = getAvailableDeliveryMethods(deliveryMethods, storefrontSettings, rawSubtotal).map((d) => d.price);
@@ -227,16 +240,21 @@ export const CartScreen: React.FC<CartScreenProps> = ({
       <div className="space-y-3">
         {cartItems.map((item, itemIdx) => {
           const isFav = favorites.includes(item.product.id);
-          const inStock = getVariantStock(item.product, item.selectedColor, item.selectedSize);
+          // a size pack (stage 20): one row, counted in packs, no variant of its own
+          const pack = packLineInfo(item);
+          const inStock = pack ? 0 : getVariantStock(item.product, item.selectedColor, item.selectedSize);
           const availableStock = lineStock(item);
-          const isPreorder = inStock === 0 && availableStock > 0;
+          const isPreorder = !pack && inStock === 0 && availableStock > 0;
           // A wholesale line changes by whole packs: «−» and «+» take or add one pack
-          const wholesale = isWholesaleLine(item);
+          const wholesale = isWholesaleLine(item) && !pack;
           const step = wholesale ? packSizeOf(item.product) : 1;
+          // the unit of the counter and of the stock texts
+          const unit = pack ? 'уп.' : 'шт.';
           const isAtMaxStock = item.quantity + step > availableStock;
           const isEditingVariant = editingVariantItemId === item.id;
           // Buttons of a row name its product: «Удалить товар» eight times does not say which (audit 07.10, finding 37)
           const title = item.product.title;
+          const rowName = pack ? `${title}, ${pack.title}` : title;
           const variantPanelId = `cart-variant-${itemIdx}`;
 
           return (
@@ -254,7 +272,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                   />
                   {availableStock <= 2 && availableStock > 0 && (
                     <span className="absolute bottom-1 right-1 neu-flat text-[#2D3A4E] text-[11px] font-extrabold px-1.5 py-0.5 rounded-md border border-white/60">
-                      {availableStock} шт.
+                      {availableStock} {unit}
                     </span>
                   )}
                 </div>
@@ -285,34 +303,63 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     </button>
                   </div>
 
-                  {/* Interactive Variant Badge (Color & Size Changer Trigger) */}
-                  <div className="flex items-center justify-between text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setEditingVariantItemId(isEditingVariant ? null : item.id)}
-                      className="neu-button min-h-8 px-2.5 py-0.5 rounded-xl flex items-center gap-1.5 text-[11px] font-bold text-accent hover:scale-102 transition-transform cursor-pointer"
-                      title="Нажмите, чтобы изменить цвет или размер"
-                      aria-label={`Цвет и размер: ${item.selectedColor}, ${item.selectedSize}. Изменить — ${title}`}
-                      aria-expanded={isEditingVariant}
-                      aria-controls={isEditingVariant ? variantPanelId : undefined}
-                    >
-                      <span>{item.selectedColor} • {item.selectedSize}</span>
-                      <SlidersHorizontal className="w-3 h-3 text-accent" />
-                    </button>
+                  {pack ? (
+                    /* a size pack has no size to change: its colour and how many packs are left */
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="text-[11px] font-bold text-accent">{item.selectedColor}</span>
+                      {availableStock === 0 ? (
+                        <span className="text-[11px] font-bold text-danger">Нет в наличии</span>
+                      ) : item.quantity > availableStock ? (
+                        <span className="text-[11px] font-bold text-danger">Доступно: {availableStock} уп.</span>
+                      ) : (
+                        <span className="text-[11px] font-semibold text-[#4E5C70]">
+                          {availableStock <= 2 ? `Осталось: ${availableStock} уп.` : `В наличии: ${availableStock} уп.`}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between text-xs">
+                        <button
+                          type="button"
+                          onClick={() => setEditingVariantItemId(isEditingVariant ? null : item.id)}
+                          className="neu-button min-h-8 px-2.5 py-0.5 rounded-xl flex items-center gap-1.5 text-[11px] font-bold text-accent hover:scale-102 transition-transform cursor-pointer"
+                          title="Нажмите, чтобы изменить цвет или размер"
+                          aria-label={`Цвет и размер: ${item.selectedColor}, ${item.selectedSize}. Изменить — ${title}`}
+                          aria-expanded={isEditingVariant}
+                          aria-controls={isEditingVariant ? variantPanelId : undefined}
+                        >
+                          <span>{item.selectedColor} • {item.selectedSize}</span>
+                          <SlidersHorizontal className="w-3 h-3 text-accent" />
+                        </button>
 
-                    {isPreorder ? (
-                      <span className="text-[11px] font-bold text-accent">Предзаказ</span>
-                    ) : availableStock === 0 ? (
-                      <span className="text-[11px] font-bold text-danger">Нет в наличии</span>
-                    ) : item.quantity > availableStock ? (
-                      <span className="text-[11px] font-bold text-danger">Доступно: {availableStock} шт.</span>
-                    ) : (
-                      <span className="text-[11px] font-semibold text-[#4E5C70]">
-                        {availableStock <= 2 ? `Осталось: ${availableStock} шт.` : `В наличии: ${availableStock} шт.`}
-                      </span>
-                    )}
-                  </div>
+                        {isPreorder ? (
+                          <span className="text-[11px] font-bold text-accent">Предзаказ</span>
+                        ) : availableStock === 0 ? (
+                          <span className="text-[11px] font-bold text-danger">Нет в наличии</span>
+                        ) : item.quantity > availableStock ? (
+                          <span className="text-[11px] font-bold text-danger">Доступно: {availableStock} шт.</span>
+                        ) : (
+                          <span className="text-[11px] font-semibold text-[#4E5C70]">
+                            {availableStock <= 2 ? `Осталось: ${availableStock} шт.` : `В наличии: ${availableStock} шт.`}
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  )}
 
+                  {pack && (
+                    <div className="text-xs text-[#4E5C70] space-y-0.5">
+                      <p>
+                        <WholesaleMark className="mr-1.5" />
+                        <span className="font-bold text-[#2D3A4E]">{pack.title}</span>
+                      </p>
+                      <p>{pack.composition}</p>
+                      <p>
+                        {packLineCountText(pack)} · {linePrice(item).toLocaleString('ru-RU')} ₽/уп.
+                      </p>
+                    </div>
+                  )}
                   {wholesale && (
                     <p className="text-xs text-[#4E5C70]">
                       <WholesaleMark className="mr-1.5" />
@@ -342,22 +389,22 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                         type="button"
                         className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent cursor-pointer"
                         title={item.quantity <= step ? 'Удалить товар' : 'Уменьшить количество'}
-                        aria-label={`${item.quantity <= step ? 'Удалить товар' : 'Уменьшить количество'}: ${title}`}
+                        aria-label={`${item.quantity <= step ? 'Удалить товар' : 'Уменьшить количество'}: ${rowName}`}
                       >
                         <Minus className="w-3 h-3 stroke-[2.5]" />
                       </button>
                       <span
-                        className={`text-xs font-bold text-[#2D3A4E] text-center ${step > 1 ? 'min-w-5 px-0.5 whitespace-nowrap' : 'w-5'}`}
+                        className={`text-xs font-bold text-[#2D3A4E] text-center ${step > 1 || pack ? 'min-w-5 px-0.5 whitespace-nowrap' : 'w-5'}`}
                         aria-live="polite"
                       >
-                        {step > 1 ? `${Math.floor(item.quantity / step)} уп.` : item.quantity}
+                        {pack ? `${item.quantity} уп.` : step > 1 ? `${Math.floor(item.quantity / step)} уп.` : item.quantity}
                       </span>
                       <button
                         onClick={() => {
                           if (item.quantity + step <= availableStock) {
                             onUpdateQuantity(item.id, item.quantity + step);
                           } else {
-                            onShowToast(`Достигнут максимум (${availableStock} шт.)`, 'info');
+                            onShowToast(`Достигнут максимум (${availableStock} ${unit})`, 'info');
                           }
                         }}
                         type="button"
@@ -369,10 +416,10 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                           isAtMaxStock
                             ? isPreorder
                               ? `Предзаказ — не больше ${availableStock} шт.`
-                              : `На складе всего ${availableStock} шт.`
+                              : `На складе всего ${availableStock} ${unit}`
                             : 'Добавить'
                         }
-                        aria-label={`Увеличить количество: ${title}`}
+                        aria-label={`Увеличить количество: ${rowName}`}
                       >
                         <Plus className="w-3 h-3 stroke-[2.5]" />
                       </button>
@@ -384,7 +431,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                       onClick={() => setItemToRemove(item)}
                       className="w-8 h-8 rounded-full neu-button-danger flex items-center justify-center transition-colors cursor-pointer"
                       title="Удалить товар"
-                      aria-label={`Удалить товар: ${title}`}
+                      aria-label={`Удалить товар: ${rowName}`}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

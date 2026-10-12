@@ -408,10 +408,11 @@ export interface OrderStockProblem {
 /**
  * Checkout checks the stock before the order is written (audit 02.10, finding 4): the cart stopped a buyer with too
  * many items, the checkout did not — the order went through and the stock silently stopped at 0. The product is taken
- * from the live catalog (`products`); lines of one variant count together.
+ * from the live catalog (`products`); lines of one variant count together. Pass the order's lines (a size pack
+ * expanded, `expandPackLines`): a variant with a line of a size pack is never a preorder (owner's decision 12.10).
  */
 export function orderStockProblems(items: CartItem[], products: Product[], preorderMode: boolean): OrderStockProblem[] {
-  const groups = new Map<string, { item: CartItem; wanted: number }>();
+  const groups = new Map<string, { item: CartItem; wanted: number; pack: boolean }>();
   for (const item of items) {
     const key = [
       item.product.id,
@@ -419,11 +420,14 @@ export function orderStockProblems(items: CartItem[], products: Product[], preor
       extractSizeName(item.selectedSize).trim().toLowerCase(),
     ].join('|');
     const group = groups.get(key);
-    if (group) group.wanted += item.quantity;
-    else groups.set(key, { item, wanted: item.quantity });
+    const pack = Boolean(item.packGroup);
+    if (group) {
+      group.wanted += item.quantity;
+      group.pack = group.pack || pack;
+    } else groups.set(key, { item, wanted: item.quantity, pack });
   }
   const problems: OrderStockProblem[] = [];
-  for (const { item, wanted } of groups.values()) {
+  for (const { item, wanted, pack } of groups.values()) {
     const product = products.find((p) => p.id === item.product.id);
     const base = {
       productId: item.product.id,
@@ -436,7 +440,7 @@ export function orderStockProblems(items: CartItem[], products: Product[], preor
       problems.push({ ...base, available: 0, reason: 'removed' });
       continue;
     }
-    const available = getOrderableStock(product, item.selectedColor, item.selectedSize, preorderMode);
+    const available = getOrderableStock(product, item.selectedColor, item.selectedSize, preorderMode && !pack);
     if (wanted > available) problems.push({ ...base, available, reason: isHiddenFromSale(product) ? 'hidden' : 'short' });
   }
   return problems;

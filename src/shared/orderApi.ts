@@ -44,6 +44,11 @@ export interface PlaceOrderItem {
   quantity: number;
   /** The buyer chose the wholesale price (src/shared/wholesalePricing.ts); the server counts the price itself */
   wholesale?: boolean;
+  /**
+   * A size pack (`product.sizePacks`, stage 20): `quantity` is packs, `size` is empty; the server takes the pack's sizes and
+   * price from the product and orders a line per size (src/shared/packLines.ts)
+   */
+  packId?: string;
 }
 
 export interface PlaceOrderRequest {

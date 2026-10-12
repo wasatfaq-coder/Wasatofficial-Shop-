@@ -13,6 +13,8 @@ import {
 } from '../../src/shared/orderApi';
 import { formatOrderDate } from '../../src/shared/orderDate';
 import { toOrderLineProduct } from '../../src/shared/orderLine';
+import { expandPackLines, ORDER_LINES_MAX, packLineProblems } from '../../src/shared/packLines';
+import { productSizePacks, sameColor, sizePackColors } from '../../src/shared/sizePacks';
 import { ADDRESS_PART_KEYS, cleanAddressParts, fullName, type AddressParts } from '../../src/shared/personName';
 import {
   QUICK_ORDER_DELIVERY_ID,
@@ -81,6 +83,7 @@ export function parsePlaceOrderRequest(data: unknown): PlaceOrderRequest {
       size: requireString(item.size, 'размер', 64, false),
       quantity,
       ...(item.wholesale === true ? { wholesale: true } : {}),
+      ...(typeof item.packId === 'string' && item.packId.trim() ? { packId: requireString(item.packId, 'ростовка', 64) } : {}),
     };
   });
 
@@ -199,6 +202,24 @@ export async function placeOrderCore(
       if (isHiddenFromSale(product)) {
         throw new OrderError('failed-precondition', `Товар «${product.title}» больше не продается`);
       }
+      if (item.packId) {
+        // a size pack: only a pack the product has, in one of its colours; sizes and price come from the product
+        const pack = productSizePacks(product).find((p) => p.id === item.packId);
+        if (!pack || !sizePackColors(product, pack).some((c) => sameColor(c, item.color))) {
+          throw new OrderError('failed-precondition', `Ростовка товара «${product.title}» больше не продаётся`);
+        }
+        cartItems.push({
+          id: `cart-${idx + 1}`,
+          // the pack is priced from the product's packs; the order line keeps the light copy (removed below)
+          product: { ...toOrderLineProduct(product), sizePacks: product.sizePacks },
+          selectedColor: item.color,
+          selectedSize: '',
+          quantity: item.quantity,
+          priceKind: 'pack',
+          packId: item.packId,
+        });
+        return;
+      }
       cartItems.push({
         id: `cart-${idx + 1}`,
         product: toOrderLineProduct(product),
@@ -207,21 +228,35 @@ export async function placeOrderCore(
         quantity: item.quantity,
         ...(item.wholesale === true ? { priceKind: 'wholesale' as const } : {}),
       });
-      const perProduct = requestedBySku.get(product.id) ?? new Map<string, number>();
-      const key = skuKey(item.color, item.size);
-      perProduct.set(key, (perProduct.get(key) ?? 0) + item.quantity);
-      requestedBySku.set(product.id, perProduct);
     });
 
-    // Prices of the lines: retail — the product's price, wholesale — the wholesale price minus the volume step of «Опт»
-    // (the same priceCartLines as the cart); the browser never sends a price
+    // Prices of the lines: retail — the product's price, wholesale — the wholesale price minus the volume step of «Опт»,
+    // a size pack — its own price (the same priceCartLines as the cart); the browser never sends a price
     const pricedItems = priceCartLines(cartItems, settings?.wholesale);
-    const wholesaleProblems = wholesaleLineProblems(pricedItems);
+    const wholesaleProblems = [...wholesaleLineProblems(pricedItems), ...packLineProblems(pricedItems)];
     if (wholesaleProblems.length > 0) {
       throw new OrderError('failed-precondition', wholesaleProblems.join('; '));
     }
-    cartItems.splice(0, cartItems.length, ...pricedItems);
+    // a pack becomes a line per size (stage 19): stock, the journal and the order work line by line
+    const orderLines = expandPackLines(pricedItems).map((line) => {
+      const { sizePacks: _packs, ...lineProduct } = line.product;
+      const { packSizes: _sizes, packUnavailable: _gone, ...rest } = line;
+      return { ...rest, product: lineProduct as Product };
+    });
+    if (orderLines.length > ORDER_LINES_MAX) {
+      throw new OrderError('invalid-argument', `Слишком много позиций в заказе: ростовка — строка на каждый размер (максимум ${ORDER_LINES_MAX})`);
+    }
+    cartItems.splice(0, cartItems.length, ...orderLines);
     lines.push(...cartItems.map(toPricingLine));
+    // a size pack is never a preorder (owner's decision 12.10): its sizes must all be in stock
+    const packKeys = new Set<string>();
+    for (const line of cartItems) {
+      const perProduct = requestedBySku.get(line.product.id) ?? new Map<string, number>();
+      const key = skuKey(line.selectedColor, line.selectedSize);
+      perProduct.set(key, (perProduct.get(key) ?? 0) + line.quantity);
+      requestedBySku.set(line.product.id, perProduct);
+      if (line.packGroup) packKeys.add(`${line.product.id}|${key}`);
+    }
 
     const stockUpdates: { ref: DocumentReference; skus: ProductSKU[] }[] = [];
     // Admin → «Витрина» → «Предзаказ»: a sold-out variant is ordered without taking it from stock
@@ -237,7 +272,7 @@ export async function placeOrderCore(
         if (!sku) {
           throw new OrderError('invalid-argument', `Вариант «${product.title}» (${color}, ${size}) не найден`);
         }
-        if (preorderMode && sku.stock <= 0) {
+        if (preorderMode && sku.stock <= 0 && !packKeys.has(`${productId}|${key}`)) {
           preorderKeys.add(`${productId}|${key}`);
           continue;
         }

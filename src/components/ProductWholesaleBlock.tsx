@@ -5,46 +5,64 @@ import { packTermsText, stepThresholdText } from '../utils/wholesaleOffer';
 
 const rub = (value: number) => `${value.toLocaleString('ru-RU')} ₽`;
 
+/** How the buyer takes the product: by the item, by the wholesale pack, or by a size pack («ростовка», stage 20) */
+export type BuyMode = 'retail' | 'wholesale' | 'pack';
+
 interface ProductWholesaleBlockProps {
   offer: WholesaleOffer;
   retailPrice: number;
-  /** The buyer chose «Оптом» (always on for a product sold only wholesale) */
-  wholesaleMode: boolean;
-  onChangeMode: (wholesale: boolean) => void;
+  /** The chosen way (a product sold only wholesale is never in `retail`) */
+  mode: BuyMode;
+  onChangeMode: (mode: BuyMode) => void;
+  /** «Ростовкой» is offered (the product has priced size packs): the lowest pack price, and are there several packs */
+  packFrom?: { price: number; several: boolean } | null;
 }
 
 /**
  * «Оптом» on the product page (stages 16–17 of docs/admin-wholesale-plan.md, part 2): the choice «В розницу / Оптом»
- * when the product is sold both ways, and the wholesale terms — the pack, the minimum and the volume-discount steps
+ * when the product is sold both ways, «Ростовкой» next to them when the product has size packs (stage 20), and the
+ * wholesale terms — the pack, the minimum and the volume-discount steps
  */
 export const ProductWholesaleBlock: React.FC<ProductWholesaleBlockProps> = ({
   offer,
   retailPrice,
-  wholesaleMode,
+  mode,
   onChangeMode,
+  packFrom = null,
 }) => {
   const terms = packTermsText(offer);
-  const choices = [
-    { wholesale: false, title: 'В розницу', price: rub(retailPrice) },
+  const choices: { mode: BuyMode; title: string; price: string }[] = [
+    ...(offer.onlyWholesale ? [] : [{ mode: 'retail' as const, title: 'В розницу', price: rub(retailPrice) }]),
     // a pack of several items is priced per pack, the item price is in the block below (owner task 11.10, item 3)
-    { wholesale: true, title: 'Оптом', price: offer.packSize > 1 ? `${rub(offer.packPrice)}/уп.` : `${rub(offer.unitPrice)}/шт.` },
+    {
+      mode: 'wholesale' as const,
+      title: 'Оптом',
+      price: offer.packSize > 1 ? `${rub(offer.packPrice)}/уп.` : `${rub(offer.unitPrice)}/шт.`,
+    },
+    ...(packFrom
+      ? [{ mode: 'pack' as const, title: 'Ростовкой', price: `${packFrom.several ? 'от ' : ''}${rub(packFrom.price)}/уп.` }]
+      : []),
   ];
   return (
     <div className="space-y-2.5">
-      {!offer.onlyWholesale && (
-        <div role="radiogroup" aria-label="Как покупаете" className="grid grid-cols-2 gap-2">
-          {choices.map((choice) => {
-            const selected = choice.wholesale === wholesaleMode;
+      {choices.length > 1 && (
+        <div
+          role="radiogroup"
+          aria-label="Как покупаете"
+          className={`grid gap-2 ${choices.length > 2 ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2'}`}
+        >
+          {choices.map((choice, index) => {
+            const selected = choice.mode === mode;
             return (
               <button
-                key={choice.title}
+                key={choice.mode}
                 type="button"
                 role="radio"
                 aria-checked={selected}
-                onClick={() => onChangeMode(choice.wholesale)}
+                onClick={() => onChangeMode(choice.mode)}
                 className={`min-h-11 px-3 py-2 rounded-2xl text-left cursor-pointer transition-all ${
-                  selected ? 'neu-pill-active' : 'neu-button text-[#2D3A4E] hover:text-accent'
-                }`}
+                  choices.length === 3 && index === 2 ? 'col-span-2 sm:col-span-1' : ''
+                } ${selected ? 'neu-pill-active' : 'neu-button text-[#2D3A4E] hover:text-accent'}`}
               >
                 <span className="block text-xs font-extrabold">{choice.title}</span>
                 <span className="block text-xs text-[#4E5C70] whitespace-nowrap">{choice.price}</span>
@@ -54,7 +72,17 @@ export const ProductWholesaleBlock: React.FC<ProductWholesaleBlockProps> = ({
         </div>
       )}
 
-      {wholesaleMode && (
+      {mode === 'pack' && (
+        <div className="neu-flat-sm rounded-2xl p-3 border border-white/60 space-y-1 text-xs text-[#4E5C70]">
+          <p className="flex items-center gap-1.5 font-bold text-[#2D3A4E]">
+            <Boxes className="w-4 h-4 text-accent shrink-0" aria-hidden="true" />
+            <span>Ростовка — набор размеров одного цвета</span>
+          </p>
+          <p>Скидка за объём и промокоды на ростовки не действуют.</p>
+        </div>
+      )}
+
+      {mode === 'wholesale' && (
         <div className="neu-flat-sm rounded-2xl p-3 border border-white/60 space-y-2 text-xs text-[#4E5C70]">
           <p className="flex items-center gap-1.5 font-bold text-[#2D3A4E]">
             <Boxes className="w-4 h-4 text-accent shrink-0" aria-hidden="true" />

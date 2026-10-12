@@ -10,6 +10,7 @@ import { useDialogA11y } from '../utils/useDialogA11y';
 import { digitsAfterCountryCode, isQuickOrderPhoneComplete, PHONE_DIGITS_AFTER_CODE } from '../utils/phoneNumber';
 import { pluralRu } from '../utils/pluralize';
 import { linePrice } from '../shared/orderLine';
+import { packLineInfo } from '../utils/cartPackLine';
 
 interface QuickOrderModalProps {
   isOpen: boolean;
@@ -102,17 +103,23 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
           title: singleProduct.product?.title || '',
           image: photoOf(singleProduct.product) || productImage(singleProduct.product),
           variant: `${singleProduct.color} • ${singleProduct.size}`,
-          qty: singleProduct.quantity,
+          composition: '',
+          qtyText: `${singleProduct.quantity} шт.`,
           price: linePrice(singleProduct) * singleProduct.quantity,
         },
       ]
-    : cartItems.map((item) => ({
-        title: item.product?.title || '',
-        image: photoOf(item.product) || productImage(item.product),
-        variant: `${item.selectedColor} • ${item.selectedSize}`,
-        qty: item.quantity,
-        price: linePrice(item) * item.quantity,
-      }));
+    : cartItems.map((item) => {
+        // a size pack from the cart (stage 20): its name and composition, packs and items
+        const pack = packLineInfo(item);
+        return {
+          title: item.product?.title || '',
+          image: photoOf(item.product) || productImage(item.product),
+          variant: pack ? `${item.selectedColor} • ${pack.title}` : `${item.selectedColor} • ${item.selectedSize}`,
+          composition: pack?.composition ?? '',
+          qtyText: pack ? `${pack.packs} уп. = ${pack.pieces} шт.` : `${item.quantity} шт.`,
+          price: linePrice(item) * item.quantity,
+        };
+      });
 
   return (
     <AnimatePresence>
@@ -173,10 +180,11 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-[#2D3A4E] truncate">{item.title}</p>
                     <p className="text-xs text-[#4E5C70]">{item.variant}</p>
+                    {item.composition && <p className="text-xs text-[#4E5C70]">{item.composition}</p>}
                   </div>
                   <div className="text-right shrink-0">
                     <p className="font-extrabold text-accent">{item.price.toLocaleString('ru-RU')} ₽</p>
-                    <p className="text-xs text-[#4E5C70]">{item.qty} шт.</p>
+                    <p className="text-xs text-[#4E5C70]">{item.qtyText}</p>
                   </div>
                 </div>
               ))}

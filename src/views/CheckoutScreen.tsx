@@ -47,6 +47,7 @@ import { isWholesaleLine, packSizeOf } from '../shared/wholesalePricing';
 import { packsText } from '../utils/wholesaleOffer';
 import { WholesaleMark } from '../components/WholesaleMark';
 import { linePrice } from '../shared/orderLine';
+import { cartLinePieces, packLineInfo } from '../utils/cartPackLine';
 
 interface CheckoutScreenProps {
   cartItems: CartItem[];
@@ -584,37 +585,53 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
       <div className="neu-flat rounded-3xl p-4 space-y-3">
         <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase">Ваш заказ</h3>
         <div className="space-y-2.5">
-          {cartItems.map((item) => (
-            <div key={item.id} className="flex items-center gap-3">
-              <div className="w-12 h-12 aspect-square rounded-2xl overflow-hidden neu-inset p-1 shrink-0 flex items-center justify-center">
-                <ProductThumbImage
-                  product={item.product}
-                  alt={item.product?.title || ''}
-                  className="w-full h-full object-cover rounded-xl"
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-[#2D3A4E] truncate">{item.product.title}</p>
-                <p className="text-xs text-[#4E5C70]">
-                  {isWholesaleLine(item) && <WholesaleMark className="mr-1" />}
-                  Размер: {item.selectedSize} / Цвет: {item.selectedColor}
-                  {isPreorderVariant(item.product, item.selectedColor, item.selectedSize, storefrontSettings?.isPreorderMode === true) && (
-                    <span className="font-bold text-accent"> • Предзаказ</span>
+          {cartItems.map((item) => {
+            // a size pack (stage 20): one row — name, composition, packs and their sum
+            const pack = packLineInfo(item);
+            return (
+              <div key={item.id} className="flex items-center gap-3">
+                <div className="w-12 h-12 aspect-square rounded-2xl overflow-hidden neu-inset p-1 shrink-0 flex items-center justify-center">
+                  <ProductThumbImage
+                    product={item.product}
+                    alt={item.product?.title || ''}
+                    className="w-full h-full object-cover rounded-xl"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-[#2D3A4E] truncate">{item.product.title}</p>
+                  {pack ? (
+                    <>
+                      <p className="text-xs text-[#4E5C70]">
+                        <WholesaleMark className="mr-1" />
+                        {pack.title} / Цвет: {item.selectedColor}
+                      </p>
+                      <p className="text-xs text-[#4E5C70]">{pack.composition}</p>
+                    </>
+                  ) : (
+                    <p className="text-xs text-[#4E5C70]">
+                      {isWholesaleLine(item) && <WholesaleMark className="mr-1" />}
+                      Размер: {item.selectedSize} / Цвет: {item.selectedColor}
+                      {isPreorderVariant(item.product, item.selectedColor, item.selectedSize, storefrontSettings?.isPreorderMode === true) && (
+                        <span className="font-bold text-accent"> • Предзаказ</span>
+                      )}
+                    </p>
                   )}
-                </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-xs font-bold text-[#2D3A4E]">
+                    {(linePrice(item) * item.quantity).toLocaleString('ru-RU')} ₽
+                  </p>
+                  <p className="text-xs text-[#4E5C70]">
+                    {pack
+                      ? `${pack.packs} уп. = ${pack.pieces} шт.`
+                      : isWholesaleLine(item) && packSizeOf(item.product) > 1
+                      ? packsText(item.quantity, packSizeOf(item.product))
+                      : `x${item.quantity}`}
+                  </p>
+                </div>
               </div>
-              <div className="text-right shrink-0">
-                <p className="text-xs font-bold text-[#2D3A4E]">
-                  {(linePrice(item) * item.quantity).toLocaleString('ru-RU')} ₽
-                </p>
-                <p className="text-xs text-[#4E5C70]">
-                  {isWholesaleLine(item) && packSizeOf(item.product) > 1
-                    ? packsText(item.quantity, packSizeOf(item.product))
-                    : `x${item.quantity}`}
-                </p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Promo code shortcut matching Image 5 */}
@@ -1457,7 +1474,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
           </h3>
 
           <div className="flex items-center justify-between">
-            <span className="text-[#4E5C70]">Товары ({cartItems.reduce((acc, i) => acc + i.quantity, 0)} шт.):</span>
+            <span className="text-[#4E5C70]">Товары ({cartItems.reduce((acc, i) => acc + cartLinePieces(i), 0)} шт.):</span>
             <span className="font-bold">{rawSubtotal.toLocaleString('ru-RU')} ₽</span>
           </div>
 

@@ -4,6 +4,8 @@ import { linePrice } from '../shared/orderLine';
 import { orderTimestamp } from '../shared/orderDate';
 import { pricesAtOrderTime } from './priceHistory';
 import { isWholesaleLine, priceCartLines, sellsWholesale } from '../shared/wholesalePricing';
+import { groupOrderLines, isPackLine, packGroupCompositionText, soldPack } from '../shared/packLines';
+import { sizePackPrice } from '../shared/sizePacks';
 
 /** What the order is compared with besides the catalog: the store's codes, delivery and payment methods */
 export interface OrderCheckContext {
@@ -74,6 +76,11 @@ export function orderPriceIssues(order: Order, products: Product[], shop: OrderC
       quantity,
       ...(wholesale ? { wholesale: true } : {}),
     });
+    // a size pack is checked whole below: its lines carry the pack's price split per item
+    if (isPackLine(item)) {
+      if (quantity <= 0) issues.push(`«${item.product?.title ?? 'строка'}»: количество ${quantity}`);
+      return;
+    }
     if (wholesale) {
       if (catalog && !sellsWholesale(catalog)) {
         issues.push(`«${catalog.title}»: в заказе оптовая цена ${rub(price)}, а товар оптом не продаётся`);
@@ -91,6 +98,26 @@ export function orderPriceIssues(order: Order, products: Product[], shop: OrderC
     }
     if (quantity <= 0) issues.push(`«${item.product?.title ?? 'строка'}»: количество ${quantity}`);
   });
+  // a size pack (stage 20): the price of one pack and its composition as the catalog sells them now (packs have no
+  // price history yet — a change after the order shows here too, and the text asks to check)
+  for (const group of groupOrderLines(items)) {
+    if (group.kind !== 'pack') continue;
+    const catalog = group.item.product?.id ? byId.get(group.item.product.id) : undefined;
+    if (!catalog) continue;
+    const name = `«${catalog.title}», ${group.title}`;
+    const pack = soldPack(catalog, group.item.packId, String(group.item.selectedColor ?? ''));
+    if (!pack) {
+      issues.push(`${name}: такой ростовки в этом цвете в каталоге нет`);
+      continue;
+    }
+    const expected = sizePackPrice(catalog, pack);
+    if (expected !== undefined && group.packPrice !== expected) {
+      issues.push(`${name}: в заказе ${rub(group.packPrice)} за упаковку, в каталоге ${rub(expected)}`);
+    }
+    if (packGroupCompositionText(group.sizes) !== packGroupCompositionText(pack.sizes)) {
+      issues.push(`${name}: в заказе состав ${packGroupCompositionText(group.sizes)}, в каталоге ${packGroupCompositionText(pack.sizes)}`);
+    }
+  }
   const subtotal = lines.reduce((sum, line) => sum + line.price * line.quantity, 0);
   const deliveryFee = Number(order.deliveryFee) || 0;
   const discount = Number(order.discountAmount) || 0;
