@@ -41,6 +41,7 @@ import { applyAdminStockChanges, saveStockMovements, subscribeToStockMovements }
 import { AdminLabelGenerator, type LabelTarget } from './AdminLabelGenerator';
 import { articleCode, skuKey } from '../../shared/barcode';
 import { InventoryGroupedList, type InventoryGrouping, type InventoryRow } from './InventoryGroupedList';
+import { InventoryPacksFlatNote, selectedLabelTargets } from './InventorySizePacks';
 import { getCategories } from '../../utils/categories';
 import { downloadCSV } from '../../utils/csvHelpers';
 import { pluralRu } from '../../utils/pluralize';
@@ -474,6 +475,11 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
   // Labels: variations ticked in the matrix, and the ones the label generator is open for
   const [selectedSkuKeys, setSelectedSkuKeys] = useState<Set<string>>(() => new Set());
   const [labelTargets, setLabelTargets] = useState<LabelTarget[] | null>(null);
+  // Ticked variations and ticked pack colours («ростовки») in one list for the label generator
+  const selectedTargets = useMemo(
+    () => selectedLabelTargets(allProductSKUs, products, selectedSkuKeys),
+    [allProductSKUs, products, selectedSkuKeys]
+  );
 
   // Warehouse high-level statistics
   const stats = useMemo(() => {
@@ -1083,7 +1089,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                 <SelectBoxMark checked={allFilteredSelected} />
                 <span>Выбрать все ({filteredSkus.length})</span>
               </button>
-              {selectedSkuKeys.size > 0 && (
+              {selectedTargets.length > 0 && (
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -1094,17 +1100,11 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() =>
-                      setLabelTargets(
-                        allProductSKUs
-                          .filter(({ product, sku }) => selectedSkuKeys.has(skuKey(product.id, sku.id)))
-                          .map(({ product, sku }) => ({ productId: product.id, skuId: sku.id }))
-                      )
-                    }
+                    onClick={() => setLabelTargets(selectedTargets)}
                     className="h-9 px-3 rounded-xl neu-button text-[11px] font-extrabold text-accent flex items-center gap-1.5 cursor-pointer transition-all"
                   >
                     <Printer className="w-3.5 h-3.5" />
-                    Этикетки ({selectedSkuKeys.size})
+                    Этикетки ({selectedTargets.length})
                   </button>
                 </div>
               )}
@@ -1113,6 +1113,7 @@ export const AdminInventoryTab: React.FC<AdminInventoryTabProps> = ({
 
           {/* SKUs Matrix Cards List */}
           <div className="space-y-2">
+            {grouping === 'flat' && <InventoryPacksFlatNote products={products} />}
             {filteredSkus.length === 0 ? (
               <div className="neu-inset rounded-2xl p-8 text-center space-y-1 text-[#4E5C70]">
                 <Boxes className="w-8 h-8 mx-auto text-[#4E5C70]/50" />

@@ -6,6 +6,7 @@ import { articleCode, articleGroupKey, skuKey } from '../../shared/barcode';
 import { categoryIcon } from '../../utils/categories';
 import { pluralRu } from '../../utils/pluralize';
 import type { LabelTarget } from './AdminLabelGenerator';
+import { InventorySizePacks } from './InventorySizePacks';
 
 export type InventoryGrouping = 'category' | 'model' | 'flat';
 
@@ -156,7 +157,8 @@ interface InventoryGroupedListProps {
 
 /**
  * «Склад и SKU» grouped: category → model → article (colour, one barcode) → sizes.
- * Categories and models fold; a group's checkbox selects all its variations for labels.
+ * Categories and models fold; a group's checkbox selects all its variations for labels. The model's size packs
+ * («ростовки») follow its articles, each pack colour has its own label checkbox.
  */
 export const InventoryGroupedList: React.FC<InventoryGroupedListProps> = ({
   rows,
@@ -266,6 +268,7 @@ export const InventoryGroupedList: React.FC<InventoryGroupedListProps> = ({
                 </ul>
               </div>
             ))}
+            <InventorySizePacks product={model.product} selectedKeys={selectedKeys} onSelect={onSelect} />
           </div>
         )}
       </li>

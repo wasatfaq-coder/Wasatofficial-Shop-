@@ -38,6 +38,7 @@ import { normalizeSizeChart } from '../../../utils/sizeChart';
 import { EMPTY_SIZE_CHART, sizeChartErrors, sizeChartForForm } from '../../../utils/sizeChartEditing';
 import type { ProductSizeChart } from '../../../types';
 import { packageFromFields, packageProblem, productPackageCm, productWeightGrams, weightProblem } from '../../../utils/productShipping';
+import { packDraftsFromProduct, productWithSizePacks, sizePackErrors, type SizePackDraft } from '../../../utils/sizePackEditing';
 
 import type { AdminProductsTabProps, ProductCategoryOption } from '../AdminProductsTab';
 import { SUPPLIER_MAX_LENGTH, SUPPLIER_SKU_MAX_LENGTH, supplierText } from '../../../utils/productCosts';
@@ -115,6 +116,8 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
   const [formPackageL, setFormPackageL] = useState('');
   const [formPackageW, setFormPackageW] = useState('');
   const [formPackageH, setFormPackageH] = useState('');
+  // «Ростовки» (stage 18): the rows as typed, checked on «Сохранить» (src/utils/sizePackEditing.ts); the customer does not see them yet
+  const [formPacks, setFormPacks] = useState<SizePackDraft[]>([]);
   const [formBadge, setFormBadge] = useState<string>('');
   // Open blocks of the form: a new product — all, an existing one — «Основное» and «Цены» (stage 4, variant A)
   const [openFormBlocks, setOpenFormBlocks] = useState<ReadonlySet<ProductFormBlockId>>(new Set());
@@ -235,11 +238,12 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
       ...sizeChartErrors(formSizeChart, formSizes),
       weightProblem(formWeight),
       packageProblem([formPackageL, formPackageW, formPackageH]),
+      ...sizePackErrors(formPacks, formSizes, formColors),
       formSizeBytes > PRODUCT_SIZE_BUDGET_BYTES &&
         `Товар занимает ${formatMegabytes(formSizeBytes)} из ${formatMegabytes(PRODUCT_SIZE_BUDGET_BYTES)}: база его не примет. Уберите часть фото`,
     ].filter((m): m is string => Boolean(m));
 
-  }, [formTitle, formCategory, formPrice, formColors, formSizes, formImages, formOldPrice, formCard, formSizeChart, formSizeBytes, formPurchaseCurrency, formPurchaseAmount, formPurchaseMarkup, formSaleChannel, formWholesalePrice, formWholesalePackSize, formWholesaleMinPacks, formWholesaleMarkup, formWeight, formPackageL, formPackageW, formPackageH]);
+  }, [formTitle, formCategory, formPrice, formColors, formSizes, formImages, formOldPrice, formCard, formSizeChart, formSizeBytes, formPurchaseCurrency, formPurchaseAmount, formPurchaseMarkup, formSaleChannel, formWholesalePrice, formWholesalePackSize, formWholesaleMinPacks, formWholesaleMarkup, formWeight, formPackageL, formPackageW, formPackageH, formPacks]);
   const formErrors = [
     ...(showFormErrors ? validationErrors : []),
     ...(photoError ? [photoError] : []),
@@ -291,6 +295,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     formPackageL,
     formPackageW,
     formPackageH,
+    formPacks,
     customSizeInput,
     customColorName,
   ]);
@@ -389,6 +394,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormPackageL('');
     setFormPackageW('');
     setFormPackageH('');
+    setFormPacks([]);
     setShowFormErrors(false);
     setPhotoError(null);
     setSaveError(null);
@@ -452,6 +458,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormPackageL(side(box?.l));
     setFormPackageW(side(box?.w));
     setFormPackageH(side(box?.h));
+    setFormPacks(packDraftsFromProduct(prod));
     setShowFormErrors(false);
     setPhotoError(null);
     setSaveError(null);
@@ -549,8 +556,11 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
       }));
     };
 
+    // every colour of every pack gets a barcode that no variation, pack or other product has (src/shared/barcode.ts)
+    const withPacks = (draft: Product): Product => productWithSizePacks(draft, formPacks, products);
+
     if (editingProduct) {
-      const updated: Product = {
+      const updated: Product = withPacks({
         ...editingProduct,
         title: formTitle.trim(),
         category: formCategory,
@@ -575,7 +585,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
         // «Снят с витрины» apart from «sold out»: a hidden sold-out product is not preordered (finding 12)
         hiddenFromSale: !formInStock,
         ...cardFields,
-      };
+      });
 
       const saved = await finishSave(
         products.map((p) => (p.id === editingProduct.id ? updated : p)),
@@ -592,7 +602,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
         deleteProductPhotos(dropped).catch((err) => console.error('Old product photos were not removed:', err));
       }
     } else {
-      const newProd: Product = {
+      const newProd: Product = withPacks({
         id: productId,
         title: formTitle.trim(),
         category: formCategory,
@@ -620,7 +630,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
         rating: 0,
         reviewsCount: 0,
         isNew: true,
-      };
+      });
 
       await finishSave([newProd, ...products], `Товар «${formTitle.trim()}» добавлен в каталог`, journal(newProd.id, newProd.title));
     }
@@ -750,6 +760,8 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormPackageW,
     formPackageH,
     setFormPackageH,
+    formPacks,
+    setFormPacks,
     formSizeBytes,
     validationErrors,
     formErrors,

@@ -7,7 +7,7 @@ import { deleteProductPhotos, loadProductPhotos, productWithPreviews, saveProduc
 import { previewsMoved } from '../../utils/productPreviews';
 import { generateBarcode, withMissingSkus } from '../../utils/inventory';
 import { copyProductPhotos } from '../../utils/productPhotos';
-import { collectBarcodes } from '../../shared/barcode';
+import { collectBarcodes, withSizePackBarcodes } from '../../shared/barcode';
 import { AdminBulkOperationsModal } from './AdminBulkOperationsModal';
 import { ModalPortal } from '../ModalPortal';
 import { TextEditModal } from './TextEditModal';
@@ -135,7 +135,12 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       badge: prod.badge || 'NEW',
     };
 
-    const saved = await onUpdateProducts([cloned, ...products]);
+    // size packs of the copy get their own barcodes: the original keeps its codes
+    const withoutPackCodes: Product = cloned.sizePacks?.length
+      ? { ...cloned, sizePacks: cloned.sizePacks.map(({ barcodes: _codes, ...pack }) => pack) }
+      : cloned;
+    const [copied] = withSizePackBarcodes([withoutPackCodes, ...products], new Set([newId]));
+    const saved = await onUpdateProducts([copied, ...products]);
     setDuplicatingId(null);
     if (saved === false) {
       deleteProductPhotos(photos.newPhotos.map((p) => p.id)).catch((err) => console.error('Photos of the copy were not removed:', err));

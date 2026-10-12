@@ -19,6 +19,8 @@ import { ProductFormSupplier } from './ProductFormSupplier';
 import { ProductFormVariants } from './ProductFormVariants';
 import { ProductFormSizeChart } from './ProductFormSizeChart';
 import { ProductFormShipping } from './ProductFormShipping';
+import { ProductFormSizePacks } from './ProductFormSizePacks';
+import { sizePacksSummary } from '../../../utils/sizePackEditing';
 import { formatPackage, formatWeight, productPackageCm, productWeightGrams } from '../../../utils/productShipping';
 
 const PRESET_BADGES = ['ХИТ', 'NEW', 'SALE', '-20%', 'PREMIUM', 'LIMITED', 'ECO', 'EXCLUSIVE'];
@@ -75,6 +77,7 @@ export function ProductFormModal({
     formCard,
     setFormCard,
     formWeight,
+    formPacks,
     formPackageL,
     formPackageW,
     formPackageH,
@@ -112,7 +115,11 @@ export function ProductFormModal({
           `${formColors.length} ${pluralRu(formColors.length, ['цвет', 'цвета', 'цветов'])}`,
           `${formSizes.length} ${pluralRu(formSizes.length, ['размер', 'размера', 'размеров'])}`,
           `${totalFormStock} шт.`,
-        ].join(' · ')
+          // size packs live in this block (the closed one names them)
+          sizePacksSummary(formPacks, formSizes, formColors),
+        ]
+          .filter(Boolean)
+          .join(' · ')
       : 'Цвета и размеры не добавлены';
   const material = compositionToMaterial(formCard.composition);
   const cardSummary =
@@ -341,6 +348,7 @@ export function ProductFormModal({
               <ProductFormBlock {...blockProps('variants')} title="Варианты и остатки" summary={variantsSummary} required>
                 <ProductFormVariants form={form} lowStockThreshold={lowStockThreshold} onShowToast={onShowToast} />
                 <ProductFormSizeChart form={form} products={products} />
+                <ProductFormSizePacks form={form} />
               </ProductFormBlock>
 
               <ProductFormBlock {...blockProps('card')} title="Описание и характеристики" summary={cardSummary}>

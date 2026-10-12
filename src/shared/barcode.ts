@@ -4,6 +4,8 @@
  * numbering, so they never clash with manufacturers' codes). No browser APIs: shared with tests.
  */
 
+import { productSizePacks, sizePackColors, sameColor, type SizePack } from './sizePacks';
+
 export type BarcodeKind = 'ean13' | 'code128';
 
 export interface EncodedBarcode {
@@ -135,6 +137,10 @@ export function generateInternalEan13(taken: Set<string>, random: () => number =
 interface BarcodeOwner {
   id: string;
   skus?: { id: string; barcode?: string; color?: string; size?: string; skuCode?: string }[];
+  /** «Ростовки» (src/shared/sizePacks.ts): a barcode per colour of a pack, unique with the variations' ones */
+  sizePacks?: SizePack[];
+  sizes?: string[];
+  colors?: ({ name: string } | string)[];
 }
 
 export const skuKey = (productId: string, skuId: string) => `${productId}::${skuId}`;
@@ -176,11 +182,21 @@ export function articleCode(product: BarcodeOwner, color: string | undefined): s
   return codes[0];
 }
 
-/** Every barcode in the catalog (to keep new ones unique) */
+/** Every barcode in the catalog, variations' and packs' (to keep new ones unique) */
 export function collectBarcodes(products: BarcodeOwner[]): Set<string> {
   const taken = new Set<string>();
-  for (const p of products) for (const s of p.skus ?? []) if (s.barcode?.trim()) taken.add(s.barcode.trim());
+  for (const p of products) {
+    for (const s of p.skus ?? []) if (s.barcode?.trim()) taken.add(s.barcode.trim());
+    for (const pack of p.sizePacks ?? []) for (const b of pack.barcodes ?? []) if (b.code?.trim()) taken.add(b.code.trim());
+  }
   return taken;
+}
+
+/** Codes of the size packs (raw, as stored): a variation's code equal to one of them is a duplicate */
+function sizePackCodes(products: BarcodeOwner[]): Set<string> {
+  const codes = new Set<string>();
+  for (const p of products) for (const pack of p.sizePacks ?? []) for (const b of pack.barcodes ?? []) if (b.code?.trim()) codes.add(b.code.trim());
+  return codes;
 }
 
 /**
@@ -190,6 +206,8 @@ export function collectBarcodes(products: BarcodeOwner[]): Set<string> {
 export function findBarcodeProblems(products: BarcodeOwner[]): Map<string, BarcodeProblem> {
   const problems = new Map<string, BarcodeProblem>();
   const owner = new Map<string, string>(); // code → article group that keeps it
+  // a pack keeps its code: packs are issued codes unique in the catalog, so a variation with the same code got it later
+  const packCodes = sizePackCodes(products);
   for (const p of products) {
     const groups = new Map<string, { id: string; barcode?: string }[]>();
     for (const s of p.skus ?? []) {
@@ -207,6 +225,7 @@ export function findBarcodeProblems(products: BarcodeOwner[]): Map<string, Barco
         }
         const code = s.barcode!.trim();
         if (codes.size > 1) problems.set(key, 'mismatch');
+        else if (packCodes.has(code)) problems.set(key, 'duplicate');
         else if (owner.has(code) && owner.get(code) !== groupKey) problems.set(key, 'duplicate');
         else owner.set(code, groupKey);
       }
@@ -222,6 +241,8 @@ export function findBarcodeProblems(products: BarcodeOwner[]): Map<string, Barco
 export function unifyArticleBarcodes<T extends BarcodeOwner>(products: T[], groupKeys?: Set<string>): T[] {
   // codes of the articles that are not being changed stay theirs
   const usedByOthers = new Map<string, string>();
+  // a size pack keeps its code: a variation that has it gets a new one
+  for (const code of sizePackCodes(products)) usedByOthers.set(code, 'pack');
   for (const p of products)
     for (const s of p.skus ?? []) {
       const group = articleGroupKey(p.id, s.color);
@@ -252,5 +273,61 @@ export function unifyArticleBarcodes<T extends BarcodeOwner>(products: T[], grou
         return code ? { ...s, barcode: code } : s;
       }),
     };
+  });
+}
+
+/** Key of a pack's colour in `findSizePackBarcodeProblems` */
+export const sizePackBarcodeKey = (productId: string, packId: string, color: string) =>
+  `${productId}::pack::${packId}::${color.trim().toLowerCase()}`;
+
+/**
+ * Problems of the packs' barcodes (key: sizePackBarcodeKey): none, a wrong one, or a code of another pack colour (the
+ * first in catalog order keeps it). A pack keeps its code against a variation: the variation is the duplicate
+ * (`findBarcodeProblems`) and `unifyArticleBarcodes` gives it a new one — a printed pack label stays valid.
+ */
+export function findSizePackBarcodeProblems(products: BarcodeOwner[]): Map<string, BarcodeProblem> {
+  const problems = new Map<string, BarcodeProblem>();
+  const owner = new Map<string, string>();
+  for (const p of products)
+    for (const pack of productSizePacks(p))
+      for (const color of sizePackColors(p, pack)) {
+        const key = sizePackBarcodeKey(p.id, pack.id, color);
+        const code = pack.barcodes?.find((b) => sameColor(b.color, color))?.code ?? '';
+        const formatProblem = barcodeFormatProblem(code);
+        if (formatProblem) problems.set(key, formatProblem);
+        else if (owner.has(code) && owner.get(code) !== key) problems.set(key, 'duplicate');
+        else owner.set(code, key);
+      }
+  return problems;
+}
+
+/**
+ * The packs of the given products (all when omitted) with a barcode for every colour: a valid code no earlier pack colour
+ * uses stays (a variation with the same code is the duplicate, see findSizePackBarcodeProblems), others get a new
+ * internal EAN-13 unique in the catalog. Packs are normalized (`productSizePacks`), so
+ * barcodes of colours a pack no longer has are dropped. Other products are returned as they are.
+ */
+export function withSizePackBarcodes<T extends BarcodeOwner>(products: T[], productIds?: Set<string>): T[] {
+  const taken = collectBarcodes(products);
+  // codes of the packs that are not being changed stay theirs
+  const used = new Set<string>();
+  if (productIds)
+    for (const p of products)
+      if (!productIds.has(p.id))
+        for (const pack of p.sizePacks ?? []) for (const b of pack.barcodes ?? []) if (b.code?.trim()) used.add(b.code.trim());
+  return products.map((p) => {
+    if (productIds && !productIds.has(p.id)) return p;
+    if (!p.sizePacks?.length) return p;
+    const packs = productSizePacks(p).map((pack) => ({
+      ...pack,
+      barcodes: sizePackColors(p, pack).map((color) => {
+        const own = pack.barcodes?.find((b) => sameColor(b.color, color))?.code ?? '';
+        const keep = own && !barcodeFormatProblem(own) && !used.has(own);
+        const code = keep ? own : generateInternalEan13(taken);
+        used.add(code);
+        return { color, code };
+      }),
+    }));
+    return { ...p, sizePacks: packs };
   });
 }

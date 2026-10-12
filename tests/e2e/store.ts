@@ -259,6 +259,27 @@ export const PRODUCTS = {
     sizes: ['M', 'L'],
     stock: 5,
   }), isPopular: false },
+  // «Ростовки» (stage 18 of docs/admin-wholesale-plan.md): admin-size-packs.spec.ts adds a pack, one per screen size
+  packTeeP: { ...product({
+    id: 'e2e-pack-tee-p',
+    title: 'Футболка для ростовки 390',
+    category: 'tshirts',
+    categoryLabel: 'Футболки',
+    price: 1500,
+    colors: [{ name: 'Синий', hex: '#1F3A93' }],
+    sizes: ['48', '50', '52'],
+    stock: 5,
+  }), isPopular: false },
+  packTeeD: { ...product({
+    id: 'e2e-pack-tee-d',
+    title: 'Футболка для ростовки 1280',
+    category: 'tshirts',
+    categoryLabel: 'Футболки',
+    price: 1500,
+    colors: [{ name: 'Синий', hex: '#1F3A93' }],
+    sizes: ['48', '50', '52'],
+    stock: 5,
+  }), isPopular: false },
 };
 
 /** A full photo of a product as `product_photos` keeps it (the product holds a preview) */

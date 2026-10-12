@@ -1,15 +1,13 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Barcode, ChevronLeft, ChevronRight, FileDown, Plus, RefreshCw, Trash2, X } from 'lucide-react';
-import type { LabelFormat, Product, ProductSKU, SaveStorefrontSettings, StorefrontSettings } from '../../types';
+import type { LabelFormat, Product, SaveStorefrontSettings, StorefrontSettings } from '../../types';
 import { ModalPortal } from '../ModalPortal';
-import { compositionToMaterial, getProductFabricComposition } from '../../utils/productAttributes';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import {
   canvasMeasure,
   downloadLabelsPdf,
   LABEL_COPIES_MAX,
-  drawLabel,
   layoutLabel,
   loadLabelFonts,
   LABEL_FORMAT_PRESETS,
@@ -18,25 +16,40 @@ import {
   LABEL_TEMPLATE_GROUPS,
   hasSaleOldPrice,
   templateInfo,
-  type LabelData,
   type LabelOptions,
   type LabelTemplate,
 } from '../../utils/labels';
 import {
-  articleCode,
   articleGroupKey,
   findBarcodeProblems,
+  findSizePackBarcodeProblems,
+  sizePackBarcodeKey,
   skuKey,
   unifyArticleBarcodes,
+  withSizePackBarcodes,
   type BarcodeProblem,
 } from '../../shared/barcode';
+import {
+  productSizePacks,
+  sizePackColors,
+  sameColor,
+} from '../../shared/sizePacks';
 import { pluralRu } from '../../utils/pluralize';
 import { AdminHint } from './AdminHint';
 
-export interface LabelTarget {
-  productId: string;
-  skuId: string;
-}
+import {
+  entryName,
+  labelData,
+  packLabelData,
+  PROBLEM_TEXT,
+  type LabelEntry,
+  type LabelTarget,
+  type PackPrintItem,
+  type PrintItem,
+} from './labelEntries';
+import { FormatThumb, LabelCanvas, Switch } from './LabelGeneratorParts';
+
+export type { LabelTarget, PackLabelTarget, SkuLabelTarget } from './labelEntries';
 
 interface AdminLabelGeneratorProps {
   targets: LabelTarget[];
@@ -49,27 +62,7 @@ interface AdminLabelGeneratorProps {
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
-const PROBLEM_TEXT: Record<BarcodeProblem, string> = {
-  missing: 'нет штрихкода',
-  duplicate: 'штрихкод повторяется',
-  invalid: 'штрихкод с ошибкой',
-  mismatch: 'у размеров разные штрихкоды',
-};
-
 const sizeText = (f: Pick<LabelFormat, 'widthMm' | 'heightMm'>) => `${f.widthMm}×${f.heightMm} мм`;
-
-/** Label data straight from the catalog: the product card and its variation */
-const labelData = (product: Product, sku: ProductSKU): LabelData => ({
-  title: product.title,
-  color: sku.color,
-  size: sku.size,
-  article: articleCode(product, sku.color) || sku.skuCode || '',
-  // the card's fibres first; product.material is the same text saved from them
-  composition: compositionToMaterial(getProductFabricComposition(product)) || (product.material ?? '').trim(),
-  barcode: sku.barcode ?? '',
-  price: product.price,
-  oldPrice: product.originalPrice,
-});
 
 const PREF_KEY = 'manstyle_label_prefs';
 function readPref(key: 'format' | 'template'): string | undefined {
@@ -91,69 +84,6 @@ function writePref(key: 'format' | 'template', value: string) {
 /** Display size of a label inside a box, keeping its proportions */
 const fitBox = (f: Pick<LabelFormat, 'widthMm' | 'heightMm'>, maxW: number, maxH: number) =>
   Math.min(maxW, (maxH * f.widthMm) / f.heightMm);
-
-type PrintItem = { target: LabelTarget; product: Product; sku: ProductSKU };
-
-/** Canvas preview drawn by the same layout as the PDF */
-const LabelCanvas: React.FC<{
-  format: Pick<LabelFormat, 'widthMm' | 'heightMm'>;
-  template: LabelTemplate;
-  data: LabelData;
-  options: LabelOptions;
-  displayWidth: number;
-  fontsReady: boolean;
-  className?: string;
-}> = ({ format, template, data, options, displayWidth, fontsReady, className }) => {
-  const ref = useRef<HTMLCanvasElement | null>(null);
-  const measure = useMemo(() => canvasMeasure(), []);
-  const displayHeight = (displayWidth * format.heightMm) / format.widthMm;
-
-  useEffect(() => {
-    if (!ref.current) return;
-    const pxPerMm = (displayWidth / format.widthMm) * (window.devicePixelRatio || 1);
-    drawLabel(ref.current, layoutLabel(template, format, data, options, measure), pxPerMm);
-  }, [format, template, data, options, displayWidth, fontsReady, measure]);
-
-  return (
-    <canvas
-      ref={ref}
-      style={{ width: displayWidth, height: displayHeight }}
-      className={className}
-      aria-hidden="true"
-    />
-  );
-};
-
-/** Proportional outline of a format, for the delete confirmation */
-const FormatThumb: React.FC<{ format: Pick<LabelFormat, 'widthMm' | 'heightMm'>; size?: number }> = ({ format, size = 44 }) => {
-  const scale = size / Math.max(format.widthMm, format.heightMm);
-  return (
-    <span
-      aria-hidden="true"
-      className="block rounded-[3px] bg-white border border-[#2D3A4E]/60 shrink-0"
-      style={{ width: format.widthMm * scale, height: format.heightMm * scale }}
-    />
-  );
-};
-
-const Switch: React.FC<{ checked: boolean; onChange: (v: boolean) => void; label: string }> = ({ checked, onChange, label }) => (
-  <button
-    type="button"
-    role="switch"
-    aria-checked={checked}
-    onClick={() => onChange(!checked)}
-    className="w-full h-11 px-3 rounded-xl neu-button flex items-center justify-between gap-3 text-xs font-bold text-[#2D3A4E] cursor-pointer"
-  >
-    <span>{label}</span>
-    <span className="w-10 h-6 rounded-full neu-inset p-0.5 flex items-center shrink-0">
-      <span
-        className={`w-5 h-5 rounded-full transition-transform duration-200 ${
-          checked ? 'translate-x-4 neu-fill-accent' : 'translate-x-0 neu-button'
-        }`}
-      />
-    </span>
-  </button>
-);
 
 /**
  * Admin → «Склад» → labels: the store's label formats, ten templates, a PDF with one page per label
@@ -210,51 +140,77 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
     () =>
       targets.map((t) => {
         const product = products.find((p) => p.id === t.productId);
+        if (t.packId !== undefined) {
+          // a pack colour: the pack and the colour must still be in the product (they may have been taken off)
+          const pack = productSizePacks(product).find((p) => p.id === t.packId);
+          const color = product && pack ? sizePackColors(product, pack).find((c) => sameColor(c, t.color)) : undefined;
+          return { target: t, product, pack, color };
+        }
         const sku = product?.skus?.find((s) => s.id === t.skuId);
         return { target: t, product, sku };
       }),
     [targets, products]
   );
-  const printable = resolved.filter((r): r is PrintItem => Boolean(r.product && r.sku));
-  const unsaved = resolved.filter((r) => r.product && !r.sku);
+  const printable = resolved.filter((r): r is PrintItem => Boolean(r.product && 'sku' in r && r.sku));
+  const printablePacks = resolved.filter(
+    (r): r is PackPrintItem => Boolean(r.product && 'pack' in r && r.pack && r.color)
+  );
+  const unsaved = resolved.filter((r) => r.product && 'sku' in r && !r.sku);
   const info = templateInfo(template);
 
+  // All labels in the order of the selection; the data is built once for the preview, the fitting and the PDF
+  const entries = useMemo<LabelEntry[]>(
+    () => [
+      ...printable.map((r) => ({
+        key: skuKey(r.product.id, r.sku.id),
+        articleKey: articleGroupKey(r.product.id, r.sku.color),
+        product: r.product,
+        sku: r.sku,
+        data: labelData(r.product, r.sku),
+      })),
+      ...printablePacks.map((r) => ({
+        key: sizePackBarcodeKey(r.product.id, r.pack.id, r.color),
+        articleKey: sizePackBarcodeKey(r.product.id, r.pack.id, r.color),
+        product: r.product,
+        pack: r.pack,
+        data: packLabelData(r.product, r.pack, r.color),
+      })),
+    ],
+    [resolved]
+  );
+
   // Without a size on the label, all sizes of an article print the same: one label per article
+  // (a pack colour is its own article: it never merges with the variations)
   const labels = useMemo(() => {
-    if (info.showsSize) return printable;
+    if (info.showsSize) return entries;
     const seen = new Set<string>();
-    return printable.filter((r) => {
-      const key = articleGroupKey(r.product.id, r.sku.color);
-      if (seen.has(key)) return false;
-      seen.add(key);
+    return entries.filter((r) => {
+      if (seen.has(r.articleKey)) return false;
+      seen.add(r.articleKey);
       return true;
     });
-  }, [printable, info.showsSize]);
+  }, [entries, info.showsSize]);
 
-  const problems = useMemo(() => findBarcodeProblems(products), [products]);
+  const problems = useMemo(
+    () => new Map<string, BarcodeProblem>([...findBarcodeProblems(products), ...findSizePackBarcodeProblems(products)]),
+    [products]
+  );
   const barcodeIssues = options.showBarcode
-    ? printable
-        .map((r) => ({ ...r, problem: problems.get(skuKey(r.product.id, r.sku.id)) }))
+    ? entries
+        .map((r) => ({ ...r, problem: problems.get(r.key) }))
         .filter((r): r is typeof r & { problem: BarcodeProblem } => Boolean(r.problem))
     : [];
-  // «Скидка» needs an old price above the current one in the product card
-  const noOldPrice = info.needsOldPrice
-    ? labels.filter((r) => !hasSaleOldPrice({ price: r.product.price, oldPrice: r.product.originalPrice }))
-    : [];
+  // «Скидка» needs an old price above the current one in the product card (a pack has none)
+  const noOldPrice = info.needsOldPrice ? labels.filter((r) => !hasSaleOldPrice(r.data)) : [];
 
   const current = labels[Math.min(previewIndex, Math.max(0, labels.length - 1))];
   // A code that is about to be replaced is not drawn in the preview
   const previewOptions: LabelOptions =
-    current && options.showBarcode && problems.has(skuKey(current.product.id, current.sku.id))
-      ? { ...options, showBarcode: false }
-      : options;
+    current && options.showBarcode && problems.has(current.key) ? { ...options, showBarcode: false } : options;
   // What the fitting had to leave out on the current label (too small a format)
   const measure = useMemo(() => canvasMeasure(), []);
   const dropped = useMemo(
-    () =>
-      format && current
-        ? layoutLabel(template, format, labelData(current.product, current.sku), previewOptions, measure).dropped
-        : [],
+    () => (format && current ? layoutLabel(template, format, current.data, previewOptions, measure).dropped : []),
     // fontsReady: measured again once Manrope has loaded
     [format, template, current, previewOptions.showBarcode, previewOptions.showPrice, measure, fontsReady]
   );
@@ -319,16 +275,34 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
     (p) => !formats.some((f) => f.widthMm === p.widthMm && f.heightMm === p.heightMm)
   );
 
+  // Variations with a wrong code are fixed per article; pack colours — per product (every colour of its packs gets a code)
+  const skuIssueGroups = new Set<string>(barcodeIssues.filter((r) => r.sku).map((r) => r.articleKey));
+  const packIssueProducts = new Set<string>(barcodeIssues.filter((r) => r.pack).map((r) => r.product.id));
+  const packIssueCount = barcodeIssues.filter((r) => r.pack).length;
+
   const reissueBarcodes = async () => {
-    const groups = new Set<string>(barcodeIssues.map((r) => articleGroupKey(r.product.id, r.sku.color)));
-    if ((await onUpdateProducts(unifyArticleBarcodes(products, groups))) === false) return;
-    onShowToast(
-      `Штрихкоды обновлены у ${groups.size} ${pluralRu(groups.size, ['артикула', 'артикулов', 'артикулов'])}: у всех размеров артикула один код`,
-      'success'
-    );
+    let next = products;
+    if (skuIssueGroups.size > 0) next = unifyArticleBarcodes(next, skuIssueGroups);
+    // after the variations, so a code just issued to a variation is not issued to a pack again
+    if (packIssueProducts.size > 0) next = withSizePackBarcodes(next, packIssueProducts);
+    if ((await onUpdateProducts(next)) === false) return;
+    const parts = [
+      skuIssueGroups.size > 0
+        ? `${skuIssueGroups.size} ${pluralRu(skuIssueGroups.size, ['артикул', 'артикула', 'артикулов'])} (у всех размеров один код)`
+        : '',
+      packIssueCount > 0 ? `${packIssueCount} ${pluralRu(packIssueCount, ['цвет ростовки', 'цвета ростовок', 'цветов ростовок'])}` : '',
+    ].filter(Boolean);
+    onShowToast(`Штрихкоды обновлены: ${parts.join(', ')}`, 'success');
   };
 
   const pageCount = labels.length * copies;
+  // «вариантов: 3, ростовок: 2»
+  const selectionText = [
+    printable.length > 0 ? `вариантов: ${printable.length}` : '',
+    printablePacks.length > 0 ? `ростовок: ${printablePacks.length}` : '',
+  ]
+    .filter(Boolean)
+    .join(', ');
 
   const handleDownload = async () => {
     if (!format || !canDownload) return;
@@ -337,7 +311,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
       await downloadLabelsPdf(
         format,
         template,
-        labels.map((r) => labelData(r.product, r.sku)),
+        labels.map((r) => r.data),
         options,
         copies
       );
@@ -377,11 +351,11 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                   Этикетки и штрихкоды
                 </h3>
                 <p className="text-xs font-semibold text-[#4E5C70] leading-snug">
-                  {printable.length === 1
-                    ? `${printable[0].product.title} · ${printable[0].sku.color} / ${printable[0].sku.size}`
-                    : labels.length === printable.length
-                    ? `Выбрано вариантов: ${printable.length}. В PDF — по одной этикетке на вариант`
-                    : `Вариантов: ${printable.length} → этикеток: ${labels.length} (одна на артикул, шаблон без размера)`}
+                  {entries.length === 1
+                    ? entryName(entries[0])
+                    : labels.length === entries.length
+                    ? `Выбрано: ${selectionText}. В PDF — по одной этикетке на каждый`
+                    : `Выбрано: ${selectionText} → этикеток: ${labels.length} (одна на артикул, шаблон без размера)`}
                 </p>
               </div>
             </div>
@@ -603,10 +577,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                     <div className="grid grid-cols-3 gap-2">
                       {LABEL_TEMPLATES.filter((t) => t.group === group.id).map((t) => {
                         const selected = template === t.id;
-                        const blocked =
-                          t.needsOldPrice &&
-                          current &&
-                          !hasSaleOldPrice({ price: current.product.price, oldPrice: current.product.originalPrice });
+                        const blocked = t.needsOldPrice && current && !hasSaleOldPrice(current.data);
                         return (
                           <button
                             key={t.id}
@@ -623,7 +594,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                               <LabelCanvas
                                 format={sampleFormat}
                                 template={t.id}
-                                data={labelData(current.product, current.sku)}
+                                data={current.data}
                                 options={previewOptions}
                                 displayWidth={fitBox(sampleFormat, 84, 64)}
                                 fontsReady={fontsReady}
@@ -688,6 +659,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                 <p className="text-xs text-[#2D3A4E] leading-snug">
                   У товара нет старой цены выше текущей. Задайте «Старую цену» в карточке товара (Каталог) или выберите
                   другой шаблон.
+                  {noOldPrice.some((r) => r.pack) && ' У ростовки старой цены нет: для неё подойдет другой шаблон.'}
                 </p>
                 {/* a scrolling list is reachable from the keyboard (axe: scrollable-region-focusable) */}
                 <ul
@@ -696,8 +668,10 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                   className="text-[11px] text-[#2D3A4E] space-y-1 max-h-24 overflow-y-auto rounded-lg"
                 >
                   {noOldPrice.map((r) => (
-                    <li key={skuKey(r.product.id, r.sku.id)} className="leading-snug break-words">
-                      {r.product.title} — цена {r.product.price.toLocaleString('ru-RU')} ₽, старой цены нет
+                    <li key={r.key} className="leading-snug break-words">
+                      {r.pack
+                        ? `${entryName(r)} — у ростовки нет старой цены`
+                        : `${r.product.title} — цена ${r.product.price.toLocaleString('ru-RU')} ₽, старой цены нет`}
                     </li>
                   ))}
                 </ul>
@@ -717,15 +691,18 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                   className="text-[11px] text-[#2D3A4E] space-y-1 max-h-28 overflow-y-auto rounded-lg"
                 >
                   {barcodeIssues.map((r) => (
-                    <li key={skuKey(r.product.id, r.sku.id)} className="leading-snug break-words">
-                      {r.product.title} · {r.sku.color} / {r.sku.size} — {PROBLEM_TEXT[r.problem]}
-                      {r.sku.barcode ? ` (${r.sku.barcode})` : ''}
+                    <li key={r.key} className="leading-snug break-words">
+                      {entryName(r)} — {PROBLEM_TEXT[r.problem]}
+                      {r.data.barcode ? ` (${r.data.barcode})` : ''}
                     </li>
                   ))}
                 </ul>
                 <p className="text-xs text-[#4E5C70] leading-snug">
-                  У всех размеров одного артикула будет один штрихкод: сохранится верный код артикула или будет выдан
-                  новый внутренний EAN-13 (начинается с 2). Коды сохранятся в товаре.
+                  {skuIssueGroups.size > 0 &&
+                    'У всех размеров одного артикула будет один штрихкод: сохранится верный код артикула или будет выдан новый внутренний EAN-13 (начинается с 2). '}
+                  {packIssueCount > 0 &&
+                    'У каждого цвета ростовки свой штрихкод: верный сохранится, недостающий выдадим. '}
+                  Коды сохранятся в товаре.
                 </p>
                 <button
                   type="button"
@@ -733,7 +710,11 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                   className="h-9 px-3 rounded-xl neu-button text-[11px] font-bold text-accent flex items-center gap-1.5 cursor-pointer transition-all"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  Один штрихкод на артикул
+                  {skuIssueGroups.size > 0 && packIssueCount > 0
+                    ? 'Обновить штрихкоды'
+                    : packIssueCount > 0
+                    ? 'Выдать штрихкоды ростовок'
+                    : 'Один штрихкод на артикул'}
                 </button>
               </section>
             )}
@@ -781,7 +762,7 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                     <LabelCanvas
                       format={sampleFormat}
                       template={template}
-                      data={labelData(current.product, current.sku)}
+                      data={current.data}
                       options={previewOptions}
                       displayWidth={fitBox(sampleFormat, Math.min(280, sampleFormat.widthMm * 5), 260)}
                       fontsReady={fontsReady}
@@ -792,6 +773,11 @@ export const AdminLabelGenerator: React.FC<AdminLabelGeneratorProps> = ({
                         ? `${sizeText(format)} · ${info.name}`
                         : `Образец ${sizeText(sampleFormat)} · ${info.name}. Для PDF добавьте формат`}
                     </span>
+                    {options.showPrice && current.data.noPrice && (
+                      <p className="text-xs font-bold text-warning text-center leading-snug">
+                        У ростовки нет цены — на этикетке её не будет. Задайте цену ростовки или оптовую цену товара.
+                      </p>
+                    )}
                     {format && dropped.length > 0 && (
                       <p className="text-xs font-bold text-warning text-center leading-snug">
                         Не поместилось: {dropped.join(', ')}. Выберите формат крупнее или шаблон проще.

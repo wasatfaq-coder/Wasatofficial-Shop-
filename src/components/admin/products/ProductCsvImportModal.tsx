@@ -3,6 +3,7 @@ import { X, FileSpreadsheet } from 'lucide-react';
 import { Product } from '../../../types';
 import { parseProductsFromCSV } from '../../../utils/csvHelpers';
 import { generateDefaultSKUs, withMissingSkus } from '../../../utils/inventory';
+import { withSizePackBarcodes } from '../../../shared/barcode';
 import { ModalPortal } from '../../ModalPortal';
 import type { StoreCategory } from '../../../types';
 import { useDialogA11y } from '../../../utils/useDialogA11y';
@@ -33,7 +34,7 @@ export function ProductCsvImportModal({ list, products, categories, onUpdateProd
     }
 
     try {
-      const { products: parsed, skipped, badPurchase, badShipping } = parseProductsFromCSV(csvInputText, products);
+      const { products: parsed, skipped, badPurchase, badShipping, badPacks } = parseProductsFromCSV(csvInputText, products);
       if (parsed.length === 0) {
         onShowToast(
           skipped > 0
@@ -84,13 +85,18 @@ export function ProductCsvImportModal({ list, products, categories, onUpdateProd
           ...(p.supplierSku ? { supplierSku: p.supplierSku } : {}),
           ...(p.weightGrams ? { weightGrams: p.weightGrams } : {}),
           ...(p.packageCm ? { packageCm: p.packageCm } : {}),
+          ...(p.sizePacks ? { sizePacks: p.sizePacks } : {}),
         };
         fullProd.skus = generateDefaultSKUs(fullProd);
         newProducts.push(fullProd);
       }
 
       // «Добавлено» only after the database answered; a failure already showed «Не сохранено: …»
-      const saved = await onUpdateProducts([...newProducts, ...products.map((p) => byId.get(p.id) ?? p)]);
+      // packs of the imported products get a barcode per colour (a pack kept from the product keeps its own)
+      const imported = new Set([...newProducts.map((p) => p.id), ...parsed.flatMap((p) => (p.id && byId.has(p.id) ? [p.id] : []))]);
+      const saved = await onUpdateProducts(
+        withSizePackBarcodes([...newProducts, ...products.map((p) => byId.get(p.id) ?? p)], imported)
+      );
       if (saved === false) return;
       onShowToast(
         [
@@ -99,6 +105,7 @@ export function ProductCsvImportModal({ list, products, categories, onUpdateProd
           skipped ? `пропущено без названия, цены или фото: ${skipped}` : '',
           badPurchase ? `закупка не распознана и не изменена: ${badPurchase}` : '',
           badShipping ? `вес или габариты не распознаны и не изменены: ${badShipping}` : '',
+          badPacks ? `ростовки не распознаны и не изменены: ${badPacks}` : '',
         ]
           .filter(Boolean)
           .join(', '),
@@ -184,7 +191,9 @@ export function ProductCsvImportModal({ list, products, categories, onUpdateProd
                 Цену по курсу пересчитает «Курсы и наценка» → «Применить». Дальше два столбца — «Поставщик»
                 и «Артикул поставщика»: пустая ячейка их не меняет, «-» или «нет» убирает. Покупатель их не видит.
                 Ещё два — «Вес, г» (целое число граммов одной штуки) и «Габариты, см» (три числа: 30×20×5);
-                пустая ячейка их не меняет, «-» или «нет» убирает.
+                пустая ячейка их не меняет, «-» или «нет» убирает. Последний — «Ростовки»: размеры и штук каждого
+                «48:1; 50:2; 52:1», цвета в скобках впереди, если не все, «(Синий)», своя цена после «=», упаковки
+                через «|». Пустая ячейка не меняет, «-» убирает; штрихкоды упаковок выдаются сами.
               </p>
             </div>
 
