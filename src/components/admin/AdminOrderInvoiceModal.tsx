@@ -9,6 +9,8 @@ import { useDialogA11y } from '../../utils/useDialogA11y';
 import { ModalPortal } from '../ModalPortal';
 import { linePrice } from '../../shared/orderLine';
 import { orderWeight, orderWeightText } from '../../utils/productShipping';
+import { storedOrderTotals } from '../../utils/orderAdjustment';
+import { isQuickOrderDelivery } from '../../shared/orderPricing';
 
 interface AdminOrderInvoiceModalProps {
   isOpen: boolean;
@@ -73,9 +75,18 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
   const totalQuantity = (order?.items || []).reduce((sum, it) => sum + (it.quantity || 1), 0);
   // Weight of the goods for the Post and carriers (stage 15); not shown when the products have no weights
   const weightText = order ? orderWeightText(orderWeight(order.items, products)) : null;
-  const discountAmount = order?.originalTotalPrice
-    ? Math.max(0, order.originalTotalPrice - order.totalPrice)
-    : 0;
+  // Only the order's own money (items, discount, delivery, total): `originalTotalPrice` is the sum before
+  // «Корректировка заказа», not before the discount
+  const totals = order ? storedOrderTotals(order) : null;
+  const rub = (value: number) => `${value.toLocaleString('ru-RU')} ₽`;
+  // a 1-click order is placed without delivery: the manager agrees it with the customer
+  const deliveryText = !totals
+    ? ''
+    : order?.deliveryMethod && totals.deliveryFee === 0 && isQuickOrderDelivery(order.deliveryMethod)
+      ? 'Согласует менеджер'
+      : totals.deliveryFee > 0
+        ? rub(totals.deliveryFee)
+        : 'Бесплатно';
 
   return (
     <ModalPortal>
@@ -268,32 +279,45 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
           </div>
 
           {/* Totals Breakdown */}
-          <div className="flex justify-end pt-2">
-            <div className="w-64 space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-              <div className="flex justify-between">
-                <span>Сумма без скидки:</span>
-                <span className="font-semibold">
-                  {(order.originalTotalPrice || order.totalPrice + discountAmount).toLocaleString('ru-RU')} ₽
-                </span>
-              </div>
-              {discountAmount > 0 && (
-                <div className="flex justify-between text-success font-semibold">
-                  <span>Скидка по акции:</span>
-                  <span>-{discountAmount.toLocaleString('ru-RU')} ₽</span>
+          {totals && !totals.matches && (
+            <p role="alert" className="text-xs font-semibold text-danger bg-danger-soft border border-danger/30 rounded-xl p-3 print:hidden">
+              Сумма строк ({rub(totals.subtotal)}) − скидка + доставка не равна итогу заказа ({rub(totals.total)}).
+              Проверьте заказ в «Заказах», прежде чем печатать.
+            </p>
+          )}
+          {totals && (
+            <div className="flex justify-end pt-2">
+              <dl className="w-64 space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                <div className="flex justify-between gap-2">
+                  <dt>Товары:</dt>
+                  <dd className="font-semibold whitespace-nowrap">{rub(totals.subtotal)}</dd>
                 </div>
-              )}
-              <div className="flex justify-between">
-                <span>Доставка:</span>
-                <span className="font-semibold text-success">Бесплатно</span>
-              </div>
-              <div className="border-t border-slate-200 pt-2 flex justify-between items-baseline font-extrabold text-slate-900 text-sm">
-                <span>ИТОГО К ОПЛАТЕ:</span>
-                <span className="text-base text-accent font-extrabold">
-                  {order.totalPrice.toLocaleString('ru-RU')} ₽
-                </span>
-              </div>
+                {totals.recorded && totals.discount > 0 && (
+                  <div className="flex justify-between gap-2 text-success font-semibold">
+                    <dt>Скидка{order.promoCode ? ` по промокоду ${order.promoCode}` : ''}:</dt>
+                    <dd className="whitespace-nowrap">−{rub(totals.discount)}</dd>
+                  </div>
+                )}
+                {totals.recorded ? (
+                <div className="flex justify-between gap-2">
+                  <dt>Доставка:</dt>
+                  <dd className={`font-semibold whitespace-nowrap ${deliveryText === 'Бесплатно' ? 'text-success' : ''}`}>
+                    {deliveryText}
+                  </dd>
+                </div>
+                ) : (
+                  <div className="text-[11px] text-[#4E5C70]">
+                    <dt className="inline">Скидка и доставка: </dt>
+                    <dd className="inline">в заказе не записаны отдельно, итог — из заказа</dd>
+                  </div>
+                )}
+                <div className="border-t border-slate-200 pt-2 flex justify-between items-baseline font-extrabold text-slate-900 text-sm">
+                  <dt>ИТОГО К ОПЛАТЕ:</dt>
+                  <dd className="text-base text-accent font-extrabold whitespace-nowrap">{rub(totals.total)}</dd>
+                </div>
+              </dl>
             </div>
-          </div>
+          )}
 
           {/* Footer with return policy & stamp placeholder */}
           <div className="border-t border-slate-200 pt-4 grid grid-cols-2 gap-4 text-[11px] text-[#4E5C70]">
