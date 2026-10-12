@@ -517,14 +517,14 @@ describe('orders', () => {
     await assertFails(guestOrder(order({ id: badId })));
   });
 
-  test('an order from the browser has only its own fields, sane texts and at most 30 lines', async () => {
+  test('an order from the browser has only its own fields, sane texts and at most 60 lines (a size pack is a line per size, stage 19)', async () => {
     await assertFails(guestOrder(order({ id: 'MS-8', placedVia: 'server' })));
     await assertFails(guestOrder(order({ id: 'MS-9', customerName: '' })));
     await assertFails(guestOrder(order({ id: 'MS-10', customerName: 'x'.repeat(5000) })));
     await assertFails(guestOrder(order({ id: 'MS-11', deliveryFee: -300 })));
     const line = order().items[0];
-    await assertFails(guestOrder(order({ id: 'MS-12', items: Array(31).fill(line) })));
-    await assertSucceeds(guestOrder(order({ id: 'MS-13', items: Array(30).fill(line) })));
+    await assertFails(guestOrder(order({ id: 'MS-12', items: Array(61).fill(line) })));
+    await assertSucceeds(guestOrder(order({ id: 'MS-13', items: Array(60).fill(line) })));
     // the admin creates orders without these limits
     await assertSucceeds(setDoc(doc(owner(), 'orders/MS-14'), { id: 'MS-14', status: 'accepted', items: [] }));
   });

@@ -102,6 +102,7 @@ import { linePrice, isWholesaleLine, orderSalesChannel, type SalesChannel } from
 import { WholesaleMark } from '../WholesaleMark';
 import { packSizeOf } from '../../shared/wholesalePricing';
 import { packsText } from '../../utils/wholesaleOffer';
+import { groupOrderLines, packGroupCompositionText } from '../../shared/packLines';
 
 interface AdminOrdersTabProps {
   orders: Order[];
@@ -1673,7 +1674,31 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                     {/* Left: Items breakdown */}
                     <div className="md:col-span-7 space-y-2 min-w-0">
                       <div className="neu-inset-deep rounded-2xl p-3 space-y-2 overflow-hidden border border-white/40">
-                        {(ord.items || []).map((it, idx) => (
+                        {groupOrderLines(ord.items || []).map((group) => {
+                          if (group.kind === 'pack') {
+                            const it = group.item;
+                            return (
+                              <div
+                                key={`admin-ord-pack-${ord.id}-${group.packGroup}`}
+                                className="flex items-start gap-2 text-xs font-medium text-[#2D3A4E]"
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0 mt-1.5" />
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-bold leading-snug">{it.product?.title || 'Товар каталога'}</p>
+                                  <p className="text-xs text-[#4E5C70]">
+                                    {[it.selectedColor, `${group.title} · ${group.packCount} уп.`].filter(Boolean).join(', ')}
+                                  </p>
+                                  <p className="text-xs text-[#4E5C70]">{packGroupCompositionText(group.sizes)}</p>
+                                  <p className="text-xs font-bold text-accent">
+                                    {group.packPrice.toLocaleString('ru-RU')} ₽/уп. · {group.total.toLocaleString('ru-RU')} ₽
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          }
+                          const it = group.item;
+                          const idx = group.index;
+                          return (
                           <div
                             key={`admin-ord-it-${ord.id}-${it.id || idx}-${idx}`}
                             className="flex items-start gap-2 text-xs font-medium text-[#2D3A4E]"
@@ -1695,7 +1720,8 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                               </p>
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
 
                       {/* Internal Manager Note View & Inline Editor */}

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { groupOrderLines, packGroupCompositionText } from '../../shared/packLines';
 import { AdminHint } from './AdminHint';
 import { usePagedList } from '../../utils/usePagedList';
 import { AdminShowMore } from './AdminShowMore';
@@ -1331,7 +1332,10 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
 
                           {/* Line Items Preview */}
                           <div className="space-y-1.5 border-t border-[#BAC5D5]/30 pt-2">
-                            {ord.items.map((it, idx) => (
+                            {groupOrderLines(ord.items).map((group, idx) => {
+                              const it = group.item;
+                              const pack = group.kind === 'pack' ? group : null;
+                              return (
                               <div key={idx} className="flex items-center gap-2 text-xs text-[#4E5C70]">
                                 {it.product && (
                                   <OrderLineThumbImage
@@ -1347,14 +1351,19 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
                                     {it.product.title}
                                   </span>
                                   <span className="block text-[11px] truncate">
-                                    {[it.selectedColor, it.selectedSize].filter(Boolean).join(', ')}
+                                    {pack
+                                      ? `${[it.selectedColor, `${pack.title} · ${pack.packCount} уп.`].filter(Boolean).join(', ')} · ${packGroupCompositionText(pack.sizes)}`
+                                      : [it.selectedColor, it.selectedSize].filter(Boolean).join(', ')}
                                   </span>
                                 </div>
                                 <span className="font-bold shrink-0 whitespace-nowrap">
-                                  {it.quantity} × {linePrice(it).toLocaleString('ru-RU')} ₽
+                                  {pack
+                                    ? `${pack.packCount} уп. × ${pack.packPrice.toLocaleString('ru-RU')} ₽`
+                                    : `${it.quantity} × ${linePrice(it).toLocaleString('ru-RU')} ₽`}
                                 </span>
                               </div>
-                            ))}
+                            );
+                            })}
                           </div>
 
                           {/* Order Logistics & Details Bar */}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { groupOrderLines, packGroupCompositionText } from '../../shared/packLines';
 import { X, Printer, FileText, CreditCard, Truck } from 'lucide-react';
 import { Order, Product, StorefrontSettings } from '../../types';
 import { currentStoreName, getLegalDetails, getStoreContacts } from '../../utils/storeContacts';
@@ -243,7 +244,34 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                  {(order.items || []).map((it, idx) => {
+                  {groupOrderLines(order.items || []).map((group, idx) => {
+                    if (group.kind === 'pack') {
+                      const it = group.item;
+                      return (
+                        <tr key={`pack-${group.packGroup}`} className="hover:bg-slate-50">
+                          <td className="py-2.5 px-3 text-[#4E5C70] font-mono text-[11px]">{idx + 1}</td>
+                          <td className="py-2.5 px-3 font-bold text-slate-800">
+                            {`${it.product?.title || 'Товар каталога'} — ${group.title}, ${it.selectedColor}`}
+                            <span className="block text-[11px] text-[#4E5C70] font-normal">
+                              {packGroupCompositionText(group.sizes)}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span className="inline-block bg-slate-100 px-1.5 py-0.5 rounded text-[11px] font-semibold text-slate-700 mr-1">
+                              {it.selectedColor}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-center font-bold">
+                            {group.packCount} уп. ({group.pieces} шт.)
+                          </td>
+                          <td className="py-2.5 px-3 text-right">{group.packPrice.toLocaleString('ru-RU')} ₽</td>
+                          <td className="py-2.5 px-3 text-right font-extrabold text-slate-900">
+                            {group.total.toLocaleString('ru-RU')} ₽
+                          </td>
+                        </tr>
+                      );
+                    }
+                    const it = group.item;
                     const price = linePrice(it);
                     const sum = price * (it.quantity || 1);
                     return (

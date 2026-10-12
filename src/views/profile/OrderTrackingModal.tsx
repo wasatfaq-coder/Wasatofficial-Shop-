@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { groupOrderLines, packGroupCompositionText } from '../../shared/packLines';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { CancelOrderDialog } from '../../components/CancelOrderDialog';
 import { OrderTimeline } from '../../components/OrderTimeline';
@@ -470,9 +471,12 @@ export const OrderTrackingModal = ({
             <div className="space-y-2 pt-1 border-t border-[#BAC5D5]/50">
               <span className="text-xs font-bold text-[#2D3A4E]">Состав заказа:</span>
               <div className="space-y-2">
-                {selectedOrderForTracking.items.map((it) => (
+                {groupOrderLines(selectedOrderForTracking.items).map((group) => {
+                  const it = group.item;
+                  const pack = group.kind === 'pack' ? group : null;
+                  return (
                   <div
-                    key={it.id}
+                    key={pack ? `pack-${pack.packGroup}` : it.id}
                     className="flex items-center justify-between neu-inset p-2.5 rounded-xl"
                   >
                     <div className="flex items-center gap-2.5">
@@ -488,13 +492,26 @@ export const OrderTrackingModal = ({
                           {it.product.title}
                         </p>
                         <p className="text-xs text-[#4E5C70]">
-                          {isWholesaleLine(it) && <WholesaleMark className="mr-1" />}
-                          {it.selectedColor}, разм. {it.selectedSize} •{' '}
-                          {isWholesaleLine(it) && packSizeOf(it.product ?? {}) > 1
-                            ? packsText(it.quantity, packSizeOf(it.product ?? {}))
-                            : `${it.quantity} шт.`}
-                          {it.isPreorder && <span className="font-bold text-accent"> • Предзаказ</span>}
+                          {pack ? (
+                            <>
+                              {[it.selectedColor, `${pack.title} · ${pack.packCount} уп.`].filter(Boolean).join(', ')}
+                            </>
+                          ) : (
+                            <>
+                              {isWholesaleLine(it) && <WholesaleMark className="mr-1" />}
+                              {it.selectedColor}, разм. {it.selectedSize} •{' '}
+                              {isWholesaleLine(it) && packSizeOf(it.product ?? {}) > 1
+                                ? packsText(it.quantity, packSizeOf(it.product ?? {}))
+                                : `${it.quantity} шт.`}
+                              {it.isPreorder && <span className="font-bold text-accent"> • Предзаказ</span>}
+                            </>
+                          )}
                         </p>
+                        {pack && (
+                          <p className="text-xs text-[#4E5C70]">
+                            {packGroupCompositionText(pack.sizes)} • {pack.packPrice.toLocaleString('ru-RU')} ₽/уп.
+                          </p>
+                        )}
                         {canReview && reviewerUid && (
                           <OrderLineReviewButton
                             order={selectedOrderForTracking}
@@ -509,10 +526,11 @@ export const OrderTrackingModal = ({
                       </div>
                     </div>
                     <span className="text-xs font-extrabold text-[#2D3A4E]">
-                      {(linePrice(it) * (it.quantity ?? 1)).toLocaleString('ru-RU')} ₽
+                      {(pack ? pack.total : linePrice(it) * (it.quantity ?? 1)).toLocaleString('ru-RU')} ₽
                     </span>
                   </div>
-                ))}
+                  );
+                })}
               </div>
               {/* Adjusted Order & Partial Refund Notice for Client */}
               {selectedOrderForTracking.isAdjusted && (

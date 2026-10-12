@@ -91,14 +91,51 @@ function sameLines(a: CartItem[], b: CartItem[]): boolean {
   return b.map(lineKey).sort().every((key, i) => key === keys[i]);
 }
 
+/** A variant given back: `refundSum` — the exact money of what left the order (a size whose price was split into roubles
+ * has two prices, and the price × quantity of either would be a rouble off) */
+export type ReturnedLine = CartItem & { refundSum?: number };
+
 /** What the adjustment gives back, model by model: «Чинос (M, синий) × 1 — 3 500 ₽; доставка — 350 ₽» */
-export function refundedLinesText(returned: CartItem[], deliveryRefund = 0): string {
+export function refundedLinesText(returned: ReturnedLine[], deliveryRefund = 0): string {
   const parts = returned.map((it) => {
     const variant = [extractSizeName(it.selectedSize), extractColorName(it.selectedColor)].filter(Boolean).join(', ');
     const title = it.product?.title ?? 'Товар';
-    const sum = (linePrice(it) * it.quantity).toLocaleString('ru-RU');
+    const sum = (it.refundSum ?? linePrice(it) * it.quantity).toLocaleString('ru-RU');
     return `${title}${variant ? ` (${variant})` : ''} × ${it.quantity} — ${sum} ₽`;
   });
   if (deliveryRefund > 0) parts.push(`доставка — ${deliveryRefund.toLocaleString('ru-RU')} ₽`);
   return parts.join('; ');
+}
+
+/**
+ * What an adjustment gives back to stock and takes from it, by variant (product, colour, size; preorder apart — it is
+ * not on stock): the sum of every line of the variant before and after. A size pack has a line per size and a size
+ * whose price was split into roubles has two (src/shared/packLines.ts) — matching line to line took the first of them.
+ * A returned variant carries the money of what left the order, for the refund text
+ */
+export function variantStockDiff(before: CartItem[], after: CartItem[]): { returnedItems: ReturnedLine[]; addedItems: CartItem[] } {
+  const key = (it: CartItem) =>
+    `${it.product.id}|${extractColorName(it.selectedColor).toLowerCase()}|${extractSizeName(it.selectedSize).toLowerCase()}|${it.isPreorder ? 1 : 0}`;
+  const totals = new Map<string, { template: CartItem; before: number; after: number; beforeSum: number; afterSum: number }>();
+  const add = (it: CartItem, side: 'before' | 'after') => {
+    const k = key(it);
+    const entry = totals.get(k) ?? { template: it, before: 0, after: 0, beforeSum: 0, afterSum: 0 };
+    const qty = Math.max(0, Number(it.quantity) || 0);
+    entry[side] += qty;
+    entry[side === 'before' ? 'beforeSum' : 'afterSum'] += linePrice(it) * qty;
+    totals.set(k, entry);
+  };
+  before.forEach((it) => add(it, 'before'));
+  after.forEach((it) => add(it, 'after'));
+  const returnedItems: ReturnedLine[] = [];
+  const addedItems: CartItem[] = [];
+  for (const entry of totals.values()) {
+    const diff = entry.after - entry.before;
+    if (diff < 0) {
+      returnedItems.push({ ...entry.template, quantity: -diff, refundSum: Math.max(0, entry.beforeSum - entry.afterSum) });
+    } else if (diff > 0) {
+      addedItems.push({ ...entry.template, quantity: diff });
+    }
+  }
+  return { returnedItems, addedItems };
 }

@@ -381,7 +381,10 @@ ECC `scripts/ecc-validate.sh` (плагин без правок, проверк�
   через `src/shared/sizePacks.ts` (`productSizePacks`, `sizePackPrice`, `sizePacksAvailable`), штрихкоды — `withSizePackBarcodes`
   и `findSizePackBarcodeProblems` (`src/shared/barcode.ts`, уникальны вместе со штрихкодами вариантов). Форма — «Варианты
   и остатки» → «Ростовки», CSV — «Ростовки» (`src/utils/sizePackCsv.ts`), склад — «можно собрать N» и этикетка ростовки.
-  В индекс каталога не входит, покупатель её пока не видит.
+  В индекс каталога не входит, покупатель её пока не видит. В заказе ростовка — строки по размерам с общим `packGroup`
+  (этап 19, `src/shared/packLines.ts`: `expandPackLines`, цена упаковки делится целыми рублями `splitPackPrice`); экраны заказа
+  показывают их одной строкой только через `groupOrderLines`, «Правка состава» меняет ростовку только целиком, склад сверяет
+  по варианту (`variantStockDiff`); заказ из браузера — до 60 строк (`ORDER_LINES_MAX`).
 - Вес и габариты — поля товара `weightGrams` (г, штука в упаковке) и `packageCm` ({ l, w, h }, см; этап 15 `docs/admin-wholesale-plan.md`):
   читаются и проверяются только через `src/utils/productShipping.ts`, форма — блок «Вес и габариты», CSV — «Вес, г», «Габариты, см».
   Вес штуки копируется в строку заказа (`toOrderLineProduct`), вес заказа — `orderWeight` (у строки без веса — вес из каталога, «≈»),

@@ -1,5 +1,6 @@
 import { Order } from '../types';
 import { orderTimestamp } from '../shared/orderDate';
+import { groupOrderLines } from '../shared/packLines';
 import { linePrice, orderSalesChannel, type SalesChannel } from '../shared/orderLine';
 import { isRevenueOrder, orderRevenue } from './orderRevenue';
 import {
@@ -242,8 +243,11 @@ export function computeFirestoreDailySales(
 export interface ProductSales {
   id: string;
   title: string;
+  /** Items sold, packs included */
   quantity: number;
   revenue: number;
+  /** Size packs («ростовки») of the product among them (stage 19); 0 — sold by the item only */
+  packs: number;
 }
 
 export interface CategorySales {
@@ -287,6 +291,7 @@ export function computePeriodBreakdown(periodOrders: Order[], topCount = 5): {
         title: product.title || 'Товар',
         quantity: 0,
         revenue: 0,
+        packs: 0,
       };
       entry.quantity += quantity;
       entry.revenue += lineRevenue;
@@ -295,6 +300,12 @@ export function computePeriodBreakdown(periodOrders: Order[], topCount = 5): {
       const category = product.categoryLabel?.trim() || 'Без категории';
       categories.set(category, (categories.get(category) || 0) + lineRevenue);
       itemsTotal += lineRevenue;
+    }
+    // the lines of a pack are items above; here — how many packs
+    for (const group of groupOrderLines(order.items || [])) {
+      if (group.kind !== 'pack') continue;
+      const entry = products.get(group.item.product?.id ?? '');
+      if (entry) entry.packs += group.packCount;
     }
     const code = order.promoCode?.trim().toUpperCase();
     if (code) {

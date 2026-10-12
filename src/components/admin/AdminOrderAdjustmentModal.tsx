@@ -14,7 +14,8 @@ import {
   Truck,
 } from 'lucide-react';
 import { Order, CartItem, Product, OrderAdjustmentLog, PromoCode } from '../../types';
-import { adjustedOrderTotals, refundedLinesText } from '../../utils/orderAdjustment';
+import { adjustedOrderTotals, refundedLinesText, variantStockDiff } from '../../utils/orderAdjustment';
+import { groupOrderLines, isPackLine, packGroupCompositionText, removePackGroup, setPackGroupCount } from '../../shared/packLines';
 import { NeumorphicSwitch } from '../NeumorphicSwitch';
 import { motion, AnimatePresence } from 'motion/react';
 import { NeumorphicSelect } from '../NeumorphicSelect';
@@ -153,8 +154,10 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
 
   const handleAddItemToOrder = () => {
     if (!selectedProductToAdd) return;
+    // a line of a size pack is not a line to add items to: the pack changes only whole
     const existingIndex = items.findIndex(
       (it) =>
+        !isPackLine(it) &&
         it.product.id === selectedProductToAdd.id &&
         it.selectedColor === selectedColor &&
         it.selectedSize === selectedSize
@@ -182,57 +185,21 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
     onShowToast(`Товар "${selectedProductToAdd.title}" добавлен в заказ`, 'success');
   };
 
-  /** Stock changes between the order's items and the edited ones: what goes back, what is taken */
-  const computeStockDiff = () => {
-    const returnedItems: CartItem[] = [];
-    const addedItems: CartItem[] = [];
+  /** Stock changes between the order's items and the edited ones, by variant: what goes back, what is taken */
+  const computeStockDiff = () => variantStockDiff(order?.items ?? [], items);
 
-    // Check items from previous order that were removed or reduced
-    (order.items || []).forEach((origItem) => {
-      const origColor = extractColorName(origItem.selectedColor).toLowerCase();
-      const origSize = extractSizeName(origItem.selectedSize).toLowerCase();
-      const matched = items.find(
-        (it) =>
-          it.product.id === origItem.product.id &&
-          extractColorName(it.selectedColor).toLowerCase() === origColor &&
-          extractSizeName(it.selectedSize).toLowerCase() === origSize
-      );
+  const handlePackCount = (packGroup: string, count: number) => {
+    if (count <= 0) {
+      handleRemovePack(packGroup);
+      return;
+    }
+    setItems((prev) => setPackGroupCount(prev, packGroup, count));
+  };
 
-      if (!matched) {
-        // Completely removed from order -> return full quantity to warehouse
-        returnedItems.push(origItem);
-      } else if (matched.quantity < origItem.quantity) {
-        // Reduced quantity -> return delta to warehouse
-        returnedItems.push({
-          ...origItem,
-          quantity: origItem.quantity - matched.quantity,
-        });
-      }
-    });
-
-    // Check items that were newly added or increased in quantity
-    items.forEach((newItem) => {
-      const newColor = extractColorName(newItem.selectedColor).toLowerCase();
-      const newSize = extractSizeName(newItem.selectedSize).toLowerCase();
-      const matched = (order.items || []).find(
-        (it) =>
-          it.product.id === newItem.product.id &&
-          extractColorName(it.selectedColor).toLowerCase() === newColor &&
-          extractSizeName(it.selectedSize).toLowerCase() === newSize
-      );
-
-      if (!matched) {
-        // Brand new item added -> deduct from warehouse
-        addedItems.push(newItem);
-      } else if (newItem.quantity > matched.quantity) {
-        // Increased quantity -> deduct delta from warehouse
-        addedItems.push({
-          ...newItem,
-          quantity: newItem.quantity - matched.quantity,
-        });
-      }
-    });
-    return { returnedItems, addedItems };
+  const handleRemovePack = (packGroup: string) => {
+    const first = items.find((it) => it.packGroup === packGroup);
+    setItems((prev) => removePackGroup(prev, packGroup));
+    if (first) onShowToast(`Ростовка «${first.packTitle || first.product.title}» удалена из заказа`, 'info');
   };
 
   /** Added goods that are not in stock: the admin sees the list and decides (audit 02.10, finding 6) */
@@ -548,7 +515,84 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                 В заказе не осталось позиций. Заказ будет аннулирован или оформлен полный возврат.
               </div>
             ) : (
-              items.map((item, idx) => {
+              groupOrderLines(items).map((group) => {
+                if (group.kind === 'pack') {
+                  const packName = `${group.item.product.title}, ${group.title} (${group.item.selectedColor})`;
+                  return (
+                    <div
+                      key={group.packGroup}
+                      className="neu-flat rounded-2xl p-3 sm:p-3.5 space-y-2.5 border border-white/70"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <OrderLineThumbImage
+                            line={group.item.product}
+                            catalog={products}
+                            alt={group.item.product.title}
+                            className="w-12 h-12 rounded-xl object-cover shrink-0 neu-inset"
+                          />
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <p className="text-xs sm:text-sm font-extrabold text-[#2D3A4E] leading-snug">
+                              {group.item.product.title}
+                            </p>
+                            <div className="flex items-center gap-2 flex-wrap text-xs">
+                              <span className="neu-inset px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E]">
+                                {group.item.selectedColor}
+                              </span>
+                              <span className="neu-flat px-2 py-0.5 rounded-lg text-[11px] font-extrabold text-accent">
+                                {group.title}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-[#4E5C70] font-medium">
+                              {packGroupCompositionText(group.sizes)} · только целой упаковкой
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePack(group.packGroup)}
+                          className="w-8 h-8 rounded-xl neu-button-danger flex items-center justify-center hover:scale-105 transition-transform cursor-pointer shrink-0"
+                          title="Удалить ростовку из заказа (частичный возврат)"
+                          aria-label={`Вернуть ростовку: ${packName}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="flex items-center justify-between border-t border-[#BAC5D5]/40 pt-2 flex-wrap gap-2">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-xs font-extrabold text-[#2D3A4E]">
+                            {group.total.toLocaleString('ru-RU')} ₽
+                          </span>
+                          <span className="text-[11px] text-[#4E5C70] font-medium">
+                            ({group.packPrice.toLocaleString('ru-RU')} ₽/уп.)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 neu-inset rounded-xl p-1">
+                          <button
+                            type="button"
+                            onClick={() => handlePackCount(group.packGroup, group.packCount - 1)}
+                            className="w-7 h-7 rounded-lg neu-button flex items-center justify-center text-xs font-extrabold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                            aria-label={`Уменьшить число упаковок: ${packName}`}
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="min-w-12 px-1 text-center text-xs font-extrabold text-[#2D3A4E]">
+                            {group.packCount} уп.
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handlePackCount(group.packGroup, group.packCount + 1)}
+                            className="w-7 h-7 rounded-lg neu-button flex items-center justify-center text-xs font-extrabold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                            aria-label={`Увеличить число упаковок: ${packName}`}
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                const { item, index: idx } = group;
                 const itemTotal = linePrice(item) * item.quantity;
                 return (
                   <div
