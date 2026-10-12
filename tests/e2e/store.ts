@@ -31,6 +31,35 @@ const product = (p: {
   };
 };
 
+/** A shirt sold in size packs: «Ростовка 48–52» (4 шт., 4 000 ₽) in both colours and «Ростовка 50–52» (4 шт., 3 501 ₽) in blue */
+function packShirt(id: string, title: string) {
+  const base = product({
+    id,
+    title,
+    category: 'tshirts',
+    categoryLabel: 'Футболки',
+    price: 1500,
+    colors: [
+      { name: 'Синий', hex: '#1F3A93' },
+      { name: 'Красный', hex: '#B3261E' },
+    ],
+    sizes: ['48', '50', '52'],
+    stock: 5,
+  });
+  return {
+    ...base,
+    isPopular: false,
+    saleChannel: 'both' as const,
+    wholesalePrice: 1000,
+    wholesalePackSize: 1,
+    skus: base.skus.map((sku) => (sku.color === 'Красный' && sku.size === '52' ? { ...sku, stock: 0 } : sku)),
+    sizePacks: [
+      { id: 'pack-a', title: 'Ростовка 48–52', sizes: [{ size: '48', qty: 1 }, { size: '50', qty: 2 }, { size: '52', qty: 1 }], price: 4000 },
+      { id: 'pack-b', title: 'Ростовка 50–52', colors: ['Синий'], sizes: [{ size: '50', qty: 1 }, { size: '52', qty: 3 }], price: 3501 },
+    ],
+  };
+}
+
 export const PRODUCTS = {
   linen: product({
     id: 'e2e-linen-shirt',
@@ -280,6 +309,9 @@ export const PRODUCTS = {
     sizes: ['48', '50', '52'],
     stock: 5,
   }), isPopular: false },
+  // «Ростовкой» у покупателя (этап 20): два цвета, две ростовки; у «Красного» нет размера 52 — ростовка в нём недоступна
+  packBuyP: packShirt('e2e-pack-buy-p', 'Футболка в ростовках 390'),
+  packBuyD: packShirt('e2e-pack-buy-d', 'Футболка в ростовках 1280'),
 };
 
 /** A full photo of a product as `product_photos` keeps it (the product holds a preview) */

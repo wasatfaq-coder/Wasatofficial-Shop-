@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { LazyMount } from '../components/LazyMount';
 import { ProductImageZoomModal, QuickOrderModal, SizeCalculatorModal } from '../components/lazyWindows';
 import {
@@ -28,7 +28,7 @@ import { RatingBadge } from '../components/RatingBadge';
 import { NeumorphicImage } from '../components/NeumorphicImage';
 import { AnimatedFavoriteButton } from '../components/AnimatedFavoriteButton';
 import { ProductReviewsSection } from '../components/ProductReviewsSection';
-import { getVariantStock, getProductSKU, getOrderableStock } from '../utils/inventory';
+import { getVariantStock, getProductSKU, getOrderableStock, isHiddenFromSale } from '../utils/inventory';
 import { colorImageIndex } from '../utils/colorPhotos';
 import { formatPackage, formatWeight, productPackageCm, productWeightGrams } from '../utils/productShipping';
 import { colorStock, initialColor, initialSize, maxOrderableForColor, profileSizeFor } from '../utils/variantSelection';
@@ -48,9 +48,20 @@ import { useProductPhotos } from '../utils/useProductPhotos';
 import { useLiveReviews } from '../utils/liveReviews';
 import { QUICK_ORDER_DELIVERY_TITLE, type FreeDeliveryOffer } from '../shared/orderPricing';
 import { freeDeliveryMethodsText } from '../utils/freeDelivery';
-import { sellsRetail, type WholesaleSettings } from '../shared/wholesalePricing';
+import { sellsRetail, sellsWholesale, type WholesaleSettings } from '../shared/wholesalePricing';
 import { wholesaleOfferOf } from '../utils/wholesaleOffer';
-import { ProductWholesaleBlock } from '../components/ProductWholesaleBlock';
+import { ProductWholesaleBlock, type BuyMode } from '../components/ProductWholesaleBlock';
+import {
+  productSizePacks,
+  sameColor,
+  sizePackColors,
+  sizePackCompositionText,
+  sizePackPieces,
+  sizePackPrice,
+  sizePackTitle,
+  type SizePack,
+} from '../shared/sizePacks';
+import { packsLeft } from '../utils/cartLines';
 import { productShareUrl } from '../utils/navigation';
 import { copyToClipboard } from '../utils/clipboard';
 import { useLiveProducts } from '../utils/liveProducts';
@@ -76,6 +87,10 @@ interface ProductDetailScreenProps {
     quantity: number,
     wholesale?: boolean
   ) => boolean | void;
+  /** A size pack («ростовка», stage 20) into the cart: `packs` whole packs of the colour; `false` — nothing added */
+  onAddPackToCart?: (product: Product, packId: string, color: string, packs: number) => boolean;
+  /** The cart's lines: what they already hold is taken off the packs the buyer can still add */
+  cartItems?: CartItem[];
   onSelectProduct?: (product: Product) => void;
   onCompleteOrder?: (orderData: {
     items: CartItem[];
@@ -114,6 +129,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   onSaveMeasurements,
   onToggleFavorite,
   onAddToCartWithOptions,
+  onAddPackToCart,
+  cartItems = [],
   onSelectProduct,
   preorderMode = false,
   onCompleteOrder,
@@ -172,9 +189,19 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   const [quantity, setQuantity] = useState(1);
   // «Оптом» (stages 16–17 of docs/admin-wholesale-plan.md): a product sold only wholesale is always bought wholesale
   const offer = wholesaleOfferOf(product, wholesale);
-  const [buyWholesale, setBuyWholesale] = useState(() => Boolean(offer?.onlyWholesale));
-  const wholesaleMode = Boolean(offer) && (buyWholesale || Boolean(offer?.onlyWholesale));
+  // «Ростовкой» (stage 20): the packs of the product that have a price; only for a product sold wholesale
+  const sizePacks = useMemo(
+    () => (sellsWholesale(product) ? productSizePacks(product).filter((pack) => sizePackPrice(product, pack) !== undefined) : []),
+    [product]
+  );
+  const packsOffered = sizePacks.length > 0;
+  const [buyChoice, setBuyChoice] = useState<BuyMode>(() => (offer?.onlyWholesale ? 'wholesale' : 'retail'));
+  const packMode = packsOffered && buyChoice === 'pack';
+  const wholesaleMode = Boolean(offer) && !packMode && (buyChoice === 'wholesale' || Boolean(offer?.onlyWholesale));
   const step = wholesaleMode && offer ? offer.packSize : 1;
+  // packs mode: the pack picked and how many packs
+  const [selectedPackId, setSelectedPackId] = useState('');
+  const [packCount, setPackCount] = useState(1);
   const [openAccordion, setOpenAccordion] = useState<'shipping' | 'returns' | 'fabric' | null>('fabric');
   const [detailTab, setDetailTab] = useState<'description' | 'specs' | 'care'>('description');
   const [isSizeCalcOpen, setIsSizeCalcOpen] = useState(false);
@@ -198,8 +225,10 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   const hasOffer = Boolean(offer);
   const onlyWholesale = Boolean(offer?.onlyWholesale);
   useEffect(() => {
-    setBuyWholesale(onlyWholesale);
+    setBuyChoice(onlyWholesale ? 'wholesale' : 'retail');
     setQuantity(onlyWholesale && offer ? offer.minPacks : 1);
+    setSelectedPackId('');
+    setPackCount(1);
   }, [product?.id, hasOffer, onlyWholesale]);
 
   // Stock of the chosen size; before a size is chosen — of the whole colour
@@ -254,12 +283,62 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     }
   }, [selectedColor, selectedSize, maxCount]);
 
-  // Switching to «Оптом» starts at the product's minimum (as many packs as there are, if fewer)
-  const changeBuyMode = (toWholesale: boolean) => {
-    setBuyWholesale(toWholesale);
-    const packs = offer ? Math.floor(orderableStock / offer.packSize) : 0;
-    setQuantity(toWholesale && offer ? Math.max(1, Math.min(offer.minPacks, packs)) : 1);
+  // Size packs of the chosen colour (the mode «Ростовкой»): each pack's whole packs left after the cart's lines
+  const packColorNames = sizePacks.flatMap((pack) => sizePackColors(product, pack));
+  const packsForColor = packMode ? sizePacks.filter((pack) => sizePackColors(product, pack).some((c) => sameColor(c, selectedColor))) : [];
+  const packsLeftOf = (pack: SizePack) =>
+    packsLeft(
+      cartItems,
+      { product, selectedColor, packSizes: pack.sizes },
+      (size) => getOrderableStock(product, selectedColor, size, false)
+    );
+  const activePack: SizePack | null =
+    packsForColor.find((pack) => pack.id === selectedPackId) ?? packsForColor.find((pack) => packsLeftOf(pack) > 0) ?? packsForColor[0] ?? null;
+  const packAvailable = activePack ? packsLeftOf(activePack) : 0;
+  const packN = packAvailable === 0 ? 0 : Math.min(Math.max(packCount, 1), packAvailable);
+  const activePackPrice = activePack ? sizePackPrice(product, activePack) : undefined;
+  const activePackPieces = activePack ? sizePackPieces(activePack) : 0;
+  // sizes of the pack the colour has too few of: named under the button
+  const packMissingSizes = activePack ? activePack.sizes.filter((line) => getVariantStock(product, selectedColor, line.size) < line.qty).map((line) => line.size) : [];
+  const packUnavailableText = !activePack
+    ? 'В этом цвете ростовок нет — выберите другой цвет'
+    : packMissingSizes.length > 0
+    ? `Нет ${packMissingSizes.length > 1 ? 'размеров' : 'размера'} ${packMissingSizes.join(', ')}: ростовка недоступна`
+    : isHiddenFromSale(product)
+    ? 'Ростовка недоступна'
+    : 'Весь остаток этой ростовки уже в вашей корзине';
+  const cheapestPack = sizePacks.reduce<number | null>((low, pack) => {
+    const price = sizePackPrice(product, pack);
+    return price !== undefined && (low === null || price < low) ? price : low;
+  }, null);
+  const packFrom = packsOffered && cheapestPack !== null ? { price: cheapestPack, several: sizePacks.length > 1 } : null;
+  /** «N шт. × 1 200 ₽/шт.»; «≈» when the pack price does not split into whole roubles */
+  const perPieceText = (price: number, pieces: number) => {
+    const each = price / pieces;
+    return `${pieces} шт. × ${Number.isInteger(each) ? '' : '≈ '}${Math.round(each).toLocaleString('ru-RU')} ₽/шт.`;
   };
+
+  // The way of buying changes: «Оптом» starts at the product's minimum (as many packs as there are, if fewer); «Ростовкой»
+  // at one pack, in a colour that has packs
+  const changeBuyMode = (mode: BuyMode) => {
+    setBuyChoice(mode);
+    if (mode === 'pack') {
+      setPackCount(1);
+      if (!packColorNames.some((c) => sameColor(c, selectedColor)) && packColorNames[0]) setSelectedColor(packColorNames[0]);
+      return;
+    }
+    const packs = offer ? Math.floor(orderableStock / offer.packSize) : 0;
+    setQuantity(mode === 'wholesale' && offer ? Math.max(1, Math.min(offer.minPacks, packs)) : 1);
+  };
+
+  // One counter for the items, wholesale packs and size packs
+  const counterMax = packMode ? packAvailable : maxCount;
+  const counterValue = packMode ? packN : quantity;
+  const counterInPacks = packMode || step > 1;
+  const setCounter = (value: number) => (packMode ? setPackCount(value) : setQuantity(value));
+  // a size pack has no size and no preorder
+  const needsSize = !packMode && !sizeChosen;
+  const showPreorder = !packMode && isPreorder;
 
 
   const handleNextImage = () => {
@@ -301,6 +380,15 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   };
 
   const handleAddToCart = () => {
+    if (packMode) {
+      if (!activePack || packN === 0 || !onAddPackToCart) return;
+      if (onAddPackToCart(product, activePack.id, selectedColor, packN) === false) return;
+      setIsAdded(true);
+      setTimeout(() => {
+        setIsAdded(false);
+      }, 1000);
+      return;
+    }
     if (!sizeChosen) {
       askForSize();
       return;
@@ -541,76 +629,130 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
 
           {/* Size Choice Tiles with live granular stock availability */}
           <div className="space-y-2 pt-1">
-            <div className="flex items-center justify-between gap-1.5 pb-0.5">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-[#2D3A4E]">{selectedSize ? 'Размер:' : 'Выберите размер'}</span>
-                {selectedSize && <span className="text-[11px] font-extrabold text-accent">{selectedSize}</span>}
+            {!packMode && (
+              <>
+              <div className="flex items-center justify-between gap-1.5 pb-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-[#2D3A4E]">{selectedSize ? 'Размер:' : 'Выберите размер'}</span>
+                  {selectedSize && <span className="text-[11px] font-extrabold text-accent">{selectedSize}</span>}
+                </div>
+                {mySize && (
+                  <span className="text-[11px] font-semibold text-[#4E5C70]">
+                    Ваш размер: <span className="font-extrabold text-accent">{mySize}</span>
+                  </span>
+                )}
               </div>
-              {mySize && (
-                <span className="text-[11px] font-semibold text-[#4E5C70]">
-                  Ваш размер: <span className="font-extrabold text-accent">{mySize}</span>
-                </span>
-              )}
-            </div>
 
-            <div
-              ref={sizesRef}
-              className="flex items-center gap-2 flex-wrap scroll-mt-24"
-              role="radiogroup"
-              aria-label="Размер"
-              aria-describedby={sizeError ? 'product-size-error' : undefined}
-            >
-              {product.sizes.map((sz) => {
-                const isSelected = selectedSize === sz;
-                const szStock = getVariantStock(product, selectedColor, sz);
-                const isOutOfStock = szStock === 0;
+              <div
+                ref={sizesRef}
+                className="flex items-center gap-2 flex-wrap scroll-mt-24"
+                role="radiogroup"
+                aria-label="Размер"
+                aria-describedby={sizeError ? 'product-size-error' : undefined}
+              >
+                {product.sizes.map((sz) => {
+                  const isSelected = selectedSize === sz;
+                  const szStock = getVariantStock(product, selectedColor, sz);
+                  const isOutOfStock = szStock === 0;
 
-                return (
-                  <button
-                    key={sz}
-                    type="button"
-                    role="radio"
-                    aria-checked={isSelected}
-                    onClick={() => {
-                      setSelectedSize(sz);
-                      setSizeError(false);
-                    }}
-                    className={`min-h-[46px] min-w-[54px] px-3 py-1.5 rounded-2xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 relative cursor-pointer ${
-                      // Sold out stays readable (4.5:1, no transparency): struck through and marked «нет»,
-                      // it can still be picked to see the preorder or «закончился» note
-                      isOutOfStock
-                        ? isSelected
-                          ? 'neu-pill-active text-[#4E5C70]'
-                          : 'neu-flat text-[#4E5C70]'
-                        : isSelected
-                        ? 'neu-pill-active'
-                        : 'neu-button text-[#2D3A4E] hover:text-accent'
-                    }`}
-                    aria-label={isOutOfStock ? `${sz}, нет в наличии` : undefined}
-                  >
-                    {sz === mySize && (
-                      <span aria-hidden="true" className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-accent" />
-                    )}
-                    <span className={isOutOfStock ? 'line-through' : undefined}>{sz}</span>
-                    <span
-                      className={`text-[11px] tracking-tight ${
+                  return (
+                    <button
+                      key={sz}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      onClick={() => {
+                        setSelectedSize(sz);
+                        setSizeError(false);
+                      }}
+                      className={`min-h-[46px] min-w-[54px] px-3 py-1.5 rounded-2xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 relative cursor-pointer ${
+                        // Sold out stays readable (4.5:1, no transparency): struck through and marked «нет»,
+                        // it can still be picked to see the preorder or «закончился» note
                         isOutOfStock
-                          ? 'text-[#4E5C70] font-medium'
+                          ? isSelected
+                            ? 'neu-pill-active text-[#4E5C70]'
+                            : 'neu-flat text-[#4E5C70]'
                           : isSelected
-                          ? 'text-accent font-semibold'
-                          : 'text-[#4E5C70] font-medium'
+                          ? 'neu-pill-active'
+                          : 'neu-button text-[#2D3A4E] hover:text-accent'
                       }`}
+                      aria-label={isOutOfStock ? `${sz}, нет в наличии` : undefined}
                     >
-                      {isOutOfStock ? 'нет' : `${szStock} шт.`}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            {sizeError && (
-              <p id="product-size-error" role="alert" className="text-xs font-bold text-danger">
-                Выберите размер, чтобы добавить товар в корзину
-              </p>
+                      {sz === mySize && (
+                        <span aria-hidden="true" className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-accent" />
+                      )}
+                      <span className={isOutOfStock ? 'line-through' : undefined}>{sz}</span>
+                      <span
+                        className={`text-[11px] tracking-tight ${
+                          isOutOfStock
+                            ? 'text-[#4E5C70] font-medium'
+                            : isSelected
+                            ? 'text-accent font-semibold'
+                            : 'text-[#4E5C70] font-medium'
+                        }`}
+                      >
+                        {isOutOfStock ? 'нет' : `${szStock} шт.`}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {sizeError && (
+                <p id="product-size-error" role="alert" className="text-xs font-bold text-danger">
+                  Выберите размер, чтобы добавить товар в корзину
+                </p>
+              )}
+              </>
+            )}
+            {packMode && (
+              <>
+                <div className="flex items-center justify-between gap-1.5 pb-0.5">
+                  <span className="text-xs font-semibold text-[#2D3A4E]">
+                    {packsForColor.length > 1 ? 'Выберите ростовку' : 'Ростовка'}
+                  </span>
+                  {activePack && <span className="text-[11px] font-extrabold text-accent">{activePackPieces} шт. в упаковке</span>}
+                </div>
+                {packsForColor.length > 0 ? (
+                  <div role="radiogroup" aria-label="Ростовка" className="grid grid-cols-1 gap-2">
+                    {packsForColor.map((pack) => {
+                      const isSelected = activePack?.id === pack.id;
+                      const left = packsLeftOf(pack);
+                      const price = sizePackPrice(product, pack);
+                      return (
+                        <button
+                          key={pack.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={isSelected}
+                          onClick={() => setSelectedPackId(pack.id)}
+                          className={`min-h-11 w-full px-3 py-2 rounded-2xl text-left flex items-center justify-between gap-3 cursor-pointer transition-all ${
+                            left === 0
+                              ? isSelected
+                                ? 'neu-pill-active text-[#4E5C70]'
+                                : 'neu-flat text-[#4E5C70]'
+                              : isSelected
+                              ? 'neu-pill-active'
+                              : 'neu-button text-[#2D3A4E] hover:text-accent'
+                          }`}
+                        >
+                          <span className="min-w-0">
+                            <span className="block text-xs font-extrabold">{sizePackTitle(pack)}</span>
+                            <span className="block text-xs text-[#4E5C70]">{sizePackCompositionText(pack)}</span>
+                          </span>
+                          <span className="shrink-0 text-right">
+                            {price !== undefined && (
+                              <span className="block text-xs font-extrabold whitespace-nowrap">{price.toLocaleString('ru-RU')} ₽</span>
+                            )}
+                            <span className="block text-[11px] font-medium text-[#4E5C70]">{left > 0 ? `${left} уп.` : 'нет'}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs font-bold text-[#4E5C70]">{packUnavailableText}</p>
+                )}
+              </>
             )}
             {sizeChart && (
               <div className="space-y-2">
@@ -639,18 +781,33 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           {/* Price on one line, the stock badge below it: side by side they wrapped «2 990 ₽» on a phone */}
           <div className="flex flex-col items-start gap-2">
             <div className="flex items-baseline gap-x-2 flex-wrap">
+              {packMode ? (
+                <>
+                  <span className="text-2xl font-extrabold text-[#2D3A4E] whitespace-nowrap">
+                    {activePackPrice === undefined && packFrom ? 'от ' : ''}
+                    {(activePackPrice ?? packFrom?.price ?? 0).toLocaleString('ru-RU')} ₽
+                    <span className="text-sm font-bold text-[#4E5C70]">/уп.</span>
+                  </span>
+                  {activePack && activePackPrice !== undefined && (
+                    <span className="text-xs font-semibold text-[#4E5C70] whitespace-nowrap">
+                      {perPieceText(activePackPrice, activePackPieces)}
+                    </span>
+                  )}
+                </>
+              ) : (
               <span className="text-2xl font-extrabold text-[#2D3A4E] whitespace-nowrap">
                 {(wholesaleMode && offer ? (offer.packSize > 1 ? offer.packPrice : offer.unitPrice) : product.price).toLocaleString('ru-RU')} ₽
                 {wholesaleMode && offer && (
                   <span className="text-sm font-bold text-[#4E5C70]">{offer.packSize > 1 ? '/уп. оптом' : '/шт. оптом'}</span>
                 )}
               </span>
-              {wholesaleMode && offer && offer.packSize > 1 && (
+              )}
+              {!packMode && wholesaleMode && offer && offer.packSize > 1 && (
                 <span className="text-xs font-semibold text-[#4E5C70] whitespace-nowrap">
                   {offer.packSize} шт. × {offer.unitPrice.toLocaleString('ru-RU')} ₽
                 </span>
               )}
-              {!wholesaleMode && shownOldPrice(product) !== null && (
+              {!packMode && !wholesaleMode && shownOldPrice(product) !== null && (
                 <span className="text-sm text-[#4E5C70] line-through whitespace-nowrap">
                   {shownOldPrice(product)!.toLocaleString('ru-RU')} ₽
                 </span>
@@ -658,7 +815,12 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             </div>
 
             {/* Dynamic SKU Stock Badge */}
-            {currentStock > 2 ? (
+            {packMode ? (
+              <div className="neu-flat text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-[#4E5C70] border border-white/60">
+                <span className={`w-1.5 h-1.5 rounded-full ${packAvailable > 0 ? 'bg-accent' : 'bg-[#BAC5D5]'}`} />
+                <span>Доступно упаковок: {packAvailable}</span>
+              </div>
+            ) : currentStock > 2 ? (
               <div className="neu-flat text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-[#4E5C70] border border-white/60">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
                 <span>В наличии: {currentStock} шт.</span>
@@ -685,13 +847,14 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             <ProductWholesaleBlock
               offer={offer}
               retailPrice={product.price}
-              wholesaleMode={wholesaleMode}
+              mode={packMode ? 'pack' : wholesaleMode ? 'wholesale' : 'retail'}
               onChangeMode={changeBuyMode}
+              packFrom={packFrom}
             />
           )}
 
           {/* Granular SKU Info helper message if variant is out of stock */}
-          {sizeChosen && currentStock === 0 && (
+          {!packMode && sizeChosen && currentStock === 0 && (
             <div className="p-2.5 rounded-xl neu-inset border border-white/60 text-[11px] text-[#4E5C70] flex items-center gap-2">
               <Info className="w-4 h-4 text-accent shrink-0" />
               {isPreorder ? (
@@ -714,29 +877,29 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             {/* Quantity Counter */}
             <div className="neu-inset rounded-full p-1 flex items-center gap-2">
               <button
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                disabled={quantity <= 1 || maxCount === 0}
+                onClick={() => setCounter(Math.max(1, counterValue - 1))}
+                disabled={counterValue <= 1 || counterMax === 0}
                 className={`w-9 h-9 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] transition-opacity cursor-pointer ${
-                  quantity <= 1 || maxCount === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:text-accent'
+                  counterValue <= 1 || counterMax === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:text-accent'
                 }`}
-                aria-label="Уменьшить количество"
+                aria-label={packMode ? 'Уменьшить число упаковок' : 'Уменьшить количество'}
               >
                 <Minus className="w-4 h-4 stroke-[2.5]" />
               </button>
               <span
-                className={`text-sm font-bold text-[#2D3A4E] text-center ${step > 1 ? 'min-w-6 whitespace-nowrap' : 'w-6'}`}
+                className={`text-sm font-bold text-[#2D3A4E] text-center ${counterInPacks ? 'min-w-6 whitespace-nowrap' : 'w-6'}`}
                 aria-live="polite"
               >
-                {maxCount === 0 ? 0 : quantity}
-                {step > 1 && ' уп.'}
+                {counterMax === 0 ? 0 : counterValue}
+                {counterInPacks && ' уп.'}
               </span>
               <button
-                onClick={() => setQuantity(Math.min(maxCount, quantity + 1))}
-                disabled={quantity >= maxCount || maxCount === 0}
+                onClick={() => setCounter(Math.min(counterMax, counterValue + 1))}
+                disabled={counterValue >= counterMax || counterMax === 0}
                 className={`w-9 h-9 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] transition-opacity cursor-pointer ${
-                  quantity >= maxCount || maxCount === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:text-accent'
+                  counterValue >= counterMax || counterMax === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:text-accent'
                 }`}
-                aria-label="Увеличить количество"
+                aria-label={packMode ? 'Увеличить число упаковок' : 'Увеличить количество'}
               >
                 <Plus className="w-4 h-4 stroke-[2.5]" />
               </button>
@@ -746,19 +909,19 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             <button
               ref={addButtonRef}
               onClick={handleAddToCart}
-              disabled={isAdded || maxCount === 0}
+              disabled={isAdded || counterMax === 0}
               className={`flex-1 basis-44 py-3.5 px-4 rounded-2xl font-bold text-sm whitespace-nowrap flex items-center justify-center gap-2.5 transition-all duration-300 cursor-pointer ${
-                maxCount === 0
+                counterMax === 0
                   ? 'neu-button-disabled'
                   : isAdded
                   ? 'neu-button-success'
                   : 'neu-button-accent'
               }`}
             >
-              {maxCount === 0 ? (
+              {counterMax === 0 ? (
                 <>
                   <X className="w-4 h-4" />
-                  <span>{orderableStock > 0 ? 'Нет целой упаковки' : 'Нет в наличии'}</span>
+                  <span>{!packMode && orderableStock > 0 ? 'Нет целой упаковки' : 'Нет в наличии'}</span>
                 </>
               ) : isAdded ? (
                 <>
@@ -768,15 +931,22 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               ) : (
                 <>
                   <ShoppingBag className="w-4 h-4 stroke-[2]" />
-                  <span>{!sizeChosen ? 'Выберите размер' : isPreorder ? 'Предзаказ' : 'В корзину'}</span>
+                  <span>{needsSize ? 'Выберите размер' : showPreorder ? 'Предзаказ' : 'В корзину'}</span>
                 </>
               )}
             </button>
           </div>
 
+          {/* A size pack that cannot be taken: the missing sizes are named right under the button */}
+          {packMode && counterMax === 0 && (
+            <p role="status" className="text-xs font-bold text-danger">
+              {packUnavailableText}
+            </p>
+          )}
+
           {/* Fast 1-Click Order Button: retail only — a «Только оптом» product goes through the cart (packs, the
               volume discount) */}
-          {orderableStock > 0 && sellsRetail(product) && !wholesaleMode && (
+          {orderableStock > 0 && sellsRetail(product) && !wholesaleMode && !packMode && (
             <button
               type="button"
               onClick={() => (sizeChosen ? setIsQuickOrderOpen(true) : askForSize())}
@@ -1040,18 +1210,35 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
       </LazyMount>
 
       {/* Quick 1-Click Order Modal */}
-      {!addButtonInView && maxCount > 0 && (
+      {!addButtonInView && counterMax > 0 && (
         <div className="lg:hidden fixed inset-x-0 bottom-[78px] z-30 px-3 pointer-events-none">
           <div className="max-w-md md:max-w-lg mx-auto neu-flat rounded-2xl p-2 flex items-center gap-3 pointer-events-auto">
             <div className="min-w-0 pl-1.5">
               <p className="text-base font-extrabold text-[#2D3A4E] leading-tight whitespace-nowrap">
-                {(wholesaleMode && offer ? (offer.packSize > 1 ? offer.packPrice : offer.unitPrice) : product.price).toLocaleString('ru-RU')} ₽
-                {wholesaleMode && offer && (
-                  <span className="text-xs font-bold text-[#4E5C70]">{offer.packSize > 1 ? '/уп.' : '/шт.'}</span>
+                {(packMode
+                  ? activePackPrice ?? 0
+                  : wholesaleMode && offer
+                  ? offer.packSize > 1
+                    ? offer.packPrice
+                    : offer.unitPrice
+                  : product.price
+                ).toLocaleString('ru-RU')}{' '}
+                ₽
+                {packMode ? (
+                  <span className="text-xs font-bold text-[#4E5C70]">/уп.</span>
+                ) : (
+                  wholesaleMode &&
+                  offer && <span className="text-xs font-bold text-[#4E5C70]">{offer.packSize > 1 ? '/уп.' : '/шт.'}</span>
                 )}
               </p>
               <p className="text-xs text-[#4E5C70] leading-tight">
-                {selectedSize ? `Размер ${selectedSize}` : 'Размер не выбран'}
+                {packMode
+                  ? activePack
+                    ? sizePackTitle(activePack)
+                    : 'Ростовка'
+                  : selectedSize
+                  ? `Размер ${selectedSize}`
+                  : 'Размер не выбран'}
               </p>
             </div>
             <button
@@ -1063,7 +1250,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               }`}
             >
               {isAdded ? <Check className="w-4 h-4 stroke-[3]" aria-hidden="true" /> : <ShoppingBag className="w-4 h-4" aria-hidden="true" />}
-              <span>{isAdded ? 'Добавлено' : !sizeChosen ? 'Выберите размер' : isPreorder ? 'Предзаказ' : 'В корзину'}</span>
+              <span>{isAdded ? 'Добавлено' : needsSize ? 'Выберите размер' : showPreorder ? 'Предзаказ' : 'В корзину'}</span>
             </button>
           </div>
         </div>

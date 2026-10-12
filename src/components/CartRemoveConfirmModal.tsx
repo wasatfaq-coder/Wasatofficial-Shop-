@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { CartItem } from '../types';
 import { useDialogA11y } from '../utils/useDialogA11y';
 import { linePrice } from '../shared/orderLine';
+import { packLineInfo } from '../utils/cartPackLine';
 
 interface CartRemoveConfirmModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
   onMoveToFavorites,
 }) => {
   const dialog = useDialogA11y(isOpen && Boolean(item), onClose);
+  const pack = item ? packLineInfo(item) : null;
   return (
     <AnimatePresence>
       {isOpen && item && (
@@ -73,9 +75,18 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
             />
             <div className="flex-1 min-w-0">
               <p className="font-extrabold text-xs text-[#2D3A4E] truncate">{item.product.title}</p>
-              <p className="text-xs text-[#4E5C70]">
-                {item.selectedColor} • {item.selectedSize} ({item.quantity} шт.)
-              </p>
+              {pack ? (
+                <>
+                  <p className="text-xs text-[#4E5C70]">
+                    {item.selectedColor} • {pack.title} ({pack.packs} уп.)
+                  </p>
+                  <p className="text-xs text-[#4E5C70]">{pack.composition}</p>
+                </>
+              ) : (
+                <p className="text-xs text-[#4E5C70]">
+                  {item.selectedColor} • {item.selectedSize} ({item.quantity} шт.)
+                </p>
+              )}
               <p className="text-xs font-extrabold text-accent pt-0.5">
                 {(linePrice(item) * item.quantity).toLocaleString('ru-RU')} ₽
               </p>
