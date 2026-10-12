@@ -1,7 +1,7 @@
 // Size packs in an order (stage 19): the pack price split into lines, lines back into one pack
 import { describe, expect, test } from 'bun:test';
 import { expandPackLines, groupOrderLines, orderPackCounts, removePackGroup, setPackGroupCount, splitPackPrice, type CartPackLine } from '../../src/shared/packLines';
-import { variantStockDiff } from '../../src/utils/orderAdjustment';
+import { refundedLinesText, variantStockDiff } from '../../src/utils/orderAdjustment';
 import { calcSubtotal, toPricingLine } from '../../src/shared/orderPricing';
 import type { CartItem, Product } from '../../src/types';
 
@@ -116,11 +116,14 @@ describe('variantStockDiff', () => {
     const lines = expandPackLines([packLine(10_002, 1)]);
     const { returnedItems, addedItems } = variantStockDiff(lines, []);
     expect(addedItems).toEqual([]);
-    expect(returnedItems.map((l) => [l.selectedSize, l.quantity, l.unitPrice])).toEqual([
+    expect(returnedItems.map((l) => [l.selectedSize, l.quantity, l.refundSum])).toEqual([
       ['48', 1, 2501],
-      ['50', 2, 2501],
+      ['50', 2, 5001],
       ['52', 1, 2500],
     ]);
+    // the refund text adds up to the pack price, not a rouble more
+    expect(refundedLinesText(returnedItems)).toContain('× 2 — 5');
+    expect(refundedLinesText(returnedItems).replace(/\s/g, '')).toContain('×2—5001₽');
   });
   test('a preorder line is a separate variant', () => {
     const plain: CartItem = { id: 'a', product, selectedColor: 'Синий', selectedSize: '50', quantity: 1 };
