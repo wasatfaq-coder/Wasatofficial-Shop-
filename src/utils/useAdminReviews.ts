@@ -9,6 +9,8 @@ export interface AdminReviewsData {
   loaded: boolean;
   /** The reviews could not be read */
   failed: boolean;
+  /** The decisions could not be read (shown as none): nothing may be written from such a list */
+  decisionsFailed: boolean;
 }
 
 /**
@@ -19,6 +21,7 @@ export function useAdminReviews(enabled = true): AdminReviewsData {
   const [reviews, setReviews] = React.useState<StoredReview[] | null>(null);
   const [decisions, setDecisions] = React.useState<ReviewModeration[] | null>(null);
   const [failed, setFailed] = React.useState(false);
+  const [decisionsFailed, setDecisionsFailed] = React.useState(false);
   React.useEffect(() => {
     if (!enabled) return;
     const unsubReviews = subscribeToReviews(
@@ -33,11 +36,21 @@ export function useAdminReviews(enabled = true): AdminReviewsData {
       }
     );
     // the rules of the collection not published yet: no decisions rather than an empty screen
-    const unsubDecisions = subscribeToReviewModeration(setDecisions, undefined, () => setDecisions([]));
+    const unsubDecisions = subscribeToReviewModeration(
+      (list) => {
+        setDecisions(list);
+        setDecisionsFailed(false);
+      },
+      undefined,
+      () => {
+        setDecisions([]);
+        setDecisionsFailed(true);
+      }
+    );
     return () => {
       unsubReviews();
       unsubDecisions();
     };
   }, [enabled]);
-  return { reviews: reviews ?? [], decisions: decisions ?? [], loaded: reviews !== null && decisions !== null, failed };
+  return { reviews: reviews ?? [], decisions: decisions ?? [], loaded: reviews !== null && decisions !== null, failed, decisionsFailed };
 }

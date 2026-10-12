@@ -293,9 +293,19 @@ service cloud.firestore {
       return !('updatedAt' in data) || data.updatedAt == request.time;
     }
 
+    // «Скрыт» от покупателей (решение владельца 12.10): автор пишет текст новой версии, поэтому прежнее решение устарело —
+    // отзыв ждёт, если включена проверка или он был отклонён (reviewVisibility в src/utils/reviewModeration.ts).
+    // Поле пока необязательно: открытая вкладка прежнего сайта пишет отзыв без него; обязательным станет вторым PR
+    function isAuthorReviewHidden(data, reviewId) {
+      let decision = /databases/$(database)/documents/review_moderation/$(reviewId);
+      return !('hidden' in data)
+        || data.hidden == (reviewPremoderationOn()
+          || (exists(decision) && get(decision).data.get('status', '') == 'rejected'));
+    }
+
     function isValidReview(data, reviewId) {
       return data.keys().hasOnly(['id', 'productId', 'uid', 'authorName', 'rating', 'comment', 'pros', 'cons',
-          'sizePurchased', 'colorPurchased', 'date', 'createdAt', 'orderId', 'updatedAt'])
+          'sizePurchased', 'colorPurchased', 'date', 'createdAt', 'orderId', 'updatedAt', 'hidden'])
         && data.id == reviewId
         && data.uid == request.auth.uid
         && data.productId is string
@@ -312,6 +322,7 @@ service cloud.firestore {
         && isOptionalText(data, 'sizePurchased', 40)
         && isOptionalText(data, 'colorPurchased', 60)
         && isReviewStamp(data)
+        && isAuthorReviewHidden(data, reviewId)
         && (!('orderId' in data) || isReceivedOrderOf(data.orderId, request.auth.uid));
     }
 
@@ -327,6 +338,10 @@ service cloud.firestore {
         && isValidReview(request.resource.data, reviewId)
         && request.resource.data.createdAt == resource.data.createdAt
         && (!reviewPremoderationOn() || 'updatedAt' in request.resource.data);
+      // сессия администратора меняет в отзыве только отметку «скрыт» (useReviewHiddenSync): текст и версия — автора
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hidden'])
+        && request.resource.data.hidden is bool;
       allow delete: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
     }
 

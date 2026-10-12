@@ -6,6 +6,9 @@ import { deleteDoc, emulatorUidOf, readDoc, writeDocs } from '../emulator';
 import { ADMIN, PRODUCTS } from '../store';
 
 test('отзыв по полученному заказу: покупатель пишет, владелец отклоняет и публикует', async ({ page, secondPage, browser, baseURL, phone, signIn }, info) => {
+  // three decisions of the owner in a row, each followed by the owner's session marking the review (it waits 2 s for the
+  // lists to settle, then writes in a transaction): longer than the usual 30 s on the CI runner
+  test.setTimeout(60_000);
   const run = info.project.name;
   const buyer = { sub: `review-${run}`, email: `vera-${run}@example.ru`, name: `Вера Отзыв ${run}` };
   // phone and desktop run at the same time on one database: each its own product, order and review
@@ -76,6 +79,8 @@ test('отзыв по полученному заказу: покупатель 
   await reject.getByRole('button', { name: 'Отклонить', exact: true }).click();
   await expect.poll(async () => (await readDoc(`review_moderation/${reviewId}`))?.status).toBe('rejected');
   await expect(card).toContainText('Отклонён');
+  // the owner's session hides it from customers' reads (owner's decision 12.10)
+  await expect.poll(async () => (await readDoc(`reviews/${reviewId}`))?.hidden).toBe(true);
 
   // the author sees the reason, nobody else sees the review
   await page.goto(`/product/${item.id}`);
@@ -91,6 +96,13 @@ test('отзыв по полученному заказу: покупатель 
   // published again
   await card.getByRole('button', { name: /^Опубликовать отзыв/ }).click();
   await expect.poll(async () => (await readDoc(`review_moderation/${reviewId}`))?.status).toBe('published');
+  await expect.poll(async () => (await readDoc(`reviews/${reviewId}`))?.hidden).toBe(false);
   await expect(page.getByText(`Отзыв отклонён: ${reason}`)).toBeHidden();
   await expect(page.getByRole('paragraph').filter({ hasText: comment })).toBeVisible();
+
+  // rejected once more in the same session: the mark follows again (review 12.10 — a value written before is not skipped)
+  await card.getByRole('button', { name: /^Отклонить отзыв/ }).click();
+  await owner.getByRole('dialog', { name: 'Отклонить отзыв?' }).getByRole('textbox', { name: /^Причина/ }).fill(reason);
+  await owner.getByRole('dialog', { name: 'Отклонить отзыв?' }).getByRole('button', { name: 'Отклонить', exact: true }).click();
+  await expect.poll(async () => (await readDoc(`reviews/${reviewId}`))?.hidden).toBe(true);
 });

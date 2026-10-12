@@ -10,7 +10,9 @@ import {
   filterAdminReviews,
 } from '../../src/utils/adminReviews';
 import {
+  authorReviewHidden,
   decisionsById,
+  reviewHiddenChanges,
   isReceivedOrderOf,
   moderationNote,
   reviewableOrders,
@@ -186,5 +188,52 @@ describe('«Отзывы» in the admin panel', () => {
   test('a decision is never older than the review it is about', () => {
     expect(decisionTime({ updatedAt: 5000 }, 1000)).toBe(5000);
     expect(decisionTime({}, 1000)).toBe(1000);
+  });
+});
+
+// Owner's decision 12.10: «скрыт» in the review itself — the rules give customers only open reviews
+describe('the hidden mark of a review', () => {
+  test('the author\'s new text waits when checking is on or the review was rejected', () => {
+    expect(authorReviewHidden(undefined, false)).toBe(false);
+    expect(authorReviewHidden(decision('p1_a'), false)).toBe(false);
+    expect(authorReviewHidden(decision('p1_a', { status: 'rejected' }), false)).toBe(true);
+    expect(authorReviewHidden(undefined, true)).toBe(true);
+    expect(authorReviewHidden(decision('p1_a'), true)).toBe(true);
+  });
+
+  test('the mark the author writes is what the site shows of the new version', () => {
+    // a saved text is a new version: any earlier decision is out of date
+    const saved = review('a', { updatedAt: 5000 });
+    for (const premoderation of [false, true]) {
+      for (const d of [undefined, decision('p1_a', { reviewedVersion: 1 }), decision('p1_a', { status: 'rejected', reviewedVersion: 1 })]) {
+        const shown = reviewVisibility(saved, d, premoderation) === 'published';
+        expect(authorReviewHidden(d, premoderation)).toBe(!shown);
+      }
+    }
+  });
+
+  test('the admin\'s session writes only reviews whose mark differs from what customers should see', () => {
+    const reviews = [
+      review('old'), // before 12.10: no mark
+      review('ok', { hidden: false }),
+      review('bad', { hidden: false, updatedAt: 1000 }),
+      review('back', { hidden: true, updatedAt: 1000 }),
+    ];
+    const decisions = decisionsById([
+      decision('p1_bad', { status: 'rejected', reviewedVersion: 1000 }),
+      decision('p1_back', { status: 'published', reviewedVersion: 1000 }),
+    ]);
+    expect(reviewHiddenChanges(reviews, decisions, false)).toEqual([
+      { id: 'p1_old', hidden: false },
+      { id: 'p1_bad', hidden: true },
+      { id: 'p1_back', hidden: false },
+    ]);
+    // checking on: a review without a decision waits
+    expect(reviewHiddenChanges(reviews, decisions, true)).toEqual([
+      { id: 'p1_old', hidden: true },
+      { id: 'p1_ok', hidden: true },
+      { id: 'p1_bad', hidden: true },
+      { id: 'p1_back', hidden: false },
+    ]);
   });
 });

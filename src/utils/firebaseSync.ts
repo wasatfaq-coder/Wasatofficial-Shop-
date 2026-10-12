@@ -30,6 +30,7 @@ import { CartItem, Product, ProductSKU, ReviewModeration, ReviewVote, StoredRevi
 import { paymentLogEntry, receiptMessageText } from './paymentDetails';
 import { DEFAULT_STOREFRONT_SETTINGS, generateDefaultSKUs, inStockAfterReturn, inStockAfterStockChange, stockMovementId } from './inventory';
 import { reviewVoteDocId, withoutCollectionReviews } from './reviews';
+import { authorReviewHidden } from './reviewModeration';
 import { splitBannerImages, type BannerImagesDoc } from './bannerImages';
 import { previewsMoved, splitProductPreviews, withProductPreviews, type ProductPreviewsDoc } from './productPreviews';
 import type { LegalDocId, LegalTexts } from './legalDocs';
@@ -1864,15 +1865,24 @@ export async function saveServerConfigToFirestore(config: ServerConfig) {
  * 4b. REVIEWS: `reviews/{productId}_{uid}` (the author edits only their own) and
  * `review_votes/{reviewId}_{uid}` (one «Полезно» per person). Not stored inside products.
  */
-/** Every review, or one product's (`productId`: the customer reads only the reviews of the product page, stage 4) */
+/**
+ * Every review, or one product's (`productId`: the customer reads only the reviews of the product page, stage 4).
+ * `openOnly` — what a customer may read: reviews with `hidden == false` (owner's decision 12.10); their own hidden ones
+ * come from `subscribeToOwnReviews`. The admin reads all
+ */
 export function subscribeToReviews(
   onUpdate: (reviews: StoredReview[]) => void,
   productId?: string,
-  onError?: (error: unknown) => void
+  onError?: (error: unknown) => void,
+  openOnly = false
 ) {
+  const constraints = [
+    ...(productId ? [where('productId', '==', productId)] : []),
+    ...(openOnly ? [where('hidden', '==', false)] : []),
+  ];
   const ref = collection(db, 'reviews');
   return onSnapshot(
-    productId ? query(ref, where('productId', '==', productId)) : ref,
+    constraints.length > 0 ? query(ref, ...constraints) : ref,
     (snap) => onUpdate(snap.docs.map(storedReviewOf)),
     (error) => {
       logSubscriptionError('Reviews', error);
@@ -1945,10 +1955,51 @@ export function loadBannerImages(banner: Pick<BannerSlide, 'id' | 'imageKey'>): 
   return pending;
 }
 
-/** The author saves a review; `updatedAt` is the server's time (a changed review is checked again, `reviewVisibility`) */
-export async function saveReviewToFirestore(review: StoredReview) {
-  const { updatedAt: _stamp, ...fields } = review;
-  await setDoc(doc(db, 'reviews', review.id), { ...sanitizeForFirestore(fields), updatedAt: serverTimestamp() });
+/**
+ * The author saves a review; `updatedAt` is the server's time (a changed review is checked again, `reviewVisibility`).
+ * `hidden` (owner's decision 12.10) comes from the database in the same transaction — «Проверять отзывы» and the owner's
+ * decision on this review — the rules compare it with the same documents, not with the browser's copy of the settings
+ */
+export async function saveReviewToFirestore(review: StoredReview, targetDb: Firestore = db) {
+  const { updatedAt: _stamp, hidden: _hidden, ...fields } = review;
+  await runTransaction(targetDb, async (tx) => {
+    const settings = await tx.get(doc(targetDb, 'settings', 'storefront'));
+    const decision = await tx.get(doc(targetDb, 'review_moderation', review.id));
+    const hidden = authorReviewHidden(
+      decision.exists() ? (decision.data() as ReviewModeration) : undefined,
+      settings.exists() && settings.data().reviewPremoderation === true
+    );
+    tx.set(doc(targetDb, 'reviews', review.id), { ...sanitizeForFirestore(fields), hidden, updatedAt: serverTimestamp() });
+  });
+}
+
+/**
+ * The `hidden` mark of reviews (the admin's session, `useReviewHiddenSync`): only this field, the author's text and its
+ * version (`updatedAt`) stay. One transaction per review, written only while the review is still the version the mark
+ * was worked out for: an author's save in between already carries its own mark (review 12.10). Throws when refused
+ */
+export async function saveReviewHiddenMarks(entries: { id: string; hidden: boolean; version?: number }[]): Promise<void> {
+  try {
+    for (const entry of entries) {
+      await runTransaction(db, async (tx) => {
+        const ref = doc(db, 'reviews', entry.id);
+        const snap = await tx.get(ref);
+        if (!snap.exists()) return;
+        const stamp = snap.data().updatedAt;
+        const version = stamp instanceof Timestamp ? stamp.toMillis() : undefined;
+        if (version !== entry.version) return;
+        tx.update(ref, { hidden: entry.hidden });
+      });
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, 'reviews');
+  }
+}
+
+/** «Проверять отзывы перед публикацией» as stored now (the admin's session checks it before writing `hidden`) */
+export async function loadReviewPremoderation(): Promise<boolean> {
+  const snap = await getDoc(doc(db, 'settings', 'storefront'));
+  return snap.exists() && snap.data().reviewPremoderation === true;
 }
 
 export async function deleteReviewFromFirestore(reviewId: string) {

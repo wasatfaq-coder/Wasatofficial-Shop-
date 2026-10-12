@@ -35,10 +35,16 @@ function start(id: string) {
   if (entries.has(id)) return;
   const entry: Entry = { unsub: () => {} };
   entries.set(id, entry);
-  const unsubReviews = subscribeToReviews((reviews) => {
-    entry.reviews = reviews;
-    notify();
-  }, id);
+  // a customer reads only open reviews (owner's decision 12.10); their own hidden one comes with useCatalog's own reviews
+  const unsubReviews = subscribeToReviews(
+    (reviews) => {
+      entry.reviews = reviews;
+      notify();
+    },
+    id,
+    undefined,
+    true
+  );
   const unsubVotes = subscribeToReviewVotes((votes) => {
     entry.votes = votes;
     notify();

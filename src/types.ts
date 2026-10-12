@@ -120,6 +120,12 @@ export interface StoredReview {
   orderId?: string;
   /** Server time of the author's last save (ms in memory); a moderation decision older than this is out of date */
   updatedAt?: number;
+  /**
+   * Customers do not see it (owner's decision 12.10): rejected, or waiting for the check. The rules give customers only
+   * reviews with `hidden == false` (and the author their own); the author writes it with the review, the admin's session
+   * keeps it in step with the decisions (`reviewHiddenChanges`). Reviews before 12.10 have none until that session
+   */
+  hidden?: boolean;
 }
 
 /**

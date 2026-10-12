@@ -36,6 +36,7 @@ import {
   confirmOrderReceipt,
   handOverGuestData,
   returnCancelledOrderStock,
+  saveReviewToFirestore,
   submitPaymentReceipt,
 } from './.generated/firebase-sync.mjs';
 
@@ -1329,6 +1330,54 @@ describe('review moderation and purchase check', () => {
     await assertSucceeds(setDoc(doc(customer('bob'), 'reviews/p1_bob'), { ...review('bob'), updatedAt: serverTimestamp() }));
     await assertSucceeds(setDoc(doc(owner(), 'review_moderation/p1_bob'), decision({ status: 'published', reviewedVersion: 1 })));
     await assertFails(setDoc(doc(owner(), 'review_moderation/p1_bob'), decision({ status: 'published', reviewedVersion: 'v1' })));
+  });
+});
+
+// Owner's decision 12.10: «скрыт» in the review itself — the author writes it by the same rule the site shows reviews
+// (checking on or a rejected review waits), the admin's session changes only it. Optional for now (open tabs of the
+// previous site); the read rule and the required field — the second PR
+describe('review hidden mark', () => {
+  const seed = (path, data) => env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), path), data));
+  const decision = (status) => ({ productId: 'p1', status, at: Date.now() });
+
+  test('the author writes «open» when nothing hides the review, and cannot hide or open it otherwise', async () => {
+    const db = customer('alice');
+    await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { hidden: true })));
+    await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { hidden: 'no' })));
+    await assertSucceeds(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { hidden: false })));
+    // still optional: the review of an open tab of the previous site
+    await assertSucceeds(setDoc(doc(db, 'reviews/p1_alice'), review('alice')));
+  });
+
+  test('with checking on, or after a rejection, the author\'s new text is hidden until the owner decides', async () => {
+    await seed('review_moderation/p1_alice', decision('rejected'));
+    await assertFails(setDoc(doc(customer('alice'), 'reviews/p1_alice'), review('alice', { hidden: false })));
+    await assertSucceeds(setDoc(doc(customer('alice'), 'reviews/p1_alice'), review('alice', { hidden: true })));
+    // a published decision of an earlier text: open, unless checking is on
+    await seed('review_moderation/p1_bob', decision('published'));
+    await assertSucceeds(setDoc(doc(customer('bob'), 'reviews/p1_bob'), review('bob', { hidden: false })));
+    await seed('settings/storefront', { reviewPremoderation: true });
+    const stamp = { updatedAt: serverTimestamp() };
+    await assertFails(setDoc(doc(customer('bob'), 'reviews/p1_bob'), { ...review('bob', { hidden: false }), ...stamp }));
+    await assertSucceeds(setDoc(doc(customer('bob'), 'reviews/p1_bob'), { ...review('bob', { hidden: true }), ...stamp }));
+  });
+
+  test('the site\'s own save (saveReviewToFirestore) reads the switch and the decision and passes', async () => {
+    const db = customer('carol');
+    await saveReviewToFirestore(review('carol'), db);
+    assert.equal((await getDoc(doc(db, 'reviews/p1_carol'))).data().hidden, false);
+    await seed('review_moderation/p1_carol', decision('rejected'));
+    await saveReviewToFirestore(review('carol', { comment: 'Исправил' }), db);
+    assert.equal((await getDoc(doc(db, 'reviews/p1_carol'))).data().hidden, true);
+  });
+
+  test('the admin changes only the mark; nobody else does', async () => {
+    await seed('reviews/p1_alice', review('alice', { hidden: false }));
+    await assertSucceeds(updateDoc(doc(owner(), 'reviews/p1_alice'), { hidden: true }));
+    await assertFails(updateDoc(doc(owner(), 'reviews/p1_alice'), { hidden: false, comment: 'Правка магазина' }));
+    await assertFails(updateDoc(doc(owner(), 'reviews/p1_alice'), { hidden: 'нет' }));
+    await assertFails(updateDoc(doc(customer('bob'), 'reviews/p1_alice'), { hidden: false }));
+    await assertFails(updateDoc(doc(guest(), 'reviews/p1_alice'), { hidden: false }));
   });
 });
 
