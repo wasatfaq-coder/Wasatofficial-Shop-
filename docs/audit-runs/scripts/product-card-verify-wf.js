@@ -20,7 +20,7 @@ const verifyPrompt = (id, lens) => 'Проверка находки аудита
 phase('Проверка')
 const checked = await pipeline(args.ids, async (id) => {
   const votes = await parallel(Object.keys(LENSES).map(l => () => {
-    const opts = { label: 'проверка:' + l + ':' + id, phase: 'Проверка', schema: S_VERDICT, model: 'opus' }
+    const opts = { label: 'проверка:' + l + ':' + id, phase: 'Проверка', schema: S_VERDICT, model: 'haiku' }
     if (l === 'код') opts.agentType = 'ecc:code-reviewer'
     return agent(verifyPrompt(id, l), opts)
   }))

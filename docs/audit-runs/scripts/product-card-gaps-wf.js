@@ -32,12 +32,12 @@ const verifyPrompt = (f, lens) => 'Проверка находки аудита 
   + 'Верни verdict, свою severity (P0–P3) и reason с цитатой или шагами. Отвечай по-русски.'
 
 phase('Критик')
-const crit = await agent(criticPrompt(), { label: 'критик полноты', phase: 'Критик', schema: S_CRIT, model: 'opus' })
+const crit = await agent(criticPrompt(), { label: 'критик полноты', phase: 'Критик', schema: S_CRIT, model: 'haiku' })
 const probes = crit ? crit.gaps.slice(0, 6) : []
 if (crit && crit.gaps.length > 6) log('Критик предложил ' + crit.gaps.length + ' пробелов; взяты первые 6: ' + crit.gaps.slice(6).map(g => g.area).join('; '))
 
 phase('Зонды')
-const probeRes = await parallel(probes.map((p, i) => () => agent(probePrompt(p), { label: 'зонд:' + (i + 1), phase: 'Зонды', schema: S_FIND, model: 'opus' })))
+const probeRes = await parallel(probes.map((p, i) => () => agent(probePrompt(p), { label: 'зонд:' + (i + 1), phase: 'Зонды', schema: S_FIND, model: 'haiku' })))
 const probeFindings = []
 probeRes.forEach((r, i) => {
   if (!r) { log('ПОТЕРЯНО: зонд ' + (i + 1) + ' не вернул результат'); return }
@@ -45,7 +45,7 @@ probeRes.forEach((r, i) => {
 })
 
 const checked = await pipeline(probeFindings, async (f) => {
-  const votes = await parallel(Object.keys(LENSES).map(l => () => agent(verifyPrompt(f, l), { label: 'проверка-зонд:' + l + ':' + f.id, phase: 'Зонды', schema: S_VERDICT, model: 'opus' })))
+  const votes = await parallel(Object.keys(LENSES).map(l => () => agent(verifyPrompt(f, l), { label: 'проверка-зонд:' + l + ':' + f.id, phase: 'Зонды', schema: S_VERDICT, model: 'haiku' })))
   const vs = votes.filter(Boolean)
   const refute = vs.filter(v => v.verdict === 'опровергнуто').length
   const status = vs.length < 2 ? 'неполно' : refute === 0 ? 'выжило' : refute === 1 ? 'спорно' : 'отброшено'
