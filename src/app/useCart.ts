@@ -131,7 +131,8 @@ export function useCart({
       addToast(`Товар "${product.title}" временно закончился`, 'error');
       return false;
     }
-    if (!sellsRetail(product) && !sellsWholesale(product)) {
+    // «Только оптом» is bought in whole packs from the minimum: the product page shows the pack, the minimum and the steps
+    if (!sellsRetail(product)) {
       onOpenProduct(product);
       return false;
     }
