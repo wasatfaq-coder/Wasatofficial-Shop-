@@ -30,7 +30,7 @@ export function ProfileMeasurementsCard({ profile, form }: { profile: UserProfil
     <>
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1">
-          <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase">
+          <h3 className="text-xs font-bold text-text-primary tracking-wider uppercase">
             Мерки профиля и лекало РФ
           </h3>
           <button
@@ -45,32 +45,32 @@ export function ProfileMeasurementsCard({ profile, form }: { profile: UserProfil
               }
               setIsEditingMeasurements(true);
             }}
-            className="neu-button px-2.5 py-1 rounded-xl text-xs font-bold text-accent flex items-center gap-1.5 cursor-pointer hover:text-[#2D3A4E] transition-all"
+            className="min-h-8 neu-button px-3 py-1.5 rounded-xl text-xs font-bold text-accent flex items-center gap-1.5 cursor-pointer hover:text-text-primary transition-all shrink-0"
           >
-            <Pencil className="w-3.5 h-3.5" />
+            <Pencil className="w-3.5 h-3.5 shrink-0" />
             <span>Изменить</span>
           </button>
         </div>
 
         {profile.bodyMeasurements ? (
-        <div className="neu-inset rounded-3xl p-4 space-y-3.5 border border-white/60">
+        <div className="neu-inset rounded-3xl p-4 space-y-3.5 ">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-10 h-10 rounded-2xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
                 <Ruler className="w-5 h-5 stroke-[2.2]" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-extrabold text-[#2D3A4E] truncate">
+                <p className="text-xs font-extrabold text-text-primary truncate">
                   Российское размерное лекало
                 </p>
-                <p className="text-xs text-[#4E5C70] font-medium truncate">
+                <p className="text-xs text-text-secondary font-medium truncate">
                   {profileRussianPattern.recommendedFit}
                 </p>
               </div>
             </div>
 
             <div className="text-right shrink-0">
-              <span className="text-[11px] font-bold text-[#4E5C70] block">Стандартный размер</span>
+              <span className="text-[11px] font-bold text-text-secondary block">Стандартный размер</span>
               <span className="text-sm font-extrabold text-accent neu-inset px-2 py-0.5 rounded-lg inline-block">
                 {profileRussianPattern.topSizeLabel}
               </span>
@@ -79,67 +79,67 @@ export function ProfileMeasurementsCard({ profile, form }: { profile: UserProfil
 
           {/* Key Russian Pattern Metrics */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <div className="neu-flat rounded-2xl p-2.5 text-center border border-white/70">
-              <span className="text-[11px] text-[#4E5C70] font-medium block">Верхняя одежда</span>
-              <span className="text-xs font-extrabold text-[#2D3A4E]">
+            <div className="neu-flat rounded-2xl p-2.5 text-center ">
+              <span className="text-[11px] text-text-secondary font-medium block">Верхняя одежда</span>
+              <span className="text-xs font-extrabold text-text-primary">
                 {profileRussianPattern.topSizeLabel}
               </span>
-              <span className="text-[11px] text-[#4E5C70] block mt-0.5">
+              <span className="text-[11px] text-text-secondary block mt-0.5">
                 ПОГ: {Math.round((profile.bodyMeasurements?.chest ?? 104) / 2)} см
               </span>
             </div>
 
-            <div className="neu-flat rounded-2xl p-2.5 text-center border border-white/70">
-              <span className="text-[11px] text-[#4E5C70] font-medium block">Брюки / Джинсы</span>
-              <span className="text-xs font-extrabold text-[#2D3A4E]">
+            <div className="neu-flat rounded-2xl p-2.5 text-center ">
+              <span className="text-[11px] text-text-secondary font-medium block">Брюки / Джинсы</span>
+              <span className="text-xs font-extrabold text-text-primary">
                 {profileRussianPattern.bottomSizeLabel}
               </span>
-              <span className="text-[11px] text-[#4E5C70] block mt-0.5">
+              <span className="text-[11px] text-text-secondary block mt-0.5">
                 Пояс: {profile.bodyMeasurements?.waist ?? 95} см
               </span>
             </div>
 
-            <div className="neu-flat rounded-2xl p-2.5 text-center border border-white/70">
-              <span className="text-[11px] text-[#4E5C70] font-medium block">Ростовка РФ</span>
-              <span className="text-xs font-extrabold text-[#2D3A4E]">
+            <div className="neu-flat rounded-2xl p-2.5 text-center ">
+              <span className="text-[11px] text-text-secondary font-medium block">Ростовка РФ</span>
+              <span className="text-xs font-extrabold text-text-primary">
                 {profileRussianPattern.heightGroupNumber}-я группа
               </span>
-              <span className="text-[11px] text-[#4E5C70] block mt-0.5">
+              <span className="text-[11px] text-text-secondary block mt-0.5">
                 {profileRussianPattern.heightRange}
               </span>
             </div>
 
-            <div className="neu-flat rounded-2xl p-2.5 text-center border border-white/70">
-              <span className="text-[11px] text-[#4E5C70] font-medium block">Полнота / ИМТ</span>
-              <span className="text-xs font-extrabold text-[#2D3A4E]">
+            <div className="neu-flat rounded-2xl p-2.5 text-center ">
+              <span className="text-[11px] text-text-secondary font-medium block">Полнота / ИМТ</span>
+              <span className="text-xs font-extrabold text-text-primary">
                 {profileRussianPattern.fullnessGroup}-я полнота
               </span>
-              <span className="text-[11px] text-[#4E5C70] block mt-0.5">
+              <span className="text-[11px] text-text-secondary block mt-0.5">
                 ИМТ: {profileRussianPattern.bmi}
               </span>
             </div>
           </div>
 
           {/* Measurements summary strip */}
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-[#BAC5D5]/40 text-[11px] font-bold text-[#4E5C70]">
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 neu-divider-t text-[11px] font-bold text-text-secondary">
             <div>
               Мерки тела:{' '}
-              <span className="text-[#2D3A4E] font-extrabold">
+              <span className="text-text-primary font-extrabold">
                 {profile.bodyMeasurements?.height ?? 184} см • {profile.bodyMeasurements?.weight ?? 94} кг
               </span>
             </div>
             <div>
               ОГ / ОТ / ОБ:{' '}
-              <span className="text-[#2D3A4E] font-extrabold">
+              <span className="text-text-primary font-extrabold">
                 {profile.bodyMeasurements?.chest ?? 104} • {profile.bodyMeasurements?.waist ?? 95} • {profile.bodyMeasurements?.hips ?? 98} см
               </span>
             </div>
           </div>
         </div>
         ) : (
-          <div className="neu-inset rounded-3xl p-4 border border-white/60 text-center space-y-1">
-            <p className="text-xs font-bold text-[#2D3A4E]">Мерки еще не указаны</p>
-            <p className="text-xs text-[#4E5C70]">
+          <div className="neu-inset rounded-3xl p-4 text-center space-y-1">
+            <p className="text-xs font-bold text-text-primary">Мерки еще не указаны</p>
+            <p className="text-xs text-text-secondary">
               Нажмите «Изменить» и укажите рост, вес и обхваты — подберем размер по российским лекалам.
             </p>
           </div>

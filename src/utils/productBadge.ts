@@ -14,7 +14,7 @@ const SALE = /sale|скидк|распрод|^-?\d+\s*%/i;
 export function photoBadgeClass(badge: string): string {
   if (GOLD.test(badge)) return 'neu-photo-badge-gold';
   if (SALE.test(badge.trim())) return 'neu-photo-badge-sale';
-  return 'neu-photo-badge text-[#2D3A4E]';
+  return 'neu-photo-badge text-text-primary';
 }
 
 /** A badge that only states a discount: «-15%», «−20 %» */

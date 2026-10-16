@@ -21,15 +21,17 @@ import {
   QUICK_ORDER_DELIVERY_TITLE,
   calcOrderTotals,
   getAvailableDeliveryMethods,
+  promoSignInProblem,
   toPricingLine,
   validatePromo,
   type PricingLine,
 } from '../../src/shared/orderPricing';
-import { priceCartLines, wholesaleLineProblems } from '../../src/shared/wholesalePricing';
-import { extractColorName, extractSizeName, generateDefaultSKUs, isHiddenFromSale, skuCodeForLine } from '../../src/utils/inventory';
+import { goesBrokenPack, isBrokenPackLine, priceCartLines, wholesaleLineProblems } from '../../src/shared/wholesalePricing';
+import { extractColorName, extractSizeName, generateDefaultSKUs, getOrderableStock, isHiddenFromSale, skuCodeForLine } from '../../src/utils/inventory';
 import { orderStockMovements, STOCK_MOVEMENTS_COLLECTION } from '../../src/shared/stockMovements';
 import { deliveryKindOfMethod, estimatedDeliveryOf, initialStatusLog, type DeliveryKind } from '../../src/shared/orderFlow';
 import { getDefaultHistorySteps, getSynchronizedDeliveryStages } from '../../src/utils/deliveryStages';
+import { buildOrderCostDoc, ORDER_COSTS_COLLECTION } from '../../src/utils/orderCosts';
 
 export type OrderErrorCode = 'invalid-argument' | 'failed-precondition' | 'not-found';
 
@@ -46,6 +48,7 @@ export class OrderError extends Error {
 
 const MAX_ITEMS = 50;
 const MAX_QUANTITY = 99;
+const ORDER_ID_RE = /^[A-Za-z0-9-]{1,40}$/;
 
 function requireString(value: unknown, field: string, maxLength: number, required = true): string {
   if (value === undefined || value === null || value === '') {
@@ -83,14 +86,20 @@ export function parsePlaceOrderRequest(data: unknown): PlaceOrderRequest {
       size: requireString(item.size, 'размер', 64, false),
       quantity,
       ...(item.wholesale === true ? { wholesale: true } : {}),
+      ...(item.broken === true ? { broken: true } : {}),
       ...(typeof item.packId === 'string' && item.packId.trim() ? { packId: requireString(item.packId, 'ростовка', 64) } : {}),
     };
   });
 
   const contact = (raw.contact || {}) as Record<string, unknown>;
   const promoCode = requireString(raw.promoCode, 'промокод', 64, false).toUpperCase();
+  const orderId = requireString(raw.orderId, 'номер заказа', 40, false);
+  if (orderId && !ORDER_ID_RE.test(orderId)) {
+    throw new OrderError('invalid-argument', 'Некорректное поле: номер заказа');
+  }
 
   return {
+    ...(orderId ? { orderId } : {}),
     items,
     deliveryMethodId: requireString(raw.deliveryMethodId, 'способ доставки', 64),
     deliveryAddress: requireString(raw.deliveryAddress, 'адрес доставки', 1000),
@@ -135,13 +144,14 @@ function stripUndefined<T>(value: T): T {
 
 /**
  * Places an order atomically. `customerUid` is the caller's Firebase Auth uid,
- * or null for guest checkout.
+ * or null for guest checkout. `signedInWithGoogle` defaults to `Boolean(customerUid)` when not explicitly passed.
  */
 export async function placeOrderCore(
   db: Firestore,
   request: PlaceOrderRequest,
   customerUid: string | null,
-  now: Date = new Date()
+  now: Date = new Date(),
+  signedInWithGoogle: boolean = Boolean(customerUid)
 ): Promise<Order> {
   const isQuickOrder = request.deliveryMethodId === QUICK_ORDER_DELIVERY_ID;
   if (isQuickOrder && request.promoCode) {
@@ -150,16 +160,41 @@ export async function placeOrderCore(
 
   const productIds = [...new Set(request.items.map((i) => i.productId))];
   const productRefs = productIds.map((id) => db.collection('products').doc(id));
+  const costRefs = productIds.map((id) => db.collection('product_costs').doc(id));
 
   return db.runTransaction(async (tx) => {
     // ---- Reads (all reads must happen before any write) ----
+    if (request.orderId && ORDER_ID_RE.test(request.orderId)) {
+      const existingSnap = await tx.get(db.collection('orders').doc(request.orderId));
+      if (existingSnap.exists) {
+        const existingOrder = existingSnap.data() as Order;
+        if (customerUid && existingOrder.customerUid === customerUid) {
+          const { updatedAt: _u, ...cleanOrder } = existingOrder as Order & { updatedAt?: unknown };
+          return cleanOrder as Order;
+        }
+      }
+    }
+
     const productSnaps = await tx.getAll(...productRefs);
+    const costSnaps = await tx.getAll(...costRefs);
     const products = new Map<string, { ref: DocumentReference; data: Product }>();
+    const productCosts = new Map<string, number>();
     productSnaps.forEach((snap, idx) => {
       if (!snap.exists) {
         throw new OrderError('not-found', `Товар ${productIds[idx]} больше не продается`);
       }
-      products.set(snap.id, { ref: productRefs[idx], data: { ...(snap.data() as Product), id: snap.id } });
+      const data = { ...(snap.data() as Product), id: snap.id };
+      products.set(snap.id, { ref: productRefs[idx], data });
+      if (typeof data.costPrice === 'number' && Number.isFinite(data.costPrice) && data.costPrice >= 0) {
+        productCosts.set(snap.id, data.costPrice);
+      }
+    });
+    costSnaps.forEach((snap, idx) => {
+      if (!snap.exists) return;
+      const rawCost = snap.data()?.costPrice;
+      if (typeof rawCost === 'number' && Number.isFinite(rawCost) && rawCost >= 0) {
+        productCosts.set(productIds[idx], rawCost);
+      }
     });
 
     const settingsSnap = await tx.get(db.collection('settings').doc('storefront'));
@@ -176,10 +211,13 @@ export async function placeOrderCore(
         throw new OrderError('not-found', 'Промокод не найден');
       }
       const doc = promoSnap.docs[0];
-      promo = { ref: doc.ref, data: doc.data() as PromoCode };
+      promo = { ref: doc.ref, data: { ...(doc.data() as PromoCode), id: doc.id } };
     }
 
-    let orderRef = db.collection('orders').doc(randomOrderId());
+    let orderRef =
+      request.orderId && ORDER_ID_RE.test(request.orderId)
+        ? db.collection('orders').doc(request.orderId)
+        : db.collection('orders').doc(randomOrderId());
     for (let attempt = 0; (await tx.get(orderRef)).exists; attempt++) {
       if (attempt >= 3) throw new Error('Could not allocate a unique order id');
       orderRef = db.collection('orders').doc(randomOrderId());
@@ -220,20 +258,36 @@ export async function placeOrderCore(
         });
         return;
       }
+      if (item.broken === true) {
+        if (!goesBrokenPack(product, item.color, item.size, (sz) => getOrderableStock(product, item.color, sz, false))) {
+          throw new OrderError(
+            'failed-precondition',
+            `«${product.title}» (${item.color}, ${item.size}): больше не продаётся как разбитая упаковка`
+          );
+        }
+      }
       cartItems.push({
         id: `cart-${idx + 1}`,
         product: toOrderLineProduct(product),
         selectedColor: item.color,
         selectedSize: item.size,
         quantity: item.quantity,
-        ...(item.wholesale === true ? { priceKind: 'wholesale' as const } : {}),
+        ...(item.broken === true
+          ? { priceKind: 'broken' as const }
+          : item.wholesale === true
+          ? { priceKind: 'wholesale' as const }
+          : {}),
       });
     });
 
+    const effectiveWholesale = settings?.brokenPackDiscount
+      ? { ...settings.wholesale, brokenPackDiscount: settings.brokenPackDiscount }
+      : settings?.wholesale;
+
     // Prices of the lines: retail — the product's price, wholesale — the wholesale price minus the volume step of «Опт»,
-    // a size pack — its own price (the same priceCartLines as the cart); the browser never sends a price
-    const pricedItems = priceCartLines(cartItems, settings?.wholesale);
-    const wholesaleProblems = [...wholesaleLineProblems(pricedItems), ...packLineProblems(pricedItems)];
+    // broken pack — wholesale minus brokenPackDiscount, a size pack — its own price; the browser never sends a price
+    const pricedItems = priceCartLines(cartItems, effectiveWholesale);
+    const wholesaleProblems = [...wholesaleLineProblems(pricedItems, effectiveWholesale), ...packLineProblems(pricedItems)];
     if (wholesaleProblems.length > 0) {
       throw new OrderError('failed-precondition', wholesaleProblems.join('; '));
     }
@@ -248,14 +302,14 @@ export async function placeOrderCore(
     }
     cartItems.splice(0, cartItems.length, ...orderLines);
     lines.push(...cartItems.map(toPricingLine));
-    // a size pack is never a preorder (owner's decision 12.10): its sizes must all be in stock
-    const packKeys = new Set<string>();
+    // a size pack or a broken pack line is never a preorder (owner's decision 12.10): its sizes must be in stock
+    const noPreorderKeys = new Set<string>();
     for (const line of cartItems) {
       const perProduct = requestedBySku.get(line.product.id) ?? new Map<string, number>();
       const key = skuKey(line.selectedColor, line.selectedSize);
       perProduct.set(key, (perProduct.get(key) ?? 0) + line.quantity);
       requestedBySku.set(line.product.id, perProduct);
-      if (line.packGroup) packKeys.add(`${line.product.id}|${key}`);
+      if (line.packGroup || isBrokenPackLine(line)) noPreorderKeys.add(`${line.product.id}|${key}`);
     }
 
     const stockUpdates: { ref: DocumentReference; skus: ProductSKU[] }[] = [];
@@ -272,7 +326,7 @@ export async function placeOrderCore(
         if (!sku) {
           throw new OrderError('invalid-argument', `Вариант «${product.title}» (${color}, ${size}) не найден`);
         }
-        if (preorderMode && sku.stock <= 0 && !packKeys.has(`${productId}|${key}`)) {
+        if (preorderMode && sku.stock <= 0 && !noPreorderKeys.has(`${productId}|${key}`)) {
           preorderKeys.add(`${productId}|${key}`);
           continue;
         }
@@ -294,6 +348,8 @@ export async function placeOrderCore(
 
     // ---- Promo & delivery ----
     if (promo) {
+      const signInProblem = promoSignInProblem(promo.data, signedInWithGoogle);
+      if (signInProblem) throw new OrderError('failed-precondition', signInProblem);
       const promoError = validatePromo(promo.data, lines, now.getTime());
       if (promoError) throw new OrderError('failed-precondition', promoError);
     }
@@ -372,11 +428,21 @@ export async function placeOrderCore(
       const commissionPercent = promo.data.partnerCommissionPercent || 0;
       tx.update(promo.ref, stripUndefined({
         usedCount: (promo.data.usedCount || 0) + 1,
+        lastOrderId: order.id,
         generatedRevenue: (promo.data.generatedRevenue || 0) + totals.total,
         commissionEarned: promo.data.isReferral
           ? (promo.data.commissionEarned || 0) + Math.round((totals.total * commissionPercent) / 100)
           : promo.data.commissionEarned,
       }));
+      tx.set(db.collection('promo_uses').doc(order.id), {
+        orderId: order.id,
+        promoId: promo.ref.id,
+        createdAt: now.toISOString(),
+      });
+    }
+    const costDoc = buildOrderCostDoc(order, productCosts, now);
+    if (costDoc) {
+      tx.create(db.collection(ORDER_COSTS_COLLECTION).doc(order.id), stripUndefined(costDoc));
     }
 
     return order;

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Tag, Ticket, Clock, Check, Sparkles, ArrowRight, AlertCircle, Copy, Share2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { PromoCode, CartItem, AppliedPromoInfo } from '../types';
+import { m, AnimatePresence } from 'motion/react';
+import { PromoCode, CartItem, AppliedPromoInfo, StoreCategory } from '../types';
 import { copyToClipboard } from '../utils/clipboard';
 import { NotConfigured } from './NotConfigured';
 import { useDialogA11y } from '../utils/useDialogA11y';
@@ -16,6 +16,7 @@ interface PromoModalProps {
   cartSubtotal?: number;
   cartItems?: CartItem[];
   promos?: PromoCode[];
+  categories?: StoreCategory[];
 }
 
 export const PromoModal: React.FC<PromoModalProps> = ({
@@ -27,6 +28,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
   cartSubtotal = 0,
   cartItems = [],
   promos = [],
+  categories = [],
 }) => {
   const dialog = useDialogA11y(isOpen, onClose);
   const [customInput, setCustomInput] = useState('');
@@ -37,6 +39,8 @@ export const PromoModal: React.FC<PromoModalProps> = ({
   const activePromos = promos.filter((p) => isPromoListed(p));
 
   const getCategoryName = (catId: string) => {
+    const found = categories.find((c) => c.id === catId);
+    if (found) return found.name;
     switch (catId) {
       case 'shirts':
         return 'Рубашки';
@@ -124,7 +128,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
+        <m.div
           key="promo-modal-overlay"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -135,10 +139,10 @@ export const PromoModal: React.FC<PromoModalProps> = ({
           {/* Backdrop */}
           <div
             onClick={onClose}
-            className="fixed inset-0 bg-[#2D3A4E]/40 backdrop-blur-xs cursor-pointer"
+            className="fixed inset-0 bg-text-primary/40 backdrop-blur-xs cursor-pointer"
           />
 
-          <motion.div
+          <m.div
             ref={dialog.ref}
             {...dialog.props}
             key="promo-modal"
@@ -146,24 +150,24 @@ export const PromoModal: React.FC<PromoModalProps> = ({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.94, opacity: 0, y: 12 }}
             transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-            className="relative w-full max-w-md neu-modal rounded-3xl p-4 sm:p-5 border border-white/80 space-y-4 max-h-[92vh] overflow-y-auto no-scrollbar z-10"
+            className="relative w-full max-w-md neu-modal rounded-3xl p-4 sm:p-5 space-y-4 max-h-[92vh] overflow-y-auto no-scrollbar z-10"
           >
           {/* Header */}
-          <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#BAC5D5]/50">
+          <div className="flex items-center justify-between gap-2 pb-2.5 neu-divider-b">
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
               <div className="w-9 h-9 rounded-2xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
-                <Ticket className="w-5 h-5 stroke-[2.2]" />
+                <Ticket className="w-5 h-5 stroke-[2.2] shrink-0" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                  <h3 id={dialog.titleId} className="text-base font-extrabold text-[#2D3A4E] leading-tight whitespace-nowrap">
+                  <h3 id={dialog.titleId} className="text-base font-extrabold text-text-primary leading-tight whitespace-nowrap">
                     Промокоды и купоны
                   </h3>
                   <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full neu-inset text-accent whitespace-nowrap shrink-0">
                     {activePromos.length} активных
                   </span>
                 </div>
-                <p className="text-xs text-[#4E5C70] font-medium truncate">
+                <p className="text-xs text-text-secondary font-medium truncate">
                   Скидка учитывается в заказе
                 </p>
               </div>
@@ -171,16 +175,16 @@ export const PromoModal: React.FC<PromoModalProps> = ({
 
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all shrink-0 cursor-pointer"
+              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary hover:text-text-primary transition-all shrink-0 cursor-pointer"
               aria-label="Закрыть"
             >
-              <X className="w-4 h-4 stroke-[2.5]" />
+              <X className="w-4 h-4 stroke-[2.5] shrink-0" />
             </button>
           </div>
 
           {/* Error Banner if any */}
           {errorMessage && (
-            <div className="neu-inset rounded-2xl p-3 border border-danger/40 text-danger text-xs flex items-center gap-2 animate-in fade-in duration-200">
+            <div className="neu-tone-danger rounded-2xl p-3 text-xs flex items-center gap-2 animate-in fade-in duration-200">
               <AlertCircle className="w-4 h-4 text-danger shrink-0" />
               <span className="font-semibold">{errorMessage}</span>
             </div>
@@ -188,7 +192,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
 
           {/* Active Applied Promo Status (If any applied) */}
           {appliedPromo && (
-            <div className="neu-inset-deep rounded-2xl p-3.5 border border-accent/40 flex items-center justify-between">
+            <div className="neu-pill-active rounded-2xl p-3.5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl neu-fill-accent text-white font-extrabold text-xs flex items-center justify-center shrink-0">
                   {appliedPromo.discountType === 'fixed'
@@ -204,7 +208,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                       Применен
                     </span>
                   </div>
-                  <p className="text-xs text-[#4E5C70] font-medium">
+                  <p className="text-xs text-text-secondary font-medium">
                     {appliedPromo.discountType === 'fixed'
                       ? `Скидка ${appliedPromo.discountValue?.toLocaleString('ru-RU')} ₽ учтена`
                       : `Скидка ${appliedPromo.discountPercent}% учтена в расчете заказа`}
@@ -215,7 +219,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
               <button
                 type="button"
                 onClick={onRemovePromo}
-                className="text-[11px] font-bold text-[#4E5C70] hover:text-danger underline px-2 py-1 rounded-lg transition-colors cursor-pointer"
+                className="min-h-8 text-[11px] font-bold text-text-secondary hover:text-danger px-3 py-1 rounded-xl neu-button transition-colors cursor-pointer shrink-0"
               >
                 Отменить
               </button>
@@ -224,7 +228,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
 
           {/* List of Coupons */}
           <div className="space-y-3 pt-1">
-            <h4 className="text-xs font-bold text-[#2D3A4E] uppercase tracking-wider flex items-center gap-1.5">
+            <h4 className="text-xs font-bold text-text-primary uppercase tracking-wider flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-accent" />
               <span>Доступные купоны со скидкой</span>
             </h4>
@@ -246,10 +250,10 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                 return (
                   <div
                     key={coupon.id}
-                    className={`rounded-2xl p-4 transition-all duration-200 relative overflow-hidden border ${
+                    className={`rounded-2xl p-4 transition-all duration-200 relative overflow-hidden ${
                       isCurrentActive
-                        ? 'neu-pill-active border-transparent'
-                        : 'neu-flat border-white/80'
+                        ? 'neu-pill-active'
+                        : 'neu-flat'
                     }`}
                   >
                     {/* Badge top right */}
@@ -262,7 +266,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
 
                     <div className="flex items-start gap-3">
                       {/* Left Discount Box */}
-                      <div className="w-12 h-12 rounded-2xl neu-inset flex flex-col items-center justify-center shrink-0 border border-white/60">
+                      <div className="w-12 h-12 rounded-2xl neu-inset flex flex-col items-center justify-center shrink-0">
                         <span
                           className={`text-xs font-extrabold leading-none ${
                             isFixed ? 'text-warning text-[11px]' : 'text-accent'
@@ -270,7 +274,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                         >
                           {discountLabel}
                         </span>
-                        <span className="text-[11px] font-bold text-[#4E5C70] uppercase mt-0.5">
+                        <span className="text-[11px] font-bold text-text-secondary uppercase mt-0.5">
                           скидка
                         </span>
                       </div>
@@ -278,13 +282,13 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                       {/* Content */}
                       <div className="flex-1 min-w-0 pr-12">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-extrabold text-[#2D3A4E] tracking-wide font-mono neu-inset px-2 py-0.5 rounded-lg border border-white/40">
+                          <span className="text-xs font-extrabold text-text-primary tracking-wide font-mono neu-inset px-2 py-0.5 rounded-lg">
                             {coupon.code}
                           </span>
                           <button
                             type="button"
                             onClick={(e) => handleCopyCode(coupon.code, e)}
-                            className="min-w-8 h-8 -my-2 px-1 justify-center text-[#4E5C70] hover:text-accent text-[11px] flex items-center gap-0.5 font-bold transition-colors cursor-pointer"
+                            className="min-w-8 h-8 -my-2 px-1 justify-center text-text-secondary hover:text-accent text-[11px] flex items-center gap-0.5 font-bold transition-colors cursor-pointer"
                             title="Скопировать код"
                             aria-label={`Скопировать код ${coupon.code}`}
                           >
@@ -296,10 +300,10 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                           </button>
                         </div>
 
-                        <p className="text-xs font-bold text-[#2D3A4E] mt-1">
+                        <p className="text-xs font-bold text-text-primary mt-1">
                           {coupon.title}
                         </p>
-                        <p className="text-xs text-[#4E5C70] leading-snug mt-0.5">
+                        <p className="text-xs text-text-secondary leading-snug mt-0.5">
                           {coupon.description}
                         </p>
 
@@ -311,7 +315,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                         )}
 
                         {/* Rules / Min Order badge */}
-                        <div className="flex items-center gap-2 flex-wrap pt-2 text-[11px] text-[#4E5C70]">
+                        <div className="flex items-center gap-2 flex-wrap pt-2 text-[11px] text-text-secondary">
                           {coupon.minOrderAmount ? (
                             <span
                               className={`neu-inset px-2 py-0.5 rounded-md font-semibold ${
@@ -321,7 +325,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                               От {coupon.minOrderAmount.toLocaleString('ru-RU')} ₽
                             </span>
                           ) : (
-                            <span className="text-[#4E5C70]">Без мин. чека</span>
+                            <span className="text-text-secondary">Без мин. чека</span>
                           )}
 
                           {promoExpiryDate(coupon.expiresAt) && (
@@ -335,13 +339,13 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                     </div>
 
                     {/* Action Button */}
-                    <div className="mt-3 pt-2.5 border-t border-[#BAC5D5]/40 flex items-center justify-between gap-2">
+                    <div className="mt-3 pt-2.5 neu-divider-t flex items-center justify-between gap-2">
                       {isMinOrderNotMet ? (
                         <span className="text-[11px] text-warning font-bold">
                           Добавьте еще товаров до {coupon.minOrderAmount?.toLocaleString('ru-RU')} ₽
                         </span>
                       ) : (
-                        <span className="text-[11px] text-[#4E5C70]">
+                        <span className="text-[11px] text-text-secondary">
                           {isCurrentActive ? 'Купон уже применен' : 'Готов к применению'}
                         </span>
                       )}
@@ -350,21 +354,21 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                         type="button"
                         onClick={() => handleApply(coupon.code)}
                         disabled={isCurrentActive}
-                        className={`py-1.5 px-4 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1 cursor-pointer ${
+                        className={`min-h-8 py-1.5 px-4 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1 cursor-pointer shrink-0 ${
                           isCurrentActive
                             ? 'neu-inset text-success opacity-80 cursor-default'
-                            : 'neu-button text-accent hover:text-[#2D3A4E] hover:scale-105'
+                            : 'neu-button text-accent hover:text-text-primary hover:scale-105'
                         }`}
                       >
                         {isCurrentActive ? (
                           <>
-                            <Check className="w-3.5 h-3.5 text-success" />
+                            <Check className="w-3.5 h-3.5 text-success shrink-0" />
                             <span>Применен</span>
                           </>
                         ) : (
                           <>
                             <span>Применить</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
+                            <ArrowRight className="w-3.5 h-3.5 shrink-0" />
                           </>
                         )}
                       </button>
@@ -376,8 +380,8 @@ export const PromoModal: React.FC<PromoModalProps> = ({
           </div>
 
           {/* Manual Input Form */}
-          <div className="pt-2 border-t border-[#BAC5D5]/50 space-y-2">
-            <label htmlFor="promo-code-input" className="text-[11px] font-extrabold text-[#2D3A4E] block">
+          <div className="pt-2 neu-divider-t space-y-2">
+            <label htmlFor="promo-code-input" className="text-[11px] font-extrabold text-text-primary block">
               Есть личный промокод? Введите его:
             </label>
             <form onSubmit={handleCustomSubmit} className="flex items-center gap-2">
@@ -391,7 +395,7 @@ export const PromoModal: React.FC<PromoModalProps> = ({
                 value={customInput}
                 onChange={(e) => setCustomInput(e.target.value.toUpperCase())}
                 placeholder="Код промокода"
-                className="flex-1 min-w-0 px-3.5 py-2.5 neu-inset rounded-2xl text-xs uppercase placeholder:normal-case font-bold text-[#2D3A4E] placeholder:text-[#56647A]"
+                className="flex-1 min-w-0 px-3.5 py-2.5 neu-inset rounded-2xl text-xs uppercase placeholder:normal-case font-bold text-text-primary placeholder:text-text-muted"
               />
               <button
                 type="submit"
@@ -404,8 +408,8 @@ export const PromoModal: React.FC<PromoModalProps> = ({
               </button>
             </form>
           </div>
-        </motion.div>
-      </motion.div>
+        </m.div>
+      </m.div>
     )}
   </AnimatePresence>
   );

@@ -104,11 +104,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 e.stopPropagation();
                 onQuickView(product, e);
               }}
-              className="w-7 h-7 rounded-full neu-photo-btn flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-transform"
+              className="w-8 h-8 rounded-full neu-photo-btn flex items-center justify-center text-text-secondary hover:text-text-primary transition-transform shrink-0"
               title="Быстрый просмотр"
               aria-label="Быстрый просмотр"
             >
-              <Eye className="w-3.5 h-3.5 stroke-[1.8]" />
+              <Eye className="w-3.5 h-3.5 stroke-[1.8] shrink-0" />
             </button>
           )}
           <AnimatedFavoriteButton
@@ -126,19 +126,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <div>
           {/* Category & Rating Row */}
           <div className="flex items-center justify-between text-[11px] mb-1">
-            <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider truncate">
+            <span className="text-[11px] font-bold text-text-secondary uppercase tracking-wider truncate">
               {product.categoryLabel}
             </span>
             {ratingInfo && (
-              <div className="flex items-center gap-1 font-bold text-[#2D3A4E] text-[11px] shrink-0">
-                <Star className="w-3 h-3 fill-[#4E5C70] text-[#4E5C70] shrink-0" strokeWidth={0} />
+              <div className="flex items-center gap-1 font-bold text-text-primary text-[11px] shrink-0">
+                <Star className="w-3 h-3 fill-current text-text-secondary shrink-0" strokeWidth={0} />
                 <span>{ratingInfo.rating.toFixed(1)}</span>
               </div>
             )}
           </div>
 
           {/* Title - fixed 2 lines baseline */}
-          <h3 className="text-[14px] font-bold text-[#2D3A4E] line-clamp-2 leading-snug break-words min-h-[38px]">
+          <h3 className="text-[14px] font-bold text-text-primary line-clamp-2 leading-snug break-words min-h-[38px]">
             <a
               href={productHref(product.id)}
               onClick={(e) => {
@@ -158,17 +158,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <div className="flex items-end justify-between pt-1 mt-auto gap-1">
           <div className="flex flex-col min-h-[36px] justify-end">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-display text-[15px] font-extrabold text-[#2D3A4E] leading-none">
+              <span className="font-display text-[15px] font-extrabold text-text-primary leading-none">
                 {(wholesaleOnly ? (product.wholesalePrice as number) : product.price).toLocaleString('ru-RU')} ₽
               </span>
               {!wholesaleOnly && discountPercent ? (
-                <span className="text-[11px] font-bold text-accent bg-[#E3E8EF] px-1.5 py-0.5 rounded-md border border-white/60 leading-none">
+                <span className="text-[11px] font-bold text-accent neu-inset px-1.5 py-0.5 rounded-md leading-none">
                   -{discountPercent}%
                 </span>
               ) : null}
             </div>
             {!wholesaleOnly && oldPrice !== null && (
-              <span className="text-[12px] text-[#4E5C70] line-through font-normal leading-tight mt-0.5">
+              <span className="text-[12px] text-text-secondary line-through font-normal leading-tight mt-0.5">
                 {oldPrice.toLocaleString('ru-RU')} ₽
               </span>
             )}

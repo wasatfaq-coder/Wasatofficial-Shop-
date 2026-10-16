@@ -9,6 +9,7 @@ import {
   parseDecimal as num,
   priceFromRate,
   productsInCurrency,
+  purchaseExtraCostLabel,
   repriceProducts,
   workingRate,
   type CurrencyRate,
@@ -218,7 +219,7 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
             Не удалось загрузить курсы. Обновите страницу.
           </p>
         ) : (
-          <p className="flex items-center gap-2 text-xs text-[#4E5C70]" role="status">
+          <p className="flex items-center gap-2 text-xs text-text-secondary" role="status">
             <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> Загрузка…
           </p>
         )}
@@ -234,8 +235,8 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
             <Coins className="w-5 h-5" aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-base font-extrabold text-[#2D3A4E]">Курсы и наценка</h3>
-            <p className="text-xs text-[#4E5C70] leading-snug mt-0.5">
+            <h3 className="text-base font-extrabold text-text-primary">Курсы и наценка</h3>
+            <p className="text-xs text-text-secondary leading-snug mt-0.5">
               Цены товаров, закупленных в долларах или юанях, считаются от рабочего курса: курс ЦБ плюс ваша надбавка.
               «Применить» пересчитывает цену и себестоимость всех таких товаров сразу, цена округляется вверх до{' '}
               {PRICE_ROUNDING_RUB} ₽. Закупку в $ или ¥ задают в форме товара, в CSV («Валюта закупки», «Закупка») или списком:
@@ -243,7 +244,7 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
             </p>
           </div>
         </div>
-        <p className="text-xs text-[#4E5C70]">
+        <p className="text-xs text-text-secondary">
           {saved.appliedAt ? `Последний раз применено ${formatDate(saved.appliedAt)}` : 'Курсы ещё не применялись'}
           {dirty && <span className="ml-2 font-bold text-warning">есть неприменённые изменения</span>}
         </p>
@@ -252,7 +253,7 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
           onClick={fillFromCbr}
           disabled={cbrLoading}
           className={`inline-flex items-center gap-2 px-4 h-10 rounded-2xl text-xs font-bold ${
-            cbrLoading ? 'neu-button-disabled' : 'neu-button text-[#2D3A4E] hover:text-accent cursor-pointer'
+            cbrLoading ? 'neu-button-disabled' : 'neu-button text-text-primary hover:text-accent cursor-pointer'
           }`}
         >
           {cbrLoading ? (
@@ -262,7 +263,7 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
           )}
           Подставить курс ЦБ
         </button>
-        <p role="status" className="text-xs text-[#4E5C70]">
+        <p role="status" className="text-xs text-text-secondary">
           {cbrNote?.ok && cbrNote.text}
         </p>
         {cbrNote && !cbrNote.ok && (
@@ -282,16 +283,16 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
             <fieldset key={id} className="neu-flat rounded-3xl p-4 space-y-3 min-w-0">
               <legend className="sr-only">{title}</legend>
               <div className="flex items-baseline justify-between gap-2">
-                <h4 className="text-sm font-extrabold text-[#2D3A4E]">
+                <h4 className="text-sm font-extrabold text-text-primary">
                   {title}, {sign}
                 </h4>
-                <span className="text-[11px] text-[#4E5C70]">
+                <span className="text-[11px] text-text-secondary">
                   {count} {pluralRu(count, ['товар', 'товара', 'товаров'])} в {id === 'USD' ? 'долларах' : 'юанях'}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="min-w-0">
-                  <label htmlFor={`${base}-official`} className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+                  <label htmlFor={`${base}-official`} className="text-[11px] font-bold text-text-secondary block mb-1">
                     Курс ЦБ, ₽ за {sign}1
                   </label>
                   <input
@@ -301,11 +302,11 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
                     value={r.official}
                     onChange={(e) => editRate(id, 'official', e.target.value)}
                     placeholder={id === 'USD' ? 'напр. 85' : 'напр. 11,7'}
-                    className="w-full h-10 px-3 neu-inset rounded-xl text-sm font-bold text-[#2D3A4E]"
+                    className="w-full h-10 px-3 neu-inset rounded-xl text-sm font-bold text-text-primary"
                   />
                 </div>
                 <div className="min-w-0">
-                  <label htmlFor={`${base}-markup`} className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+                  <label htmlFor={`${base}-markup`} className="text-[11px] font-bold text-text-secondary block mb-1">
                     Надбавка, {r.markupKind === 'percent' ? '%' : '₽'}
                   </label>
                   <input
@@ -315,7 +316,7 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
                     value={r.markup}
                     onChange={(e) => editRate(id, 'markup', e.target.value)}
                     placeholder="0"
-                    className="w-full h-10 px-3 neu-inset rounded-xl text-sm font-bold text-[#2D3A4E]"
+                    className="w-full h-10 px-3 neu-inset rounded-xl text-sm font-bold text-text-primary"
                   />
                 </div>
               </div>
@@ -327,15 +328,15 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
                     role="radio"
                     aria-checked={r.markupKind === kind}
                     onClick={() => editRate(id, 'markupKind', kind)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer ${
-                      r.markupKind === kind ? 'neu-pill-active' : 'neu-button text-[#2D3A4E] hover:text-accent'
+                    className={`px-3 py-1.5 min-h-8 rounded-xl text-xs font-bold cursor-pointer ${
+                      r.markupKind === kind ? 'neu-pill-active' : 'neu-button text-text-primary hover:text-accent'
                     }`}
                   >
                     {kind === 'rub' ? 'В рублях' : 'В процентах'}
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-[#4E5C70]">Надбавка — запас на реальный курс закупки, он обычно выше курса ЦБ.</p>
+              <p className="text-xs text-text-secondary">Надбавка — запас на реальный курс закупки, он обычно выше курса ЦБ.</p>
               <p className="text-sm font-extrabold text-accent" aria-live="polite">
                 {working !== null ? `Рабочий курс: ${rub(working)} за ${sign}1` : 'Рабочий курс: укажите курс ЦБ'}
               </p>
@@ -346,7 +347,7 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
 
       <div className="neu-flat rounded-3xl p-4 grid gap-4 sm:grid-cols-2">
         <div className="space-y-2 min-w-0">
-          <label htmlFor="rate-markup-percent" className="text-sm font-extrabold text-[#2D3A4E] block">
+          <label htmlFor="rate-markup-percent" className="text-sm font-extrabold text-text-primary block">
             Наценка для розницы, %
           </label>
           <input
@@ -356,15 +357,15 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
             value={current.markupPercent}
             onChange={(e) => edit((d) => ({ ...d, markupPercent: e.target.value }))}
             placeholder="напр. 180"
-            className="w-full max-w-xs h-10 px-3 neu-inset rounded-xl text-sm font-bold text-[#2D3A4E]"
+            className="w-full max-w-xs h-10 px-3 neu-inset rounded-xl text-sm font-bold text-text-primary"
           />
-          <p className="text-xs text-[#4E5C70]">
+          <p className="text-xs text-text-secondary">
             Розничная цена = закупка × рабочий курс + наценка. Обязательна: 0 — продавать по себестоимости. Товар со своей
             наценкой в форме товара считается по своей.
           </p>
         </div>
         <div className="space-y-2 min-w-0">
-          <label htmlFor="rate-wholesale-markup" className="text-sm font-extrabold text-[#2D3A4E] block">
+          <label htmlFor="rate-wholesale-markup" className="text-sm font-extrabold text-text-primary block">
             Наценка для опта, %
           </label>
           <input
@@ -374,9 +375,9 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
             value={current.wholesaleMarkupPercent}
             onChange={(e) => edit((d) => ({ ...d, wholesaleMarkupPercent: e.target.value }))}
             placeholder="напр. 80"
-            className="w-full max-w-xs h-10 px-3 neu-inset rounded-xl text-sm font-bold text-[#2D3A4E]"
+            className="w-full max-w-xs h-10 px-3 neu-inset rounded-xl text-sm font-bold text-text-primary"
           />
-          <p className="text-xs text-[#4E5C70]">
+          <p className="text-xs text-text-secondary">
             Оптовая цена за штуку = закупка × рабочий курс + наценка опта. Считается только у товаров, которые продаются
             оптом (есть оптовая цена, «Только оптом» или своя наценка опта). Пусто — оптовые цены не меняются.
           </p>
@@ -392,35 +393,39 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
       {example && <AdminExample title={example.title} lines={example.lines} />}
 
       <div className="neu-flat rounded-3xl p-4 space-y-3">
-        <h4 className="text-sm font-extrabold text-[#2D3A4E]">Что изменится</h4>
+        <h4 className="text-sm font-extrabold text-text-primary">Что изменится</h4>
         {inCurrency === 0 ? (
-          <p className="text-xs text-[#4E5C70]">
+          <p className="text-xs text-text-secondary">
             Пока нет товаров с закупкой в долларах или юанях: откройте товар и укажите закупку в $ или ¥ в блоке цен. Остальные
             товары курсы не меняют.
           </p>
         ) : !ready ? (
-          <p className="text-xs text-[#4E5C70]">Укажите курсы ЦБ и наценку для розницы — здесь появятся новые цены.</p>
+          <p className="text-xs text-text-secondary">Укажите курсы ЦБ и наценку для розницы — здесь появятся новые цены.</p>
         ) : changes.length === 0 ? (
           <p className="flex items-center gap-1.5 text-xs font-bold text-success">
             <Check className="w-4 h-4" aria-hidden="true" /> Цены всех {inCurrency} {pluralRu(inCurrency, ['товара', 'товаров', 'товаров'])} уже такие
           </p>
         ) : (
           <>
-            <p className="text-xs text-[#4E5C70]">
+            <p className="text-xs text-text-secondary">
               Изменится цена у {changes.length} {pluralRu(changes.length, ['товара', 'товаров', 'товаров'])} из {inCurrency}. Товары без
               закупки в валюте не меняются.
             </p>
-            <ul className="divide-y divide-[#C9D2DD]" aria-label="Новые цены">
+            <ul className="neu-divide-y" aria-label="Новые цены">
               {changes.map((c) => {
                 const sign = PURCHASE_CURRENCIES.find((x) => x.id === c.currency)?.sign;
                 const up = c.after.price > c.before.price;
                 return (
                   <li key={c.product.id} className="py-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-[#2D3A4E] truncate">{c.product.title}</p>
-                      <p className="text-[11px] text-[#4E5C70]">
+                      <p className="text-xs font-bold text-text-primary truncate">{c.product.title}</p>
+                      <p className="text-[11px] text-text-secondary">
                         закупка {sign}
-                        {c.product.purchase?.amount.toLocaleString('ru-RU')} → себестоимость {rub(c.after.costPrice)}
+                        {c.product.purchase?.amount.toLocaleString('ru-RU')}
+                        {purchaseExtraCostLabel(c.product.purchase)
+                          ? ` (${purchaseExtraCostLabel(c.product.purchase)})`
+                          : ''}{' '}
+                        → себестоимость {rub(c.after.costPrice)}
                       </p>
                       {c.discountCutFrom !== undefined && (
                         <p className="text-[11px] font-bold text-warning">
@@ -429,14 +434,14 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
                         </p>
                       )}
                       {c.after.wholesalePrice !== undefined && c.after.wholesalePrice !== c.before.wholesalePrice && (
-                        <p className="text-[11px] text-[#4E5C70]">
+                        <p className="text-[11px] text-text-secondary">
                           опт за штуку:{' '}
                           {c.before.wholesalePrice !== undefined ? `${rub(c.before.wholesalePrice)} → ` : ''}
                           {rub(c.after.wholesalePrice)}
                         </p>
                       )}
                       {c.after.originalPrice !== null ? (
-                        <p className="text-[11px] text-[#4E5C70]">
+                        <p className="text-[11px] text-text-secondary">
                           скидка {c.discountPercent} % сохраняется: старая цена {rub(c.after.originalPrice)}
                         </p>
                       ) : (
@@ -446,8 +451,8 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
                       )}
                     </div>
                     <p className="flex items-center gap-1.5 text-xs font-bold tabular-nums">
-                      <span className="text-[#4E5C70]">{rub(c.before.price)}</span>
-                      <ArrowRight className="w-3.5 h-3.5 text-[#4E5C70]" aria-label="станет" />
+                      <span className="text-text-secondary">{rub(c.before.price)}</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-text-secondary" aria-label="станет" />
                       <span className={up ? 'text-danger' : 'text-success'}>{rub(c.after.price)}</span>
                     </p>
                   </li>
@@ -462,7 +467,7 @@ export const AdminRatesTab: React.FC<AdminRatesTabProps> = ({ products, onApply,
             ref={errorsRef}
             tabIndex={-1}
             role="alert"
-            className="rounded-2xl p-3 bg-danger-soft border border-danger/30 text-xs text-[#2D3A4E]"
+            className="rounded-2xl p-3 neu-tone-danger text-xs text-text-primary"
           >
             <p className="flex items-center gap-1.5 font-bold text-danger">
               <AlertTriangle className="w-4 h-4" aria-hidden="true" /> Исправьте, чтобы применить:

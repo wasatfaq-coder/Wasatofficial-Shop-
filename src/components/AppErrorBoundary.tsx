@@ -31,10 +31,10 @@ export class AppErrorBoundary extends React.Component<{ children: React.ReactNod
           <div className="w-12 h-12 rounded-2xl neu-inset mx-auto flex items-center justify-center text-warning">
             {updated ? <RefreshCw className="w-6 h-6" aria-hidden="true" /> : <AlertTriangle className="w-6 h-6" aria-hidden="true" />}
           </div>
-          <h1 className="font-display text-lg font-extrabold text-[#2D3A4E]">
+          <h1 className="font-display text-lg font-extrabold text-text-primary">
             {updated ? 'Сайт обновился' : 'Что-то пошло не так'}
           </h1>
-          <p className="text-sm text-[#4E5C70]">
+          <p className="text-sm text-text-secondary">
             {updated
               ? 'Пока страница была открыта, вышла новая версия магазина. Обновите страницу, корзина и избранное сохранятся.'
               : 'Страница не открылась из-за ошибки. Обновите страницу, корзина и избранное сохранятся.'}

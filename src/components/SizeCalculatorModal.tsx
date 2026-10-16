@@ -13,7 +13,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { m, AnimatePresence } from 'motion/react';
 import { UserProfile, BodyMeasurements } from '../types';
 import { NeumorphicSlider } from './NeumorphicSlider';
 import { calculateRussianPattern, RUSSIAN_SIZE_TABLE_ROWS } from '../utils/russianSizing';
@@ -214,7 +214,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
+        <m.div
           key="size-calc-overlay"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -224,9 +224,9 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
         >
           <div
             onClick={onClose}
-            className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer"
+            className="fixed inset-0 bg-text-primary/50 backdrop-blur-xs cursor-pointer"
           />
-          <motion.div
+          <m.div
             ref={dialog.ref}
             {...dialog.props}
             key="size-calc-modal"
@@ -234,81 +234,81 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.94, opacity: 0, y: 12 }}
             transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-            className="relative w-full max-w-lg neu-modal rounded-3xl p-4 sm:p-6 border border-white/70 space-y-4 max-h-[92vh] overflow-y-auto no-scrollbar z-10"
+            className="relative w-full max-w-lg neu-modal rounded-3xl p-4 sm:p-6 space-y-4 max-h-[92vh] overflow-y-auto no-scrollbar z-10"
           >
             {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-[#BAC5D5]/40">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-accent">
-                  <Ruler className="w-5 h-5 stroke-[2.2]" />
+            <div className="flex items-center justify-between gap-2 pb-3 neu-divider-b">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-accent shrink-0">
+                  <Ruler className="w-5 h-5 stroke-[2.2] shrink-0" />
                 </div>
-                <div>
-                  <h3 id={dialog.titleId} className="text-base font-extrabold text-[#2D3A4E]">
+                <div className="min-w-0">
+                  <h3 id={dialog.titleId} className="text-base font-extrabold text-text-primary">
                     Мои размеры и лекало
                   </h3>
-                  <p className="text-xs text-[#4E5C70] font-medium">
+                  <p className="text-xs text-text-secondary font-medium">
                     Точный расчет параметров и размера мужской одежды
                   </p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="w-9 h-9 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer"
+                className="w-9 h-9 rounded-full neu-button flex items-center justify-center text-text-secondary hover:text-text-primary transition-all cursor-pointer shrink-0"
                 aria-label="Закрыть"
               >
-                <X className="w-4 h-4 stroke-[2.5]" />
+                <X className="w-4 h-4 stroke-[2.5] shrink-0" />
               </button>
             </div>
 
             {/* Product Fit & Silhouette Indicator (Neumorphic Inset Deepened Banner with live updates) */}
-            <div className="neu-inset rounded-2xl p-3.5 border border-white/50 space-y-2 transition-all duration-200">
+            <div className="neu-inset rounded-2xl p-3.5 space-y-2 transition-all duration-200">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 rounded-xl neu-flat-sm flex items-center justify-center shrink-0 text-accent border border-white/80">
-                    <Info className="w-3.5 h-3.5 stroke-[2.4]" />
+                  <div className="w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center shrink-0 text-accent">
+                    <Info className="w-4 h-4 stroke-[2.4] shrink-0" />
                   </div>
                   <div className="flex items-center gap-2 flex-wrap min-w-0">
-                    <span className="text-xs font-extrabold text-[#2D3A4E]">
+                    <span className="text-xs font-extrabold text-text-primary">
                       Силуэт изделия:
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-full neu-inset text-accent text-[11px] uppercase font-extrabold tracking-wider border border-accent/30">
+                    <span className="px-2.5 py-0.5 rounded-full neu-tone-info text-accent text-[11px] uppercase font-extrabold tracking-wider">
                       {silhouetteData.fitBadge}
                     </span>
-                    <span className="text-[11px] font-bold text-[#4E5C70] px-2 py-0.5 rounded-md neu-inset border border-white/40">
+                    <span className="text-[11px] font-bold text-text-secondary px-2 py-0.5 rounded-md neu-inset ">
                       {silhouetteData.fitTag}
                     </span>
                   </div>
                 </div>
 
                 <div className="text-[11px] font-extrabold text-accent flex items-center gap-1.5 ml-auto">
-                  <span className="text-[#4E5C70] font-medium">Прибавка к ПОГ:</span>
-                  <span className="px-1.5 py-0.5 rounded-md neu-inset border border-white/40 font-mono">
+                  <span className="text-text-secondary font-medium">Прибавка к ПОГ:</span>
+                  <span className="px-1.5 py-0.5 rounded-md neu-inset font-mono">
                     {silhouetteData.allowance}
                   </span>
                 </div>
               </div>
 
-              <p className="text-xs text-[#4E5C70] leading-relaxed font-medium pl-0.5">
+              <p className="text-xs text-text-secondary leading-relaxed font-medium pl-0.5">
                 {silhouetteData.fitDescription}
               </p>
 
               {/* Dynamic Micro-metrics bar inside the Inset banner */}
-              <div className="grid grid-cols-3 gap-1.5 pt-1.5 border-t border-[#BAC5D5]/40 text-[11px]">
-                <div className="neu-flat rounded-lg px-2 py-1 border border-white/60 text-center">
-                  <span className="text-[#4E5C70] text-[11px] block">ПОГ изделия</span>
-                  <span className="font-extrabold text-[#2D3A4E]">
+              <div className="grid grid-cols-3 gap-1.5 pt-2 neu-divider-t text-[11px]">
+                <div className="neu-flat rounded-lg px-2 py-1 text-center">
+                  <span className="text-text-secondary text-[11px] block">ПОГ изделия</span>
+                  <span className="font-extrabold text-text-primary tabular-nums">
                     {silhouetteData.halfChest} см
                   </span>
                 </div>
-                <div className="neu-flat rounded-lg px-2 py-1 border border-white/60 text-center">
-                  <span className="text-[#4E5C70] text-[11px] block">Дроп (ОГ − ОТ)</span>
-                  <span className="font-extrabold text-accent">
+                <div className="neu-flat rounded-lg px-2 py-1 text-center">
+                  <span className="text-text-secondary text-[11px] block">Дроп (ОГ − ОТ)</span>
+                  <span className="font-extrabold text-accent tabular-nums">
                     {silhouetteData.drop > 0 ? `+${silhouetteData.drop}` : silhouetteData.drop} см
                   </span>
                 </div>
-                <div className="neu-flat rounded-lg px-2 py-1 border border-white/60 text-center">
-                  <span className="text-[#4E5C70] text-[11px] block">Тип телосложения</span>
-                  <span className="font-extrabold text-[#2D3A4E]">
+                <div className="neu-flat rounded-lg px-2 py-1 text-center">
+                  <span className="text-text-secondary text-[11px] block">Тип телосложения</span>
+                  <span className="font-extrabold text-text-primary">
                     {russianPattern.fullnessGroup}-я полнота
                   </span>
                 </div>
@@ -316,31 +316,31 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
             </div>
 
             {/* Russian Sizing Result Summary Card */}
-            <div className="neu-inset rounded-2xl p-3.5 space-y-3 border border-white/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-accent" />
-                  <span className="text-xs font-extrabold text-[#2D3A4E] uppercase tracking-wide">
+            <div className="neu-inset rounded-2xl p-3.5 space-y-3 ">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Sparkles className="w-4 h-4 text-accent shrink-0" />
+                  <span className="text-xs font-extrabold text-text-primary uppercase tracking-wide">
                     Рассчитанное лекало
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
                     onClick={() => setShowSizeTable(!showSizeTable)}
-                    className="text-[11px] font-bold text-accent neu-button px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer"
+                    className="min-h-8 text-[11px] font-bold text-accent neu-button px-3 py-1 rounded-xl flex items-center gap-1 cursor-pointer shrink-0"
                   >
                     <span>Таблица</span>
                     {showSizeTable ? (
-                      <ChevronUp className="w-3 h-3" />
+                      <ChevronUp className="w-3.5 h-3.5 shrink-0" />
                     ) : (
-                      <ChevronDown className="w-3 h-3" />
+                      <ChevronDown className="w-3.5 h-3.5 shrink-0" />
                     )}
                   </button>
                   <button
                     type="button"
                     onClick={handleResetToStandard}
-                    className="text-[11px] font-bold text-[#4E5C70] hover:text-[#2D3A4E] neu-button px-2.5 py-1 rounded-lg cursor-pointer"
+                    className="min-h-8 text-[11px] font-bold text-text-secondary hover:text-text-primary neu-button px-3 py-1 rounded-xl cursor-pointer shrink-0"
                     title="Сбросить на типовые параметры"
                   >
                     Типовые
@@ -350,61 +350,61 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
 
               {/* 4 Metric Cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div className="neu-flat rounded-xl p-2.5 text-center border border-white/70">
-                  <span className="text-[11px] font-medium text-[#4E5C70] block">Верхняя одежда</span>
+                <div className="neu-flat rounded-xl p-2.5 text-center ">
+                  <span className="text-[11px] font-medium text-text-secondary block">Верхняя одежда</span>
                   <span className="text-xs font-extrabold text-accent block my-0.5">
                     {russianPattern.topSizeLabel}
                   </span>
-                  <span className="text-[11px] text-[#4E5C70] block">
+                  <span className="text-[11px] text-text-secondary block tabular-nums">
                     ПОГ: {Math.round(chest / 2)} см
                   </span>
                 </div>
 
-                <div className="neu-flat rounded-xl p-2.5 text-center border border-white/70">
-                  <span className="text-[11px] font-medium text-[#4E5C70] block">Брюки / Джинсы</span>
-                  <span className="text-xs font-extrabold text-[#2D3A4E] block my-0.5">
+                <div className="neu-flat rounded-xl p-2.5 text-center ">
+                  <span className="text-[11px] font-medium text-text-secondary block">Брюки / Джинсы</span>
+                  <span className="text-xs font-extrabold text-text-primary block my-0.5">
                     {russianPattern.bottomSizeLabel}
                   </span>
-                  <span className="text-[11px] text-[#4E5C70] block">Пояс: {waist} см</span>
+                  <span className="text-[11px] text-text-secondary block tabular-nums">Пояс: {waist} см</span>
                 </div>
 
-                <div className="neu-flat rounded-xl p-2.5 text-center border border-white/70">
-                  <span className="text-[11px] font-medium text-[#4E5C70] block">Ростовка РФ</span>
-                  <span className="text-xs font-extrabold text-[#2D3A4E] block my-0.5">
+                <div className="neu-flat rounded-xl p-2.5 text-center ">
+                  <span className="text-[11px] font-medium text-text-secondary block">Ростовка РФ</span>
+                  <span className="text-xs font-extrabold text-text-primary block my-0.5">
                     {russianPattern.heightGroupNumber}-я группа
                   </span>
-                  <span className="text-[11px] text-[#4E5C70] block">
+                  <span className="text-[11px] text-text-secondary block tabular-nums">
                     {russianPattern.heightRange}
                   </span>
                 </div>
 
-                <div className="neu-flat rounded-xl p-2.5 text-center border border-white/70">
-                  <span className="text-[11px] font-medium text-[#4E5C70] block">Полнота / ИМТ</span>
-                  <span className="text-xs font-extrabold text-[#2D3A4E] block my-0.5">
+                <div className="neu-flat rounded-xl p-2.5 text-center ">
+                  <span className="text-[11px] font-medium text-text-secondary block">Полнота / ИМТ</span>
+                  <span className="text-xs font-extrabold text-text-primary block my-0.5">
                     {russianPattern.fullnessGroup}-я полнота
                   </span>
-                  <span className="text-[11px] text-[#4E5C70] block">
+                  <span className="text-[11px] text-text-secondary block tabular-nums">
                     ИМТ: {russianPattern.bmi}
                   </span>
                 </div>
               </div>
 
               {/* Dynamic Status Strip */}
-              <div className="text-[11px] font-medium text-[#4E5C70] pt-1 border-t border-[#BAC5D5]/40">
+              <div className="text-[11px] font-medium text-text-secondary pt-1.5 neu-divider-t">
                 <span>{russianPattern.recommendedFit}</span>
               </div>
 
               {/* Collapsible Russian Size Grid Table */}
               {showSizeTable && (
-                <div className="neu-flat rounded-xl p-3 border border-white/80 space-y-2 mt-2 animate-in fade-in">
-                  <div className="text-[11px] font-extrabold text-[#2D3A4E] flex items-center justify-between">
+                <div className="neu-flat rounded-xl p-3 space-y-2 mt-2 animate-in fade-in">
+                  <div className="text-[11px] font-extrabold text-text-primary flex items-center justify-between">
                     <span>Сетка размеров мужской одежды</span>
                     <span className="text-[11px] text-accent font-bold">Стандарт РФ</span>
                   </div>
                   <div className="overflow-x-auto no-scrollbar">
                     <table className="w-full text-[11px] text-center border-collapse">
                       <thead>
-                        <tr className="border-b border-[#BAC5D5]/50 text-[#4E5C70] font-bold">
+                        <tr className="neu-divider-b text-text-secondary font-bold">
                           <th className="py-1 px-1 text-left">Размер РФ</th>
                           <th className="py-1 px-1">Междунар.</th>
                           <th className="py-1 px-1">Грудь (ОГ)</th>
@@ -419,18 +419,18 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                           return (
                             <tr
                               key={row.ru}
-                              className={`border-b border-[#BAC5D5]/30 transition-colors ${
+                              className={`neu-divider-b last:neu-divider-b-0 transition-colors ${
                                 isMatch
                                   ? 'neu-inset text-accent font-extrabold'
-                                  : 'text-[#2D3A4E]'
+                                  : 'text-text-primary'
                               }`}
                             >
                               <td className="py-1 px-1 font-bold text-left">RU {row.ru}</td>
                               <td className="py-1 px-1">{row.int}</td>
-                              <td className="py-1 px-1">{row.chest} см</td>
-                              <td className="py-1 px-1">{row.waist} см</td>
-                              <td className="py-1 px-1">{row.hips} см</td>
-                              <td className="py-1 px-1 font-mono font-bold">{row.jeans}</td>
+                              <td className="py-1 px-1 tabular-nums">{row.chest} см</td>
+                              <td className="py-1 px-1 tabular-nums">{row.waist} см</td>
+                              <td className="py-1 px-1 tabular-nums">{row.hips} см</td>
+                              <td className="py-1 px-1 font-mono font-bold tabular-nums">{row.jeans}</td>
                             </tr>
                           );
                         })}
@@ -514,8 +514,8 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
               />
 
               {/* Fit Preference */}
-              <div className="space-y-2 neu-inset rounded-2xl p-3 border border-white/40">
-                <span className="text-xs font-extrabold text-[#2D3A4E] block">
+              <div className="space-y-2 neu-inset rounded-2xl p-3 ">
+                <span className="text-xs font-extrabold text-text-primary block">
                   Предпочитаемая посадка:
                 </span>
                 <div className="grid grid-cols-3 gap-2">
@@ -533,7 +533,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                         className={`py-2 px-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                           isActive
                             ? 'neu-pill-active font-extrabold'
-                            : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
+                            : 'neu-button text-text-secondary hover:text-text-primary'
                         }`}
                       >
                         <span>{pref.label}</span>
@@ -552,18 +552,18 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
               role="checkbox"
               aria-checked={saveToProfile}
               onClick={() => setSaveToProfile(!saveToProfile)}
-              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl neu-button transition-all cursor-pointer border border-white/40"
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl neu-button transition-all cursor-pointer "
             >
               <div
                 className={`w-5 h-5 rounded-lg flex items-center justify-center transition-all ${
                   saveToProfile
                     ? 'neu-fill-accent text-white'
-                    : 'neu-inset text-transparent border border-white/60'
+                    : 'neu-inset text-transparent '
                 }`}
               >
                 <Check className="w-3.5 h-3.5 stroke-[3]" />
               </div>
-              <span className="text-xs font-bold text-[#2D3A4E] flex items-center gap-1.5">
+              <span className="text-xs font-bold text-text-primary flex items-center gap-1.5">
                 <BookmarkCheck className="w-3.5 h-3.5 text-accent" />
                 <span>Сохранить параметры и размер в профиле</span>
               </span>
@@ -575,7 +575,7 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 py-3.5 neu-button rounded-2xl text-[#4E5C70] font-bold text-xs hover:text-[#2D3A4E] cursor-pointer transition-transform"
+                className="flex-1 py-3.5 neu-button rounded-2xl text-text-secondary font-bold text-xs hover:text-text-primary cursor-pointer transition-transform"
               >
                 Закрыть
               </button>
@@ -607,8 +607,8 @@ export const SizeCalculatorModal: React.FC<SizeCalculatorModalProps> = ({
                 )}
               </button>
             </div>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

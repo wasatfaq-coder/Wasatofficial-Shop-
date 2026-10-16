@@ -38,12 +38,12 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
   return (
     <div className={`space-y-3 pt-2 ${className}`}>
       <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-xl neu-inset flex items-center justify-center text-accent">
-            <Clock className="w-4 h-4 stroke-[2.2]" />
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0">
+            <Clock className="w-4 h-4 stroke-[2.2] shrink-0" />
           </div>
-          <h3 className="text-sm font-bold text-[#2D3A4E] tracking-tight">{title}</h3>
-          <span className="text-[11px] font-bold text-[#4E5C70] neu-photo-badge px-2 py-0.5 rounded-full">
+          <h3 className="text-sm font-bold text-text-primary tracking-tight truncate">{title}</h3>
+          <span className="text-[11px] font-bold text-text-secondary neu-inset px-2 py-0.5 rounded-full shrink-0">
             {recentlyViewed.length}
           </span>
         </div>
@@ -51,10 +51,10 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
         {onClearRecentlyViewed && (
           <button
             onClick={onClearRecentlyViewed}
-            className="neu-button-danger rounded-xl px-2.5 py-1 text-[11px] font-bold transition-colors flex items-center gap-1.5"
+            className="min-h-8 neu-button-danger rounded-xl px-2.5 py-1.5 text-[11px] font-bold transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
             title="Очистить историю просмотров"
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="w-3.5 h-3.5 shrink-0" />
             <span>Очистить</span>
           </button>
         )}
@@ -68,7 +68,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
           return (
             <div
               key={`recently-viewed-${product.id}-${idx}`}
-              className="group relative neu-flat-sm rounded-2xl overflow-hidden w-36 sm:w-40 shrink-0 transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98] flex flex-col justify-between select-none"
+              className="group relative neu-flat-sm neu-product-card rounded-2xl overflow-hidden w-36 sm:w-40 shrink-0 flex flex-col justify-between select-none"
             >
               <div className="space-y-2">
                 {/* Thumbnail Image Container */}
@@ -88,7 +88,7 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
                         e.stopPropagation();
                         onRemoveFromRecentlyViewed(product.id);
                       }}
-                      className="absolute top-1.5 left-1.5 w-8 h-8 rounded-full neu-photo-btn flex items-center justify-center text-[#4E5C70] hover:text-danger transition-transform z-10"
+                      className="absolute top-1.5 left-1.5 w-8 h-8 rounded-full neu-photo-btn flex items-center justify-center text-text-secondary hover:text-danger transition-transform z-10"
                       title="Удалить из истории"
                       aria-label={`Удалить из истории: ${product.title}`}
                     >
@@ -103,14 +103,14 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
                         e.stopPropagation();
                         onToggleFavorite(product, e);
                       }}
-                      className="absolute top-1.5 right-1.5 w-8 h-8 rounded-full neu-photo-btn flex items-center justify-center text-[#4E5C70] hover:text-danger transition-transform z-10"
+                      className="absolute top-1.5 right-1.5 w-8 h-8 rounded-full neu-photo-btn flex items-center justify-center text-text-secondary hover:text-danger transition-transform z-10"
                       title={isFav ? 'Убрать из избранного' : 'В избранное'}
                       aria-label={`В избранное: ${product.title}`}
                       aria-pressed={isFav}
                     >
                       <Heart
                         className={`w-3.5 h-3.5 ${
-                          isFav ? 'fill-danger text-danger' : 'text-[#4E5C70]'
+                          isFav ? 'fill-danger text-danger' : 'text-text-secondary'
                         }`}
                       />
                     </button>
@@ -126,11 +126,11 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
 
                 {/* Info */}
                 <div className="space-y-0.5 px-2.5">
-                  <p className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider truncate">
+                  <p className="text-[11px] font-bold text-text-secondary uppercase tracking-wider truncate">
                     {product.categoryLabel}
                   </p>
                   {/* The card opens with its title link stretched over it, as ProductCard (Tab reaches it) */}
-                  <h4 className="text-xs font-bold text-[#2D3A4E] truncate leading-tight group-hover:text-accent transition-colors">
+                  <h4 className="text-xs font-bold text-text-primary truncate leading-tight group-hover:text-accent transition-colors">
                     <a
                       href={productHref(product.id)}
                       onClick={(e) => {
@@ -147,13 +147,13 @@ export const RecentlyViewed: React.FC<RecentlyViewedProps> = ({
               </div>
 
               {/* Price & Rating */}
-              <div className="pt-2 mt-1 mx-2.5 mb-2.5 border-t border-[#BAC5D5]/40 flex items-center justify-between">
+              <div className="pt-2 mt-1 mx-2.5 mb-2.5 neu-divider-t flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-bold text-[#2D3A4E]">
+                  <span className="text-xs font-bold text-text-primary">
                     {buyerPrice(product).toLocaleString('ru-RU')} ₽
                   </span>
                   {shownOldPrice(product) !== null && (
-                    <span className="text-[11px] text-[#4E5C70] line-through block leading-none">
+                    <span className="text-[11px] text-text-secondary line-through block leading-none">
                       {shownOldPrice(product)!.toLocaleString('ru-RU')} ₽
                     </span>
                   )}

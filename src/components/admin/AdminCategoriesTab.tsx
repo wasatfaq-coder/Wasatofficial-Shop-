@@ -62,7 +62,7 @@ export const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({
       deleteMessage={(c) => {
         const count = productCount(c.id);
         return count > 0
-          ? `В категории ${count} ${pluralRu(count, ['товар', 'товара', 'товаров'])}: они останутся без категории и пропадут из её раздела в каталоге. Назначьте им новую категорию в «Товарах».`
+          ? `В категории ${count} ${pluralRu(count, ['товар', 'товара', 'товаров'])}: они останутся без категории (автоматически перейдут в «Без категории»). Вы сможете назначить им новую категорию в «Товарах».`
           : 'В категории нет товаров. Покупатели перестанут её видеть.';
       }}
       renderSummary={(c) => {
@@ -70,15 +70,12 @@ export const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({
         const count = productCount(c.id);
         return (
           <div className="flex items-center gap-2.5">
-            <span className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-[#2D3A4E] shrink-0">
+            <span className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-text-primary shrink-0">
               <Icon className="w-4 h-4" />
             </span>
             <div className="min-w-0">
-              <p className="text-xs font-extrabold text-[#2D3A4E] truncate">{c.name}</p>
-              <p className="text-xs text-[#4E5C70]">
-                Товаров: {count}
-                <span className="font-mono ml-2">{c.id}</span>
-              </p>
+              <p className="text-xs font-extrabold text-text-primary truncate">{c.name}</p>
+              <p className="text-xs text-text-secondary">Товаров: {count}</p>
             </div>
           </div>
         );
@@ -93,10 +90,23 @@ export const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({
         });
         const saved = onUpdateSettings?.({ ...settings, categories: withIds });
         const nameById = new Map(withIds.map((c) => [c.id, c.name]));
-        const renamed = products.filter((p) => nameById.has(p.category) && p.categoryLabel !== nameById.get(p.category));
-        if (renamed.length > 0 && onUpdateProducts) {
+        const removedIds = new Set(categories.map((c) => c.id).filter((id) => id && !nameById.has(id)));
+        const affected = products.filter(
+          (p) =>
+            removedIds.has(p.category) ||
+            (nameById.has(p.category) && p.categoryLabel !== nameById.get(p.category))
+        );
+        if (affected.length > 0 && onUpdateProducts) {
           onUpdateProducts(
-            products.map((p) => (nameById.has(p.category) ? { ...p, categoryLabel: nameById.get(p.category)! } : p))
+            products.map((p) => {
+              if (removedIds.has(p.category)) {
+                return { ...p, category: '', categoryLabel: '' };
+              }
+              if (nameById.has(p.category)) {
+                return { ...p, categoryLabel: nameById.get(p.category)! };
+              }
+              return p;
+            })
           );
         }
         return saved;

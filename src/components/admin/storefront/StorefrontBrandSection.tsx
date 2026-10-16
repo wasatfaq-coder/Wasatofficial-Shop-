@@ -33,7 +33,7 @@ export const StorefrontBrandSection: React.FC<StorefrontSectionProps> = ({ setti
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-[#4E5C70]">
+      <p className="text-xs text-text-secondary">
         Пустой текст покупателю не показывается: в окне будет «Не настроено», пока вы не заполните его.
       </p>
 
@@ -48,7 +48,7 @@ export const StorefrontBrandSection: React.FC<StorefrontSectionProps> = ({ setti
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {SERVICES.map(({ n, title, desc }) => (
             <div key={n} className="neu-inset rounded-2xl p-3 space-y-2.5">
-              <h5 className="text-xs font-extrabold text-[#2D3A4E]">Услуга {n}</h5>
+              <h5 className="text-xs font-extrabold text-text-primary">Услуга {n}</h5>
               <StorefrontTextField
                 {...field}
                 name={title}
@@ -89,7 +89,7 @@ export const StorefrontBrandSection: React.FC<StorefrontSectionProps> = ({ setti
           placeholder="Например: Стандарты подлинности и гарантии"
         />
         <div className="space-y-2">
-          <p className="text-xs font-bold text-[#4E5C70]">Пункты гарантий (до 3, пустые не показываются)</p>
+          <p className="text-xs font-bold text-text-secondary">Пункты гарантий (до 3, пустые не показываются)</p>
           {GUARANTEE_EXAMPLES.map((example, i) => (
             <div key={i} className="flex items-center gap-2">
               <span
@@ -104,7 +104,7 @@ export const StorefrontBrandSection: React.FC<StorefrontSectionProps> = ({ setti
                 onChange={(e) => updateGuarantee(i, e.target.value)}
                 placeholder={`Например: ${example}`}
                 aria-label={`Пункт гарантии ${i + 1}`}
-                className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E]"
+                className="flex-1 min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-text-primary"
               />
             </div>
           ))}

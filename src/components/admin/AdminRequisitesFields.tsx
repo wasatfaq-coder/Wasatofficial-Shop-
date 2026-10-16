@@ -29,7 +29,7 @@ export function AdminRequisitesFields<K extends PaymentKind>({ kind, value, onCh
         const numeric = field.format !== 'text';
         return (
           <div key={field.key} className={`space-y-1 min-w-0 ${field.key === 'orgName' ? 'sm:col-span-2' : ''}`}>
-            <label htmlFor={id} className="block text-[11px] font-bold text-[#4E5C70]">
+            <label htmlFor={id} className="block text-[11px] font-bold text-text-secondary">
               {field.label}
               {field.optional && kind === 'account' && field.key === 'kpp' ? ' (для ИП необязательно)' : field.optional ? ' (необязательно)' : ''}
             </label>
@@ -47,7 +47,7 @@ export function AdminRequisitesFields<K extends PaymentKind>({ kind, value, onCh
               }}
               aria-invalid={Boolean(error)}
               aria-describedby={error ? `${id}-error` : undefined}
-              className={`w-full neu-inset rounded-xl px-3 py-2 text-xs text-[#2D3A4E] outline-none ${numeric ? 'font-mono' : ''}`}
+              className={`w-full neu-inset rounded-xl px-3 py-2 text-xs text-text-primary ${numeric ? 'font-mono' : ''}`}
             />
             {error && (
               <p id={`${id}-error`} className="text-[11px] font-bold text-danger">

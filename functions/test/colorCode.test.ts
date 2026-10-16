@@ -5,6 +5,8 @@ import {
   normalizeProductColors,
   readColorCode,
   splitColorEntry,
+  storeColorsOf,
+  storeSizesOf,
   UNKNOWN_COLOR_HEX,
 } from '../../src/utils/colorCode';
 import { generateSkuCode, withMissingSkus } from '../../src/utils/inventory';
@@ -140,3 +142,22 @@ describe('CSV import reads colour codes', () => {
     expect('colors' in products[0]).toBe(false);
   });
 });
+
+describe('store palette helpers (fast product entry)', () => {
+  test('storeColorsOf returns saved settings.productColors when defined, otherwise catalog + defaults', () => {
+    const custom = storeColorsOf({ productColors: [{ name: 'Олива', hex: '#708238' }] }, []);
+    expect(custom).toEqual([{ name: 'Олива', hex: '#708238' }]);
+
+    const fallback = storeColorsOf(undefined, [{ colors: [{ name: 'Индиго', hex: '#3F4A8A' }] }]);
+    expect(fallback[0]).toEqual({ name: 'Индиго', hex: '#3F4A8A' });
+    expect(fallback.some((c) => c.name === 'Черный')).toBe(true);
+  });
+
+  test('storeSizesOf returns saved settings.productSizes when defined, otherwise defaults + catalog', () => {
+    expect(storeSizesOf({ productSizes: ['s', 'm', 'S'] }, [])).toEqual(['S', 'M']);
+    const fallback = storeSizesOf(undefined, [{ sizes: ['56'] }]);
+    expect(fallback).toContain('M');
+    expect(fallback).toContain('56');
+  });
+});
+

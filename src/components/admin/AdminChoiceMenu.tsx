@@ -39,15 +39,15 @@ export function AdminChoiceMenu<T extends string>({
       </Menu.Trigger>
       <Menu.Portal>
         <Menu.Positioner data-floating-layer="" className="z-[260] outline-none" sideOffset={6} collisionPadding={8} align="end">
-          <Menu.Popup className="min-w-[12rem] max-w-[calc(100vw-16px)] p-1.5 neu-dropdown rounded-2xl border border-white/80 outline-none space-y-1 transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0">
+          <Menu.Popup className="min-w-[12rem] max-w-[calc(100vw-16px)] p-1.5 neu-dropdown rounded-2xl outline-none space-y-1 transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0">
             <Menu.RadioGroup value={value} onValueChange={(next) => next !== value && onChoose(next as T)}>
               {choices.map((choice) => (
                 <Menu.RadioItem
                   key={choice.value}
                   value={choice.value}
                   closeOnClick
-                  className={`w-full min-h-9 px-3 py-2 rounded-xl text-left text-xs text-[#2D3A4E] flex items-center gap-2 cursor-pointer select-none outline-none ${
-                    choice.value === value ? 'neu-pill-active font-extrabold' : 'neu-option font-bold'
+                  className={`neu-option w-full min-h-9 px-3 py-2 rounded-xl text-left text-xs text-text-primary flex items-center gap-2 cursor-pointer select-none outline-none ${
+                    choice.value === value ? 'neu-pill-active font-extrabold' : 'font-bold'
                   }`}
                 >
                   {choice.icon && (

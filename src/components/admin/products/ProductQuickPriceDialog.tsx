@@ -70,7 +70,7 @@ export function ProductQuickPriceDialog({
   return (
     <ModalPortal>
       <div
-        className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200"
+        className="admin-no-glow fixed inset-0 z-[80] bg-text-primary/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200"
         onClick={(e) => {
           if (e.target === e.currentTarget && !saving) guard.requestClose();
         }}
@@ -78,20 +78,20 @@ export function ProductQuickPriceDialog({
         <div
           ref={dialog.ref}
           {...dialog.props}
-          className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-5 sm:p-6 max-w-sm w-full space-y-3.5 text-[#2D3A4E] border border-white/80 my-auto"
+          className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-5 sm:p-6 max-w-sm w-full space-y-3.5 text-text-primary my-auto"
         >
-          <div className="flex items-start justify-between gap-3 pb-2 border-b border-[#BAC5D5]/50">
+          <div className="flex items-start justify-between gap-3 pb-2 neu-divider-b">
             <div className="min-w-0">
-              <h3 id={dialog.titleId} className="text-sm sm:text-base font-extrabold text-[#2D3A4E]">
+              <h3 id={dialog.titleId} className="text-sm sm:text-base font-extrabold text-text-primary">
                 Цена товара
               </h3>
-              <p className="text-xs text-[#4E5C70] truncate">{product.title}</p>
+              <p className="text-xs text-text-secondary truncate">{product.title}</p>
             </div>
             <button
               type="button"
               onClick={guard.requestClose}
               disabled={saving}
-              className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer shrink-0"
+              className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer shrink-0"
               aria-label="Закрыть"
             >
               <X className="w-4 h-4" />
@@ -108,7 +108,7 @@ export function ProductQuickPriceDialog({
           >
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label htmlFor="quick-price" className="text-[11px] font-bold text-[#4E5C70]">
+                <label htmlFor="quick-price" className="text-[11px] font-bold text-text-secondary">
                   Цена, ₽
                 </label>
                 <input
@@ -120,11 +120,11 @@ export function ProductQuickPriceDialog({
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                   aria-invalid={Boolean(error) && error.startsWith('Цена')}
-                  className="w-full px-3 py-2 neu-inset rounded-xl text-sm font-extrabold text-[#2D3A4E]"
+                  className="w-full px-3 py-2 neu-inset rounded-xl text-sm font-extrabold text-text-primary"
                 />
               </div>
               <div className="space-y-1">
-                <label htmlFor="quick-old-price" className="text-[11px] font-bold text-[#4E5C70]">
+                <label htmlFor="quick-old-price" className="text-[11px] font-bold text-text-secondary">
                   Старая цена, ₽
                 </label>
                 <input
@@ -136,18 +136,18 @@ export function ProductQuickPriceDialog({
                   onChange={(e) => setOldPrice(e.target.value)}
                   placeholder="нет"
                   aria-invalid={Boolean(error) && error.startsWith('Старая')}
-                  className="w-full px-3 py-2 neu-inset rounded-xl text-sm font-extrabold text-[#2D3A4E]"
+                  className="w-full px-3 py-2 neu-inset rounded-xl text-sm font-extrabold text-text-primary"
                 />
               </div>
             </div>
 
             {product.costPrice !== undefined && product.costPrice > 0 && (
-              <p className="text-xs text-[#4E5C70]">
-                Закупка: <strong className="text-[#2D3A4E]">{rub(product.costPrice)}</strong>
+              <p className="text-xs text-text-secondary">
+                Закупка: <strong className="text-text-primary">{rub(product.costPrice)}</strong>
               </p>
             )}
             {below && (
-              <p className="flex items-start gap-1.5 rounded-xl bg-warning-soft border border-warning/25 p-2.5 text-xs font-bold text-warning">
+              <p className="flex items-start gap-1.5 rounded-xl neu-tone-warning p-2.5 text-xs font-bold text-warning">
                 <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" aria-hidden="true" />
                 Цена ниже закупки на {rub(below.loss)}: каждая продажа — в убыток. Сохранить можно, если так задумано.
               </p>
@@ -158,12 +158,12 @@ export function ProductQuickPriceDialog({
               </p>
             )}
 
-            <div className="flex gap-2.5 pt-2 border-t border-[#BAC5D5]/50">
+            <div className="flex gap-2.5 pt-2 neu-divider-t">
               <button
                 type="button"
                 onClick={guard.requestClose}
                 disabled={saving}
-                className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary cursor-pointer"
               >
                 Отмена
               </button>
@@ -172,7 +172,7 @@ export function ProductQuickPriceDialog({
                 disabled={saving}
                 aria-busy={saving}
                 className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold ${
-                  saving ? 'neu-button-disabled text-[#4E5C70]' : 'neu-button-accent text-white cursor-pointer'
+                  saving ? 'neu-button-disabled text-text-secondary' : 'neu-button-accent text-white cursor-pointer'
                 }`}
               >
                 {saving ? 'Сохраняем…' : 'Сохранить'}

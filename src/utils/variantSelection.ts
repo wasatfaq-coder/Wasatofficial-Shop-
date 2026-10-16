@@ -1,4 +1,6 @@
 import type { BodyMeasurements, Product } from '../types';
+import { productSizePacks, sizePackPrice } from '../shared/sizePacks';
+import { sellsRetail, sellsWholesale } from '../shared/wholesalePricing';
 import { getOrderableStock, getVariantStock } from './inventory';
 
 /**
@@ -39,9 +41,18 @@ export function maxOrderableForColor(product: Product, color: string, preorderMo
   return Math.max(0, ...(product.sizes ?? []).map((size) => getOrderableStock(product, color, size, preorderMode)));
 }
 
-/** Several sizes or colours: the «+» on a card asks which one instead of adding the first */
-export function needsVariantChoice(product: Pick<Product, 'sizes' | 'colors'>): boolean {
-  return (product.sizes?.length ?? 0) > 1 || (product.colors?.length ?? 0) > 1;
+/**
+ * Several sizes or colours, or wholesale / size-pack («Ростовкой») options:
+ * the «+» on a card opens the picker sheet so the customer can choose the mode, variant and quantity
+ */
+export function needsVariantChoice(
+  product: Pick<Product, 'sizes' | 'colors'> &
+    Partial<Pick<Product, 'saleChannel' | 'wholesalePrice' | 'sizePacks' | 'price'>>
+): boolean {
+  if ((product.sizes?.length ?? 0) > 1 || (product.colors?.length ?? 0) > 1) return true;
+  if (!sellsRetail(product) || sellsWholesale(product)) return true;
+  const hasPricedPacks = productSizePacks(product).some((pack) => sizePackPrice(product, pack) !== undefined);
+  return hasPricedPacks;
 }
 
 /** Any colour and size can be put in the cart (stock, or a preorder when it is on) */

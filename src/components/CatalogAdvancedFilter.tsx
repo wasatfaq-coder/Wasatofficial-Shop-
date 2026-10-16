@@ -10,7 +10,7 @@ import {
   SlidersHorizontal,
   ChevronUp,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { m, AnimatePresence } from 'motion/react';
 import { Product } from '../types';
 import { pluralRu } from '../utils/pluralize';
 import { NeumorphicSwitch } from './NeumorphicSwitch';
@@ -170,19 +170,25 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
   // «Оптом» is offered only when the store sells something wholesale
   const hasWholesale = useMemo(() => products.some(sellsWholesale), [products]);
 
+  const sliderValue = Math.min(filterState.maxPrice, maxPossiblePrice);
+  const sliderPercent =
+    maxPossiblePrice > minPossiblePrice
+      ? Math.max(0, Math.min(100, ((sliderValue - minPossiblePrice) / (maxPossiblePrice - minPossiblePrice)) * 100))
+      : 100;
+
   // Filter content is rendered inline and in the modal: ids get a prefix so they stay unique
   // sections are divided by a line, not cards inside the filter card (design pass 07.10)
   const renderFilterContent = (idPrefix: string) => (
     <div className="space-y-4">
       {/* 1. In-stock switch: the whole row is its label */}
-      <div className="pt-4 border-t border-[#BAC5D5]/50 first:border-t-0 first:pt-0 flex items-center justify-between gap-3">
-        <label htmlFor={`${idPrefix}-in-stock`} className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer select-none">
-          <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0 border border-white/40">
-            <PackageCheck className="w-4 h-4 stroke-[2.2]" aria-hidden="true" />
+      <div className="pt-4 neu-divider-t first:neu-divider-t-0 first:pt-0 flex items-center justify-between gap-3">
+        <label htmlFor={`${idPrefix}-in-stock`} className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer select-none">
+          <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0">
+            <PackageCheck className="w-4 h-4 stroke-[2.2] shrink-0" aria-hidden="true" />
           </div>
-          <div>
-            <div className="text-xs font-bold text-[#2D3A4E]">Только товары в наличии</div>
-            <p className="text-xs text-[#4E5C70]">
+          <div className="min-w-0">
+            <div className="text-xs font-extrabold text-text-primary">Только товары в наличии</div>
+            <p className="text-xs text-text-secondary leading-snug">
               Скрывать распроданные размеры и товары
             </p>
           </div>
@@ -197,23 +203,24 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
       </div>
 
       {/* 2. Price Range Filter with Deepened Inset Buttons */}
-      <div className="pt-4 border-t border-[#BAC5D5]/50 first:border-t-0 first:pt-0 space-y-3">
+      <div className="pt-4 neu-divider-t first:neu-divider-t-0 first:pt-0 space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-xs font-bold text-[#2D3A4E]">
-            <Banknote className="w-4 h-4 text-accent" />
+          <div className="flex items-center gap-2 text-xs font-extrabold text-text-primary">
+            <Banknote className="w-4 h-4 text-accent shrink-0" />
             <span>Ценовой диапазон</span>
           </div>
-          <span className="text-xs font-extrabold text-accent text-right whitespace-nowrap">{priceRangeLabel(filterState)}</span>
+          <span className="text-xs font-extrabold text-accent text-right whitespace-nowrap tabular-nums">{priceRangeLabel(filterState)}</span>
         </div>
 
         {/* Price Slider */}
-        <div className="space-y-1 pt-1">
+        <div className="space-y-1.5 pt-1 px-0.5">
           <input
             type="range"
             min={minPossiblePrice}
             max={maxPossiblePrice}
             step="500"
-            value={Math.min(filterState.maxPrice, maxPossiblePrice)}
+            value={sliderValue}
+            style={{ '--range-progress': `${sliderPercent}%` } as React.CSSProperties}
             aria-label="Максимальная цена"
             onChange={(e) => {
               const val = Number(e.target.value);
@@ -225,7 +232,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
             }}
             className="neu-range h-8 w-full"
           />
-          <div className="flex justify-between text-[11px] text-[#4E5C70] font-bold px-1">
+          <div className="flex justify-between text-[11px] text-text-secondary font-bold px-0.5 tabular-nums">
             <span>{minPossiblePrice.toLocaleString('ru-RU')} ₽</span>
             <span>{Math.round((minPossiblePrice + maxPossiblePrice) / 2).toLocaleString('ru-RU')} ₽</span>
             <span>{maxPossiblePrice.toLocaleString('ru-RU')} ₽</span>
@@ -234,7 +241,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
 
         {/* Quick price presets: raised, the selected one pressed in */}
         {pricePresets.length > 1 && (
-        <div role="radiogroup" aria-label="Быстрый выбор цены" className="flex items-center gap-1.5 flex-wrap pt-1">
+        <div role="radiogroup" aria-label="Быстрый выбор цены" className="flex items-center gap-2 flex-wrap pt-1">
           {pricePresets.map((preset) => {
             const isPresetActive =
               filterState.minPrice === preset.min && filterState.maxPrice === preset.max;
@@ -251,10 +258,10 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                     maxPrice: preset.max,
                   }));
                 }}
-                className={`text-[11px] font-bold px-2.5 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
+                className={`min-h-8 text-[11px] font-bold px-3.5 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
                   isPresetActive
                     ? 'neu-pill-active font-extrabold'
-                    : 'neu-button text-[#2D3A4E] hover:text-accent'
+                    : 'neu-button text-text-primary hover:text-accent'
                 }`}
               >
                 {preset.label}
@@ -266,10 +273,10 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
       </div>
 
       {/* 3. Material & Fabric Composition Filter with Deepened Inset Buttons */}
-      <div className="pt-4 border-t border-[#BAC5D5]/50 first:border-t-0 first:pt-0 space-y-2.5">
+      <div className="pt-4 neu-divider-t first:neu-divider-t-0 first:pt-0 space-y-2.5">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs font-bold text-[#2D3A4E]">
-            <Layers className="w-4 h-4 text-accent" />
+          <div className="flex items-center gap-2 text-xs font-extrabold text-text-primary">
+            <Layers className="w-4 h-4 text-accent shrink-0" />
             <span>Материал изделия</span>
           </div>
           {filterState.selectedMaterials.length > 0 && (
@@ -278,14 +285,14 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
               onClick={() =>
                 onChangeFilterState((prev) => ({ ...prev, selectedMaterials: [] }))
               }
-              className="text-[11px] font-bold neu-button-danger px-2.5 py-1 rounded-lg cursor-pointer"
+              className="min-h-8 text-[11px] font-bold neu-button-danger px-2.5 py-1 rounded-xl cursor-pointer shrink-0"
             >
               Сбросить ({filterState.selectedMaterials.length})
             </button>
           )}
         </div>
 
-        <div role="group" aria-label="Материал изделия" className="flex flex-wrap gap-1.5">
+        <div role="group" aria-label="Материал изделия" className="flex flex-wrap gap-2">
           {MATERIAL_CATEGORIES.map((cat) => {
             const isSelected = filterState.selectedMaterials.includes(cat.id);
             const count = materialCounts[cat.id] || 0;
@@ -295,17 +302,17 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 type="button"
                 aria-pressed={isSelected}
                 onClick={() => toggleMaterial(cat.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`min-h-9 px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
                   isSelected
                     ? 'neu-pill-active font-extrabold'
-                    : 'neu-button text-[#2D3A4E] hover:text-accent'
+                    : 'neu-button text-text-primary hover:text-accent'
                 }`}
               >
-                {isSelected && <Check className="w-3 h-3 stroke-[3]" aria-hidden="true" />}
+                {isSelected && <Check className="w-3.5 h-3.5 stroke-[3] shrink-0" aria-hidden="true" />}
                 <span>{cat.name}</span>
                 <span
-                  className={`text-[11px] font-medium px-1.5 py-0.2 rounded-md ${
-                    isSelected ? 'font-bold' : 'text-[#4E5C70]'
+                  className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md tabular-nums ${
+                    isSelected ? 'neu-fill-accent text-white' : 'neu-inset text-text-secondary'
                   }`}
                 >
                   {count}
@@ -317,10 +324,10 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
       </div>
 
       {/* 4. Size & Availability Filter with Deepened Inset Buttons */}
-      <div className="pt-4 border-t border-[#BAC5D5]/50 first:border-t-0 first:pt-0 space-y-2.5">
+      <div className="pt-4 neu-divider-t first:neu-divider-t-0 first:pt-0 space-y-2.5">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs font-bold text-[#2D3A4E]">
-            <Sparkles className="w-4 h-4 text-accent" />
+          <div className="flex items-center gap-2 text-xs font-extrabold text-text-primary">
+            <Sparkles className="w-4 h-4 text-accent shrink-0" />
             <span>Наличие размеров</span>
           </div>
           {filterState.selectedSizes.length > 0 && (
@@ -329,7 +336,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
               onClick={() =>
                 onChangeFilterState((prev) => ({ ...prev, selectedSizes: [] }))
               }
-              className="text-[11px] font-bold neu-button-danger px-2.5 py-1 rounded-lg cursor-pointer"
+              className="min-h-8 text-[11px] font-bold neu-button-danger px-2.5 py-1 rounded-xl cursor-pointer shrink-0"
             >
               Сбросить ({filterState.selectedSizes.length})
             </button>
@@ -340,7 +347,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
         <div
           role="group"
           aria-label="Размер"
-          className={`grid gap-2 ${
+          className={`grid gap-2.5 ${
             variant === 'sidebar' ? 'grid-cols-3' : 'grid-cols-3 min-[360px]:grid-cols-4 sm:grid-cols-5'
           }`}
         >
@@ -355,22 +362,22 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                 disabled={isOutOfStock}
                 aria-pressed={isSelected}
                 onClick={() => toggleSize(chip.label)}
-                className={`min-h-12 py-2 px-1 rounded-xl text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
+                className={`min-h-14 py-2.5 px-1.5 rounded-2xl text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                   isOutOfStock
                     ? 'neu-button-disabled'
                     : isSelected
                     ? 'neu-pill-active font-extrabold'
-                    : 'neu-button font-bold text-[#2D3A4E] hover:text-accent'
+                    : 'neu-button font-bold text-text-primary hover:text-accent'
                 }`}
               >
-                <span className="text-xs break-words max-w-full">{chip.label}</span>
+                <span className="text-xs font-extrabold leading-tight break-words max-w-full">{chip.label}</span>
                 {chip.russian && (
-                  <span className="text-[11px] font-bold text-[#4E5C70]">
+                  <span className="text-[11px] font-bold text-accent leading-tight tabular-nums">
                     <span className="sr-only">российский </span>
                     {chip.russian}
                   </span>
                 )}
-                <span className="text-[11px] font-medium text-[#4E5C70] whitespace-nowrap">
+                <span className="text-[10px] font-semibold text-text-secondary leading-tight whitespace-nowrap mt-0.5">
                   {isOutOfStock ? 'нет' : `${chip.count} ${pluralRu(chip.count, ['товар', 'товара', 'товаров'])}`}
                 </span>
               </button>
@@ -379,22 +386,29 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
         </div>
       </div>
 
-      {/* 5. Special Options (New, Discounts) with Inset Buttons */}
-      <div className="grid grid-cols-2 gap-2">
+      {/* 5. Special Options (New, Discounts, Wholesale) with Carved Divider & Tactile Check Wells */}
+      <div className="pt-4 neu-divider-t grid grid-cols-2 gap-2.5">
         <button
           type="button"
           onClick={() =>
             onChangeFilterState((prev) => ({ ...prev, onlyNew: !prev.onlyNew }))
           }
           aria-pressed={filterState.onlyNew}
-          className={`p-3 rounded-2xl text-xs flex items-center justify-between transition-all cursor-pointer ${
+          className={`p-3 px-3.5 rounded-2xl text-xs flex items-center justify-between gap-2 transition-all cursor-pointer ${
             filterState.onlyNew
               ? 'neu-pill-active font-extrabold'
-              : 'neu-button font-medium text-[#2D3A4E] hover:text-accent'
+              : 'neu-button font-bold text-text-primary hover:text-accent'
           }`}
         >
           <span>Только новинки</span>
-          {filterState.onlyNew && <Check className="w-4 h-4 text-accent stroke-[3]" aria-hidden="true" />}
+          <span
+            aria-hidden="true"
+            className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 transition-all ${
+              filterState.onlyNew ? 'neu-fill-accent text-white' : 'neu-inset text-transparent'
+            }`}
+          >
+            <Check className="w-3.5 h-3.5 stroke-[3]" />
+          </span>
         </button>
 
         <button
@@ -406,14 +420,21 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
             }))
           }
           aria-pressed={filterState.onlyDiscount}
-          className={`p-3 rounded-2xl text-xs flex items-center justify-between transition-all cursor-pointer ${
+          className={`p-3 px-3.5 rounded-2xl text-xs flex items-center justify-between gap-2 transition-all cursor-pointer ${
             filterState.onlyDiscount
               ? 'neu-pill-active font-extrabold'
-              : 'neu-button font-medium text-[#2D3A4E] hover:text-accent'
+              : 'neu-button font-bold text-text-primary hover:text-accent'
           }`}
         >
           <span>Со скидкой</span>
-          {filterState.onlyDiscount && <Check className="w-4 h-4 text-accent stroke-[3]" aria-hidden="true" />}
+          <span
+            aria-hidden="true"
+            className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 transition-all ${
+              filterState.onlyDiscount ? 'neu-fill-accent text-white' : 'neu-inset text-transparent'
+            }`}
+          >
+            <Check className="w-3.5 h-3.5 stroke-[3]" />
+          </span>
         </button>
 
         {hasWholesale && (
@@ -421,14 +442,21 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
             type="button"
             onClick={() => onChangeFilterState((prev) => ({ ...prev, onlyWholesale: !prev.onlyWholesale }))}
             aria-pressed={filterState.onlyWholesale}
-            className={`p-3 rounded-2xl text-xs flex items-center justify-between transition-all cursor-pointer ${
+            className={`col-span-2 p-3 px-3.5 rounded-2xl text-xs flex items-center justify-between gap-2 transition-all cursor-pointer ${
               filterState.onlyWholesale
                 ? 'neu-pill-active font-extrabold'
-                : 'neu-button font-medium text-[#2D3A4E] hover:text-accent'
+                : 'neu-button font-bold text-text-primary hover:text-accent'
             }`}
           >
             <span>Оптом</span>
-            {filterState.onlyWholesale && <Check className="w-4 h-4 text-accent stroke-[3]" aria-hidden="true" />}
+            <span
+              aria-hidden="true"
+              className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 transition-all ${
+                filterState.onlyWholesale ? 'neu-fill-accent text-white' : 'neu-inset text-transparent'
+              }`}
+            >
+              <Check className="w-3.5 h-3.5 stroke-[3]" />
+            </span>
           </button>
         )}
       </div>
@@ -437,18 +465,18 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
 
   if (variant === 'sidebar') {
     return (
-      <div className="neu-flat rounded-3xl p-4 space-y-4 border border-white/60">
-        <div className="flex items-center justify-between gap-2 pb-3 border-b border-[#BAC5D5]/60">
-          <h2 className="text-sm font-bold text-[#2D3A4E] flex items-center gap-2">
-            <SlidersHorizontal className="w-4 h-4 text-accent" />
+      <div className="neu-flat rounded-3xl p-4 space-y-4 ">
+        <div className="flex items-center justify-between gap-2 pb-3 neu-divider-b">
+          <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4 text-accent shrink-0" />
             Фильтры
           </h2>
           <button
             type="button"
             onClick={onResetFilters}
-            className="h-8 px-3 rounded-xl neu-button text-[11px] font-bold text-[#4E5C70] hover:text-danger flex items-center gap-1.5 cursor-pointer"
+            className="h-8 px-3 rounded-xl neu-button text-[11px] font-bold text-text-secondary hover:text-danger flex items-center gap-1.5 cursor-pointer shrink-0"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className="w-3.5 h-3.5 shrink-0" />
             Сбросить
           </button>
         </div>
@@ -462,7 +490,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
       {/* Inline Expandable Filter Box in Catalog */}
       <AnimatePresence>
         {isInlineExpanded && (
-          <motion.div
+          <m.div
             key="catalog-inline-filter"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
@@ -470,68 +498,68 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
             transition={{ duration: 0.25, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="neu-flat rounded-3xl p-4 border border-white/80 space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
-                <div className="flex items-center gap-2">
-                  <SlidersHorizontal className="w-4 h-4 text-accent" />
-                  <span className="text-xs font-extrabold text-[#2D3A4E] uppercase tracking-wider">
+            <div className="neu-flat rounded-3xl p-4 space-y-4">
+              <div className="flex items-center justify-between pb-2 neu-divider-b">
+                <div className="flex items-center gap-2 min-w-0">
+                  <SlidersHorizontal className="w-4 h-4 text-accent shrink-0" />
+                  <span className="text-xs font-extrabold text-text-primary uppercase tracking-wider truncate">
                     Параметры фильтрации каталога
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={onToggleInline}
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer shrink-0"
                   title="Свернуть"
                   aria-label="Свернуть"
                 >
-                  <ChevronUp className="w-4 h-4" />
+                  <ChevronUp className="w-4 h-4 shrink-0" />
                 </button>
               </div>
 
               {renderFilterContent('catalog-filter-inline')}
 
-              <div className="flex items-center gap-2.5 pt-2 border-t border-[#BAC5D5]/50">
+              <div className="flex items-center gap-2.5 pt-2 neu-divider-t">
                 <button
                   type="button"
                   onClick={onResetFilters}
-                  className="py-2.5 px-4 rounded-xl neu-button text-xs font-bold text-[#4E5C70] hover:text-danger transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="h-11 px-4 rounded-xl neu-button text-xs font-bold text-text-secondary hover:text-danger transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
+                  <RotateCcw className="w-3.5 h-3.5 shrink-0" />
                   <span>Сбросить</span>
                 </button>
                 <button
                   type="button"
                   onClick={onToggleInline}
                   disabled={filteredCount === 0}
-                  className="flex-1 py-2.5 px-4 rounded-xl neu-button-accent text-xs font-bold text-center transition-all cursor-pointer disabled:opacity-55 disabled:cursor-not-allowed"
+                  className="flex-1 h-11 px-4 rounded-xl neu-button-accent text-xs font-bold text-center transition-all cursor-pointer flex items-center justify-center disabled:cursor-not-allowed"
                 >
                   {showLabel}
                 </button>
               </div>
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 
       {/* Modal Drawer Overlay */}
       <AnimatePresence>
         {isOpenModal && (
-          <motion.div
+          <m.div
             key="catalog-filter-modal-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4"
           >
             {/* Backdrop */}
             <div
               onClick={onCloseModal}
-              className="fixed inset-0 bg-[#2D3A4E]/40 backdrop-blur-xs cursor-pointer"
+              className="fixed inset-0 bg-text-primary/40 backdrop-blur-xs cursor-pointer"
             />
 
-            <motion.div
+            <m.div
               ref={dialog.ref}
               {...dialog.props}
               key="catalog-filter-modal-card"
@@ -539,36 +567,41 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.94, opacity: 0, y: 12 }}
               transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-              className="relative w-full max-w-md neu-modal rounded-3xl p-5 space-y-4 max-h-[90vh] overflow-y-auto no-scrollbar z-10 border border-white/80"
+              className="relative w-full max-w-md neu-modal rounded-3xl p-5 flex flex-col gap-3.5 max-h-[90dvh] overflow-hidden z-10"
             >
               {/* Header */}
-              <div className="flex items-center justify-between pb-3 border-b border-[#BAC5D5]/60">
-                <div className="flex items-center gap-2">
-                  <SlidersHorizontal className="w-5 h-5 text-accent stroke-[2.2]" />
-                  <h3 id={dialog.titleId} className="text-base font-bold text-[#2D3A4E]">
+              <div className="flex items-center justify-between pb-3.5 neu-divider-b shrink-0">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0">
+                    <SlidersHorizontal className="w-4 h-4 stroke-[2.2] shrink-0" />
+                  </div>
+                  <h3 id={dialog.titleId} className="text-base font-extrabold text-text-primary truncate">
                     Фильтры
                   </h3>
                 </div>
                 <button
                   type="button"
                   onClick={onCloseModal}
-                  className="w-9 h-9 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent transition-colors cursor-pointer"
+                  className="w-9 h-9 rounded-full neu-button flex items-center justify-center text-text-primary hover:text-accent transition-colors cursor-pointer shrink-0"
                   aria-label="Закрыть"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4 shrink-0" />
                 </button>
               </div>
 
-              {renderFilterContent('catalog-filter-modal')}
+              {/* Scrollable filter body with negative horizontal margin + padding so button shadows never clip */}
+              <div className="flex-1 min-h-0 overflow-y-auto -mx-3 px-3 py-1 no-scrollbar">
+                {renderFilterContent('catalog-filter-modal')}
+              </div>
 
-              {/* Actions stay at the bottom of the window: in a long list the button used to be off-screen */}
-              <div className="sticky -bottom-5 -mx-5 px-5 pt-3 pb-5 -mb-5 bg-[#E3E8EF] border-t border-[#BAC5D5]/50 flex items-center gap-3">
+              {/* Pinned footer with matched h-12 buttons */}
+              <div className="pt-3.5 neu-divider-t flex items-center gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={onResetFilters}
-                  className="py-3 px-4 rounded-2xl neu-button text-xs font-bold text-[#4E5C70] hover:text-danger shrink-0 transition-colors cursor-pointer flex items-center gap-1.5"
+                  className="h-12 px-4 rounded-2xl neu-button text-xs font-bold text-text-secondary hover:text-danger shrink-0 transition-colors cursor-pointer flex items-center gap-1.5"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
+                  <RotateCcw className="w-3.5 h-3.5 shrink-0" />
                   <span>Сбросить</span>
                 </button>
                 <button
@@ -581,13 +614,13 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                     }
                   }}
                   disabled={filteredCount === 0}
-                  className="flex-1 py-3.5 px-5 rounded-2xl neu-button-accent font-bold text-xs text-center transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-55 disabled:cursor-not-allowed"
+                  className="flex-1 h-12 px-5 rounded-2xl neu-button-accent font-extrabold text-xs text-center transition-all cursor-pointer flex items-center justify-center gap-2 disabled:cursor-not-allowed"
                 >
                   <span>{showLabel}</span>
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
+            </m.div>
+          </m.div>
         )}
       </AnimatePresence>
     </>

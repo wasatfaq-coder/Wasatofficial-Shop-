@@ -8,9 +8,9 @@ const MAX_FIRESTORE_IMAGE_BYTES = 400 * 1024; // 400KB safe ceiling (well below 
 
 async function compressImageFile(
   file: File,
-  maxWidth = 1000,
-  maxHeight = 1000,
-  quality = 0.8
+  maxWidth = 1600,
+  maxHeight = 1600,
+  quality = 0.82
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     if (!file.type.startsWith('image/')) {
@@ -98,9 +98,14 @@ export async function compressBase64Image(
 
       let currentQuality = quality;
       let result = '';
+      const encodeCanvas = (q: number): string => {
+        const webp = canvas.toDataURL('image/webp', q);
+        if (webp.startsWith('data:image/webp')) return webp;
+        return canvas.toDataURL('image/jpeg', q);
+      };
 
       try {
-        result = canvas.toDataURL('image/jpeg', currentQuality);
+        result = encodeCanvas(currentQuality);
       } catch {
         return resolve(dataUrl);
       }
@@ -118,7 +123,7 @@ export async function compressBase64Image(
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, newWidth, newHeight);
         try {
-          result = canvas.toDataURL('image/jpeg', Math.max(0.4, currentQuality));
+          result = encodeCanvas(Math.max(0.4, currentQuality));
         } catch {
           break;
         }

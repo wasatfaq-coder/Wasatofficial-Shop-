@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { X, Phone, User, MapPin, MessageCircle, ShoppingBag, AlertCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { CartItem, Product } from '../types';
+import React, { useState, useEffect } from 'react';
+import { X, Phone, User, MapPin, MessageCircle, ShoppingBag, AlertCircle, Sparkles } from 'lucide-react';
+import { m, AnimatePresence } from 'motion/react';
+import { CartItem, Product, SavedAddress, UserProfile } from '../types';
 import { STORE_PAUSED_TEXT } from '../shared/orderApi';
 import { productImage } from '../utils/productImage';
 import { useProductThumbs } from '../utils/productThumbs';
@@ -11,6 +11,7 @@ import { digitsAfterCountryCode, isQuickOrderPhoneComplete, PHONE_DIGITS_AFTER_C
 import { pluralRu } from '../utils/pluralize';
 import { linePrice } from '../shared/orderLine';
 import { packLineInfo } from '../utils/cartPackLine';
+import { cleanHouseNumber, cleanCityName, parseSmartAddress } from '../utils/addressFormat';
 
 interface QuickOrderModalProps {
   isOpen: boolean;
@@ -23,6 +24,8 @@ interface QuickOrderModalProps {
     quantity: number;
   } | null;
   totalPrice: number;
+  /** Customer profile to pre-fill contact & saved addresses when available */
+  userProfile?: UserProfile;
   /** A promo is applied in the cart: it does not work for a 1-click order */
   promoNotApplied?: boolean;
   /** «Технические работы» in «Витрина»: the site takes no orders — said here, the button is off */
@@ -31,12 +34,16 @@ interface QuickOrderModalProps {
   onSuccess: (details: { name: string; phone: string; address: string }) => boolean | void | Promise<boolean | void>;
 }
 
+const DEFAULT_GUEST_NAME = 'Гость';
+const DEFAULT_GUEST_PHONE = '+7 (999) 000-00-00';
+
 export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
   isOpen,
   onClose,
   cartItems = [],
   singleProduct,
   totalPrice,
+  userProfile,
   promoNotApplied = false,
   ordersPaused = false,
   onSuccess,
@@ -51,6 +58,61 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
   const [entrance, setEntrance] = useState('');
   const [apartment, setApartment] = useState('');
   const [intercom, setIntercom] = useState('');
+  const [selectedSavedId, setSelectedSavedId] = useState<string | null>(null);
+
+  const applySavedAddress = (addr: SavedAddress) => {
+    const cityPart = cleanCityName(addr.city);
+    const streetPart = (addr.street || '').trim();
+    setAddress([cityPart ? `г. ${cityPart}` : '', streetPart].filter(Boolean).join(', '));
+    setHouse(cleanHouseNumber(addr.house));
+    setEntrance(addr.entrance || '');
+    setApartment(addr.apartment || '');
+    setIntercom(addr.intercom || '');
+    setSelectedSavedId(addr.id);
+  };
+
+  // Pre-fill from userProfile when opening if fields are still untouched
+  useEffect(() => {
+    if (!isOpen || !userProfile) return;
+    const realName =
+      userProfile.name && userProfile.name.trim() !== DEFAULT_GUEST_NAME ? userProfile.name.trim() : '';
+    const realPhone =
+      userProfile.phone && userProfile.phone.trim() !== DEFAULT_GUEST_PHONE ? userProfile.phone.trim() : '';
+    if (!name.trim() && realName) {
+      setName(realName);
+    }
+    if ((phone.trim() === '+7' || !phone.trim()) && realPhone) {
+      setPhone(realPhone.startsWith('+7') ? realPhone : `+7 ${realPhone.replace(/^\+?7?/, '')}`);
+    }
+    if (!address.trim() && !house.trim()) {
+      const defAddr =
+        userProfile.savedAddresses?.find((a) => a.isDefault) || userProfile.savedAddresses?.[0];
+      if (defAddr && (defAddr.city || defAddr.street)) {
+        applySavedAddress(defAddr);
+      } else if (userProfile.address && (userProfile.address.city || userProfile.address.street)) {
+        const cityPart = cleanCityName(userProfile.address.city);
+        const streetPart = (userProfile.address.street || '').trim();
+        setAddress([cityPart ? `г. ${cityPart}` : '', streetPart].filter(Boolean).join(', '));
+        setHouse(cleanHouseNumber(userProfile.address.house));
+        setEntrance(userProfile.address.entrance || '');
+        setApartment(userProfile.address.apartment || '');
+        setIntercom(userProfile.address.intercom || '');
+      }
+    }
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSmartParseAddress = (rawText?: string) => {
+    const source = rawText ?? address;
+    const parsed = parseSmartAddress(source);
+    if (parsed.city || parsed.street) {
+      const cityClean = cleanCityName(parsed.city);
+      setAddress([cityClean ? `г. ${cityClean}` : '', parsed.street || ''].filter(Boolean).join(', '));
+    }
+    if (parsed.house) setHouse(parsed.house);
+    if (parsed.entrance) setEntrance(parsed.entrance);
+    if (parsed.apartment) setApartment(parsed.apartment);
+    if (parsed.intercom) setIntercom(parsed.intercom);
+  };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.value;
@@ -78,10 +140,11 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
     if (isSubmitting || ordersPaused || !name.trim() || !phoneComplete) return;
 
     const extra: string[] = [];
-    if (house.trim()) extra.push(`д. ${house.trim()}`);
-    if (entrance.trim()) extra.push(`подъезд ${entrance.trim()}`);
-    if (apartment.trim()) extra.push(`кв. ${apartment.trim()}`);
-    if (intercom.trim()) extra.push(`домофон: ${intercom.trim()}`);
+    const hClean = cleanHouseNumber(house);
+    if (hClean) extra.push(`д. ${hClean}`);
+    if (entrance.trim()) extra.push(entrance.trim().toLowerCase().includes('под') ? entrance.trim() : `подъезд ${entrance.trim()}`);
+    if (apartment.trim()) extra.push(/^(?:квартира|кв\.?|офис|оф\.?)\s*/i.test(apartment.trim()) ? apartment.trim() : `кв. ${apartment.trim()}`);
+    if (intercom.trim()) extra.push(intercom.trim().toLowerCase().includes('домофон') ? intercom.trim() : `домофон: ${intercom.trim()}`);
     const finalAddr = [address.trim(), ...extra].filter(Boolean).join(', ');
 
     // The window closes once the order is written; not placed — it stays with what was typed
@@ -124,7 +187,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
+        <m.div
           key="quick-order-overlay"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -134,9 +197,9 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
         >
           <div
             onClick={onClose}
-            className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer"
+            className="fixed inset-0 bg-text-primary/50 backdrop-blur-xs cursor-pointer"
           />
-          <motion.div
+          <m.div
             ref={dialog.ref}
             {...dialog.props}
             key="quick-order-modal"
@@ -147,19 +210,19 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
             className="relative w-full max-w-md neu-modal rounded-3xl p-5 space-y-4 max-h-[92vh] overflow-y-auto no-scrollbar z-10"
           >
             {/* Header */}
-            <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-accent">
-                  <ShoppingBag className="w-4 h-4 text-accent" />
+            <div className="flex items-center justify-between gap-2 pb-2 neu-divider-b">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0">
+                  <ShoppingBag className="w-4 h-4 text-accent shrink-0" />
                 </div>
-                <div>
-                  <h3 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">Заказ в 1 клик</h3>
-                  <p className="text-xs text-[#4E5C70]">Менеджер перезвонит для подтверждения</p>
+                <div className="min-w-0">
+                  <h3 id={dialog.titleId} className="text-sm font-extrabold text-text-primary">Заказ в 1 клик</h3>
+                  <p className="text-xs text-text-secondary">Менеджер перезвонит для подтверждения</p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer shrink-0"
                 aria-label="Закрыть"
               >
                 <X className="w-4 h-4 stroke-[2.5]" />
@@ -178,13 +241,13 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                     className="w-10 h-10 rounded-xl object-cover neu-flat shrink-0"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold text-[#2D3A4E] truncate">{item.title}</p>
-                    <p className="text-xs text-[#4E5C70]">{item.variant}</p>
-                    {item.composition && <p className="text-xs text-[#4E5C70]">{item.composition}</p>}
+                    <p className="font-bold text-text-primary truncate">{item.title}</p>
+                    <p className="text-xs text-text-secondary">{item.variant}</p>
+                    {item.composition && <p className="text-xs text-text-secondary">{item.composition}</p>}
                   </div>
                   <div className="text-right shrink-0">
                     <p className="font-extrabold text-accent">{item.price.toLocaleString('ru-RU')} ₽</p>
-                    <p className="text-xs text-[#4E5C70]">{item.qtyText}</p>
+                    <p className="text-xs text-text-secondary">{item.qtyText}</p>
                   </div>
                 </div>
               ))}
@@ -192,13 +255,13 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
 
             {/* Price Preview */}
             <div className="neu-flat rounded-2xl p-3 flex items-center justify-between">
-              <span className="text-xs font-bold text-[#4E5C70]">Итого к оплате:</span>
-              <span className="text-base font-extrabold text-[#2D3A4E]">
+              <span className="text-xs font-bold text-text-secondary">Итого к оплате:</span>
+              <span className="text-base font-extrabold text-text-primary">
                 {totalPrice.toLocaleString('ru-RU')} ₽
               </span>
             </div>
             {promoNotApplied && (
-              <p className="text-xs font-semibold text-[#4E5C70] px-1">
+              <p className="text-xs font-semibold text-text-secondary px-1">
                 Промокод действует только при полном оформлении заказа
               </p>
             )}
@@ -206,7 +269,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
             {/* Fast Form */}
             <form onSubmit={handleSubmit} className="space-y-3">
               <div className="space-y-1">
-                <label htmlFor="quick-order-name" className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
+                <label htmlFor="quick-order-name" className="text-[11px] font-bold text-text-primary flex items-center gap-1.5">
                   <User className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
                   <span>Ваше имя *</span>
                 </label>
@@ -218,12 +281,12 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   placeholder="Иван"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
+                  className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-text-primary placeholder:text-text-muted"
                 />
               </div>
 
               <div className="space-y-1">
-                <label htmlFor="quick-order-phone" className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
+                <label htmlFor="quick-order-phone" className="text-[11px] font-bold text-text-primary flex items-center gap-1.5">
                   <Phone className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
                   <span>Номер телефона *</span>
                 </label>
@@ -237,29 +300,72 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   aria-describedby="quick-order-phone-hint"
                   value={phone}
                   onChange={handlePhoneChange}
-                  className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
+                  className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-text-primary placeholder:text-text-muted"
                 />
-                <p id="quick-order-phone-hint" className="text-xs text-[#4E5C70]">
+                <p id="quick-order-phone-hint" className="text-xs text-text-secondary">
                   {phoneHint}
                 </p>
               </div>
 
-              <div className="space-y-1">
-                <label htmlFor="quick-order-address" className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
-                  <span>Адрес доставки — по желанию</span>
-                </label>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <label htmlFor="quick-order-address" className="text-[11px] font-bold text-text-primary flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
+                    <span>Адрес доставки — по желанию</span>
+                  </label>
+                  {address.includes(',') && !house.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => handleSmartParseAddress()}
+                      className="text-[11px] font-bold text-accent hover:text-accent-strong inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Разобрать по полям</span>
+                    </button>
+                  )}
+                </div>
+
+                {userProfile?.savedAddresses && userProfile.savedAddresses.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pb-0.5">
+                    {userProfile.savedAddresses.map((sa) => {
+                      const active = selectedSavedId === sa.id;
+                      return (
+                        <button
+                          key={sa.id}
+                          type="button"
+                          onClick={() => applySavedAddress(sa)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                            active ? 'neu-pill-active text-accent font-extrabold' : 'neu-button text-text-secondary hover:text-text-primary'
+                          }`}
+                        >
+                          {sa.title || sa.city || 'Адрес'}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
                 <input
                   id="quick-order-address"
                   type="text"
                   autoComplete="street-address"
-                  placeholder="Город, улица"
+                  placeholder="Город, улица (или вставьте полный адрес)"
                   aria-describedby="quick-order-address-hint"
                   value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
+                  onChange={(e) => {
+                    setAddress(e.target.value);
+                    setSelectedSavedId(null);
+                  }}
+                  onPaste={(e) => {
+                    const pasted = e.clipboardData.getData('text');
+                    if (pasted && pasted.includes(',') && /\d/.test(pasted)) {
+                      e.preventDefault();
+                      handleSmartParseAddress(pasted);
+                    }
+                  }}
+                  className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-text-primary placeholder:text-text-muted"
                 />
-                <p id="quick-order-address-hint" className="text-xs text-[#4E5C70]">
+                <p id="quick-order-address-hint" className="text-xs text-text-secondary">
                   Можно не заполнять: менеджер уточнит адрес, когда позвонит.
                 </p>
               </div>
@@ -267,7 +373,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
               {/* Дополнительные поля: Номер дома, Подъезд, Квартира/Офис, Домофон */}
               <div className="grid grid-cols-4 gap-2 text-[11px]">
                 <div>
-                  <label htmlFor="quick-order-house" className="text-[11px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
+                  <label htmlFor="quick-order-house" className="text-[11px] font-bold text-text-primary block mb-0.5 truncate">
                     Дом
                   </label>
                   <input
@@ -276,11 +382,11 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                     placeholder="10"
                     value={house}
                     onChange={(e) => setHouse(e.target.value)}
-                    className="w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
+                    className="w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-text-primary placeholder:text-text-muted"
                   />
                 </div>
                 <div>
-                  <label htmlFor="quick-order-entrance" className="text-[11px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
+                  <label htmlFor="quick-order-entrance" className="text-[11px] font-bold text-text-primary block mb-0.5 truncate">
                     Подъезд
                   </label>
                   <input
@@ -289,11 +395,11 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                     placeholder="2"
                     value={entrance}
                     onChange={(e) => setEntrance(e.target.value)}
-                    className="w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
+                    className="w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-text-primary placeholder:text-text-muted"
                   />
                 </div>
                 <div>
-                  <label htmlFor="quick-order-apartment" className="text-[11px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
+                  <label htmlFor="quick-order-apartment" className="text-[11px] font-bold text-text-primary block mb-0.5 truncate">
                     Кв./Офис
                   </label>
                   <input
@@ -302,11 +408,11 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                     placeholder="25"
                     value={apartment}
                     onChange={(e) => setApartment(e.target.value)}
-                    className="w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
+                    className="w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-text-primary placeholder:text-text-muted"
                   />
                 </div>
                 <div>
-                  <label htmlFor="quick-order-intercom" className="text-[11px] font-bold text-[#2D3A4E] block mb-0.5 truncate">
+                  <label htmlFor="quick-order-intercom" className="text-[11px] font-bold text-text-primary block mb-0.5 truncate">
                     Домофон
                   </label>
                   <input
@@ -315,7 +421,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                     placeholder="25K"
                     value={intercom}
                     onChange={(e) => setIntercom(e.target.value)}
-                    className="w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
+                    className="w-full py-1.5 px-2 neu-inset rounded-lg text-xs text-text-primary placeholder:text-text-muted"
                   />
                 </div>
               </div>
@@ -323,12 +429,12 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
               {/* The order goes out with «Уточнит менеджер» for delivery and payment: no made-up fitting or free returns
                   (audit 02.10, finding 44) */}
               {ordersPaused ? (
-                <div role="status" className="p-2.5 rounded-xl bg-warning-soft border border-warning/40 flex items-start gap-2 text-xs text-[#2D3A4E] font-semibold">
+                <div role="status" className="p-2.5 rounded-xl neu-tone-warning flex items-start gap-2 text-xs text-text-primary font-semibold">
                   <AlertCircle className="w-4 h-4 text-warning shrink-0 mt-px" aria-hidden="true" />
                   <span>{STORE_PAUSED_TEXT}. Напишите в чат поддержки — менеджер оформит заказ сам.</span>
                 </div>
               ) : (
-                <div className="p-2 rounded-xl neu-flat flex items-center gap-2 text-xs text-[#4E5C70] font-semibold">
+                <div className="p-2 rounded-xl neu-flat flex items-center gap-2 text-xs text-text-secondary font-semibold">
                   <MessageCircle className="w-4 h-4 text-accent shrink-0" aria-hidden="true" />
                   <span>Доставку и оплату менеджер согласует с вами после заказа.</span>
                 </div>
@@ -339,7 +445,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                  className="py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary cursor-pointer"
                 >
                   Отмена
                 </button>
@@ -348,7 +454,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   disabled={ordersPaused || isSubmitting || !name.trim() || !phoneComplete}
                   className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-extrabold cursor-pointer transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 btn-confirm-order ${
                     isSubmitting
-                      ? 'neu-inset-deep neu-inset-deep-animated text-accent ring-2 ring-accent/40'
+                      ? 'neu-pill-active neu-inset-deep-animated text-accent'
                       : 'neu-button-accent text-white hover:scale-102 active:neu-inset-deep'
                   }`}
                 >
@@ -364,8 +470,8 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
               </div>
               <LegalConsentNote action="Подтвердить быстрый заказ" className="text-center" />
             </form>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

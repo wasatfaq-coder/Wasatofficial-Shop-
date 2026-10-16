@@ -1,7 +1,9 @@
 import React from 'react';
 import { AlertCircle, Sparkles, Store } from 'lucide-react';
+import { readMinWholesaleAmount } from '../../../shared/wholesalePricing';
 import { AdminServerOrdersCard } from '../AdminServerOrdersCard';
 import {
+  MAX_MIN_WHOLESALE_AMOUNT,
   MAX_RETURN_PERIOD_DAYS,
   MAX_UNPAID_CANCEL_DAYS,
   parseWholeNumber,
@@ -13,7 +15,7 @@ interface StorefrontOrdersSectionProps extends StorefrontSectionProps {
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
-/** «Приём заказов»: принимает ли сайт заказы, предзаказ, автоотмена, срок возврата и проверка заказов на сервере */
+/** «Приём заказов»: принимает ли сайт заказы, предзаказ, автоотмена, срок возврата, минимальная сумма опта и проверка заказов на сервере */
 export const StorefrontOrdersSection: React.FC<StorefrontOrdersSectionProps> = ({ settings, patch, onShowToast }) => (
   <div className="space-y-4">
     <StorefrontCard title="Приём заказов" icon={<Store className="w-3.5 h-3.5 text-accent" aria-hidden="true" />}>
@@ -28,9 +30,9 @@ export const StorefrontOrdersSection: React.FC<StorefrontOrdersSectionProps> = (
           icon={<Store className="w-4 h-4" aria-hidden="true" />}
         />
         {!settings.isStoreOnline && (
-          <div className="bg-warning-soft border border-warning/30 rounded-2xl p-3 flex items-start gap-2.5">
+          <div className="neu-tone-warning rounded-2xl p-3 flex items-start gap-2.5">
             <AlertCircle className="w-4 h-4 text-warning shrink-0 mt-0.5" aria-hidden="true" />
-            <p className="text-xs text-[#2D3A4E] leading-snug">
+            <p className="text-xs text-text-primary leading-snug">
               <span className="font-extrabold block">
                 Приём заказов остановлен: оформление и «Заказ в 1 клик» не подтверждают заказ
               </span>
@@ -73,8 +75,28 @@ export const StorefrontOrdersSection: React.FC<StorefrontOrdersSectionProps> = (
         />
       </div>
 
-      <p className="text-xs text-[#4E5C70]">
-        Порог бесплатной доставки и экспресс — в разделе «Доставка и ПВЗ».
+      <StorefrontDaysField
+        id="storefront-minWholesaleOrderAmount"
+        label="Минимальная сумма оптового заказа"
+        hint="Общая сумма оптовых строк и ростовок в корзине, меньше которой оптовый заказ не оформляется. На розничные заказы не влияет."
+        value={readMinWholesaleAmount(settings.wholesale)}
+        max={MAX_MIN_WHOLESALE_AMOUNT}
+        unit="₽"
+        placeholder="без минимума"
+        note="Проверяется в корзине и при оформлении заказа только тогда, когда в корзине есть оптовые позиции или ростовки. Поле синхронизировано с разделом «Опт». Пусто — без порога."
+        onChange={(raw) => {
+          const minOrderAmount = parseWholeNumber(raw, MAX_MIN_WHOLESALE_AMOUNT);
+          const { minOrderAmount: _old, ...rest } = settings.wholesale ?? {};
+          const nextWholesale = {
+            ...rest,
+            ...(minOrderAmount !== undefined ? { minOrderAmount } : {}),
+          };
+          patch({ wholesale: Object.keys(nextWholesale).length > 0 ? nextWholesale : undefined });
+        }}
+      />
+
+      <p className="text-xs text-text-secondary">
+        Порог бесплатной доставки и экспресс — в разделе «Доставка и ПВЗ», шкала скидок за объём — в разделе «Опт».
       </p>
     </StorefrontCard>
 

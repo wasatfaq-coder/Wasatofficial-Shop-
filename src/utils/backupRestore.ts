@@ -40,7 +40,11 @@ export const BACKUP_COLLECTION_TITLES: Record<string, string> = {
   products: 'Товары',
   product_previews: 'Превью фото товаров',
   product_photos: 'Фото товаров',
+  product_thumbs: 'Миниатюры карточек товаров',
   product_costs: 'Себестоимость и поставщики',
+  catalog_index: 'Индекс каталога',
+  orders_index: 'Индекс заказов',
+  pack_marks: 'Отметки вскрытых упаковок',
   promos: 'Промокоды',
   settings: 'Настройки витрины',
   banners: 'Баннеры',
@@ -64,6 +68,15 @@ export const BACKUP_COLLECTION_TITLES: Record<string, string> = {
   price_changes: 'Журнал цен',
   order_costs: 'Себестоимость заказов',
 };
+
+export interface DatabaseMigrationRow {
+  collection: string;
+  title: string;
+  sourceCount: number;
+  targetCount: number;
+  writtenCount: number;
+  skippedReason?: string;
+}
 
 export type RestoreMode = 'missing' | 'overwrite';
 
@@ -123,15 +136,22 @@ export function parseBackup(text: string): ParsedBackup | string {
   };
 }
 
-/** `{ __timestamp: ISO }` of the file back to a date of the database (`toDate` makes a Firestore Timestamp) */
-export function fromBackupValue(value: unknown, toDate: (iso: string) => unknown): unknown {
-  if (Array.isArray(value)) return value.map((v) => fromBackupValue(v, toDate));
+/** `{ __timestamp: ISO }` of the file back to a date of the database (`toDate` makes a Firestore Timestamp), and `{ __bytes: base64 }` back to Firestore Bytes */
+export function fromBackupValue(
+  value: unknown,
+  toDate: (iso: string) => unknown,
+  toBytes?: (base64: string) => unknown
+): unknown {
+  if (Array.isArray(value)) return value.map((v) => fromBackupValue(v, toDate, toBytes));
   if (isPlainObject(value)) {
     const keys = Object.keys(value);
     if (keys.length === 1 && keys[0] === '__timestamp' && typeof value.__timestamp === 'string') {
       return toDate(value.__timestamp);
     }
-    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, fromBackupValue(v, toDate)]));
+    if (keys.length === 1 && keys[0] === '__bytes' && typeof value.__bytes === 'string' && toBytes) {
+      return toBytes(value.__bytes);
+    }
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, fromBackupValue(v, toDate, toBytes)]));
   }
   return value;
 }
@@ -146,7 +166,8 @@ export function planRestore(
   chosen: string[],
   mode: RestoreMode,
   existing: Record<string, Set<string>>,
-  toDate: (iso: string) => unknown
+  toDate: (iso: string) => unknown,
+  toBytes?: (base64: string) => unknown
 ): RestoreWrite[] {
   const writes: RestoreWrite[] = [];
   const costIds = new Set((backup.collections.product_costs ?? []).map((d) => d.id));
@@ -155,7 +176,7 @@ export function planRestore(
   for (const collection of chosen) {
     if (RESTORE_SKIPPED[collection]) continue;
     for (const doc of backup.collections[collection] ?? []) {
-      const data = fromBackupValue(doc.data, toDate) as Record<string, unknown>;
+      const data = fromBackupValue(doc.data, toDate, toBytes) as Record<string, unknown>;
       if (collection === 'products' && 'costPrice' in data) {
         const { costPrice, ...product } = data;
         if (typeof costPrice === 'number' && !costIds.has(doc.id) && takes('product_costs', doc.id)) {

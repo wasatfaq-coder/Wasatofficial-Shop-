@@ -69,6 +69,7 @@ import { NotConfigured } from '../NotConfigured';
 import { useChatTemplates } from './useChatTemplates';
 import { MAX_CHAT_TEMPLATES, MAX_TEMPLATE_TEXT, MAX_TEMPLATE_TITLE } from '../../utils/chatTemplates';
 import { ChatPhoto, hasChatPhoto } from '../ChatPhoto';
+import { buyerPrice } from '../../utils/wholesaleOffer';
 
 /** What an admin sends into a customer's dialog */
 export interface AdminChatPayload {
@@ -120,11 +121,11 @@ const RETURN_REASONS = [
 ];
 
 const inputClass =
-  'w-full min-w-0 h-10 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]';
+  'w-full min-w-0 h-10 px-3 neu-inset rounded-xl text-xs text-text-primary placeholder:text-text-muted';
 const textareaClass =
-  'w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A] resize-y leading-relaxed';
-const labelClass = 'text-[11px] font-bold text-[#4E5C70] block mb-1';
-const labelHintRowClass = 'text-[11px] font-bold text-[#4E5C70] flex items-center gap-0.5 mb-1';
+  'w-full px-3 py-2 neu-inset rounded-xl text-xs text-text-primary placeholder:text-text-muted resize-y leading-relaxed';
+const labelClass = 'text-[11px] font-bold text-text-secondary block mb-1';
+const labelHintRowClass = 'text-[11px] font-bold text-text-secondary flex items-center gap-0.5 mb-1';
 
 const newPromoCode = () => `CARE-${Math.floor(1000 + Math.random() * 9000)}`;
 
@@ -153,7 +154,7 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
   return (
   <ModalPortal>
     <div
-      className="fixed inset-0 z-[150] bg-[#2D3A4E]/55 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-[150] bg-text-primary/55 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
@@ -162,12 +163,12 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
         onClick={(e) => e.stopPropagation()}
         className={`w-full ${wide ? 'max-w-lg' : 'max-w-md'} neu-modal rounded-3xl p-4 sm:p-5 flex flex-col gap-3.5 max-h-[90dvh] animate-in zoom-in-95 fade-in duration-200`}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-[#BAC5D5]/50 pb-3 shrink-0">
-          <h4 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">{title}</h4>
+        <div className="flex items-center justify-between gap-3 neu-divider-b pb-3 shrink-0">
+          <h4 id={dialog.titleId} className="text-sm font-extrabold text-text-primary">{title}</h4>
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer shrink-0"
+            className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-text-secondary hover:text-text-primary transition-all cursor-pointer shrink-0"
             aria-label="Закрыть"
           >
             <X className="w-4 h-4" />
@@ -205,7 +206,7 @@ function Segments<T extends string>({
           disabled={disabled}
           onClick={() => onChange(o.value)}
           className={`flex-1 h-8 px-2 rounded-lg text-[11px] font-bold transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
-            value === o.value ? 'neu-pill-active' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
+            value === o.value ? 'neu-pill-active' : 'text-text-secondary hover:text-text-primary'
           }`}
         >
           {o.label}
@@ -518,7 +519,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
     const card: ProductRecommendationCard = {
       productId: recommended.id,
       title: recommended.title,
-      price: recommended.price,
+      price: buyerPrice(recommended),
       // products keep no previews inside (stage 6 of docs/catalog-scale-plan.md): the card takes the miniature
       image: recommended.images?.[0] || thumbOf(recommended.id) || '',
       color: recommendColor || undefined,
@@ -641,8 +642,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
 
   const senderLabel = (m: ChatMessage) => {
     if (m.isInternalNote) return { text: 'Заметка для команды', icon: Lock, cls: 'text-warning' };
-    if (m.sender === 'user') return { text: 'Покупатель', icon: User, cls: 'text-[#4E5C70]' };
-    if (m.sender === 'bot') return { text: 'Автоответ (старый)', icon: Bot, cls: 'text-[#4E5C70]' };
+    if (m.sender === 'user') return { text: 'Покупатель', icon: User, cls: 'text-text-secondary' };
+    if (m.sender === 'bot') return { text: 'Автоответ (старый)', icon: Bot, cls: 'text-text-secondary' };
     return { text: 'Сотрудник', icon: UserCheck, cls: 'text-success' };
   };
 
@@ -661,14 +662,14 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               <User className="w-5 h-5" />
             </div>
             <div className="min-w-0 space-y-0.5">
-              <h3 className="text-sm font-extrabold text-[#2D3A4E] leading-tight break-words">{thread.name}</h3>
-              <p className="text-xs text-[#4E5C70] leading-snug break-words">
+              <h3 className="text-sm font-extrabold text-text-primary leading-tight break-words">{thread.name}</h3>
+              <p className="text-xs text-text-secondary leading-snug break-words">
                 {isLegacy
                   ? 'Сообщения до разделения чата по покупателям'
                   : [contacts?.customerPhone, contacts?.customerEmail].filter(Boolean).join(' · ') ||
                     (orders.length ? 'Контакты в заказе не указаны' : 'Заказов нет, контакты неизвестны')}
               </p>
-              <p className="text-xs text-[#4E5C70]">Сообщений: {thread.count}</p>
+              <p className="text-xs text-text-secondary">Сообщений: {thread.count}</p>
             </div>
           </div>
           {isLegacy ? (
@@ -686,22 +687,22 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               onClick={() => setDialogOpen((v) => !v)}
               aria-expanded={dialogOpen}
               aria-controls="support-dialog-settings"
-              className="min-h-9 px-3 py-1.5 rounded-xl neu-button text-[11px] font-bold text-[#2D3A4E] hover:text-accent flex items-center gap-1.5 shrink-0 cursor-pointer text-left"
+              className="min-h-9 px-3 py-1.5 rounded-xl neu-button text-[11px] font-bold text-text-primary hover:text-accent flex items-center gap-1.5 shrink-0 cursor-pointer text-left"
             >
               <span className="flex flex-col leading-tight">
                 <span>Диалог</span>
-                <span className={priority === 'normal' ? 'text-[#4E5C70]' : 'text-danger'}>
+                <span className={priority === 'normal' ? 'text-text-secondary' : 'text-danger'}>
                   {STATUS_LABELS[status]}
                   {priority !== 'normal' && ` · ${PRIORITY_LABELS[priority]}`}
                 </span>
               </span>
-              <ChevronDown aria-hidden="true" className={`w-4 h-4 text-[#4E5C70] transition-transform ${dialogOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown aria-hidden="true" className={`w-4 h-4 text-text-secondary transition-transform ${dialogOpen ? 'rotate-180' : ''}`} />
             </button>
           )}
         </div>
 
         {isLegacy ? (
-          <p className="neu-inset rounded-2xl p-3 text-xs text-[#2D3A4E] leading-snug flex gap-2">
+          <p className="neu-inset rounded-2xl p-3 text-xs text-text-primary leading-snug flex gap-2">
             <Info className="w-4 h-4 text-accent shrink-0" />
             Ответить сюда нельзя: у этих сообщений нет покупателя, ответ никто не увидит. Историю можно очистить.
           </p>
@@ -735,7 +736,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 </div>
               </div>
               {/* Clearing is rare and cannot be undone: last, after a line, and confirmed */}
-              <div className="border-t border-[#BAC5D5]/40 pt-3 flex justify-end">
+              <div className="neu-divider-t pt-3 flex justify-end">
                 <button
                   type="button"
                   onClick={() => setIsClearConfirmOpen(true)}
@@ -758,22 +759,22 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             type="button"
             onClick={() => setOrderOpen((v) => !v)}
             aria-expanded={orderOpen}
-            className="w-full flex items-center justify-between gap-2 cursor-pointer min-h-6"
+            className="w-full flex items-center justify-between gap-2 cursor-pointer min-h-8"
           >
             <span className="flex flex-col items-start gap-0.5 min-w-0 text-left">
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-text-primary flex items-center gap-1.5">
                 <ShoppingBag className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
                 Заказ покупателя
               </span>
               {(!orderOpen || sortedOrders.length > 1) && (
-                <span className="text-[11px] text-[#4E5C70]">
+                <span className="text-[11px] text-text-secondary">
                   {!orderOpen && <span className="font-bold text-accent">№ {order.id}</span>}
                   {!orderOpen && sortedOrders.length > 1 && ' · '}
                   {sortedOrders.length > 1 && `всего заказов: ${sortedOrders.length}`}
                 </span>
               )}
             </span>
-            <ChevronDown aria-hidden="true" className={`w-4 h-4 text-[#4E5C70] shrink-0 transition-transform ${orderOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown aria-hidden="true" className={`w-4 h-4 text-text-secondary shrink-0 transition-transform ${orderOpen ? 'rotate-180' : ''}`} />
           </button>
           {orderOpen && (
           <>
@@ -789,25 +790,25 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
           )}
           <div className="neu-inset rounded-2xl p-3 space-y-2">
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <span className="text-xs font-extrabold text-[#2D3A4E]">№ {order.id}</span>
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-accent/10 text-accent">
+              <span className="text-xs font-extrabold text-text-primary">№ {order.id}</span>
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg neu-tone-info text-accent">
                 {adminStatusLabel(order)}
               </span>
             </div>
-            <p className="text-xs text-[#4E5C70] leading-snug">
+            <p className="text-xs text-text-secondary leading-snug">
               {(order.totalPrice || 0).toLocaleString('ru-RU')} ₽ · {groupOrderLines(order.items || []).length} поз.
               {order.deliveryAddress ? ` · ${order.deliveryAddress}` : ''}
             </p>
             {order.trackingNumber && (
-              <p className="text-xs text-[#4E5C70]">
-                Трек-номер: <strong className="font-mono text-[#2D3A4E]">{order.trackingNumber}</strong>
+              <p className="text-xs text-text-secondary">
+                Трек-номер: <strong className="font-mono text-text-primary">{order.trackingNumber}</strong>
               </p>
             )}
             <button
               type="button"
               onClick={() => setShowOrderItems((v) => !v)}
               aria-expanded={showOrderItems}
-              className="text-[11px] font-bold text-accent flex items-center gap-1 cursor-pointer"
+              className="min-h-8 text-[11px] font-bold text-accent flex items-center gap-1 cursor-pointer"
             >
               {showOrderItems ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
               {showOrderItems ? 'Скрыть состав' : 'Состав заказа'}
@@ -821,7 +822,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                       {item.product && (
                         <OrderLineThumbImage line={item.product} catalog={products} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" />
                       )}
-                      <span className="text-[11px] text-[#2D3A4E] min-w-0 flex-1 leading-snug">
+                      <span className="text-[11px] text-text-primary min-w-0 flex-1 leading-snug">
                         {group.kind === 'pack' ? (
                           <>
                             {item.product?.title || 'Товар'} · {[item.selectedColor, `${group.title} · ${group.packCount} уп.`].filter(Boolean).join(' / ')} ·{' '}
@@ -845,7 +846,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               type="button"
               onClick={openStatusModal}
               disabled={!onUpdateOrders}
-              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-accent flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-accent flex items-center gap-1.5 transition-all cursor-pointer "
             >
               <Truck className="w-3.5 h-3.5" />
               Изменить статус
@@ -855,7 +856,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               type="button"
               onClick={() => setIsReturnModalOpen(true)}
               disabled={!onUpdateOrders || isLegacy}
-              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-text-primary flex items-center gap-1.5 transition-all cursor-pointer "
             >
               <RotateCcw className="w-3.5 h-3.5" />
               Возврат или обмен
@@ -871,7 +872,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
       {/* 3. Messages */}
       <section className="neu-flat rounded-3xl p-3.5 sm:p-4 space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#2D3A4E]">Переписка</span>
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-text-primary">Переписка</span>
           <div className="flex items-center gap-2 flex-wrap justify-end">
           {hiddenCount > 0 && (
             <span className="inline-flex items-center gap-0.5">
@@ -880,12 +881,12 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               role="switch"
               aria-checked={showHidden}
               onClick={() => setShowHidden((v) => !v)}
-              className="h-8 px-2.5 neu-button rounded-xl text-[11px] font-bold text-[#4E5C70] flex items-center gap-2 cursor-pointer"
+              className="min-h-8 px-2.5 py-1 neu-button rounded-xl text-[11px] font-bold text-text-secondary flex items-center gap-2 cursor-pointer"
             >
               Скрытые ({hiddenCount})
-              <span className="w-8 h-5 rounded-full neu-inset p-0.5 flex items-center">
+              <span className={`w-9 h-5 rounded-full px-0.5 flex items-center transition-colors duration-200 ${showHidden ? 'neu-fill-accent' : 'neu-inset'}`}>
                 <span
-                  className={`w-4 h-4 rounded-full transition-transform ${showHidden ? 'translate-x-3 neu-fill-accent' : 'neu-button'}`}
+                  className={`w-4 h-4 rounded-full neu-flat-sm transition-transform duration-200 ${showHidden ? 'translate-x-4' : 'translate-x-0'}`}
                 />
               </span>
             </button>
@@ -898,12 +899,12 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               role="switch"
               aria-checked={showNotes}
               onClick={() => setShowNotes((v) => !v)}
-              className="h-8 px-2.5 neu-button rounded-xl text-[11px] font-bold text-[#4E5C70] flex items-center gap-2 cursor-pointer"
+              className="min-h-8 px-2.5 py-1 neu-button rounded-xl text-[11px] font-bold text-text-secondary flex items-center gap-2 cursor-pointer"
             >
               Заметки ({notesCount})
-              <span className="w-8 h-5 rounded-full neu-inset p-0.5 flex items-center">
+              <span className={`w-9 h-5 rounded-full px-0.5 flex items-center transition-colors duration-200 ${showNotes ? 'neu-fill-accent' : 'neu-inset'}`}>
                 <span
-                  className={`w-4 h-4 rounded-full transition-transform ${showNotes ? 'translate-x-3 neu-fill-accent' : 'neu-button'}`}
+                  className={`w-4 h-4 rounded-full neu-flat-sm transition-transform duration-200 ${showNotes ? 'translate-x-4' : 'translate-x-0'}`}
                 />
               </span>
             </button>
@@ -911,7 +912,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
           </div>
         </div>
         <div className="neu-inset rounded-2xl p-3 space-y-3 max-h-[55dvh] overflow-y-auto" aria-live="polite">
-          {visibleMessages.length === 0 && <p className="text-center py-8 text-xs text-[#4E5C70]">Сообщений нет</p>}
+          {visibleMessages.length === 0 && <p className="text-center py-8 text-xs text-text-secondary">Сообщений нет</p>}
           {visibleMessages.map((msg, idx) => {
             const isCustomer = msg.sender === 'user';
             const who = senderLabel(msg);
@@ -924,13 +925,13 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 <span className={`text-[11px] font-bold flex items-center gap-1 px-1 ${who.cls}`}>
                   <WhoIcon className="w-3 h-3" />
                   {who.text}
-                  <span className="text-[#4E5C70] font-medium">
+                  <span className="text-text-secondary font-medium">
                     · {msg.timestamp}
                     {msg.editedAt ? ' · изменено' : ''}
                   </span>
                 </span>
                 {(msg.hiddenForCustomer || msg.hiddenForStaff) && (
-                  <span className="text-[11px] font-bold text-[#4E5C70] flex items-center gap-1 px-1">
+                  <span className="text-[11px] font-bold text-text-secondary flex items-center gap-1 px-1">
                     <EyeOff className="w-3 h-3" />
                     {msg.hiddenForStaff ? 'Скрыто у сотрудников' : 'Покупатель удалил у себя'}
                     {msg.hiddenForStaff && msg.hiddenForCustomer ? ' и у покупателя' : ''}
@@ -939,13 +940,13 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 <div
                   className={`p-3 rounded-2xl text-xs max-w-[88%] space-y-2 leading-relaxed ${
                     msg.hiddenForStaff ? 'opacity-60' : ''
-                  } ${editing?.id === msg.id ? 'ring-2 ring-accent/50' : ''} ${
+                  } ${editing?.id === msg.id ? 'neu-pill-active' : ''} ${
                     msg.isInternalNote
-                      ? 'neu-flat-sm border border-warning/40 text-[#2D3A4E]'
+                      ? 'neu-tone-warning text-text-primary'
                       : isCustomer
-                      ? 'neu-flat-sm text-[#2D3A4E]'
+                      ? 'neu-flat-sm text-text-primary'
                       : msg.sender === 'bot'
-                      ? 'neu-flat-sm text-[#4E5C70]'
+                      ? 'neu-flat-sm text-text-secondary'
                       : 'neu-bubble-own'
                   }`}
                 >
@@ -960,8 +961,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                           className="relative group rounded-xl overflow-hidden block max-w-full bg-black/5 cursor-pointer"
                         >
                           <img src={src} alt="Фото из чата" className="max-h-56 w-auto max-w-[220px] rounded-xl object-contain block" loading="lazy" />
-                          <span className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 text-white text-[11px] font-bold">
-                            <Maximize2 className="w-3.5 h-3.5" />
+                          <span className="absolute inset-0 neu-photo-btn opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 text-text-primary text-[11px] font-bold">
+                            <Maximize2 className="w-3.5 h-3.5 text-accent shrink-0" />
                             Увеличить
                           </span>
                         </button>
@@ -984,12 +985,16 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                       </p>
                     );
                   })()}
-                  {msg.productCard && (
-                    <p className="text-xs font-bold flex items-center gap-1 opacity-90">
-                      <ShoppingBag className="w-3 h-3" />
-                      Товар: {msg.productCard.title} · {msg.productCard.price.toLocaleString('ru-RU')} ₽
-                    </p>
-                  )}
+                  {msg.productCard && (() => {
+                    const live = products.find((p) => p.id === msg.productCard!.productId);
+                    const price = live ? buyerPrice(live) : msg.productCard.price;
+                    return (
+                      <p className="text-xs font-bold flex items-center gap-1 opacity-90">
+                        <ShoppingBag className="w-3 h-3" />
+                        Товар: {msg.productCard.title} · {price.toLocaleString('ru-RU')} ₽
+                      </p>
+                    );
+                  })()}
                   {msg.promoCard && (
                     <p className="text-xs font-bold flex items-center gap-1 opacity-90">
                       <Gift className="w-3 h-3" />
@@ -1056,13 +1061,13 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                   <p className="text-xs font-extrabold text-accent">
                     {editing.isInternalNote ? 'Редактирование заметки' : 'Редактирование ответа'}
                   </p>
-                  <p className="text-xs text-[#4E5C70] truncate">{editing.text}</p>
+                  <p className="text-xs text-text-secondary truncate">{editing.text}</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={cancelEdit}
-                className="h-8 px-2.5 neu-button rounded-lg text-[11px] font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer shrink-0"
+                className="h-8 px-2.5 neu-button rounded-lg text-[11px] font-bold text-text-secondary hover:text-text-primary cursor-pointer shrink-0"
               >
                 Отмена
               </button>
@@ -1091,7 +1096,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isProcessingPhoto}
-              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-text-primary flex items-center gap-1.5 transition-all cursor-pointer "
             >
               {isProcessingPhoto ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5 text-accent" />}
               Фото
@@ -1102,7 +1107,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               onClick={openProductPicker}
               disabled={products.length === 0 || isInternalNote}
               title={products.length === 0 ? 'В каталоге нет товаров' : undefined}
-              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-text-primary flex items-center gap-1.5 transition-all cursor-pointer disabled:cursor-not-allowed"
             >
               <ShoppingBag className="w-3.5 h-3.5 text-accent" />
               Товар
@@ -1114,7 +1119,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               type="button"
               onClick={openPromoModal}
               disabled={isInternalNote}
-              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-text-primary flex items-center gap-1.5 transition-all cursor-pointer disabled:cursor-not-allowed"
             >
               <Gift className="w-3.5 h-3.5 text-accent" />
               Промокод
@@ -1125,7 +1130,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             <button
               type="button"
               onClick={() => setIsTemplatesOpen(true)}
-              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5 transition-all cursor-pointer"
+              className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-text-primary flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <FileText className="w-3.5 h-3.5 text-accent" />
               Шаблоны{templates.length > 0 ? ` · ${templates.length}` : ''}
@@ -1140,7 +1145,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             <div className="neu-inset rounded-2xl p-2 flex items-center justify-between gap-2">
               <span className="flex items-center gap-2 min-w-0">
                 <img src={photo} alt="Прикрепленное фото" className="w-10 h-10 rounded-xl object-cover" />
-                <span className="text-[11px] font-bold text-[#2D3A4E]">Фото будет отправлено с сообщением</span>
+                <span className="text-[11px] font-bold text-text-primary">Фото будет отправлено с сообщением</span>
               </span>
               <button
                 type="button"
@@ -1168,17 +1173,17 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               }}
               maxLength={5000}
               placeholder={isInternalNote ? 'Заметка видна только сотрудникам…' : 'Ответ покупателю…'}
-              className={`${textareaClass} min-h-20 ${isInternalNote ? 'border border-warning/40' : ''}`}
+              className={`${textareaClass} min-h-20 ${isInternalNote ? 'neu-tone-warning' : ''}`}
             />
           </label>
 
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[11px] text-[#4E5C70] leading-snug">Enter — отправить, Shift+Enter — новая строка</span>
+            <span className="text-[11px] text-text-secondary leading-snug">Enter — отправить, Shift+Enter — новая строка</span>
             <button
               type="button"
               onClick={handleSendReply}
               disabled={!canSend}
-              className="h-11 px-5 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+              className="h-11 px-5 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 transition-all cursor-pointer disabled:cursor-not-allowed shrink-0"
             >
               {editing ? <Check className="w-4 h-4" /> : isInternalNote ? <Lock className="w-4 h-4" /> : <Send className="w-4 h-4" />}
               {editing ? 'Сохранить' : isInternalNote ? 'Сохранить заметку' : 'Отправить'}
@@ -1230,11 +1235,11 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 role="switch"
                 aria-checked={notifyCustomer}
                 onClick={() => setNotifyCustomer((v) => !v)}
-                className="w-full h-11 px-3 neu-button rounded-xl text-xs font-bold text-[#2D3A4E] flex items-center justify-between cursor-pointer"
+                className="w-full h-11 px-3 neu-button rounded-xl text-xs font-bold text-text-primary flex items-center justify-between cursor-pointer"
               >
                 Сообщить покупателю в чат
-                <span className="w-10 h-6 rounded-full neu-inset p-0.5 flex items-center">
-                  <span className={`w-5 h-5 rounded-full transition-transform ${notifyCustomer ? 'translate-x-4 neu-fill-accent' : 'neu-button'}`} />
+                <span className={`w-12 h-7 rounded-full p-1 flex items-center transition-colors duration-200 ${notifyCustomer ? 'neu-fill-accent' : 'neu-inset'}`}>
+                  <span className={`w-5 h-5 rounded-full neu-flat-sm transition-transform duration-200 ${notifyCustomer ? 'translate-x-5' : 'translate-x-0'}`} />
                 </span>
               </button>
             )}
@@ -1264,7 +1269,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               <span className={labelClass}>Комментарий (необязательно)</span>
               <textarea rows={3} value={returnComment} onChange={(e) => setReturnComment(e.target.value)} className={textareaClass} />
             </label>
-            <p className="text-xs text-[#4E5C70] leading-snug">
+            <p className="text-xs text-text-secondary leading-snug">
               Заявка попадет в историю заказа, покупатель получит сообщение в чат.
             </p>
             <button type="submit" className="w-full h-11 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center justify-center gap-1.5 cursor-pointer">
@@ -1278,7 +1283,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
       {isProductPickerOpen && (
         <Modal title="Рекомендовать товар" onClose={() => setIsProductPickerOpen(false)} wide>
           <label className="relative block">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#4E5C70]" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
             <input
               value={productSearch}
               onChange={(e) => setProductSearch(e.target.value)}
@@ -1295,7 +1300,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                   type="button"
                   onClick={() => setProductCategory(c.id)}
                   className={`h-8 px-3 rounded-xl text-[11px] font-bold cursor-pointer ${
-                    productCategory === c.id ? 'neu-pill-active' : 'neu-button text-[#4E5C70]'
+                    productCategory === c.id ? 'neu-pill-active' : 'neu-button text-text-secondary'
                   }`}
                 >
                   {c.name}
@@ -1304,7 +1309,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             </div>
           )}
           <div className="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto p-1 -m-1">
-            {filteredProducts.length === 0 && <p className="col-span-2 text-center text-xs text-[#4E5C70] py-4">Товары не найдены</p>}
+            {filteredProducts.length === 0 && <p className="col-span-2 text-center text-xs text-text-secondary py-4">Товары не найдены</p>}
             {filteredProducts.map((p) => (
               <button
                 key={p.id}
@@ -1312,19 +1317,19 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 onClick={() => pickProduct(p)}
                 aria-pressed={recommended?.id === p.id}
                 className={`rounded-2xl p-2 flex items-center gap-2 text-left cursor-pointer ${
-                  recommended?.id === p.id ? 'neu-pill-active' : 'neu-button text-[#2D3A4E]'
+                  recommended?.id === p.id ? 'neu-pill-active' : 'neu-button text-text-primary'
                 }`}
               >
                 <ProductThumbImage product={p} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
                 <span className="min-w-0">
                   <span className="block text-[11px] font-bold leading-tight line-clamp-2">{p.title}</span>
-                  <span className="block text-[11px] opacity-80">{p.price.toLocaleString('ru-RU')} ₽</span>
+                  <span className="block text-[11px] opacity-80">{buyerPrice(p).toLocaleString('ru-RU')} ₽</span>
                 </span>
               </button>
             ))}
           </div>
           {recommended && (
-            <div className="space-y-3 pt-1 border-t border-[#BAC5D5]/50">
+            <div className="space-y-3 pt-2 neu-divider-t">
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <span className={labelClass}>Цвет</span>
@@ -1398,7 +1403,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 <>
                   <label className="relative block">
                     <span className="sr-only">Поиск промокода</span>
-                    <Search className="w-3.5 h-3.5 text-[#4E5C70] absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Search className="w-3.5 h-3.5 text-text-secondary absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       value={promoSearch}
                       onChange={(e) => setPromoSearch(e.target.value)}
@@ -1408,7 +1413,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                   </label>
                   <div className="space-y-2 max-h-64 overflow-y-auto p-1 -m-1" role="radiogroup" aria-label="Промокоды">
                     {foundPromos.length === 0 && (
-                      <p className="text-center py-4 text-xs text-[#4E5C70]">Ничего не найдено</p>
+                      <p className="text-center py-4 text-xs text-text-secondary">Ничего не найдено</p>
                     )}
                     {foundPromos.map((p) => {
                       const picked = p.id === pickedPromoId;
@@ -1424,10 +1429,10 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                           }`}
                         >
                           <span className="min-w-0">
-                            <span className="block font-mono font-extrabold text-xs text-[#2D3A4E] tracking-wider break-all">
+                            <span className="block font-mono font-extrabold text-xs text-text-primary tracking-wider break-all">
                               {p.code}
                             </span>
-                            <span className="block text-[11px] text-[#4E5C70] leading-snug">
+                            <span className="block text-[11px] text-text-secondary leading-snug">
                               {[
                                 p.title,
                                 p.minOrderAmount ? `от ${p.minOrderAmount.toLocaleString('ru-RU')} ₽` : '',
@@ -1438,7 +1443,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                                 .join(' · ')}
                             </span>
                           </span>
-                          <span className="text-[11px] font-extrabold text-success bg-success-soft px-2 py-0.5 rounded-lg shrink-0">
+                          <span className="text-[11px] font-extrabold neu-tone-success px-2 py-0.5 rounded-lg shrink-0">
                             {formatPromoDiscount(p)}
                           </span>
                         </button>
@@ -1458,7 +1463,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                   <button
                     type="submit"
                     disabled={!pickedPromo}
-                    className="w-full h-11 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full h-11 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
                   >
                     <Send className="w-4 h-4" />
                     {pickedPromo ? `Отправить ${pickedPromo.code}` : 'Выберите промокод'}
@@ -1520,7 +1525,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 className={textareaClass}
               />
             </label>
-            <p className="text-xs text-[#4E5C70] leading-snug">
+            <p className="text-xs text-text-secondary leading-snug">
               Промокод появится в разделе «Промокоды»: одно использование, без минимальной суммы.
             </p>
             <button type="submit" className="w-full h-11 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center justify-center gap-1.5 cursor-pointer">
@@ -1546,9 +1551,9 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               Не удалось загрузить шаблоны. Проверьте связь и откройте окно ещё раз.
             </p>
           ) : savedTemplates === null ? (
-            <p className="neu-inset rounded-2xl p-3 text-xs text-[#4E5C70] text-center">Загружаем шаблоны…</p>
+            <p className="neu-inset rounded-2xl p-3 text-xs text-text-secondary text-center">Загружаем шаблоны…</p>
           ) : templates.length === 0 ? (
-            <p className="neu-inset rounded-2xl p-3 text-xs text-[#4E5C70] text-center">
+            <p className="neu-inset rounded-2xl p-3 text-xs text-text-secondary text-center">
               Шаблонов пока нет. Добавьте ответы, которые пишете чаще всего: они общие для телефона и компьютера.
             </p>
           ) : (
@@ -1561,8 +1566,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                     className="flex-1 min-w-0 text-left neu-button rounded-2xl px-3 py-2 cursor-pointer"
                     title="Вставить в ответ"
                   >
-                    <span className="block text-xs font-bold text-[#2D3A4E] truncate">{t.title}</span>
-                    <span className="block text-[11px] text-[#4E5C70] line-clamp-2">{t.text}</span>
+                    <span className="block text-xs font-bold text-text-primary truncate">{t.title}</span>
+                    <span className="block text-[11px] text-text-secondary line-clamp-2">{t.text}</span>
                   </button>
                   <button
                     type="button"
@@ -1572,7 +1577,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                       setTplText(t.text);
                       setTplCategory(t.category);
                     }}
-                    className="w-10 neu-button rounded-xl flex items-center justify-center text-accent cursor-pointer shrink-0"
+                    className="w-10 min-h-8 neu-button rounded-xl flex items-center justify-center text-accent cursor-pointer shrink-0"
                     aria-label={`Изменить шаблон «${t.title}»`}
                   >
                     <Pencil className="w-3.5 h-3.5" />
@@ -1580,7 +1585,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                   <button
                     type="button"
                     onClick={() => setTemplateToDelete(t)}
-                    className="w-10 neu-button-danger rounded-xl flex items-center justify-center cursor-pointer shrink-0"
+                    className="w-10 min-h-8 neu-button-danger rounded-xl flex items-center justify-center cursor-pointer shrink-0"
                     aria-label={`Удалить шаблон «${t.title}»`}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -1590,7 +1595,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             </ul>
           )}
           <form onSubmit={handleSaveTemplate} className="neu-inset rounded-2xl p-3 space-y-2.5">
-            <p className="text-[11px] font-extrabold uppercase tracking-wider text-[#2D3A4E]">
+            <p className="text-[11px] font-extrabold uppercase tracking-wider text-text-primary">
               {editingTplId ? 'Изменить шаблон' : 'Новый шаблон'}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1615,7 +1620,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             />
             <div className="flex justify-end gap-2">
               {editingTplId && (
-                <button type="button" onClick={resetTemplateForm} className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-[#4E5C70] cursor-pointer">
+                <button type="button" onClick={resetTemplateForm} className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-text-secondary cursor-pointer">
                   Отмена
                 </button>
               )}
@@ -1647,7 +1652,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                 type="button"
                 data-autofocus
                 onClick={() => setPreviewImage(null)}
-                className="absolute top-2.5 right-2.5 w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#2D3A4E] cursor-pointer"
+                className="absolute top-2.5 right-2.5 w-9 h-9 rounded-xl neu-button flex items-center justify-center text-text-primary cursor-pointer"
                 aria-label="Закрыть просмотр"
               >
                 <X className="w-5 h-5" />
@@ -1668,8 +1673,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
               <User className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-extrabold text-[#2D3A4E] truncate">{thread.name}</p>
-              <p className="text-xs text-[#4E5C70]">Сообщений: {thread.count}</p>
+              <p className="text-xs font-extrabold text-text-primary truncate">{thread.name}</p>
+              <p className="text-xs text-text-secondary">Сообщений: {thread.count}</p>
             </div>
           </div>
         }
@@ -1689,8 +1694,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
         preview={
           templateToDelete && (
             <div className="min-w-0">
-              <p className="text-xs font-extrabold text-[#2D3A4E] truncate">{templateToDelete.title}</p>
-              <p className="text-xs text-[#4E5C70] line-clamp-2">{templateToDelete.text}</p>
+              <p className="text-xs font-extrabold text-text-primary truncate">{templateToDelete.title}</p>
+              <p className="text-xs text-text-secondary line-clamp-2">{templateToDelete.text}</p>
             </div>
           )
         }

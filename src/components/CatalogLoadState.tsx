@@ -40,8 +40,8 @@ export const CatalogLoadState: React.FC<{ status: Exclude<CatalogStatus, 'ready'
         <div className="w-12 h-12 rounded-2xl neu-flat-sm mx-auto flex items-center justify-center text-warning">
           <WifiOff className="w-6 h-6" aria-hidden="true" />
         </div>
-        <p className="text-sm font-bold text-[#2D3A4E]">Не удалось загрузить каталог</p>
-        <p className="text-xs text-[#4E5C70]">Проверьте соединение и обновите страницу.</p>
+        <p className="text-sm font-bold text-text-primary">Не удалось загрузить каталог</p>
+        <p className="text-xs text-text-secondary">Проверьте соединение и обновите страницу.</p>
         <button
           type="button"
           onClick={reload}
@@ -71,7 +71,7 @@ export const CatalogLoadState: React.FC<{ status: Exclude<CatalogStatus, 'ready'
       {(slow || offline) && (
         <div role="status" className="neu-inset rounded-2xl p-3 flex items-center gap-3">
           {offline && <WifiOff className="w-4 h-4 text-warning shrink-0" aria-hidden="true" />}
-          <p className="text-xs text-[#4E5C70]">
+          <p className="text-xs text-text-secondary">
             {offline
               ? 'Нет соединения с интернетом. Каталог загрузится сам, когда связь появится.'
               : 'Каталог загружается дольше обычного: фото товаров ещё скачиваются. Страница откроется сама — обновлять не нужно.'}

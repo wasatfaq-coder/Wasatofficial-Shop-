@@ -84,8 +84,8 @@ export const AdminLegalTab: React.FC<AdminLegalTabProps> = ({ settings, onSaveLe
             <FileText className="w-5 h-5" aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-base font-extrabold text-[#2D3A4E]">Оферта и политика персональных данных</h3>
-            <p className="text-xs text-[#4E5C70] leading-snug mt-0.5">
+            <h3 className="text-sm font-extrabold text-text-primary">Оферта и политика персональных данных</h3>
+            <p className="text-xs text-text-secondary leading-snug mt-0.5">
               Покупатели видят документы на сайте и принимают оферту кнопкой «Подтвердить заказ». Текст — шаблон по
               Закону о защите прав потребителей и 152-ФЗ; реквизиты подставляются из «Витрины». Текст можно изменить:
               метки вида {'{{продавец}}'} заменяются реквизитами при показе.
@@ -94,7 +94,7 @@ export const AdminLegalTab: React.FC<AdminLegalTabProps> = ({ settings, onSaveLe
         </div>
 
         {missing.length > 0 ? (
-          <div role="status" className="rounded-2xl p-3 bg-warning-soft border border-warning/30 text-xs text-[#2D3A4E]">
+          <div role="status" className="rounded-2xl p-3 neu-tone-warning text-xs text-text-primary">
             <p className="font-bold text-warning">Документы не показываются покупателям</p>
             <p className="text-xs mt-0.5 leading-snug">
               Заполните в «Витрине» → «Реквизиты»: {missing.join(', ')}. До этого оформление заказа работает без ссылки на
@@ -131,7 +131,7 @@ export const AdminLegalTab: React.FC<AdminLegalTabProps> = ({ settings, onSaveLe
               aria-checked={docId === id}
               onClick={() => switchDoc(id)}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer ${
-                docId === id ? 'neu-pill-active' : 'neu-button text-[#2D3A4E] hover:text-accent'
+                docId === id ? 'neu-pill-active' : 'neu-button text-text-primary hover:text-accent'
               }`}
             >
               {LEGAL_DOC_TITLES[id]}
@@ -140,13 +140,13 @@ export const AdminLegalTab: React.FC<AdminLegalTabProps> = ({ settings, onSaveLe
         </div>
 
         {texts === null ? (
-          <p className="flex items-center gap-2 text-xs text-[#4E5C70]" role="status">
+          <p className="flex items-center gap-2 text-xs text-text-secondary" role="status">
             <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> Загрузка…
           </p>
         ) : (
           <>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs text-[#4E5C70]">
+              <p className="text-xs text-text-secondary">
                 {edition
                   ? `Текст магазина, изменен ${formatLegalDate(edition.updatedAt)}`
                   : `Шаблон, редакция от ${formatLegalDate(LEGAL_TEMPLATE_DATE)}`}
@@ -156,7 +156,7 @@ export const AdminLegalTab: React.FC<AdminLegalTabProps> = ({ settings, onSaveLe
                 type="button"
                 onClick={() => setPreview((v) => !v)}
                 aria-pressed={preview}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl neu-button text-xs font-bold text-accent cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-8 rounded-xl neu-button text-xs font-bold text-accent cursor-pointer"
               >
                 {preview ? <Pencil className="w-3.5 h-3.5" aria-hidden="true" /> : <Eye className="w-3.5 h-3.5" aria-hidden="true" />}
                 {preview ? 'Редактировать' : 'Как увидит покупатель'}
@@ -169,25 +169,25 @@ export const AdminLegalTab: React.FC<AdminLegalTabProps> = ({ settings, onSaveLe
               </div>
             ) : (
               <div className="space-y-1.5">
-                <label htmlFor="legal-doc-text" className="block text-xs font-bold text-[#2D3A4E]">
+                <label htmlFor="legal-doc-text" className="block text-xs font-bold text-text-primary">
                   Текст документа
                 </label>
+                <p className="text-xs text-text-secondary">
+                  «## » — заголовок раздела, «- » — пункт списка, пустая строка — новый абзац.
+                </p>
                 <textarea
                   id="legal-doc-text"
                   value={value}
                   onChange={(e) => setDraft(e.target.value)}
                   rows={18}
                   spellCheck
-                  className="w-full neu-inset rounded-2xl p-3.5 text-xs leading-relaxed text-[#2D3A4E] resize-y font-mono"
+                  className="w-full neu-inset rounded-2xl p-3.5 text-xs leading-relaxed text-text-primary resize-y font-mono"
                 />
-                <p className="text-xs text-[#4E5C70]">
-                  «## » — заголовок раздела, «- » — пункт списка, пустая строка — новый абзац.
-                </p>
               </div>
             )}
 
             <div className="flex items-start gap-1">
-            <details className="flex-1 min-w-0 neu-inset rounded-2xl p-3 text-[11px] text-[#2D3A4E]">
+            <details className="flex-1 min-w-0 neu-inset rounded-2xl p-3 text-[11px] text-text-primary">
               <summary className="font-bold cursor-pointer">Метки и их значения</summary>
               <dl className="mt-2 grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-x-3 gap-y-1">
                 {placeholders.map((p) => (
@@ -211,7 +211,7 @@ export const AdminLegalTab: React.FC<AdminLegalTabProps> = ({ settings, onSaveLe
                   type="button"
                   onClick={() => setConfirmReset(true)}
                   disabled={saving || !onSaveLegalText}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl neu-button text-xs font-bold text-[#2D3A4E] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl neu-button text-xs font-bold text-text-primary cursor-pointer disabled:cursor-not-allowed"
                 >
                   <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" /> Вернуть шаблон
                 </button>
@@ -226,7 +226,7 @@ export const AdminLegalTab: React.FC<AdminLegalTabProps> = ({ settings, onSaveLe
                   type="button"
                   onClick={() => setDraft(null)}
                   disabled={saving}
-                  className="px-3.5 py-2.5 rounded-xl neu-button text-xs font-bold text-[#4E5C70] cursor-pointer"
+                  className="px-3.5 py-2.5 rounded-xl neu-button text-xs font-bold text-text-secondary cursor-pointer"
                 >
                   Отменить правки
                 </button>
@@ -235,7 +235,7 @@ export const AdminLegalTab: React.FC<AdminLegalTabProps> = ({ settings, onSaveLe
                 type="button"
                 onClick={() => save(value)}
                 disabled={!dirty || saving || !onSaveLegalText || !value.trim()}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl neu-button-accent text-white text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl neu-button-accent text-white text-xs font-bold cursor-pointer disabled:cursor-not-allowed"
               >
                 {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> : <Save className="w-3.5 h-3.5" aria-hidden="true" />}
                 {saving ? 'Сохранение…' : 'Сохранить'}

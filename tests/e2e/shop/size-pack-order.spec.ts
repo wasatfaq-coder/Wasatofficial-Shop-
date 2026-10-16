@@ -1,24 +1,26 @@
-// Ростовка у покупателя (этап 20 плана админки): «Ростовкой» на странице товара — вместо размеров кнопки ростовок цвета,
-// цена за упаковку и за штуку, «Доступно упаковок», счётчик упаковок; в корзине и в оформлении ростовка — одна строка;
-// заказ записывается строками по размерам, склад списывается по ним
+// Упаковки (ростовки) в «Оптом» и «Разбитая упаковка» у покупателя (этап 20 плана админки + этапы 1–4 docs/broken-pack-plan.md):
+// «Оптом» на странице товара продаёт полными упаковками по цене упаковки (кнопка «Ростовкой» убрана),
+// а при неполной упаковке и «В розницу и оптом» доступен режим «Разбитая упаковка»
 import { test, expect, rub } from '../fixtures';
 import { queryDocs, readDoc } from '../emulator';
 import { COURIER, PRODUCTS } from '../store';
 
-test('покупатель берёт ростовку: страница товара, корзина, оформление, заказ', async ({ page, phone }, info) => {
+test('покупатель берёт упаковку в «Оптом» и видит «Разбитая упаковка»: страница товара, корзина, оформление, заказ', async ({ page, phone }, info) => {
   // phone and desktop share the database: each buys its own product
   const item = phone ? PRODUCTS.packBuyP : PRODUCTS.packBuyD;
   const email = `pack-${info.project.name}@example.ru`;
 
   await page.goto(`/product/${item.id}`);
-  // the packs come with the product's full document
+  // the packs come with the product's full document; «Ростовкой» is merged into «Оптом», and «Разбитая упаковка» is shown for both-channel
   const modes = page.getByRole('radiogroup', { name: 'Как покупаете' });
-  await expect(modes.getByRole('radio', { name: /^Ростовкой/ })).toBeVisible();
-  await modes.getByRole('radio', { name: /^Ростовкой/ }).click();
+  await expect(modes.getByRole('radio', { name: /^Ростовкой/ })).toHaveCount(0);
+  await expect(modes.getByRole('radio', { name: /^Разбитая упаковка/ })).toBeVisible();
+  await expect(modes.getByRole('radio', { name: /^Оптом/ })).toBeVisible();
+  await modes.getByRole('radio', { name: /^Оптом/ }).click();
 
   // the size buttons are replaced by the packs of the colour (blue: both)
   await expect(page.getByRole('radiogroup', { name: 'Размер' })).toHaveCount(0);
-  const packs = page.getByRole('radiogroup', { name: 'Ростовка' });
+  const packs = page.getByRole('radiogroup', { name: 'Упаковка' });
   await expect(packs.getByRole('radio')).toHaveCount(2);
   await expect(page.getByRole('button', { name: 'Заказать в 1 клик' })).toHaveCount(0);
 
@@ -45,13 +47,13 @@ test('покупатель берёт ростовку: страница тов�
 
   // the cart already holds all of this pack: the button is off and the line says why
   await expect(page.getByText('Доступно упаковок: 0')).toBeVisible();
-  await expect(page.getByText('Весь остаток этой ростовки уже в вашей корзине')).toBeVisible();
+  await expect(page.getByText('Весь остаток этой упаковки уже в вашей корзине')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Нет в наличии' })).toBeDisabled();
 
   // red: no size 52, the pack cannot be taken, the missing size is named
   await page.getByRole('button', { name: 'Цвет: Красный' }).click();
   await expect(packs.getByRole('radio')).toHaveCount(1);
-  await expect(page.getByText('Нет размера 52: ростовка недоступна')).toBeVisible();
+  await expect(page.getByText('Нет размера 52: целая упаковка недоступна')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Нет в наличии' })).toBeDisabled();
 
   // the cart: one row, no size to change

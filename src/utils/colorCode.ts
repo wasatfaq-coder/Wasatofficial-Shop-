@@ -149,3 +149,99 @@ export function normalizeProductColors(colors: unknown): { name: string; hex: st
     })
     .filter((c) => c.name);
 }
+
+export const MAX_STORE_COLORS = 40;
+export const MAX_STORE_SIZES = 30;
+
+export const DEFAULT_STORE_COLORS: { name: string; hex: string }[] = [
+  { name: 'Черный', hex: '#1A1A1A' },
+  { name: 'Белый', hex: '#FFFFFF' },
+  { name: 'Темно-синий', hex: '#1F2A44' },
+  { name: 'Серый', hex: '#8B939C' },
+  { name: 'Графит', hex: '#3B3F45' },
+  { name: 'Бежевый', hex: '#D9C4A3' },
+  { name: 'Молочный', hex: '#F3EEE3' },
+  { name: 'Хаки', hex: '#6B6B47' },
+  { name: 'Оливковый', hex: '#708238' },
+  { name: 'Коричневый', hex: '#6B4A2F' },
+  { name: 'Голубой', hex: '#8DB3D9' },
+  { name: 'Бордовый', hex: '#6D1F2C' },
+];
+
+export const DEFAULT_STORE_SIZES: string[] = [
+  'XS',
+  'S',
+  'M',
+  'L',
+  'XL',
+  '2XL',
+  '3XL',
+  '46',
+  '48',
+  '50',
+  '52',
+  '54',
+];
+
+/**
+ * Store colour palette (docs/fast-product-entry-spec.md, stage 1): when `settings.productColors` is not saved yet,
+ * collects the colours already used in the catalog and supplements them with `DEFAULT_STORE_COLORS`.
+ */
+export function storeColorsOf(
+  settings?: { productColors?: { name: string; hex: string }[] },
+  products: { colors?: { name: string; hex: string }[] }[] = []
+): { name: string; hex: string }[] {
+  if (Array.isArray(settings?.productColors)) {
+    return normalizeProductColors(settings.productColors)
+      .map(({ name, hex }) => ({ name, hex }))
+      .slice(0, MAX_STORE_COLORS);
+  }
+  const seen = new Set<string>();
+  const result: { name: string; hex: string }[] = [];
+  const push = (name: string, hex: string) => {
+    const key = normalizeColorName(name);
+    if (!key || seen.has(key) || result.length >= MAX_STORE_COLORS) return;
+    seen.add(key);
+    result.push({ name: name.trim(), hex });
+  };
+  for (const p of products) {
+    for (const c of normalizeProductColors(p.colors)) push(c.name, c.hex);
+  }
+  for (const c of DEFAULT_STORE_COLORS) push(c.name, c.hex);
+  return result;
+}
+
+/**
+ * Store size chips (docs/fast-product-entry-spec.md, stage 1): when `settings.productSizes` is not saved yet,
+ * combines `DEFAULT_STORE_SIZES` with sizes already used in the catalog.
+ */
+export function storeSizesOf(
+  settings?: { productSizes?: string[] },
+  products: { sizes?: string[] }[] = []
+): string[] {
+  if (Array.isArray(settings?.productSizes)) {
+    const seen = new Set<string>();
+    const list: string[] = [];
+    for (const raw of settings.productSizes) {
+      const s = String(raw ?? '').trim().toUpperCase();
+      if (!s || seen.has(s) || list.length >= MAX_STORE_SIZES) continue;
+      seen.add(s);
+      list.push(s);
+    }
+    return list;
+  }
+  const seen = new Set<string>();
+  const list: string[] = [];
+  const push = (raw: string) => {
+    const s = String(raw ?? '').trim().toUpperCase();
+    if (!s || seen.has(s) || list.length >= MAX_STORE_SIZES) return;
+    seen.add(s);
+    list.push(s);
+  };
+  for (const s of DEFAULT_STORE_SIZES) push(s);
+  for (const p of products) {
+    for (const s of p.sizes ?? []) push(s);
+  }
+  return list;
+}
+

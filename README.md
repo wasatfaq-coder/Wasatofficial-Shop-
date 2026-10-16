@@ -222,7 +222,7 @@ Google, пишет от своего аккаунта. Гость при пер�
 Рекомендуется включить в **Settings**:
 
 - **Rules → Rulesets → New branch ruleset** для `main`: запрет удаления и force-push,
-  обязательный Pull Request и обязательные проверки `Typecheck & build`, `Firestore rules tests` и `Browser scenarios (390 & 1280 px)`. Сценарии в браузере
+  обязательный Pull Request и обязательные проверки `Typecheck & build`, `Firestore rules tests`, `Cloud Functions tests` и `Browser scenarios (390 & 1280 px)`. Сценарии в браузере
   нужны в этом списке (аудит 07.10, находка 42): без них красный e2e не мешает слить PR, а `deploy.yml` перед
   публикацией их не запускает. Включить: правило `main` → *Require status checks to pass* → *Add checks* → найти
   `Browser scenarios (390 & 1280 px)` (проверка появляется в поиске после первого прогона CI в PR) → *Save changes*;

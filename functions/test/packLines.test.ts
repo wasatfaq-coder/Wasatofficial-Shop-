@@ -1,6 +1,6 @@
 // Size packs in an order (stage 19): the pack price split into lines, lines back into one pack
 import { describe, expect, test } from 'bun:test';
-import { expandPackLines, groupOrderLines, orderPackCounts, removePackGroup, setPackGroupCount, splitPackPrice, type CartPackLine } from '../../src/shared/packLines';
+import { expandPackLines, groupOrderLines, orderPackCounts, removePackGroup, setPackGroupCount, splitPackPrice, unpackOrderGroup, unpackUnitPrice, type CartPackLine } from '../../src/shared/packLines';
 import { refundedLinesText, variantStockDiff } from '../../src/utils/orderAdjustment';
 import { calcSubtotal, toPricingLine } from '../../src/shared/orderPricing';
 import type { CartItem, Product } from '../../src/types';
@@ -250,3 +250,50 @@ describe('review 12.10: a pack order in «Цены не совпадают с к
     expect([line.unitPrice, line.packSizes, line.packUnavailable]).toEqual([10_002, sizes, undefined]);
   });
 });
+
+describe('«Разобрать упаковку» in «Правка состава» (broken-pack)', () => {
+  test('uses product wholesalePrice when set, otherwise falls back to rounded pack average per piece', () => {
+    const withWholesale = { ...product, wholesalePrice: 2200 } as Product;
+    const linesWithWholesale = expandPackLines([{ ...packLine(10_002, 2), product: withWholesale }]);
+    const groupWithWholesale = groupOrderLines(linesWithWholesale)[0];
+    if (groupWithWholesale.kind !== 'pack') throw new Error('pack expected');
+    expect(unpackUnitPrice(groupWithWholesale, [withWholesale])).toBe(2200);
+    expect(unpackUnitPrice(groupWithWholesale, withWholesale)).toBe(2200);
+
+    const unpackedWholesale = unpackOrderGroup(linesWithWholesale, 'c1', [withWholesale]);
+    expect(unpackOrderGroup(linesWithWholesale, 'c1', withWholesale)).toEqual(unpackedWholesale);
+    expect(unpackedWholesale.length).toBe(3); // 48, 50 (merged from splitPackPrice boundary), 52
+    expect(unpackedWholesale.map((l) => [l.selectedSize, l.quantity, l.unitPrice, l.priceKind])).toEqual([
+      ['48', 2, 2200, 'wholesale'],
+      ['50', 4, 2200, 'wholesale'],
+      ['52', 2, 2200, 'wholesale'],
+    ]);
+    expect(unpackedWholesale.some((l) => l.packGroup || l.packId || l.packTitle || l.packCount || l.packPieces || l.packPrice)).toBe(false);
+    // Variant stock diff before removing any size is zero (no stock moved just by unpacking)
+    expect(variantStockDiff(linesWithWholesale, unpackedWholesale)).toEqual({ returnedItems: [], addedItems: [] });
+
+    // Without wholesalePrice: 10 002 / 4 = 2500.5 -> 2501 ₽
+    const linesNoWholesale = expandPackLines([packLine(10_002, 1)]);
+    const groupNoWholesale = groupOrderLines(linesNoWholesale)[0];
+    if (groupNoWholesale.kind !== 'pack') throw new Error('pack expected');
+    expect(unpackUnitPrice(groupNoWholesale, [product])).toBe(2501);
+    const unpackedFallback = unpackOrderGroup(linesNoWholesale, 'c1', [product]);
+    expect(unpackedFallback.map((l) => [l.selectedSize, l.quantity, l.unitPrice, l.priceKind])).toEqual([
+      ['48', 1, 2501, 'wholesale'],
+      ['50', 2, 2501, 'wholesale'],
+      ['52', 1, 2501, 'wholesale'],
+    ]);
+  });
+
+  test('removing one size after unpacking returns only that size to stock', () => {
+    const withWholesale = { ...product, wholesalePrice: 2500 } as Product;
+    const original = expandPackLines([{ ...packLine(10_000, 1), product: withWholesale }]);
+    const unpacked = unpackOrderGroup(original, 'c1', [withWholesale]);
+    // Admin removes size 52 (missing on warehouse)
+    const without52 = unpacked.filter((l) => l.selectedSize !== '52');
+    const { returnedItems, addedItems } = variantStockDiff(original, without52);
+    expect(addedItems).toEqual([]);
+    expect(returnedItems.map((l) => [l.selectedSize, l.quantity, l.refundSum])).toEqual([['52', 1, 2500]]);
+  });
+});
+

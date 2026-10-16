@@ -18,10 +18,10 @@ export const NotConfigured: React.FC<NotConfiguredProps> = ({ title, hint, class
     role="status"
     className={`neu-inset rounded-2xl p-3 flex items-start gap-2.5 text-left ${className}`}
   >
-    <CircleSlash className="w-4 h-4 text-[#4E5C70] shrink-0 mt-0.5" aria-hidden="true" />
+    <CircleSlash className="w-4 h-4 text-text-secondary shrink-0 mt-0.5" aria-hidden="true" />
     <div className="min-w-0">
-      <p className="text-xs font-bold text-[#2D3A4E]">{title ? `${title}: не настроено` : 'Не настроено'}</p>
-      {hint && <p className="text-xs text-[#4E5C70] leading-snug mt-0.5">{hint}</p>}
+      <p className="text-xs font-bold text-text-primary">{title ? `${title}: не настроено` : 'Не настроено'}</p>
+      {hint && <p className="text-xs text-text-secondary leading-snug mt-0.5">{hint}</p>}
     </div>
   </div>
 );

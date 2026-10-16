@@ -1,25 +1,30 @@
 @import "tailwindcss";
 
 /* Status colors: text-success, bg-danger-soft, border-warning/30 ...
-   Every tone passes 4.5:1 as text on the page background and on its -soft tint, and under white text.
+   Every tone passes WCAG AAA (7:1+) as text on the page background (#E3E8EF), on buttons (#D9DFEB),
+   on its -soft tint, and under white text (#FFFFFF).
    -soft is the tone mixed 8% into white: a light chip background, like the old *-50 shades */
 @theme {
-  --color-success: #3B6652;
-  --color-warning: #6F5B31;
-  --color-danger: #7E525E;
+  --color-text-primary: #2D3A4E;
+  --color-text-secondary: #3B4758;
+  --color-text-muted: #3E4A5C;
+
+  --color-success: #28503E;
+  --color-warning: #554420;
+  --color-danger: #643B47;
   --color-success-soft: #EFF3F1;
   --color-warning-soft: #F3F2EF;
   --color-danger-soft: #F5F1F2;
 
-  /* Brand. Main buttons and fills (neu-button-accent, neu-fill-accent) are graphite #2D3A4E → #232D3D.
-     accent is a deep navy for links, selection, current steps and icons, so they stand apart from
-     the graphite body text (7.4:1 on the background, 6.8:1 on buttons); accent-strong for hover.
-     Muted gold only for brand badges (Хит, Premium, Limited): a fill under white text (4.53:1),
-     or gold-text as text (4.9:1) */
-  --color-accent: #2C4A6B;
-  --color-accent-strong: #1F3650;
-  --color-gold: #8C733E;
-  --color-gold-text: #75602F;
+  /* Brand (WCAG AAA 7:1+). Main buttons and fills (neu-button-accent, neu-fill-accent) are graphite #2D3A4E → #232D3D.
+     accent (#213B58) is a deep sapphire navy for links, selection, current steps and icons (9.31:1 on the background,
+     8.58:1 on buttons, 11.47:1 under white text); accent-strong (#172B42) for hover.
+     Deep antique gold (#594722) only for brand badges (Хит, Premium, Limited): a fill under white text (8.94:1),
+     or gold-text (#544320) as text (7.75:1) */
+  --color-accent: #213B58;
+  --color-accent-strong: #172B42;
+  --color-gold: #594722;
+  --color-gold-text: #544320;
 
   /* Headings: Manrope (index.html); body text stays on the system font */
   --font-display: 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -29,40 +34,46 @@
   :root {
     --neu-bg: #E3E8EF;
     --text-primary: #2D3A4E;
-    --text-secondary: #4E5C70;
+    --text-secondary: #3B4758;
     /* Accent for fills, borders, icons and text (--color-accent) */
     --accent-periwinkle: var(--color-accent);
     --accent-text: var(--color-accent);
 
-    /* Neumorphic shadows: light falls from the top-left (135°) */
-    --neu-shadow-dark: rgb(163 177 198 / 0.65);
-    --neu-shadow-dark-strong: rgb(163 177 198 / 0.9);
-    --neu-shadow-light: rgb(255 255 255 / 0.95);
+    /* Neumorphic AAA shadows: directional light falls from the top-left (135°) with smooth 1px micro-bevels */
+    --neu-shadow-dark: rgb(156 171 194 / 0.72);
+    --neu-shadow-dark-strong: rgb(148 164 189 / 0.9);
+    --neu-shadow-light: rgb(255 255 255 / 0.94);
 
-    --neu-raised-sm: 3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light);
-    --neu-raised-md: 5px 5px 12px var(--neu-shadow-dark), -5px -5px 12px var(--neu-shadow-light);
-    --neu-raised-lg: 7px 7px 16px var(--neu-shadow-dark-strong), -7px -7px 16px var(--neu-shadow-light);
-    --neu-inset-sm: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light);
-    --neu-selected-rim: color-mix(in srgb, var(--accent-text) 70%, transparent);
-    --neu-inset-lg: inset 5px 5px 11px var(--neu-shadow-dark-strong), inset -5px -5px 11px var(--neu-shadow-light);
-    --neu-edge-highlight: inset 0 0 0 1px rgb(255 255 255 / 0.75);
-    --neu-floating: 6px 12px 24px var(--neu-shadow-dark), -4px -4px 12px var(--neu-shadow-light), inset 1px 1px 0 var(--neu-shadow-light);
+    --neu-bevel-light: inset 1px 1px 1px rgb(255 255 255 / 0.78);
+    --neu-bevel-dark: inset -1px -1px 1px rgb(138 154 178 / 0.36);
+    --neu-inset-lip-dark: inset 1px 1px 1px rgb(138 154 178 / 0.44);
+    --neu-inset-lip-light: inset -1px -1px 1px rgb(255 255 255 / 0.84);
+
+    --neu-raised-sm: 3px 3px 7px var(--neu-shadow-dark), -3px -3px 7px var(--neu-shadow-light), var(--neu-bevel-light), var(--neu-bevel-dark);
+    --neu-raised-md: 5px 5px 11px var(--neu-shadow-dark), -5px -5px 11px var(--neu-shadow-light), var(--neu-bevel-light), var(--neu-bevel-dark);
+    --neu-raised-lg: 7px 7px 15px var(--neu-shadow-dark-strong), -7px -7px 15px var(--neu-shadow-light), var(--neu-bevel-light), var(--neu-bevel-dark);
+    --neu-inset-core: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light);
+    --neu-inset-sm: var(--neu-inset-core), var(--neu-inset-lip-dark), var(--neu-inset-lip-light);
+    --neu-selected-rim: color-mix(in srgb, var(--accent-text) 78%, transparent);
+    --neu-inset-lg: inset 5px 5px 11px var(--neu-shadow-dark-strong), inset -5px -5px 11px var(--neu-shadow-light), var(--neu-inset-lip-dark), var(--neu-inset-lip-light);
+    --neu-edge-highlight: inset 0 0 0 1px rgb(255 255 255 / 0.82);
+    --neu-floating: 6px 12px 24px var(--neu-shadow-dark-strong), -4px -4px 12px var(--neu-shadow-light), var(--neu-bevel-light), var(--neu-bevel-dark);
     --neu-modal: 0 24px 48px -12px rgb(15 23 42 / 0.45), 0 8px 16px -4px rgb(15 23 42 / 0.25),
-      inset 1px 1px 0 var(--neu-shadow-light), inset -1px -1px 0 var(--neu-shadow-dark);
+      inset 1px 1px 1px var(--neu-shadow-light), inset -1px -1px 1px var(--neu-shadow-dark);
 
     /* Over photos: dark shadow only, a white one leaves a halo on dark fabric */
-    --neu-on-photo: 0 2px 6px rgb(20 28 40 / 0.35);
-    --neu-on-photo-hover: 0 3px 8px rgb(20 28 40 / 0.45);
-    --neu-on-photo-pressed: inset 0 2px 4px rgb(20 28 40 / 0.4);
+    --neu-on-photo: 0 2px 6px rgb(20 28 40 / 0.38);
+    --neu-on-photo-hover: 0 3px 8px rgb(20 28 40 / 0.48);
+    --neu-on-photo-pressed: inset 0 2px 4px rgb(20 28 40 / 0.45);
 
-    /* Filled elements cast a shadow of their own color */
-    --neu-raised-accent: 4px 5px 14px rgb(31 42 60 / 0.4), -3px -3px 10px var(--neu-shadow-light);
-    --neu-raised-accent-hover: 5px 7px 18px rgb(31 42 60 / 0.5), -4px -4px 12px var(--neu-shadow-light);
+    /* Filled elements cast a shadow of their own color and carry a 135° inner specular bevel */
+    --neu-raised-accent: 4px 5px 14px rgb(31 42 60 / 0.45), -3px -3px 10px var(--neu-shadow-light), inset 1px 1px 1px rgb(255 255 255 / 0.24), inset -1px -1px 1px rgb(12 17 26 / 0.45);
+    --neu-raised-accent-hover: 5px 7px 18px rgb(31 42 60 / 0.55), -4px -4px 12px var(--neu-shadow-light), inset 1px 1px 1px rgb(255 255 255 / 0.3), inset -1px -1px 1px rgb(12 17 26 / 0.5);
     --neu-pressed-accent: inset 3px 3px 6px rgb(12 17 26 / 0.85), inset -2px -2px 5px rgb(255 255 255 / 0.25);
-    --neu-fill-accent-shadow: 2px 3px 6px rgb(31 42 60 / 0.3);
-    --neu-raised-success: 4px 5px 14px rgb(59 102 82 / 0.4), -3px -3px 10px var(--neu-shadow-light);
-    --neu-pressed-success: inset 3px 3px 6px rgb(25 45 36 / 0.85), inset -2px -2px 5px rgb(255 255 255 / 0.25);
-    --neu-raised-dark: 4px 5px 14px rgb(30 39 54 / 0.4), -3px -3px 10px var(--neu-shadow-light);
+    --neu-fill-accent-shadow: 2px 3px 6px rgb(31 42 60 / 0.35), inset 1px 1px 1px rgb(255 255 255 / 0.24), inset -1px -1px 1px rgb(12 17 26 / 0.4);
+    --neu-raised-success: 4px 5px 14px rgb(40 80 62 / 0.45), -3px -3px 10px var(--neu-shadow-light), inset 1px 1px 1px rgb(255 255 255 / 0.24), inset -1px -1px 1px rgb(18 38 29 / 0.45);
+    --neu-pressed-success: inset 3px 3px 6px rgb(18 38 29 / 0.85), inset -2px -2px 5px rgb(255 255 255 / 0.25);
+    --neu-raised-dark: 4px 5px 14px rgb(30 39 54 / 0.45), -3px -3px 10px var(--neu-shadow-light), inset 1px 1px 1px rgb(255 255 255 / 0.2), inset -1px -1px 1px rgb(12 17 26 / 0.45);
   }
 
   h1,
@@ -105,7 +116,14 @@
   box-shadow: var(--neu-raised-sm);
 }
 
-.neu-inset {
+/* Convex tactile knob for switches: compact shadow that does not flood the recessed track */
+.neu-switch-thumb {
+  background: linear-gradient(145deg, #f5f8fc 0%, #d8e0ec 100%);
+  box-shadow: 2px 2px 4px rgb(138 154 178 / 0.78), -1px -1px 2px rgb(255 255 255 / 0.92), inset 1px 1px 1px rgb(255 255 255 / 0.92);
+}
+
+.neu-inset,
+.neu-pressed {
   background-color: var(--neu-bg);
   box-shadow: var(--neu-inset-sm);
 }
@@ -114,6 +132,37 @@
   background-color: var(--neu-bg);
   box-shadow: var(--neu-inset-lg);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Semantic neumorphic wells: rim is placed first so it renders cleanly on top of the inset shadow */
+.neu-tone-warning {
+  background-color: color-mix(in srgb, var(--color-warning) 6%, var(--neu-bg));
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-warning) 45%, transparent), var(--neu-inset-core);
+  color: var(--color-warning);
+}
+
+.neu-tone-danger {
+  background-color: color-mix(in srgb, var(--color-danger) 6%, var(--neu-bg));
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-danger) 45%, transparent), var(--neu-inset-core);
+  color: var(--color-danger);
+}
+
+.neu-tone-success {
+  background-color: color-mix(in srgb, var(--color-success) 6%, var(--neu-bg));
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-success) 45%, transparent), var(--neu-inset-core);
+  color: var(--color-success);
+}
+
+.neu-tone-info {
+  background-color: color-mix(in srgb, var(--color-accent) 6%, var(--neu-bg));
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-accent) 45%, transparent), var(--neu-inset-core);
+  color: var(--color-accent);
+}
+
+.neu-tone-gold {
+  background-color: color-mix(in srgb, var(--color-gold) 6%, var(--neu-bg));
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-gold) 45%, transparent), var(--neu-inset-core);
+  color: var(--color-gold-text);
 }
 
 /* Breathing depth for active status trackers (opacity only, GPU friendly) */
@@ -209,11 +258,15 @@ input[type="submit"] {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Keyboard focus: an accent outline. Only :focus-visible, so a mouse click on a button shows nothing;
-   text fields show it on any focus. An outline is not a box-shadow, so it works on neu-* elements too */
-:where(button, [role="button"], a, summary, [tabindex], input, select, textarea):focus-visible {
+/* Keyboard focus: semantic inset shadow rim + accent outline. Only :focus-visible, so a mouse click on a button shows nothing;
+   text fields show it on any focus. */
+:where(button, [role="button"], [role="tab"], [role="switch"], [role="checkbox"], [role="radio"], [role="slider"], a, summary, [tabindex], input, select, textarea):focus-visible {
   outline: 2px solid var(--accent-text);
   outline-offset: 2px;
+}
+
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea, .neu-inset):focus-visible {
+  box-shadow: inset 0 0 0 1.5px var(--neu-selected-rim), var(--neu-inset-core);
 }
 
 /* The dark main button gets a wider gap so the focus ring does not merge with it */
@@ -228,14 +281,14 @@ input[type="submit"] {
 
 .neu-button,
 .neu-button-danger {
-  background: linear-gradient(145deg, #ebf0f7, #d9dfeb);
+  background: linear-gradient(145deg, #e9eef6 0%, #dae1ed 100%);
   box-shadow: var(--neu-raised-md);
   cursor: pointer;
 }
 
-.neu-button:hover,
-.neu-button-danger:hover {
-  background: linear-gradient(145deg, #f0f5fc, #dce2ee);
+.neu-button:hover:not(:disabled),
+.neu-button-danger:hover:not(:disabled) {
+  background: linear-gradient(145deg, #eef3fb 0%, #dce3ef 100%);
   box-shadow: var(--neu-raised-lg);
   transform: translateY(-1px);
 }
@@ -245,14 +298,14 @@ input[type="submit"] {
   transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.neu-flat.neu-pressable:hover {
+.neu-flat.neu-pressable:hover:not(:disabled) {
   box-shadow: var(--neu-raised-lg);
   transform: translateY(-1px);
 }
 
-.neu-button:active,
-.neu-button-danger:active,
-.neu-pressable:active {
+.neu-button:active:not(:disabled),
+.neu-button-danger:active:not(:disabled),
+.neu-pressable:active:not(:disabled) {
   box-shadow: var(--neu-inset-sm) !important;
   transform: translateY(1px) scale(0.98) !important;
 }
@@ -261,7 +314,7 @@ input[type="submit"] {
   color: var(--color-danger);
 }
 
-.neu-button-danger:hover {
+.neu-button-danger:hover:not(:disabled) {
   color: color-mix(in srgb, var(--color-danger) 80%, black);
 }
 
@@ -272,31 +325,31 @@ input[type="submit"] {
   cursor: pointer;
 }
 
-.neu-button-accent:hover {
+.neu-button-accent:hover:not(:disabled) {
   background: linear-gradient(145deg, #435066 0%, #283345 100%);
   box-shadow: var(--neu-raised-accent-hover);
   transform: translateY(-1px);
 }
 
-.neu-button-accent:active {
+.neu-button-accent:active:not(:disabled) {
   box-shadow: var(--neu-pressed-accent) !important;
   transform: translateY(1px) scale(0.98) !important;
 }
 
 /* Short-lived "done" state of a main button (added to cart, size saved) */
 .neu-button-success {
-  background: linear-gradient(135deg, #4A7D66 0%, var(--color-success) 100%);
+  background: linear-gradient(135deg, #32614B 0%, var(--color-success) 100%);
   color: #FFFFFF;
   box-shadow: var(--neu-raised-success);
   cursor: pointer;
 }
 
-.neu-button-success:hover {
-  background: linear-gradient(135deg, #44735E 0%, #34594A 100%);
+.neu-button-success:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2D5844 0%, #204233 100%);
   transform: translateY(-1px);
 }
 
-.neu-button-success:active {
+.neu-button-success:active:not(:disabled) {
   box-shadow: var(--neu-pressed-success) !important;
   transform: translateY(1px) scale(0.98) !important;
 }
@@ -308,26 +361,33 @@ input[type="submit"] {
   user-select: none;
 }
 
-.btn-confirm-order:active,
-button.active\:neu-inset-deep:active {
+.btn-confirm-order:active:not(:disabled),
+button.active\:neu-inset-deep:active:not(:disabled) {
   box-shadow: var(--neu-pressed-accent) !important;
   transform: translateY(1.5px) scale(0.975) !important;
 }
 
-/* Selected option: chip, segment, tab, menu item. Pressed in, accent text and a thin accent rim inside:
-   the shadow alone is 1.4:1 against the page, the rim is 3.6:1 (WCAG 1.4.11), so «selected» does not rest
-   on the shadow direction and the text colour only */
-.neu-pill-active {
-  background-color: var(--neu-bg);
-  box-shadow: var(--neu-inset-sm), inset 0 0 0 1.5px var(--neu-selected-rim);
+/* Selected option: chip, segment, tab, menu item. Pressed in with a concave 145° surface, accent text and
+   a continuous 1.5px accent rim painted on the topmost shadow layer (3.6:1 WCAG 1.4.11) */
+.neu-pill-active,
+.neu-button.active:not(:disabled),
+.neu-pressable.active:not(:disabled) {
+  background: linear-gradient(145deg, #d7dfe9 0%, #e6ebf3 100%);
+  box-shadow: inset 0 0 0 1.5px var(--neu-selected-rim), var(--neu-inset-core);
   color: var(--accent-text);
 }
 
-/* Unavailable button or option (disabled): flat with a hairline, muted text. Not pressed in: pressed in means selected */
-.neu-button-disabled {
-  background-color: var(--neu-bg);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, #4E5C70 30%, transparent);
-  color: #4E5C70;
+/* Unavailable button or option (disabled): flat with a hairline, muted text (7.5:1 AAA). Not pressed in: pressed in means selected */
+.neu-button-disabled,
+.neu-button:disabled,
+.neu-button-danger:disabled,
+.neu-button-accent:disabled,
+.neu-button-success:disabled {
+  background: var(--neu-bg);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-text-secondary) 35%, transparent) !important;
+  color: var(--color-text-secondary) !important;
+  opacity: 1 !important;
+  transform: none !important;
   cursor: not-allowed;
 }
 
@@ -368,22 +428,40 @@ button.active\:neu-inset-deep:active {
 
 /* Buttons and badges over photos */
 .neu-photo-btn {
-  background-color: var(--neu-bg);
-  color: #4E5C70;
+  background-color: rgb(227 232 239 / 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--color-text-secondary);
   box-shadow: var(--neu-on-photo);
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1), color 0.15s ease, background-color 0.15s ease;
   cursor: pointer;
 }
 
 .neu-photo-btn:hover {
-  color: #2D3A4E;
+  background-color: var(--neu-bg);
+  color: var(--color-text-primary);
   box-shadow: var(--neu-on-photo-hover);
-  transform: scale(1.05);
+  transform: scale(1.04);
 }
 
 .neu-photo-btn:active {
   box-shadow: var(--neu-on-photo-pressed) !important;
-  transform: scale(0.92) !important;
+  transform: scale(0.95) !important;
+}
+
+.neu-photo-btn-active {
+  background-color: var(--color-accent);
+  color: #FFFFFF;
+  box-shadow: 0 3px 10px rgb(15 23 42 / 0.45), inset 1.5px 1.5px 3px rgb(255 255 255 / 0.28), inset -1.5px -1.5px 3px rgb(10 20 35 / 0.5);
+}
+
+.neu-photo-btn-active:hover {
+  background-color: var(--color-accent-hover);
+  color: #FFFFFF;
+}
+
+.neu-photo-btn-danger:hover {
+  color: var(--color-danger);
 }
 
 /* Over a photo an accent ring vanishes in dark fabric and a white one in light fabric: a dark ring inside a white
@@ -392,6 +470,42 @@ button.active\:neu-inset-deep:active {
   outline: 2px solid #fff;
   outline-offset: 2px;
   box-shadow: 0 0 0 4px var(--accent-text);
+}
+
+/* Carved neumorphic grooves replacing flat 1px borders */
+.neu-divider-b {
+  border-bottom: none;
+  box-shadow: inset 0 -1px 0 rgb(138 154 178 / 0.36), 0 1px 0 rgb(255 255 255 / 0.85);
+}
+
+.neu-divider-t {
+  border-top: none;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.85), 0 -1px 0 rgb(138 154 178 / 0.36);
+}
+
+tr.neu-divider-b {
+  border-bottom: 1px solid rgb(138 154 178 / 0.3);
+  box-shadow: inset 0 -1px 0 rgb(255 255 255 / 0.8);
+}
+
+.first\:neu-divider-t-0:first-child {
+  box-shadow: none;
+}
+
+.last\:neu-divider-b-0:last-child,
+tr.last\:neu-divider-b-0:last-child {
+  border-bottom: none;
+  box-shadow: none;
+}
+
+@media (min-width: 40rem) {
+  .sm\:neu-divider-t-0 {
+    box-shadow: none;
+  }
+}
+
+.neu-divide-y > * + * {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.85), 0 -1px 0 rgb(138 154 178 / 0.34);
 }
 
 .neu-photo-badge {
@@ -413,7 +527,7 @@ button.active\:neu-inset-deep:active {
   box-shadow: var(--neu-on-photo);
 }
 
-/* Range sliders */
+/* Range sliders: carved track with active progress fill and sculpted dial thumb */
 input[type="range"].neu-range {
   -webkit-appearance: none;
   appearance: none;
@@ -423,20 +537,25 @@ input[type="range"].neu-range {
 }
 
 input[type="range"].neu-range::-webkit-slider-runnable-track {
-  height: 8px;
+  height: 10px;
   border-radius: 9999px;
-  background-color: var(--neu-bg);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-accent) 82%, var(--neu-bg)) 0%,
+    var(--color-accent) var(--range-progress, 100%),
+    var(--neu-bg) var(--range-progress, 100%),
+    var(--neu-bg) 100%
+  );
   box-shadow: var(--neu-inset-sm);
 }
 
 input[type="range"].neu-range::-webkit-slider-thumb {
   -webkit-appearance: none;
-  height: 22px;
-  width: 22px;
+  height: 24px;
+  width: 24px;
   border-radius: 50%;
-  background: var(--neu-bg);
-  box-shadow: var(--neu-raised-sm);
-  border: 2.5px solid var(--color-accent);
+  background: radial-gradient(circle, var(--color-accent) 0 3.5px, #f4f7fc 4px, #d8e0ec 100%);
+  box-shadow: 2px 3px 6px rgb(138 154 178 / 0.82), -2px -2px 5px rgb(255 255 255 / 0.95), inset 0 0 0 1.5px var(--neu-selected-rim);
   margin-top: -7px;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   cursor: grab;
@@ -444,24 +563,37 @@ input[type="range"].neu-range::-webkit-slider-thumb {
 
 input[type="range"].neu-range::-webkit-slider-thumb:active {
   cursor: grabbing;
-  transform: scale(1.15);
+  transform: scale(1.12);
+  box-shadow: inset 0 0 0 2px var(--neu-selected-rim), var(--neu-inset-core);
 }
 
 input[type="range"].neu-range::-moz-range-track {
-  height: 8px;
+  height: 10px;
   border-radius: 9999px;
-  background-color: var(--neu-bg);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-accent) 82%, var(--neu-bg)) 0%,
+    var(--color-accent) var(--range-progress, 100%),
+    var(--neu-bg) var(--range-progress, 100%),
+    var(--neu-bg) 100%
+  );
   box-shadow: var(--neu-inset-sm);
 }
 
 input[type="range"].neu-range::-moz-range-thumb {
-  height: 22px;
-  width: 22px;
+  height: 24px;
+  width: 24px;
   border-radius: 50%;
-  background: var(--neu-bg);
-  box-shadow: var(--neu-raised-sm);
-  border: 2.5px solid var(--color-accent);
+  background: radial-gradient(circle, var(--color-accent) 0 3.5px, #f4f7fc 4px, #d8e0ec 100%);
+  box-shadow: 2px 3px 6px rgb(138 154 178 / 0.82), -2px -2px 5px rgb(255 255 255 / 0.95), inset 0 0 0 1.5px var(--neu-selected-rim);
+  border: none;
   cursor: grab;
+}
+
+input[type="range"].neu-range::-moz-range-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.12);
+  box-shadow: inset 0 0 0 2px var(--neu-selected-rim), var(--neu-inset-core);
 }
 
 /* Hide scrollbar for clean UI */
@@ -475,12 +607,14 @@ input[type="range"].neu-range::-moz-range-thumb {
 
 /* Admin panel tabs: the active tab is pressed in, like any selected option */
 .admin-tab-bar {
-  box-shadow: var(--neu-raised-sm);
+  background-color: var(--neu-bg);
+  box-shadow: var(--neu-raised-sm), inset 0 1px 0 rgb(255 255 255 / 0.75);
 }
 
 .admin-tab-active {
-  background-color: var(--neu-bg);
-  box-shadow: var(--neu-inset-sm);
+  background: linear-gradient(145deg, #d7dfe9 0%, #e6ebf3 100%);
+  box-shadow: inset 0 0 0 1.5px var(--neu-selected-rim), var(--neu-inset-core);
+  color: var(--accent-text);
 }
 
 /* Modals over a dark scrim: a dark shadow without the white halo */

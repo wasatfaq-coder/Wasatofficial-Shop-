@@ -23,8 +23,8 @@ export const CopyValueRow: React.FC<CopyValueRowProps> = ({ label, value, copyTe
   return (
     <div className="flex items-center gap-2 min-w-0 neu-inset rounded-xl px-3 py-2">
       <div className="min-w-0 flex-1">
-        <span className="block text-[11px] text-[#4E5C70]">{label}</span>
-        <span className="block text-sm font-extrabold text-[#2D3A4E] break-words">{value}</span>
+        <span className="block text-[11px] text-text-secondary">{label}</span>
+        <span className="block text-sm font-extrabold text-text-primary break-words">{value}</span>
       </div>
       {copied && (
         <span className="text-[11px] font-bold text-success shrink-0" aria-hidden="true">

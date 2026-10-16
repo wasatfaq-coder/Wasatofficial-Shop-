@@ -1,12 +1,17 @@
 import { AlertTriangle } from 'lucide-react';
-import { SALE_CHANNELS, type SaleChannel } from '../../../shared/wholesalePricing';
+import {
+  SALE_CHANNELS,
+  brokenPackDiscountedPrice,
+  readBrokenPackDiscount,
+  type SaleChannel,
+} from '../../../shared/wholesalePricing';
 import { effectiveWholesaleMarkup, parseDecimal, wholesalePriceFromRate, type ExchangeRates } from '../../../utils/currencyPricing';
 import { AdminHint } from '../AdminHint';
 import type { ProductForm } from './useProductForm';
 
 const rub = (value: number) => `${value.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ₽`;
 const inputClass =
-  'w-full h-9 px-2.5 neu-inset rounded-xl text-xs font-bold text-[#2D3A4E] placeholder:text-[#56647A]';
+  'w-full h-9 px-2.5 neu-inset rounded-xl text-xs font-bold text-text-primary placeholder:text-text-muted';
 
 interface ProductFormWholesaleProps {
   form: ProductForm;
@@ -35,6 +40,8 @@ export function ProductFormWholesale({ form, rates, cost }: ProductFormWholesale
     formWholesaleMarkup,
     setFormWholesaleMarkup,
     formPurchase,
+    formPacks,
+    settings,
   } = form;
   const purchase = formPurchase();
   const fromRate = purchase && rates ? wholesalePriceFromRate(purchase, rates) : null;
@@ -44,9 +51,18 @@ export function ProductFormWholesale({ form, rates, cost }: ProductFormWholesale
   const belowCost = wholesaleOn && price > 0 && cost !== undefined && cost > 0 && price < cost ? Math.ceil(cost - price) : 0;
   const notLower = wholesaleOn && formSaleChannel === 'both' && price > 0 && formPrice > 0 && price >= formPrice;
 
+  const brokenDiscount = readBrokenPackDiscount(settings?.brokenPackDiscount ?? settings?.wholesale?.brokenPackDiscount);
+  const roundedWholesale = price > 0 ? Math.round(price) : 0;
+  const brokenPrice =
+    formSaleChannel === 'both' && roundedWholesale > 0
+      ? brokenPackDiscountedPrice(roundedWholesale, brokenDiscount)
+      : null;
+  const brokenBelowCost =
+    brokenPrice !== null && cost !== undefined && cost > 0 && brokenPrice < cost ? Math.ceil(cost - brokenPrice) : 0;
+
   return (
     <fieldset className="space-y-2 pt-1">
-      <legend className="flex items-center gap-1 text-[11px] font-bold text-[#4E5C70]">
+      <legend className="flex items-center gap-1 text-[11px] font-bold text-text-secondary">
         Опт
         <AdminHint label="Опт">
           Оптовая цена уже снижена: промокоды и скидка товара на неё не действуют, только скидка за объём из раздела «Опт».
@@ -60,8 +76,8 @@ export function ProductFormWholesale({ form, rates, cost }: ProductFormWholesale
             role="radio"
             aria-checked={formSaleChannel === id}
             onClick={() => setFormSaleChannel(id as SaleChannel)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer ${
-              formSaleChannel === id ? 'neu-pill-active' : 'neu-button text-[#2D3A4E] hover:text-accent'
+            className={`px-3 py-1.5 min-h-8 rounded-xl text-xs font-bold cursor-pointer ${
+              formSaleChannel === id ? 'neu-pill-active' : 'neu-button text-text-primary hover:text-accent'
             }`}
           >
             {title}
@@ -69,11 +85,17 @@ export function ProductFormWholesale({ form, rates, cost }: ProductFormWholesale
         ))}
       </div>
 
+      {!wholesaleOn && formPacks.length > 0 && (
+        <p className="text-xs text-text-secondary leading-snug rounded-xl p-2.5 neu-inset">
+          При режиме «Только в розницу» ростовки скрываются на витрине, но сохраняются в карточке товара (вернутся при переключении на «И опт, и розница»).
+        </p>
+      )}
+
       {wholesaleOn && (
         <>
           <div className="grid grid-cols-2 gap-2">
             <div className="min-w-0">
-              <label htmlFor="product-form-wholesale-price" className="text-[11px] font-bold text-[#4E5C70] block mb-1 leading-tight">
+              <label htmlFor="product-form-wholesale-price" className="text-[11px] font-bold text-text-secondary block mb-1 leading-tight">
                 Оптовая цена за штуку, ₽{formSaleChannel === 'wholesale' ? ' *' : ''}
               </label>
               <input
@@ -88,7 +110,7 @@ export function ProductFormWholesale({ form, rates, cost }: ProductFormWholesale
             </div>
             {purchase && (
               <div className="min-w-0">
-                <label htmlFor="product-form-wholesale-markup" className="text-[11px] font-bold text-[#4E5C70] block mb-1 leading-tight">
+                <label htmlFor="product-form-wholesale-markup" className="text-[11px] font-bold text-text-secondary block mb-1 leading-tight">
                   Своя наценка опта, %
                 </label>
                 <input
@@ -103,7 +125,7 @@ export function ProductFormWholesale({ form, rates, cost }: ProductFormWholesale
               </div>
             )}
             <div className="min-w-0">
-              <label htmlFor="product-form-pack-size" className="text-[11px] font-bold text-[#4E5C70] block mb-1 leading-tight">
+              <label htmlFor="product-form-pack-size" className="text-[11px] font-bold text-text-secondary block mb-1 leading-tight">
                 Штук в упаковке
               </label>
               <input
@@ -117,7 +139,7 @@ export function ProductFormWholesale({ form, rates, cost }: ProductFormWholesale
               />
             </div>
             <div className="min-w-0">
-              <label htmlFor="product-form-min-packs" className="text-[11px] font-bold text-[#4E5C70] block mb-1 leading-tight">
+              <label htmlFor="product-form-min-packs" className="text-[11px] font-bold text-text-secondary block mb-1 leading-tight">
                 Минимум упаковок
               </label>
               <input
@@ -134,9 +156,9 @@ export function ProductFormWholesale({ form, rates, cost }: ProductFormWholesale
 
           {fromRate !== null && markup !== undefined && (
             <div className="rounded-xl p-2.5 neu-inset flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs text-[#2D3A4E]">
+              <p className="text-xs text-text-primary">
                 <span className="font-extrabold">Опт по курсу: {rub(fromRate)}</span>{' '}
-                <span className="text-[#4E5C70]">наценка опта {markup.toLocaleString('ru-RU')} %</span>
+                <span className="text-text-secondary">наценка опта {markup.toLocaleString('ru-RU')} %</span>
               </p>
               {price === fromRate ? (
                 <p className="text-xs font-bold text-success">Уже по курсу</p>
@@ -152,9 +174,25 @@ export function ProductFormWholesale({ form, rates, cost }: ProductFormWholesale
             </div>
           )}
 
+          {brokenPrice !== null && (
+            <p className="text-xs text-text-secondary leading-snug">
+              При разбивке ростовки вещь уйдёт по{' '}
+              <span className="font-extrabold text-text-primary">{rub(brokenPrice)}</span> за штуку
+              {brokenDiscount
+                ? ` (скидка на разбитую упаковку −${brokenDiscount.kind === 'percent' ? `${brokenDiscount.value} %` : rub(brokenDiscount.value)})`
+                : ' (без доп. скидки на разбитую упаковку)'}
+              .
+            </p>
+          )}
+
           {belowCost > 0 && (
             <p role="status" className="flex items-start gap-1.5 text-xs font-bold text-warning">
               <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" /> Оптовая цена ниже закупки на {rub(belowCost)}
+            </p>
+          )}
+          {brokenBelowCost > 0 && (
+            <p role="status" className="flex items-start gap-1.5 text-xs font-bold text-warning">
+              <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" /> При разбивке ростовки цена ({rub(brokenPrice!)}) ниже закупки на {rub(brokenBelowCost)}
             </p>
           )}
           {notLower && (
@@ -162,7 +200,7 @@ export function ProductFormWholesale({ form, rates, cost }: ProductFormWholesale
               <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" /> Оптовая цена не ниже розничной
             </p>
           )}
-          <p className="text-xs text-[#4E5C70] leading-snug">
+          <p className="text-xs text-text-secondary leading-snug">
             Оптом заказывают целыми упаковками. Скидку за объём задаёт раздел «Опт» для всех оптовых товаров.
           </p>
         </>

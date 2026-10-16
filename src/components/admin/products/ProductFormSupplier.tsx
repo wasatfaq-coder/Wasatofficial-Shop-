@@ -20,7 +20,7 @@ export function ProductFormSupplier({ form, products }: { form: ProductForm; pro
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
       <div className="min-w-0">
         <div className="flex items-center gap-0.5 mb-1">
-          <label htmlFor="product-form-supplier" className="text-[11px] font-bold text-[#4E5C70] leading-tight">
+          <label htmlFor="product-form-supplier" className="text-[11px] font-bold text-text-secondary leading-tight">
             Поставщик
           </label>
           <AdminHint label="Поставщик">Для вас: у кого купили товар. Покупатель не видит.</AdminHint>
@@ -34,7 +34,7 @@ export function ProductFormSupplier({ form, products }: { form: ProductForm; pro
           maxLength={SUPPLIER_MAX_LENGTH}
           autoComplete="off"
           placeholder="напр. Guangzhou Fashion"
-          className="w-full h-9 px-2.5 neu-inset rounded-xl text-xs font-bold text-[#2D3A4E] placeholder:text-[#56647A]"
+          className="w-full h-9 px-2.5 neu-inset rounded-xl text-xs font-bold text-text-primary placeholder:text-text-muted"
         />
         {knownSuppliers.length > 0 && (
           <datalist id="product-form-supplier-list">
@@ -47,7 +47,7 @@ export function ProductFormSupplier({ form, products }: { form: ProductForm; pro
 
       <div className="min-w-0">
         <div className="flex items-center gap-0.5 mb-1">
-          <label htmlFor="product-form-supplier-sku" className="text-[11px] font-bold text-[#4E5C70] leading-tight">
+          <label htmlFor="product-form-supplier-sku" className="text-[11px] font-bold text-text-secondary leading-tight">
             Артикул поставщика
           </label>
           <AdminHint label="Артикул поставщика">
@@ -62,7 +62,7 @@ export function ProductFormSupplier({ form, products }: { form: ProductForm; pro
           maxLength={SUPPLIER_SKU_MAX_LENGTH}
           autoComplete="off"
           placeholder="напр. GF-2231"
-          className="w-full h-9 px-2.5 neu-inset rounded-xl text-xs font-bold text-[#2D3A4E] placeholder:text-[#56647A]"
+          className="w-full h-9 px-2.5 neu-inset rounded-xl text-xs font-bold text-text-primary placeholder:text-text-muted"
         />
       </div>
     </div>

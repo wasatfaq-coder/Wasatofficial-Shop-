@@ -19,6 +19,7 @@ interface ReportData {
   topProducts: Array<{
     title: string;
     quantity: number;
+    packs?: number;
     revenue: number;
   }>;
   /** «Все продажи», «Розница», «Опт»: which orders the numbers above are of */
@@ -138,7 +139,7 @@ export async function generateAnalyticsPDF(data: ReportData): Promise<void> {
         </p>
         ${
           data.prevRevenue
-            ? `<span style="font-size: 10px; color: ${data.revenueGrowthPercent >= 0 ? '#3B6652' : '#7E525E'}; font-weight: 700;">${data.revenueGrowthPercent > 0 ? '+' : ''}${esc(data.revenueGrowthPercent)}% к пред. периоду</span>`
+            ? `<span style="font-size: 10px; color: ${data.revenueGrowthPercent >= 0 ? '#3B6652' : '#7E525E'}; font-weight: 700;">${data.revenueGrowthPercent > 0 ? '+' : ''}${esc(data.revenueGrowthPercent.toLocaleString('ru-RU', { maximumFractionDigits: 1 }))}% к пред. периоду</span>`
             : `<span style="font-size: 10px; color: #64748B;">нет данных за прошлый период</span>`
         }
       </div>
@@ -217,7 +218,7 @@ export async function generateAnalyticsPDF(data: ReportData): Promise<void> {
                   <span style="color: #2C4A6B; font-weight: 800; margin-right: 4px;">#${idx + 1}</span>
                   ${esc(p.title.length > 25 ? p.title.slice(0, 25) + '...' : p.title)}
                 </td>
-                <td style="padding: 6px 0; text-align: center; font-weight: 700; color: #475569;">${esc(p.quantity)}</td>
+                <td style="padding: 6px 0; text-align: center; font-weight: 700; color: #475569;">${esc(p.quantity)}${p.packs ? ` <span style="font-size: 10px; color: #64748B;">(${esc(p.packs)} уп.)</span>` : ''}</td>
                 <td style="padding: 6px 0; text-align: right; font-weight: 700; color: #0F172A;">${p.revenue.toLocaleString('ru-RU')} ₽</td>
               </tr>
             `

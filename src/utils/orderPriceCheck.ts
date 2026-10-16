@@ -2,7 +2,7 @@ import type { DeliveryMethod, Order, Product, PromoCode, StorefrontSettings } fr
 import { calcPromoDiscount, getAvailableDeliveryMethods, isQuickOrderDelivery, type PricingLine } from '../shared/orderPricing';
 import { linePrice } from '../shared/orderLine';
 import { orderTimestamp } from '../shared/orderDate';
-import { pricesAtOrderTime } from './priceHistory';
+import { pricesAtOrderTime, wholesalePricesAtOrderTime } from './priceHistory';
 import { isWholesaleLine, priceCartLines, sellsWholesale } from '../shared/wholesalePricing';
 import { groupOrderLines, isPackLine, packGroupCompositionText, soldPack } from '../shared/packLines';
 import { sizePackPrice } from '../shared/sizePacks';
@@ -49,22 +49,20 @@ function checkedOrderTime(order: Order): number | null {
  * «Цены не совпадают с каталогом» (audit 02.10, stage 5 without Blaze): an order from the browser is written by the
  * buyer, and its prices nobody but `placeOrder` checks — a made-up order could cost 1 ₽. The owner confirms the payment
  * by hand, so before «Подтвердить оплату» the order is compared with the catalog's prices at the time of the order
- * (`priceHistory`) and with its own sum, and — with
+ * (`priceHistory` and `wholesalePriceHistory`) and with its own sum, and — with
  * `shop` — its discount with the promo code, its delivery fee with the delivery method and its payment method with
  * «Оплата» (check 04.10, finding 2: a made-up discount, a missing fee or «при получении» passed unnoticed).
  * A price could also change after the order — the text asks to check, it does not accuse.
  */
 export function orderPriceIssues(order: Order, products: Product[], shop: OrderCheckContext = {}): string[] {
-  // the server already checked its prices; a paid, refunded or cancelled order is past the moment of checking
-  if (order.placedVia === 'server' || order.isCancelled) return [];
+  // the server already checked its prices; a paid, refunded, cancelled or admin-adjusted order is past client price checking
+  if (order.placedVia === 'server' || order.isAdjusted || order.isCancelled || (order.adjustmentLogs?.length ?? 0) > 0) return [];
   if (order.paymentStatus === 'paid' || order.paymentStatus === 'refunded') return [];
 
   const issues: string[] = [];
   const byId = new Map(products.map((p) => [p.id, p]));
   const orderTime = checkedOrderTime(order);
   const lines: PricingLine[] = [];
-  // Wholesale lines as the catalog prices them now: the wholesale price and the volume step of «Опт» (the wholesale
-  // price has no history yet — a change after the order shows here too, and the text asks to check)
   const items = order.items ?? [];
   const expectedWholesale = priceCartLines(
     items.map((item) => {
@@ -94,8 +92,29 @@ export function orderPriceIssues(order: Order, products: Product[], shop: OrderC
     if (wholesale) {
       if (catalog && !sellsWholesale(catalog)) {
         issues.push(`«${catalog.title}»: в заказе оптовая цена ${rub(price)}, а товар оптом не продаётся`);
-      } else if (catalog && linePrice(expectedWholesale[i]) !== price) {
-        issues.push(`«${catalog.title}»: в заказе опт ${rub(price)}, в каталоге ${rub(linePrice(expectedWholesale[i]))}`);
+      } else if (catalog) {
+        const bases = wholesalePricesAtOrderTime(catalog, orderTime);
+        const allowed =
+          bases.length > 0
+            ? Array.from(
+                new Set(
+                  bases.map((wp) => {
+                    const priced = priceCartLines(
+                      items.map((it) => {
+                        const cat = it.product?.id ? byId.get(it.product.id) : undefined;
+                        if (!cat) return it;
+                        return { ...it, product: cat.id === catalog.id ? { ...cat, wholesalePrice: wp } : cat };
+                      }),
+                      shop.settings?.wholesale
+                    );
+                    return linePrice(priced[i]);
+                  })
+                )
+              )
+            : [linePrice(expectedWholesale[i])];
+        if (!allowed.includes(price)) {
+          issues.push(`«${catalog.title}»: в заказе опт ${rub(price)}, в каталоге ${allowed.map(rub).join(' или ')}`);
+        }
       }
       if (quantity <= 0) issues.push(`«${item.product?.title ?? 'строка'}»: количество ${quantity}`);
       return;
@@ -108,8 +127,8 @@ export function orderPriceIssues(order: Order, products: Product[], shop: OrderC
     }
     if (quantity <= 0) issues.push(`«${item.product?.title ?? 'строка'}»: количество ${quantity}`);
   });
-  // a size pack (stage 20): the price of one pack and its composition as the catalog sells them now (packs have no
-  // price history yet — a change after the order shows here too, and the text asks to check)
+  // a size pack (stage 20): the price of one pack (including wholesale/retail price history when the pack derives its
+  // price from per-unit price) and its composition as the catalog sells them
   for (const group of groupOrderLines(items)) {
     if (group.kind !== 'pack') continue;
     const catalog = group.item.product?.id ? byId.get(group.item.product.id) : undefined;
@@ -120,9 +139,16 @@ export function orderPriceIssues(order: Order, products: Product[], shop: OrderC
       issues.push(`${name}: такой ростовки в этом цвете в каталоге нет`);
       continue;
     }
-    const expected = sizePackPrice(catalog, pack);
-    if (expected !== undefined && group.packPrice !== expected) {
-      issues.push(`${name}: в заказе ${rub(group.packPrice)} за упаковку, в каталоге ${rub(expected)}`);
+    const allowedPackPrices = Array.from(
+      new Set(
+        [
+          ...wholesalePricesAtOrderTime(catalog, orderTime).map((wp) => sizePackPrice({ wholesalePrice: wp }, pack)),
+          sizePackPrice(catalog, pack),
+        ].filter((p): p is number => typeof p === 'number')
+      )
+    );
+    if (allowedPackPrices.length > 0 && !allowedPackPrices.includes(group.packPrice)) {
+      issues.push(`${name}: в заказе ${rub(group.packPrice)} за упаковку, в каталоге ${allowedPackPrices.map(rub).join(' или ')}`);
     }
     if (packGroupCompositionText(group.sizes) !== packGroupCompositionText(pack.sizes)) {
       issues.push(`${name}: в заказе состав ${packGroupCompositionText(group.sizes)}, в каталоге ${packGroupCompositionText(pack.sizes)}`);

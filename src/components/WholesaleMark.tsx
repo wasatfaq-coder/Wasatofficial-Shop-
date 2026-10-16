@@ -6,7 +6,7 @@ import React from 'react';
  */
 export const WholesaleMark: React.FC<{ className?: string }> = ({ className = '' }) => (
   <span
-    className={`inline-block px-1.5 py-px rounded-md bg-accent/10 text-accent text-[11px] font-extrabold leading-tight align-middle ${className}`}
+    className={`inline-block px-1.5 py-0.5 rounded-md neu-tone-info text-[11px] font-extrabold leading-tight align-middle ${className}`}
   >
     Опт
   </span>

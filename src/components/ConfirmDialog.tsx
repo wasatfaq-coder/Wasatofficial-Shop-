@@ -1,6 +1,6 @@
 import React from 'react';
 import { AlertTriangle, Trash2, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { m, AnimatePresence } from 'motion/react';
 import { ModalPortal } from './ModalPortal';
 import { useDialogA11y } from '../utils/useDialogA11y';
 
@@ -43,7 +43,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   <ModalPortal>
   <AnimatePresence>
     {isOpen && (
-      <motion.div
+      <m.div
         key="confirm-dialog-overlay"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -51,8 +51,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         transition={{ duration: 0.2 }}
         className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4"
       >
-        <div onClick={onClose} className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer" />
-        <motion.div
+        <div onClick={onClose} className="fixed inset-0 bg-text-primary/50 backdrop-blur-xs cursor-pointer" />
+        <m.div
           ref={dialog.ref}
           {...dialog.props}
           role="alertdialog"
@@ -62,24 +62,24 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
           className="relative w-full max-w-sm neu-modal rounded-3xl p-5 space-y-4 z-10"
         >
-          <div className="flex items-center justify-between gap-3 pb-2 border-b border-[#BAC5D5]/50">
+          <div className="flex items-center justify-between gap-3 pb-2 neu-divider-b">
             <div className="flex items-center gap-2 min-w-0">
               <div
                 className={`w-8 h-8 rounded-xl neu-inset flex items-center justify-center shrink-0 ${
                   tone === 'danger' ? 'text-danger' : 'text-accent'
                 }`}
               >
-                <AlertTriangle className="w-4 h-4" />
+                <AlertTriangle className="w-4 h-4 shrink-0" />
               </div>
-              <h3 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">{title}</h3>
+              <h3 id={dialog.titleId} className="text-sm font-extrabold text-text-primary">{title}</h3>
             </div>
             <button
               type="button"
               onClick={onClose}
               aria-label="Закрыть"
-              className="w-7 h-7 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer shrink-0"
+              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer shrink-0"
             >
-              <X className="w-4 h-4 stroke-[2.5]" />
+              <X className="w-4 h-4 stroke-[2.5] shrink-0" />
             </button>
           </div>
 
@@ -87,14 +87,14 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             <div className="neu-inset rounded-2xl p-2.5 flex items-center gap-3 min-w-0">{preview}</div>
           )}
 
-          <p className="text-xs text-[#4E5C70] leading-relaxed">{message}</p>
+          <p className="text-xs text-text-secondary leading-relaxed">{message}</p>
 
           <div className="flex items-center gap-2 pt-1">
             <button
               data-autofocus
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+              className="flex-1 py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary cursor-pointer"
             >
               {cancelLabel}
             </button>
@@ -112,8 +112,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               <span>{confirmLabel}</span>
             </button>
           </div>
-        </motion.div>
-      </motion.div>
+        </m.div>
+      </m.div>
     )}
   </AnimatePresence>
   </ModalPortal>

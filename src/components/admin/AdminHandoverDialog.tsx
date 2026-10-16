@@ -43,18 +43,18 @@ export const AdminHandoverDialog: React.FC<AdminHandoverDialogProps> = ({ order,
   return (
     <ModalPortal>
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
-        <div onClick={() => !busy && onClose()} className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer" />
+        <div onClick={() => !busy && onClose()} className="fixed inset-0 bg-text-primary/50 backdrop-blur-xs cursor-pointer" />
         <div
           ref={dialog.ref}
           {...dialog.props}
           className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto neu-modal rounded-3xl p-5 space-y-4 z-10"
         >
-          <div className="flex items-center justify-between gap-3 pb-2 border-b border-[#BAC5D5]/50">
+          <div className="flex items-center justify-between gap-3 pb-2 neu-divider-b">
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center shrink-0 text-accent">
                 <KeyRound className="w-4 h-4" aria-hidden="true" />
               </div>
-              <h3 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">
+              <h3 id={dialog.titleId} className="text-sm font-extrabold text-text-primary">
                 Выдача заказа № {order.id}
               </h3>
             </div>
@@ -63,7 +63,7 @@ export const AdminHandoverDialog: React.FC<AdminHandoverDialogProps> = ({ order,
               onClick={onClose}
               disabled={busy}
               aria-label="Закрыть"
-              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer shrink-0"
+              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer shrink-0"
             >
               <X className="w-4 h-4 stroke-[2.5]" aria-hidden="true" />
             </button>
@@ -71,15 +71,15 @@ export const AdminHandoverDialog: React.FC<AdminHandoverDialogProps> = ({ order,
 
           <dl className="space-y-2 text-xs">
             <div>
-              <dt className="text-[11px] text-[#4E5C70]">Получатель</dt>
-              <dd className="font-extrabold text-[#2D3A4E] break-words">{name}</dd>
+              <dt className="text-[11px] text-text-secondary">Получатель</dt>
+              <dd className="font-extrabold text-text-primary break-words">{name}</dd>
             </div>
             <div>
-              <dt className="text-[11px] text-[#4E5C70]">Оплата</dt>
+              <dt className="text-[11px] text-text-secondary">Оплата</dt>
               <dd>
                 <span
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-xs font-extrabold ${
-                    paidOnDelivery ? 'bg-warning-soft text-warning border-warning/25' : 'bg-success-soft text-success border-success/25'
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-extrabold ${
+                    paidOnDelivery ? 'neu-tone-warning' : 'neu-tone-success'
                   }`}
                 >
                   {paidOnDelivery ? 'Оплата при получении — примите оплату' : 'Оплачено'}
@@ -89,11 +89,11 @@ export const AdminHandoverDialog: React.FC<AdminHandoverDialogProps> = ({ order,
           </dl>
 
           <div className="neu-inset rounded-2xl p-4 text-center space-y-1">
-            <p className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider">Код выдачи</p>
-            <p className="text-3xl font-extrabold font-mono tracking-widest text-[#2D3A4E]" aria-live="polite">
+            <p className="text-[11px] font-bold text-text-secondary uppercase tracking-wider">Код выдачи</p>
+            <p className="text-3xl font-extrabold font-mono tracking-widest text-text-primary" aria-live="polite">
               {order.pickupCode}
             </p>
-            <p className="text-xs text-[#4E5C70]">Попросите покупателя назвать код и сверьте</p>
+            <p className="text-xs text-text-secondary">Попросите покупателя назвать код и сверьте</p>
             {onNewCode && (
               <div className="mt-2 flex items-center gap-1">
               <button
@@ -120,7 +120,7 @@ export const AdminHandoverDialog: React.FC<AdminHandoverDialogProps> = ({ order,
               type="button"
               onClick={onClose}
               disabled={busy}
-              className="flex-1 py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+              className="flex-1 py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary cursor-pointer"
             >
               Закрыть
             </button>

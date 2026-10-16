@@ -262,4 +262,24 @@ describe('wholesale markup for all wholesale products («Курсы и наце�
     expect(readPurchase({ currency: 'USD', amount: 4, wholesaleMarkupPercent: 40 })).toEqual({ currency: 'USD', amount: 4, wholesaleMarkupPercent: 40 });
     expect(samePurchase({ currency: 'USD', amount: 4 }, { currency: 'USD', amount: 4, wholesaleMarkupPercent: 40 })).toBe(false);
   });
+
+  test('extraCost per item in roubles or percent is added to cost before retail and wholesale markups (brief B19)', () => {
+    // 10 $ × 90 ₽ = 900 ₽ + 150 ₽ extra = 1050 ₽ cost; retail +180 % = 2940 ₽, wholesale +60 % = 1680 ₽
+    const withRub = { currency: 'USD' as const, amount: 10, extraCost: 150, extraCostKind: 'rub' as const };
+    expect(priceFromRate(withRub, r)).toEqual({ price: 2940, costPrice: 1050 });
+    expect(wholesalePriceFromRate(withRub, r)).toBe(1680);
+
+    // 10 $ × 90 ₽ = 900 ₽ + 10 % extra = 990 ₽ cost; retail +180 % = 2772 → 2780 ₽, wholesale +60 % = 1584 → 1590 ₽
+    const withPercent = { currency: 'USD' as const, amount: 10, extraCost: 10, extraCostKind: 'percent' as const };
+    expect(priceFromRate(withPercent, r)).toEqual({ price: 2780, costPrice: 990 });
+    expect(wholesalePriceFromRate(withPercent, r)).toBe(1590);
+
+    // readPurchase & samePurchase validate and compare extraCost
+    expect(readPurchase({ currency: 'USD', amount: 10, extraCost: 150, extraCostKind: 'rub' })).toEqual(withRub);
+    expect(readPurchase({ currency: 'USD', amount: 10, extraCost: 10, extraCostKind: 'percent' })).toEqual(withPercent);
+    expect(readPurchase({ currency: 'USD', amount: 10, extraCost: -5, extraCostKind: 'rub' })).toEqual({ currency: 'USD', amount: 10 });
+    expect(samePurchase(withRub, withPercent)).toBe(false);
+    expect(samePurchase(withRub, { ...withRub })).toBe(true);
+  });
 });
+

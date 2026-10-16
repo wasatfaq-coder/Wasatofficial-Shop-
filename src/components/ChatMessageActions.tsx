@@ -1,6 +1,6 @@
 import React from 'react';
 import { EyeOff, Image as ImageIcon, MoreHorizontal, Pencil, Trash2, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { m, AnimatePresence } from 'motion/react';
 import type { ChatMessage } from '../types';
 import { ModalPortal } from './ModalPortal';
 import { useDialogA11y } from '../utils/useDialogA11y';
@@ -33,7 +33,7 @@ export const ChatMessageMenu: React.FC<ChatMessageMenuProps> = ({ isOpen, onTogg
           <button
             type="button"
             onClick={onEdit}
-            className="h-8 px-2.5 neu-button rounded-lg text-[11px] font-bold text-[#2D3A4E] hover:text-accent flex items-center gap-1 cursor-pointer"
+            className="h-8 px-2.5 neu-button rounded-lg text-[11px] font-bold text-text-primary hover:text-accent flex items-center gap-1 cursor-pointer"
           >
             <Pencil className="w-3.5 h-3.5" />
             Изменить
@@ -56,7 +56,7 @@ export const ChatMessageMenu: React.FC<ChatMessageMenuProps> = ({ isOpen, onTogg
       aria-expanded={isOpen}
       title="Изменить или удалить"
       className={`w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer transition-all ${
-        isOpen ? 'neu-pill-active text-accent' : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
+        isOpen ? 'neu-pill-active text-accent' : 'neu-button text-text-secondary hover:text-text-primary'
       }`}
     >
       {isOpen ? <X className="w-3.5 h-3.5" /> : <MoreHorizontal className="w-4 h-4" />}
@@ -92,7 +92,7 @@ export const ChatMessageDeleteDialog: React.FC<ChatMessageDeleteDialogProps> = (
   <ModalPortal>
     <AnimatePresence>
       {message && (
-        <motion.div
+        <m.div
           key="chat-delete-overlay"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -100,8 +100,8 @@ export const ChatMessageDeleteDialog: React.FC<ChatMessageDeleteDialogProps> = (
           transition={{ duration: 0.2 }}
           className="fixed inset-0 z-[220] flex items-center justify-center p-3 sm:p-4"
         >
-          <div onClick={onClose} className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer" />
-          <motion.div
+          <div onClick={onClose} className="fixed inset-0 bg-text-primary/50 backdrop-blur-xs cursor-pointer" />
+          <m.div
             ref={dialog.ref}
             {...dialog.props}
             role="alertdialog"
@@ -111,20 +111,20 @@ export const ChatMessageDeleteDialog: React.FC<ChatMessageDeleteDialogProps> = (
             transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
             className="relative w-full max-w-sm neu-modal rounded-3xl p-5 space-y-4 z-10"
           >
-            <div className="flex items-center justify-between gap-3 pb-2 border-b border-[#BAC5D5]/50">
+            <div className="flex items-center justify-between gap-3 pb-2 neu-divider-b">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center shrink-0 text-danger">
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-4 h-4 shrink-0" />
                 </div>
-                <h3 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">Удалить сообщение?</h3>
+                <h3 id={dialog.titleId} className="text-sm font-extrabold text-text-primary">Удалить сообщение?</h3>
               </div>
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="Закрыть"
-                className="w-7 h-7 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer shrink-0"
+                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer shrink-0"
               >
-                <X className="w-4 h-4 stroke-[2.5]" />
+                <X className="w-4 h-4 stroke-[2.5] shrink-0" />
               </button>
             </div>
 
@@ -132,7 +132,7 @@ export const ChatMessageDeleteDialog: React.FC<ChatMessageDeleteDialogProps> = (
               {message.imageUrl ? (
                 <img src={message.imageUrl} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
               ) : null}
-              <p className="text-xs text-[#2D3A4E] leading-snug break-words min-w-0 whitespace-pre-line">
+              <p className="text-xs text-text-primary leading-snug break-words min-w-0 whitespace-pre-line">
                 {(message.imageUrl || message.imageId) && !message.text?.trim() ? (
                   <span className="flex items-center gap-1">
                     <ImageIcon className="w-3.5 h-3.5" /> Фото
@@ -143,7 +143,7 @@ export const ChatMessageDeleteDialog: React.FC<ChatMessageDeleteDialogProps> = (
               </p>
             </div>
 
-            <p className="text-xs text-[#4E5C70] leading-relaxed">
+            <p className="text-xs text-text-secondary leading-relaxed">
               {forAllOnly
                 ? 'Заметку видят только сотрудники — она будет удалена из диалога.'
                 : `«Удалить у меня» — сообщение останется у ${otherSide}. «Удалить у всех» — оно исчезнет из диалога.`}
@@ -157,7 +157,7 @@ export const ChatMessageDeleteDialog: React.FC<ChatMessageDeleteDialogProps> = (
                   onDeleteForMe();
                   onClose();
                 }}
-                className="py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-[#2D3A4E] flex items-center justify-center gap-1.5 cursor-pointer"
+                className="py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-text-primary flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <EyeOff className="w-3.5 h-3.5" />
                 Удалить у меня
@@ -179,13 +179,13 @@ export const ChatMessageDeleteDialog: React.FC<ChatMessageDeleteDialogProps> = (
               <button
                 type="button"
                 onClick={onClose}
-                className="col-span-2 py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                className="col-span-2 py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary cursor-pointer"
               >
                 Отмена
               </button>
             </div>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       )}
     </AnimatePresence>
   </ModalPortal>

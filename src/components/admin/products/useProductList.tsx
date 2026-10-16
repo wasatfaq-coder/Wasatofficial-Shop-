@@ -3,6 +3,7 @@ import { Tag } from 'lucide-react';
 import { Product } from '../../../types';
 import { isHiddenFromSale } from '../../../utils/inventory';
 import { isWholesaleListed } from '../../../utils/wholesaleOffer';
+import { articleCode } from '../../../shared/barcode';
 import type { BulkTab } from '../AdminBulkOperationsModal';
 
 import type { AdminProductsTabProps, ProductCategoryOption } from '../AdminProductsTab';
@@ -48,10 +49,19 @@ export function useProductList(
       const matchesSearch =
         !q ||
         p.title.toLowerCase().includes(q) ||
+        p.id.toLowerCase().includes(q) ||
         p.description?.toLowerCase().includes(q) ||
+        p.colors?.some(
+          (c) => c?.name && (c.name.toLowerCase().includes(q) || articleCode(p, c.name).toLowerCase().includes(q))
+        ) ||
         p.skus?.some((s) => s.skuCode?.toLowerCase().includes(q) || s.barcode?.includes(q));
 
-      const matchesCat = categoryFilter === 'all' || p.category === categoryFilter;
+      const matchesCat =
+        categoryFilter === 'all'
+          ? true
+          : categoryFilter === '__uncategorized__'
+          ? !p.category
+          : p.category === categoryFilter;
       const matchesStock =
         stockFilter === 'all'
           ? true
@@ -71,8 +81,13 @@ export function useProductList(
   const categorySelectOptions = useMemo(() => {
     const knownIds = new Set(CATEGORY_OPTIONS.map((c) => c.id));
     const extraCategories: { id: string; name: string }[] = [];
+    let uncategorizedCount = 0;
     products.forEach((p) => {
-      if (p.category && !knownIds.has(p.category)) {
+      if (!p.category) {
+        uncategorizedCount += 1;
+        return;
+      }
+      if (!knownIds.has(p.category)) {
         knownIds.add(p.category);
         extraCategories.push({
           id: p.category,
@@ -81,12 +96,18 @@ export function useProductList(
       }
     });
 
-    const allOptions = [...CATEGORY_OPTIONS, ...extraCategories];
+    const allOptions = [
+      ...CATEGORY_OPTIONS,
+      ...extraCategories,
+      ...(uncategorizedCount > 0 ? [{ id: '__uncategorized__', name: 'Без категории' }] : []),
+    ];
 
     return allOptions.map((cat) => {
       const count =
         cat.id === 'all'
           ? products.length
+          : cat.id === '__uncategorized__'
+          ? uncategorizedCount
           : products.filter((p) => p.category === cat.id).length;
 
       return {
@@ -96,7 +117,7 @@ export function useProductList(
         icon: <Tag className="w-3.5 h-3.5 text-accent" />,
       };
     });
-  }, [products]);
+  }, [products, CATEGORY_OPTIONS]);
 
   // Selection Handlers
   const handleToggleSelectAll = () => {

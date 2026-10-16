@@ -243,35 +243,35 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
   return (
     <ModalPortal>
     <div
-      className="fixed inset-0 z-[130] bg-[#2D3A4E]/55 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-[130] bg-text-primary/55 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
       onClick={guard.requestClose}
     >
       <div
-        className="relative w-full max-w-xl neu-modal rounded-3xl p-4 sm:p-6 border border-white/80 space-y-4 animate-in zoom-in-95 fade-in duration-200 h-[88dvh] sm:h-auto sm:max-h-[92dvh] flex flex-col will-change-transform"
+        className="relative w-full max-w-xl neu-modal rounded-3xl p-4 sm:p-6 space-y-4 animate-in zoom-in-95 fade-in duration-200 h-[88dvh] sm:h-auto sm:max-h-[92dvh] flex flex-col will-change-transform"
         onClick={(e) => e.stopPropagation()}
         ref={dialog.ref}
         {...dialog.props}
       >
         {/* Header: icon, title with its tag, subtitle; close button in the corner */}
-        <div className="flex items-start justify-between gap-3 border-b border-[#BAC5D5]/50 pb-3 shrink-0">
+        <div className="flex items-start justify-between gap-3 neu-divider-b pb-3 shrink-0">
           <div className="flex items-start gap-3 min-w-0">
             <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-accent shrink-0">
               <FileText className="w-5 h-5" />
             </div>
             <div className="min-w-0 space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 id={dialog.titleId} className="text-base font-extrabold text-[#2D3A4E] tracking-tight leading-tight">{title}</h3>
-                <span className="text-[11px] font-extrabold text-accent bg-accent/10 px-2 py-0.5 rounded-md">
+                <h3 id={dialog.titleId} className="text-base font-extrabold text-text-primary tracking-tight leading-tight">{title}</h3>
+                <span className="text-[11px] font-extrabold text-accent neu-tone-info px-2 py-0.5 rounded-md">
                   Каталог акцентов
                 </span>
               </div>
-              <p className="text-xs font-semibold text-[#4E5C70] leading-snug">{subtitle}</p>
+              <p className="text-xs font-semibold text-text-secondary leading-snug">{subtitle}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={guard.requestClose}
-            className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer shrink-0"
+            className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-text-secondary hover:text-text-primary transition-all cursor-pointer shrink-0"
             title="Закрыть окно (Esc)"
             aria-label="Закрыть окно (Esc)"
           >
@@ -284,11 +284,11 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
           {/* Phrase set picker */}
           <div className="space-y-1.5" ref={categoryDropdownRef}>
             <div className="space-y-0.5">
-              <label className="text-[11px] font-extrabold text-[#2D3A4E] uppercase tracking-wider flex items-center gap-1.5">
+              <label className="text-[11px] font-extrabold text-text-primary uppercase tracking-wider flex items-center gap-1.5">
                 <SlidersHorizontal className="w-3.5 h-3.5 text-accent shrink-0" />
                 <span>Категория одежды</span>
               </label>
-              <p className="text-xs font-semibold text-[#4E5C70] leading-snug">
+              <p className="text-xs font-semibold text-text-secondary leading-snug">
                 Фразы общие для всех товаров выбранной категории
               </p>
             </div>
@@ -299,16 +299,16 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                 onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
                 aria-haspopup="listbox"
                 aria-expanded={isCategoryDropdownOpen}
-                className={`w-full h-12 pl-2 pr-3 rounded-2xl neu-inset flex items-center justify-between gap-2 text-left transition-all cursor-pointer ${
-                  isCategoryDropdownOpen ? 'ring-2 ring-accent/40' : ''
+                className={`w-full h-12 pl-2 pr-3 rounded-2xl flex items-center justify-between gap-2 text-left transition-all cursor-pointer ${
+                  isCategoryDropdownOpen ? 'neu-pill-active' : 'neu-inset'
                 }`}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent shrink-0">
                     <ActiveIcon className="w-4 h-4" />
                   </div>
-                  <span className="text-xs font-extrabold text-[#2D3A4E] truncate">{activeSet.label}</span>
-                  <span className="text-[11px] px-2 py-0.5 rounded-lg font-extrabold bg-accent/10 text-accent whitespace-nowrap shrink-0">
+                  <span className="text-xs font-extrabold text-text-primary truncate">{activeSet.label}</span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-lg font-extrabold neu-tone-info text-accent whitespace-nowrap shrink-0">
                     {phraseCount(activeSet.id)} {pluralRu(phraseCount(activeSet.id), ['акцент', 'акцента', 'акцентов'])}
                   </span>
                 </div>
@@ -326,14 +326,14 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
               {isCategoryDropdownOpen && (
                 <div
                   role="listbox"
-                  className="absolute top-full mt-2 left-0 right-0 z-50 neu-dropdown rounded-2xl border border-white/80 p-1.5 max-h-72 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150"
+                  className="absolute top-full mt-2 left-0 right-0 z-50 neu-dropdown rounded-2xl p-1.5 max-h-72 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150"
                 >
                   {(['global', 'store', 'other'] as PhraseSetGroup[]).map((group) => {
                     const sets = phraseSets.filter((set) => set.group === group);
                     if (sets.length === 0) return null;
                     return (
                       <div key={group} className="py-1 first:pt-0 last:pb-0">
-                        <p className="px-2.5 pt-1 pb-1.5 text-[11px] font-extrabold uppercase tracking-wider text-[#4E5C70]">
+                        <p className="px-2.5 pt-1 pb-1.5 text-[11px] font-extrabold uppercase tracking-wider text-text-secondary">
                           {GROUP_TITLES[group]}
                         </p>
                         <div className="space-y-1">
@@ -352,7 +352,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                                   setIsAddingPhrase(false);
                                 }}
                                 className={`w-full h-10 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between gap-2 ${
-                                  isSelected ? 'neu-pill-active' : 'text-[#2D3A4E] hover:bg-[#BAC5D5]/20'
+                                  isSelected ? 'neu-pill-active' : 'text-text-primary hover:neu-inset'
                                 }`}
                               >
                                 <span className="flex items-center gap-2 min-w-0">
@@ -360,11 +360,11 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                                   <span className="truncate">{set.label}</span>
                                 </span>
                                 <span className="flex items-center gap-2 shrink-0">
-                                  <span className="text-[11px] min-w-6 px-1.5 py-0.5 rounded-md font-extrabold text-center bg-accent/10 text-accent">
+                                  <span className="text-[11px] min-w-6 px-1.5 py-0.5 rounded-md font-extrabold text-center neu-tone-info text-accent">
                                     {phraseCount(set.id)}
                                   </span>
                                   {isSelected ? (
-                                    <Check className="w-3.5 h-3.5 text-accent" />
+                                    <Check className="w-3.5 h-3.5 text-accent shrink-0" />
                                   ) : (
                                     <span className="w-3.5 h-3.5" aria-hidden="true" />
                                   )}
@@ -383,8 +383,8 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
 
           {/* Phrases: title, actions, the list */}
           <div className="neu-inset rounded-2xl p-3.5 space-y-3">
-            <div className="space-y-2.5 pb-2.5 border-b border-[#BAC5D5]/40">
-              <p className="text-xs font-extrabold text-[#2D3A4E] flex items-start gap-1.5 leading-snug">
+            <div className="space-y-2.5 pb-2.5 neu-divider-b">
+              <p className="text-xs font-extrabold text-text-primary flex items-start gap-1.5 leading-snug">
                 <Sparkles className="w-3.5 h-3.5 text-accent shrink-0 mt-px" />
                 <span>
                   {activeSet.id === 'global'
@@ -403,7 +403,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                     }
                   }}
                   aria-pressed={isAddingPhrase}
-                  className={`h-8 px-3 rounded-xl text-[11px] font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 ${
+                  className={`h-8 px-3 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                     isAddingPhrase ? 'neu-pill-active' : 'neu-button text-accent'
                   }`}
                 >
@@ -414,8 +414,8 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                   type="button"
                   onClick={() => setIsManageMode(!isManageMode)}
                   aria-pressed={isManageMode}
-                  className={`h-8 px-3 rounded-xl text-[11px] font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 ${
-                    isManageMode ? 'neu-button-danger' : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
+                  className={`h-8 px-3 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    isManageMode ? 'neu-button-danger' : 'neu-button text-text-secondary hover:text-text-primary'
                   }`}
                   title="Режим удаления фраз"
                 >
@@ -431,14 +431,14 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                 onSubmit={handleAddNewPhrase}
                 className="neu-flat-sm rounded-xl p-2.5 space-y-2 animate-in fade-in zoom-in-95 duration-100"
               >
-                <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-[#4E5C70]">
+                <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-text-secondary">
                   <span className="min-w-0 truncate">
                     Новая фраза: <strong className="text-accent">{targetLabel}</strong>
                   </span>
                   <button
                     type="button"
                     onClick={() => setIsAddingPhrase(false)}
-                    className="shrink-0 text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                    className="w-8 h-8 inline-flex items-center justify-center rounded-lg shrink-0 text-text-secondary hover:text-text-primary cursor-pointer"
                   >
                     Отмена
                   </button>
@@ -450,12 +450,12 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                     value={newPhraseInput}
                     onChange={(e) => setNewPhraseInput(e.target.value)}
                     placeholder="Например: дышащая ткань"
-                    className="flex-1 min-w-0 h-9 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
+                    className="flex-1 min-w-0 h-9 px-3 neu-inset rounded-xl text-xs text-text-primary placeholder:text-text-muted"
                   />
                   <button
                     type="submit"
                     disabled={!newPhraseInput.trim()}
-                    className="h-9 px-3 rounded-xl neu-button text-accent text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 shrink-0"
+                    className="h-9 px-3 rounded-xl neu-button text-accent text-xs font-bold disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 shrink-0"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Добавить</span>
@@ -467,14 +467,14 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
             {/* Phrases (padding keeps the raised shadows from being cut by the scroll box) */}
             <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1.5 -mx-1.5">
               {!phrasesData ? (
-                <div className="w-full py-4 text-center text-xs font-bold text-[#4E5C70]">Загружаем фразы…</div>
+                <div className="w-full py-4 text-center text-xs font-bold text-text-secondary">Загружаем фразы…</div>
               ) : currentPhrases.length === 0 ? (
-                <div className="w-full py-4 text-center text-xs font-bold text-[#4E5C70]">
+                <div className="w-full py-4 text-center text-xs font-bold text-text-secondary">
                   Фразы для этой категории пока не добавлены.{' '}
                   <button
                     type="button"
                     onClick={() => setIsAddingPhrase(true)}
-                    className="text-accent underline hover:text-accent-strong cursor-pointer ml-1"
+                    className="min-h-8 inline-flex items-center text-accent underline hover:text-accent-strong cursor-pointer ml-1"
                   >
                     Добавить первую
                   </button>
@@ -486,7 +486,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                     <div
                       key={idx}
                       className={`inline-flex items-stretch max-w-full rounded-xl text-[11px] font-bold transition-all ${
-                        isSelected ? 'neu-pill-active' : 'neu-button text-[#2D3A4E] hover:text-accent'
+                        isSelected ? 'neu-pill-active' : 'neu-button text-text-primary hover:text-accent'
                       }`}
                     >
                       <button
@@ -503,7 +503,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
                         <button
                           type="button"
                           onClick={(e) => handleDeletePhrase(phrase, e)}
-                          className="px-2.5 rounded-r-xl text-danger hover:bg-danger-soft border-l border-[#BAC5D5]/50 flex items-center cursor-pointer"
+                          className="min-w-8 min-h-8 px-2.5 rounded-r-xl text-danger hover:neu-inset border-l border-[#BAC5D5]/50 inline-flex items-center justify-center cursor-pointer"
                           title="Удалить фразу из базы"
                           aria-label={`Удалить фразу «${phrase}»`}
                         >
@@ -516,7 +516,7 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
               )}
             </div>
 
-            <p className="pt-2.5 border-t border-[#BAC5D5]/40 text-xs font-semibold text-[#4E5C70]">
+            <p className="pt-2.5 neu-divider-t text-xs font-semibold text-text-secondary">
               {isManageMode ? 'Нажмите ×, чтобы удалить фразу из базы' : 'Нажмите на фразу, чтобы добавить ее в текст'}
             </p>
           </div>
@@ -524,18 +524,18 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
           {/* Text */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
-              <label className="text-[11px] font-extrabold text-[#2D3A4E] flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5 text-accent" />
+              <label className="text-[11px] font-extrabold text-text-primary flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-accent shrink-0" />
                 <span>Текст описания</span>
               </label>
               {draft && (
                 <button
                   type="button"
                   onClick={() => setDraft('')}
-                  className="h-7 px-2.5 rounded-lg neu-button-danger text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0"
+                  className="h-8 px-2.5 rounded-lg neu-button-danger text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0"
                   title="Очистить поле ввода"
                 >
-                  <Trash2 className="w-3 h-3" />
+                  <Trash2 className="w-3 h-3 shrink-0" />
                   <span>Очистить</span>
                 </button>
               )}
@@ -547,22 +547,22 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               placeholder="Введите детальное описание товара, особенности кроя, сезонность и уход..."
-              className="w-full px-4 py-3 neu-inset rounded-2xl text-xs sm:text-sm font-semibold text-[#2D3A4E] resize-none leading-relaxed placeholder:text-[#56647A]"
+              className="w-full px-4 py-3 neu-inset rounded-2xl text-xs sm:text-sm font-semibold text-text-primary resize-none leading-relaxed placeholder:text-text-muted"
             />
 
-            <p className="text-xs font-bold text-[#4E5C70] px-1">
-              Слов: <strong className="text-[#2D3A4E]">{wordCount}</strong> • Символов:{' '}
-              <strong className="text-[#2D3A4E]">{draft.length}</strong>
+            <p className="text-xs font-bold text-text-secondary px-1">
+              Слов: <strong className="text-text-primary">{wordCount}</strong> • Символов:{' '}
+              <strong className="text-text-primary">{draft.length}</strong>
             </p>
           </div>
         </div>
 
         {/* Footer: equal heights, the main action takes the remaining width */}
-        <div className="flex items-center gap-2.5 pt-3 border-t border-[#BAC5D5]/50 shrink-0">
+        <div className="flex items-center gap-2.5 pt-3 neu-divider-t shrink-0">
           <button
             type="button"
             onClick={guard.requestClose}
-            className="h-11 px-5 shrink-0 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer"
+            className="h-11 px-5 shrink-0 neu-button rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary transition-all cursor-pointer"
           >
             Отмена
           </button>

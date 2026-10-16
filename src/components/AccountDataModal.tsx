@@ -1,8 +1,9 @@
 import React from 'react';
-import { Download, LogOut, ShieldCheck, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { Download, LogOut, RefreshCw, ShieldCheck, X } from 'lucide-react';
+import { m, AnimatePresence } from 'motion/react';
 import type { Order, UserProfile } from '../types';
 import { useDialogA11y } from '../utils/useDialogA11y';
+import { GoogleLogoIcon } from '../views/profile/ProfileAccountCard';
 
 interface AccountDataModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface AccountDataModalProps {
   orders: Order[];
   /** Signed in with Google: the account is managed by Google (password, 2-step verification) */
   googleEmail?: string | null;
+  onSwitchAccount?: () => void;
   onSignOut?: () => void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
@@ -27,6 +29,7 @@ export const AccountDataModal: React.FC<AccountDataModalProps> = ({
   profile,
   orders,
   googleEmail,
+  onSwitchAccount,
   onSignOut,
   onShowToast,
 }) => {
@@ -71,20 +74,20 @@ export const AccountDataModal: React.FC<AccountDataModalProps> = ({
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
-          <div onClick={onClose} className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer" />
-          <motion.div
+          <div onClick={onClose} className="fixed inset-0 bg-text-primary/50 backdrop-blur-xs cursor-pointer" />
+          <m.div
             ref={dialog.ref}
             {...dialog.props}
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
             transition={{ duration: 0.2 }}
-            className="neu-modal rounded-3xl p-5 max-w-md w-full space-y-4 relative z-10 text-[#2D3A4E]"
+            className="neu-modal rounded-3xl p-5 max-w-md w-full space-y-4 relative z-10 text-text-primary"
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl neu-button flex items-center justify-center text-accent">
-                  <ShieldCheck className="w-5 h-5" />
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-accent shrink-0">
+                  <ShieldCheck className="w-5 h-5 shrink-0" />
                 </div>
                 <h3 id={dialog.titleId} className="text-base font-extrabold">
                   Аккаунт и данные
@@ -93,24 +96,46 @@ export const AccountDataModal: React.FC<AccountDataModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] cursor-pointer"
+                className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-text-secondary cursor-pointer shrink-0"
                 aria-label="Закрыть"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="neu-inset rounded-2xl p-3.5 space-y-1">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[#4E5C70]">Вход</p>
+            <div className="neu-inset rounded-2xl p-3.5 space-y-2.5">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">Вход</p>
               {googleEmail ? (
                 <>
                   <p className="text-xs font-bold">Аккаунт Google: {googleEmail}</p>
-                  <p className="text-xs text-[#4E5C70] leading-snug">
+                  <p className="text-xs text-text-secondary leading-snug">
                     Пароль и двухэтапная проверка настраиваются в вашем аккаунте Google.
                   </p>
+                  {onSwitchAccount && (
+                    <button
+                      type="button"
+                      onClick={onSwitchAccount}
+                      className="w-full py-2 px-3 neu-button rounded-xl text-xs font-bold text-text-primary hover:text-accent flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-accent shrink-0" />
+                      <span>Сменить аккаунт Google</span>
+                    </button>
+                  )}
                 </>
               ) : (
-                <p className="text-xs text-[#4E5C70]">Вы не вошли. Данные хранятся только в этом браузере.</p>
+                <>
+                  <p className="text-xs text-text-secondary">Вы не вошли. Данные хранятся только в этом браузере.</p>
+                  {onSwitchAccount && (
+                    <button
+                      type="button"
+                      onClick={onSwitchAccount}
+                      className="w-full py-2 px-3 neu-button rounded-xl text-xs font-bold text-text-primary hover:text-accent flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
+                    >
+                      <GoogleLogoIcon />
+                      <span>Войти через Google</span>
+                    </button>
+                  )}
+                </>
               )}
             </div>
 
@@ -136,7 +161,7 @@ export const AccountDataModal: React.FC<AccountDataModalProps> = ({
                 Выйти из аккаунта
               </button>
             )}
-          </motion.div>
+          </m.div>
         </div>
       )}
     </AnimatePresence>

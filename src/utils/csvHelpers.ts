@@ -7,6 +7,7 @@ import { parseDecimal, readPurchase, type ProductPurchase, type PurchaseCurrency
 import { SUPPLIER_MAX_LENGTH, SUPPLIER_SKU_MAX_LENGTH, supplierText } from './productCosts';
 import { packageCell, packageFromCell, productWeightGrams, weightProblem } from './productShipping';
 import { mergeSizePacks, sizePacksCell, sizePacksFromCell } from './sizePackCsv';
+import { productSizePacks } from '../shared/sizePacks';
 
 /**
  * One CSV cell: quoted with doubled quotes. Text starting with = + - @ would run as a formula in Excel
@@ -59,6 +60,8 @@ const PRODUCT_CSV_HEADERS = [
   'Габариты, см',
   // size packs (stage 18): «(Синий) 48:1; 50:2 = 4500 | 46:1; 48:1» — src/utils/sizePackCsv.ts
   'Ростовки',
+  // extra overhead per item for currency purchases (brief B19): e.g. «150» (roubles) or «10%»
+  'Доп. расходы (₽ или %)',
 ];
 
 /** «USD», «$», «доллар» — dollars; «CNY», «¥», «юань», «RMB» — yuan */
@@ -73,23 +76,45 @@ function purchaseCurrencyOf(cell: string): PurchaseCurrency | null {
 const NO_PURCHASE_CELLS = ['₽', 'rub', 'руб', 'рубль', 'рубли', 'нет', '-', '—'];
 
 /**
- * The purchase from the three cells: `undefined` — the cells are empty, the product keeps its own; `null` — remove it;
+ * The purchase from the cells: `undefined` — the cells are empty, the product keeps its own; `null` — remove it;
  * `'invalid'` — not a currency, or not an amount above zero (the row is imported without the purchase).
  */
 export function purchaseFromCells(
   currencyCell = '',
   amountCell = '',
-  markupCell = ''
+  markupCell = '',
+  extraCostCell = ''
 ): ProductPurchase | null | undefined | 'invalid' {
   const cur = currencyCell.trim();
-  if (!cur && !amountCell.trim() && !markupCell.trim()) return undefined;
+  const extraRaw = extraCostCell.trim();
+  if (!cur && !amountCell.trim() && !markupCell.trim() && !extraRaw) return undefined;
   if (NO_PURCHASE_CELLS.includes(cur.toLowerCase())) return null;
   const currency = purchaseCurrencyOf(cur);
   const amount = parseDecimal(amountCell);
   const markup = markupCell.trim() === '' ? undefined : parseDecimal(markupCell.replace('%', ''));
   // a markup out of 0…1000 % would be dropped silently and the product priced with the common one
   if (!currency || (markup !== undefined && !(markup >= 0 && markup <= 1000))) return 'invalid';
-  return readPurchase({ currency, amount, ...(markup !== undefined ? { markupPercent: markup } : {}) }) ?? 'invalid';
+
+  let extraFields: { extraCost?: number; extraCostKind?: 'rub' | 'percent' } = {};
+  if (extraRaw !== '' && !NO_SUPPLIER_CELLS.includes(extraRaw.toLowerCase())) {
+    const isPercent = extraRaw.includes('%');
+    const cleaned = extraRaw.replace(/%|₽|руб\.?/gi, '').trim();
+    const extraVal = parseDecimal(cleaned);
+    const maxExtra = isPercent ? 1000 : 100_000;
+    if (!(extraVal >= 0 && extraVal <= maxExtra)) return 'invalid';
+    if (extraVal > 0) {
+      extraFields = { extraCost: extraVal, extraCostKind: isPercent ? 'percent' : 'rub' };
+    }
+  }
+
+  return (
+    readPurchase({
+      currency,
+      amount,
+      ...(markup !== undefined ? { markupPercent: markup } : {}),
+      ...extraFields,
+    }) ?? 'invalid'
+  );
 }
 
 /** «-» or «—»: the supplier or its article is removed */
@@ -151,6 +176,11 @@ export function exportProductsToCSV(products: Product[]): void {
     productWeightGrams(p) ?? '',
     packageCell(p),
     sizePacksCell(p),
+    p.purchase?.extraCost
+      ? p.purchase.extraCostKind === 'percent'
+        ? `${p.purchase.extraCost}%`
+        : p.purchase.extraCost
+      : '',
   ]);
   downloadCSV(`catalog_${new Date().toISOString().slice(0, 10)}.csv`, [PRODUCT_CSV_HEADERS, ...rows]);
 }
@@ -194,7 +224,7 @@ const listCells = (value: string) =>
 export function parseProductsFromCSV(
   csvText: string,
   /** the catalog: a colour of an existing product written without a code keeps its shade */
-  catalog: Pick<Product, 'id' | 'colors' | 'sizePacks'>[] = []
+  catalog: Pick<Product, 'id' | 'colors' | 'sizes' | 'sizePacks'>[] = []
 ): { products: Partial<Product>[]; skipped: number; badPurchase: number; badShipping: number; badPacks: number } {
   const lines = csvText.split(/\r?\n/).filter((l) => l.trim().length > 0);
   if (lines.length < 2) return { products: [], skipped: 0, badPurchase: 0, badShipping: 0, badPacks: 0 };
@@ -208,7 +238,7 @@ export function parseProductsFromCSV(
   let badPacks = 0;
   for (const line of lines.slice(1)) {
     const cells = splitCsvLine(line, separator);
-    const [id, title, category, priceCell, oldPriceCell, inStockCell, , sizesCell, colorsCell, image, description, currencyCell, amountCell, markupCell, supplierCell, supplierSkuCell, weightCell, boxCell, packsCell] =
+    const [id, title, category, priceCell, oldPriceCell, inStockCell, , sizesCell, colorsCell, image, description, currencyCell, amountCell, markupCell, supplierCell, supplierSkuCell, weightCell, boxCell, packsCell, extraCostCell] =
       cells;
     const price = Number(String(priceCell ?? '').replace(/\s/g, '').replace(',', '.'));
     // an existing product may come without a photo: its previews live in product_previews (catalog-scale-plan, stage 6),
@@ -244,7 +274,7 @@ export function parseProductsFromCSV(
       image && colors.length === 0 && knownColors.some((c) => typeof c === 'object' && c.imageIndex !== undefined)
         ? normalizeProductColors(knownColors).map(({ imageIndex: _old, ...rest }) => rest)
         : [];
-    const purchase = purchaseFromCells(currencyCell, amountCell, markupCell);
+    const purchase = purchaseFromCells(currencyCell, amountCell, markupCell, extraCostCell);
     if (purchase === 'invalid') badPurchase++;
     const supplier = supplierFromCell(supplierCell, SUPPLIER_MAX_LENGTH);
     const supplierSku = supplierFromCell(supplierSkuCell, SUPPLIER_SKU_MAX_LENGTH);
@@ -253,9 +283,30 @@ export function parseProductsFromCSV(
     const box = packageFromCell(boxCell ?? '');
     // rows, not cells: the toast tells the owner how many products to look at
     if (weight === 'invalid' || box === null) badShipping++;
-    // size packs: empty keeps the product's, «-» removes, a pack of the same sizes and colours keeps its barcodes
+    // size packs: empty keeps the product's, «-» removes, a pack of the same sizes and colours keeps its barcodes;
+    // packs whose sizes or colours do not exist on the product are counted in `badPacks` (stage 18 follow-up)
     const packs = sizePacksFromCell(packsCell);
-    if (packs === null) badPacks++;
+    const effectiveSizes = sizes.length ? sizes : known?.sizes ?? [];
+    const effectiveColors = colors.length ? colors : unboundColors.length ? unboundColors : knownColors;
+    let resolvedSizePacks: Product['sizePacks'] | 'remove' | undefined;
+    if (packs === null) {
+      badPacks++;
+    } else if (packs === 'remove') {
+      resolvedSizePacks = 'remove';
+    } else if (Array.isArray(packs)) {
+      if (effectiveSizes.length > 0) {
+        const checkColors = effectiveColors.length > 0 ? effectiveColors : packs.flatMap((p) => p.colors ?? []);
+        const validImported = productSizePacks({
+          sizes: effectiveSizes,
+          colors: checkColors,
+          sizePacks: packs.map((p, idx) => ({ ...p, id: `tmp-${idx}` })),
+        });
+        if (validImported.length < packs.length) badPacks++;
+        if (validImported.length > 0) resolvedSizePacks = mergeSizePacks(known?.sizePacks, validImported);
+      } else {
+        resolvedSizePacks = mergeSizePacks(known?.sizePacks, packs);
+      }
+    }
     products.push({
       ...(id ? { id } : {}),
       title,
@@ -275,7 +326,7 @@ export function parseProductsFromCSV(
       ...(supplierSku !== undefined ? { supplierSku: supplierSku ?? undefined } : {}),
       ...(weight === null ? { weightGrams: undefined } : typeof weight === 'number' ? { weightGrams: weight } : {}),
       ...(box === 'remove' ? { packageCm: undefined } : typeof box === 'object' && box ? { packageCm: box } : {}),
-      ...(packs === 'remove' ? { sizePacks: undefined } : Array.isArray(packs) ? { sizePacks: mergeSizePacks(known?.sizePacks, packs) } : {}),
+      ...(resolvedSizePacks === 'remove' ? { sizePacks: undefined } : Array.isArray(resolvedSizePacks) ? { sizePacks: resolvedSizePacks } : {}),
     });
   }
   return { products, skipped, badPurchase, badShipping, badPacks };

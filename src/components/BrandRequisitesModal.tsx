@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { m, AnimatePresence } from 'motion/react';
 import {
   X,
   Building2,
@@ -115,7 +115,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
+        <m.div
           key="requisites-overlay"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -126,11 +126,11 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
           {/* Backdrop */}
           <div
             onClick={onClose}
-            className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer"
+            className="fixed inset-0 bg-text-primary/50 backdrop-blur-xs cursor-pointer"
           />
 
           {/* Modal Container */}
-          <motion.div
+          <m.div
             ref={dialog.ref}
             {...dialog.props}
             key="requisites-modal"
@@ -138,19 +138,19 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.93, opacity: 0, y: 12 }}
             transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-            className="relative w-full max-w-lg max-h-[90vh] neu-modal rounded-3xl p-4 sm:p-6 flex flex-col z-10 overflow-hidden border border-white/80"
+            className="relative w-full max-w-lg max-h-[90vh] neu-modal rounded-3xl p-4 sm:p-6 flex flex-col z-10 overflow-hidden "
           >
             {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-[#BAC5D5]/50 shrink-0">
+            <div className="flex items-center justify-between pb-4 neu-divider-b shrink-0">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-accent shrink-0">
-                  <Crown className="w-5 h-5 stroke-[2.2]" />
+                  <Crown className="w-5 h-5 stroke-[2.2] shrink-0" />
                 </div>
                 <div className="min-w-0">
-                  <h2 id={dialog.titleId} className="text-base sm:text-lg font-extrabold text-[#2D3A4E] tracking-tight truncate">
+                  <h2 id={dialog.titleId} className="text-base sm:text-lg font-extrabold text-text-primary tracking-tight truncate">
                     {storeName} • О бренде и реквизиты
                   </h2>
-                  <p className="text-xs text-[#4E5C70] font-semibold truncate">
+                  <p className="text-xs text-text-secondary font-semibold truncate">
                     Контакты консьерж-сервиса и юридические данные
                   </p>
                 </div>
@@ -158,10 +158,10 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="w-9 h-9 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent cursor-pointer shrink-0 transition-colors"
+                className="w-9 h-9 rounded-full neu-button flex items-center justify-center text-text-primary hover:text-accent cursor-pointer shrink-0 transition-colors"
                 aria-label="Закрыть"
               >
-                <X className="w-5 h-5 stroke-[2.2]" />
+                <X className="w-5 h-5 stroke-[2.2] shrink-0" />
               </button>
             </div>
 
@@ -180,11 +180,11 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                     type="button"
                     onClick={() => setActiveTab(tab.id as TabType)}
                     className={`relative py-2 px-2 rounded-xl text-xs font-extrabold transition-colors flex items-center justify-center gap-1.5 cursor-pointer select-none ${
-                      isActive ? 'text-accent' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
+                      isActive ? 'text-accent' : 'text-text-secondary hover:text-text-primary'
                     }`}
                   >
                     {isActive && (
-                      <motion.div
+                      <m.div
                         layoutId="requisitesTabPill"
                         className="absolute inset-0 rounded-xl neu-button z-0"
                         transition={{ type: 'spring', stiffness: 450, damping: 35 }}
@@ -200,9 +200,9 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
             </div>
 
             {/* Scrollable Body */}
-            <div className="overflow-y-auto pr-1 space-y-4 custom-scrollbar flex-1">
+            <div className="overflow-y-auto -mx-3 px-3 py-1 space-y-4 no-scrollbar flex-1">
               <AnimatePresence mode="wait">
-                <motion.div
+                <m.div
                   key={activeTab}
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -221,9 +221,9 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                   </span>
                 </div>
                 {conciergeDescription ? (
-                  <p className="text-xs text-[#2D3A4E] font-medium leading-relaxed">{conciergeDescription}</p>
+                  <p className="text-xs text-text-primary font-medium leading-relaxed">{conciergeDescription}</p>
                 ) : (
-                  <p className="text-xs font-bold text-[#4E5C70]">Описание не настроено</p>
+                  <p className="text-xs font-bold text-text-secondary">Описание не настроено</p>
                 )}
               </div>
 
@@ -235,13 +235,13 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                 {phone && (
                 <a
                   href={`tel:${cleanPhone}`}
-                  className="neu-inset rounded-2xl p-3 flex items-center gap-2.5 text-[#2D3A4E] hover:text-accent transition-all cursor-pointer active:scale-[0.98] group"
+                  className="neu-button rounded-2xl p-3 flex items-center gap-2.5 text-text-primary hover:text-accent transition-all cursor-pointer group"
                 >
-                  <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent shrink-0 group-hover:scale-105 transition-transform">
+                  <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0 group-hover:scale-105 transition-transform">
                     <PhoneCall className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 text-left">
-                    <span className="text-[11px] text-[#4E5C70] block font-bold uppercase group-hover:text-accent transition-colors">
+                    <span className="text-[11px] text-text-secondary block font-bold uppercase group-hover:text-accent transition-colors">
                       Позвонить
                     </span>
                     <span className="text-xs font-extrabold truncate block group-hover:text-accent transition-colors">
@@ -256,13 +256,13 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                     href={`https://wa.me/${cleanWhatsapp}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="neu-inset rounded-2xl p-3 flex items-center gap-2.5 text-[#2D3A4E] hover:text-success transition-all cursor-pointer active:scale-[0.98] group"
+                    className="neu-button rounded-2xl p-3 flex items-center gap-2.5 text-text-primary hover:text-success transition-all cursor-pointer group"
                   >
-                    <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-success shrink-0 group-hover:scale-105 transition-transform">
+                    <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-success shrink-0 group-hover:scale-105 transition-transform">
                       <MessageSquare className="w-4 h-4" />
                     </div>
                     <div className="min-w-0 text-left">
-                      <span className="text-[11px] text-[#4E5C70] block font-bold uppercase group-hover:text-success transition-colors">
+                      <span className="text-[11px] text-text-secondary block font-bold uppercase group-hover:text-success transition-colors">
                         WhatsApp
                       </span>
                       <span className="text-xs font-extrabold truncate block group-hover:text-success transition-colors">
@@ -277,13 +277,13 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                     href={`https://t.me/${cleanTg}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="neu-inset rounded-2xl p-3 flex items-center gap-2.5 text-[#2D3A4E] hover:text-accent transition-all cursor-pointer active:scale-[0.98] group"
+                    className="neu-button rounded-2xl p-3 flex items-center gap-2.5 text-text-primary hover:text-accent transition-all cursor-pointer group"
                   >
-                    <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent shrink-0 group-hover:scale-105 transition-transform">
+                    <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0 group-hover:scale-105 transition-transform">
                       <Send className="w-4 h-4" />
                     </div>
                     <div className="min-w-0 text-left">
-                      <span className="text-[11px] text-[#4E5C70] block font-bold uppercase group-hover:text-accent transition-colors">
+                      <span className="text-[11px] text-text-secondary block font-bold uppercase group-hover:text-accent transition-colors">
                         Telegram
                       </span>
                       <span className="text-xs font-extrabold truncate block group-hover:text-accent transition-colors">
@@ -296,13 +296,13 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                 {email && (
                 <a
                   href={`mailto:${email}`}
-                  className="neu-inset rounded-2xl p-3 flex items-center gap-2.5 text-[#2D3A4E] hover:text-accent transition-all cursor-pointer active:scale-[0.98] group"
+                  className="neu-button rounded-2xl p-3 flex items-center gap-2.5 text-text-primary hover:text-accent transition-all cursor-pointer group"
                 >
-                  <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent shrink-0 group-hover:scale-105 transition-transform">
+                  <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0 group-hover:scale-105 transition-transform">
                     <Mail className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 text-left">
-                    <span className="text-[11px] text-[#4E5C70] block font-bold uppercase group-hover:text-accent transition-colors">
+                    <span className="text-[11px] text-text-secondary block font-bold uppercase group-hover:text-accent transition-colors">
                       Email
                     </span>
                     <span className="text-xs font-extrabold truncate block group-hover:text-accent transition-colors">
@@ -330,12 +330,12 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
 
               {/* Concierge Services List */}
               <div className="neu-inset rounded-2xl p-4 space-y-3">
-                <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+                <h4 className="text-xs font-extrabold uppercase tracking-wider text-text-primary flex items-center gap-1.5">
                   <Crown className="w-3.5 h-3.5 text-accent" />
                   Услуги консьерж-сервиса
                 </h4>
                 {conciergeServices.length === 0 ? (
-                  <p className="text-xs font-bold text-[#4E5C70]">Услуги не настроены</p>
+                  <p className="text-xs font-bold text-text-secondary">Услуги не настроены</p>
                 ) : (
                   <div className="space-y-2.5 text-xs">
                     {conciergeServices.map((service, idx) => (
@@ -344,8 +344,8 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                           {idx + 1}
                         </span>
                         <div>
-                          {service.title && <strong className="text-[#2D3A4E] block">{service.title}</strong>}
-                          {service.desc && <p className="text-xs text-[#4E5C70]">{service.desc}</p>}
+                          {service.title && <strong className="text-text-primary block">{service.title}</strong>}
+                          {service.desc && <p className="text-xs text-text-secondary">{service.desc}</p>}
                         </div>
                       </div>
                     ))}
@@ -360,7 +360,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                     <MapPin className="w-3.5 h-3.5" />
                     <span>Адрес магазина</span>
                   </div>
-                  <p className={`text-xs font-bold ${pickupAddress ? 'text-[#2D3A4E]' : 'text-[#4E5C70]'}`}>
+                  <p className={`text-xs font-bold ${pickupAddress ? 'text-text-primary' : 'text-text-secondary'}`}>
                     {pickupAddress || 'Не настроено'}
                   </p>
                 </div>
@@ -373,7 +373,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                   {workingHours || isScheduleConfigured(storefrontSettings?.schedule) ? (
                     <StoreHours schedule={storefrontSettings?.schedule} comment={workingHours} />
                   ) : (
-                    <p className="text-xs font-bold text-[#4E5C70]">Не настроено</p>
+                    <p className="text-xs font-bold text-text-secondary">Не настроено</p>
                   )}
                 </div>
               </div>
@@ -387,10 +387,10 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
               {requisiteItems.length > 0 && (
               <div className="flex items-center justify-between gap-3 p-3.5 neu-inset rounded-2xl">
                 <div className="min-w-0">
-                  <span className="text-xs font-extrabold text-[#2D3A4E] block truncate">
+                  <span className="text-xs font-extrabold text-text-primary block truncate">
                     Официальные реквизиты организации
                   </span>
-                  <span className="text-[11px] text-[#4E5C70] block">
+                  <span className="text-[11px] text-text-secondary block">
                     Для выставления счетов и договоров
                   </span>
                 </div>
@@ -433,18 +433,18 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                     aria-label={`Скопировать — ${item.label}: ${item.value}`}
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="text-[11px] uppercase font-bold text-[#4E5C70] block">
+                      <span className="text-[11px] uppercase font-bold text-text-secondary block">
                         {item.label}
                       </span>
-                      <span className="text-xs font-extrabold text-[#2D3A4E] block break-all">
+                      <span className="text-xs font-extrabold text-text-primary block break-all">
                         {item.value}
                       </span>
                     </span>
-                    <span className="w-7 h-7 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] group-hover:text-accent shrink-0 transition-colors">
+                    <span className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-text-secondary group-hover:text-accent shrink-0 transition-colors">
                       {copiedKey === item.key ? (
-                        <Check className="w-3.5 h-3.5 text-success stroke-[2.5]" />
+                        <Check className="w-3.5 h-3.5 text-success stroke-[2.5] shrink-0" />
                       ) : (
-                        <Copy className="w-3.5 h-3.5" />
+                        <Copy className="w-3.5 h-3.5 shrink-0" />
                       )}
                     </span>
                   </button>
@@ -463,11 +463,11 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                 <div className="neu-inset rounded-2xl p-4 space-y-2.5">
                   <div className="flex items-center gap-2">
                     <Crown className="w-4 h-4 text-accent" />
-                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E]">
+                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-text-primary">
                       {brandPhilosophyTitle}
                     </h3>
                   </div>
-                  <p className="text-xs text-[#2D3A4E] leading-relaxed">{brandPhilosophyText}</p>
+                  <p className="text-xs text-text-primary leading-relaxed">{brandPhilosophyText}</p>
                 </div>
               )}
 
@@ -481,7 +481,7 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
                           <span>{fact.title}</span>
                         </div>
                       )}
-                      {fact.body && <p className="text-xs text-[#4E5C70] leading-snug">{fact.body}</p>}
+                      {fact.body && <p className="text-xs text-text-secondary leading-snug">{fact.body}</p>}
                     </div>
                   ))}
                 </div>
@@ -489,11 +489,11 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
 
               {brandGuaranteesList.length > 0 && (
                 <div className="neu-inset p-3.5 rounded-2xl space-y-2">
-                  <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#2D3A4E]">
+                  <div className="flex items-center gap-1.5 text-xs font-extrabold text-text-primary">
                     <ShieldCheck className="w-4 h-4 text-success" />
                     <span>{brandGuaranteesTitle}</span>
                   </div>
-                  <ul className="text-[11px] text-[#4E5C70] space-y-1 list-disc list-inside">
+                  <ul className="text-[11px] text-text-secondary space-y-1 list-disc list-inside">
                     {brandGuaranteesList.map((item, idx) => (
                       <li key={`guarantee-${idx}-${item.slice(0, 15)}`}>{item}</li>
                     ))}
@@ -502,23 +502,23 @@ export const BrandRequisitesModal: React.FC<BrandRequisitesModalProps> = ({
               )}
             </div>
           )}
-                </motion.div>
+                </m.div>
               </AnimatePresence>
             </div>
 
             {/* Footer info */}
-            <div className="pt-3.5 mt-2 border-t border-[#BAC5D5]/50 flex items-center justify-between text-[11px] text-[#4E5C70] shrink-0">
+            <div className="pt-3.5 mt-2 neu-divider-t flex items-center justify-between text-[11px] text-text-secondary shrink-0">
               <span>{storeName}</span>
               <button
                 type="button"
                 onClick={onClose}
-                className="neu-button px-4 py-1.5 rounded-xl text-xs font-bold text-[#2D3A4E] hover:text-accent cursor-pointer transition-colors"
+                className="min-h-8 neu-button px-4 py-1.5 rounded-xl text-xs font-bold text-text-primary hover:text-accent cursor-pointer transition-colors shrink-0"
               >
                 Закрыть
               </button>
             </div>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

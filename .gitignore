@@ -35,3 +35,7 @@ __pycache__/
 
 # снимки .claude/settings.json хука ecc-install.sh: остаются, только если контейнер убит посреди установки
 .claude/settings.json.ecc-*
+
+# Служебные артефакты планировщика Google AI Studio
+.aistudio/
+

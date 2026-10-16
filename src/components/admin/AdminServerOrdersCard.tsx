@@ -54,7 +54,7 @@ export const AdminServerOrdersCard: React.FC<AdminServerOrdersCardProps> = ({ on
   };
 
   return (
-    <div className="neu-flat p-4 sm:p-5 rounded-3xl space-y-3 border border-white/60">
+    <div className="neu-flat p-4 sm:p-5 rounded-3xl space-y-3 ">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div className="flex items-start gap-2.5 min-w-0">
           <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0">
@@ -62,31 +62,31 @@ export const AdminServerOrdersCard: React.FC<AdminServerOrdersCardProps> = ({ on
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1">
-              <h4 className="text-sm font-extrabold text-[#2D3A4E]">Проверка заказов на сервере</h4>
+              <h4 className="text-sm font-extrabold text-text-primary">Проверка заказов на сервере</h4>
               <AdminHint label="Проверка заказов на сервере">
                 Сервер сам считает цену и склад, подделать заказ из браузера нельзя.
               </AdminHint>
             </div>
-            <p className="text-xs text-[#4E5C70] leading-snug">
+            <p className="text-xs text-text-secondary leading-snug">
               Сервер пересчитывает цену, проверяет остатки и промокоды. Покупатель не сможет изменить
               сумму заказа или остатки на складе из своего браузера.
             </p>
           </div>
         </div>
         {enabled === null ? null : enabled ? (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-extrabold text-success bg-success-soft border border-success/25">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-extrabold neu-tone-success">
             <ShieldCheck className="w-3.5 h-3.5" />
             Включено
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-extrabold text-warning bg-warning-soft border border-warning/25">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-extrabold neu-tone-warning">
             Выключено
           </span>
         )}
       </div>
 
       {enabled === false && (
-        <p className="text-xs text-[#4E5C70] leading-snug neu-inset rounded-2xl p-3">
+        <p className="text-xs text-text-secondary leading-snug neu-inset rounded-2xl p-3">
           Нужен платный тариф Firebase и включённая проверка заказов на сервере — настраивает разработчик.
           Перед включением проверка пробуется: если сервер не отвечает, режим не включится и заказы
           продолжат работать.
@@ -101,7 +101,7 @@ export const AdminServerOrdersCard: React.FC<AdminServerOrdersCardProps> = ({ on
           <button
             type="button"
             onClick={() => setIsDisableConfirmOpen(true)}
-            className="py-2 px-3.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] cursor-pointer"
+            className="py-2 px-3.5 neu-button rounded-xl text-xs font-bold text-text-secondary cursor-pointer"
           >
             Выключить
           </button>
@@ -110,7 +110,7 @@ export const AdminServerOrdersCard: React.FC<AdminServerOrdersCardProps> = ({ on
             type="button"
             onClick={handleEnable}
             disabled={enabled === null || isChecking}
-            className="py-2 px-3.5 neu-button rounded-xl text-xs font-extrabold text-accent cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+            className="py-2 px-3.5 neu-button rounded-xl text-xs font-extrabold text-accent cursor-pointer disabled:cursor-wait"
           >
             {isChecking ? 'Проверяем функцию…' : 'Проверить и включить'}
           </button>

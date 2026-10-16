@@ -125,25 +125,25 @@ export const AdminNav: React.FC<AdminNavProps> = ({ tab, onRequestTab, onPrefetc
   // «Ещё» on a phone: the list of sections; a section from it gets «‹ Все разделы» above it
   const moreList = (
     <nav aria-label="Все разделы" className="space-y-4 lg:hidden">
-      <h3 className="text-lg font-extrabold text-[#2D3A4E] font-display">Ещё</h3>
+      <h3 className="text-lg font-extrabold text-text-primary font-display">Ещё</h3>
       {MORE_GROUPS.map((group) => (
         <section key={group.label} aria-label={group.label} className="space-y-1.5">
-          <h4 className="px-1 text-[11px] font-extrabold uppercase tracking-wide text-[#4E5C70]">{group.label}</h4>
-          <ul className="neu-flat rounded-2xl p-1.5 space-y-1">
+          <h4 className="px-1 text-[11px] font-extrabold uppercase tracking-wide text-text-secondary">{group.label}</h4>
+          <ul className="space-y-2">
             {group.tabs.map((t) => (
               <li key={t}>
                 <button
                   type="button"
                   onClick={() => onRequestTab(t)}
                   {...prefetch(t)}
-                  className="w-full rounded-xl px-2.5 py-2 flex items-center gap-3 text-left cursor-pointer hover:bg-white/40 transition-colors"
+                  className="w-full rounded-2xl px-3 py-2.5 neu-button flex items-center gap-3 text-left cursor-pointer"
                 >
                   <span className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0">
                     {icon(t, 'w-4 h-4')}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-extrabold text-[#2D3A4E]">{TABS[t].label}</span>
-                    <span className="block text-xs text-[#4E5C70]">{TABS[t].about}</span>
+                    <span className="block text-sm font-extrabold text-text-primary">{TABS[t].label}</span>
+                    <span className="block text-xs text-text-secondary">{TABS[t].about}</span>
                   </span>
                   {counts[t] && <Badge value={counts[t]!.value} label={counts[t]!.label} />}
                   <ChevronRight className="w-4 h-4 text-accent shrink-0" aria-hidden="true" />
@@ -166,7 +166,7 @@ export const AdminNav: React.FC<AdminNavProps> = ({ tab, onRequestTab, onPrefetc
         {[{ label: '', tabs: PRIMARY }, ...MORE_GROUPS].map((group) => (
           <div key={group.label || 'primary'} className={group.label ? 'pt-2' : ''}>
             {group.label && (
-              <div aria-hidden="true" className="px-3 pb-1 text-[11px] font-extrabold uppercase tracking-wide text-[#4E5C70]">
+              <div aria-hidden="true" className="px-3 pb-1 text-[11px] font-extrabold uppercase tracking-wide text-text-secondary">
                 {group.label}
               </div>
             )}
@@ -181,7 +181,7 @@ export const AdminNav: React.FC<AdminNavProps> = ({ tab, onRequestTab, onPrefetc
                   onClick={() => onRequestTab(t)}
                   {...prefetch(t)}
                   className={`w-full h-9 px-3 rounded-xl text-sm flex items-center gap-2.5 text-left cursor-pointer select-none transition-colors ${
-                    isActive ? 'neu-pill-active text-accent font-extrabold' : 'text-[#4E5C70] hover:text-[#2D3A4E] font-bold'
+                    isActive ? 'neu-pill-active text-accent font-extrabold' : 'text-text-secondary hover:text-text-primary font-bold'
                   }`}
                 >
                   {icon(t, 'w-4 h-4 shrink-0')}
@@ -206,7 +206,7 @@ export const AdminNav: React.FC<AdminNavProps> = ({ tab, onRequestTab, onPrefetc
               <ChevronLeft className="w-4 h-4" aria-hidden="true" />
               Все разделы
             </button>
-            <span className="text-sm font-extrabold text-[#2D3A4E] truncate">{TABS[tab as SectionTab].label}</span>
+            <span className="text-sm font-extrabold text-text-primary truncate">{TABS[tab as SectionTab].label}</span>
           </div>
         )}
         <div
@@ -221,7 +221,7 @@ export const AdminNav: React.FC<AdminNavProps> = ({ tab, onRequestTab, onPrefetc
             <>
               {moreList}
               {/* a computer has every section on the left («Ещё» was chosen on a narrow window) */}
-              <p className="hidden lg:block text-sm text-[#4E5C70]">Выберите раздел в списке слева.</p>
+              <p className="hidden lg:block text-sm text-text-secondary">Выберите раздел в списке слева.</p>
             </>
           ) : (
             children
@@ -244,7 +244,7 @@ export const AdminNav: React.FC<AdminNavProps> = ({ tab, onRequestTab, onPrefetc
                   onClick={() => onRequestTab(t)}
                   {...prefetch(t)}
                   className={`w-full min-w-0 h-12 rounded-xl flex flex-col items-center justify-center gap-0.5 text-[11px] cursor-pointer select-none transition-colors ${
-                    isActive ? 'neu-pill-active text-accent font-extrabold' : 'text-[#4E5C70] hover:text-[#2D3A4E] font-bold'
+                    isActive ? 'neu-pill-active text-accent font-extrabold' : 'text-text-secondary hover:text-text-primary font-bold'
                   }`}
                 >
                   <span className="relative">

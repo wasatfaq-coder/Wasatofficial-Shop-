@@ -95,7 +95,7 @@ describe('price journal entries', () => {
     expect(priceChangeSourceText(entries[0])).toBe('по курсу 90 ₽ за $');
   });
 
-  test('an edit by hand has no rate; ids differ for the same product', () => {
+  test('an edit by hand has no rate; ids differ for the same product; wholesale price change is logged with priceKind wholesale', () => {
     const after = [{ id: 'p1', title: 'Рубашка', price: 1000 }];
     const [a] = priceChangeEntries(before, after, { operator: 'owner@example.com', now });
     const [b] = priceChangeEntries(before, after, { operator: 'owner@example.com', now });
@@ -103,5 +103,29 @@ describe('price journal entries', () => {
     expect('rate' in a).toBe(false);
     expect(priceChangeSourceText(a)).toBe('вручную');
     expect(a.id).not.toBe(b.id);
+
+    const wBefore = [{ id: 'p1', price: 900, wholesalePrice: 600 }];
+    const wAfter = [{ id: 'p1', title: 'Рубашка', price: 900, wholesalePrice: 650, purchase: { currency: 'USD' as const, amount: 10 } }];
+    const [wEntry] = priceChangeEntries(wBefore, wAfter, { operator: 'owner@example.com', rates, now });
+    expect(wEntry).toMatchObject({ productId: 'p1', oldPrice: 600, newPrice: 650, priceKind: 'wholesale', source: 'rates' });
+    expect(priceChangeSourceText(wEntry)).toBe('по курсу 90 ₽ за $ · опт');
+  });
+
+  test('purchaseFromCells parses extraCost in roubles or percent', () => {
+    expect(purchaseFromCells('USD', '10', '120', '150')).toEqual({
+      currency: 'USD',
+      amount: 10,
+      markupPercent: 120,
+      extraCost: 150,
+      extraCostKind: 'rub',
+    });
+    expect(purchaseFromCells('CNY', '45', '', '12%')).toEqual({
+      currency: 'CNY',
+      amount: 45,
+      extraCost: 12,
+      extraCostKind: 'percent',
+    });
+    expect(purchaseFromCells('USD', '10', '', '2000%')).toBe('invalid');
   });
 });
+

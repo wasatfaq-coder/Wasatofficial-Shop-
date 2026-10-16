@@ -43,7 +43,7 @@ const LegalDocumentScreen: React.FC<{ docId: LegalDocId; settings: StorefrontSet
 
   if (!texts) {
     return (
-      <div className="py-10 flex items-center justify-center gap-2 text-xs text-[#4E5C70]" role="status">
+      <div className="py-10 flex items-center justify-center gap-2 text-xs text-text-secondary" role="status">
         <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
         Загрузка документа…
       </div>
@@ -61,8 +61,8 @@ const LegalDocumentScreen: React.FC<{ docId: LegalDocId; settings: StorefrontSet
           <FileText className="w-5 h-5" aria-hidden="true" />
         </div>
         <div className="min-w-0">
-          <h2 className="text-lg font-extrabold text-[#2D3A4E] leading-tight">{LEGAL_DOC_TITLES[docId]}</h2>
-          <p className="text-xs text-[#4E5C70] mt-0.5">
+          <h2 className="text-lg font-extrabold text-text-primary leading-tight">{LEGAL_DOC_TITLES[docId]}</h2>
+          <p className="text-xs text-text-secondary mt-0.5">
             Редакция от {formatLegalDate(edition?.updatedAt || LEGAL_TEMPLATE_DATE)}
           </p>
         </div>
@@ -70,7 +70,7 @@ const LegalDocumentScreen: React.FC<{ docId: LegalDocId; settings: StorefrontSet
       <div className="neu-flat rounded-3xl p-4 sm:p-6">
         <LegalText text={text} />
       </div>
-      <p className="text-xs text-[#4E5C70] text-center">
+      <p className="text-xs text-text-secondary text-center">
         См. также:{' '}
         <a href={LEGAL_DOC_HREF[other]} className="text-accent font-bold hover:underline">
           {LEGAL_DOC_TITLES[other]}

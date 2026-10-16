@@ -62,7 +62,7 @@ export const AdminAnalyticsPeriodDialog: React.FC<{
   return (
     <ModalPortal>
       <div
-        className="fixed inset-0 z-[160] bg-[#2D3A4E]/45 flex items-end sm:items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
+        className="fixed inset-0 z-[160] bg-text-primary/45 flex items-end sm:items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
         onClick={onClose}
       >
         <div
@@ -72,7 +72,7 @@ export const AdminAnalyticsPeriodDialog: React.FC<{
           className="w-full max-w-sm max-h-[calc(100dvh-1.5rem)] overflow-y-auto neu-modal rounded-3xl p-4 sm:p-5 space-y-3 animate-in zoom-in-95 fade-in duration-200"
         >
           <div className="flex items-center justify-between gap-3">
-            <h4 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E] flex items-center gap-2">
+            <h4 id={dialog.titleId} className="text-sm font-extrabold text-text-primary flex items-center gap-2">
               <CalendarRange className="w-4 h-4 text-accent" />
               Период аналитики
             </h4>
@@ -80,7 +80,7 @@ export const AdminAnalyticsPeriodDialog: React.FC<{
               type="button"
               onClick={onClose}
               aria-label="Закрыть"
-              className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+              className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -100,12 +100,12 @@ export const AdminAnalyticsPeriodDialog: React.FC<{
                     onClose();
                   }}
                   className={`w-full min-h-12 px-3.5 py-2.5 rounded-2xl flex items-center justify-between gap-3 text-left cursor-pointer transition-all ${
-                    selected ? 'neu-pill-active' : 'neu-button text-[#2D3A4E]'
+                    selected ? 'neu-pill-active' : 'neu-button text-text-primary'
                   }`}
                 >
                   <span className="min-w-0">
                     <span className="block text-xs font-extrabold">{p.title}</span>
-                    <span className="block text-[11px] text-[#4E5C70]">{periodRangeText(p.id)}</span>
+                    <span className="block text-[11px] text-text-secondary">{periodRangeText(p.id)}</span>
                   </span>
                   {selected && <Check className="w-4 h-4 text-accent shrink-0" />}
                 </button>
@@ -117,12 +117,12 @@ export const AdminAnalyticsPeriodDialog: React.FC<{
             noValidate
             className={`rounded-2xl p-3 space-y-2.5 ${isCustomPeriod(value) ? 'neu-pill-active' : 'neu-flat-sm'}`}
           >
-            <p className="text-xs font-extrabold text-[#2D3A4E]">
+            <p className="text-xs font-extrabold text-text-primary">
               Свой период{isCustomPeriod(value) && <span className="font-bold text-accent"> · выбран</span>}
             </p>
             <div className="grid grid-cols-2 gap-2">
               <label className="space-y-1 min-w-0">
-                <span className="block text-[11px] font-bold text-[#4E5C70]">С</span>
+                <span className="block text-[11px] font-bold text-text-secondary">С</span>
                 <input
                   type="date"
                   value={from}
@@ -133,11 +133,11 @@ export const AdminAnalyticsPeriodDialog: React.FC<{
                   }}
                   aria-invalid={error ? true : undefined}
                   aria-describedby={error ? 'analytics-period-error' : undefined}
-                  className="w-full min-w-0 h-11 px-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E]"
+                  className="w-full min-w-0 h-11 px-2.5 neu-inset rounded-xl text-xs text-text-primary"
                 />
               </label>
               <label className="space-y-1 min-w-0">
-                <span className="block text-[11px] font-bold text-[#4E5C70]">По</span>
+                <span className="block text-[11px] font-bold text-text-secondary">По</span>
                 <input
                   type="date"
                   value={to}
@@ -149,7 +149,7 @@ export const AdminAnalyticsPeriodDialog: React.FC<{
                   }}
                   aria-invalid={error ? true : undefined}
                   aria-describedby={error ? 'analytics-period-error' : undefined}
-                  className="w-full min-w-0 h-11 px-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E]"
+                  className="w-full min-w-0 h-11 px-2.5 neu-inset rounded-xl text-xs text-text-primary"
                 />
               </label>
             </div>

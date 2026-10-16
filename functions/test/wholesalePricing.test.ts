@@ -1,9 +1,14 @@
 // Опт: оптовая цена, скидка за объём (% или ₽ с штуки), промокоды не действуют на опт (задача владельца 09.10)
 import { describe, expect, test } from 'bun:test';
 import {
+  brokenPackDiscountErrors,
+  brokenPackDiscountedPrice,
+  isBrokenPackLine,
   isWholesaleOrder,
   orderLinesByChannel,
   priceCartLines,
+  readBrokenPackDiscount,
+  readMinWholesaleAmount,
   readVolumeDiscount,
   sellsRetail,
   sellsWholesale,
@@ -11,6 +16,7 @@ import {
   volumeDiscountedPrice,
   volumeTierFor,
   wholesaleLineProblems,
+  wholesaleOrderSubtotal,
   type WholesaleSettings,
 } from '../../src/shared/wholesalePricing';
 import {
@@ -190,6 +196,32 @@ describe('the cart prices its lines (priceCartLines — the cart, the checkout a
     const enough = [line(packed, 12, { priceKind: 'wholesale' }), line(packed, 6, { priceKind: 'wholesale', selectedSize: 'L' })];
     expect(wholesaleLineProblems(priceCartLines(enough))).toEqual([]);
   });
+
+  test('minimum wholesale order amount (minOrderAmount): checks wholesale + pack lines, ignores retail-only carts', () => {
+    expect(readMinWholesaleAmount(undefined)).toBeUndefined();
+    expect(readMinWholesaleAmount({ minOrderAmount: 0 })).toBeUndefined();
+    expect(readMinWholesaleAmount({ minOrderAmount: -500 })).toBeUndefined();
+    expect(readMinWholesaleAmount({ minOrderAmount: 15_000 })).toBe(15_000);
+
+    const minSettings: WholesaleSettings = { minOrderAmount: 15_000 };
+    // Retail-only cart is not blocked by wholesale minimum order amount
+    const retailOnly = priceCartLines([line(tee, 2)], minSettings);
+    expect(wholesaleOrderSubtotal(retailOnly)).toBe(0);
+    expect(wholesaleLineProblems(retailOnly, minSettings)).toEqual([]);
+
+    // Wholesale cart below 15 000 ₽ reports remaining amount
+    const shortWholesale = priceCartLines([line(tee, 10, { priceKind: 'wholesale' })], minSettings);
+    expect(wholesaleOrderSubtotal(shortWholesale)).toBe(10_000);
+    const problems = wholesaleLineProblems(shortWholesale, minSettings);
+    expect(problems.length).toBe(1);
+    expect(problems[0]).toContain('Минимальная сумма оптового заказа');
+    expect(problems[0].replace(/\s/g, '')).toContain('добавьтеещёна5000₽');
+
+    // Wholesale cart at or above 15 000 ₽ passes
+    const fullWholesale = priceCartLines([line(tee, 15, { priceKind: 'wholesale' })], minSettings);
+    expect(wholesaleOrderSubtotal(fullWholesale)).toBe(15_000);
+    expect(wholesaleLineProblems(fullWholesale, minSettings)).toEqual([]);
+  });
 });
 
 describe('promo codes and coupons do not apply to wholesale lines', () => {
@@ -283,3 +315,55 @@ describe('the wholesale fields of the product form', () => {
     expect(wholesaleFormErrors({ ...draft, channel: 'retail', price: 'abc' })).toEqual([]);
   });
 });
+
+describe('broken pack discount and priceKind === broken (docs/broken-pack-plan.md, stages 3–4)', () => {
+  const brokenPercent: WholesaleSettings = {
+    volumeDiscount: percentScale.volumeDiscount,
+    brokenPackDiscount: { kind: 'percent', value: 15 },
+  };
+  const brokenFixed: WholesaleSettings = {
+    brokenPackDiscount: { kind: 'fixed', value: 120 },
+  };
+
+  test('reads and validates brokenPackDiscount', () => {
+    expect(readBrokenPackDiscount(brokenPercent)).toEqual({ kind: 'percent', value: 15 });
+    expect(readBrokenPackDiscount({ wholesale: brokenFixed })).toEqual({ kind: 'fixed', value: 120 });
+    expect(readBrokenPackDiscount({ brokenPackDiscount: { kind: 'percent', value: 95 } })).toBeUndefined();
+    expect(brokenPackDiscountErrors({ kind: 'percent', value: 15 })).toEqual([]);
+    expect(brokenPackDiscountErrors({ kind: 'percent', value: 95 })).toEqual(['Скидка на разбитую упаковку — не больше 90 %']);
+    expect(brokenPackDiscountedPrice(1000, { kind: 'percent', value: 15 })).toBe(850);
+    expect(brokenPackDiscountedPrice(1000, { kind: 'fixed', value: 120 })).toBe(880);
+  });
+
+  test('priceCartLines prices broken lines from wholesalePrice minus brokenPackDiscount, without volume steps or promos', () => {
+    const items = priceCartLines(
+      [
+        line(tee, 2, { priceKind: 'broken' }),
+        line(tee, 10, { priceKind: 'wholesale', selectedSize: 'L' }),
+      ],
+      brokenPercent
+    );
+    expect(isBrokenPackLine(items[0])).toBe(true);
+    // broken line gets 1000 - 15% = 850 (not affected by the 10-pack 5% volume step)
+    expect(items[0].unitPrice).toBe(850);
+    // wholesale line gets 1000 - 5% = 950
+    expect(items[1].unitPrice).toBe(950);
+
+    // promo code does not apply to broken lines and does not count them toward minOrderAmount
+    const brokenOnlyPricing = [toPricingLine(items[0])];
+    expect(calcPromoDiscount(brokenOnlyPricing, promo({ discountPercent: 10 }))).toBe(0);
+    expect(validatePromo(promo({ discountPercent: 10 }), brokenOnlyPricing)).toBe(WHOLESALE_NO_PROMO_TEXT);
+  });
+
+  test('a broken line on a product changed to wholesale-only or retail-only falls back from broken pricing', () => {
+    const wholesaleOnly = { ...tee, saleChannel: 'wholesale' as const };
+    const [afterWholesale] = priceCartLines([line(wholesaleOnly, 1, { priceKind: 'broken' })], brokenPercent);
+    expect(afterWholesale.priceKind).toBe('wholesale');
+
+    const retailOnly = { ...tee, saleChannel: 'retail' as const };
+    const [afterRetail] = priceCartLines([line(retailOnly, 1, { priceKind: 'broken' })], brokenPercent);
+    expect(afterRetail.priceKind).toBeUndefined();
+    expect(toPricingLine(afterRetail).price).toBe(2000);
+  });
+});
+

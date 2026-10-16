@@ -336,7 +336,9 @@ describe('placeOrderCore', () => {
       id: 'p2', code: 'ONCE', title: '', description: '', discountPercent: 50,
       active: true, usedCount: 1, usageLimit: 1,
     });
-    await expectOrderError(placeOrderCore(db, request({ promoCode: 'ONCE' }), null), 'failed-precondition', /Лимит/);
+    // a limited code is for a Google sign-in only: the limit is checked for such a buyer
+    await expectOrderError(placeOrderCore(db, request({ promoCode: 'ONCE' }), 'alice', new Date(), true), 'failed-precondition', /Лимит/);
+    await expectOrderError(placeOrderCore(db, request({ promoCode: 'ONCE' }), null), 'failed-precondition', /входа через Google/);
     await expectOrderError(placeOrderCore(db, request({ promoCode: 'NOPE' }), null), 'not-found');
   });
 
@@ -369,6 +371,20 @@ describe('placeOrderCore', () => {
       placeOrderCore(db, request({ deliveryMethodId: 'quick-order', promoCode: 'X' }), null),
       'invalid-argument'
     );
+  });
+
+  test('captures order_costs snapshot at the moment of server order placement when product_costs exist', async () => {
+    await db.doc('product_costs/shirt').set({ costPrice: 1250 });
+    const now = new Date('2026-10-15T10:00:00.000Z');
+    const order = await placeOrderCore(db, request(), 'alice', now);
+    const snap = await db.doc(`order_costs/${order.id}`).get();
+    expect(snap.exists).toBe(true);
+    expect(snap.data()).toEqual({
+      orderId: order.id,
+      orderCreatedAt: '2026-10-15T10:00:00.000Z',
+      capturedAt: '2026-10-15T10:00:00.000Z',
+      lines: [{ productId: 'shirt', size: 'M', color: 'Белый', unitCost: 1250 }],
+    });
   });
 
   // Находка 43 (07.10): способ оплаты сервер не сверяет с «Оплатой» в «Витрине» — заказ проходит с любым текстом,
@@ -442,5 +458,51 @@ describe('parsePlaceOrderRequest', () => {
     const parsed = parsePlaceOrderRequest({ ...request(), promoCode: ' sale10 ', totalPrice: 1 });
     expect(parsed.promoCode).toBe('SALE10');
     expect('totalPrice' in parsed).toBe(false);
+  });
+
+  test('preserves broken pack flag and orderId in parsePlaceOrderRequest', () => {
+    const parsed = parsePlaceOrderRequest({
+      ...request({ items: [{ productId: 'shirt', color: 'Белый', size: 'M', quantity: 1, broken: true }] }),
+      orderId: 'WS-12345678',
+    });
+    expect(parsed.orderId).toBe('WS-12345678');
+    expect(parsed.items[0].broken).toBe(true);
+    expect(() => parsePlaceOrderRequest({ ...request(), orderId: 'bad id!' })).toThrow(/номер заказа/);
+  });
+
+  test('records promo_uses document and blocks anonymous users on limited promos', async () => {
+    await db.doc('promos/LIM1').set({
+      id: 'LIM1',
+      code: 'LIM1',
+      discountPercent: 10,
+      discountType: 'percent',
+      discountValue: 10,
+      active: true,
+      usageLimit: 5,
+      usedCount: 0,
+    });
+    await expectOrderError(
+      placeOrderCore(db, request({ promoCode: 'LIM1' }), 'anon-uid', new Date(), false),
+      'failed-precondition'
+    );
+    const order = await placeOrderCore(db, request({ promoCode: 'LIM1' }), 'alice', new Date(), true);
+    const useSnap = await db.doc(`promo_uses/${order.id}`).get();
+    expect(useSnap.exists).toBe(true);
+    expect(useSnap.data()?.promoId).toBe('LIM1');
+    const promoSnap = await db.doc('promos/LIM1').get();
+    expect(promoSnap.data()?.usedCount).toBe(1);
+    expect(promoSnap.data()?.lastOrderId).toBe(order.id);
+  });
+
+  test('idempotent orderId returns existing order for the same customer without deducting stock twice', async () => {
+    const req = { ...request(), orderId: 'WS-99998888' };
+    const first = await placeOrderCore(db, req, 'alice');
+    const second = await placeOrderCore(db, req, 'alice');
+    expect(second.id).toBe(first.id);
+    const prodSnap = await db.doc('products/shirt').get();
+    const mSku = (prodSnap.data()?.skus ?? []).find((s: { size: string }) => s.size === 'M');
+    expect(mSku.stock).toBe(1); // 2 in stock − 1 ordered, once
+    const movements = await db.collection('stock_movements').where('orderId', '==', first.id).get();
+    expect(movements.size).toBe(1);
   });
 });

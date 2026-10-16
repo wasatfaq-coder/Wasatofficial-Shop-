@@ -23,7 +23,7 @@ import {
   documentId,
   Bytes,
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { db, getFirestoreById, FIRESTORE_DATABASE_ID, NAMED_FIRESTORE_DATABASE_ID, DEFAULT_FIRESTORE_DATABASE_ID, handleFirestoreError, OperationType } from '../firebase';
 import { needsOwnerAttention } from './firestoreErrors';
 import { changedFields, changedSince, hasFieldChanges, holdsChange, orderFieldsToCheck, type FieldChanges } from './fieldChanges';
 import { CartItem, Product, ProductSKU, ReviewModeration, ReviewVote, StoredReview, Order, OrderStatusHistoryStep, PromoCode, StorefrontSettings, ChatMessage, SupportThreadMeta, SupportStatus, UserProfile, BannerSlide, DeliveryMethod, PickupPoint, StockMovementLog, PaymentKind, PaymentTemplate, PriceHistoryEntry, PriceChangeLog } from '../types';
@@ -34,7 +34,7 @@ import { authorReviewHidden } from './reviewModeration';
 import { splitBannerImages, type BannerImagesDoc } from './bannerImages';
 import { previewsMoved, splitProductPreviews, withProductPreviews, type ProductPreviewsDoc } from './productPreviews';
 import type { LegalDocId, LegalTexts } from './legalDocs';
-import { BACKUP_MARK_DOC, type BackupMark, type RestoreWrite } from './backupRestore';
+import { BACKUP_COLLECTION_TITLES, BACKUP_MARK_DOC, chunkWrites, fromBackupValue, planRestore, RESTORE_SKIPPED, type BackupMark, type RestoreMode, type RestoreWrite } from './backupRestore';
 import { hasHeavyPhotos, splitProductPhotos, type PhotoDoc } from './productPhotos';
 import { compressBase64Image } from './imageUpload';
 import { SERVER_CONFIG_DOC_ID, ServerConfig } from '../shared/orderApi';
@@ -99,6 +99,11 @@ async function setDocs<T extends { id: string }>(collectionName: string, items: 
  * index — is for the owner: `console.error` reaches «Ошибки на сайте». Anything else stays a warning.
  */
 function logSubscriptionError(what: string, error: unknown) {
+  const code = (error as { code?: string })?.code?.replace(/^firestore\//, '');
+  if (code === 'permission-denied') {
+    console.warn(`${what} subscription permission notice:`, error);
+    return;
+  }
   if (needsOwnerAttention(error)) console.error(`${what} subscription failed:`, error);
   else console.warn(`${what} subscription warning:`, error);
 }
@@ -1373,27 +1378,66 @@ function storedOrder(order: Order) {
   return { ...sanitizeForFirestore(order), updatedAt: serverTimestamp() };
 }
 
-/** What the admin's subscription hands to the orders index (docs/orders-scale-plan.md, stage 4) */
+/** What the admin's subscription hands to the orders index (docs/orders-scale-plan.md, stages 4–5) */
 export interface StoredOrders {
   rows: OrderIndexRow[];
+  /** Order ids deleted in this snapshot (`docChanges` with `removed`) */
+  removedIds: string[];
   /** A write of this browser is not confirmed yet: its `updatedAt` is still empty */
   pending: boolean;
 }
 
+/** Normalizes a stored index row back into an Order, preserving delivery stage timestamps */
+export function orderFromIndexRow(row: OrderIndexRow): Order {
+  const raw = fromBackupValue(row.data, (iso) => Timestamp.fromDate(new Date(iso)));
+  return normalizeOrderFromFirestore(raw, row.id);
+}
+
+/** Sorts orders newest first by date, then by id descending */
+export function sortOrders(orders: Order[]): Order[] {
+  return [...orders].sort((a, b) => {
+    const timeA = new Date(a.date).getTime() || 0;
+    const timeB = new Date(b.date).getTime() || 0;
+    if (timeA !== timeB) return timeB - timeA;
+    return b.id.localeCompare(a.id);
+  });
+}
+
+const deletedOrderListeners = new Set<(orderId: string) => void>();
+
+export function subscribeToDeletedOrderIds(listener: (orderId: string) => void): () => void {
+  deletedOrderListeners.add(listener);
+  return () => {
+    deletedOrderListeners.delete(listener);
+  };
+}
+
 /**
- * Subscribes to orders. Admins receive every order, and the documents as stored for the orders index; customers pass
- * their uid and only receive their own orders (required by firestore.rules).
+ * Subscribes to orders. Customers pass `customerUid` and receive only their own orders (required by firestore.rules).
+ * Admins pass `sinceMs` (stage 5 of docs/orders-scale-plan.md) to read only orders changed since the orders index was
+ * written (`updatedAt >= syncedUpTo`), or omit it when building the index from all orders for the first time.
  */
 export function subscribeToOrders(
   onUpdate: (orders: Order[], stored?: StoredOrders) => void,
   onError?: (error: unknown) => void,
-  customerUid?: string
+  customerUid?: string,
+  sinceMs?: number
 ) {
   const colRef = collection(db, 'orders');
-  const source = customerUid ? query(colRef, where('customerUid', '==', customerUid)) : colRef;
+  const source = customerUid
+    ? query(colRef, where('customerUid', '==', customerUid))
+    : typeof sinceMs === 'number' && sinceMs > 0
+      ? query(colRef, where('updatedAt', '>=', Timestamp.fromMillis(sinceMs)))
+      : colRef;
   return onSnapshot(
     source,
     async (snapshot) => {
+      const removedIds = customerUid
+        ? []
+        : snapshot
+            .docChanges()
+            .filter((c) => c.type === 'removed')
+            .map((c) => c.doc.id);
       const stored = customerUid
         ? undefined
         : {
@@ -1402,6 +1446,7 @@ export function subscribeToOrders(
               const updatedAt = data.updatedAt instanceof Timestamp ? data.updatedAt.toMillis() : undefined;
               return { id: d.id, data: toBackupValue(data) as Record<string, unknown>, ...(updatedAt ? { updatedAt } : {}) };
             }),
+            removedIds,
             pending: snapshot.metadata.hasPendingWrites,
           };
       if (snapshot.empty) {
@@ -1418,13 +1463,7 @@ export function subscribeToOrders(
           console.error(`[Firestore Orders Listener] Error mapping order document ${docSnap.id}:`, itemErr);
         }
       });
-      loaded.sort((a, b) => {
-        const timeA = new Date(a.date).getTime() || 0;
-        const timeB = new Date(b.date).getTime() || 0;
-        if (timeA !== timeB) return timeB - timeA;
-        return b.id.localeCompare(a.id);
-      });
-      onUpdate(loaded, stored);
+      onUpdate(sortOrders(loaded), stored);
     },
     (error) => {
       logSubscriptionError('Orders', error);
@@ -1515,6 +1554,7 @@ export async function handOverGuestData(
 export async function deleteOrderFromFirestore(orderId: string) {
   try {
     await deleteDoc(doc(db, 'orders', orderId));
+    deletedOrderListeners.forEach((l) => l(orderId));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `orders/${orderId}`);
   }
@@ -2544,10 +2584,11 @@ export const CHAT_TEMPLATES_DOC_ID = 'chat_templates';
 
 /** Every collection of the store; `test` holds only the connection probe */
 export const BACKUP_COLLECTIONS = [
-  'products', 'product_previews', 'product_photos', 'product_costs', 'promos', 'settings', 'banners', 'banner_images', 'delivery_methods', 'pickup_points',
-  'orders', 'users', 'customer_notes', 'admins', 'reviews', 'review_votes', 'review_moderation',
+  'products', 'product_previews', 'product_photos', 'product_thumbs', 'product_costs', 'catalog_index',
+  'promos', 'settings', 'banners', 'banner_images', 'delivery_methods', 'pickup_points',
+  'orders', 'orders_index', 'users', 'customer_notes', 'admins', 'reviews', 'review_votes', 'review_moderation',
   'chat_messages', 'chat_images', 'support_threads', 'support_status', STOCK_MOVEMENTS_COLLECTION, 'promo_uses', 'payment_templates',
-  PRICE_CHANGES_COLLECTION, ORDER_COSTS_COLLECTION,
+  PRICE_CHANGES_COLLECTION, ORDER_COSTS_COLLECTION, 'pack_marks',
 ] as const;
 
 export interface DatabaseBackup {
@@ -2555,14 +2596,15 @@ export interface DatabaseBackup {
   version: 1;
   createdAt: string;
   databaseId: string;
-  collections: Record<string, { id: string; data: unknown }[]>;
+  collections: Record<string, { id: string; data: Record<string, unknown> }[]>;
   /** Collections the admin session could not read, with the error */
   failed: Record<string, string>;
 }
 
-/** Timestamps become `{ __timestamp: ISO }`, so a restore can write them back as dates */
+/** Timestamps become `{ __timestamp: ISO }` and Bytes become `{ __bytes: base64 }`, so a restore can write them back */
 function toBackupValue(value: unknown): unknown {
   if (value instanceof Timestamp) return { __timestamp: value.toDate().toISOString() };
+  if (value instanceof Bytes) return { __bytes: value.toBase64() };
   if (Array.isArray(value)) return value.map(toBackupValue);
   if (value && typeof value === 'object') {
     return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, toBackupValue(v)]));
@@ -2627,10 +2669,10 @@ export async function saveQuickPhrasesDoc(data: object): Promise<void> {
 }
 
 /** Ids of the documents now in these collections (the «Только недостающие» restore): reads, writes nothing */
-export async function readExistingIds(names: string[]): Promise<Record<string, Set<string>>> {
+export async function readExistingIds(names: string[], targetDb: Firestore = db): Promise<Record<string, Set<string>>> {
   const result: Record<string, Set<string>> = {};
   for (const name of names) {
-    const snapshot = await getDocs(collection(db, name));
+    const snapshot = await getDocs(collection(targetDb, name));
     result[name] = new Set(snapshot.docs.map((d) => d.id));
   }
   return result;
@@ -2642,16 +2684,17 @@ export async function readExistingIds(names: string[]): Promise<Record<string, S
  */
 export async function restoreDatabase(
   chunks: RestoreWrite[][],
-  onProgress: (written: number) => void
+  onProgress: (written: number) => void,
+  targetDb: Firestore = db
 ): Promise<number> {
   let written = 0;
   for (const chunk of chunks) {
-    const batch = writeBatch(db);
+    const batch = writeBatch(targetDb);
     for (const write of chunk) {
       // a restored order is a write of an order like any other: its time of change is now, not the copy's
       // (docs/orders-scale-plan.md, stage 2), so the admin's index takes it in
       const data = write.collection === 'orders' ? { ...write.data, updatedAt: serverTimestamp() } : write.data;
-      batch.set(doc(db, write.collection, write.id), data);
+      batch.set(doc(targetDb, write.collection, write.id), data);
     }
     try {
       await batch.commit();
@@ -2666,14 +2709,17 @@ export async function restoreDatabase(
 }
 
 /** Reads every collection of the store (admin session). Reads only: nothing is written to the database. */
-export async function exportDatabase(databaseId: string): Promise<DatabaseBackup> {
+export async function exportDatabase(databaseId: string = FIRESTORE_DATABASE_ID, sourceDb: Firestore = db): Promise<DatabaseBackup> {
   const backup: DatabaseBackup = {
     format: 'wasat-shop-backup', version: 1, createdAt: new Date().toISOString(), databaseId, collections: {}, failed: {},
   };
   for (const name of BACKUP_COLLECTIONS) {
     try {
-      const snapshot = await getDocs(collection(db, name));
-      backup.collections[name] = snapshot.docs.map((d) => ({ id: d.id, data: toBackupValue(d.data()) }));
+      const snapshot = await getDocs(collection(sourceDb, name));
+      backup.collections[name] = snapshot.docs.map((d) => ({
+        id: d.id,
+        data: toBackupValue(d.data()) as Record<string, unknown>,
+      }));
     } catch (error) {
       backup.failed[name] = error instanceof Error ? error.message : String(error);
     }
@@ -2681,7 +2727,77 @@ export async function exportDatabase(databaseId: string): Promise<DatabaseBackup
   return backup;
 }
 
-/** When the owner last downloaded a copy of the database (`settings/backup`, admin only); null — never. Throws if not read */
+export interface DatabaseMigrationCollectionRow {
+  collection: string;
+  title: string;
+  sourceCount: number;
+  targetBefore: number;
+  written: number;
+  targetAfter: number;
+  skippedReason?: string;
+}
+
+export interface DatabaseMigrationReport {
+  sourceDbId: string;
+  targetDbId: string;
+  mode: RestoreMode;
+  totalWritten: number;
+  rows: DatabaseMigrationCollectionRow[];
+  failed: Record<string, string>;
+}
+
+/**
+ * Stages 6–7 of docs/unified-plan.md (docs/firestore-free-tier-plan.md, stages 2–3):
+ * copies collections directly from `sourceDbId` (e.g. `ai-studio-...`) into `targetDbId` (e.g. `(default)`),
+ * either overwriting all restorable documents (`mode = 'overwrite'`, stage 6) or copying only missing documents
+ * (`mode = 'missing'`, stage 7 catch-up after switchover), and verifies the resulting document counts.
+ */
+export async function copyBetweenDatabases(
+  sourceDbId: string = NAMED_FIRESTORE_DATABASE_ID,
+  targetDbId: string = DEFAULT_FIRESTORE_DATABASE_ID,
+  mode: RestoreMode = 'overwrite',
+  onProgress: (written: number) => void = () => {}
+): Promise<DatabaseMigrationReport> {
+  const sourceDb = getFirestoreById(sourceDbId);
+  const targetDb = getFirestoreById(targetDbId);
+  const backup = await exportDatabase(sourceDbId, sourceDb);
+  const allCollections = [...BACKUP_COLLECTIONS];
+  const restorable = allCollections.filter((name) => !RESTORE_SKIPPED[name]);
+  const existingBefore = await readExistingIds(allCollections, targetDb);
+  const writes = planRestore(
+    backup,
+    restorable,
+    mode,
+    existingBefore,
+    (iso) => Timestamp.fromDate(new Date(iso)),
+    (b64) => Bytes.fromBase64String(b64)
+  );
+  const totalWritten = writes.length > 0 ? await restoreDatabase(chunkWrites(writes), onProgress, targetDb) : 0;
+  const existingAfter = await readExistingIds(allCollections, targetDb);
+  const writtenByCol = writes.reduce<Record<string, number>>((acc, w) => {
+    acc[w.collection] = (acc[w.collection] ?? 0) + 1;
+    return acc;
+  }, {});
+  const rows: DatabaseMigrationCollectionRow[] = allCollections.map((name) => ({
+    collection: name,
+    title: BACKUP_COLLECTION_TITLES[name] ?? name,
+    sourceCount: backup.collections[name]?.length ?? 0,
+    targetBefore: existingBefore[name]?.size ?? 0,
+    written: writtenByCol[name] ?? 0,
+    targetAfter: existingAfter[name]?.size ?? 0,
+    ...(RESTORE_SKIPPED[name] ? { skippedReason: RESTORE_SKIPPED[name] } : {}),
+  }));
+  return {
+    sourceDbId,
+    targetDbId,
+    mode,
+    totalWritten,
+    rows,
+    failed: backup.failed,
+  };
+}
+
+/**When the owner last downloaded a copy of the database (`settings/backup`, admin only); null — never. Throws if not read */
 export async function loadBackupMark(): Promise<BackupMark | null> {
   try {
     const snapshot = await getDoc(doc(db, 'settings', BACKUP_MARK_DOC));
@@ -2704,5 +2820,76 @@ export async function saveBackupMark(documents: number, complete: boolean): Prom
     await setDoc(doc(db, 'settings', BACKUP_MARK_DOC), { lastExportAt: serverTimestamp(), documents, complete });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `settings/${BACKUP_MARK_DOC}`);
+  }
+}
+
+/**
+ * 12. PACK MARKS (`pack_marks/{id}`, stage 5 of docs/broken-pack-plan.md / stage 16 of docs/unified-plan.md):
+ * admin-only «вскрыта» mark on an incomplete size pack (for display only; never alters stock or stock_movements).
+ */
+export const PACK_MARKS_COLLECTION = 'pack_marks';
+
+export interface PackMark {
+  id: string;
+  productId: string;
+  packId: string;
+  color: string;
+  openedAt: string;
+  openedBy: string;
+}
+
+export function packMarkId(productId: string, packId: string, color: string): string {
+  const safeColor = color.trim().toLowerCase().replace(/[^a-zа-яё0-9_-]/gi, '_');
+  return `${productId}_${packId}_${safeColor}`.slice(0, 120);
+}
+
+export function subscribeToPackMarks(
+  onUpdate: (marks: Record<string, PackMark>) => void,
+  onError?: (error: unknown) => void
+) {
+  return onSnapshot(
+    collection(db, PACK_MARKS_COLLECTION),
+    (snapshot) => {
+      const map: Record<string, PackMark> = {};
+      snapshot.forEach((snap) => {
+        const data = snap.data() as PackMark;
+        if (data && typeof data.productId === 'string' && typeof data.packId === 'string') {
+          map[snap.id] = { ...data, id: snap.id };
+        }
+      });
+      onUpdate(map);
+    },
+    (error) => {
+      logSubscriptionError('Pack marks', error);
+      onError?.(error);
+    }
+  );
+}
+
+export async function setPackMarkInFirestore(
+  productId: string,
+  packId: string,
+  color: string,
+  opened: boolean,
+  operatorEmail: string
+): Promise<void> {
+  const id = packMarkId(productId, packId, color);
+  const ref = doc(db, PACK_MARKS_COLLECTION, id);
+  try {
+    if (opened) {
+      const mark: PackMark = {
+        id,
+        productId,
+        packId,
+        color: color.trim(),
+        openedAt: new Date().toISOString(),
+        openedBy: (operatorEmail || 'admin').slice(0, 120),
+      };
+      await setDoc(ref, mark);
+    } else {
+      await deleteDoc(ref);
+    }
+  } catch (error) {
+    handleFirestoreError(error, opened ? OperationType.WRITE : OperationType.DELETE, `${PACK_MARKS_COLLECTION}/${id}`);
   }
 }

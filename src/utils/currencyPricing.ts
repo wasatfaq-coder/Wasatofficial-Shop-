@@ -54,6 +54,10 @@ export interface ProductPurchase {
   markupPercent?: number;
   /** The product's own wholesale markup, percent; absent — the wholesale markup for all products */
   wholesaleMarkupPercent?: number;
+  /** Additional overhead per item (delivery, customs, etc.) added to the rouble cost before markups (brief B19) */
+  extraCost?: number;
+  /** How `extraCost` is applied: `'rub'` — roubles per item, `'percent'` — percent of the base currency purchase */
+  extraCostKind?: 'rub' | 'percent';
 }
 
 export const EMPTY_EXCHANGE_RATES: ExchangeRates = {
@@ -95,11 +99,24 @@ export function effectiveMarkup(purchase: ProductPurchase, rates: ExchangeRates)
   return isNonNegative(purchase.markupPercent) ? purchase.markupPercent : rates.markupPercent;
 }
 
-/** Cost of one item in roubles at these rates, kopecks; null when the purchase or the rate is not set */
-function costFromRate(purchase: ProductPurchase | undefined, rates: ExchangeRates): number | null {
+/** Cost of one item in roubles at these rates (including extraCost overhead), kopecks; null when purchase or rate is not set */
+export function costFromRate(purchase: ProductPurchase | undefined, rates: ExchangeRates): number | null {
   if (!purchase || !isPositive(purchase.amount)) return null;
   const rate = workingRate(rateOf(rates, purchase.currency));
-  return rate === null ? null : purchase.amount * rate;
+  if (rate === null) return null;
+  const baseRub = purchase.amount * rate;
+  if (!isPositive(purchase.extraCost)) return baseRub;
+  return purchase.extraCostKind === 'percent'
+    ? baseRub * (1 + purchase.extraCost / 100)
+    : baseRub + purchase.extraCost;
+}
+
+/** Short label for the product's extra purchase overhead (e.g. «+150 ₽» or «+10 %»); empty when none */
+export function purchaseExtraCostLabel(purchase: ProductPurchase | undefined): string {
+  if (!purchase || !isPositive(purchase.extraCost)) return '';
+  return purchase.extraCostKind === 'percent'
+    ? `+${purchase.extraCost.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} %`
+    : `+${purchase.extraCost.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ₽`;
 }
 
 /** The product's wholesale markup: its own or the one for all products; undefined — none is set */
@@ -271,6 +288,9 @@ export function readPurchase(value: unknown): ProductPurchase | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const v = value as Record<string, unknown>;
   if ((v.currency !== 'USD' && v.currency !== 'CNY') || !isPositive(v.amount)) return undefined;
+  const extraKind: 'rub' | 'percent' = v.extraCostKind === 'percent' ? 'percent' : 'rub';
+  const maxExtra = extraKind === 'percent' ? MAX_MARKUP_PERCENT : MAX_RATE;
+  const hasExtra = isPositive(v.extraCost) && v.extraCost <= maxExtra;
   return {
     currency: v.currency,
     amount: v.amount,
@@ -278,6 +298,7 @@ export function readPurchase(value: unknown): ProductPurchase | undefined {
     ...(isNonNegative(v.wholesaleMarkupPercent) && v.wholesaleMarkupPercent <= MAX_MARKUP_PERCENT
       ? { wholesaleMarkupPercent: v.wholesaleMarkupPercent }
       : {}),
+    ...(hasExtra ? { extraCost: v.extraCost as number, extraCostKind: extraKind } : {}),
   };
 }
 
@@ -306,11 +327,17 @@ export function readExchangeRates(value: unknown): ExchangeRates {
 /** Two purchases are the same (both absent counts as the same) */
 export function samePurchase(a: ProductPurchase | undefined, b: ProductPurchase | undefined): boolean {
   if (!a || !b) return !a && !b;
+  const aExtra = isPositive(a.extraCost) ? a.extraCost : undefined;
+  const bExtra = isPositive(b.extraCost) ? b.extraCost : undefined;
+  const aKind = aExtra !== undefined ? (a.extraCostKind ?? 'rub') : undefined;
+  const bKind = bExtra !== undefined ? (b.extraCostKind ?? 'rub') : undefined;
   return (
     a.currency === b.currency &&
     a.amount === b.amount &&
     a.markupPercent === b.markupPercent &&
-    a.wholesaleMarkupPercent === b.wholesaleMarkupPercent
+    a.wholesaleMarkupPercent === b.wholesaleMarkupPercent &&
+    aExtra === bExtra &&
+    aKind === bKind
   );
 }
 

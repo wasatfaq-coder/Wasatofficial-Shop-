@@ -29,10 +29,10 @@ export const AdminFaqTab: React.FC<AdminFaqTabProps> = ({ settings, onUpdateSett
     visibleKey="isActive"
     renderSummary={(q) => (
       <div className="space-y-0.5">
-        <p className="text-xs font-extrabold text-[#2D3A4E]">
+        <p className="text-xs font-extrabold text-text-primary">
           {q.question}
         </p>
-        <p className="text-xs text-[#4E5C70] line-clamp-2">{q.answer}</p>
+        <p className="text-xs text-text-secondary line-clamp-2">{q.answer}</p>
       </div>
     )}
     onSave={(faqItems) => onUpdateSettings?.({ ...settings, faqItems })}

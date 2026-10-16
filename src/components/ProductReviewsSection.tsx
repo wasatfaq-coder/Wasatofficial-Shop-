@@ -26,7 +26,7 @@ const RatingStars: React.FC<{ rating: number; className: string }> = ({ rating, 
       <Star
         key={star}
         aria-hidden="true"
-        className={`${className} ${star <= rating ? 'fill-warning text-warning' : 'text-[#4E5C70]'}`}
+        className={`${className} ${star <= rating ? 'fill-warning text-warning' : 'text-text-secondary'}`}
       />
     ))}
   </div>
@@ -55,6 +55,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
   const [reviewToDelete, setReviewToDelete] = useState<ProductReview | null>(null);
   const [isWriteReviewOpen, setIsWriteReviewOpen] = useState(false);
   const [sortBy, setSortBy] = useState<'newest' | 'helpful'>('newest');
+  const [ratingFilter, setRatingFilter] = useState<'all' | 5 | 4 | 3 | 2 | 1>('all');
 
   // Only real reviews; the summary is computed from them (stored rating fields may be template numbers)
   // The author's own review that the store has not published (or rejected) is shown to the author only, with a note,
@@ -110,22 +111,35 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
     setReviewToDelete(null);
   };
 
-  const sortedReviews = [...reviews].sort((a, b) => {
-    if (sortBy === 'helpful') {
-      const aCount = helpfulCount(a);
-      const bCount = helpfulCount(b);
-      return bCount - aCount;
+  const reviewTimeMs = (r: ProductReview): number => {
+    const raw = String(r.updatedAt || r.createdAt || r.date || '');
+    const parsed = Date.parse(raw);
+    if (Number.isFinite(parsed)) return parsed;
+    const dotMatch = /^(\d{1,2})\.(\d{1,2})\.(\d{4})/.exec(raw.trim());
+    if (dotMatch) {
+      return new Date(Number(dotMatch[3]), Number(dotMatch[2]) - 1, Number(dotMatch[1])).getTime();
     }
-    return 0; // default order
-  });
+    return 0;
+  };
+
+  const sortedReviews = [...reviews]
+    .filter((r) => ratingFilter === 'all' || r.rating === ratingFilter)
+    .sort((a, b) => {
+      if (sortBy === 'helpful') {
+        const aCount = helpfulCount(a);
+        const bCount = helpfulCount(b);
+        if (bCount !== aCount) return bCount - aCount;
+      }
+      return reviewTimeMs(b) - reviewTimeMs(a);
+    });
 
   return (
-    <div className="space-y-4 pt-4 border-t border-[#BAC5D5]/40 text-[#2D3A4E]">
+    <div className="space-y-4 pt-4 neu-divider-t text-text-primary">
       {/* Header with Title & Write Review Button */}
       {/* the button moves under the title on a narrow screen instead of squeezing it to two lines */}
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <div>
-          <h3 className="text-base font-extrabold text-[#2D3A4E] flex items-center gap-2">
+          <h3 className="text-base font-extrabold text-text-primary flex items-center gap-2">
             <span>Отзывы покупателей</span>
             <span className="neu-inset px-2.5 py-0.5 rounded-full text-xs font-bold text-accent">
               {publicReviews.length}
@@ -146,59 +160,94 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
       </div>
 
       {uid && !mayWrite && (
-        <p className="text-xs text-[#4E5C70]">{REVIEW_NEEDS_ORDER_TEXT}</p>
+        <p className="text-xs text-text-secondary">{REVIEW_NEEDS_ORDER_TEXT}</p>
       )}
 
       {!ratingInfo && (
-        <p className="py-2 text-xs font-bold text-[#4E5C70] text-center">
+        <p className="py-2 text-xs font-bold text-text-secondary text-center">
           Отзывов пока нет. Станьте первым, кто оценит этот товар.
         </p>
       )}
 
       {/* Rating Summary Card */}
       {ratingInfo && (
-      <div className="neu-flat rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl neu-inset flex flex-col items-center justify-center shrink-0">
-            <span className="text-2xl font-extrabold text-accent leading-none">
-              {ratingInfo.rating.toFixed(1)}
-            </span>
-            <span className="text-[11px] text-[#4E5C70] font-bold mt-1">из 5.0</span>
+      <div className="neu-flat rounded-2xl p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-2xl neu-inset flex flex-col items-center justify-center shrink-0">
+              <span className="text-2xl font-extrabold text-accent leading-none">
+                {ratingInfo.rating.toFixed(1)}
+              </span>
+              <span className="text-[11px] text-text-secondary font-bold mt-1">из 5.0</span>
+            </div>
+
+            <div>
+              <RatingStars rating={Math.round(ratingInfo.rating)} className="w-4 h-4" />
+              <p className="text-xs font-bold text-text-primary mt-1">
+                {ratingInfo.count} {pluralRu(ratingInfo.count, ['отзыв', 'отзыва', 'отзывов'])}
+              </p>
+              <p className="text-xs text-success font-semibold flex items-center gap-1 mt-0.5">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                {recommendShare}% покупателей оценили на 4–5
+              </p>
+            </div>
           </div>
 
-          <div>
-            <RatingStars rating={Math.round(ratingInfo.rating)} className="w-4 h-4" />
-            <p className="text-xs font-bold text-[#2D3A4E] mt-1">
-              {ratingInfo.count} {pluralRu(ratingInfo.count, ['отзыв', 'отзыва', 'отзывов'])}
-            </p>
-            <p className="text-xs text-success font-semibold flex items-center gap-1 mt-0.5">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              {recommendShare}% покупателей оценили на 4–5
-            </p>
+          {/* Sort controls */}
+          <div className="grid grid-cols-2 gap-1.5 neu-flat-sm p-1 rounded-xl w-full sm:w-auto sm:flex sm:items-center">
+            <button
+              type="button"
+              onClick={() => setSortBy('newest')}
+              className={`py-2 px-3 sm:px-4 rounded-lg text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center ${
+                sortBy === 'newest' ? 'neu-pill-active' : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              Сначала новые
+            </button>
+            <button
+              type="button"
+              onClick={() => setSortBy('helpful')}
+              className={`py-2 px-3 sm:px-4 rounded-lg text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center ${
+                sortBy === 'helpful' ? 'neu-pill-active' : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              Полезные
+            </button>
           </div>
         </div>
 
-        {/* Sort controls */}
-        <div className="grid grid-cols-2 gap-1.5 neu-flat-sm p-1 rounded-xl w-full sm:w-auto sm:flex sm:items-center">
-          <button
-            type="button"
-            onClick={() => setSortBy('newest')}
-            className={`py-2 px-3 sm:px-4 rounded-lg text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center ${
-              sortBy === 'newest' ? 'neu-pill-active' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
-            }`}
-          >
-            Сначала новые
-          </button>
-          <button
-            type="button"
-            onClick={() => setSortBy('helpful')}
-            className={`py-2 px-3 sm:px-4 rounded-lg text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center ${
-              sortBy === 'helpful' ? 'neu-pill-active' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
-            }`}
-          >
-            Полезные
-          </button>
-        </div>
+        {/* Rating filter buttons when more than 1 review */}
+        {reviews.length > 1 && (
+          <div className="flex items-center gap-1.5 flex-wrap pt-2 neu-divider-t" role="radiogroup" aria-label="Фильтр по оценке">
+            {(['all', 5, 4, 3, 2, 1] as const).map((starVal) => {
+              const count = starVal === 'all' ? reviews.length : reviews.filter((r) => r.rating === starVal).length;
+              if (starVal !== 'all' && count === 0) return null;
+              const isSelected = ratingFilter === starVal;
+              return (
+                <button
+                  key={`rev-filter-${starVal}`}
+                  type="button"
+                  role="radio"
+                  aria-checked={isSelected}
+                  onClick={() => setRatingFilter(starVal)}
+                  className={`min-h-8 px-2.5 py-1 rounded-xl text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer transition-all ${
+                    isSelected ? 'neu-pill-active text-accent font-extrabold' : 'neu-button text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  {starVal === 'all' ? (
+                    <span>Все ({count})</span>
+                  ) : (
+                    <>
+                      <span>{starVal}</span>
+                      <Star className="w-3 h-3 fill-warning text-warning" aria-hidden="true" />
+                      <span className="text-text-secondary">({count})</span>
+                    </>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       )}
@@ -220,8 +269,8 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                     {rev.authorName ? rev.authorName[0] : 'U'}
                   </div>
                   <div>
-                    <span className="text-xs font-bold text-[#2D3A4E]">{rev.authorName}</span>
-                    <p className="text-xs text-[#4E5C70]">{rev.date}</p>
+                    <span className="text-xs font-bold text-text-primary">{rev.authorName}</span>
+                    <p className="text-xs text-text-secondary">{rev.date}</p>
                   </div>
                 </div>
 
@@ -232,8 +281,8 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
               {rev.moderation && (
                 <p
                   role="status"
-                  className={`rounded-xl border px-3 py-2 text-xs font-bold text-[#2D3A4E] ${
-                    rev.moderation === 'rejected' ? 'bg-danger-soft border-danger/30' : 'bg-warning-soft border-warning/30'
+                  className={`rounded-xl border px-3 py-2 text-xs font-bold text-text-primary ${
+                    rev.moderation === 'rejected' ? 'neu-tone-danger' : 'neu-tone-warning'
                   }`}
                 >
                   {moderationNote(rev)}
@@ -249,7 +298,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
 
               {/* Purchase specs */}
               {(rev.sizePurchased || rev.colorPurchased) && (
-                <div className="flex items-center gap-2 text-[11px] text-[#4E5C70]">
+                <div className="flex items-center gap-2 text-[11px] text-text-secondary">
                   {rev.sizePurchased && (
                     <span className="neu-inset px-2 py-0.5 rounded-md font-semibold">
                       Размер: {rev.sizePurchased}
@@ -264,20 +313,20 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
               )}
 
               {/* Text */}
-              <p className="text-xs text-[#2D3A4E] leading-relaxed">{rev.comment}</p>
+              <p className="text-xs text-text-primary leading-relaxed">{rev.comment}</p>
 
               {/* Pros & Cons with tactile Neumorphic Inset (эффект углубления) */}
               {rev.pros && (
-                <div className="text-xs space-y-0.5 neu-inset p-3 rounded-2xl border border-success/25">
+                <div className="text-xs space-y-0.5 neu-tone-success p-3 rounded-2xl">
                   <span className="font-extrabold text-success">Достоинства: </span>
-                  <span className="text-[#2D3A4E] leading-relaxed">{rev.pros}</span>
+                  <span className="text-text-primary leading-relaxed">{rev.pros}</span>
                 </div>
               )}
 
               {rev.cons && (
-                <div className="text-xs space-y-0.5 neu-inset p-3 rounded-2xl border border-danger/25">
+                <div className="text-xs space-y-0.5 neu-tone-danger p-3 rounded-2xl">
                   <span className="font-extrabold text-danger">Недостатки: </span>
-                  <span className="text-[#2D3A4E] leading-relaxed">{rev.cons}</span>
+                  <span className="text-text-primary leading-relaxed">{rev.cons}</span>
                 </div>
               )}
 
@@ -296,7 +345,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({
                   type="button"
                   onClick={() => handleToggleHelpful(rev)}
                   className={`neu-button px-2.5 py-1 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                    isLiked ? 'text-success' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
+                    isLiked ? 'text-success' : 'text-text-secondary hover:text-text-primary'
                   }`}
                 >
                   <ThumbsUp className={`w-3.5 h-3.5 ${isLiked ? 'fill-success' : ''}`} />

@@ -92,7 +92,6 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
     reordered.splice(newIndex, 0, item);
 
     if (!(await saveBanners(reordered))) return;
-    onShowToast(`Баннер перенесен на позицию ${newIndex + 1}`, 'success');
   };
 
   // Form Fields
@@ -112,7 +111,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
   const [targetCategory, setTargetCategory] = useState<string>('all');
   const [targetProductId, setTargetProductId] = useState<string>('');
   const [targetPromoCode, setTargetPromoCode] = useState<string>('');
-  const [badge, setBadge] = useState('АКЦИЯ');
+  const [badge, setBadge] = useState('');
 
   // Scheduling Fields
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
@@ -340,7 +339,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
   };
 
   const SCHEDULE_STATUS = {
-    always: { label: 'Бессрочно', color: 'text-[#4E5C70]' },
+    always: { label: 'Бессрочно', color: 'text-text-secondary' },
     scheduled: { label: 'Запланирован', color: 'text-warning' },
     live: { label: 'Показывается по расписанию', color: 'text-success' },
     expired: { label: 'Завершен', color: 'text-danger' },
@@ -348,16 +347,16 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
   const getBannerScheduleStatus = (b: BannerSlide) => SCHEDULE_STATUS[bannerScheduleState(b, Date.now())];
 
   return (
-    <div className="space-y-4 text-[#2D3A4E] w-full min-w-0 max-w-full">
+    <div className="space-y-4 text-text-primary w-full min-w-0 max-w-full">
       {/* Header & Create Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div className="min-w-0">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+          <h3 className="text-xs font-extrabold uppercase tracking-wider text-text-primary flex items-center gap-1.5">
             <ImageIcon className="w-4 h-4 text-accent shrink-0" />
-            <span>Управление промо-баннерами</span>
+            <span>Баннеры на главной</span>
           </h3>
-          <p className="text-xs text-[#4E5C70] truncate">
-            Планировщик публикаций и адаптивные форматы для мобильных и десктоп экранов
+          <p className="text-xs text-text-secondary truncate">
+            Слайды на первом экране, фото для телефона и компьютера, показ по расписанию
           </p>
         </div>
 
@@ -372,7 +371,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
           }}
           className={`py-2 px-3.5 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0 neu-inset active:scale-95 ${
             isCreating
-              ? 'text-[#4E5C70]'
+              ? 'text-text-secondary'
               : 'text-accent hover:text-accent-strong bg-[#E3E8EF]'
           }`}
         >
@@ -394,11 +393,11 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
       {isCreating && (
         <form
           onSubmit={handleSaveBanner}
-          className="neu-inset rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 space-y-4 border border-accent/30 animate-in fade-in slide-in-from-top-2 duration-200"
+          className="neu-inset rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200"
         >
-          <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-2.5">
+          <div className="flex items-center justify-between neu-divider-b pb-2.5">
             <span className="text-xs font-extrabold text-accent uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5" />
+              <Sparkles className="w-3.5 h-3.5 shrink-0" />
               <span>{editingId ? 'Редактирование баннера' : 'Создание нового слайда'}</span>
             </span>
           </div>
@@ -407,7 +406,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <div className="flex items-center gap-1 mb-1">
-                <label htmlFor="banner-title" className="text-[11px] font-bold text-[#4E5C70] block">
+                <label htmlFor="banner-title" className="text-[11px] font-bold text-text-secondary block">
                   Главный заголовок *
                 </label>
                 <AdminHint label="Главный заголовок">Крупный текст слайда на главной. Обязательное поле.</AdminHint>
@@ -419,12 +418,12 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Премиум льняные рубашки"
-                className="w-full px-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E] font-extrabold"
+                className="w-full px-3 py-2.5 neu-inset rounded-xl text-xs text-text-primary font-extrabold"
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+              <label className="text-[11px] font-bold text-text-secondary block mb-1">
                 Подзаголовок / Описание
               </label>
               <input
@@ -432,7 +431,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                 value={subtitle}
                 onChange={(e) => setSubtitle(e.target.value)}
                 placeholder="Натуральный 100% лен и дышащие ткани"
-                className="w-full px-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E]"
+                className="w-full px-3 py-2.5 neu-inset rounded-xl text-xs text-text-primary"
               />
             </div>
           </div>
@@ -440,7 +439,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <div className="flex items-center gap-1 mb-1">
-                <label className="text-[11px] font-bold text-[#4E5C70] block">
+                <label className="text-[11px] font-bold text-text-secondary block">
                   Текст кнопки действия
                 </label>
                 <AdminHint label="Текст кнопки">Подпись на кнопке слайда. Пусто — «Смотреть».</AdminHint>
@@ -450,23 +449,23 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                 value={btnText}
                 onChange={(e) => setBtnText(e.target.value)}
                 placeholder="Смотреть"
-                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-bold"
+                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-text-primary font-bold"
               />
             </div>
 
             <div>
               <div className="flex items-center gap-1 mb-1">
-                <label className="text-[11px] font-bold text-[#4E5C70] block">
-                  Бейдж / Стикер
+                <label className="text-[11px] font-bold text-text-secondary block">
+                  Короткая метка на слайде
                 </label>
-                <AdminHint label="Бейдж / Стикер">Короткая метка в углу слайда: «Хит», «-20 %». Можно оставить пустой.</AdminHint>
+                <AdminHint label="Короткая метка на слайде">Короткая метка в углу слайда: «Хит», «-20 %». Можно оставить пустой.</AdminHint>
               </div>
               <input
                 type="text"
                 value={badge}
                 onChange={(e) => setBadge(e.target.value)}
-                placeholder="NEW, ХИТ, 100% ЛЕН"
-                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E]"
+                placeholder="Хит, Новинка, -20 %"
+                className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-text-primary"
               />
             </div>
           </div>
@@ -474,12 +473,12 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
           {/* Section: Deeplink Action Type */}
           <div className="p-3.5 neu-inset rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-extrabold text-[#2D3A4E] uppercase tracking-wider flex items-center gap-1.5">
+              <span className="text-[11px] font-extrabold text-text-primary uppercase tracking-wider flex items-center gap-1.5">
                 <ArrowUpRight className="w-3.5 h-3.5 text-accent" />
                 <span>Куда ведёт баннер:</span>
                 <AdminHint label="Куда ведёт баннер">Куда попадёт покупатель, когда нажмёт на слайд.</AdminHint>
               </span>
-              <span className="text-[11px] text-[#4E5C70] font-semibold">
+              <span className="text-[11px] text-text-secondary font-semibold">
                 Куда перейдет покупатель
               </span>
             </div>
@@ -498,7 +497,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                   className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
                     actionType === act.id
                       ? 'neu-pill-active font-extrabold'
-                      : 'text-[#4E5C70] hover:text-[#2D3A4E]'
+                      : 'text-text-secondary hover:text-text-primary'
                   }`}
                 >
                   {act.label}
@@ -509,7 +508,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
             {/* Sub-inputs depending on action type */}
             {actionType === 'category' && (
               <div className="space-y-1 pt-1">
-                <label className="text-[11px] font-bold text-[#4E5C70] block">
+                <label className="text-[11px] font-bold text-text-secondary block">
                   Выберите категорию каталога:
                 </label>
                 <NeumorphicSelect
@@ -529,7 +528,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
 
             {actionType === 'product' && (
               <div className="space-y-1 pt-1">
-                <label className="text-[11px] font-bold text-[#4E5C70] block">
+                <label className="text-[11px] font-bold text-text-secondary block">
                   Выберите конкретный товар для перехода в карточку:
                 </label>
                 <NeumorphicSelect
@@ -550,7 +549,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
             {actionType === 'promo' && (
               <div className="space-y-1 pt-1">
                 <div className="flex items-center gap-1">
-                  <label className="text-[11px] font-bold text-[#4E5C70] block">
+                  <label className="text-[11px] font-bold text-text-secondary block">
                     Выберите промокод, который автоматически активируется при клике:
                   </label>
                   <AdminHint label="Действие «Промокод»">Код сам подставится в корзину. Для кода с лимитом нужен вход через Google.</AdminHint>
@@ -571,14 +570,14 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
             )}
 
             {actionType === 'catalog' && (
-              <p className="text-xs text-[#4E5C70] font-medium pt-0.5">
+              <p className="text-xs text-text-secondary font-medium pt-0.5">
                 Клик по баннеру откроет главную витрину каталога со всеми новинками.
               </p>
             )}
           </div>
 
           {/* Section: Adaptive Images (Mobile vs Desktop) with Neumorphic Inset Gallery Upload & Delete */}
-          <div className="p-3.5 neu-inset rounded-2xl space-y-3.5 border border-white/60">
+          <div className="p-3.5 neu-inset rounded-2xl space-y-3.5 ">
             {/* Hidden File Inputs for Device/Gallery Upload */}
             <input
               type="file"
@@ -596,21 +595,21 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
             />
 
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-extrabold text-[#2D3A4E] uppercase tracking-wider flex items-center gap-1.5">
+              <span className="text-[11px] font-extrabold text-text-primary uppercase tracking-wider flex items-center gap-1.5">
                 <ImageIcon className="w-3.5 h-3.5 text-accent" />
                 <span>Адаптивные форматы изображений:</span>
               </span>
-              <span className="text-[11px] text-[#4E5C70] font-semibold">
+              <span className="text-[11px] text-text-secondary font-semibold">
                 Раздельная загрузка для мобайла и десктопа
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               {/* Mobile Image Card */}
-              <div className="neu-flat rounded-2xl p-3 border border-white/60 space-y-2.5">
+              <div className="neu-flat rounded-2xl p-3 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1">
-                    <label className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
+                    <label className="text-[11px] font-bold text-text-primary flex items-center gap-1.5">
                       <Smartphone className="w-3.5 h-3.5 text-accent" />
                       <span>Версия для смартфонов</span>
                     </label>
@@ -619,8 +618,8 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                   <span
                     className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md ${
                       mobileImage || image
-                        ? 'bg-success-soft text-success font-extrabold'
-                        : 'bg-[#D8DFE8] text-[#4E5C70]'
+                        ? 'neu-tone-success font-extrabold'
+                        : 'neu-inset text-text-secondary'
                     }`}
                   >
                     {mobileImage || image ? 'Загружено' : 'Не задано'}
@@ -643,24 +642,24 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                         <button
                           type="button"
                           onClick={() => setPreviewZoomImage(mobileImage || image)}
-                          className="w-6 h-6 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center shadow-[var(--neu-on-photo)] active:scale-90 transition-transform cursor-pointer"
+                          className="w-8 h-8 rounded-xl neu-photo-btn flex items-center justify-center shrink-0"
                           title="Увеличить"
                           aria-label="Увеличить"
                         >
-                          <Maximize2 className="w-3 h-3" />
+                          <Maximize2 className="w-3.5 h-3.5 shrink-0" />
                         </button>
                         <button
                           type="button"
                           onClick={handleClearMobileImage}
-                          className="w-6 h-6 rounded-full bg-danger hover:bg-danger/90 text-white flex items-center justify-center shadow-[var(--neu-on-photo)] active:scale-90 transition-transform cursor-pointer"
+                          className="w-8 h-8 rounded-xl neu-photo-btn neu-photo-btn-danger flex items-center justify-center shrink-0"
                           title="Удалить фото"
                           aria-label="Удалить фото"
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Trash2 className="w-3.5 h-3.5 shrink-0" />
                         </button>
                       </div>
 
-                      <div className="absolute bottom-1.5 left-1.5 bg-black/60 backdrop-blur-xs text-white text-[11px] font-bold px-1.5 py-0.5 rounded-md">
+                      <div className="absolute bottom-1.5 left-1.5 neu-photo-badge text-[11px] font-bold px-2 py-0.5 rounded-lg">
                         Мобайл (4:5 / 9:16)
                       </div>
                     </div>
@@ -668,12 +667,12 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                 ) : (
                   <div
                     onClick={() => mobileFileInputRef.current?.click()}
-                    className="neu-inset rounded-xl p-4 sm:p-5 flex flex-col items-center justify-center text-center cursor-pointer active:scale-[0.99] transition-all border border-dashed border-accent/40 group"
+                    className="neu-inset rounded-xl p-4 sm:p-5 flex flex-col items-center justify-center text-center cursor-pointer active:scale-[0.99] transition-all group"
                   >
                     {isUploadingMobile ? (
                       <div className="flex flex-col items-center py-2">
                         <Loader2 className="w-6 h-6 text-accent animate-spin mb-1.5" />
-                        <span className="text-[11px] font-bold text-[#4E5C70]">Сжатие и обработка...</span>
+                        <span className="text-[11px] font-bold text-text-secondary">Сжатие и обработка...</span>
                       </div>
                     ) : (
                       <>
@@ -683,7 +682,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                         <span className="text-xs font-extrabold text-accent">
                           Загрузить из галереи / устройства
                         </span>
-                        <span className="text-[11px] text-[#4E5C70] mt-0.5">
+                        <span className="text-[11px] text-text-secondary mt-0.5">
                           Нажмите для выбора (JPG, PNG, WebP)
                         </span>
                       </>
@@ -697,7 +696,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     type="button"
                     onClick={() => mobileFileInputRef.current?.click()}
                     disabled={isUploadingMobile}
-                    className="flex-1 h-7 px-2.5 rounded-lg neu-button text-[11px] font-bold text-accent hover:text-accent-strong transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
+                    className="flex-1 h-8 px-2.5 rounded-lg neu-button text-[11px] font-bold text-accent hover:text-accent-strong transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
                   >
                     <Upload className="w-3 h-3" />
                     <span>{mobileImage || image ? 'Заменить' : 'Выбрать файл'}</span>
@@ -707,7 +706,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     <button
                       type="button"
                       onClick={handleClearMobileImage}
-                      className="h-7 px-2.5 rounded-lg neu-button-danger text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
+                      className="h-8 px-2.5 rounded-lg neu-button-danger text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
                       title="Удалить фото"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -719,7 +718,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                 {/* Manual URL Input */}
                 <div className="space-y-0.5 pt-0.5">
                   <div className="flex items-center gap-1">
-                    <span className="text-[11px] font-bold text-[#4E5C70]">Или прямая ссылка:</span>
+                    <span className="text-[11px] font-bold text-text-secondary">Или прямая ссылка:</span>
                     <AdminHint label="Или прямая ссылка">Адрес картинки в интернете. Надёжнее загрузить файл: чужой сайт может её убрать.</AdminHint>
                   </div>
                   <input
@@ -730,16 +729,16 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                       setImage(e.target.value);
                     }}
                     placeholder="https://…"
-                    className="w-full h-7 px-2.5 neu-inset rounded-lg text-[11px] text-[#2D3A4E] placeholder:text-[#56647A]"
+                    className="w-full h-8 px-2.5 neu-inset rounded-lg text-[11px] text-text-primary placeholder:text-text-muted"
                   />
                 </div>
               </div>
 
               {/* Desktop Image Card */}
-              <div className="neu-flat rounded-2xl p-3 border border-white/60 space-y-2.5">
+              <div className="neu-flat rounded-2xl p-3 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1">
-                    <label className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
+                    <label className="text-[11px] font-bold text-text-primary flex items-center gap-1.5">
                       <Monitor className="w-3.5 h-3.5 text-accent" />
                       <span>Широкоформатная десктоп-версия (16:9)</span>
                     </label>
@@ -748,8 +747,8 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                   <span
                     className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md ${
                       desktopImage
-                        ? 'bg-success-soft text-success font-extrabold'
-                        : 'bg-[#D8DFE8] text-[#4E5C70]'
+                        ? 'neu-tone-success font-extrabold'
+                        : 'neu-inset text-text-secondary'
                     }`}
                   >
                     {desktopImage ? 'Загружено' : 'Не задано'}
@@ -772,24 +771,24 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                         <button
                           type="button"
                           onClick={() => setPreviewZoomImage(desktopImage)}
-                          className="w-6 h-6 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center shadow-[var(--neu-on-photo)] active:scale-90 transition-transform cursor-pointer"
+                          className="w-8 h-8 rounded-xl neu-photo-btn flex items-center justify-center shrink-0"
                           title="Увеличить"
                           aria-label="Увеличить"
                         >
-                          <Maximize2 className="w-3 h-3" />
+                          <Maximize2 className="w-3.5 h-3.5 shrink-0" />
                         </button>
                         <button
                           type="button"
                           onClick={handleClearDesktopImage}
-                          className="w-6 h-6 rounded-full bg-danger hover:bg-danger/90 text-white flex items-center justify-center shadow-[var(--neu-on-photo)] active:scale-90 transition-transform cursor-pointer"
+                          className="w-8 h-8 rounded-xl neu-photo-btn neu-photo-btn-danger flex items-center justify-center shrink-0"
                           title="Удалить фото"
                           aria-label="Удалить фото"
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Trash2 className="w-3.5 h-3.5 shrink-0" />
                         </button>
                       </div>
 
-                      <div className="absolute bottom-1.5 left-1.5 bg-black/60 backdrop-blur-xs text-white text-[11px] font-bold px-1.5 py-0.5 rounded-md">
+                      <div className="absolute bottom-1.5 left-1.5 neu-photo-badge text-[11px] font-bold px-2 py-0.5 rounded-lg">
                         Десктоп (16:9)
                       </div>
                     </div>
@@ -797,12 +796,12 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                 ) : (
                   <div
                     onClick={() => desktopFileInputRef.current?.click()}
-                    className="neu-inset rounded-xl p-4 sm:p-5 flex flex-col items-center justify-center text-center cursor-pointer active:scale-[0.99] transition-all border border-dashed border-accent/40 group"
+                    className="neu-inset rounded-xl p-4 sm:p-5 flex flex-col items-center justify-center text-center cursor-pointer active:scale-[0.99] transition-all group"
                   >
                     {isUploadingDesktop ? (
                       <div className="flex flex-col items-center py-2">
                         <Loader2 className="w-6 h-6 text-accent animate-spin mb-1.5" />
-                        <span className="text-[11px] font-bold text-[#4E5C70]">Сжатие и обработка...</span>
+                        <span className="text-[11px] font-bold text-text-secondary">Сжатие и обработка...</span>
                       </div>
                     ) : (
                       <>
@@ -812,7 +811,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                         <span className="text-xs font-extrabold text-accent">
                           Загрузить из галереи / устройства
                         </span>
-                        <span className="text-[11px] text-[#4E5C70] mt-0.5">
+                        <span className="text-[11px] text-text-secondary mt-0.5">
                           Нажмите для выбора (JPG, PNG, WebP)
                         </span>
                       </>
@@ -826,7 +825,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     type="button"
                     onClick={() => desktopFileInputRef.current?.click()}
                     disabled={isUploadingDesktop}
-                    className="flex-1 h-7 px-2.5 rounded-lg neu-button text-[11px] font-bold text-accent hover:text-accent-strong transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
+                    className="flex-1 h-8 px-2.5 rounded-lg neu-button text-[11px] font-bold text-accent hover:text-accent-strong transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
                   >
                     <Upload className="w-3 h-3" />
                     <span>{desktopImage ? 'Заменить' : 'Выбрать файл'}</span>
@@ -836,7 +835,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     <button
                       type="button"
                       onClick={handleClearDesktopImage}
-                      className="h-7 px-2.5 rounded-lg neu-button-danger text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
+                      className="h-8 px-2.5 rounded-lg neu-button-danger text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0"
                       title="Удалить фото"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -848,7 +847,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                 {/* Manual URL Input */}
                 <div className="space-y-0.5 pt-0.5">
                   <div className="flex items-center gap-1">
-                    <span className="text-[11px] font-bold text-[#4E5C70]">Или прямая ссылка:</span>
+                    <span className="text-[11px] font-bold text-text-secondary">Или прямая ссылка:</span>
                     <AdminHint label="Или прямая ссылка">Адрес картинки в интернете. Надёжнее загрузить файл: чужой сайт может её убрать.</AdminHint>
                   </div>
                   <input
@@ -856,14 +855,14 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     value={desktopImage}
                     onChange={(e) => setDesktopImage(e.target.value)}
                     placeholder="https://…"
-                    className="w-full h-7 px-2.5 neu-inset rounded-lg text-[11px] text-[#2D3A4E] placeholder:text-[#56647A]"
+                    className="w-full h-8 px-2.5 neu-inset rounded-lg text-[11px] text-text-primary placeholder:text-text-muted"
                   />
                 </div>
               </div>
             </div>
 
             {/* Ready photos: the store's own products, not stock pictures (finding 23) */}
-            <div className="pt-2 border-t border-[#BAC5D5]/40">
+            <div className="pt-2 neu-divider-t">
               <BannerProductPhotos
                 products={products}
                 onPick={(src) => {
@@ -891,12 +890,12 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                 <Calendar className="w-4 h-4 text-accent" />
                 <div>
                   <div className="flex items-center gap-1">
-                    <span className="text-[11px] font-extrabold text-[#2D3A4E] block">
+                    <span className="text-[11px] font-extrabold text-text-primary block">
                       Показ по времени
                     </span>
                     <AdminHint label="Показ по времени">Баннер сам появится и сам исчезнет в нужное время. Время — московское.</AdminHint>
                   </div>
-                  <span className="text-[11px] text-[#4E5C70]">
+                  <span className="text-[11px] text-text-secondary">
                     Начало и конец показа на главной, по Москве
                   </span>
                 </div>
@@ -908,27 +907,30 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                 aria-checked={scheduleEnabled}
                 aria-label="Показ по времени"
                 onClick={() => setScheduleEnabled(!scheduleEnabled)}
-                className="w-11 h-6 rounded-full neu-inset p-0.5 transition-colors cursor-pointer shrink-0"
+                className={`w-12 h-8 rounded-full px-1 flex items-center transition-colors duration-200 cursor-pointer shrink-0 ${
+                  scheduleEnabled ? 'neu-fill-accent' : 'neu-inset'
+                }`}
               >
-                <div
-                  className={`w-5 h-5 rounded-full transition-transform neu-flat ${
-                    scheduleEnabled ? 'translate-x-5 bg-accent' : 'translate-x-0 bg-[#BAC5D5]'
+                <span
+                  aria-hidden="true"
+                  className={`w-5 h-5 rounded-full neu-flat-sm transition-transform duration-200 ${
+                    scheduleEnabled ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
               </button>
             </div>
 
             {scheduleEnabled && (
-              <div className="space-y-3 pt-2 border-t border-[#BAC5D5]/50 animate-in fade-in duration-200">
+              <div className="space-y-3 pt-2 neu-divider-t animate-in fade-in duration-200">
                 {/* From now, by Moscow time */}
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[11px] font-bold text-[#4E5C70]">С этой минуты:</span>
+                  <span className="text-[11px] font-bold text-text-secondary">С этой минуты:</span>
                   {BANNER_SCHEDULE_PRESETS.map((preset) => (
                     <button
                       key={preset.id}
                       type="button"
                       onClick={() => applySchedulePreset(preset.id)}
-                      className="neu-button min-h-6 px-2.5 py-1 rounded-lg text-[11px] font-bold text-[#4E5C70] hover:text-accent"
+                      className="neu-button min-h-8 px-2.5 py-1 rounded-lg text-[11px] font-bold text-text-secondary hover:text-accent"
                     >
                       {preset.label}
                     </button>
@@ -937,7 +939,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="banner-start" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+                    <label htmlFor="banner-start" className="text-[11px] font-bold text-text-secondary block mb-1">
                       Начало показа (МСК)
                     </label>
                     <input
@@ -945,12 +947,12 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                       type="datetime-local"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-2.5 py-1.5 neu-flat rounded-xl text-xs text-[#2D3A4E] font-bold"
+                      className="w-full px-2.5 py-1.5 neu-flat rounded-xl text-xs text-text-primary font-bold"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="banner-end" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+                    <label htmlFor="banner-end" className="text-[11px] font-bold text-text-secondary block mb-1">
                       Конец показа (МСК)
                     </label>
                     <input
@@ -958,7 +960,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                       type="datetime-local"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full px-2.5 py-1.5 neu-flat rounded-xl text-xs text-[#2D3A4E] font-bold"
+                      className="w-full px-2.5 py-1.5 neu-flat rounded-xl text-xs text-text-primary font-bold"
                     />
                   </div>
                 </div>
@@ -971,7 +973,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
             <button
               type="button"
               onClick={resetForm}
-              className="h-9 px-4 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer transition-all"
+              className="h-9 px-4 neu-button rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary cursor-pointer transition-all"
             >
               Отмена
             </button>
@@ -989,8 +991,8 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
       {/* Banners List with Schedule Indicators and Format Badges */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-0.5">
-          <p className="text-xs font-bold text-[#4E5C70]">
-            Всего баннеров: <strong className="text-[#2D3A4E]">{banners.length}</strong> (активных:{' '}
+          <p className="text-xs font-bold text-text-secondary">
+            Всего баннеров: <strong className="text-text-primary">{banners.length}</strong> (активных:{' '}
             {banners.filter((b) => b.active).length})
           </p>
         </div>
@@ -1016,34 +1018,34 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                       <span className="text-[11px] font-extrabold text-accent px-1 font-mono">
                         #{index + 1}
                       </span>
-                      <div className="flex items-center gap-0.5">
+                      <div className="flex items-center gap-1">
                         <button
                           type="button"
                           disabled={index === 0}
                           onClick={() => handleMoveBanner(index, 'up')}
-                          className={`w-5 h-5 rounded-lg flex items-center justify-center transition-all ${
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
                             index === 0
-                              ? 'text-[#4E5C70]/30 cursor-not-allowed'
-                              : 'neu-button text-[#2D3A4E] hover:text-accent cursor-pointer'
+                              ? 'text-text-secondary/30 cursor-not-allowed'
+                              : 'neu-button text-text-primary hover:text-accent cursor-pointer'
                           }`}
-                          title="Переместить выше"
-                          aria-label="Переместить выше"
+                          title={`Переместить выше: ${slide.title}`}
+                          aria-label={`Переместить выше: ${slide.title}`}
                         >
-                          <ChevronUp className="w-3.5 h-3.5" />
+                          <ChevronUp className="w-4 h-4" />
                         </button>
                         <button
                           type="button"
                           disabled={index === banners.length - 1}
                           onClick={() => handleMoveBanner(index, 'down')}
-                          className={`w-5 h-5 rounded-lg flex items-center justify-center transition-all ${
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
                             index === banners.length - 1
-                              ? 'text-[#4E5C70]/30 cursor-not-allowed'
-                              : 'neu-button text-[#2D3A4E] hover:text-accent cursor-pointer'
+                              ? 'text-text-secondary/30 cursor-not-allowed'
+                              : 'neu-button text-text-primary hover:text-accent cursor-pointer'
                           }`}
-                          title="Переместить ниже"
-                          aria-label="Переместить ниже"
+                          title={`Переместить ниже: ${slide.title}`}
+                          aria-label={`Переместить ниже: ${slide.title}`}
                         >
-                          <ChevronDown className="w-3.5 h-3.5" />
+                          <ChevronDown className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
@@ -1052,7 +1054,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                       <AdminHint label="Стрелки порядка">Первый в списке показывается на главной первым.</AdminHint>
                     )}
 
-                    <span className="text-xs font-extrabold text-[#2D3A4E] neu-flat-sm px-2.5 py-1 rounded-xl">
+                    <span className="text-xs font-extrabold text-text-primary neu-flat-sm px-2.5 py-1 rounded-xl">
                       {slide.title}
                     </span>
 
@@ -1064,21 +1066,21 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
 
                     {/* Schedule status badge */}
                     <span
-                      className={`text-[11px] font-bold neu-button px-2 py-0.5 rounded-full flex items-center gap-1 ${scheduleInfo.color}`}
+                      className={`text-[11px] font-bold neu-inset px-2 py-0.5 rounded-full flex items-center gap-1 ${scheduleInfo.color}`}
                     >
                       <Clock className="w-3 h-3" />
                       {scheduleInfo.label}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => handleToggleActive(slide.id)}
-                      className={`px-2.5 py-1 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer ${
+                      className={`px-2.5 py-1 min-h-8 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer ${
                         slide.active
                           ? 'neu-button text-success'
-                          : 'neu-inset text-[#4E5C70]'
+                          : 'neu-inset text-text-secondary'
                       }`}
                     >
                       {slide.active ? 'Активен' : 'Скрыт'}
@@ -1089,7 +1091,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     <button
                       type="button"
                       onClick={() => handleOpenEdit(slide)}
-                      className="w-7 h-7 rounded-xl neu-button flex items-center justify-center text-accent hover:scale-105 cursor-pointer"
+                      className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent hover:scale-105 cursor-pointer"
                       title="Редактировать"
                       aria-label="Редактировать"
                     >
@@ -1098,7 +1100,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                     <button
                       type="button"
                       onClick={() => setBannerToDelete(slide)}
-                      className="w-7 h-7 rounded-xl neu-button-danger flex items-center justify-center cursor-pointer"
+                      className="w-8 h-8 rounded-xl neu-button-danger flex items-center justify-center cursor-pointer"
                       title="Удалить"
                       aria-label="Удалить"
                     >
@@ -1115,21 +1117,21 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
                       alt={slide.title}
                       className="w-full h-full object-cover object-center"
                     />
-                    <div className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-xs text-white text-[11px] font-bold px-1.5 py-0.5 rounded">
+                    <div className="absolute bottom-1 right-1 neu-photo-badge text-[11px] font-bold px-1.5 py-0.5 rounded-md">
                       {slide.desktopImage ? 'Телефон и ПК' : 'Одно фото'}
                     </div>
                   </div>
 
                   <div className="sm:col-span-3 space-y-1">
-                    <p className="text-xs text-[#4E5C70]">{slide.subtitle}</p>
-                    <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-[11px] text-[#4E5C70] pt-1">
-                      <span>Кнопка: <strong className="text-[#2D3A4E]">{slide.btnText}</strong></span>
+                    <p className="text-xs text-text-secondary">{slide.subtitle}</p>
+                    <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-[11px] text-text-secondary pt-1">
+                      <span>Кнопка: <strong className="text-text-primary">{slide.btnText}</strong></span>
                       <span>Ведет: <strong className="text-accent">{bannerTargetLabel(slide)}</strong></span>
                       {slide.startDate && (
-                        <span>Начало: <strong className="text-[#2D3A4E]">{formatBannerTime(slide.startDate)} МСК</strong></span>
+                        <span>Начало: <strong className="text-text-primary">{formatBannerTime(slide.startDate)} МСК</strong></span>
                       )}
                       {slide.endDate && (
-                        <span>Конец: <strong className="text-[#2D3A4E]">{formatBannerTime(slide.endDate)} МСК</strong></span>
+                        <span>Конец: <strong className="text-text-primary">{formatBannerTime(slide.endDate)} МСК</strong></span>
                       )}
                     </div>
                   </div>
@@ -1152,15 +1154,15 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
             className="neu-flat rounded-2xl max-w-4xl w-full p-4 relative space-y-3"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-2.5">
-              <span className="text-xs font-extrabold text-[#2D3A4E] uppercase tracking-wider flex items-center gap-1.5">
+            <div className="flex items-center justify-between neu-divider-b pb-2.5">
+              <span className="text-xs font-extrabold text-text-primary uppercase tracking-wider flex items-center gap-1.5">
                 <ImageIcon className="w-4 h-4 text-accent" />
                 <span>Просмотр изображения баннера</span>
               </span>
               <button
                 type="button"
                 onClick={() => setPreviewZoomImage(null)}
-                className="w-7 h-7 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer"
                 aria-label="Закрыть"
               >
                 <X className="w-4 h-4" />
@@ -1180,7 +1182,7 @@ export const AdminBannersTab: React.FC<AdminBannersTabProps> = ({
               <button
                 type="button"
                 onClick={() => setPreviewZoomImage(null)}
-                className="px-4 py-2 rounded-xl neu-button text-xs font-bold text-[#2D3A4E] cursor-pointer"
+                className="px-4 py-2 rounded-xl neu-button text-xs font-bold text-text-primary cursor-pointer"
               >
                 Закрыть
               </button>

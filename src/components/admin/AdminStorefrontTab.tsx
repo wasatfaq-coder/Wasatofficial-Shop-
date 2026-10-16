@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Tabs } from '@base-ui/react/tabs';
 import { Check, Crown, Save, Store } from 'lucide-react';
-import { SaveStorefrontSettings, StorefrontSettings } from '../../types';
+import { Product, SaveStorefrontSettings, StorefrontSettings } from '../../types';
 import { loadStorefrontSettings, saveStorefrontSettings } from '../../utils/inventory';
 import { scheduleErrors } from '../../utils/storeSchedule';
 import { STOREFRONT_RESET_FIELDS, resetStorefrontTexts } from '../../utils/storefrontReset';
@@ -13,6 +13,7 @@ import { StorefrontBrandSection } from './storefront/StorefrontBrandSection';
 import { StorefrontContactsSection } from './storefront/StorefrontContactsSection';
 import { StorefrontDataSection } from './storefront/StorefrontDataSection';
 import { StorefrontOrdersSection } from './storefront/StorefrontOrdersSection';
+import { StorefrontPaletteSection } from './storefront/StorefrontPaletteSection';
 import { StorefrontRequisitesSection } from './storefront/StorefrontRequisitesSection';
 import {
   STOREFRONT_SECTIONS,
@@ -24,6 +25,7 @@ import {
 
 interface AdminStorefrontTabProps {
   settings?: StorefrontSettings;
+  products?: Product[];
   onUpdateSettings?: SaveStorefrontSettings;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
@@ -62,6 +64,7 @@ function withResetFields(target: StorefrontSettings, source: StorefrontSettings)
  */
 export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
   settings: propSettings,
+  products,
   onUpdateSettings,
   onShowToast,
 }) => {
@@ -168,14 +171,14 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
   const sectionProps = { settings: localSettings, patch };
 
   return (
-    <div className="space-y-4 text-[#2D3A4E]">
-      <div className="flex items-start justify-between gap-3 flex-wrap pb-2 border-b border-[#BAC5D5]/50">
+    <div className="space-y-4 text-text-primary">
+      <div className="flex items-start justify-between gap-3 flex-wrap pb-2 neu-divider-b">
         <div className="min-w-0">
-          <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-2">
+          <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-text-primary flex items-center gap-2">
             <Store className="w-4 h-4 text-accent" aria-hidden="true" />
             <span>Витрина</span>
           </h3>
-          <p className="text-xs text-[#4E5C70] font-medium mt-0.5">
+          <p className="text-xs text-text-secondary font-medium mt-0.5">
             Название, контакты, график, приём заказов, реквизиты и тексты о бренде
           </p>
         </div>
@@ -204,7 +207,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
               key={id}
               value={id}
               className={`shrink-0 whitespace-nowrap h-10 px-3.5 rounded-xl text-xs font-bold cursor-pointer lg:text-left ${
-                section === id ? 'neu-pill-active text-accent font-extrabold' : 'neu-button text-[#4E5C70]'
+                section === id ? 'neu-pill-active text-accent font-extrabold' : 'neu-button text-text-secondary'
               }`}
             >
               {label}
@@ -213,8 +216,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
         </Tabs.List>
 
         <div className="min-w-0">
-          <Tabs.Panel value="orders">
+          <Tabs.Panel value="orders" className="space-y-4">
             <StorefrontOrdersSection {...sectionProps} onShowToast={onShowToast} />
+            <StorefrontPaletteSection {...sectionProps} products={products} onShowToast={onShowToast} />
           </Tabs.Panel>
           <Tabs.Panel value="contacts">
             <StorefrontContactsSection {...sectionProps} showScheduleErrors={showScheduleErrors} />
@@ -234,9 +238,9 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
       {/* Edits made in the form are applied by one button that stays in view */}
       {(hasUnappliedChanges || isSaved || isSaving) && (
         <div className="sticky bottom-0 z-10 pt-2 pb-1">
-          <div className="neu-flat rounded-2xl px-3.5 py-2.5 flex items-center justify-between gap-3 flex-wrap border border-white/80">
+          <div className="neu-flat rounded-2xl px-3.5 py-2.5 flex items-center justify-between gap-3 flex-wrap ">
             {hasUnappliedChanges || isSaving ? (
-              <p className="text-xs font-bold text-[#2D3A4E] flex items-center gap-2">
+              <p className="text-xs font-bold text-text-primary flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-warning shrink-0" aria-hidden="true" />
                 Есть несохранённые изменения
               </p>
@@ -252,7 +256,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   type="button"
                   onClick={() => setIsCancelConfirmOpen(true)}
                   disabled={isSaving}
-                  className="h-9 px-3.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer disabled:opacity-60"
+                  className="h-9 px-3.5 neu-button rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary cursor-pointer "
                 >
                   Отменить
                 </button>
@@ -260,7 +264,7 @@ export const AdminStorefrontTab: React.FC<AdminStorefrontTabProps> = ({
                   type="button"
                   onClick={() => void handleSave()}
                   disabled={isSaving}
-                  className="h-9 px-4 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+                  className="h-9 px-4 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 cursor-pointer disabled:cursor-wait"
                 >
                   <Save className="w-4 h-4" aria-hidden="true" />
                   {isSaving ? 'Сохранение…' : 'Применить'}

@@ -59,9 +59,44 @@ export function requestThumbs(ids: string[]) {
   }
 }
 
-async function flush() {
-  const ids = [...queue];
+/**
+ * Picks the miniatures to read first (docs/performance-plan.md, stage 2): the cards visible in the viewport (or the
+ * first two cards on a phone screen when no miniatures are loaded yet), so the customer sees the first photos without
+ * waiting for all 8 miniatures of the section to finish downloading.
+ */
+function takeNextBatch(): string[] {
+  const all = [...queue];
+  if (all.length <= 2) {
+    queue.clear();
+    return all;
+  }
+  let priority: string[] = [];
+  if (typeof document !== 'undefined' && typeof window !== 'undefined') {
+    const vh = window.innerHeight || 844;
+    const onScreen = new Set<string>();
+    document.querySelectorAll<HTMLAnchorElement>('main a[href^="/product/"]').forEach((a) => {
+      const id = a.getAttribute('href')?.replace('/product/', '').split(/[?#]/)[0];
+      if (!id || !queue.has(id)) return;
+      const rect = a.getBoundingClientRect();
+      if (rect.bottom > 0 && rect.top < vh + 40) onScreen.add(id);
+    });
+    if (onScreen.size > 0 && onScreen.size < all.length) {
+      priority = all.filter((id) => onScreen.has(id)).slice(0, 4);
+    }
+  }
+  if (priority.length === 0 && thumbs.size === 0) {
+    priority = all.slice(0, 2);
+  }
+  if (priority.length > 0 && priority.length < all.length) {
+    priority.forEach((id) => queue.delete(id));
+    return priority;
+  }
   queue.clear();
+  return all;
+}
+
+async function flush() {
+  const ids = takeNextBatch();
   try {
     const loaded = await loadProductThumbs(ids);
     failures = 0;

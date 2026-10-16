@@ -36,6 +36,7 @@ test('отзыв по полученному заказу: покупатель 
     [`orders/${orderId}`]: {
       id: orderId, createdAt, date: 'Вчера', status: 'delivered', paymentStatus: 'paid',
       items: [{ id: 'l1', product: { id: item.id, title: item.title, price: item.price, category: item.category }, quantity: 1, selectedColor: 'Черный', selectedSize: 'Единый' }],
+      productIds: [item.id],
       deliveryMethod: 'Пункт выдачи', deliveryKind: 'pickup', deliveryFee: 0, totalPrice: item.price,
       paymentMethod: 'Наличными или картой', deliveryAddress: 'Москва', customerName: buyer.name, customerPhone: '+79990000007', customerUid: uid,
     },

@@ -47,9 +47,9 @@ export const OrderLineReviewButton: React.FC<OrderLineReviewButtonProps> = ({
         onPointerEnter={preload}
         onFocus={preload}
         aria-label={`${label}: ${product.title}`}
-        className="mt-1.5 neu-button px-2.5 py-1 rounded-xl text-[11px] font-bold text-accent inline-flex items-center gap-1.5 cursor-pointer"
+        className="mt-1.5 min-h-8 neu-button px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-accent inline-flex items-center gap-1.5 cursor-pointer"
       >
-        <MessageSquarePlus className="w-3.5 h-3.5" aria-hidden="true" />
+        <MessageSquarePlus className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
         {label}
       </button>
       <LazyMount when={isOpen}>

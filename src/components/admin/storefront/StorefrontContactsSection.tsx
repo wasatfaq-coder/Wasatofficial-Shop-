@@ -81,7 +81,7 @@ export const StorefrontContactsSection: React.FC<StorefrontContactsSectionProps>
       <StorefrontCard title="Объявление в шапке" icon={<Tag className="w-3.5 h-3.5 text-accent" aria-hidden="true" />}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1 min-w-0">
-            <label htmlFor="storefront-isStoreBannerVisible" className="text-xs font-bold text-[#2D3A4E] cursor-pointer select-none">
+            <label htmlFor="storefront-isStoreBannerVisible" className="text-xs font-bold text-text-primary cursor-pointer select-none">
               Показывать объявление
             </label>
             <AdminHint label="Показывать объявление">

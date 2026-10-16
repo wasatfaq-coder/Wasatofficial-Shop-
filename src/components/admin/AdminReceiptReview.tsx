@@ -15,7 +15,7 @@ import {
 /** «Чек на проверке»: a pulsing badge — the money has to be checked by hand (brief §4); still without motion when reduced */
 export const ReceiptReviewBadge: React.FC<{ className?: string }> = ({ className = '' }) => (
   <span
-    className={`inline-flex items-center gap-1.5 text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-warning-soft text-warning border border-warning/40 ${className}`}
+    className={`inline-flex items-center gap-1.5 text-[11px] font-extrabold px-2 py-0.5 rounded-full neu-tone-warning ${className}`}
   >
     <span className="relative flex w-2 h-2" aria-hidden="true">
       <span className="absolute inline-flex w-full h-full rounded-full bg-warning opacity-75 animate-ping" />
@@ -53,7 +53,7 @@ export const AdminReceiptReview: React.FC<AdminReceiptReviewProps> = ({ order, o
   };
 
   return (
-    <div className="rounded-xl bg-warning-soft border border-warning/30 p-2.5 space-y-2 text-xs text-[#2D3A4E]">
+    <div className="rounded-xl neu-tone-warning p-2.5 space-y-2 text-xs text-text-primary">
       <div className="flex items-center gap-2 flex-wrap">
         <span className="inline-flex items-center gap-0.5">
           <ReceiptReviewBadge />
@@ -62,14 +62,14 @@ export const AdminReceiptReview: React.FC<AdminReceiptReviewProps> = ({ order, o
         <span className="font-bold">
           {receipt ? PAYMENT_KIND_TITLES[receipt.method] : 'Чек'}
           {sentAt && !Number.isNaN(sentAt.getTime()) && (
-            <span className="font-medium text-[#4E5C70]">
+            <span className="font-medium text-text-secondary">
               {' '}· {sentAt.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
             </span>
           )}
         </span>
       </div>
       {products && <AdminOrderPriceWarning order={order} products={products} />}
-      <p className="text-[#4E5C70]">Сверьте поступление {(order.totalPrice ?? 0).toLocaleString('ru-RU')} ₽ и подтвердите оплату или отклоните чек.</p>
+      <p className="text-text-secondary">Сверьте поступление {(order.totalPrice ?? 0).toLocaleString('ru-RU')} ₽ и подтвердите оплату или отклоните чек.</p>
       <div className="flex items-center gap-2 flex-wrap">
         {onOpenChat && (
           <button
@@ -152,10 +152,10 @@ const RejectReceiptDialog: React.FC<{
   return (
     <ModalPortal>
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
-        <div onClick={() => !busy && onClose()} className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer" />
+        <div onClick={() => !busy && onClose()} className="fixed inset-0 bg-text-primary/50 backdrop-blur-xs cursor-pointer" />
         <div ref={dialog.ref} {...dialog.props} className="relative w-full max-w-sm max-h-[90dvh] overflow-y-auto neu-modal rounded-3xl p-5 space-y-4 z-10">
-          <div className="flex items-center justify-between gap-3 pb-2 border-b border-[#BAC5D5]/50">
-            <h3 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">
+          <div className="flex items-center justify-between gap-3 pb-2 neu-divider-b">
+            <h3 id={dialog.titleId} className="text-sm font-extrabold text-text-primary">
               Отклонить чек к заказу № {order.id}?
             </h3>
             <button
@@ -163,7 +163,7 @@ const RejectReceiptDialog: React.FC<{
               onClick={onClose}
               disabled={busy}
               aria-label="Закрыть"
-              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] cursor-pointer shrink-0"
+              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary cursor-pointer shrink-0"
             >
               <X className="w-4 h-4" aria-hidden="true" />
             </button>
@@ -182,7 +182,7 @@ const RejectReceiptDialog: React.FC<{
                     setError('');
                   }}
                   className={`w-full min-h-9 px-3 py-2 rounded-xl text-left text-xs font-bold flex items-center gap-2.5 cursor-pointer ${
-                    selected ? 'neu-pill-active text-[#2D3A4E]' : 'neu-button text-[#2D3A4E]'
+                    selected ? 'neu-pill-active text-text-primary' : 'neu-button text-text-primary'
                   }`}
                 >
                   <span className={`w-4 h-4 rounded-full shrink-0 flex items-center justify-center ${selected ? 'neu-fill-accent' : 'neu-inset'}`} aria-hidden="true">
@@ -194,7 +194,7 @@ const RejectReceiptDialog: React.FC<{
             })}
           </div>
           <div className="space-y-1">
-            <label htmlFor="reject-receipt-comment" className="text-xs font-extrabold text-[#2D3A4E]">
+            <label htmlFor="reject-receipt-comment" className="text-xs font-extrabold text-text-primary">
               Комментарий покупателю{reason === OTHER_REJECT_REASON ? '' : ' (необязательно)'}
             </label>
             <textarea
@@ -203,7 +203,7 @@ const RejectReceiptDialog: React.FC<{
               onChange={(e) => setComment(e.target.value)}
               maxLength={300}
               rows={2}
-              className="w-full neu-inset rounded-xl px-3 py-2 text-xs text-[#2D3A4E] outline-none resize-y"
+              className="w-full neu-inset rounded-xl px-3 py-2 text-xs text-text-primary resize-y"
             />
           </div>
           {error && (
@@ -211,14 +211,14 @@ const RejectReceiptDialog: React.FC<{
               {error}
             </p>
           )}
-          <p className="text-xs text-[#4E5C70]">Заказ снова будет ждать оплаты, покупатель увидит причину в заказе и в чате.</p>
+          <p className="text-xs text-text-secondary">Заказ снова будет ждать оплаты, покупатель увидит причину в заказе и в чате.</p>
           <div className="flex items-center gap-2">
             <button
               data-autofocus
               type="button"
               onClick={onClose}
               disabled={busy}
-              className="flex-1 py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-[#4E5C70] cursor-pointer"
+              className="flex-1 py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-text-secondary cursor-pointer"
             >
               Назад
             </button>

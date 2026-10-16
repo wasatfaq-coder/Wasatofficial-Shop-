@@ -24,7 +24,7 @@ export type CatalogEntry = Pick<
   'id' | 'title' | 'category' | 'categoryLabel' | 'price' | 'originalPrice' | 'badge' | 'material' | 'description' |
   'sizes' | 'colors' | 'inStock' | 'hiddenFromSale' | 'isPopular' | 'isNew' | 'fit' |
   // wholesale (format 2): the cart prices wholesale lines from them, the card will show «Опт от …»
-  'saleChannel' | 'wholesalePrice' | 'wholesalePackSize' | 'wholesaleMinPacks'
+  'saleChannel' | 'wholesalePrice' | 'wholesalePackSize' | 'wholesaleMinPacks' | 'sizePacks' | 'sizeChart'
 > & {
   skus: Pick<ProductSKU, 'id' | 'color' | 'size' | 'stock' | 'skuCode'>[];
   /** From real reviews only (getProductRating): the product's own `rating` may be a template number */
@@ -106,6 +106,8 @@ export function catalogEntry(product: Product): CatalogEntry {
   if (typeof product.wholesalePrice === 'number') entry.wholesalePrice = product.wholesalePrice;
   if (typeof product.wholesalePackSize === 'number') entry.wholesalePackSize = product.wholesalePackSize;
   if (typeof product.wholesaleMinPacks === 'number') entry.wholesaleMinPacks = product.wholesaleMinPacks;
+  if (product.sizePacks?.length) entry.sizePacks = product.sizePacks;
+  if (product.sizeChart?.rows?.length) entry.sizeChart = product.sizeChart;
   if (rating) {
     entry.reviewRating = rating.rating;
     entry.reviewCount = rating.count;

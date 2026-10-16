@@ -30,18 +30,20 @@ describe('cart storage', () => {
     expect(loadStoredCart(null)).toEqual([]);
   });
 
-  test('a line\'s own price is not read from the browser: localStorage can be edited by anyone', () => {
+  test('a line\'s own price is not read from the browser: localStorage can be edited by anyone; addedPrice stays only as a valid notice reference', () => {
     const raw = JSON.stringify([
-      { ...line('cheap'), unitPrice: 1, priceKind: 'wholesale', volumeDiscountPerUnit: 5000, packSize: 1 },
-      { ...line('pack'), unitPrice: 1, priceKind: 'pack' },
+      { ...line('cheap'), unitPrice: 1, addedPrice: 2800, priceKind: 'wholesale', volumeDiscountPerUnit: 5000, packSize: 1 },
+      { ...line('pack'), unitPrice: 1, addedPrice: -50, priceKind: 'pack' },
     ]);
     const [loaded, pack] = loadStoredCart(raw);
     expect(loaded.unitPrice).toBeUndefined();
+    expect(loaded.addedPrice).toBe(2800);
     expect(loaded.volumeDiscountPerUnit).toBeUndefined();
     expect(loaded.packSize).toBeUndefined();
     expect(loaded.product.price).toBe(2990);
     // the choice «оптом» stays: the price is counted again from the catalog (priceCartLines)
     expect(loaded.priceKind).toBe('wholesale');
     expect(pack.priceKind).toBeUndefined();
+    expect(pack.addedPrice).toBeUndefined();
   });
 });

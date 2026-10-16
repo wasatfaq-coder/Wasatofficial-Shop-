@@ -37,8 +37,8 @@ export class SectionErrorBoundary extends React.Component<Props, { error: unknow
           <div className="w-11 h-11 rounded-2xl neu-inset mx-auto flex items-center justify-center text-warning">
             <RefreshCw className="w-5 h-5" aria-hidden="true" />
           </div>
-          <h2 className="font-display text-base font-extrabold text-[#2D3A4E]">Сайт обновился</h2>
-          <p className="text-sm text-[#4E5C70]">
+          <h2 className="font-display text-base font-extrabold text-text-primary">Сайт обновился</h2>
+          <p className="text-sm text-text-secondary">
             Пока страница была открыта, вышла новая версия магазина. Обновите страницу, корзина и избранное сохранятся.
           </p>
           <button
@@ -57,8 +57,8 @@ export class SectionErrorBoundary extends React.Component<Props, { error: unknow
         <div className="w-11 h-11 rounded-2xl neu-inset mx-auto flex items-center justify-center text-warning">
           <AlertTriangle className="w-5 h-5" aria-hidden="true" />
         </div>
-        <h2 className="font-display text-base font-extrabold text-[#2D3A4E]">{this.props.title ?? 'Раздел не открылся'}</h2>
-        <p className="text-sm text-[#4E5C70]">
+        <h2 className="font-display text-base font-extrabold text-text-primary">{this.props.title ?? 'Раздел не открылся'}</h2>
+        <p className="text-sm text-text-secondary">
           Не получилось загрузить или показать раздел. Повторите, а если не помогает, обновите страницу: несохранённое в этом разделе может пропасть.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-2">

@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { LazyMount } from '../components/LazyMount';
 import { QuickViewModal } from '../components/lazyWindows';
 import { ChevronRight, SlidersHorizontal, Menu, Truck, RotateCcw, AlertCircle, Pause, Play } from 'lucide-react';
-import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { Product, ActiveTab, BannerSlide, StorefrontSettings, UserProfile, BodyMeasurements } from '../types';
+import { m, AnimatePresence, useReducedMotion } from 'motion/react';
+import { Product, ActiveTab, BannerSlide, StorefrontSettings, UserProfile, BodyMeasurements, CartItem } from '../types';
 import type { FreeDeliveryOffer } from '../shared/orderPricing';
 import { freeDeliveryMethodsText } from '../utils/freeDelivery';
 import { getStoreContacts, getStoreName } from '../utils/storeContacts';
@@ -52,7 +52,9 @@ interface HomeScreenProps {
   userProfile?: UserProfile;
   onOpenFilters?: () => void;
   onSaveMeasurements?: (measurements: BodyMeasurements) => void;
-  onAddToCartWithOptions?: (product: Product, color: string, size: string, quantity: number) => boolean | void;
+  onAddToCartWithOptions?: (product: Product, color: string, size: string, quantity: number, wholesale?: boolean | 'wholesale' | 'broken') => boolean | void;
+  onAddPackToCart?: (product: Product, packId: string, color: string, packs: number) => boolean;
+  cartItems?: CartItem[];
   /** Admin → «Витрина» → «Предзаказ» (quick view shows sold-out sizes as orderable) */
   preorderMode?: boolean;
 }
@@ -79,6 +81,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenFilters,
   onSaveMeasurements,
   onAddToCartWithOptions,
+  onAddPackToCart,
+  cartItems,
   preorderMode = false,
   searchQuery: externalSearchQuery,
   onSearchChange: externalOnSearchChange,
@@ -201,13 +205,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       <h1 data-screen-heading tabIndex={-1} className="sr-only">{getStoreName(storefrontSettings)}</h1>
       {/* 1. «Технические работы» in «Витрина»: the site takes no orders now (checkout and 1-click refuse too) */}
       {!isOnline && (
-        <div className="neu-flat rounded-2xl p-3.5 border border-warning/30 flex items-center gap-3 text-warning animate-in fade-in">
-          <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-warning shrink-0">
+        <div className="neu-tone-warning rounded-2xl p-3.5 flex items-center gap-3 animate-in fade-in">
+          <div className="w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center text-warning shrink-0">
             <AlertCircle className="w-4 h-4" />
           </div>
           <div className="text-xs space-y-0.5">
-            <span className="font-extrabold block text-[#2D3A4E]">{STORE_PAUSED_TEXT}</span>
-            <p className="text-xs text-[#4E5C70]">
+            <span className="font-extrabold block text-text-primary">{STORE_PAUSED_TEXT}</span>
+            <p className="text-xs text-text-secondary">
               Каталог открыт, корзина сохранится. Чтобы заказать сейчас, напишите в чат поддержки
               {phone ? (
                 <>
@@ -226,7 +230,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <button
             type="button"
             onClick={onOpenDrawer}
-            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent shrink-0 transition-all cursor-pointer"
+            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-text-primary hover:text-accent shrink-0 transition-all cursor-pointer"
             aria-label="Открыть меню"
             title="Меню"
           >
@@ -258,7 +262,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               setActiveTab('catalog');
             }
           }}
-          className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent shrink-0 transition-all cursor-pointer"
+          className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-text-primary hover:text-accent shrink-0 transition-all cursor-pointer"
           title="Фильтры"
           aria-label="Фильтры"
         >
@@ -279,10 +283,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         onBlur={(e) => {
           if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setIsBannerHeld(false);
         }}
-        className="relative neu-inset rounded-3xl p-5 overflow-hidden select-none group/banner border border-transparent"
+        className="relative neu-inset rounded-3xl p-5 overflow-hidden select-none group/banner"
       >
         <AnimatePresence mode="wait">
-          <motion.div
+          <m.div
             key={currentSlide.id || activeBannerSlide}
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -297,7 +301,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   {currentSlide.badge}
                 </span>
               )}
-              <h2 className={`${banner.title} font-extrabold text-[#2D3A4E] leading-tight`}>
+              <h2 className={`${banner.title} font-extrabold text-text-primary leading-tight`}>
                 {/* The title is the banner's link: its ::after stretches over the slide (like a product card) */}
                 <button
                   type="button"
@@ -307,7 +311,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   {currentSlide.title}
                 </button>
               </h2>
-              <p className={`${banner.subtitle} text-[#4E5C70] font-normal leading-relaxed line-clamp-3`}>
+              <p className={`${banner.subtitle} text-text-secondary font-normal leading-relaxed line-clamp-3`}>
                 {currentSlide.subtitle}
               </p>
             </div>
@@ -322,7 +326,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 className="w-full h-full object-cover object-top rounded-xl"
               />
             </div>
-          </motion.div>
+          </m.div>
         </AnimatePresence>
 
         {/* Carousel Pagination Dots */}
@@ -332,7 +336,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setIsBannerPaused((v) => !v)}
-                className="h-6 w-6 mr-1 flex items-center justify-center rounded-full text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                className="h-6 w-6 mr-1 flex items-center justify-center rounded-full text-text-secondary hover:text-text-primary cursor-pointer"
                 aria-label={isBannerPaused ? 'Запустить прокрутку баннеров' : 'Остановить прокрутку баннеров'}
               >
                 {isBannerPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
@@ -353,7 +357,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               >
                 <span
                   className={`block transition-all duration-300 rounded-full ${
-                    activeBannerSlide === idx ? 'w-6 h-2 bg-[#2D3A4E]' : 'w-2 h-2 neu-inset'
+                    activeBannerSlide === idx ? 'w-6 h-2 bg-text-primary' : 'w-2 h-2 neu-inset'
                   }`}
                 />
               </button>
@@ -381,11 +385,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 }}
                 className={`${index >= 4 ? 'hidden lg:flex' : 'flex'} flex-col items-center gap-2 group cursor-pointer bg-transparent border-0 p-0 select-none`}
               >
-                <span className="w-14 h-14 rounded-2xl neu-button flex items-center justify-center text-[#2D3A4E] group-hover:text-accent transition-colors duration-150">
+                <span className="w-14 h-14 rounded-2xl neu-button flex items-center justify-center text-text-primary group-hover:text-accent transition-colors duration-150">
                   <IconComp className="w-6 h-6 stroke-[1.8]" aria-hidden="true" />
                 </span>
                 {/* Up to two lines with hyphens: on 320 px one line cut «Футболка» to «Футбо…» */}
-                <span className="text-xs sm:text-[13px] font-medium text-[#2D3A4E] group-hover:text-accent text-center leading-tight hyphens-auto break-words line-clamp-2 max-w-full">
+                <span className="text-xs sm:text-[13px] font-medium text-text-primary group-hover:text-accent text-center leading-tight hyphens-auto break-words line-clamp-2 max-w-full">
                   {cat.name}
                 </span>
               </button>
@@ -398,13 +402,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       <div className={`grid gap-2.5 py-1 ${freeShippingLimit > 0 && returnPeriod > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
         {freeShippingLimit > 0 && (
         <div className="neu-inset rounded-2xl p-3 text-center space-y-1">
-          <div className="w-7 h-7 mx-auto rounded-xl neu-flat-sm flex items-center justify-center text-accent">
-            <Truck className="w-3.5 h-3.5" />
+          <div className="w-8 h-8 mx-auto rounded-xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
+            <Truck className="w-4 h-4 shrink-0" />
           </div>
-          <span className="text-[11px] font-extrabold text-[#2D3A4E] block">
+          <span className="text-[11px] font-extrabold text-text-primary block">
             {`Бесплатно от ${freeShippingLimit.toLocaleString('ru-RU')} ₽`}
           </span>
-          <span className="text-[11px] text-[#4E5C70] block line-clamp-2">
+          <span className="text-[11px] text-text-secondary block line-clamp-2">
             {freeShippingMethods ? `Доставка: ${freeShippingMethods}` : 'Условия при оформлении'}
           </span>
         </div>
@@ -412,13 +416,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
         {returnPeriod > 0 && (
         <div className="neu-inset rounded-2xl p-3 text-center space-y-1">
-          <div className="w-7 h-7 mx-auto rounded-xl neu-flat-sm flex items-center justify-center text-accent">
-            <RotateCcw className="w-3.5 h-3.5" />
+          <div className="w-8 h-8 mx-auto rounded-xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
+            <RotateCcw className="w-4 h-4 shrink-0" />
           </div>
-          <span className="text-[11px] font-extrabold text-[#2D3A4E] block">
+          <span className="text-[11px] font-extrabold text-text-primary block">
             {formatDays(returnPeriod)} на возврат
           </span>
-          <span className="text-[11px] text-[#4E5C70] block">Условия в FAQ</span>
+          <span className="text-[11px] text-text-secondary block">Условия в FAQ</span>
         </div>
         )}
       </div>
@@ -427,7 +431,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       {/* 8. Popular Section: 2-column grid as in the catalog */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-[18px] font-bold text-[#2D3A4E] tracking-tight">Популярное</h2>
+          <h2 className="text-[18px] font-bold text-text-primary tracking-tight">Популярное</h2>
           {popularProducts.length > 0 && (
             <button
               onClick={() => setActiveTab('catalog')}
@@ -488,8 +492,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           onSelectProduct(prod);
         }}
         onToggleFavorite={onToggleFavorite}
-        onAddToCartWithOptions={(prod, color, size, qty) =>
-          onAddToCartWithOptions ? onAddToCartWithOptions(prod, color, size, qty) : onAddToCart(prod, null as any)
+        onAddToCartWithOptions={(prod, color, size, qty, isWholesale) =>
+          onAddToCartWithOptions ? onAddToCartWithOptions(prod, color, size, qty, isWholesale) : onAddToCart(prod, null as any)
+        }
+        onAddPackToCart={onAddPackToCart}
+        cartItems={cartItems}
+        wholesale={
+          storefrontSettings?.brokenPackDiscount
+            ? { ...storefrontSettings.wholesale, brokenPackDiscount: storefrontSettings.brokenPackDiscount }
+            : storefrontSettings?.wholesale
         }
         preorderMode={preorderMode}
       />

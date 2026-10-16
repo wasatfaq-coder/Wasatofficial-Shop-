@@ -76,18 +76,18 @@ export const CancelOrderDialog: React.FC<CancelOrderDialogProps> = ({ order: tar
   return (
     <ModalPortal>
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
-        <div onClick={() => !busy && onClose()} className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer" />
+        <div onClick={() => !busy && onClose()} className="fixed inset-0 bg-text-primary/50 backdrop-blur-xs cursor-pointer" />
         <div
           ref={dialog.ref}
           {...dialog.props}
           className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto neu-modal rounded-3xl p-5 space-y-4 z-10"
         >
-          <div className="flex items-center justify-between gap-3 pb-2 border-b border-[#BAC5D5]/50">
+          <div className="flex items-center justify-between gap-3 pb-2 neu-divider-b">
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center shrink-0 text-danger">
                 <AlertTriangle className="w-4 h-4" aria-hidden="true" />
               </div>
-              <h3 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">
+              <h3 id={dialog.titleId} className="text-sm font-extrabold text-text-primary">
                 {isBulk
                   ? `Отменить ${list.length} ${pluralRu(list.length, ['заказ', 'заказа', 'заказов'])}?`
                   : intent === 'delete'
@@ -100,25 +100,25 @@ export const CancelOrderDialog: React.FC<CancelOrderDialogProps> = ({ order: tar
               onClick={onClose}
               disabled={busy}
               aria-label="Закрыть"
-              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer shrink-0"
+              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer shrink-0"
             >
               <X className="w-4 h-4 stroke-[2.5]" aria-hidden="true" />
             </button>
           </div>
 
-          <div className="neu-inset rounded-2xl p-2.5 text-xs text-[#2D3A4E] space-y-0.5">
+          <div className="neu-inset rounded-2xl p-2.5 text-xs text-text-primary space-y-0.5">
             <p className="font-bold">
               {itemsCount} {pluralRu(itemsCount, ['товар', 'товара', 'товаров'])} · {totalSum.toLocaleString('ru-RU')} ₽
             </p>
             {isBulk ? (
-              <p className="text-[#4E5C70] break-words">{list.map((o) => `№ ${o.id}`).join(', ')}</p>
+              <p className="text-text-secondary break-words">{list.map((o) => `№ ${o.id}`).join(', ')}</p>
             ) : (
-              audience === 'admin' && order.customerName && <p className="text-[#4E5C70]">{order.customerName}</p>
+              audience === 'admin' && order.customerName && <p className="text-text-secondary">{order.customerName}</p>
             )}
           </div>
 
           <fieldset className="space-y-2" aria-describedby={error ? errorId : undefined}>
-            <legend className="text-xs font-extrabold text-[#2D3A4E] mb-2">Причина отмены</legend>
+            <legend className="text-xs font-extrabold text-text-primary mb-2">Причина отмены</legend>
             <div role="radiogroup" aria-label="Причина отмены" aria-invalid={Boolean(error && !reason)} className="space-y-1.5">
               {reasons.map((item) => {
                 const selected = reason === item;
@@ -133,7 +133,7 @@ export const CancelOrderDialog: React.FC<CancelOrderDialogProps> = ({ order: tar
                       setError('');
                     }}
                     className={`w-full min-h-9 px-3 py-2 rounded-xl text-left text-xs font-bold flex items-center gap-2.5 cursor-pointer ${
-                      selected ? 'neu-pill-active text-[#2D3A4E]' : 'neu-button text-[#2D3A4E]'
+                      selected ? 'neu-pill-active text-text-primary' : 'neu-button text-text-primary'
                     }`}
                   >
                     <span
@@ -150,7 +150,7 @@ export const CancelOrderDialog: React.FC<CancelOrderDialogProps> = ({ order: tar
           </fieldset>
 
           <div className="space-y-1">
-            <label htmlFor="cancel-order-comment" className="text-xs font-extrabold text-[#2D3A4E]">
+            <label htmlFor="cancel-order-comment" className="text-xs font-extrabold text-text-primary">
               Комментарий{reason === OTHER_CANCEL_REASON ? '' : ' (необязательно)'}
             </label>
             <textarea
@@ -164,7 +164,7 @@ export const CancelOrderDialog: React.FC<CancelOrderDialogProps> = ({ order: tar
               rows={2}
               aria-invalid={Boolean(error && reason === OTHER_CANCEL_REASON && !comment.trim())}
               aria-describedby={error ? errorId : undefined}
-              className="w-full neu-inset rounded-xl px-3 py-2 text-xs text-[#2D3A4E] outline-none resize-y"
+              className="w-full neu-inset rounded-xl px-3 py-2 text-xs text-text-primary resize-y"
             />
           </div>
 
@@ -174,7 +174,7 @@ export const CancelOrderDialog: React.FC<CancelOrderDialogProps> = ({ order: tar
             </p>
           )}
 
-          <p className="text-xs text-[#4E5C70] leading-relaxed">
+          <p className="text-xs text-text-secondary leading-relaxed">
             {audience === 'customer'
               ? 'Товары вернутся на склад, заказ останется в истории отменённым.'
               : intent === 'delete'
@@ -194,7 +194,7 @@ export const CancelOrderDialog: React.FC<CancelOrderDialogProps> = ({ order: tar
               type="button"
               onClick={onClose}
               disabled={busy}
-              className="flex-1 py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+              className="flex-1 py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary cursor-pointer"
             >
               Не отменять
             </button>

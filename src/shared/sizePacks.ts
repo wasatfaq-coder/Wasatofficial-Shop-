@@ -52,6 +52,23 @@ export function productColorNames(product: Pick<PackOwner, 'colors'>): string[] 
 }
 
 /**
+ * Matches a pack's size entry to the product's size list: exact case-insensitive match first, then unambiguous match by
+ * the leading size token before `(` (e.g. `48` in CSV matches `48 (M)` in the product's sizes, stage 18 follow-up).
+ */
+export function matchProductSize(productSizes: string[], rawSize: string): string | undefined {
+  const exact = productSizes.find((s) => sameColor(s, rawSize));
+  if (exact) return exact;
+  const headOf = (s: string) => s.split('(')[0]?.trim() ?? '';
+  const rawHead = headOf(rawSize);
+  if (!rawHead) return undefined;
+  const byHead = productSizes.filter((s) => {
+    const h = headOf(s);
+    return Boolean(h) && sameColor(h, rawHead);
+  });
+  return byHead.length === 1 ? byHead[0] : undefined;
+}
+
+/**
  * The packs as stored and used: only sizes of the product (in its order, each once) with 1–99 items, only its colours
  * (a pack left without any of the colours it named is dropped — it would otherwise silently become «every colour»),
  * a sane price, barcodes of the pack's colours. A pack without sizes is dropped. Reads the database defensively.
@@ -69,8 +86,9 @@ export function productSizePacks(product: PackOwner | null | undefined): SizePac
     const qtyBySize = new Map<string, number>();
     for (const line of Array.isArray(pack.sizes) ? pack.sizes : []) {
       const qty = Number(line?.qty);
-      if (typeof line?.size === 'string' && Number.isInteger(qty) && qty >= 1 && qty <= SIZE_PACK_QTY_MAX && !qtyBySize.has(line.size)) {
-        qtyBySize.set(line.size, qty);
+      const canonical = typeof line?.size === 'string' ? matchProductSize(sizes, line.size) : undefined;
+      if (canonical && Number.isInteger(qty) && qty >= 1 && qty <= SIZE_PACK_QTY_MAX && !qtyBySize.has(canonical)) {
+        qtyBySize.set(canonical, qty);
       }
     }
     const lines = sizes.filter((s) => qtyBySize.has(s)).map((size) => ({ size, qty: qtyBySize.get(size)! }));
@@ -164,3 +182,109 @@ export function sizePacksAvailable(product: StockOwner, pack: Pick<SizePack, 'si
   }
   return Number.isFinite(packs) ? packs : 0;
 }
+
+export interface BrokenPackSizeSlot {
+  size: string;
+  /** Required pieces per 1 full pack */
+  packQty: number;
+  /** Total physical stock for this colour and size */
+  stock: number;
+  /** Pieces left over above whole packs (stock - wholePacks * packQty) */
+  brokenStock: number;
+  /** Whether this size can be picked in «Разбитая упаковка» mode */
+  available: boolean;
+}
+
+export interface BrokenPackState {
+  pack: SizePack;
+  color: string;
+  /** Whole packs that can be assembled from current stock */
+  wholePacks: number;
+  /** Per-size breakdown of the pack */
+  sizes: BrokenPackSizeSlot[];
+  /** Total pieces remaining in broken packs across all sizes of the pack */
+  totalBrokenPieces: number;
+}
+
+/**
+ * Stock breakdown of a size pack for one colour: how many whole packs can be assembled (`wholePacks`) and how many
+ * leftover pieces remain per size above whole packs (`brokenStock`).
+ *
+ * A pack is considered «broken» (incomplete) for a colour when:
+ * - Either `wholePacks === 0` and at least one size of the pack has `stock > 0` (some sizes are missing for a full pack,
+ *   while others are in stock), OR
+ * - `wholePacks > 0` and at least one size has `stock > wholePacks * line.qty` (after taking out whole packs, an
+ *   incomplete remainder is left).
+ */
+export function packStockSummary(
+  product: StockOwner,
+  pack: SizePack,
+  color: string
+): BrokenPackState {
+  const wholePacks = sizePacksAvailable(product, pack, color);
+  const sizes: BrokenPackSizeSlot[] = pack.sizes.map((line) => {
+    const stock = (product.skus ?? [])
+      .filter((s) => sameColor(s.color ?? '', color) && s.size === line.size)
+      .reduce((sum, s) => sum + Math.max(0, Number(s.stock) || 0), 0);
+    const brokenStock = Math.max(0, stock - wholePacks * line.qty);
+    return {
+      size: line.size,
+      packQty: line.qty,
+      stock,
+      brokenStock,
+      available: stock > 0,
+    };
+  });
+  const totalBrokenPieces = sizes.reduce((sum, s) => sum + s.brokenStock, 0);
+  return {
+    pack,
+    color,
+    wholePacks,
+    sizes,
+    totalBrokenPieces,
+  };
+}
+
+/**
+ * Stage 2 of docs/broken-pack-plan.md (stage 12 of docs/unified-plan.md):
+ * Returns the broken pack state for `(product, pack, color)` ONLY when:
+ * 1) the product is sold «В розницу и оптом» (`saleChannel === 'both'` or absent; never for `'wholesale'` or `'retail'`),
+ * 2) the colour is sold in this pack, and
+ * 3) there are leftover pieces in an incomplete pack (`totalBrokenPieces > 0`) and at least one size of the pack is missing
+ *    for another full pack.
+ * Otherwise returns `null`.
+ */
+export function brokenPackState(
+  product: StockOwner & { saleChannel?: 'both' | 'retail' | 'wholesale' },
+  pack: SizePack,
+  color: string
+): BrokenPackState | null {
+  const channel = product.saleChannel === 'retail' || product.saleChannel === 'wholesale' ? product.saleChannel : 'both';
+  if (channel !== 'both') return null;
+  const validColors = sizePackColors(product, pack);
+  if (!validColors.some((c) => sameColor(c, color))) return null;
+  const summary = packStockSummary(product, pack, color);
+  if (summary.totalBrokenPieces <= 0) return null;
+  return summary;
+}
+
+/**
+ * Finds the first broken pack state for the given colour (or across all colours of the product if `color` is omitted).
+ */
+export function findProductBrokenPack(
+  product: StockOwner & { saleChannel?: 'both' | 'retail' | 'wholesale' },
+  color?: string
+): BrokenPackState | null {
+  const channel = product.saleChannel === 'retail' || product.saleChannel === 'wholesale' ? product.saleChannel : 'both';
+  if (channel !== 'both') return null;
+  const packs = productSizePacks(product);
+  for (const pack of packs) {
+    const colors = color ? [color] : sizePackColors(product, pack);
+    for (const c of colors) {
+      const state = brokenPackState(product, pack, c);
+      if (state) return state;
+    }
+  }
+  return null;
+}
+

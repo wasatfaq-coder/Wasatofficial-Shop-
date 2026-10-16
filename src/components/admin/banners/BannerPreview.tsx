@@ -51,7 +51,7 @@ export const BannerPreview: React.FC<BannerPreviewProps> = ({ title, subtitle, b
     <section aria-labelledby="banner-preview-title" className="p-3.5 neu-inset rounded-2xl space-y-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-1">
-          <h4 id="banner-preview-title" className="text-[11px] font-extrabold text-[#2D3A4E] uppercase tracking-wider">
+          <h4 id="banner-preview-title" className="text-[11px] font-extrabold text-text-primary uppercase tracking-wider">
             Как увидит покупатель
           </h4>
           <AdminHint label="Как увидит покупатель">
@@ -67,7 +67,7 @@ export const BannerPreview: React.FC<BannerPreviewProps> = ({ title, subtitle, b
               aria-checked={device === id}
               onClick={() => setDevice(id)}
               className={`min-h-8 px-2.5 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
-                device === id ? 'neu-pill-active text-[#2D3A4E]' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
+                device === id ? 'neu-pill-active text-text-primary' : 'text-text-secondary hover:text-text-primary'
               }`}
             >
               <Icon className="w-3.5 h-3.5" aria-hidden="true" />
@@ -91,10 +91,10 @@ export const BannerPreview: React.FC<BannerPreviewProps> = ({ title, subtitle, b
                     {badge.trim()}
                   </span>
                 )}
-                <p className={`${layout.title} font-display font-extrabold text-[#2D3A4E] leading-tight`}>
+                <p className={`${layout.title} font-display font-extrabold text-text-primary leading-tight`}>
                   {title.trim() || 'Заголовок баннера'}
                 </p>
-                <p className={`${layout.subtitle} text-[#4E5C70] font-normal leading-relaxed line-clamp-3`}>{subtitle.trim()}</p>
+                <p className={`${layout.subtitle} text-text-secondary font-normal leading-relaxed line-clamp-3`}>{subtitle.trim()}</p>
               </div>
               <div className={`${layout.image} shrink-0 rounded-2xl overflow-hidden bg-[#D8DFE8]`}>
                 {image && (
@@ -105,7 +105,7 @@ export const BannerPreview: React.FC<BannerPreviewProps> = ({ title, subtitle, b
           </div>
         </div>
       </div>
-      {!image && <p className="text-xs text-[#4E5C70]">Добавьте фото — оно появится справа на слайде.</p>}
+      {!image && <p className="text-xs text-text-secondary">Добавьте фото — оно появится справа на слайде.</p>}
     </section>
   );
 };

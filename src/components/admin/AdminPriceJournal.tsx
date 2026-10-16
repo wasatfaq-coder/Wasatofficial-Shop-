@@ -37,7 +37,7 @@ export function AdminPriceJournal() {
     <section className="neu-flat rounded-3xl p-4 space-y-3" aria-labelledby="price-journal-title">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
-          <h4 id="price-journal-title" className="text-sm font-extrabold text-[#2D3A4E] flex items-center gap-2">
+          <h4 id="price-journal-title" className="text-sm font-extrabold text-text-primary flex items-center gap-2">
             <History className="w-4 h-4 text-accent" aria-hidden="true" /> Журнал цен
           </h4>
           <AdminHint label="Журнал цен">Когда, кто и с какой на какую цену поменял товар — на случай спора о цене с оптовиком</AdminHint>
@@ -47,7 +47,7 @@ export function AdminPriceJournal() {
           onClick={load}
           disabled={loading}
           className={`inline-flex items-center gap-2 px-4 h-10 rounded-2xl text-xs font-bold ${
-            loading ? 'neu-button-disabled' : 'neu-button text-[#2D3A4E] hover:text-accent cursor-pointer'
+            loading ? 'neu-button-disabled' : 'neu-button text-text-primary hover:text-accent cursor-pointer'
           }`}
         >
           {loading && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
@@ -60,26 +60,33 @@ export function AdminPriceJournal() {
           Не удалось загрузить журнал. Проверьте связь и нажмите ещё раз.
         </p>
       )}
-      {entries && entries.length === 0 && <p className="text-xs text-[#4E5C70]">Цены ещё не менялись.</p>}
+      {entries && entries.length === 0 && <p className="text-xs text-text-secondary">Цены ещё не менялись.</p>}
       {entries && entries.length > 0 && (
         <>
-          <p className="text-xs text-[#4E5C70]">
+          <p className="text-xs text-text-secondary">
             {entries.length === PRICE_CHANGES_LIMIT
               ? `Последние ${PRICE_CHANGES_LIMIT} изменений`
               : `${entries.length} ${pluralRu(entries.length, ['изменение', 'изменения', 'изменений'])}`}
           </p>
-          <ul className="divide-y divide-[#C9D2DD]" aria-label="Изменения цен">
+          <ul className="neu-divide-y" aria-label="Изменения цен">
             {entries.map((e) => (
               <li key={e.id} className="py-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-[#2D3A4E] truncate">{e.productTitle}</p>
-                  <p className="text-xs text-[#4E5C70]">
+                  <p className="text-xs font-bold text-text-primary truncate flex items-center gap-1.5">
+                    <span className="truncate">{e.productTitle}</span>
+                    {e.priceKind === 'wholesale' && (
+                      <span className="shrink-0 px-1.5 py-0.5 rounded-md neu-inset text-[11px] font-extrabold uppercase tracking-wider text-accent">
+                        Опт
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-text-secondary">
                     {formatDate(e.createdAt)} · {priceChangeSourceText(e)} · {e.operator}
                   </p>
                 </div>
                 <p className="flex items-center gap-1.5 text-xs font-bold tabular-nums">
-                  <span className="text-[#4E5C70]">{rub(e.oldPrice)}</span>
-                  <ArrowRight className="w-3.5 h-3.5 text-[#4E5C70]" aria-label="стало" />
+                  <span className="text-text-secondary">{rub(e.oldPrice)}</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-text-secondary" aria-label="стало" />
                   <span className={e.newPrice > e.oldPrice ? 'text-danger' : 'text-success'}>{rub(e.newPrice)}</span>
                 </p>
               </li>

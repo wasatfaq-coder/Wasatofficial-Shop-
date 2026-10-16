@@ -18,13 +18,13 @@ export const AdminExample: React.FC<AdminExampleProps> = ({ title, lines, note }
   if (lines.length === 0) return null;
   return (
     <div role="note" aria-label="Пример" className="rounded-2xl p-3 neu-inset space-y-1">
-      <p className="text-xs font-bold text-[#2D3A4E]">Пример: «{title}»</p>
+      <p className="text-xs font-bold text-text-primary">Пример: «{title}»</p>
       {lines.map((line, i) => (
-        <p key={i} className="text-xs text-[#4E5C70]">
+        <p key={i} className="text-xs text-text-secondary">
           {line}
         </p>
       ))}
-      {note && <p className="text-[11px] text-[#4E5C70]">{note}</p>}
+      {note && <p className="text-[11px] text-text-secondary">{note}</p>}
     </div>
   );
 };

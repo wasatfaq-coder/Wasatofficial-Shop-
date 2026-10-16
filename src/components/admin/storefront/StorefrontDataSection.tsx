@@ -21,18 +21,18 @@ export const StorefrontDataSection: React.FC<StorefrontDataSectionProps> = ({ on
 
   return (
     <div className="space-y-4">
-      <p className="text-xs font-bold text-[#2D3A4E]">Сохраняется сразу, без «Применить»</p>
+      <p className="text-xs font-bold text-text-primary">Сохраняется сразу, без «Применить»</p>
 
       <AdminBackupCard onShowToast={onShowToast} />
 
-      <section className="neu-flat p-4 sm:p-5 rounded-3xl space-y-3 border border-white/60">
+      <section className="neu-flat p-4 sm:p-5 rounded-3xl space-y-3 ">
         <div className="flex items-center gap-1">
-          <h4 className="text-sm font-extrabold text-[#2D3A4E]">Очистить контакты и тексты</h4>
+          <h4 className="text-sm font-extrabold text-text-primary">Очистить контакты и тексты</h4>
           <AdminHint label="Очистить контакты и тексты">
             Очищает контакты, реквизиты и тексты о бренде. Товары, заказы, категории и оплата остаются.
           </AdminHint>
         </div>
-        <p className="text-xs text-[#4E5C70] leading-snug">
+        <p className="text-xs text-text-secondary leading-snug">
           Покупатели увидят «Не настроено», пока вы не заполните эти поля снова. Название магазина, объявление в
           шапке, график, категории, способы оплаты, FAQ, этикетки, режимы и пороги останутся как есть.
         </p>
@@ -40,7 +40,7 @@ export const StorefrontDataSection: React.FC<StorefrontDataSectionProps> = ({ on
           type="button"
           onClick={() => setIsConfirmOpen(true)}
           disabled={busy}
-          className="py-2 px-3.5 neu-button-danger rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+          className="py-2 px-3.5 neu-button-danger rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:cursor-wait"
         >
           <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
           Очистить контакты и тексты

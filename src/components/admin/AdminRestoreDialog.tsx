@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Loader2, RotateCcw, X } from 'lucide-react';
-import { Timestamp } from 'firebase/firestore';
+import { Bytes, Timestamp } from 'firebase/firestore';
 import firebaseConfig from '../../../firebase-applet-config.json';
 import { ModalPortal } from '../ModalPortal';
 import { ConfirmDialog } from '../ConfirmDialog';
@@ -21,6 +21,7 @@ import {
 
 const docsWord = (n: number) => pluralRu(n, ['документ', 'документа', 'документов']);
 const toTimestamp = (iso: string) => Timestamp.fromDate(new Date(iso));
+const toBytes = (b64: string) => Bytes.fromBase64String(b64);
 
 const MODES: { value: RestoreMode; title: string; hint: string; help: string }[] = [
   {
@@ -83,7 +84,7 @@ export const AdminRestoreDialog: React.FC<AdminRestoreDialogProps> = ({ backup, 
     setBusy('checking');
     try {
       const existing = mode === 'missing' ? await readExistingIds([...chosen, ...(chosen.includes('products') ? ['product_costs'] : [])]) : {};
-      const writes = planRestore(backup, chosen, mode, existing, toTimestamp);
+      const writes = planRestore(backup, chosen, mode, existing, toTimestamp, toBytes);
       if (writes.length === 0) {
         onShowToast('Всё выбранное из копии уже есть в базе — записывать нечего', 'info');
         return;
@@ -129,14 +130,14 @@ export const AdminRestoreDialog: React.FC<AdminRestoreDialogProps> = ({ backup, 
   return (
     <ModalPortal>
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
-        <div onClick={() => !busy && onClose()} className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer" />
+        <div onClick={() => !busy && onClose()} className="fixed inset-0 bg-text-primary/50 backdrop-blur-xs cursor-pointer" />
         <div
           ref={dialog.ref}
           {...dialog.props}
           className="relative w-full max-w-lg max-h-[90dvh] overflow-y-auto neu-modal rounded-3xl p-5 space-y-4 z-10"
         >
-          <div className="flex items-center justify-between gap-3 pb-2 border-b border-[#BAC5D5]/50">
-            <h3 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">
+          <div className="flex items-center justify-between gap-3 pb-2 neu-divider-b">
+            <h3 id={dialog.titleId} className="text-sm font-extrabold text-text-primary">
               Восстановление из копии
             </h3>
             <button
@@ -144,13 +145,13 @@ export const AdminRestoreDialog: React.FC<AdminRestoreDialogProps> = ({ backup, 
               onClick={onClose}
               disabled={Boolean(busy)}
               aria-label="Закрыть"
-              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] cursor-pointer shrink-0"
+              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary cursor-pointer shrink-0"
             >
               <X className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
 
-          <p className="text-xs text-[#4E5C70] break-words">
+          <p className="text-xs text-text-secondary break-words">
             Файл {fileName}
             {createdAt && !Number.isNaN(createdAt.getTime()) && (
               <>, копия от {createdAt.toLocaleString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</>
@@ -158,7 +159,7 @@ export const AdminRestoreDialog: React.FC<AdminRestoreDialogProps> = ({ backup, 
             . Восстановление ничего не удаляет: документы, которых нет в копии, остаются.
           </p>
           {otherDatabase && (
-            <p role="note" className="rounded-xl bg-warning-soft border border-warning/30 p-2.5 text-xs text-[#2D3A4E] flex gap-2">
+            <p role="note" className="rounded-xl neu-tone-warning p-2.5 text-xs text-text-primary flex gap-2">
               <AlertTriangle className="w-4 h-4 text-warning shrink-0" aria-hidden="true" />
               Копия сделана из другой базы ({backup.databaseId}). Проверьте, что выбрали нужный файл.
             </p>
@@ -167,6 +168,7 @@ export const AdminRestoreDialog: React.FC<AdminRestoreDialogProps> = ({ backup, 
           <div role="radiogroup" aria-label="Как восстановить" className="space-y-1.5">
             {MODES.map((item) => {
               const selected = mode === item.value;
+              const isDestructive = item.value === 'overwrite';
               return (
                 <div key={item.value} className="flex items-start gap-1">
                 <button
@@ -176,18 +178,31 @@ export const AdminRestoreDialog: React.FC<AdminRestoreDialogProps> = ({ backup, 
                   onClick={() => setMode(item.value)}
                   disabled={Boolean(busy)}
                   className={`flex-1 min-w-0 px-3 py-2 rounded-xl text-left flex items-start gap-2.5 cursor-pointer ${
-                    selected ? 'neu-pill-active' : 'neu-button'
+                    selected
+                      ? isDestructive
+                        ? 'neu-tone-warning'
+                        : 'neu-pill-active'
+                      : 'neu-button'
                   }`}
                 >
                   <span
-                    className={`mt-0.5 w-4 h-4 rounded-full shrink-0 flex items-center justify-center ${selected ? 'neu-fill-accent' : 'neu-inset'}`}
+                    className={`mt-0.5 w-4 h-4 rounded-full shrink-0 flex items-center justify-center ${
+                      selected ? (isDestructive ? 'bg-warning text-white' : 'neu-fill-accent') : 'neu-inset'
+                    }`}
                     aria-hidden="true"
                   >
                     {selected && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-xs font-extrabold text-[#2D3A4E]">{item.title}</span>
-                    <span className="block text-xs text-[#4E5C70]">{item.hint}</span>
+                    <span className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-extrabold text-text-primary">{item.title}</span>
+                      {isDestructive && (
+                        <span className="px-1.5 py-0.5 rounded-md neu-tone-warning text-[11px] font-bold">
+                          Перезапишет текущие
+                        </span>
+                      )}
+                    </span>
+                    <span className="block text-xs text-text-secondary">{item.hint}</span>
                   </span>
                 </button>
                 <AdminHint label={item.title} className="mt-1.5">{item.help}</AdminHint>
@@ -197,7 +212,7 @@ export const AdminRestoreDialog: React.FC<AdminRestoreDialogProps> = ({ backup, 
           </div>
 
           <fieldset className="space-y-1.5">
-            <legend className="text-xs font-extrabold text-[#2D3A4E] mb-1.5">Что восстановить</legend>
+            <legend className="text-xs font-extrabold text-text-primary mb-1.5">Что восстановить</legend>
             {collections.map((name) => {
               const count = backup.collections[name]?.length ?? 0;
               const skipped = RESTORE_SKIPPED[name];
@@ -210,12 +225,12 @@ export const AdminRestoreDialog: React.FC<AdminRestoreDialogProps> = ({ backup, 
                     <SelectCheckbox checked={checked} onToggle={() => !busy && toggle(name)} label={BACKUP_COLLECTION_TITLES[name]} />
                   )}
                   <span className="min-w-0 flex-1">
-                    <span className={`block text-xs font-bold ${skipped ? 'text-[#4E5C70]' : 'text-[#2D3A4E]'}`}>
+                    <span className={`block text-xs font-bold ${skipped ? 'text-text-secondary' : 'text-text-primary'}`}>
                       {BACKUP_COLLECTION_TITLES[name]}
                     </span>
-                    {skipped && <span className="block text-[11px] text-[#4E5C70]">Не восстанавливается: {skipped}</span>}
+                    {skipped && <span className="block text-[11px] text-text-secondary">Не восстанавливается: {skipped}</span>}
                   </span>
-                  <span className="text-[11px] font-bold text-[#4E5C70] shrink-0">
+                  <span className="text-[11px] font-bold text-text-secondary shrink-0">
                     {count} {docsWord(count)}
                   </span>
                 </div>
@@ -223,7 +238,7 @@ export const AdminRestoreDialog: React.FC<AdminRestoreDialogProps> = ({ backup, 
             })}
           </fieldset>
 
-          <p className="text-xs text-[#4E5C70]">
+          <p className="text-xs text-text-secondary">
             Выбрано документов в копии: {chosenDocs}. В режиме «Только недостающие» запишутся лишь те, которых нет в базе.
           </p>
 
@@ -239,7 +254,7 @@ export const AdminRestoreDialog: React.FC<AdminRestoreDialogProps> = ({ backup, 
               type="button"
               onClick={onClose}
               disabled={Boolean(busy)}
-              className="h-10 px-4 neu-button rounded-2xl text-xs font-bold text-[#4E5C70] cursor-pointer"
+              className="h-10 px-4 neu-button rounded-2xl text-xs font-bold text-text-secondary cursor-pointer"
             >
               Отмена
             </button>
@@ -248,7 +263,7 @@ export const AdminRestoreDialog: React.FC<AdminRestoreDialogProps> = ({ backup, 
               onClick={prepare}
               disabled={Boolean(busy) || chosen.length === 0}
               className={`h-10 px-4 rounded-2xl text-xs font-extrabold flex items-center justify-center gap-2 cursor-pointer ${
-                busy || chosen.length === 0 ? 'neu-button-disabled text-[#4E5C70]' : 'neu-button-accent'
+                busy || chosen.length === 0 ? 'neu-button-disabled text-text-secondary' : 'neu-button-accent'
               }`}
             >
               {busy === 'checking' ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <RotateCcw className="w-4 h-4" aria-hidden="true" />}

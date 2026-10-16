@@ -40,6 +40,8 @@ describe('database errors (findings 15, 18, 21)', () => {
     );
     const offline = firestoreOperationError(firebaseError('unavailable', 'Failed to get document because the client is offline.'), 'write', 'users/u1');
     expect(buildReport('console', errorText(offline), context)).toBeNull();
+    const leaseNoise = errorText("@firebase/firestore: Firestore (12.19.0): Failed to obtain primary lease for action 'Release target'.");
+    expect(buildReport('console', leaseNoise, context)).toBeNull();
   });
 });
 

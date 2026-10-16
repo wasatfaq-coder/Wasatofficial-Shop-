@@ -5,27 +5,35 @@ import { saveOrdersIndex, subscribeToOrdersIndex, type StoredOrders } from '../u
 /** A status change writes the order and its stock in a few snapshots in a row: the index is written once they settle */
 const SETTLE_MS = 2_000;
 
+export interface OrdersIndexMeta {
+  parts: number;
+  hash: string;
+}
+
 /**
- * The admin's session keeps the orders index (docs/orders-scale-plan.md, stage 4) in step with the orders: after an
+ * The admin's session keeps the orders index (docs/orders-scale-plan.md, stages 4–5) in step with the orders: after an
  * order is placed, changed or deleted, by the owner or by a customer. No index yet, another format or a restore — it is
  * built from all orders. Without Cloud Functions nobody else can write it; the admin reads it from stage 5. Nothing is
  * written while the stored index already matches or a write of this browser is not confirmed yet.
  *
- * `stored` — the admin's orders as stored (subscribeToOrders), null until they come.
+ * `stored` — the admin's merged orders as stored, null until they come.
+ * `sharedIndex` — when `useAccountData` already subscribes to `orders_index`, its `{ parts, hash }` is reused so the
+ * index is not subscribed twice.
  */
-export function useOrdersIndexSync(stored: StoredOrders | null) {
-  const [index, setIndex] = React.useState<{ parts: number; hash: string } | null>(null);
+export function useOrdersIndexSync(stored: StoredOrders | null, sharedIndex?: OrdersIndexMeta | null) {
+  const [ownIndex, setOwnIndex] = React.useState<OrdersIndexMeta | null>(null);
   const running = React.useRef(false);
-  const enabled = stored !== null;
+  const enabled = stored !== null && sharedIndex === undefined;
+  const index = sharedIndex !== undefined ? sharedIndex : ownIndex;
 
   React.useEffect(() => {
     if (!enabled) return;
     const unsub = subscribeToOrdersIndex((parts: OrdersIndexPart[]) =>
-      setIndex({ parts: parts.length, hash: isWholeOrdersIndex(parts) ? parts[0].hash : '' })
+      setOwnIndex({ parts: parts.length, hash: isWholeOrdersIndex(parts) ? parts[0].hash : '' })
     );
     return () => {
       unsub();
-      setIndex(null);
+      setOwnIndex(null);
     };
   }, [enabled]);
 

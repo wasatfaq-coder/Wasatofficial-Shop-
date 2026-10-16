@@ -14,8 +14,8 @@ const CHANNELS: { id: SalesChannel; title: string }[] = [
 
 const Row: React.FC<{ label: string; value: string; strong?: boolean; tone?: string }> = ({ label, value, strong, tone }) => (
   <div className="flex items-baseline justify-between gap-2">
-    <dt className="text-[11px] text-[#4E5C70]">{label}</dt>
-    <dd className={`tabular-nums text-right ${strong ? 'text-sm font-extrabold' : 'text-xs font-bold'} ${tone ?? 'text-[#2D3A4E]'}`}>{value}</dd>
+    <dt className="text-[11px] text-text-secondary">{label}</dt>
+    <dd className={`tabular-nums text-right ${strong ? 'text-sm font-extrabold' : 'text-xs font-bold'} ${tone ?? 'text-text-primary'}`}>{value}</dd>
   </div>
 );
 
@@ -45,13 +45,13 @@ export const AdminAnalyticsProfitCard: React.FC<{ byChannel: Record<SalesChannel
           return (
             <div key={c.id} role="group" aria-label={c.title} className="neu-inset rounded-2xl p-3 space-y-2">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="text-xs font-extrabold text-[#2D3A4E]">{c.title}</span>
-                <span className="text-[11px] text-[#4E5C70]">
+                <span className="text-xs font-extrabold text-text-primary">{c.title}</span>
+                <span className="text-[11px] text-text-secondary">
                   {p.orders} {pluralRu(p.orders, ['оплаченный заказ', 'оплаченных заказа', 'оплаченных заказов'])}
                 </span>
               </div>
               {p.orders === 0 ? (
-                <p className="text-xs text-[#4E5C70]">
+                <p className="text-xs text-text-secondary">
                   {c.id === 'wholesale'
                     ? 'Оптовых продаж за период нет. Заказ считается оптовым, если в нём есть строка по оптовой цене'
                     : 'Продаж за период нет'}
@@ -60,7 +60,7 @@ export const AdminAnalyticsProfitCard: React.FC<{ byChannel: Record<SalesChannel
                 <dl className="space-y-1.5">
                   <Row label="Выручка от товаров" value={rub(p.revenue)} />
                   <Row label="Себестоимость закупки" value={`${approx}${rub(p.cogs)}`} />
-                  <div className="border-t border-[#BAC5D5]/50 pt-1.5 space-y-1">
+                  <div className="neu-divider-t pt-1.5 space-y-1">
                     <Row
                       label="Чистый доход"
                       value={`${approx}${rub(p.netProfit)}`}
@@ -76,7 +76,7 @@ export const AdminAnalyticsProfitCard: React.FC<{ byChannel: Record<SalesChannel
         })}
       </div>
       {(estimatedOrders > 0 || missingLines > 0) && (
-        <div className="text-[11px] text-[#4E5C70] space-y-1">
+        <div className="text-[11px] text-text-secondary space-y-1">
           {estimatedOrders > 0 && (
             <p>
               ≈ — оценка: у {estimatedOrders} {pluralRu(estimatedOrders, ['заказа', 'заказов', 'заказов'])} себестоимость

@@ -25,6 +25,8 @@ interface AdminSupportInboxProps {
   categories: StoreCategory[];
   /** Opened from an order in «Заказы»: select that customer's dialog */
   initialOrderId?: string | null;
+  /** Opened from a customer card in «Клиенты»: select that customer's dialog */
+  initialThreadUid?: string | null;
   onSend: (thread: { threadId: string; threadName: string }, payload: AdminChatPayload) => void;
   onUpdateOrders?: (orders: Order[]) => Promise<boolean> | void;
   /** «Подтвердить оплату» / «Отклонить чек» on a receipt photo («Доработки 5») */
@@ -54,6 +56,7 @@ export const AdminSupportInbox: React.FC<AdminSupportInboxProps> = ({
   promos,
   categories,
   initialOrderId,
+  initialThreadUid,
   onSend,
   onUpdateOrders,
   onReviewReceipt,
@@ -88,11 +91,29 @@ export const AdminSupportInbox: React.FC<AdminSupportInboxProps> = ({
     if (filter === 'open' && statusOf(t) !== 'open') return false;
     if (filter === 'resolved' && statusOf(t) === 'open') return false;
     const q = search.trim().toLowerCase();
-    return !q || t.name.toLowerCase().includes(q) || t.lastText.toLowerCase().includes(q);
+    if (!q) return true;
+    const qDigits = q.replace(/\D/g, '');
+    const threadOrders = t.threadId ? orders.filter((o) => o.customerUid === t.threadId) : [];
+    const threadMsgs = messages.filter((m) => (m.threadId || LEGACY_THREAD_KEY) === t.key);
+    return (
+      t.name.toLowerCase().includes(q) ||
+      t.lastText.toLowerCase().includes(q) ||
+      threadOrders.some(
+        (o) =>
+          o.id.toLowerCase().includes(q) ||
+          o.customerPhone?.toLowerCase().includes(q) ||
+          (qDigits.length >= 3 && o.customerPhone?.replace(/\D/g, '').includes(qDigits))
+      ) ||
+      threadMsgs.some((m) => !m.hiddenForStaff && m.text?.toLowerCase().includes(q))
+    );
   });
 
-  // Keep a dialog selected; opened from an order → that customer's dialog
+  // Keep a dialog selected; opened from an order or customer card → that customer's dialog
   useEffect(() => {
+    if (initialThreadUid && threads.some((t) => t.threadId === initialThreadUid)) {
+      setActiveKey(initialThreadUid);
+      return;
+    }
     if (initialOrderId) {
       const uid = orders.find((o) => o.id === initialOrderId)?.customerUid;
       if (uid && threads.some((t) => t.threadId === uid)) {
@@ -101,7 +122,7 @@ export const AdminSupportInbox: React.FC<AdminSupportInboxProps> = ({
       }
     }
     if (threads.length > 0 && !threads.some((t) => t.key === activeKey)) setActiveKey(threads[0].key);
-  }, [threads, initialOrderId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [threads, initialOrderId, initialThreadUid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const activeThread = threads.find((t) => t.key === activeKey) ?? null;
   const activeMessages = activeThread
@@ -117,27 +138,27 @@ export const AdminSupportInbox: React.FC<AdminSupportInboxProps> = ({
             <MessagesSquare className="w-4.5 h-4.5" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-sm font-extrabold text-[#2D3A4E] leading-tight">Диалоги покупателей · {threads.length}</h3>
-            <p className="text-xs text-[#4E5C70] leading-snug">
-              Сообщения из «Службы заботы». Ответ сразу появится у покупателя
+            <h3 className="text-sm font-extrabold text-text-primary leading-tight">Диалоги покупателей · {threads.length}</h3>
+            <p className="text-xs text-text-secondary leading-snug">
+              Сообщения из чата поддержки. Ответ сразу появится у покупателя
             </p>
           </div>
         </div>
 
         {threads.length === 0 ? (
-          <p className="neu-inset rounded-2xl p-4 text-xs text-[#4E5C70] text-center">
-            Покупатели еще не писали в «Службу заботы»
+          <p className="neu-inset rounded-2xl p-4 text-xs text-text-secondary text-center">
+            Покупатели еще не писали в чат поддержки
           </p>
         ) : (
           <>
             <label className="relative block">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#4E5C70]" />
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Поиск по имени или тексту"
+                placeholder="Имя, телефон, № заказа или текст"
                 aria-label="Поиск диалога"
-                className="w-full h-10 pl-8 pr-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
+                className="w-full h-10 pl-8 pr-3 neu-inset rounded-xl text-xs text-text-primary placeholder:text-text-muted"
               />
             </label>
 
@@ -150,7 +171,7 @@ export const AdminSupportInbox: React.FC<AdminSupportInboxProps> = ({
                   aria-checked={filter === f.id}
                   onClick={() => setFilter(f.id)}
                   className={`h-8 px-3 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
-                    filter === f.id ? 'neu-pill-active' : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
+                    filter === f.id ? 'neu-pill-active' : 'neu-button text-text-secondary hover:text-text-primary'
                   }`}
                 >
                   {f.label} · {counts[f.id]}
@@ -160,7 +181,7 @@ export const AdminSupportInbox: React.FC<AdminSupportInboxProps> = ({
 
             <div className="space-y-2 max-h-72 overflow-y-auto p-1 -m-1">
               {visibleThreads.length === 0 && (
-                <p className="text-xs text-[#4E5C70] text-center py-3">Нет диалогов по этому фильтру</p>
+                <p className="text-xs text-text-secondary text-center py-3">Нет диалогов по этому фильтру</p>
               )}
               {visibleThreads.map((t) => {
                 const selected = t.key === activeKey;
@@ -173,30 +194,30 @@ export const AdminSupportInbox: React.FC<AdminSupportInboxProps> = ({
                     onClick={() => setActiveKey(t.key)}
                     aria-pressed={selected}
                     className={`w-full text-left rounded-2xl px-3 py-2.5 transition-all cursor-pointer space-y-1 ${
-                      selected ? 'neu-pill-active' : 'neu-button text-[#2D3A4E]'
+                      selected ? 'neu-pill-active' : 'neu-button text-text-primary'
                     }`}
                   >
                     <span className="flex items-center gap-2 min-w-0">
                       <span className="text-xs font-extrabold truncate flex-1 min-w-0">{t.name}</span>
                       {t.threadId && receiptThreads.has(t.threadId) && <ReceiptReviewBadge className="shrink-0" />}
                       {meta && meta.priority !== 'normal' && (
-                        <span className="text-[11px] font-extrabold px-1.5 py-0.5 rounded-md bg-danger-soft text-danger shrink-0">
+                        <span className="text-[11px] font-extrabold px-1.5 py-0.5 rounded-md neu-tone-danger shrink-0">
                           {PRIORITY_LABELS[meta.priority]}
                         </span>
                       )}
                       {t.awaitingReply ? (
-                        <span className="text-[11px] font-extrabold px-1.5 py-0.5 rounded-md bg-warning-soft text-warning shrink-0">
+                        <span className="text-[11px] font-extrabold px-1.5 py-0.5 rounded-md neu-tone-warning shrink-0">
                           Ждет ответа
                         </span>
                       ) : (
                         status !== 'open' && (
-                          <span className="text-[11px] font-extrabold px-1.5 py-0.5 rounded-md bg-success-soft text-success shrink-0">
+                          <span className="text-[11px] font-extrabold px-1.5 py-0.5 rounded-md neu-tone-success shrink-0">
                             {STATUS_LABELS[status]}
                           </span>
                         )
                       )}
                     </span>
-                    <span className="flex items-center gap-2 text-[11px] text-[#4E5C70]">
+                    <span className="flex items-center gap-2 text-[11px] text-text-secondary">
                       <span className="truncate flex-1 min-w-0">{t.lastText}</span>
                       <span className="shrink-0">{t.lastTime}</span>
                     </span>

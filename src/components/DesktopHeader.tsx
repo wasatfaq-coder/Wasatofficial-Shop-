@@ -48,12 +48,12 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
     activeTab === tab || (tab === 'cart' && activeTab === 'checkout') || (tab === 'catalog' && activeTab === 'product-detail');
 
   return (
-    <header className="hidden lg:block sticky top-0 z-30 bg-[#E3E8EF] border-b border-[#BAC5D5]/50">
+    <header className="hidden lg:block sticky top-0 z-30 bg-[#E3E8EF] neu-divider-b">
       <div className="px-6 py-3 flex items-center gap-5">
         <button
           type="button"
           onClick={onOpenDrawer}
-          className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent shrink-0 cursor-pointer"
+          className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-text-primary hover:text-accent shrink-0 cursor-pointer"
           aria-label="Открыть меню"
           title="Меню"
         >
@@ -65,7 +65,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
             e.preventDefault();
             setActiveTab('home');
           }}
-          className="font-display text-xl font-extrabold text-[#2D3A4E] tracking-tight whitespace-nowrap hover:text-accent shrink-0"
+          className="font-display text-xl font-extrabold text-text-primary tracking-tight whitespace-nowrap hover:text-accent shrink-0"
           aria-current={activeTab === 'home' ? 'page' : undefined}
         >
           {storeName}
@@ -99,7 +99,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
                 onClick={() => setActiveTab(tab)}
                 aria-current={isCurrent ? 'page' : undefined}
                 className={`h-10 px-3.5 rounded-xl flex items-center gap-2 text-sm cursor-pointer select-none ${
-                  isCurrent ? 'neu-pill-active text-accent font-bold' : 'neu-button text-[#2D3A4E] hover:text-accent font-semibold'
+                  isCurrent ? 'neu-pill-active text-accent font-bold' : 'neu-button text-text-primary hover:text-accent font-semibold'
                 }`}
               >
                 <Icon className="w-4 h-4 shrink-0" />

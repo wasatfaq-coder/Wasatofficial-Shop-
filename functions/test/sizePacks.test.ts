@@ -2,6 +2,9 @@
 // штрихкод на цвет упаковки (уникален вместе со штрихкодами вариантов) и столбец CSV «Ростовки»
 import { describe, expect, test } from 'bun:test';
 import {
+  brokenPackState,
+  findProductBrokenPack,
+  packStockSummary,
   productSizePacks,
   sizePackColors,
   sizePackLabelLine,
@@ -179,4 +182,60 @@ describe('CSV «Ростовки»', () => {
     expect(merged).toEqual([{ id: expect.stringMatching(/^pack-/), sizes: [{ size: '50', qty: 1 }] }]);
     expect(merged[0].id).not.toBe('pack-1');
   });
+
+  test('short size tokens like «48:1; 50:2» match product sizes «48 (M); 50 (L)», and packs with unknown sizes or colours increment badPacks', async () => {
+    const { parseProductsFromCSV } = await import('../../src/utils/csvHelpers');
+    const header =
+      'ID,Название,Категория,Цена,Старая цена,В наличии,Остаток,Размеры,Цвета,Картинка,Описание,Валюта закупки,Закупка,Своя наценка (%),Поставщик,Артикул поставщика,Вес,Габариты,Ростовки';
+    const okCsv = `${header}\np1,Футболка,tshirts,1500,,Да,10,"48 (M); 50 (L); 52 (XL)",Синий,https://x/1.jpg,,,,,,,,,"(Синий) 48:1; 50:2 = 4500"`;
+    const okRes = parseProductsFromCSV(okCsv);
+    expect(okRes.badPacks).toBe(0);
+    expect(okRes.products[0].sizePacks?.[0]?.sizes).toEqual([
+      { size: '48 (M)', qty: 1 },
+      { size: '50 (L)', qty: 2 },
+    ]);
+
+    const badSizeCsv = `${header}\np1,Футболка,tshirts,1500,,Да,10,"48 (M); 50 (L)",Синий,https://x/1.jpg,,,,,,,,,"60:1; 62:2"`;
+    const badSizeRes = parseProductsFromCSV(badSizeCsv);
+    expect(badSizeRes.badPacks).toBe(1);
+    expect(badSizeRes.products[0].sizePacks).toBeUndefined();
+
+    const badColorCsv = `${header}\np1,Футболка,tshirts,1500,,Да,10,"48 (M); 50 (L)",Синий,https://x/1.jpg,,,,,,,,,"(Зелёный) 48:1; 50:2"`;
+    const badColorRes = parseProductsFromCSV(badColorCsv);
+    expect(badColorRes.badPacks).toBe(1);
+    expect(badColorRes.products[0].sizePacks).toBeUndefined();
+  });
 });
+
+describe('brokenPackState and packStockSummary (docs/broken-pack-plan.md, stages 2–3)', () => {
+  const pack = { id: 'a', sizes: [{ size: '48', qty: 1 }, { size: '50', qty: 2 }, { size: '52', qty: 1 }] };
+
+  test('counts whole packs and leftover broken pieces per size', () => {
+    const p = product({ sizePacks: [pack] });
+    // Синий: 48=5, 50=9, 52=2 -> 2 whole packs (uses 48×2, 50×4, 52×2); leftover: 48×3, 50×5, 52×0 (8 pieces)
+    const blue = packStockSummary(p, pack, 'Синий');
+    expect(blue.wholePacks).toBe(2);
+    expect(blue.totalBrokenPieces).toBe(8);
+    expect(blue.sizes.map((s) => ({ size: s.size, brokenStock: s.brokenStock, available: s.available }))).toEqual([
+      { size: '48', brokenStock: 3, available: true },
+      { size: '50', brokenStock: 5, available: true },
+      { size: '52', brokenStock: 0, available: true },
+    ]);
+
+    // Чёрный: 48=1, 50=0, 52=0 -> 0 whole packs, 1 broken piece (48×1)
+    const black = packStockSummary(p, pack, 'Чёрный');
+    expect(black.wholePacks).toBe(0);
+    expect(black.totalBrokenPieces).toBe(1);
+  });
+
+  test('brokenPackState is returned ONLY for saleChannel === both (or absent) and when leftover pieces exist', () => {
+    const p = product({ sizePacks: [pack] });
+    expect(brokenPackState(p, pack, 'Синий')?.totalBrokenPieces).toBe(8);
+    expect(brokenPackState({ ...p, saleChannel: 'both' }, pack, 'Чёрный')?.totalBrokenPieces).toBe(1);
+    expect(brokenPackState({ ...p, saleChannel: 'wholesale' }, pack, 'Синий')).toBeNull();
+    expect(brokenPackState({ ...p, saleChannel: 'retail' }, pack, 'Синий')).toBeNull();
+    expect(findProductBrokenPack({ ...p, saleChannel: 'wholesale' })).toBeNull();
+    expect(findProductBrokenPack({ ...p, saleChannel: 'both' })?.totalBrokenPieces).toBe(8);
+  });
+});
+
