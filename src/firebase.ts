@@ -22,8 +22,6 @@ import {
   getFirestore,
   doc,
   getDocFromServer,
-  persistentLocalCache,
-  persistentMultipleTabManager,
 } from 'firebase/firestore';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import firebaseConfig from '../firebase-applet-config.json';
@@ -73,28 +71,17 @@ export const DEFAULT_FIRESTORE_DATABASE_ID = '(default)';
 export const FIRESTORE_DATABASE_ID =
   (import.meta.env.VITE_FIRESTORE_DATABASE_ID as string | undefined)?.trim() || NAMED_FIRESTORE_DATABASE_ID;
 
-const IS_IN_IFRAME = typeof window !== 'undefined' && window.self !== window.top;
-const DEFAULT_PERSISTENT_CACHE =
-  (import.meta.env.PROD && !USE_EMULATORS && !IS_IN_IFRAME) || import.meta.env.VITE_FIRESTORE_CACHE === 'true';
 
 // CRITICAL: Must specify firestoreDatabaseId from configuration
 // Using initializeFirestore with auto-detect long polling prevents 10s backend stream timeout warnings in sandboxes.
-// Stage 6 of docs/performance-plan.md: persistent IndexedDB cache in production (and when VITE_FIRESTORE_CACHE=true);
-// memory cache in emulators, dev server and sandboxed iframes so StrictMode double-mounts and cross-frame IndexedDB
-// contention do not trigger primary lease errors.
-function createFirestore(
-  firebaseApp: FirebaseApp,
-  withPersistentCache = DEFAULT_PERSISTENT_CACHE,
-  databaseId = FIRESTORE_DATABASE_ID
-): Firestore {
+// No persistent IndexedDB cache (owner's decision 16.10): +21 KB on the first load, and orders, chats and costs would
+// stay in the browser after «Выйти» (stage 6 of docs/performance-plan.md waits for 100+ products)
+function createFirestore(firebaseApp: FirebaseApp, databaseId = FIRESTORE_DATABASE_ID): Firestore {
   try {
     return initializeFirestore(
       firebaseApp,
       {
         experimentalAutoDetectLongPolling: true,
-        ...(withPersistentCache
-          ? { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }
-          : {}),
       },
       databaseId
     );
@@ -109,7 +96,7 @@ export function getFirestoreById(databaseId: string): Firestore {
   const normalized = databaseId.trim() || DEFAULT_FIRESTORE_DATABASE_ID;
   const existing = firestoreInstances.get(normalized);
   if (existing) return existing;
-  const instance = createFirestore(app, normalized === FIRESTORE_DATABASE_ID && DEFAULT_PERSISTENT_CACHE, normalized);
+  const instance = createFirestore(app, normalized);
   if (USE_EMULATORS) {
     try {
       connectFirestoreEmulator(instance, '127.0.0.1', 8080);
@@ -180,7 +167,7 @@ function getGuestChat() {
     const guestApp = initializeApp(firebaseConfig, 'guest-chat');
     protectWithAppCheck(guestApp);
     const guestAuth = createAuth(guestApp);
-    const guestDb = createFirestore(guestApp, false);
+    const guestDb = createFirestore(guestApp);
     guestChat = { auth: guestAuth, db: guestDb };
     connectEmulators(guestDb, guestAuth);
   }

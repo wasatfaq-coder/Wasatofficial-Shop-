@@ -42,7 +42,7 @@ import { orderStatusChip } from '../../utils/orderStatusStyle';
 import { isRevenueOrder, orderRevenue } from '../../utils/analyticsEngine';
 import { formatAddress } from '../../utils/addressFormat';
 import { googleAvatarUrl } from '../../utils/googleAvatar';
-import { ADMIN_EMAIL } from '../../context/AuthContext';
+import { isAdminEmail } from '../../context/AuthContext';
 import { pluralRu } from '../../utils/pluralize';
 import { cancelledByLabel, cancelledShare, cancelReasonText, formatCancelledAt } from '../../utils/orderCancel';
 import { useDialogA11y } from '../../utils/useDialogA11y';
@@ -1437,7 +1437,7 @@ export const AdminCustomersTab: React.FC<AdminCustomersTabProps> = ({
               </div>
 
               {/* Deleting is the last, rare action: below everything, after a line, and confirmed */}
-              {selectedCustomer.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase() && (
+              {!isAdminEmail(selectedCustomer.email) && (
                 <div className="neu-divider-t pt-3 flex justify-end">
                   <button
                     type="button"

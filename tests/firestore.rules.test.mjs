@@ -252,6 +252,15 @@ describe('catalog', () => {
     }));
   });
 
+  // second admin by email (owner's decision 16.10): only with the Google-verified email, like the owner's
+  test('the second admin email manages products only when the email is verified', async () => {
+    const second = (verified) =>
+      env.authenticatedContext('second-admin', { email: 'asatfaq@gmail.com', email_verified: verified }).firestore();
+    await assertSucceeds(updateDoc(doc(second(true), 'products/p1'), { price: 9100 }));
+    await assertFails(updateDoc(doc(second(false), 'products/p1'), { price: 9200 }));
+    await assertSucceeds(getDocs(collection(second(true), 'orders')));
+  });
+
   test('admins (owner email or /admins doc) can manage products', async () => {
     await assertSucceeds(updateDoc(doc(owner(), 'products/p1'), { price: 9000 }));
     await assertSucceeds(setDoc(doc(extraAdmin(), 'products/p2'), { ...product, id: 'p2' }));

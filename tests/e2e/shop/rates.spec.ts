@@ -65,7 +65,7 @@ test('владелец задаёт курс и надбавку, цена то�
     await openAdminSection(panel, 'Опт');
     await page.getByRole('alertdialog', { name: 'Перейти без сохранения?' }).getByRole('button', { name: 'Не сохранять' }).click();
     await expect(panel.getByRole('heading', { name: 'Опт: скидка за объём' })).toBeVisible();
-    await panel.getByRole('radio', { name: 'Рублей с каждой штуки' }).click();
+    await panel.getByLabel('Как задаётся скидка').getByRole('radio', { name: 'Рублей с каждой штуки' }).click();
     // the shop already has one step (store.ts: the wholesale scenario buys with it); the new one is the second
     await panel.getByRole('button', { name: 'Добавить ступень' }).click();
     await panel.getByRole('button', { name: 'Сохранить' }).click();

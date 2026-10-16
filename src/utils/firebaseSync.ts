@@ -99,11 +99,6 @@ async function setDocs<T extends { id: string }>(collectionName: string, items: 
  * index — is for the owner: `console.error` reaches «Ошибки на сайте». Anything else stays a warning.
  */
 function logSubscriptionError(what: string, error: unknown) {
-  const code = (error as { code?: string })?.code?.replace(/^firestore\//, '');
-  if (code === 'permission-denied') {
-    console.warn(`${what} subscription permission notice:`, error);
-    return;
-  }
   if (needsOwnerAttention(error)) console.error(`${what} subscription failed:`, error);
   else console.warn(`${what} subscription warning:`, error);
 }
@@ -2582,11 +2577,15 @@ export async function deleteClientErrorsBefore(beforeMs: number): Promise<number
  */
 export const CHAT_TEMPLATES_DOC_ID = 'chat_templates';
 
-/** Every collection of the store; `test` holds only the connection probe */
+/**
+ * Every collection of the store; `test` holds only the connection probe. Not the indexes and thumbnails (`catalog_index`,
+ * `orders_index`, `product_thumbs`): the admin's session builds them from products and orders, and an old index restored
+ * «Как в копии» would show buyers old prices (review 16.10, finding 8)
+ */
 export const BACKUP_COLLECTIONS = [
-  'products', 'product_previews', 'product_photos', 'product_thumbs', 'product_costs', 'catalog_index',
+  'products', 'product_previews', 'product_photos', 'product_costs',
   'promos', 'settings', 'banners', 'banner_images', 'delivery_methods', 'pickup_points',
-  'orders', 'orders_index', 'users', 'customer_notes', 'admins', 'reviews', 'review_votes', 'review_moderation',
+  'orders', 'users', 'customer_notes', 'admins', 'reviews', 'review_votes', 'review_moderation',
   'chat_messages', 'chat_images', 'support_threads', 'support_status', STOCK_MOVEMENTS_COLLECTION, 'promo_uses', 'payment_templates',
   PRICE_CHANGES_COLLECTION, ORDER_COSTS_COLLECTION, 'pack_marks',
 ] as const;

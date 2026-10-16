@@ -25,8 +25,13 @@ const AuthContext = createContext<AuthContextType>({
 
 // Must stay in sync with isAdmin() in firestore.rules
 export const ADMIN_EMAIL = 'gunh83975@gmail.com';
+/** Every Google account with the admin panel by its email; asatfaq@gmail.com — owner's decision 16.10 */
+export const ADMIN_EMAILS: readonly string[] = [ADMIN_EMAIL, 'asatfaq@gmail.com'];
 
-const isOwnerAccount = (user: User) => user.emailVerified && user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+export const isAdminEmail = (email: string | null | undefined): boolean =>
+  Boolean(email) && ADMIN_EMAILS.some((admin) => admin.toLowerCase() === email!.trim().toLowerCase());
+
+const isOwnerAccount = (user: User) => user.emailVerified && isAdminEmail(user.email);
 
 /** Whether the account has an /admins/{uid} document (created manually in Firebase Console); throws when unread */
 async function hasAdminDoc(user: User): Promise<boolean> {

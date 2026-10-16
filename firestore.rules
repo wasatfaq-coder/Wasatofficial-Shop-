@@ -14,7 +14,8 @@ service cloud.firestore {
     // (создаётся только через Firebase Console / Admin SDK).
     function isAdmin() {
       return isSignedIn() && (
-        (request.auth.token.email == 'gunh83975@gmail.com'
+        // asatfaq@gmail.com — второй администратор (решение владельца 16.10); список — ADMIN_EMAILS в AuthContext.tsx
+        (request.auth.token.email in ['gunh83975@gmail.com', 'asatfaq@gmail.com']
           && request.auth.token.email_verified == true)
         || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
