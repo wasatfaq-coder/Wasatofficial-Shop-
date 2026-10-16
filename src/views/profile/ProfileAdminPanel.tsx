@@ -637,6 +637,7 @@ export const ProfileAdminPanel = ({
                   products={productsList}
                   promos={localPromos}
                   categories={getCategories(storefrontSettings)}
+                  storefrontSettings={storefrontSettings}
                   initialOrderId={supportTargetOrderId}
                   initialThreadUid={supportTargetThreadUid}
                   onSend={handleSendAdminMessage}

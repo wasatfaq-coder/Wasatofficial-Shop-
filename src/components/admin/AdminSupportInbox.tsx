@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { MessagesSquare, Search } from 'lucide-react';
-import type { ChatMessage, Order, Product, PromoCode, StoreCategory, SupportThreadMeta } from '../../types';
+import type { ChatMessage, Order, Product, PromoCode, StoreCategory, StorefrontSettings, SupportThreadMeta } from '../../types';
 import {
   saveSupportThreadMeta,
   subscribeToSupportThreads,
@@ -23,6 +23,7 @@ interface AdminSupportInboxProps {
   products: Product[];
   promos: PromoCode[];
   categories: StoreCategory[];
+  storefrontSettings?: StorefrontSettings;
   /** Opened from an order in «Заказы»: select that customer's dialog */
   initialOrderId?: string | null;
   /** Opened from a customer card in «Клиенты»: select that customer's dialog */
@@ -55,6 +56,7 @@ export const AdminSupportInbox: React.FC<AdminSupportInboxProps> = ({
   products,
   promos,
   categories,
+  storefrontSettings,
   initialOrderId,
   initialThreadUid,
   onSend,
@@ -247,6 +249,7 @@ export const AdminSupportInbox: React.FC<AdminSupportInboxProps> = ({
           products={products}
           promos={promos}
           categories={categories}
+          storefrontSettings={storefrontSettings}
           initialOrderId={initialOrderId}
           onSend={(payload) => {
             if (!activeThread.threadId) return;

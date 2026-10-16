@@ -28,6 +28,7 @@ import { ProductWholesaleBlock, type BuyMode } from './ProductWholesaleBlock';
 import { WholesaleMatrixPicker } from './WholesaleMatrixPicker';
 import {
   findProductBrokenPack,
+  brokenPackPieces,
   productSizePacks,
   sameColor,
   sizePackColors,
@@ -157,10 +158,19 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
   const sizeChosen = !product?.sizes?.length || Boolean(selectedSize);
   // Stock of the chosen size; before a size is chosen — of the whole colour
   const stock = !product ? 0 : sizeChosen ? getVariantStock(product, selectedColor, selectedSize) : colorStock(product, selectedColor);
+  // a broken pack: no preorder, only the pieces above whole packs (as on the product page; review 16.10)
+  const sizeOrderable = (sz: string) =>
+    !product
+      ? 0
+      : brokenMode
+      ? Math.min(getOrderableStock(product, selectedColor, sz, false), brokenPackPieces(product, selectedColor, sz))
+      : getOrderableStock(product, selectedColor, sz, preorderMode);
   const orderable = !product
     ? 0
     : sizeChosen
-    ? getOrderableStock(product, selectedColor, selectedSize, preorderMode)
+    ? sizeOrderable(selectedSize)
+    : brokenMode
+    ? Math.max(0, ...product.sizes.map(sizeOrderable))
     : maxOrderableForColor(product, selectedColor, preorderMode);
 
   const maxCount = Math.floor(orderable / step);
@@ -560,7 +570,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                   >
                     {product.sizes.map((sz, szIdx) => {
                       const isSelected = selectedSize === sz;
-                      const szOrderable = getOrderableStock(product, selectedColor, sz, preorderMode);
+                      const szOrderable = sizeOrderable(sz);
                       const canOrder = szOrderable >= step;
                       return (
                         <button

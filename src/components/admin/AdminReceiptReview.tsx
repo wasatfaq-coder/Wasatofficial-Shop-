@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AdminHint } from './AdminHint';
 import { CheckCircle2, Loader2, MessageSquare, X, XCircle } from 'lucide-react';
-import type { Order, Product } from '../../types';
+import type { Order, Product, StorefrontSettings } from '../../types';
 import { AdminOrderPriceWarning } from './AdminOrderPriceWarning';
 import { ModalPortal } from '../ModalPortal';
 import { useDialogA11y } from '../../utils/useDialogA11y';
@@ -34,13 +34,15 @@ interface AdminReceiptReviewProps {
   onOpenChat?: () => void;
   /** The catalog: «Цены не совпадают с каталогом» right above the buttons (in the chat; «Заказы» show it in the card) */
   products?: Product[];
+  /** «Опт» and the broken pack discount of «Витрина»: the price check counts wholesale lines as «Заказы» do */
+  storefrontSettings?: StorefrontSettings;
 }
 
 /**
  * The receipt the buyer sent («Доработки 5» §4): which way and when, «Подтвердить оплату» (→ «Оплачен», the buyer gets
  * a message and a notification) and «Отклонить чек» with the reason (→ «Ожидает оплаты»).
  */
-export const AdminReceiptReview: React.FC<AdminReceiptReviewProps> = ({ order, onReview, onOpenChat, products }) => {
+export const AdminReceiptReview: React.FC<AdminReceiptReviewProps> = ({ order, onReview, onOpenChat, products, storefrontSettings }) => {
   const [busy, setBusy] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const receipt = order.paymentReceipt;
@@ -68,7 +70,7 @@ export const AdminReceiptReview: React.FC<AdminReceiptReviewProps> = ({ order, o
           )}
         </span>
       </div>
-      {products && <AdminOrderPriceWarning order={order} products={products} />}
+      {products && <AdminOrderPriceWarning order={order} products={products} shop={{ settings: storefrontSettings }} />}
       <p className="text-text-secondary">Сверьте поступление {(order.totalPrice ?? 0).toLocaleString('ru-RU')} ₽ и подтвердите оплату или отклоните чек.</p>
       <div className="flex items-center gap-2 flex-wrap">
         {onOpenChat && (

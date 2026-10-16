@@ -165,6 +165,11 @@ export function useCart({
     const asBroken =
       wholesaleChoice === 'broken' &&
       goesBrokenPack(product, color, size, (sz) => getOrderableStock(product, color, sz, false));
+    // asked for a broken pack this size does not have: refuse, never a retail line at a higher price (review 16.10)
+    if (wholesaleChoice === 'broken' && !asBroken) {
+      addToast(`${product.title} (${color}, ${size}): разбитой упаковкой этот размер не продаётся`, 'error');
+      return false;
+    }
     const asWholesale = !asBroken && sellsWholesale(product) && (wholesaleChoice === true || !sellsRetail(product));
     const step = asWholesale ? packSizeOf(product) : 1;
     const variant = { product, selectedColor: color, selectedSize: size };

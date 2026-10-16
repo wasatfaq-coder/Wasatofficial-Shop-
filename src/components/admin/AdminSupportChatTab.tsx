@@ -39,6 +39,7 @@ import type {
   ProductRecommendationCard,
   PromoCode,
   StoreCategory,
+  StorefrontSettings,
   SupportThreadMeta,
 } from '../../types';
 import { ConfirmDialog } from '../ConfirmDialog';
@@ -93,6 +94,8 @@ interface AdminSupportChatTabProps {
   products: Product[];
   promos: PromoCode[];
   categories: StoreCategory[];
+  /** For «Цены не совпадают с каталогом» on a receipt: «Опт» and the broken pack discount */
+  storefrontSettings?: StorefrontSettings;
   initialOrderId?: string | null;
   onSend: (payload: AdminChatPayload) => void;
   onUpdateOrders?: (orders: Order[]) => Promise<boolean> | void;
@@ -230,6 +233,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   products,
   promos,
   categories,
+  storefrontSettings,
   initialOrderId,
   onSend,
   onUpdateOrders,
@@ -975,7 +979,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
                     if (!receiptOrder) return null;
                     const isCurrent = receiptOrder.paymentReceipt?.messageId === msg.id;
                     if (isCurrent && isReceiptOnReview(receiptOrder) && onReviewReceipt) {
-                      return <AdminReceiptReview order={receiptOrder} onReview={onReviewReceipt} products={products} />;
+                      return <AdminReceiptReview order={receiptOrder} onReview={onReviewReceipt} products={products} storefrontSettings={storefrontSettings} />;
                     }
                     const last = [...(receiptOrder.paymentLog ?? [])].reverse().find((e) => e.event !== 'receipt');
                     if (!isCurrent || !last) return null;
