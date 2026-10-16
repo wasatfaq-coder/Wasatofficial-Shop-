@@ -331,6 +331,30 @@ describe('placeOrderCore', () => {
     expect((await db.doc('promos/p4').get()).data()!.commissionEarned).toBe(0);
   });
 
+  // ревью 16.10, находка 1: разбитой упаковкой — только штуки сверх целых ростовок, и не у товара без ростовок
+  test('a broken pack sells only the pieces left above whole packs', async () => {
+    await db.doc('products/tee').set({
+      id: 'tee', title: 'Футболка', category: 'shirts', price: 1500, wholesalePrice: 1000, inStock: true,
+      sizes: ['S', 'L'], colors: [{ name: 'Синий', hex: '#1F3A93' }],
+      skus: [
+        { id: 'tee-s', color: 'Синий', size: 'S', stock: 3 },
+        { id: 'tee-l', color: 'Синий', size: 'L', stock: 4 },
+      ],
+      sizePacks: [{ id: 'a', sizes: [{ size: 'S', qty: 1 }, { size: 'L', qty: 1 }] }],
+    });
+    const broken = (size: string, quantity: number) =>
+      request({ items: [{ productId: 'tee', color: 'Синий', size, quantity, broken: true }] });
+    await expectOrderError(placeOrderCore(db, broken('L', 2), 'alice'), 'failed-precondition', /не больше 1 шт/);
+    await expectOrderError(placeOrderCore(db, broken('S', 1), 'alice'), 'failed-precondition', /разбитая упаковка/);
+    const order = await placeOrderCore(db, broken('L', 1), 'alice');
+    expect(order.items[0].priceKind).toBe('broken');
+    await expectOrderError(
+      placeOrderCore(db, request({ items: [{ productId: 'shirt', color: 'Белый', size: 'M', quantity: 1, broken: true }] }), 'alice'),
+      'failed-precondition',
+      /разбитая упаковка/
+    );
+  });
+
   test('rejects exhausted, inactive and unknown promos', async () => {
     await db.doc('promos/p2').set({
       id: 'p2', code: 'ONCE', title: '', description: '', discountPercent: 50,

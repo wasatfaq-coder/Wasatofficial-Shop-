@@ -21,7 +21,7 @@ import { promoDiscountText } from '../utils/promoLabel';
 import { packsText } from '../utils/wholesaleOffer';
 import { heldByOtherLines, packsLeft } from '../utils/cartLines';
 import { isCartPackLine, pricePackLine } from '../shared/packLines';
-import { sizePackPieces } from '../shared/sizePacks';
+import { brokenPackPieces, sizePackPieces } from '../shared/sizePacks';
 import { hasOrderableVariant, needsVariantChoice } from '../utils/variantSelection';
 import type { AddToast } from './useToasts';
 
@@ -176,8 +176,12 @@ export function useCart({
     // broken pack never allows preorder; retail and wholesale respect preorderMode
     const availableStock = Math.max(
       0,
-      getOrderableStock(product, color, size, asBroken ? false : preorderMode) -
-        heldByOtherLines(cartItems, variant, existing?.id ?? '')
+      Math.min(
+        getOrderableStock(product, color, size, asBroken ? false : preorderMode) -
+          heldByOtherLines(cartItems, variant, existing?.id ?? ''),
+        // a broken pack sells only the pieces left above whole packs (review 16.10, finding 1)
+        asBroken ? brokenPackPieces(product, color, size) : Number.POSITIVE_INFINITY
+      )
     );
     // only whole packs can be ordered wholesale
     const maxQty = Math.floor(availableStock / step) * step;
@@ -323,9 +327,13 @@ export function useCart({
           }
           if (item.id === cartItemId) {
             const allowPreorder = item.priceKind === 'broken' ? false : preorderMode;
-            const stock =
+            const stock = Math.min(
               getOrderableStock(item.product, item.selectedColor, item.selectedSize, allowPreorder) -
-              heldByOtherLines(prev, item, item.id);
+                heldByOtherLines(prev, item, item.id),
+              item.priceKind === 'broken'
+                ? brokenPackPieces(item.product, item.selectedColor, item.selectedSize)
+                : Number.POSITIVE_INFINITY
+            );
             return { ...item, quantity: fitQuantity(newQty, stock, step) };
           }
           return item;
@@ -350,9 +358,11 @@ export function useCart({
       prev.map((item) => {
         if (item.id === cartItemId) {
           const allowPreorder = item.priceKind === 'broken' ? false : preorderMode;
-          const availableStock =
+          const availableStock = Math.min(
             getOrderableStock(item.product, newColor, newSize, allowPreorder) -
-            heldByOtherLines(prev, { product: item.product, selectedColor: newColor, selectedSize: newSize }, item.id);
+              heldByOtherLines(prev, { product: item.product, selectedColor: newColor, selectedSize: newSize }, item.id),
+            item.priceKind === 'broken' ? brokenPackPieces(item.product, newColor, newSize) : Number.POSITIVE_INFINITY
+          );
           // none of the new variant left — one pack stays: the checkout names it in «Не хватает на складе»
           const clampedQty = availableStock >= step ? fitQuantity(item.quantity, availableStock, step) : step;
           return {

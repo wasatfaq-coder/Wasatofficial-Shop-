@@ -297,6 +297,18 @@ describe('wholesale orders in «Заказы» and «Аналитика»', () =
       '«Товар shirt»: в заказе оптовая цена 100 ₽, а товар оптом не продаётся',
     ]);
   });
+
+  // ревью 16.10, находка 2: честная разбитая упаковка — без предупреждения, подделанная — с ним
+  test('the price check knows a broken pack: wholesale minus its discount, from the storefront field too', () => {
+    const discount = { kind: 'percent' as const, value: 15 };
+    const items = priceCartLines([line(tee, 2, { priceKind: 'broken' })], { brokenPackDiscount: discount });
+    expect(items[0].unitPrice).toBe(850);
+    expect(orderPriceIssues(order(items), [tee], { settings: { brokenPackDiscount: discount } })).toEqual([]);
+    const cheap = items.map((i) => ({ ...i, unitPrice: 100 }));
+    expect(orderPriceIssues(order(cheap), [tee], { settings: { brokenPackDiscount: discount } })).toEqual([
+      '«Товар tee»: в заказе разбитая упаковка 100 ₽, в каталоге 850 ₽',
+    ]);
+  });
 });
 
 describe('the wholesale fields of the product form', () => {

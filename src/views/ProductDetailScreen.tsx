@@ -65,6 +65,7 @@ import {
   brokenPackState,
   findProductBrokenPack,
   productSizePacks,
+  brokenPackPieces,
   sameColor,
   sizePackColors,
   sizePackCompositionText,
@@ -320,9 +321,14 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   const activeDetailTab = detailTabs.some((tab) => tab.id === detailTab) ? detailTab : detailTabs[0]?.id;
   // Units that can be ordered: the stock, or a preorder limit for a sold-out variant (broken packs have no preorder)
   const effectivePreorder = brokenMode ? false : preorderMode;
-  const orderableStock = sizeChosen
+  const variantOrderable = sizeChosen
     ? getOrderableStock(product, selectedColor, selectedSize, effectivePreorder)
     : maxOrderableForColor(product, selectedColor, effectivePreorder);
+  // a broken pack sells only the pieces left above whole packs (review 16.10, finding 1)
+  const orderableStock =
+    brokenMode && sizeChosen
+      ? Math.min(variantOrderable, brokenPackPieces(product, selectedColor, selectedSize))
+      : variantOrderable;
   const isPreorder = !brokenMode && currentStock === 0 && orderableStock > 0;
   // What the counter can reach: items, or whole packs when buying wholesale
   const maxCount = Math.floor(orderableStock / step);

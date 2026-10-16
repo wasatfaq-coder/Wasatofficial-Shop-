@@ -3,7 +3,7 @@ import { calcPromoDiscount, getAvailableDeliveryMethods, isQuickOrderDelivery, t
 import { linePrice } from '../shared/orderLine';
 import { orderTimestamp } from '../shared/orderDate';
 import { pricesAtOrderTime, wholesalePricesAtOrderTime } from './priceHistory';
-import { isWholesaleLine, priceCartLines, sellsWholesale } from '../shared/wholesalePricing';
+import { isBrokenPackLine, isWholesaleLine, priceCartLines, sellsWholesale } from '../shared/wholesalePricing';
 import { groupOrderLines, isPackLine, packGroupCompositionText, soldPack } from '../shared/packLines';
 import { sizePackPrice } from '../shared/sizePacks';
 
@@ -11,7 +11,7 @@ import { sizePackPrice } from '../shared/sizePacks';
 export interface OrderCheckContext {
   promos?: PromoCode[];
   deliveryMethods?: DeliveryMethod[];
-  settings?: Partial<Pick<StorefrontSettings, 'paymentMethods' | 'freeDeliveryThreshold' | 'isExpressEnabled' | 'wholesale'>>;
+  settings?: Partial<Pick<StorefrontSettings, 'paymentMethods' | 'freeDeliveryThreshold' | 'isExpressEnabled' | 'wholesale' | 'brokenPackDiscount'>>;
 }
 
 /** A 1-click order and an old one without a choice: the manager agrees payment with the buyer */
@@ -55,8 +55,9 @@ function checkedOrderTime(order: Order): number | null {
  * A price could also change after the order — the text asks to check, it does not accuse.
  */
 export function orderPriceIssues(order: Order, products: Product[], shop: OrderCheckContext = {}): string[] {
-  // the server already checked its prices; a paid, refunded, cancelled or admin-adjusted order is past client price checking
-  if (order.placedVia === 'server' || order.isAdjusted || order.isCancelled || (order.adjustmentLogs?.length ?? 0) > 0) return [];
+  // the server already checked its prices; a paid, refunded or cancelled order is past the moment of checking. An
+  // adjusted order is still checked: the buyer's own lines stay in it (review 16.10, finding 6)
+  if (order.placedVia === 'server' || order.isCancelled) return [];
   if (order.paymentStatus === 'paid' || order.paymentStatus === 'refunded') return [];
 
   const issues: string[] = [];
@@ -64,18 +65,24 @@ export function orderPriceIssues(order: Order, products: Product[], shop: OrderC
   const orderTime = checkedOrderTime(order);
   const lines: PricingLine[] = [];
   const items = order.items ?? [];
+  // the broken pack discount is a storefront field next to «Опт» (as in the checkout and placeOrder)
+  const wholesaleSettings = shop.settings?.brokenPackDiscount
+    ? { ...shop.settings.wholesale, brokenPackDiscount: shop.settings.brokenPackDiscount }
+    : shop.settings?.wholesale;
   const expectedWholesale = priceCartLines(
     items.map((item) => {
       const catalog = item.product?.id ? byId.get(item.product.id) : undefined;
       return catalog ? { ...item, product: catalog } : item;
     }),
-    shop.settings?.wholesale
+    wholesaleSettings
   );
   items.forEach((item, i) => {
     const price = linePrice(item);
     const quantity = Number(item.quantity) || 0;
     const catalog = item.product?.id ? byId.get(item.product.id) : undefined;
     const wholesale = isWholesaleLine(item);
+    // a broken pack line: wholesale minus the broken pack discount, no promo (review 16.10, finding 2)
+    const broken = isBrokenPackLine(item);
     // the category for the promo is the catalog's: the line's copy is written by the buyer
     lines.push({
       productId: item.product?.id ?? '',
@@ -83,13 +90,14 @@ export function orderPriceIssues(order: Order, products: Product[], shop: OrderC
       price,
       quantity,
       ...(wholesale ? { wholesale: true } : {}),
+      ...(broken ? { broken: true } : {}),
     });
     // a size pack is checked whole below: its lines carry the pack's price split per item
     if (isPackLine(item)) {
       if (quantity <= 0) issues.push(`«${item.product?.title ?? 'строка'}»: количество ${quantity}`);
       return;
     }
-    if (wholesale) {
+    if (wholesale || broken) {
       if (catalog && !sellsWholesale(catalog)) {
         issues.push(`«${catalog.title}»: в заказе оптовая цена ${rub(price)}, а товар оптом не продаётся`);
       } else if (catalog) {
@@ -105,7 +113,7 @@ export function orderPriceIssues(order: Order, products: Product[], shop: OrderC
                         if (!cat) return it;
                         return { ...it, product: cat.id === catalog.id ? { ...cat, wholesalePrice: wp } : cat };
                       }),
-                      shop.settings?.wholesale
+                      wholesaleSettings
                     );
                     return linePrice(priced[i]);
                   })
@@ -113,7 +121,8 @@ export function orderPriceIssues(order: Order, products: Product[], shop: OrderC
               )
             : [linePrice(expectedWholesale[i])];
         if (!allowed.includes(price)) {
-          issues.push(`«${catalog.title}»: в заказе опт ${rub(price)}, в каталоге ${allowed.map(rub).join(' или ')}`);
+          const kind = broken ? 'разбитая упаковка' : 'опт';
+          issues.push(`«${catalog.title}»: в заказе ${kind} ${rub(price)}, в каталоге ${allowed.map(rub).join(' или ')}`);
         }
       }
       if (quantity <= 0) issues.push(`«${item.product?.title ?? 'строка'}»: количество ${quantity}`);

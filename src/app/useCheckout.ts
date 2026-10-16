@@ -17,7 +17,7 @@ import { buildClientOrder } from '../utils/clientOrder';
 import { pluralRu } from '../utils/pluralize';
 import { QUICK_ORDER_DELIVERY_ID, promoSignInProblem } from '../shared/orderPricing';
 import { linePrice, toOrderLineProduct } from '../shared/orderLine';
-import { goesBrokenPack, isBrokenPackLine, isWholesaleLine, priceCartLines, wholesaleLineProblems } from '../shared/wholesalePricing';
+import { brokenPackExcess, goesBrokenPack, isBrokenPackLine, isWholesaleLine, priceCartLines, wholesaleLineProblems } from '../shared/wholesalePricing';
 import { expandPackLines, isCartPackLine, ORDER_LINES_MAX, packLineProblems, soldPack } from '../shared/packLines';
 import { STORE_PAUSED_TEXT, storeAcceptsOrders } from '../shared/orderApi';
 import { cleanAddressParts, fullName, hasNameParts, namePartsOf, type AddressParts, type PersonName } from '../shared/personName';
@@ -280,6 +280,20 @@ export function useCheckout({
         return !goesBrokenPack(live, color, size, (sz) => getOrderableStock(live, color, sz, false));
       })
       .map((item) => `«${item.product.title}» (${item.selectedColor}, ${item.selectedSize}): больше не продаётся как разбитая упаковка — обновите корзину`);
+    brokenProblems.push(
+      ...brokenPackExcess(
+        priced
+          .filter((item) => isBrokenPackLine(item))
+          .map((item) => ({
+            product: products.find((p) => p.id === item.product.id) ?? item.product,
+            color: extractColorName(item.selectedColor),
+            size: extractSizeName(item.selectedSize),
+            quantity: item.quantity,
+          }))
+      )
+        .filter((e) => e.pieces > 0)
+        .map((e) => `«${e.product.title}» (${e.color}, ${e.size}): разбитой упаковкой — не больше ${e.pieces} шт.`)
+    );
     if (brokenProblems.length > 0) {
       addToast([...new Set(brokenProblems)].join('; '), 'error');
       return false;

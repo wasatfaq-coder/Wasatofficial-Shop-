@@ -26,7 +26,7 @@ import {
   validatePromo,
   type PricingLine,
 } from '../../src/shared/orderPricing';
-import { goesBrokenPack, isBrokenPackLine, priceCartLines, wholesaleLineProblems } from '../../src/shared/wholesalePricing';
+import { brokenPackExcess, goesBrokenPack, isBrokenPackLine, priceCartLines, wholesaleLineProblems } from '../../src/shared/wholesalePricing';
 import { extractColorName, extractSizeName, generateDefaultSKUs, getOrderableStock, isHiddenFromSale, skuCodeForLine } from '../../src/utils/inventory';
 import { orderStockMovements, STOCK_MOVEMENTS_COLLECTION } from '../../src/shared/stockMovements';
 import { deliveryKindOfMethod, estimatedDeliveryOf, initialStatusLog, type DeliveryKind } from '../../src/shared/orderFlow';
@@ -279,6 +279,24 @@ export async function placeOrderCore(
           : {}),
       });
     });
+
+    // a broken pack sells only the pieces left above whole packs, summed over the variant's lines (review 16.10, finding 1)
+    const brokenExcess = brokenPackExcess(
+      request.items
+        .filter((item) => item.broken === true && products.has(item.productId))
+        .map((item) => ({
+          product: products.get(item.productId)!.data,
+          color: item.color,
+          size: item.size,
+          quantity: item.quantity,
+        }))
+    );
+    if (brokenExcess.length > 0) {
+      throw new OrderError(
+        'failed-precondition',
+        brokenExcess.map((e) => `«${e.product.title}» (${e.color}, ${e.size}): разбитой упаковкой — не больше ${e.pieces} шт.`).join('; ')
+      );
+    }
 
     const effectiveWholesale = settings?.brokenPackDiscount
       ? { ...settings.wholesale, brokenPackDiscount: settings.brokenPackDiscount }

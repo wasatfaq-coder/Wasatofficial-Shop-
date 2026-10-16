@@ -269,6 +269,29 @@ export function brokenPackState(
 }
 
 /**
+ * Pieces of one size that may be sold as «Разбитая упаковка» (review 16.10, finding 1): only what is left above the whole
+ * packs of every pack of this colour with this size — the smallest leftover, so no whole pack of any of them is broken up.
+ * 0 when the product has no size pack with this size and colour, or nothing is left over (no broken pack then).
+ */
+export function brokenPackPieces(
+  product: StockOwner & { saleChannel?: 'both' | 'retail' | 'wholesale' },
+  color: string,
+  size: string
+): number {
+  let pieces: number | null = null;
+  let broken = false;
+  for (const pack of productSizePacks(product)) {
+    if (!pack.sizes.some((s) => s.size === size)) continue;
+    if (!sizePackColors(product, pack).some((c) => sameColor(c, color))) continue;
+    if (brokenPackState(product, pack, color)) broken = true;
+    const slot = packStockSummary(product, pack, color).sizes.find((s) => s.size === size);
+    const left = slot?.brokenStock ?? 0;
+    pieces = pieces === null ? left : Math.min(pieces, left);
+  }
+  return broken && pieces !== null ? pieces : 0;
+}
+
+/**
  * Finds the first broken pack state for the given colour (or across all colours of the product if `color` is omitted).
  */
 export function findProductBrokenPack(

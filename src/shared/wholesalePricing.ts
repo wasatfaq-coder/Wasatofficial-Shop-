@@ -11,7 +11,7 @@
 import type { CartItem, Order, Product } from '../types';
 import { linePrice } from './orderLine';
 import { isCartPackLine, pricePackLine } from './packLines';
-import { brokenPackState, productSizePacks } from './sizePacks';
+import { brokenPackPieces } from './sizePacks';
 
 /** Who a product is sold to; absent — both */
 export type SaleChannel = 'both' | 'retail' | 'wholesale';
@@ -160,7 +160,8 @@ export function brokenPackDiscountedPrice(
     discount.kind === 'fixed'
       ? Math.round(baseWholesalePrice - discount.value)
       : Math.round((baseWholesalePrice * (100 - discount.value)) / 100);
-  return Math.max(0, price);
+  // never 0 ₽: a fixed discount saved before a lower wholesale price is set (review 16.10, finding 5)
+  return Math.max(1, price);
 }
 
 /**
@@ -184,11 +185,8 @@ export function goesBrokenPack(
   if (typeof color === 'string' && typeof size === 'string') {
     const product = first as Product;
     if (!product || saleChannelOf(product) !== 'both' || !hasWholesalePrice(product)) return false;
-    const packs = productSizePacks(product);
-    if (packs.length === 0) return true;
-    return packs.some(
-      (pack) => brokenPackState(product, pack, color) !== null && pack.sizes.some((s) => s.size === size)
-    );
+    // only leftover pieces above whole packs: no size pack — no broken pack (review 16.10, finding 1)
+    return brokenPackPieces(product, color, size) > 0;
   }
   const item = first as Pick<CartItem, 'product' | 'priceKind'>;
   const product = item.product;
@@ -378,4 +376,31 @@ export function orderLinesByChannel(order: Pick<Order, 'items'>): { wholesale: n
     else retail += sum;
   }
   return { wholesale, retail };
+}
+
+export interface BrokenPackExcess {
+  product: Product;
+  color: string;
+  size: string;
+  /** Pieces asked for this variant in all broken pack lines */
+  quantity: number;
+  /** Pieces left above whole packs (`brokenPackPieces`) */
+  pieces: number;
+}
+
+/**
+ * Broken pack lines asking for more pieces of a variant than are left above whole packs (review 16.10, finding 1):
+ * the browser's checkout and placeOrder sum every broken line of the variant, so splitting the order does not help.
+ */
+export function brokenPackExcess(
+  lines: { product: Product; color: string; size: string; quantity: number }[]
+): BrokenPackExcess[] {
+  const byVariant = new Map<string, BrokenPackExcess>();
+  for (const line of lines) {
+    const key = `${line.product.id}|${line.color.trim().toLowerCase()}|${line.size.trim().toLowerCase()}`;
+    const entry = byVariant.get(key);
+    if (entry) entry.quantity += line.quantity;
+    else byVariant.set(key, { ...line, pieces: brokenPackPieces(line.product, line.color, line.size) });
+  }
+  return [...byVariant.values()].filter((e) => e.quantity > e.pieces);
 }
