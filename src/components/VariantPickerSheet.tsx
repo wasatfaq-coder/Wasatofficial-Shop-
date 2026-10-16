@@ -87,8 +87,9 @@ export const VariantPickerSheet: React.FC<VariantPickerSheetProps> = ({
     return { price: minPrice, several };
   }, [pricedPacks, onAddPackToCart]);
 
+  // as on the product page: with size packs «Оптом» sells whole packs (review 16.10, finding 2)
   const effectiveBuyMode: BuyMode =
-    buyMode === 'pack' && packFrom
+    packFrom && (buyMode === 'pack' || (offer && (buyMode === 'wholesale' || offer.onlyWholesale)))
       ? 'pack'
       : offer
       ? offer.onlyWholesale
@@ -166,7 +167,7 @@ export const VariantPickerSheet: React.FC<VariantPickerSheetProps> = ({
   const handleChangeMode = (next: BuyMode) => {
     setBuyMode(next);
     setSizeError(false);
-    if (next === 'pack') {
+    if (next === 'pack' || (next === 'wholesale' && packFrom)) {
       setPackQuantity(1);
       if (product) {
         const firstColorWithPack = product.colors.find((c) =>
@@ -271,7 +272,7 @@ export const VariantPickerSheet: React.FC<VariantPickerSheetProps> = ({
                 <ProductWholesaleBlock
                   offer={offer}
                   retailPrice={product.price}
-                  mode={effectiveBuyMode}
+                  mode={isPackMode ? 'wholesale' : effectiveBuyMode}
                   onChangeMode={handleChangeMode}
                   packFrom={packFrom}
                 />

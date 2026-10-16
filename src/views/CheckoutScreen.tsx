@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ProductThumbImage } from '../components/ProductThumbImage';
 import { isPreorderVariant, stockProblemText, type OrderStockProblem } from '../utils/inventory';
 import { pluralRu } from '../utils/pluralize';
@@ -282,9 +282,15 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
     }
   };
 
-  // When userProfile loads after signing in on checkout, fill empty contact and address fields
+  // When userProfile loads after signing in on checkout, fill empty contact and address fields — once: a later snapshot
+  // of the profile must not refill «+ Новый адрес» with the old address (review 16.10, finding 5)
+  const prefilledFor = useRef<string | null>(null);
+  const newAddressChosen = useRef(false);
   useEffect(() => {
     if (!userProfile) return;
+    const account = userProfile.uid || userProfile.email || 'guest';
+    if (prefilledFor.current === account) return;
+    prefilledFor.current = account;
     const parts = namePartsOf(userProfile);
     setLastName((prev) => (prev.trim() ? prev : parts.lastName || ''));
     setFirstName((prev) => (prev.trim() ? prev : parts.firstName || ''));
@@ -292,7 +298,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
     setPhone((prev) => (prev.trim() ? prev : userProfile.phone || ''));
     setEmail((prev) => (prev.trim() ? prev : userProfile.email || ''));
     const saved = userProfile.savedAddresses?.find((a) => a.isDefault) || userProfile.savedAddresses?.[0];
-    if (saved) {
+    if (saved && !newAddressChosen.current) {
       setAddrCity((prev) => (prev.trim() ? prev : saved.city || ''));
       setAddrStreet((prev) => (prev.trim() ? prev : saved.street || ''));
       setAddrHouse((prev) => (prev.trim() ? prev : saved.house || ''));
@@ -339,6 +345,8 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
   };
 
   const handleStartNewAddress = () => {
+    // the buyer types a new address: the profile, coming later, does not fill it
+    newAddressChosen.current = true;
     setSelectedSavedId('custom');
     setAddrTitle('Новый адрес');
     setAddrStreet('');
@@ -429,12 +437,12 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({
       isDefault: addrData.isDefault ?? existingList.length === 0,
     };
 
-    const exists = existingList.some((a) => a.id === targetId);
-    const nextAddresses = exists
-      ? existingList.map((a) => (a.id === targetId ? entry : entry.isDefault ? { ...a, isDefault: false } : a))
-      : [...(entry.isDefault ? existingList.map((a) => ({ ...a, isDefault: false })) : existingList), entry];
-
     setSelectedSavedId(targetId);
+    // only a new address is remembered: a saved one changed for this order stays as the buyer saved it in the profile,
+    // with its «по умолчанию» (review 16.10, finding 4)
+    if (existingList.some((a) => a.id === targetId)) return;
+    const nextAddresses = [...(entry.isDefault ? existingList.map((a) => ({ ...a, isDefault: false })) : existingList), entry];
+
     void onUpdateProfile({
       ...userProfile,
       savedAddresses: nextAddresses,

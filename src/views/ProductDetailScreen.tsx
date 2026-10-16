@@ -98,10 +98,11 @@ interface ProductDetailScreenProps {
     color: string,
     size: string,
     quantity: number,
-    wholesale?: boolean | 'wholesale' | 'broken'
+    wholesale?: boolean | 'wholesale' | 'broken',
+    quiet?: boolean
   ) => boolean | void;
   /** A size pack («ростовка», stage 20) into the cart: `packs` whole packs of the colour; `false` — nothing added */
-  onAddPackToCart?: (product: Product, packId: string, color: string, packs: number) => boolean;
+  onAddPackToCart?: (product: Product, packId: string, color: string, packs: number, quiet?: boolean) => boolean;
   /** The cart's lines: what they already hold is taken off the packs the buyer can still add */
   cartItems?: CartItem[];
   onSelectProduct?: (product: Product) => void;

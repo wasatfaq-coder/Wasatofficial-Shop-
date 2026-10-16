@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Check, Grid, Minus, Plus, RotateCcw, ShoppingBag } from 'lucide-react';
 import type { CartItem, Product } from '../types';
 import {
@@ -24,8 +24,8 @@ interface WholesaleMatrixPickerProps {
   sizePacks: SizePack[];
   cartItems: CartItem[];
   preorderMode?: boolean;
-  onAddWholesaleLine: (product: Product, color: string, size: string, quantity: number, wholesale?: boolean) => boolean | void;
-  onAddPackLine?: (product: Product, packId: string, color: string, packs: number) => boolean;
+  onAddWholesaleLine: (product: Product, color: string, size: string, quantity: number, wholesale?: boolean, quiet?: boolean) => boolean | void;
+  onAddPackLine?: (product: Product, packId: string, color: string, packs: number, quiet?: boolean) => boolean;
 }
 
 const rub = (n: number) => `${n.toLocaleString('ru-RU')} ₽`;
@@ -42,6 +42,12 @@ export const WholesaleMatrixPicker: React.FC<WholesaleMatrixPickerProps> = ({
 }) => {
   const [draft, setDraft] = useState<Record<string, number>>({});
   const [addedFeedback, setAddedFeedback] = useState(false);
+  // «Добавлено» on the button for a moment; the timer goes with the picker
+  useEffect(() => {
+    if (!addedFeedback) return;
+    const timer = setTimeout(() => setAddedFeedback(false), 1200);
+    return () => clearTimeout(timer);
+  }, [addedFeedback]);
 
   const setCell = (color: string, second: string, value: number, max: number) => {
     const key = matrixCellKey(color, second);
@@ -94,13 +100,13 @@ export const WholesaleMatrixPicker: React.FC<WholesaleMatrixPickerProps> = ({
     let anyAdded = false;
     if (mode === 'wholesale' && wholesaleSummary) {
       for (const line of wholesaleSummary.lines) {
-        if (onAddWholesaleLine(product, line.color, line.size, line.quantity, true) !== false) {
+        if (onAddWholesaleLine(product, line.color, line.size, line.quantity, true, true) !== false) {
           anyAdded = true;
         }
       }
     } else if (mode === 'pack' && packSummary && onAddPackLine) {
       for (const line of packSummary.lines) {
-        if (onAddPackLine(product, line.pack.id, line.color, line.packs) !== false) {
+        if (onAddPackLine(product, line.pack.id, line.color, line.packs, true) !== false) {
           anyAdded = true;
         }
       }
@@ -108,7 +114,6 @@ export const WholesaleMatrixPicker: React.FC<WholesaleMatrixPickerProps> = ({
     if (anyAdded) {
       setDraft({});
       setAddedFeedback(true);
-      setTimeout(() => setAddedFeedback(false), 1200);
     }
   };
 

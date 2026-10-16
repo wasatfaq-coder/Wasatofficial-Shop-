@@ -377,7 +377,7 @@ export const CatalogAdvancedFilter: React.FC<CatalogAdvancedFilterProps> = ({
                     {chip.russian}
                   </span>
                 )}
-                <span className="text-[10px] font-semibold text-text-secondary leading-tight whitespace-nowrap mt-0.5">
+                <span className="text-[11px] font-semibold text-text-secondary leading-tight whitespace-nowrap mt-0.5">
                   {isOutOfStock ? 'нет' : `${chip.count} ${pluralRu(chip.count, ['товар', 'товара', 'товаров'])}`}
                 </span>
               </button>

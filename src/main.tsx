@@ -5,13 +5,13 @@ import App from './App.tsx';
 import { AuthProvider } from './context/AuthContext.tsx';
 import { AppErrorBoundary } from './components/AppErrorBoundary.tsx';
 import { reportRenderError, startErrorReporter } from './utils/errorReporter.ts';
-import { whenReadsSettle } from './utils/pendingReads.ts';
 import '@fontsource/manrope/700.css';
 import '@fontsource/manrope/800.css';
 import './index.css';
 
-// Stage 5 of docs/performance-plan.md: animation features load in a separate chunk after the first screen's photos settle
-const loadMotionFeatures = () => whenReadsSettle().then(() => import('./utils/motionFeatures.ts').then((r) => r.default));
+// Stage 5 of docs/performance-plan.md: animation features load in a separate chunk, right away — until they come every
+// `m.*` element stays at its `initial` state (the catalog grid and new screens at opacity 0; review 16.10, finding 1)
+const loadMotionFeatures = () => import('./utils/motionFeatures.ts').then((r) => r.default);
 
 // Errors on customers' screens go to the owner's log («Аналитика» → «Ошибки на сайте», docs/ops-plan.md)
 startErrorReporter();

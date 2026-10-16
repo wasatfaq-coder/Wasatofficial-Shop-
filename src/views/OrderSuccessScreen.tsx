@@ -1,13 +1,11 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   CheckCircle2,
   Package,
   Home,
   Copy,
   Check,
-  ImagePlus,
   Landmark,
-  Loader2,
   MessageCircle,
 } from 'lucide-react';
 import { ActiveTab, Order, PaymentKind } from '../types';
@@ -17,10 +15,7 @@ import { PaymentRequisitesModal } from '../components/PaymentRequisitesModal';
 import {
   canPayByRequisites,
   isReceiptOnReview,
-  RECEIPT_ACCEPT,
-  receiptFileError,
 } from '../utils/paymentDetails';
-import { compressReceiptImageFile } from '../utils/imageUpload';
 
 interface OrderSuccessScreenProps {
   orderId: string;
@@ -57,9 +52,7 @@ export const OrderSuccessScreen: React.FC<OrderSuccessScreenProps> = ({
   const [copiedId, setCopiedId] = useState(false);
   const [copiedInstructions, setCopiedInstructions] = useState(false);
   const [isRequisitesOpen, setIsRequisitesOpen] = useState(false);
-  const [uploadingReceipt, setUploadingReceipt] = useState(false);
   const [receiptSentLocal, setReceiptSentLocal] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleCopyOrderId = async () => {
     const ok = await copyToClipboard(orderId);
@@ -84,39 +77,6 @@ export const OrderSuccessScreen: React.FC<OrderSuccessScreenProps> = ({
     order && onSubmitPaymentReceipt && canPayByRequisites(order, order.customerUid)
   );
   const receiptAlreadyOnReview = receiptSentLocal || Boolean(order && isReceiptOnReview(order));
-  const canAttachQuickReceipt = Boolean(
-    order &&
-      onSubmitPaymentReceipt &&
-      !order.isCancelled &&
-      order.paymentStatus !== 'paid' &&
-      order.paymentStatus !== 'paid_on_delivery' &&
-      !receiptAlreadyOnReview &&
-      Boolean(paymentInstructions?.trim())
-  );
-
-  const handleDirectReceiptFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file || !order || !onSubmitPaymentReceipt) return;
-    const problem = receiptFileError(file);
-    if (problem) {
-      onShowToast?.(problem, 'error');
-      return;
-    }
-    setUploadingReceipt(true);
-    try {
-      const dataUrl = await compressReceiptImageFile(file);
-      const sent = await onSubmitPaymentReceipt(order, 'card', dataUrl);
-      if (sent) {
-        setReceiptSentLocal(true);
-      }
-    } catch {
-      onShowToast?.('Не удалось обработать фото чека — выберите JPG или PNG', 'error');
-    } finally {
-      setUploadingReceipt(false);
-    }
-  };
-
   return (
     <div className="py-8 space-y-6 text-center animate-in zoom-in-95 duration-300 max-w-sm mx-auto pb-28 lg:pb-10">
       {/* Celebration Icon */}
@@ -205,35 +165,6 @@ export const OrderSuccessScreen: React.FC<OrderSuccessScreenProps> = ({
             </button>
           )}
 
-          {!hasRequisitesModal && canAttachQuickReceipt && (
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept={RECEIPT_ACCEPT}
-                onChange={handleDirectReceiptFile}
-                className="hidden"
-              />
-              <button
-                type="button"
-                disabled={uploadingReceipt}
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full py-2.5 px-3 rounded-2xl neu-button text-xs font-extrabold text-accent hover:text-accent-strong flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {uploadingReceipt ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Отправка чека…</span>
-                  </>
-                ) : (
-                  <>
-                    <ImagePlus className="w-4 h-4" />
-                    <span>Прикрепить чек об оплате</span>
-                  </>
-                )}
-              </button>
-            </>
-          )}
         </div>
       )}
 

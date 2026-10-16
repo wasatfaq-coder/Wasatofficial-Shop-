@@ -57,6 +57,7 @@ import { screenDocumentTitle } from './utils/screenMeta';
 import { VariantPickerSheet } from './components/VariantPickerSheet';
 import { DEFAULT_CATALOG_VIEW, type CatalogView } from './utils/productListing';
 import { linePrice } from './shared/orderLine';
+import { IS_PREVIEW_BUILD } from './utils/previewBuild';
 
 // Legal documents: a separate chunk with the templates, loaded when a document is opened
 const LegalDocumentScreen = lazyWithRetry(() => import('./views/LegalDocumentScreen'));
@@ -142,7 +143,8 @@ export default function App() {
       const code = (err as { code?: string })?.code ?? '';
       // the buyer closed the Google window: nothing to report
       if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return;
-      if (code === 'auth/unauthorized-domain') {
+      // a preview address not in «Authorized domains»: the owner checking the preview needs the reason, a buyer does not
+      if (code === 'auth/unauthorized-domain' && IS_PREVIEW_BUILD) {
         const host = typeof window !== 'undefined' ? window.location.hostname : '';
         addToast(
           `Домен ${host} не добавлен в список разрешённых (Authorized domains) в Firebase Console → Authentication → Settings.`,

@@ -133,6 +133,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
   // Quick View state
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [isExportingWholesalePdf, setIsExportingWholesalePdf] = useState(false);
+  const [wholesalePdfFailed, setWholesalePdfFailed] = useState(false);
   const wholesaleProductsCount = useMemo(() => products.filter(sellsWholesale).length, [products]);
 
   const activeFiltersCount = useMemo(() => {
@@ -483,8 +484,13 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
               onFocus={preloadPdfLibraries}
               onClick={async () => {
                 setIsExportingWholesalePdf(true);
+                setWholesalePdfFailed(false);
                 try {
                   await generateWholesalePriceListPDF(products, wholesale);
+                } catch (error) {
+                  // e.g. the canvas height limit of a phone with a long catalog: the buyer is told, CSV still works
+                  console.warn('Wholesale price list PDF failed:', error);
+                  setWholesalePdfFailed(true);
                 } finally {
                   setIsExportingWholesalePdf(false);
                 }
@@ -498,9 +504,14 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
               ) : (
                 <FileText className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
               )}
-              <span>{isExportingWholesalePdf ? 'PDF…' : 'Прайс PDF с фото'}</span>
+              <span>{isExportingWholesalePdf ? 'PDF…' : 'Прайс PDF'}</span>
             </button>
           </div>
+          {wholesalePdfFailed && (
+            <p role="alert" className="w-full text-xs font-semibold text-danger">
+              Не удалось собрать PDF на этом устройстве — скачайте прайс CSV.
+            </p>
+          )}
         </div>
       )}
 

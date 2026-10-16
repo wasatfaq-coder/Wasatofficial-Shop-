@@ -55,10 +55,11 @@ interface QuickViewModalProps {
     color: string,
     size: string,
     quantity: number,
-    wholesale?: boolean | 'wholesale' | 'broken'
+    wholesale?: boolean | 'wholesale' | 'broken',
+    quiet?: boolean
   ) => boolean | void;
   /** Добавление ростовки («Ростовкой», этап 20) в корзину прямо из быстрого просмотра */
-  onAddPackToCart?: (product: Product, packId: string, color: string, packs: number) => boolean;
+  onAddPackToCart?: (product: Product, packId: string, color: string, packs: number, quiet?: boolean) => boolean;
   /** Текущие строки корзины для расчёта доступного числа ростовок */
   cartItems?: CartItem[];
   /** Настройки опта («Опт») со ступенями скидки за объём */
@@ -121,8 +122,11 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
 
   const [buyChoice, setBuyChoice] = useState<BuyMode>(() => (offer?.onlyWholesale ? 'wholesale' : 'retail'));
   const brokenMode = Boolean(brokenPackOffer) && buyChoice === 'broken';
-  const packMode = packsOffered && !brokenMode && buyChoice === 'pack';
-  const wholesaleMode = Boolean(offer) && !packMode && !brokenMode && (buyChoice === 'wholesale' || Boolean(offer?.onlyWholesale));
+  // as on the product page: with size packs «Оптом» sells whole packs, otherwise wholesale packs (review 16.10, finding 2)
+  const wantsWholesale =
+    !brokenMode && (buyChoice === 'pack' || (Boolean(offer) && (buyChoice === 'wholesale' || Boolean(offer?.onlyWholesale))));
+  const packMode = packsOffered && wantsWholesale;
+  const wholesaleMode = Boolean(offer) && !packsOffered && wantsWholesale;
   const step = wholesaleMode && offer ? offer.packSize : 1;
   const [quantity, setQuantity] = useState(1);
   const [selectedPackId, setSelectedPackId] = useState('');
@@ -213,7 +217,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
 
   const changeBuyMode = (mode: BuyMode) => {
     setBuyChoice(mode);
-    if (mode === 'pack' && product) {
+    if ((mode === 'pack' || (mode === 'wholesale' && packsOffered)) && product) {
       setPackCount(1);
       if (!packColorNames.some((c) => sameColor(c, selectedColor)) && packColorNames[0]) {
         setSelectedColor(packColorNames[0]);

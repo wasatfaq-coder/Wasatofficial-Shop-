@@ -156,8 +156,11 @@ export function useCart({
     color: string,
     size: string,
     quantity: number,
-    wholesaleChoice: boolean | 'broken' = false
+    wholesaleChoice: boolean | 'broken' = false,
+    // the shah-matrix adds many lines at once and says «Добавлено» itself: no toast per line (review 16.10, finding 8)
+    quiet = false
   ): boolean => {
+    const notify: typeof addToast = quiet ? () => {} : addToast;
     const asBroken =
       wholesaleChoice === 'broken' &&
       goesBrokenPack(product, color, size, (sz) => getOrderableStock(product, color, sz, false));
@@ -201,7 +204,7 @@ export function useCart({
     if (existing) {
       const currentQty = existing.quantity;
       if (currentQty >= maxQty) {
-        addToast(
+        notify(
           `В корзине уже максимум: ${product.title} (${asWholesale ? packsText(maxQty, step) : `${maxQty} шт.`})`,
           'info',
           openCartAction
@@ -211,7 +214,7 @@ export function useCart({
       // whole packs even when the line was not (the pack size changed since it was added)
       const newTotalQty = Math.min(Math.floor((currentQty + clampedQuantity) / step) * step, maxQty);
       setCartItems((prev) => prev.map((item) => (item.id === existing.id ? { ...item, quantity: newTotalQty } : item)));
-      addToast(
+      notify(
         asBroken
           ? `Разбитая упаковка в корзине: ${variantText} — ${newTotalQty} шт.`
           : asWholesale
@@ -239,7 +242,7 @@ export function useCart({
         ...(asBroken ? { priceKind: 'broken' as const } : asWholesale ? { priceKind: 'wholesale' as const } : {}),
       };
       setCartItems((prev) => [...prev, newItem]);
-      addToast(
+      notify(
         asBroken
           ? `Разбитая упаковка в корзину: ${variantText} — ${clampedQuantity} шт.`
           : asWholesale
@@ -256,7 +259,8 @@ export function useCart({
    * Add a size pack («ростовка», stage 20): one line of the pack in the colour, `packs` — whole packs, as many as every
    * size of the pack allows after the other lines of the cart (no preorder for packs, owner's decision 12.10)
    */
-  const handleAddPackToCart = (product: Product, packId: string, color: string, packs: number): boolean => {
+  const handleAddPackToCart = (product: Product, packId: string, color: string, packs: number, quiet = false): boolean => {
+    const notify: typeof addToast = quiet ? () => {} : addToast;
     const draft = pricePackLine<CartItem>({
       id: `cart-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       product,
@@ -280,7 +284,7 @@ export function useCart({
     }
     const current = existing?.quantity ?? 0;
     if (current >= max) {
-      addToast(`В корзине уже максимум: ${name} — ${max} уп.`, 'info', openCartAction);
+      notify(`В корзине уже максимум: ${name} — ${max} уп.`, 'info', openCartAction);
       return false;
     }
     const next = Math.min(current + Math.max(1, Math.floor(packs)), max);
@@ -289,7 +293,7 @@ export function useCart({
     } else {
       setCartItems((prev) => [...prev, { ...draft, quantity: next, addedPrice: draft.packPrice }]);
     }
-    addToast(`Ростовка в корзине: ${name} — ${next} уп.`, 'success', openCartAction);
+    notify(`Ростовка в корзине: ${name} — ${next} уп.`, 'success', openCartAction);
     return true;
   };
 
