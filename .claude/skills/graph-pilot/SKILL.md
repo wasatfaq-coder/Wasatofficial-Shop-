@@ -26,7 +26,7 @@ description: Отвечает на вопросы о коде магазина �
 ## Главная таблица: намерение → команда
 
 Подбери намерение и выполни **одну** команду. Нет `graphify-out/graph.json` или он построен на старом коммите
-(строка «Built from commit» в `GRAPH_REPORT.md` ≠ `git rev-parse HEAD`) — сначала `graphify update .`.
+(строка «Built from commit» в `GRAPH_REPORT.md` ≠ `git log -1 --format=%h -- src functions scripts`, то есть последний коммит, который менял код, а не документы и скиллы) — сначала `graphify update .`.
 
 | Что хочет человек | Команда | Цена |
 |---|---|---|
