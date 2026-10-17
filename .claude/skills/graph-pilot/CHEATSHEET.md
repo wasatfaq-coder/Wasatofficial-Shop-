@@ -19,7 +19,7 @@
 
 | Хочу | Команда |
 |---|---|
-| Как устроена фича | `graphify query "auth admin signIn"` 🆓 |
+| Как устроена фича | `graphify query "auth admin signIn" --budget 2000` 🆓 |
 | Связь двух сущностей | `graphify path "useAuth()" "ProfileAdminPanel()"` 🆓 (`--undirected`, если пути нет) |
 | Объяснить одну сущность | `graphify explain "AuthProvider()"` 🆓 |
 | Что заденет правка | `graphify affected "resolveIsAdmin()"` 🆓 |
