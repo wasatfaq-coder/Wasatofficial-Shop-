@@ -148,7 +148,7 @@ export function getOrderPaymentNotification(
       icon: 'check',
       orderId: order.id,
       badgeText: 'Оплачен',
-      badgeBg: 'bg-success-soft text-success border-success/35',
+      badgeBg: 'neu-tone-success',
     };
   }
   if (paymentStatus === 'pending') {
@@ -159,7 +159,7 @@ export function getOrderPaymentNotification(
       icon: 'alert',
       orderId: order.id,
       badgeText: 'Чек отклонён',
-      badgeBg: 'bg-danger-soft text-danger border-danger/35',
+      badgeBg: 'neu-tone-danger',
     };
   }
   return null;
@@ -186,7 +186,7 @@ export function getOrderStatusNotification(
       oldStatus,
       newStatus: effectiveNewStatus,
       badgeText: 'Отменен',
-      badgeBg: 'bg-danger-soft text-danger border-danger/35',
+      badgeBg: 'neu-tone-danger',
     };
   }
 
@@ -206,7 +206,7 @@ export function getOrderStatusNotification(
         oldStatus,
         newStatus: effectiveNewStatus,
         badgeText: 'Сборка',
-        badgeBg: 'bg-warning-soft text-warning border-warning/35',
+        badgeBg: 'neu-tone-warning',
       };
 
     case 'in_transit': {
@@ -234,7 +234,7 @@ export function getOrderStatusNotification(
         oldStatus,
         newStatus: effectiveNewStatus,
         badgeText: 'В пути',
-        badgeBg: 'bg-accent/10 text-accent border-accent/30',
+        badgeBg: 'neu-tone-info',
       };
     }
 
@@ -248,7 +248,7 @@ export function getOrderStatusNotification(
         oldStatus,
         newStatus: effectiveNewStatus,
         badgeText: 'Готов к выдаче',
-        badgeBg: 'bg-success-soft text-success border-success/35',
+        badgeBg: 'neu-tone-success',
       };
 
     case 'delivered':
@@ -261,7 +261,7 @@ export function getOrderStatusNotification(
         oldStatus,
         newStatus: effectiveNewStatus,
         badgeText: 'Доставлен',
-        badgeBg: 'bg-success-soft text-success border-success/35',
+        badgeBg: 'neu-tone-success',
       };
 
     case 'accepted':
@@ -275,7 +275,7 @@ export function getOrderStatusNotification(
         oldStatus,
         newStatus: effectiveNewStatus,
         badgeText: 'Принят',
-        badgeBg: 'bg-accent/10 text-accent border-accent/30',
+        badgeBg: 'neu-tone-info',
       };
   }
 }

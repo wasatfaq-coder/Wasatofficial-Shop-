@@ -23,6 +23,8 @@ export function ProductFormVariants({
   onShowToast: AdminProductsTabProps['onShowToast'];
 }) {
   const {
+    storeColors,
+    storeSizes,
     editingProduct,
     formCategory,
     formSizes,
@@ -32,6 +34,10 @@ export function ProductFormVariants({
     formImages,
     formSkus,
     setFormSkus,
+    defaultVariantStock,
+    setDefaultVariantStock,
+    bulkStockInput,
+    setBulkStockInput,
     setPendingRemoval,
     customSizeInput,
     setCustomSizeInput,
@@ -44,6 +50,8 @@ export function ProductFormVariants({
     takenBarcodes,
     barcodeForColor,
   } = form;
+
+  const initialStockValue = editingProduct ? 0 : Math.max(0, parseInt(defaultVariantStock, 10) || 0);
 
   // Color management with SKU synchronization
   // A code inside the name («Хаки #556B2F» pasted from a supplier's table) wins over the code field
@@ -86,11 +94,33 @@ export function ProductFormVariants({
       id: `${prodId}-${cleanName}-${size}`,
       color: cleanName,
       size,
-      stock: 0,
+      stock: initialStockValue,
       skuCode: generateSkuCode({ id: prodId, category: formCategory }, cleanName, size, 'WS'),
       barcode: colorBarcode,
     }));
 
+    setFormSkus((prev) => [...prev, ...newSkus]);
+  };
+
+  const handleToggleStoreColor = (paletteColor: { name: string; hex: string }) => {
+    const existing = formColors.find((c) => normalizeColorName(c.name) === normalizeColorName(paletteColor.name));
+    if (existing) {
+      handleRemoveColor(existing.name);
+      return;
+    }
+    const cleanName = paletteColor.name.trim();
+    const hex = paletteColor.hex;
+    setFormColors((prev) => [...prev, { name: cleanName, hex }]);
+    const prodId = editingProduct ? editingProduct.id : `prod-${Date.now()}`;
+    const colorBarcode = generateBarcode(takenBarcodes());
+    const newSkus: ProductSKU[] = formSizes.map((size) => ({
+      id: `${prodId}-${cleanName}-${size}`,
+      color: cleanName,
+      size,
+      stock: initialStockValue,
+      skuCode: generateSkuCode({ id: prodId, category: formCategory }, cleanName, size, 'WS'),
+      barcode: colorBarcode,
+    }));
     setFormSkus((prev) => [...prev, ...newSkus]);
   };
 
@@ -111,7 +141,7 @@ export function ProductFormVariants({
             className="w-8 h-8 rounded-full border border-black/15 shrink-0"
             style={{ backgroundColor: color?.hex || '#94A3B8' }}
           />
-          <p className="font-extrabold text-xs text-[#2D3A4E] min-w-0">{colorName}</p>
+          <p className="font-extrabold text-xs text-text-primary min-w-0">{colorName}</p>
         </>
       ),
       run: () => {
@@ -139,7 +169,7 @@ export function ProductFormVariants({
       id: `${prodId}-${c.name}-${size}`,
       color: c.name,
       size,
-      stock: 0,
+      stock: initialStockValue,
       skuCode: generateSkuCode({ id: prodId, category: formCategory }, c.name, size, 'WS'),
       barcode: barcodeForColor(c.name, taken),
     }));
@@ -160,7 +190,7 @@ export function ProductFormVariants({
         id: `${prodId}-${c.name}-${size}`,
         color: c.name,
         size,
-        stock: 0,
+        stock: initialStockValue,
         skuCode: generateSkuCode({ id: prodId, category: formCategory }, c.name, size, 'WS'),
         barcode: barcodeForColor(c.name, taken),
       }));
@@ -184,7 +214,7 @@ export function ProductFormVariants({
           <span className="h-8 min-w-8 px-2 rounded-xl neu-flat flex items-center justify-center text-xs font-extrabold text-accent shrink-0">
             {sizeToRemove}
           </span>
-          <p className="font-extrabold text-xs text-[#2D3A4E] min-w-0">Размер {sizeToRemove}</p>
+          <p className="font-extrabold text-xs text-text-primary min-w-0">Размер {sizeToRemove}</p>
         </>
       ),
       run: () => {
@@ -226,21 +256,79 @@ export function ProductFormVariants({
     onShowToast('Артикулы и штрихкоды SKU синхронизированы', 'success');
   };
 
+  /**
+   * Step 1: «Заполнить варианты (N)» — creates all colour × size pairs with `defaultVariantStock` (keeping manually entered
+   * stocks > 0 on existing pairs, or setting `defaultVariantStock` on pairs still at 0).
+   */
+  const handleFillVariantMatrix = () => {
+    if (formColors.length === 0 || formSizes.length === 0) {
+      onShowToast('Сначала выберите хотя бы один цвет и один размер', 'error');
+      return;
+    }
+    const stockToSet = Math.max(0, parseInt(defaultVariantStock, 10) || 0);
+    const prodId = editingProduct ? editingProduct.id : `prod-${Date.now()}`;
+    const taken = takenBarcodes();
+    setFormSkus((prev) => {
+      const byPair = new Map<string, ProductSKU>();
+      for (const s of prev) {
+        byPair.set(`${normalizeColorName(s.color)}|${s.size.trim().toUpperCase()}`, s);
+      }
+      const next: ProductSKU[] = [];
+      for (const c of formColors) {
+        const colorBarcode = barcodeForColor(c.name, taken, [...prev, ...next]);
+        for (const sz of formSizes) {
+          const key = `${normalizeColorName(c.name)}|${sz.trim().toUpperCase()}`;
+          const existing = byPair.get(key);
+          if (existing) {
+            next.push({
+              ...existing,
+              stock: existing.stock > 0 ? existing.stock : stockToSet,
+              skuCode: existing.skuCode || generateSkuCode({ id: prodId, category: formCategory }, c.name, sz, 'WS'),
+              barcode: existing.barcode?.trim() ? existing.barcode : colorBarcode,
+            });
+          } else {
+            next.push({
+              id: `${prodId}-${c.name}-${sz}`,
+              color: c.name,
+              size: sz,
+              stock: stockToSet,
+              skuCode: generateSkuCode({ id: prodId, category: formCategory }, c.name, sz, 'WS'),
+              barcode: colorBarcode,
+            });
+          }
+        }
+      }
+      return next;
+    });
+    onShowToast(`Варианты (${formColors.length * formSizes.length}) заполнены по ${stockToSet} шт.`, 'success');
+  };
+
+  /** Step 2: «Задать всем: [ N ] шт. → Применить» */
+  const handleApplyBulkStock = () => {
+    const val = Math.max(0, parseInt(bulkStockInput, 10));
+    if (Number.isNaN(val)) return;
+    setFormSkus((prev) => prev.map((s) => ({ ...s, stock: val })));
+    setBulkStockInput('');
+    onShowToast(`Остаток всех вариантов (${formSkus.length}) установлен: ${val} шт.`, 'success');
+  };
+
+  const presetSizesList = storeSizes.length > 0 ? storeSizes : PRESET_SIZES;
+
   return (
     <>
       {/* Right Column: Colors, Sizes, SKU Matrix */}
       <div className="space-y-3.5">
         {/* Colors Section - Unified Inset Container */}
-        <div className="neu-inset rounded-2xl p-3.5 border border-white/60 space-y-3">
-          <div className="flex items-center justify-between pb-1 border-b border-[#BAC5D5]/30">
+        <div className="neu-inset rounded-2xl p-3.5 space-y-3">
+          <div className="flex items-center justify-between pb-1.5 neu-divider-b">
             <div className="flex items-center gap-1">
-              <label className="text-[11px] font-extrabold text-[#2D3A4E] flex items-center gap-1.5 uppercase tracking-wider">
+              <label className="text-[11px] font-extrabold text-text-primary flex items-center gap-1.5 uppercase tracking-wider">
                 <Palette className="w-3.5 h-3.5 text-accent" />
                 <span>Цвета товара * ({formColors.length})</span>
               </label>
               <AdminHint label="Цвета">Цвет и оттенок для покупателя. Добавьте цвета, потом размеры.</AdminHint>
             </div>
-            <span className="text-[11px] font-semibold text-[#4E5C70]">Мин. 1 цвет</span>
+            <span className="text-[11px] font-semibold text-text-secondary">Мин. 1 цвет</span>
           </div>
 
           {/* Active Colors Chips */}
@@ -248,7 +336,7 @@ export function ProductFormVariants({
             {formColors.map((c) => (
               <div
                 key={c.name}
-                className="neu-flat-sm px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs font-bold text-[#2D3A4E] border border-white/60"
+                className="neu-flat-sm px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs font-bold text-text-primary "
               >
                 <span
                   className="w-3 h-3 rounded-full border border-black/15 shrink-0"
@@ -259,7 +347,7 @@ export function ProductFormVariants({
                   <button
                     type="button"
                     onClick={() => handleRemoveColor(c.name)}
-                    className="-my-1 -mr-1.5 ml-0.5 w-6 h-6 inline-flex items-center justify-center rounded-lg text-[#4E5C70] hover:text-danger cursor-pointer"
+                    className="-my-1 -mr-1.5 ml-0.5 w-8 h-8 inline-flex items-center justify-center rounded-lg text-text-secondary hover:text-danger cursor-pointer"
                     title={`Удалить цвет «${c.name}»`}
                     aria-label={`Удалить цвет «${c.name}»`}
                   >
@@ -274,7 +362,7 @@ export function ProductFormVariants({
           {formImages.length > 1 && (
             <div className="space-y-1.5">
               <div className="flex items-center gap-1">
-                <span className="text-[11px] font-extrabold text-[#2D3A4E] uppercase tracking-wider">Фото по цвету</span>
+                <span className="text-[11px] font-extrabold text-text-primary uppercase tracking-wider">Фото по цвету</span>
                 <AdminHint label="Фото по цвету">
                   Необязательно. Если выбрать для цвета номер фото из галереи, при выборе этого цвета покупатель сразу увидит это фото. Без выбора фото не меняется.
                 </AdminHint>
@@ -283,7 +371,7 @@ export function ProductFormVariants({
                 {formColors.map((c) => (
                   <div key={c.name} className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full border border-black/15 shrink-0" style={{ backgroundColor: c.hex }} />
-                    <span className="text-xs font-bold text-[#2D3A4E] min-w-0 flex-1 truncate">{c.name}</span>
+                    <span className="text-xs font-bold text-text-primary min-w-0 flex-1 truncate">{c.name}</span>
                     <NeumorphicSelect
                       className="w-32 shrink-0"
                       ariaLabel={`Фото для цвета «${c.name}»`}
@@ -300,6 +388,42 @@ export function ProductFormVariants({
             </div>
           )}
 
+          {/* Store Colour Palette Chips (1-tap selection) */}
+          {storeColors.length > 0 && (
+            <div className="space-y-1">
+              <div className="flex items-center gap-1">
+                <span className="text-[11px] text-text-secondary font-semibold">Палитра магазина:</span>
+                <AdminHint label="Палитра магазина">
+                  Нажмите на цвет, чтобы сразу добавить или убрать его. Настраивается в «Витрине» → «Цвета и размеры товаров».
+                </AdminHint>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {storeColors.map((sc) => {
+                  const isPicked = formColors.some((c) => normalizeColorName(c.name) === normalizeColorName(sc.name));
+                  return (
+                    <button
+                      key={sc.name}
+                      type="button"
+                      onClick={() => handleToggleStoreColor(sc)}
+                      aria-pressed={isPicked}
+                      className={`h-8 px-2.5 rounded-xl flex items-center gap-1.5 text-[11px] font-extrabold transition-all cursor-pointer ${
+                        isPicked
+                          ? 'neu-pill-active text-accent'
+                          : 'neu-button text-text-secondary hover:text-text-primary'
+                      }`}
+                    >
+                      <span
+                        className="w-3 h-3 rounded-full border border-black/15 shrink-0"
+                        style={{ backgroundColor: sc.hex }}
+                      />
+                      <span>{sc.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Add Custom Color */}
           <div className="flex flex-col gap-2.5">
             <div data-enter-adds className="grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_7rem_auto] gap-2">
@@ -309,7 +433,7 @@ export function ProductFormVariants({
                 onChange={(e) => handleCustomColorNameChange(e.target.value)}
                 placeholder="Новый цвет, напр. Хаки"
                 aria-label="Название нового цвета"
-                className="col-span-2 sm:col-span-1 min-w-0 h-9 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
+                className="col-span-2 sm:col-span-1 min-w-0 h-9 px-3 neu-inset rounded-xl text-xs text-text-primary placeholder:text-text-muted"
               />
               <div className="relative min-w-0">
                 <input
@@ -326,13 +450,13 @@ export function ProductFormVariants({
                   }}
                   placeholder="#HEX"
                   maxLength={40}
-                  className="w-full h-9 pl-8 pr-2 neu-inset rounded-xl text-xs text-[#2D3A4E] uppercase font-mono"
+                  className="w-full h-9 pl-8 pr-2 neu-inset rounded-xl text-xs text-text-primary uppercase font-mono"
                   aria-label="Код цвета: HEX или rgb"
                   aria-invalid={customColorHexUnreadable || undefined}
                   aria-describedby={customColorHexUnreadable ? 'product-color-code-error' : undefined}
                 />
                 <div
-                  className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-black/15 shadow-inner"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full shadow-[var(--neu-inset-sm)]"
                   style={{ backgroundColor: pendingColorHex ?? 'transparent' }}
                 />
               </div>
@@ -340,7 +464,7 @@ export function ProductFormVariants({
                 type="button"
                 onClick={handleAddCustomColor}
                 disabled={!pendingColor.name.trim() || !pendingColorHex}
-                className="h-9 px-3 neu-button rounded-xl text-xs font-extrabold text-accent cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0 whitespace-nowrap"
+                className="h-9 px-3 neu-button rounded-xl text-xs font-extrabold text-accent cursor-pointer transition-all disabled:cursor-not-allowed shrink-0 whitespace-nowrap"
               >
                 + Цвет
               </button>
@@ -378,7 +502,7 @@ export function ProductFormVariants({
                     setCustomColorHex(hex);
                     setCustomColorHexChosen(true);
                   }}
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center p-1 transition-all cursor-pointer ${
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center p-1 transition-all cursor-pointer ${
                     pendingColorHex === hex ? 'neu-pill-active' : 'neu-button'
                   }`}
                   title={hex}
@@ -396,13 +520,13 @@ export function ProductFormVariants({
         </div>
 
         {/* Sizes Section - Unified Inset Container */}
-        <div className="neu-inset rounded-2xl p-3.5 border border-white/60 space-y-3">
-          <div className="flex items-center justify-between pb-1 border-b border-[#BAC5D5]/30">
-            <label className="text-[11px] font-extrabold text-[#2D3A4E] flex items-center gap-1.5 uppercase tracking-wider">
+        <div className="neu-inset rounded-2xl p-3.5 space-y-3">
+          <div className="flex items-center justify-between pb-1.5 neu-divider-b">
+            <label className="text-[11px] font-extrabold text-text-primary flex items-center gap-1.5 uppercase tracking-wider">
               <Ruler className="w-3.5 h-3.5 text-accent" />
               <span>Размеры товара * ({formSizes.length})</span>
             </label>
-            <span className="text-[11px] font-semibold text-[#4E5C70]">Мин. 1 размер</span>
+            <span className="text-[11px] font-semibold text-text-secondary">Мин. 1 размер</span>
           </div>
 
           {/* Active Sizes */}
@@ -410,14 +534,14 @@ export function ProductFormVariants({
             {formSizes.map((s) => (
               <div
                 key={s}
-                className="neu-flat-sm px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs font-extrabold text-accent border border-white/60"
+                className="neu-flat-sm px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs font-extrabold text-accent "
               >
                 <span>{s}</span>
                 {formSizes.length > 1 && (
                   <button
                     type="button"
                     onClick={() => handleRemoveSize(s)}
-                    className="-my-1 -mr-1.5 ml-0.5 w-6 h-6 inline-flex items-center justify-center rounded-lg text-[#4E5C70] hover:text-danger cursor-pointer"
+                    className="-my-1 -mr-1.5 ml-0.5 w-8 h-8 inline-flex items-center justify-center rounded-lg text-text-secondary hover:text-danger cursor-pointer"
                     title={`Удалить размер ${s}`}
                     aria-label={`Удалить размер ${s}`}
                   >
@@ -430,9 +554,9 @@ export function ProductFormVariants({
 
           {/* Preset Sizes Bar */}
           <div className="flex flex-wrap items-center gap-1 pt-0.5">
-            <span className="text-[11px] text-[#4E5C70] font-semibold mr-0.5">Сетка:</span>
+            <span className="text-[11px] text-text-secondary font-semibold mr-0.5">Сетка:</span>
             <AdminHint label="Размеры («Сетка»)" className="-ml-1">Размеры, в которых есть товар. Для каждого цвета создастся вариант.</AdminHint>
-            {PRESET_SIZES.map((sz) => {
+            {presetSizesList.map((sz) => {
               const isSelected = formSizes.includes(sz);
               return (
                 <button
@@ -440,10 +564,10 @@ export function ProductFormVariants({
                   type="button"
                   onClick={() => handleTogglePresetSize(sz)}
                   aria-pressed={isSelected}
-                  className={`h-6 min-w-6 px-2 rounded-lg text-[11px] font-extrabold transition-all active:scale-95 cursor-pointer whitespace-nowrap ${
+                  className={`min-h-8 min-w-8 px-2 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer whitespace-nowrap ${
                     isSelected
                       ? 'neu-pill-active'
-                      : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
+                      : 'neu-button text-text-secondary hover:text-text-primary'
                   }`}
                 >
                   {sz}
@@ -460,15 +584,41 @@ export function ProductFormVariants({
               value={customSizeInput}
               onChange={(e) => setCustomSizeInput(e.target.value)}
               placeholder="Свой размер, напр. 56"
-              className="flex-1 min-w-0 h-9 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] uppercase placeholder:normal-case placeholder:text-[#56647A]"
+              className="flex-1 min-w-0 h-9 px-3 neu-inset rounded-xl text-xs text-text-primary uppercase placeholder:normal-case placeholder:text-text-muted"
             />
             <button
               type="button"
               onClick={handleAddCustomSize}
               disabled={!customSizeInput.trim()}
-              className="h-9 px-3 neu-button rounded-xl text-xs font-extrabold text-accent cursor-pointer shrink-0 transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+              className="h-9 px-3 neu-button rounded-xl text-xs font-extrabold text-accent cursor-pointer shrink-0 transition-all disabled:cursor-not-allowed whitespace-nowrap"
             >
               + Размер
+            </button>
+          </div>
+
+          {/* Step 1: Initial stock per variant & Fill Matrix button */}
+          <div className="pt-2 neu-divider-t flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <label htmlFor="default-variant-stock-input" className="text-[11px] font-bold text-text-secondary">
+                Остаток на каждый вариант, шт.
+              </label>
+              <input
+                id="default-variant-stock-input"
+                type="number"
+                min="0"
+                max="9999"
+                value={defaultVariantStock}
+                onChange={(e) => setDefaultVariantStock(e.target.value)}
+                className="w-16 h-8 px-2 text-center neu-inset rounded-xl font-extrabold text-xs text-accent"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleFillVariantMatrix}
+              disabled={formColors.length === 0 || formSizes.length === 0}
+              className="h-8 px-3 neu-button rounded-xl text-xs font-extrabold text-accent cursor-pointer transition-all disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              Заполнить варианты ({formColors.length * formSizes.length})
             </button>
           </div>
         </div>
@@ -477,7 +627,7 @@ export function ProductFormVariants({
         <div>
           <div className="flex items-center justify-between mb-2 flex-wrap gap-x-2 gap-y-1.5">
             <div className="flex items-center gap-1">
-              <label className="text-[11px] font-extrabold text-[#2D3A4E] uppercase tracking-wider flex items-center gap-1.5">
+              <label className="text-[11px] font-extrabold text-text-primary uppercase tracking-wider flex items-center gap-1.5">
                 <Boxes className="w-3.5 h-3.5 text-accent" />
                 <span>Остатки SKU ({formSkus.length})</span>
               </label>
@@ -486,10 +636,31 @@ export function ProductFormVariants({
 
             {/* Bulk Adjustments */}
             <div className="flex items-center gap-1.5 flex-wrap">
+              <div data-enter-adds className="flex items-center gap-1">
+                <span className="text-[11px] font-bold text-text-secondary">Задать всем:</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="9999"
+                  value={bulkStockInput}
+                  onChange={(e) => setBulkStockInput(e.target.value)}
+                  placeholder="шт."
+                  aria-label="Задать остаток всем вариантам, шт."
+                  className="w-14 h-7 px-1.5 text-center neu-inset rounded-lg font-extrabold text-xs text-accent placeholder:font-normal placeholder:text-text-muted"
+                />
+                <button
+                  type="button"
+                  onClick={handleApplyBulkStock}
+                  disabled={formSkus.length === 0 || bulkStockInput.trim() === ''}
+                  className="h-8 px-2.5 rounded-lg neu-button text-[11px] font-extrabold text-accent disabled:cursor-not-allowed transition-all cursor-pointer whitespace-nowrap"
+                >
+                  Применить
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={handleResetAllSkuStock}
-                className="h-7 px-2.5 rounded-lg neu-button text-[11px] font-bold text-danger transition-all cursor-pointer whitespace-nowrap"
+                className="h-8 px-2.5 rounded-lg neu-button text-[11px] font-bold text-danger transition-all cursor-pointer whitespace-nowrap"
                 title="Обнулить остатки всех вариаций"
               >
                 Обнулить
@@ -498,7 +669,7 @@ export function ProductFormVariants({
               <button
                 type="button"
                 onClick={handleRegenerateMissingCodes}
-                className="h-7 px-2.5 rounded-lg neu-button text-[11px] font-bold text-[#4E5C70] hover:text-accent transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap"
+                className="h-8 px-2.5 rounded-lg neu-button text-[11px] font-bold text-text-secondary hover:text-accent transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap"
                 title="Заполнить пропущенные артикулы и штрихкоды"
               >
                 <RefreshCw className="w-2.5 h-2.5" />
@@ -510,7 +681,7 @@ export function ProductFormVariants({
 
           <div className="neu-inset rounded-2xl p-2 max-h-72 overflow-y-auto space-y-2 text-xs">
             {formSkus.length === 0 ? (
-              <div className="p-4 text-center text-xs text-[#4E5C70]">
+              <div className="p-4 text-center text-xs text-text-secondary">
                 Нет вариаций SKU. Добавьте цвет и размер.
               </div>
             ) : (
@@ -519,7 +690,7 @@ export function ProductFormVariants({
                 return (
                   <div
                     key={`form-sku-${sku.color}-${sku.size}-${sku.id || sIdx}-${sIdx}`}
-                    className="flex flex-wrap items-center justify-between py-2 px-2.5 neu-flat rounded-xl gap-x-2 gap-y-2 border border-white/40"
+                    className="flex flex-wrap items-center justify-between py-2 px-2.5 neu-flat rounded-xl gap-x-2 gap-y-2 "
                   >
                     <div className="min-w-0 flex-1 basis-full sm:basis-0 flex items-start gap-2">
                       <span
@@ -528,14 +699,14 @@ export function ProductFormVariants({
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="font-extrabold text-[#2D3A4E] text-xs truncate">
+                          <span className="font-extrabold text-text-primary text-xs truncate">
                             {sku.color}
                           </span>
                           <span className="font-extrabold text-accent text-xs whitespace-nowrap shrink-0">
                             {sku.size}
                           </span>
                         </div>
-                        <div className="flex flex-wrap items-center gap-x-2 text-[11px] text-[#4E5C70] font-mono">
+                        <div className="flex flex-wrap items-center gap-x-2 text-[11px] text-text-secondary font-mono">
                           <span className="whitespace-nowrap">{sku.skuCode}</span>
                           {sku.barcode && <span className="whitespace-nowrap">{sku.barcode}</span>}
                         </div>
@@ -553,7 +724,7 @@ export function ProductFormVariants({
                             )
                           );
                         }}
-                        className="w-7 h-7 rounded-lg neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer font-bold text-xs"
+                        className="w-8 h-8 rounded-lg neu-button flex items-center justify-center text-text-secondary hover:text-text-primary transition-all cursor-pointer font-bold text-xs"
                         aria-label="Уменьшить остаток"
                       >
                         <Minus className="w-3 h-3" />
@@ -581,12 +752,12 @@ export function ProductFormVariants({
                             )
                           );
                         }}
-                        className="w-7 h-7 rounded-lg neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all cursor-pointer font-bold text-xs"
+                        className="w-8 h-8 rounded-lg neu-button flex items-center justify-center text-accent hover:text-accent-strong transition-all cursor-pointer font-bold text-xs"
                         aria-label="Увеличить остаток"
                       >
                         <Plus className="w-3 h-3" />
                       </button>
-                      <span className="text-[11px] font-bold text-[#4E5C70] ml-0.5">шт.</span>
+                      <span className="text-[11px] font-bold text-text-secondary ml-0.5">шт.</span>
 
                       {/* Stock status dot */}
                       <span

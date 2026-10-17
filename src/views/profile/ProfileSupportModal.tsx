@@ -1,5 +1,5 @@
 import { StoreHours } from '../../components/StoreHours';
-import { motion, AnimatePresence } from 'motion/react';
+import { m, AnimatePresence } from 'motion/react';
 import { telHref } from '../../utils/storeContacts';
 import { Headphones, X, Phone, MessageCircle } from 'lucide-react';
 import { StorefrontSettings } from '../../types';
@@ -22,7 +22,7 @@ export function ProfileSupportModal({ isOpen, onClose, storeName, storePhone, st
     <>
       <AnimatePresence>
         {isOpen && (
-          <motion.div
+          <m.div
             key="support-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -33,10 +33,10 @@ export function ProfileSupportModal({ isOpen, onClose, storeName, storePhone, st
             {/* Backdrop */}
             <div
               onClick={() => onClose()}
-              className="fixed inset-0 bg-[#2D3A4E]/40 backdrop-blur-xs cursor-pointer"
+              className="fixed inset-0 bg-text-primary/40 backdrop-blur-xs cursor-pointer"
             />
 
-            <motion.div
+            <m.div
               ref={supportDialog.ref}
               {...supportDialog.props}
               key="support-modal"
@@ -44,33 +44,33 @@ export function ProfileSupportModal({ isOpen, onClose, storeName, storePhone, st
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.93, opacity: 0, y: 12 }}
               transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-              className="neu-modal rounded-3xl p-5 sm:p-6 max-w-md w-full space-y-4 text-[#2D3A4E] border border-white/80 relative z-10"
+              className="neu-modal rounded-3xl p-5 sm:p-6 max-w-md w-full space-y-4 text-text-primary relative z-10"
             >
-              <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center text-accent">
-                    <Headphones className="w-4 h-4" />
+              <div className="flex items-center justify-between gap-2 neu-divider-b pb-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0">
+                    <Headphones className="w-4 h-4 shrink-0" />
                   </div>
-                  <h3 id={supportDialog.titleId} className="text-sm font-extrabold uppercase tracking-wider text-[#2D3A4E]">
+                  <h3 id={supportDialog.titleId} className="text-sm font-extrabold uppercase tracking-wider text-text-primary">
                     Служба заботы {storeName}
                   </h3>
                 </div>
                 <button
                   onClick={() => onClose()}
-                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                  className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer shrink-0"
                   aria-label="Закрыть"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4 shrink-0" />
                 </button>
               </div>
 
-              <div className="space-y-3 text-xs text-[#4E5C70] leading-relaxed">
-                <p className="font-bold text-[#2D3A4E]">Мы на связи и готовы помочь с любым вопросом!</p>
+              <div className="space-y-3 text-xs text-text-secondary leading-relaxed">
+                <p className="font-bold text-text-primary">Мы на связи и готовы помочь с любым вопросом!</p>
                 {storePhone && (
                 <div className="neu-inset rounded-2xl p-3.5 space-y-2">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-bold text-[#2D3A4E]">Телефон магазина:</p>
+                      <p className="font-bold text-text-primary">Телефон магазина:</p>
                       <a
                         href={telHref(storePhone)}
                         className="text-accent font-extrabold text-base hover:underline block"
@@ -108,15 +108,15 @@ export function ProfileSupportModal({ isOpen, onClose, storeName, storePhone, st
                   {storeEmail && (
                     <a
                       href={`mailto:${storeEmail}`}
-                      className="w-full neu-button py-2.5 px-4 rounded-xl text-xs font-bold text-[#2D3A4E] flex items-center justify-center gap-2 cursor-pointer hover:text-accent transition-colors"
+                      className="w-full neu-button py-2.5 px-4 rounded-xl text-xs font-bold text-text-primary flex items-center justify-center gap-2 cursor-pointer hover:text-accent transition-colors"
                     >
                       <span>Email: {storeEmail}</span>
                     </a>
                   )}
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
+            </m.div>
+          </m.div>
         )}
       </AnimatePresence>
     </>

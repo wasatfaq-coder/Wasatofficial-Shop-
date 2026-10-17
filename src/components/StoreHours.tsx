@@ -46,8 +46,8 @@ export const StoreHours: React.FC<StoreHoursProps> = ({ schedule, comment = '' }
   if (!configured) {
     return note ? (
       <div className="flex items-start gap-2 text-xs">
-        <Clock className="w-3.5 h-3.5 text-[#4E5C70] shrink-0 mt-0.5" aria-hidden="true" />
-        <span className="text-[#4E5C70]">{note}</span>
+        <Clock className="w-3.5 h-3.5 text-text-secondary shrink-0 mt-0.5" aria-hidden="true" />
+        <span className="text-text-secondary">{note}</span>
       </div>
     ) : null;
   }
@@ -56,31 +56,31 @@ export const StoreHours: React.FC<StoreHoursProps> = ({ schedule, comment = '' }
   return (
     <div className="space-y-1.5 text-xs">
       <div className="flex items-start gap-2">
-        <Clock className="w-3.5 h-3.5 text-[#4E5C70] shrink-0 mt-0.5" aria-hidden="true" />
+        <Clock className="w-3.5 h-3.5 text-text-secondary shrink-0 mt-0.5" aria-hidden="true" />
         <div className="min-w-0 space-y-1">
-          <p className={`font-bold ${status.open ? 'text-success' : 'text-[#2D3A4E]'}`}>
+          <p className={`font-bold ${status.open ? 'text-success' : 'text-text-primary'}`}>
             {statusText(status)}
-            {status.note && <span className="font-semibold text-[#4E5C70]"> · {status.note}</span>}
+            {status.note && <span className="font-semibold text-text-secondary"> · {status.note}</span>}
           </p>
-          <ul className="text-[#4E5C70] space-y-0.5" aria-label="График работы">
+          <ul className="text-text-secondary space-y-0.5" aria-label="График работы">
             {weekSummary(schedule).map((row) => (
               <li key={row.days}>
-                <span className="font-semibold text-[#2D3A4E]">{row.days}</span> {row.hours}
+                <span className="font-semibold text-text-primary">{row.days}</span> {row.hours}
               </li>
             ))}
           </ul>
           {special.length > 0 && (
-            <ul className="text-[#4E5C70] space-y-0.5" aria-label="Особые дни">
+            <ul className="text-text-secondary space-y-0.5" aria-label="Особые дни">
               {special.map((day) => (
                 <li key={day.date}>
-                  <span className="font-semibold text-[#2D3A4E]">{day.label}</span> {day.hours}
+                  <span className="font-semibold text-text-primary">{day.label}</span> {day.hours}
                   {day.note && ` · ${day.note}`}
                 </li>
               ))}
             </ul>
           )}
-          {note && <p className="text-[#4E5C70]">{note}</p>}
-          {!isMoscowTime() && <p className="text-[#4E5C70]">Время — московское</p>}
+          {note && <p className="text-text-secondary">{note}</p>}
+          {!isMoscowTime() && <p className="text-text-secondary">Время — московское</p>}
         </div>
       </div>
     </div>

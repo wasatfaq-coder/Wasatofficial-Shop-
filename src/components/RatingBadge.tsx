@@ -39,20 +39,20 @@ export const RatingBadge: React.FC<RatingBadgeProps> = ({
 
   return (
     <div
-      className={`rounded-full neu-photo-badge text-[#2D3A4E] font-bold inline-flex items-center justify-center shrink-0 leading-none ${
+      className={`rounded-full neu-photo-badge text-text-primary font-bold inline-flex items-center justify-center shrink-0 leading-none ${
         size === 'sm' ? 'h-6 px-2.5 text-[11px] gap-1' : 'h-7 px-3 text-xs gap-1.5'
       } ${className}`}
     >
       <Star
         className={`${
           size === 'sm' ? 'w-2.5 h-2.5' : 'w-3 h-3'
-        } fill-[#4E5C70] text-[#4E5C70] shrink-0`}
+        } fill-current text-text-secondary shrink-0`}
         strokeWidth={0}
       />
-      {showLabel && <span className="text-[#4E5C70] font-semibold text-[11px]">Рейтинг</span>}
+      {showLabel && <span className="text-text-secondary font-semibold text-[11px]">Рейтинг</span>}
       <span className="font-bold">{formattedRating}</span>
       {reviewsCount !== undefined && showLabel && (
-        <span className="text-[#4E5C70] font-normal text-[11px]">({reviewsCount})</span>
+        <span className="text-text-secondary font-normal text-[11px]">({reviewsCount})</span>
       )}
     </div>
   );

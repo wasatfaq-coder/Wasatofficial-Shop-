@@ -10,6 +10,11 @@ import { mkdirSync } from 'node:fs';
 
 const STUB = `
 export const db = null;
+export const NAMED_FIRESTORE_DATABASE_ID = 'stub-named';
+export const DEFAULT_FIRESTORE_DATABASE_ID = '(default)';
+export const FIRESTORE_DATABASE_ID = NAMED_FIRESTORE_DATABASE_ID;
+// copyBetweenDatabases opens databases by id: in the rules test it must fail instead of reaching a real project
+export function getFirestoreById(): never { throw new Error('getFirestoreById is not available in the rules test'); }
 export enum OperationType { CREATE = 'create', UPDATE = 'update', DELETE = 'delete', LIST = 'list', GET = 'get', WRITE = 'write' }
 // the site's handleFirestoreError logs and throws a new Error; the test needs the original one (its code)
 export function handleFirestoreError(error: unknown): never { throw error; }

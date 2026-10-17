@@ -130,8 +130,13 @@ export function useCustomerOrders({
     // next to wholesale — takes from the same stock)
     const next = [...cartItems];
     let added = 0;
-    let skipped = 0;
-    let cut = 0;
+    const skippedNames: string[] = [];
+    const cutNames: string[] = [];
+    const labelOf = (item: CartItem) => {
+      const title = item.product?.title || 'Товар';
+      const variant = [item.selectedSize, item.selectedColor].filter(Boolean).join(', ');
+      return variant ? `${title} (${variant})` : title;
+    };
     // a size pack of the order (a line per size) comes back as one pack line (stage 20)
     const lines: CartItem[] = groupOrderLines(items).map((group) =>
       group.kind === 'line'
@@ -152,7 +157,7 @@ export function useCustomerOrders({
     lines.forEach((item, idx) => {
       const product = products.find((p) => p.id === item.product?.id);
       if (!product) {
-        skipped += 1;
+        skippedNames.push(labelOf(item));
         return;
       }
       if (isCartPackLine(item)) {
@@ -160,7 +165,7 @@ export function useCustomerOrders({
         // the cart prices it from the product's document and the checkout refuses a pack no longer sold (review 12.10)
         const pack = pricePackLine<CartItem>({ ...item, id: `cart-${Date.now()}-${idx}`, product });
         if (pack.packUnavailable || !pack.packSizes?.length) {
-          skipped += 1;
+          skippedNames.push(labelOf(item));
           return;
         }
         const i = next.findIndex((c) => isCartPackLine(c) && c.product.id === product.id && c.packId === pack.packId && c.selectedColor === pack.selectedColor);
@@ -173,10 +178,10 @@ export function useCustomerOrders({
         );
         const total = Math.min(current + item.quantity, max);
         if (total - current <= 0) {
-          skipped += 1;
+          skippedNames.push(labelOf(item));
           return;
         }
-        if (total - current < item.quantity) cut += 1;
+        if (total - current < item.quantity) cutNames.push(`${labelOf(item)}: ${total - current} из ${item.quantity}`);
         added += 1;
         if (i > -1) next[i] = { ...next[i], quantity: total };
         else next.push({ ...pack, quantity: total });
@@ -200,26 +205,35 @@ export function useCustomerOrders({
       const total = Math.floor(Math.min(current + item.quantity, Math.max(0, free)) / step) * step;
       const gained = total - current;
       if (gained <= 0) {
-        skipped += 1;
+        skippedNames.push(labelOf(item));
         return;
       }
-      if (gained < item.quantity) cut += 1;
+      if (gained < item.quantity) cutNames.push(`${labelOf(item)}: ${gained} из ${item.quantity} шт.`);
       added += 1;
       if (i > -1) next[i] = { ...next[i], quantity: total };
       else next.push({ ...add, quantity: total });
     });
 
     if (added === 0) {
-      addToast('Товаров из этого заказа сейчас нет в наличии', 'error');
+      addToast(
+        skippedNames.length > 0
+          ? `Нет в наличии: ${skippedNames.slice(0, 3).join(', ')}${skippedNames.length > 3 ? ` и ещё ${skippedNames.length - 3}` : ''}`
+          : 'Товаров из этого заказа сейчас нет в наличии',
+        'error'
+      );
       return;
     }
     setCartItems(next);
     const notes = [
-      skipped > 0 ? `нет в наличии: ${skipped}` : '',
-      cut > 0 ? `добавлено меньше, чем в заказе: ${cut}` : '',
+      skippedNames.length > 0
+        ? `нет в наличии — ${skippedNames.slice(0, 2).join(', ')}${skippedNames.length > 2 ? ` (+${skippedNames.length - 2})` : ''}`
+        : '',
+      cutNames.length > 0
+        ? `меньше остатка — ${cutNames.slice(0, 2).join(', ')}${cutNames.length > 2 ? ` (+${cutNames.length - 2})` : ''}`
+        : '',
     ].filter(Boolean);
     addToast(
-      notes.length ? `Товары добавлены в корзину. ${notes.join('; ')}` : 'Товары заказа добавлены в корзину',
+      notes.length ? `Товары добавлены в корзину (${notes.join('; ')})` : 'Товары заказа добавлены в корзину',
       notes.length ? 'info' : 'success'
     );
     setActiveTab('cart');

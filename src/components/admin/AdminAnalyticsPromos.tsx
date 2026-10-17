@@ -9,7 +9,7 @@ const rub = (value: number) => `${value.toLocaleString('ru-RU')} ₽`;
 
 /** Nothing sold in the period: a plain note (not «не настроено» — there is nothing to set up) */
 export const AdminAnalyticsEmptyState: React.FC<{ text: string }> = ({ text }) => (
-  <p role="status" className="neu-inset rounded-2xl p-3 text-xs text-[#4E5C70] text-center">
+  <p role="status" className="neu-inset rounded-2xl p-3 text-xs text-text-secondary text-center">
     {text}
   </p>
 );
@@ -36,9 +36,9 @@ export const AdminAnalyticsPromos: React.FC<{
           Промокоды за период
         </h4>
         {promos.length > 0 && (
-          <span className="text-[11px] text-[#4E5C70]">
+          <span className="text-[11px] text-text-secondary">
             Выручка: <strong className="text-accent">{rub(promos.reduce((s, p) => s + p.revenue, 0))}</strong> · скидки:{' '}
-            <strong className="text-[#2D3A4E]">{rub(promos.reduce((s, p) => s + p.discount, 0))}</strong>
+            <strong className="text-text-primary">{rub(promos.reduce((s, p) => s + p.discount, 0))}</strong>
           </span>
         )}
       </div>
@@ -54,23 +54,23 @@ export const AdminAnalyticsPromos: React.FC<{
                   <span className="font-mono text-xs font-extrabold tracking-wider break-all">{p.code}</span>
                   <span
                     className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                      !promo ? 'text-[#4E5C70] bg-[#4E5C70]/10' : promo.active ? 'text-success bg-success-soft' : 'text-[#4E5C70] bg-[#4E5C70]/10'
+                      !promo ? 'text-text-secondary neu-inset' : promo.active ? 'neu-tone-success' : 'text-text-secondary neu-inset'
                     }`}
                   >
                     {!promo ? 'Удален' : promo.active ? 'Активен' : 'Выключен'}
                   </span>
                 </div>
-                <div className="grid grid-cols-3 gap-1 text-center pt-1 border-t border-[#BAC5D5]/40">
+                <div className="grid grid-cols-3 gap-1 text-center pt-1.5 neu-divider-t">
                   <div>
-                    <span className="text-[11px] text-[#4E5C70] block">Заказов</span>
+                    <span className="text-[11px] text-text-secondary block">Заказов</span>
                     <span className="text-xs font-extrabold">{p.orders}</span>
                   </div>
                   <div>
-                    <span className="text-[11px] text-[#4E5C70] block">Выручка</span>
+                    <span className="text-[11px] text-text-secondary block">Выручка</span>
                     <span className="text-xs font-extrabold text-accent">{rub(p.revenue)}</span>
                   </div>
                   <div>
-                    <span className="text-[11px] text-[#4E5C70] flex items-center justify-center gap-0.5">
+                    <span className="text-[11px] text-text-secondary flex items-center justify-center gap-0.5">
                       Доля заказов
                       <AdminHint label="Доля заказов" className="-my-0.5">Какая часть заказов за период пришла с этим промокодом</AdminHint>
                     </span>
@@ -80,7 +80,7 @@ export const AdminAnalyticsPromos: React.FC<{
                 {periodCommissions.has(p.code) && (() => {
                   const c = periodCommissions.get(p.code)!;
                   return (
-                    <p className="text-[11px] text-[#4E5C70] pt-1 border-t border-[#BAC5D5]/40">
+                    <p className="text-[11px] text-text-secondary pt-1.5 neu-divider-t">
                       Партнер{c.partnerName ? ` ${c.partnerName}` : ''}:{' '}
                       {c.percent === null ? (
                         'процент не задан'

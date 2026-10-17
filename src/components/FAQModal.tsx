@@ -6,7 +6,7 @@ import {
   MessageSquare,
   PhoneCall,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { m, AnimatePresence } from 'motion/react';
 import { FAQAccordion, FAQAccordionItem } from './FAQAccordion';
 import { NotConfigured } from './NotConfigured';
 import type { StoreFaqItem } from '../types';
@@ -45,7 +45,8 @@ export const FAQModal: React.FC<FAQModalProps> = ({
     const fill = (text: string) =>
       text
         .split('{FREE_DELIVERY}').join((freeDeliveryThreshold ?? 0).toLocaleString('ru-RU'))
-        .split('{RETURN_DAYS} дней').join(formatDays(returnPeriodDays ?? 0));
+        .split('{RETURN_DAYS} дней').join(formatDays(returnPeriodDays ?? 0))
+        .split('{RETURN_DAYS}').join(String(returnPeriodDays ?? 0));
     // A question built on a value the store has not set would show an invented number: it is not shown
     const unset = (text: string) =>
       (!freeDeliveryThreshold && text.includes('{FREE_DELIVERY}')) || (!returnPeriodDays && text.includes('{RETURN_DAYS}'));
@@ -74,62 +75,62 @@ export const FAQModal: React.FC<FAQModalProps> = ({
     <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
         {/* Backdrop */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer"
+          className="fixed inset-0 bg-text-primary/50 backdrop-blur-xs cursor-pointer"
         />
 
         {/* Modal Container */}
-        <motion.div
+        <m.div
           ref={dialog.ref}
           {...dialog.props}
           initial={{ scale: 0.94, opacity: 0, y: 15 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.94, opacity: 0, y: 15 }}
           transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-          className="neu-modal rounded-3xl p-4 sm:p-6 max-w-2xl w-full max-h-[88vh] flex flex-col space-y-4 text-[#2D3A4E] border border-white/80 relative z-10 overflow-hidden"
+          className="neu-modal rounded-3xl p-4 sm:p-6 max-w-2xl w-full max-h-[88vh] flex flex-col space-y-4 text-text-primary relative z-10 overflow-hidden"
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3 shrink-0">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between neu-divider-b pb-3 shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 rounded-2xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
-                <HelpCircle className="w-5 h-5 stroke-[2.2]" />
+                <HelpCircle className="w-5 h-5 stroke-[2.2] shrink-0" />
               </div>
-              <div>
-                <h3 id={dialog.titleId} className="text-base font-extrabold text-[#2D3A4E]">
+              <div className="min-w-0">
+                <h3 id={dialog.titleId} className="text-base font-extrabold text-text-primary">
                   Часто задаваемые вопросы (FAQ)
                 </h3>
-                <p className="text-xs text-[#4E5C70]">Ответы магазина на частые вопросы</p>
+                <p className="text-xs text-text-secondary">Ответы магазина на частые вопросы</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer transition-transform"
+              className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer transition-transform shrink-0"
               title="Закрыть"
               aria-label="Закрыть"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4 shrink-0" />
             </button>
           </div>
 
           {/* Search bar */}
           <div className="relative shrink-0">
-            <Search className="w-4 h-4 text-[#4E5C70] absolute left-3.5 top-3" />
+            <Search className="w-4 h-4 text-text-secondary absolute left-3.5 top-3" />
             <input
               type="text"
               placeholder="Поиск по вопросам"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full py-2.5 pl-10 pr-4 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
+              className="w-full py-2.5 pl-10 pr-4 rounded-xl neu-inset text-xs text-text-primary placeholder:text-text-muted"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-2.5 text-[#4E5C70] hover:text-[#2D3A4E] text-xs font-bold"
+                className="absolute right-3 top-2.5 text-text-secondary hover:text-text-primary text-xs font-bold"
               >
                 Очистить
               </button>
@@ -154,14 +155,14 @@ export const FAQModal: React.FC<FAQModalProps> = ({
           </div>
 
           {/* Footer Call to Action (Support Chat & Call) */}
-          <div className="neu-flat rounded-2xl p-3.5 flex items-center justify-between gap-3 shrink-0 bg-gradient-to-r from-[#E3E8EF] to-[#D8E1EC] border border-white/80">
+          <div className="neu-flat rounded-2xl p-3.5 flex items-center justify-between gap-3 shrink-0 bg-gradient-to-r from-[#E3E8EF] to-[#D8E1EC] ">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
                 <MessageSquare className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-[#2D3A4E] truncate">Не нашли ответ на свой вопрос?</p>
-                <p className="text-xs text-[#4E5C70]">Напишите нам в чат поддержки</p>
+                <p className="text-xs font-bold text-text-primary truncate">Не нашли ответ на свой вопрос?</p>
+                <p className="text-xs text-text-secondary">Напишите нам в чат поддержки</p>
               </div>
             </div>
 
@@ -169,7 +170,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
               {storePhone && (
                 <a
                   href={telHref(storePhone)}
-                  className="w-8 h-8 rounded-xl neu-button text-[#2D3A4E] hover:text-accent flex items-center justify-center cursor-pointer transition-colors"
+                  className="w-8 h-8 rounded-xl neu-button text-text-primary hover:text-accent flex items-center justify-center cursor-pointer transition-colors"
                   title={`Позвонить: ${storePhone}`}
                 >
                   <PhoneCall className="w-3.5 h-3.5" />
@@ -197,7 +198,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({
               ) : null}
             </div>
           </div>
-        </motion.div>
+        </m.div>
       </div>
     </AnimatePresence>
   );

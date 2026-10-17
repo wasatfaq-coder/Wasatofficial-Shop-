@@ -9,8 +9,8 @@ export type StorefrontTextKey = {
   [K in keyof StorefrontSettings]-?: StorefrontSettings[K] extends string | undefined ? K : never;
 }[keyof StorefrontSettings];
 
-const labelClass = 'block text-xs font-bold text-[#4E5C70] mb-1';
-const inputClass = 'w-full min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E]';
+const labelClass = 'block text-xs font-bold text-text-secondary mb-1';
+const inputClass = 'w-full min-w-0 px-3 py-2 neu-inset rounded-xl text-xs text-text-primary';
 
 /** Блок раздела: заголовок с иконкой и необязательной подсказкой */
 export const StorefrontCard: React.FC<{
@@ -21,7 +21,7 @@ export const StorefrontCard: React.FC<{
 }> = ({ title, icon, hint, children }) => (
   <section className="neu-inset rounded-2xl sm:rounded-3xl p-4 sm:p-5 space-y-3.5">
     <div className="flex items-center gap-1 min-w-0">
-      <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+      <h4 className="text-xs font-extrabold uppercase tracking-wider text-text-primary flex items-center gap-1.5">
         {icon}
         {title}
       </h4>
@@ -110,14 +110,14 @@ export const StorefrontSwitchRow: React.FC<{
     <label htmlFor={id} className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer select-none">
       <span
         className={`w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center shrink-0 ${
-          checked ? 'text-accent' : 'text-[#4E5C70]'
+          checked ? 'text-accent' : 'text-text-secondary'
         }`}
       >
         {icon}
       </span>
       <span className="min-w-0">
-        <span className="text-xs font-extrabold text-[#2D3A4E] block">{label}</span>
-        <span className="text-xs text-[#4E5C70] block">{status}</span>
+        <span className="text-xs font-extrabold text-text-primary block">{label}</span>
+        <span className="text-xs text-text-secondary block">{status}</span>
       </span>
     </label>
     <AdminHint label={label}>{hint}</AdminHint>
@@ -125,20 +125,21 @@ export const StorefrontSwitchRow: React.FC<{
   </div>
 );
 
-/** Поле «число дней»: пусто — «не задано» (разбор числа — `parseWholeNumber`) */
+/** Поле целого числа (дни или рубли): пусто — «не задано» (разбор числа — `parseWholeNumber`) */
 export const StorefrontDaysField: React.FC<{
   id: string;
   label: string;
   hint: string;
   value: number | undefined;
   max: number;
+  unit?: string;
   placeholder: string;
   note: string;
   onChange: (raw: string) => void;
-}> = ({ id, label, hint, value, max, placeholder, note, onChange }) => (
+}> = ({ id, label, hint, value, max, unit = 'дн.', placeholder, note, onChange }) => (
   <div className="neu-inset p-3 rounded-2xl space-y-1.5">
     <div className="flex items-center gap-1">
-      <label htmlFor={id} className="block text-xs font-extrabold text-[#2D3A4E]">
+      <label htmlFor={id} className="block text-xs font-extrabold text-text-primary">
         {label}
       </label>
       <AdminHint label={label}>{hint}</AdminHint>
@@ -154,11 +155,11 @@ export const StorefrontDaysField: React.FC<{
         placeholder={placeholder}
         aria-describedby={`${id}-note`}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 neu-inset rounded-xl text-xs font-extrabold text-accent pr-10"
+        className="w-full px-3 py-2 neu-inset rounded-xl text-xs font-extrabold text-accent pr-10 tabular-nums"
       />
-      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4E5C70]">дн.</span>
+      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-text-secondary">{unit}</span>
     </div>
-    <p id={`${id}-note`} className="text-xs text-[#4E5C70]">
+    <p id={`${id}-note`} className="text-xs text-text-secondary">
       {note}
     </p>
   </div>

@@ -16,8 +16,11 @@ const db = getFirestore(appConfig.firestoreDatabaseId);
 export const placeOrder = onCall(async (request): Promise<PlaceOrderResponse> => {
   try {
     const orderRequest = parsePlaceOrderRequest(request.data);
-    const order = await placeOrderCore(db, orderRequest, request.auth?.uid ?? null);
-    logger.info('Order placed', { orderId: order.id, total: order.totalPrice, uid: request.auth?.uid ?? null });
+    const uid = request.auth?.uid ?? null;
+    const signInProvider = (request.auth?.token as { firebase?: { sign_in_provider?: string } } | undefined)?.firebase?.sign_in_provider;
+    const signedInWithGoogle = Boolean(uid && signInProvider !== 'anonymous');
+    const order = await placeOrderCore(db, orderRequest, uid, new Date(), signedInWithGoogle);
+    logger.info('Order placed', { orderId: order.id, total: order.totalPrice, uid });
     return { order };
   } catch (err) {
     if (err instanceof OrderError) {

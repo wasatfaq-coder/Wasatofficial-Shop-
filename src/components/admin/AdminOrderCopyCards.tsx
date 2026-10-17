@@ -19,8 +19,8 @@ const CopyRow: React.FC<{ label: string; value?: string; strong?: boolean }> = (
   return (
     <div className="flex items-center gap-2 min-w-0">
       <div className="min-w-0 flex-1">
-        <span className="block text-[11px] text-[#4E5C70]">{label}</span>
-        <span className={`block text-xs text-[#2D3A4E] break-words ${strong ? 'font-extrabold' : 'font-bold'}`}>{value}</span>
+        <span className="block text-[11px] text-text-secondary">{label}</span>
+        <span className={`block text-xs text-text-primary break-words ${strong ? 'font-extrabold' : 'font-bold'}`}>{value}</span>
       </div>
       <button
         type="button"
@@ -76,7 +76,7 @@ export const AdminOrderCopyCards: React.FC<{ order: Order }> = ({ order }) => {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={panelId}
-        className="flex-1 min-w-0 min-h-8 px-2.5 rounded-xl neu-button text-[11px] font-bold text-[#2D3A4E] hover:text-accent flex items-center justify-between gap-2 cursor-pointer"
+        className="flex-1 min-w-0 min-h-8 px-2.5 rounded-xl neu-button text-[11px] font-bold text-text-primary hover:text-accent flex items-center justify-between gap-2 cursor-pointer"
       >
         <span>ФИО и адрес для отправки</span>
         <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
@@ -86,7 +86,7 @@ export const AdminOrderCopyCards: React.FC<{ order: Order }> = ({ order }) => {
       {open && (
         <div id={panelId} className="space-y-2">
           <section className="neu-flat-sm rounded-xl p-2.5 space-y-2" aria-label="ФИО клиента">
-            <h5 className="text-[11px] font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1">
+            <h5 className="text-[11px] font-extrabold uppercase tracking-wider text-text-primary flex items-center gap-1">
               <UserRound className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
               ФИО клиента
             </h5>
@@ -97,7 +97,7 @@ export const AdminOrderCopyCards: React.FC<{ order: Order }> = ({ order }) => {
           </section>
           {fullAddress && (
             <section className="neu-flat-sm rounded-xl p-2.5 space-y-2" aria-label="Адрес доставки">
-              <h5 className="text-[11px] font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1">
+              <h5 className="text-[11px] font-extrabold uppercase tracking-wider text-text-primary flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
                 Адрес доставки
               </h5>

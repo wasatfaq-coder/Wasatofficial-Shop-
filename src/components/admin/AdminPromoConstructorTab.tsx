@@ -9,6 +9,7 @@ import { PromoBatchCard, PromoCard, discountLabel } from './promos/PromoListCard
 import type { Order, Product, PromoCode, StoreCategory } from '../../types';
 import { isPromoExpired } from '../../shared/orderPricing';
 import { copyToClipboard } from '../../utils/clipboard';
+import { downloadCSV } from '../../utils/csvHelpers';
 import { computePartnerCommissions } from '../../utils/partnerCommission';
 import { pluralRu } from '../../utils/pluralize';
 import { usePagedList } from '../../utils/usePagedList';
@@ -149,20 +150,20 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
   const totalPending = partnerCommissions.reduce((acc, c) => acc + c.pendingOrders, 0);
 
   return (
-    <div className="space-y-4 text-[#2D3A4E] w-full min-w-0 max-w-full">
+    <div className="space-y-4 text-text-primary w-full min-w-0 max-w-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div className="min-w-0">
-          <h3 ref={headingRef} tabIndex={-1} className="text-xs font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+          <h3 ref={headingRef} tabIndex={-1} className="text-xs font-extrabold uppercase tracking-wider text-text-primary flex items-center gap-1.5">
             <Tag className="w-4 h-4 text-accent shrink-0" aria-hidden="true" />
             <span>Промокоды</span>
           </h3>
-          <p className="text-xs text-[#4E5C70]">Скидки по коду, одноразовые коды для рассылки и коды партнёров</p>
+          <p className="text-xs text-text-secondary">Скидки по коду, одноразовые коды для рассылки и коды партнёров</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={() => setView({ kind: 'batch' })}
-            className="h-10 px-3.5 neu-button rounded-xl text-xs font-bold text-[#2D3A4E] hover:text-accent flex items-center gap-1.5 cursor-pointer"
+            className="h-10 px-3.5 neu-button rounded-xl text-xs font-bold text-text-primary hover:text-accent flex items-center gap-1.5 cursor-pointer"
           >
             <Wand2 className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
             <span>Пачка кодов</span>
@@ -179,8 +180,8 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
       </div>
 
       {expiredActivePromos.length > 0 && (
-        <div className="bg-warning-soft border border-warning/30 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center gap-2.5">
-          <p className="text-xs text-[#2D3A4E] flex-1 min-w-0">
+        <div className="neu-tone-warning rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center gap-2.5">
+          <p className="text-xs text-text-primary flex-1 min-w-0">
             <strong>
               {expiredActivePromos.length} {codesWord(expiredActivePromos.length)} с прошедшим сроком
             </strong>{' '}
@@ -192,7 +193,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
             onClick={handleDisableExpired}
             disabled={isDisablingExpired}
             className={`h-9 px-4 rounded-xl text-xs font-extrabold shrink-0 self-start sm:self-auto ${
-              isDisablingExpired ? 'neu-button-disabled' : 'neu-button text-[#2D3A4E] cursor-pointer'
+              isDisablingExpired ? 'neu-button-disabled' : 'neu-button text-text-primary cursor-pointer'
             }`}
           >
             {isDisablingExpired ? 'Выключение…' : `Выключить ${expiredActivePromos.length}`}
@@ -206,14 +207,14 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
         <>
           <div className="space-y-2.5">
             <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#4E5C70]" aria-hidden="true" />
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" aria-hidden="true" />
               <input
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 aria-label="Найти промокод"
                 placeholder="Код, название или партнёр"
-                className="w-full h-10 pl-9 pr-3 neu-inset rounded-xl text-xs text-[#2D3A4E]"
+                className="w-full h-10 pl-9 pr-3 neu-inset rounded-xl text-xs text-text-primary"
               />
             </div>
             <div role="radiogroup" aria-label="Какие промокоды показать" className="flex flex-wrap gap-1.5">
@@ -225,7 +226,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                   aria-checked={filter === f.id}
                   onClick={() => setFilter(f.id)}
                   className={`min-h-8 px-3 rounded-xl text-xs font-bold cursor-pointer ${
-                    filter === f.id ? 'neu-pill-active font-extrabold' : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
+                    filter === f.id ? 'neu-pill-active font-extrabold' : 'neu-button text-text-secondary hover:text-text-primary'
                   }`}
                 >
                   {f.label} ({counts[f.id]})
@@ -237,30 +238,30 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
           {filter === 'partners' && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="neu-inset rounded-2xl p-3.5 space-y-1">
-                <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider flex items-center gap-1">
+                <span className="text-[11px] font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1">
                   <TrendingUp className="w-3.5 h-3.5 text-success" aria-hidden="true" />
                   Продажи партнёров
                 </span>
-                <p className="text-lg font-extrabold text-[#2D3A4E]">{totalSales.toLocaleString('ru-RU')} ₽</p>
-                <p className="text-xs text-[#4E5C70]">Оплаченные и полученные заказы с партнёрскими кодами, без доставки</p>
+                <p className="text-lg font-extrabold text-text-primary">{totalSales.toLocaleString('ru-RU')} ₽</p>
+                <p className="text-xs text-text-secondary">Оплаченные и полученные заказы с партнёрскими кодами, без доставки</p>
               </div>
               <div className="neu-inset rounded-2xl p-3.5 space-y-1">
-                <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider flex items-center gap-1">
+                <span className="text-[11px] font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1">
                   <DollarSign className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
                   Комиссия партнёров
                 </span>
                 <p className="text-lg font-extrabold text-accent">{totalCommission.toLocaleString('ru-RU')} ₽</p>
-                <p className="text-xs text-[#4E5C70]">Для статистики: сайт её не выплачивает. Процент — в настройках кода</p>
+                <p className="text-xs text-text-secondary">Для статистики: сайт её не выплачивает. Процент — в настройках кода</p>
               </div>
               <div className="neu-inset rounded-2xl p-3.5 space-y-1">
-                <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider flex items-center gap-1">
+                <span className="text-[11px] font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1">
                   <Users className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
                   Заказов от партнёров
                 </span>
-                <p className="text-lg font-extrabold text-[#2D3A4E]">
+                <p className="text-lg font-extrabold text-text-primary">
                   {totalOrders} {pluralRu(totalOrders, ['заказ', 'заказа', 'заказов'])}
                 </p>
-                <p className="text-xs text-[#4E5C70]">
+                <p className="text-xs text-text-secondary">
                   {totalPending > 0
                     ? `Ещё ${totalPending} ${pluralRu(totalPending, ['ждёт', 'ждут', 'ждут'])} оплаты или получения — в комиссию пока не входят`
                     : 'Оплаченные и полученные клиентом'}
@@ -270,7 +271,7 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
           )}
 
           {rows.length === 0 ? (
-            <p className="text-xs text-[#4E5C70] neu-inset rounded-2xl p-4 text-center">
+            <p className="text-xs text-text-secondary neu-inset rounded-2xl p-4 text-center">
               {query.trim() ? `По запросу «${query.trim()}» промокодов нет` : 'В этом списке промокодов нет'}
             </p>
           ) : (
@@ -287,6 +288,20 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                         `Скопировано ${row.batch.unused.length} ${pluralRu(row.batch.unused.length, ['код', 'кода', 'кодов'])}: вставьте их в рассылку`
                       )
                     }
+                    onExportCsv={() => {
+                      downloadCSV(`promo_batch_${row.batch.prefix || 'codes'}.csv`, [
+                        ['Код', 'Скидка', 'Статус', 'Использований', 'Лимит', 'Срок действия'],
+                        ...row.batch.codes.map((c) => [
+                          c.code,
+                          discountLabel(c),
+                          c.usedCount >= (c.usageLimit || 1) ? 'Погашен' : c.active ? 'Активен' : 'На паузе',
+                          c.usedCount,
+                          c.usageLimit ?? 1,
+                          c.expiresAt ?? '',
+                        ]),
+                      ]);
+                      onShowToast(`CSV пачки ${row.batch.prefix || 'кодов'} скачан`, 'success');
+                    }}
                     onDelete={() => setBatchToDelete(row.batch)}
                   />
                 ) : (
@@ -297,6 +312,17 @@ export const AdminPromoConstructorTab: React.FC<AdminPromoConstructorTabProps> =
                     commission={commissionByPromo.get(row.promo.id)}
                     onToggleActive={() => handleToggleActive(row.promo)}
                     onEdit={() => setView({ kind: 'form', promo: row.promo })}
+                    onDuplicate={() =>
+                      setView({
+                        kind: 'form',
+                        promo: {
+                          ...row.promo,
+                          id: '',
+                          code: `${row.promo.code}_COPY`,
+                          usedCount: 0,
+                        },
+                      })
+                    }
                     onCopy={() => handleCopy(row.promo.code, `Код ${row.promo.code} скопирован`)}
                     onDelete={() => setPromoToDelete(row.promo)}
                   />

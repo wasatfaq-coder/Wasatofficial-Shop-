@@ -11,11 +11,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const SHOWN_GROUPS = 5;
 
 const kindChip: Record<ClientErrorKind, string> = {
-  error: 'bg-danger-soft text-danger border-danger/25',
-  rejection: 'bg-danger-soft text-danger border-danger/25',
-  render: 'bg-danger-soft text-danger border-danger/25',
-  console: 'bg-warning-soft text-warning border-warning/25',
-  update: 'bg-warning-soft text-warning border-warning/25',
+  error: 'neu-tone-danger',
+  rejection: 'neu-tone-danger',
+  render: 'neu-tone-danger',
+  console: 'neu-tone-warning',
+  update: 'neu-tone-warning',
 };
 
 const when = (ms: number) =>
@@ -77,20 +77,25 @@ export const AdminSiteErrorsCard: React.FC<{
         : `За сутки: ${lastDay} · за ${CLIENT_ERRORS_KEEP_DAYS} дней: ${total} ${pluralRu(total, ['запись', 'записи', 'записей'])}`;
   const visible = showAll ? groups : groups.slice(0, SHOWN_GROUPS);
 
+  const isQuiet = !failed && total === 0;
+
   return (
-    <section aria-labelledby="site-errors-title" className="neu-flat rounded-2xl p-4 space-y-3 border border-white/60">
+    <section
+      aria-labelledby="site-errors-title"
+      className={`neu-flat rounded-2xl space-y-3 ${isQuiet ? 'order-last p-3' : 'p-4'}`}
+    >
       <div className="flex items-start gap-2.5">
         <div className={`w-8 h-8 rounded-xl neu-inset flex items-center justify-center shrink-0 ${lastDay ? 'text-danger' : 'text-accent'}`}>
           <Bug className="w-4 h-4" aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1">
-            <h3 id="site-errors-title" className="text-sm font-extrabold text-[#2D3A4E]">
+            <h3 id="site-errors-title" className="text-sm font-extrabold text-text-primary">
               Ошибки на сайте
             </h3>
             <AdminHint label="Ошибки на сайте">Сбои, которые случились у покупателей. Если пусто — всё работает</AdminHint>
           </div>
-          <p className="text-xs text-[#4E5C70]" aria-live="polite">
+          <p className="text-xs text-text-secondary" aria-live="polite">
             {summary}
           </p>
         </div>
@@ -114,12 +119,12 @@ export const AdminSiteErrorsCard: React.FC<{
                 <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${kindChip[group.kind]}`}>
                   {CLIENT_ERROR_KIND_LABELS[group.kind]}
                 </span>
-                <span className="text-[11px] text-[#4E5C70]">
+                <span className="text-[11px] text-text-secondary">
                   {group.count} {pluralRu(group.count, ['раз', 'раза', 'раз'])} · последний {when(group.lastAt)}
                 </span>
               </div>
-              <p className="text-xs font-bold text-[#2D3A4E] break-words">{group.message}</p>
-              <p className="text-[11px] text-[#4E5C70] break-words">
+              <p className="text-xs font-bold text-text-primary break-words">{group.message}</p>
+              <p className="text-[11px] text-text-secondary break-words">
                 {[
                   group.pages.slice(0, 3).join(', ') + (group.pages.length > 3 ? ` и ещё ${group.pages.length - 3}` : ''),
                   group.browsers.slice(0, 2).join(', '),
@@ -129,7 +134,7 @@ export const AdminSiteErrorsCard: React.FC<{
                   .join(' · ')}
               </p>
               {group.stack && (
-                <details className="text-[11px] text-[#4E5C70]">
+                <details className="text-[11px] text-text-secondary">
                   <summary className="cursor-pointer text-accent font-bold w-fit">Подробности для разработчика</summary>
                   <pre className="mt-1.5 whitespace-pre-wrap break-all max-h-48 overflow-y-auto">{group.stack}</pre>
                 </details>
@@ -148,7 +153,7 @@ export const AdminSiteErrorsCard: React.FC<{
         </button>
       )}
       {total > 0 && (
-        <p className="text-[11px] text-[#4E5C70]">
+        <p className="text-[11px] text-text-secondary">
           Почта и телефоны покупателей в журнал не попадают. В час записывается не больше 30 ошибок, записи старше{' '}
           {CLIENT_ERRORS_KEEP_DAYS} дней удаляются сами. Если ошибка повторяется, перешлите её Claude в проекте.
         </p>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Heart } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { m, AnimatePresence } from 'motion/react';
 
 interface AnimatedFavoriteButtonProps {
   isFavorite: boolean;
@@ -48,7 +48,7 @@ export const AnimatedFavoriteButton: React.FC<AnimatedFavoriteButtonProps> = ({
   const currentSize = sizeMap[size] || sizeMap.md;
 
   return (
-    <motion.button
+    <m.button
       type="button"
       onClick={handleClick}
       whileTap={{ scale: 0.82 }}
@@ -63,7 +63,7 @@ export const AnimatedFavoriteButton: React.FC<AnimatedFavoriteButtonProps> = ({
       {/* Pulse Aura Burst on favorite click */}
       <AnimatePresence>
         {isFavorite && isAnimating && (
-          <motion.span
+          <m.span
             key="favorite-pulse-aura"
             initial={{ scale: 0.6, opacity: 0.9 }}
             animate={{ scale: 2.2, opacity: 0 }}
@@ -76,7 +76,7 @@ export const AnimatedFavoriteButton: React.FC<AnimatedFavoriteButtonProps> = ({
       </AnimatePresence>
 
       {/* Pulsing and scaling heart icon */}
-      <motion.div
+      <m.div
         key={isFavorite ? 'fav-active' : 'fav-inactive'}
         initial={{ scale: 1 }}
         animate={
@@ -100,10 +100,10 @@ export const AnimatedFavoriteButton: React.FC<AnimatedFavoriteButtonProps> = ({
           className={`${currentSize.icon} transition-colors duration-200 ${
             isFavorite
               ? 'fill-danger text-danger stroke-danger drop-shadow-xs'
-              : 'text-[#4E5C70] stroke-[1.8] hover:text-[#2D3A4E]'
+              : 'text-text-secondary stroke-[1.8] hover:text-text-primary'
           } ${iconClassName}`}
         />
-      </motion.div>
-    </motion.button>
+      </m.div>
+    </m.button>
   );
 };

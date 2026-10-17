@@ -26,11 +26,11 @@ export const triggerChartHapticFeedback = (intensity: 'light' | 'medium' | 'doub
 export const NeumorphicSVGDefs: React.FC = () => {
   return (
     <defs>
-      {/* Raised bar: the same dual light as --neu-raised-sm in index.css (dark rgb(163 177 198 / .65) to the
-          bottom-right, white rgb(255 255 255 / .95) to the top-left) */}
+      {/* Raised bar: the same dual light as --neu-raised-sm in index.css (dark rgb(156 171 194 / .72) to the
+          bottom-right, white rgb(255 255 255 / .96) to the top-left) */}
       <filter id="neu-bar-elevation" x="-40%" y="-20%" width="180%" height="140%">
-        <feDropShadow dx="3" dy="3" stdDeviation="3.5" floodColor="rgb(163, 177, 198)" floodOpacity="0.65" />
-        <feDropShadow dx="-3" dy="-3" stdDeviation="3.5" floodColor="#FFFFFF" floodOpacity="0.95" />
+        <feDropShadow dx="3" dy="3" stdDeviation="3.5" floodColor="rgb(156, 171, 194)" floodOpacity="0.72" />
+        <feDropShadow dx="-3" dy="-3" stdDeviation="3.5" floodColor="#FFFFFF" floodOpacity="0.96" />
       </filter>
 
       {/* 4. Inset Vertical Track Gradient (Recessed slot effect) */}
@@ -43,27 +43,27 @@ export const NeumorphicSVGDefs: React.FC = () => {
 
       {/* 5. Convex Bar Body Gradients */}
       <linearGradient id="neu-bar-indigo-convex" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="#4A6A8E" />
-        <stop offset="45%" stopColor="#2C4A6B" />
-        <stop offset="100%" stopColor="#1F3650" />
+        <stop offset="0%" stopColor="#35557A" />
+        <stop offset="45%" stopColor="#213B58" />
+        <stop offset="100%" stopColor="#172B42" />
       </linearGradient>
 
       <linearGradient id="neu-bar-emerald-convex" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="#5E8A74" />
-        <stop offset="45%" stopColor="#3B6652" />
-        <stop offset="100%" stopColor="#2B4E3E" />
+        <stop offset="0%" stopColor="#3B6D56" />
+        <stop offset="45%" stopColor="#28503E" />
+        <stop offset="100%" stopColor="#1E3D2F" />
       </linearGradient>
 
       <linearGradient id="neu-bar-sky-convex" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="#8196B3" />
-        <stop offset="45%" stopColor="#5A6F8C" />
-        <stop offset="100%" stopColor="#44576F" />
+        <stop offset="0%" stopColor="#52647D" />
+        <stop offset="45%" stopColor="#3B4758" />
+        <stop offset="100%" stopColor="#2D3A4E" />
       </linearGradient>
 
       <linearGradient id="neu-bar-amber-convex" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="#A68B55" />
-        <stop offset="45%" stopColor="#8C733E" />
-        <stop offset="100%" stopColor="#584826" />
+        <stop offset="0%" stopColor="#755F31" />
+        <stop offset="45%" stopColor="#554420" />
+        <stop offset="100%" stopColor="#3E3116" />
       </linearGradient>
 
 
@@ -75,20 +75,20 @@ export const NeumorphicSVGDefs: React.FC = () => {
 
       {/* 6. Soft Translucent Gradients for Area & Composed Mix fills */}
       <linearGradient id="colorRevenueArea" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="#2C4A6B" stopOpacity={0.28} />
-        <stop offset="100%" stopColor="#2C4A6B" stopOpacity={0} />
+        <stop offset="0%" stopColor="#213B58" stopOpacity={0.28} />
+        <stop offset="100%" stopColor="#213B58" stopOpacity={0} />
       </linearGradient>
       <linearGradient id="colorOrdersArea" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="#3B6652" stopOpacity={0.28} />
-        <stop offset="100%" stopColor="#3B6652" stopOpacity={0} />
+        <stop offset="0%" stopColor="#28503E" stopOpacity={0.28} />
+        <stop offset="100%" stopColor="#28503E" stopOpacity={0} />
       </linearGradient>
       <linearGradient id="colorAvgCheckArea" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="#5A6F8C" stopOpacity={0.28} />
-        <stop offset="100%" stopColor="#5A6F8C" stopOpacity={0} />
+        <stop offset="0%" stopColor="#3B4758" stopOpacity={0.28} />
+        <stop offset="100%" stopColor="#3B4758" stopOpacity={0} />
       </linearGradient>
       <linearGradient id="colorReturnsArea" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="#8C733E" stopOpacity={0.28} />
-        <stop offset="100%" stopColor="#8C733E" stopOpacity={0} />
+        <stop offset="0%" stopColor="#554420" stopOpacity={0.28} />
+        <stop offset="100%" stopColor="#554420" stopOpacity={0} />
       </linearGradient>
       <linearGradient id="colorPrevArea" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stopColor="#94A3B8" stopOpacity={0.35} />
@@ -179,7 +179,7 @@ export const NeumorphicBarShape: React.FC<NeumorphicBarShapeProps> = (props) => 
           rx={radius + 2}
           ry={radius + 2}
           fill="none"
-          stroke="#2C4A6B"
+          stroke="#213B58"
           strokeWidth={2}
           strokeDasharray="4 3"
           opacity={0.85}
@@ -218,7 +218,7 @@ export const NeumorphicBarShape: React.FC<NeumorphicBarShapeProps> = (props) => 
           cy={y + radius + 3}
           r={2.5}
           fill="#FFFFFF"
-          stroke="#2C4A6B"
+          stroke="#213B58"
           strokeWidth={1}
         />
       )}
@@ -238,7 +238,7 @@ interface NeumorphicActiveDotProps {
  * Floating 3D spherical jewel with authentic tactile elevation and optical reflection.
  */
 export const NeumorphicActiveDot: React.FC<NeumorphicActiveDotProps> = (props) => {
-  const { cx = 0, cy = 0, stroke = '#2C4A6B' } = props;
+  const { cx = 0, cy = 0, stroke = '#213B58' } = props;
   // A calm marker: no endless pulsing (it repainted the chart every frame)
   return (
     <g pointerEvents="none">
@@ -271,7 +271,7 @@ export const NeumorphicCursor: React.FC<NeumorphicCursorProps> = (props) => {
         y1={points[0].y}
         x2={points[1].x}
         y2={points[1].y}
-        stroke="#2C4A6B"
+        stroke="#213B58"
         strokeOpacity={0.35}
         strokeWidth={1.5}
         strokeDasharray="3 4"
@@ -280,7 +280,7 @@ export const NeumorphicCursor: React.FC<NeumorphicCursorProps> = (props) => {
     );
   }
   // Bar chart: a soft band behind the hovered bar
-  return <rect x={x} y={y} width={width} height={height} rx={10} ry={10} fill="#2C4A6B" fillOpacity={0.06} pointerEvents="none" />;
+  return <rect x={x} y={y} width={width} height={height} rx={10} ry={10} fill="#213B58" fillOpacity={0.06} pointerEvents="none" />;
 };
 
 interface NeumorphicAxisTickProps {
@@ -345,8 +345,8 @@ export const NeumorphicAxisTick: React.FC<NeumorphicAxisTickProps> = (props) => 
     }
   }
 
-  const textColor = isSelected ? '#2C4A6B' : '#2D3A4E';
-  const subTextColor = isSelected ? '#2C4A6B' : '#4E5C70';
+  const textColor = isSelected ? '#213B58' : '#2D3A4E';
+  const subTextColor = isSelected ? '#213B58' : '#3B4758';
   const pillWidth = Math.max(26, primaryText.length * 8 + 12);
   const pillHeight = secondaryText ? 27 : 19;
 
@@ -361,9 +361,9 @@ export const NeumorphicAxisTick: React.FC<NeumorphicAxisTickProps> = (props) => 
           height={pillHeight}
           rx={7}
           ry={7}
-          fill="#2C4A6B"
+          fill="#213B58"
           fillOpacity={0.14}
-          stroke="#2C4A6B"
+          stroke="#213B58"
           strokeWidth={1.2}
         />
       )}
@@ -374,8 +374,7 @@ export const NeumorphicAxisTick: React.FC<NeumorphicAxisTickProps> = (props) => 
           cx={0}
           cy={secondaryText ? 24 : 16}
           r={1.8}
-          fill="#8C733E"
-          className="animate-pulse"
+          fill="#554420"
         />
       )}
 

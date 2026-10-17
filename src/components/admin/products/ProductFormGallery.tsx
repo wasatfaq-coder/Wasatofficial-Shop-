@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, Image as ImageIcon, ImagePlus, ArrowLeft, ArrowRight, Maximize2, Loader2 } from 'lucide-react';
+import { Trash2, Image as ImageIcon, ImagePlus, Camera, ArrowLeft, ArrowRight, Maximize2, Loader2 } from 'lucide-react';
 import { processImageFiles } from '../../../utils/imageUpload';
 import { moveMap, remapColorImages, removalMap } from '../../../utils/colorPhotos';
 import { formatMegabytes, PRODUCT_SIZE_BUDGET_BYTES } from '../../../utils/productSize';
@@ -17,6 +17,7 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
     newImageUrlInput,
     setNewImageUrlInput,
     galleryFileInputRef,
+    cameraFileInputRef,
     isUploadingImage,
     setIsUploadingImage,
     setPhotoError,
@@ -59,6 +60,9 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
       if (galleryFileInputRef.current) {
         galleryFileInputRef.current.value = '';
       }
+      if (cameraFileInputRef.current) {
+        cameraFileInputRef.current.value = '';
+      }
     }
   };
 
@@ -73,7 +77,7 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
   const photoPreview = (src: string, label: string) => (
     <>
       <img src={src} alt="" className="w-12 h-12 rounded-xl object-cover neu-flat shrink-0" referrerPolicy="no-referrer" />
-      <p className="font-extrabold text-xs text-[#2D3A4E] min-w-0">{label}</p>
+      <p className="font-extrabold text-xs text-text-primary min-w-0">{label}</p>
     </>
   );
 
@@ -139,7 +143,7 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
             <div className="w-5 h-5 rounded-md neu-inset flex items-center justify-center text-accent">
               <ImageIcon className="w-3 h-3" />
             </div>
-            <span className="text-[11px] font-extrabold text-[#2D3A4E]">Галерея фото *</span>
+            <span className="text-[11px] font-extrabold text-text-primary">Галерея фото *</span>
             <span className="text-[11px] font-extrabold px-1.5 py-0.2 rounded-md neu-inset text-accent">
               {formImages.length}
             </span>
@@ -147,14 +151,14 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
 
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-0.5">
-              <span className="text-[11px] font-bold text-[#4E5C70]">Первое фото — обложка</span>
+              <span className="text-[11px] font-bold text-text-secondary">Первое фото — обложка</span>
               <AdminHint label="Первое фото">Первое фото — обложка: его видят в каталоге и в ссылке.</AdminHint>
             </span>
             {formImages.length > 0 && (
               <button
                 type="button"
                 onClick={handleClearAllImages}
-                className="h-6 px-2.5 rounded-lg neu-button-danger text-[11px] font-extrabold transition-all cursor-pointer flex items-center gap-1"
+                className="h-8 px-2.5 rounded-lg neu-button-danger text-[11px] font-extrabold transition-all cursor-pointer flex items-center gap-1"
                 title="Удалить все фото"
               >
                 <Trash2 className="w-2.5 h-2.5" />
@@ -168,11 +172,11 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
         {formImages.length > 0 && (
           <div className="space-y-1">
             <div className="flex items-center justify-between text-[11px] font-bold">
-              <span className="inline-flex items-center gap-0.5 text-[#4E5C70]">
+              <span className="inline-flex items-center gap-0.5 text-text-secondary">
                 Место под фото и описание
                 <AdminHint label="Место под фото и описание">Сколько места товар занимает в базе. Если заполнено, уберите часть фото.</AdminHint>
               </span>
-              <span className={formSizeBytes > PRODUCT_SIZE_BUDGET_BYTES ? 'text-danger' : formSizeBytes > PRODUCT_SIZE_BUDGET_BYTES * 0.8 ? 'text-warning' : 'text-[#2D3A4E]'}>
+              <span className={formSizeBytes > PRODUCT_SIZE_BUDGET_BYTES ? 'text-danger' : formSizeBytes > PRODUCT_SIZE_BUDGET_BYTES * 0.8 ? 'text-warning' : 'text-text-primary'}>
                 {formatMegabytes(formSizeBytes)} из {formatMegabytes(PRODUCT_SIZE_BUDGET_BYTES)}
               </span>
             </div>
@@ -195,7 +199,7 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
           </div>
         )}
         {/* Product pages for messengers are rebuilt every hour (share-pages.yml, docs/seo-plan.md) */}
-        <p className="text-xs text-[#4E5C70]">
+        <p className="text-xs text-text-secondary">
           Превью ссылки на товар в Telegram и WhatsApp обновится в течение часа после сохранения.
         </p>
 
@@ -208,6 +212,15 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
           onChange={handleGalleryFileSelect}
           className="hidden"
         />
+        {/* Hidden Native Camera Input (opens rear camera on phones) */}
+        <input
+          ref={cameraFileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleGalleryFileSelect}
+          className="hidden"
+        />
 
         {/* Image Upload Actions & Drag-and-Drop Area */}
         <div
@@ -217,41 +230,61 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
           }}
           onDragLeave={() => setIsDraggingOverGallery(false)}
           onDrop={handleGalleryDrop}
-          className={`p-3 neu-inset rounded-2xl transition-all space-y-2.5 ${
+          className={`p-3 rounded-2xl transition-all space-y-2.5 ${
             isDraggingOverGallery
-              ? 'border-2 border-dashed border-accent bg-accent/5'
-              : 'border border-white/60 bg-[#E3E8EF]'
+              ? 'neu-pill-active'
+              : 'neu-inset'
           }`}
         >
-          {/* Top Action Bar: Upload from Device + Loading state */}
-          <button
-            type="button"
-            onClick={() => galleryFileInputRef.current?.click()}
-            disabled={isUploadingImage}
-            className="w-full py-2.5 px-3 neu-button rounded-xl text-xs font-extrabold text-accent hover:text-accent-strong flex items-center justify-center gap-2 cursor-pointer transition-all"
-          >
-            {isUploadingImage ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin text-accent" />
-                <span>Обработка изображений...</span>
-              </>
-            ) : (
-              <>
-                <ImagePlus className="w-4 h-4 text-accent" />
-                <span>Загрузить из галереи / с устройства</span>
-              </>
-            )}
-          </button>
+          {/* Top Action Bar: Shoot with Camera + Upload from Gallery */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => cameraFileInputRef.current?.click()}
+              disabled={isUploadingImage}
+              className="py-2.5 px-3 neu-button rounded-xl text-xs font-extrabold text-accent hover:text-accent-strong flex items-center justify-center gap-2 cursor-pointer transition-all"
+            >
+              {isUploadingImage ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-accent shrink-0" />
+                  <span className="truncate">Обработка…</span>
+                </>
+              ) : (
+                <>
+                  <Camera className="w-4 h-4 text-accent shrink-0" />
+                  <span className="truncate">Сделать фото</span>
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => galleryFileInputRef.current?.click()}
+              disabled={isUploadingImage}
+              className="py-2.5 px-3 neu-button rounded-xl text-xs font-extrabold text-accent hover:text-accent-strong flex items-center justify-center gap-2 cursor-pointer transition-all"
+            >
+              {isUploadingImage ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-accent shrink-0" />
+                  <span className="truncate">Обработка…</span>
+                </>
+              ) : (
+                <>
+                  <ImagePlus className="w-4 h-4 text-accent shrink-0" />
+                  <span className="truncate">Из галереи</span>
+                </>
+              )}
+            </button>
+          </div>
 
           {/* Image Thumbnails Strip & Controls */}
           {formImages.length === 0 ? (
             <div
               onClick={() => galleryFileInputRef.current?.click()}
-              className="py-6 px-4 rounded-xl border border-dashed border-[#BAC5D5] flex flex-col items-center justify-center gap-1.5 cursor-pointer hover:bg-white/40 transition-colors text-center"
+              className="py-6 px-4 rounded-xl neu-inset flex flex-col items-center justify-center gap-1.5 cursor-pointer hover:opacity-90 transition-opacity text-center"
             >
-              <ImagePlus className="w-6 h-6 text-[#4E5C70]" />
-              <p className="text-xs font-bold text-[#2D3A4E]">Галерея пока пуста</p>
-              <p className="text-xs text-[#4E5C70]">
+              <ImagePlus className="w-6 h-6 text-text-secondary shrink-0" />
+              <p className="text-xs font-bold text-text-primary">Галерея пока пуста</p>
+              <p className="text-xs text-text-secondary">
                 Добавьте хотя бы одно фото — без него товар не сохранить
               </p>
             </div>
@@ -260,8 +293,8 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
               {formImages.map((imgUrl, idx) => (
                 <div
                   key={idx}
-                  className={`relative rounded-xl overflow-hidden neu-flat border-2 group transition-all aspect-[3/4] flex flex-col justify-between ${
-                    idx === 0 ? 'border-accent' : 'border-white/80'
+                  className={`relative rounded-xl overflow-hidden group transition-all aspect-[3/4] flex flex-col justify-between ${
+                    idx === 0 ? 'neu-pill-active' : 'neu-flat'
                   }`}
                 >
                   <img
@@ -274,7 +307,7 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
 
                   {/* Cover Badge */}
                   {idx === 0 && (
-                    <div className="absolute top-1.5 left-1.5 bg-accent text-white text-[11px] font-extrabold px-1.5 py-0.5 rounded-md shadow-sm">
+                    <div className="absolute top-1.5 left-1.5 neu-photo-btn-active text-[11px] font-extrabold px-2 py-0.5 rounded-lg">
                       <span>Главная</span>
                     </div>
                   )}
@@ -286,16 +319,15 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
                       e.stopPropagation();
                       handleDeleteImage(idx);
                     }}
-                    className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-danger hover:bg-danger/90 text-white flex items-center justify-center shadow-[var(--neu-on-photo)] active:scale-90 transition-transform cursor-pointer z-10"
+                    className="absolute top-1.5 right-1.5 w-8 h-8 rounded-xl neu-photo-btn neu-photo-btn-danger flex items-center justify-center z-10 shrink-0"
                     title="Удалить это фото"
                     aria-label="Удалить это фото"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3.5 h-3.5 shrink-0" />
                   </button>
 
                   {/* Bottom Action Bar for Cover & Reordering */}
-                  {/* 24 px buttons (UX audit 03.10, finding 15): on a narrow photo «Обложка» goes to a second row */}
-                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent p-1.5 flex flex-wrap items-center justify-between gap-1 text-white">
+                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/75 via-black/40 to-transparent p-1.5 flex flex-wrap items-center justify-between gap-1">
                     <div className="flex items-center gap-1">
                       {idx > 0 && (
                         <button
@@ -304,11 +336,11 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
                             e.stopPropagation();
                             handleMoveImage(idx, idx - 1);
                           }}
-                          className="w-6 h-6 flex items-center justify-center rounded bg-white/20 hover:bg-white/40 text-white cursor-pointer"
+                          className="w-8 h-8 flex items-center justify-center rounded-xl neu-photo-btn shrink-0"
                           title="Переместить левее"
                           aria-label="Переместить левее"
                         >
-                          <ArrowLeft className="w-3 h-3" />
+                          <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
                         </button>
                       )}
                       {idx < formImages.length - 1 && (
@@ -318,11 +350,11 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
                             e.stopPropagation();
                             handleMoveImage(idx, idx + 1);
                           }}
-                          className="w-6 h-6 flex items-center justify-center rounded bg-white/20 hover:bg-white/40 text-white cursor-pointer"
+                          className="w-8 h-8 flex items-center justify-center rounded-xl neu-photo-btn shrink-0"
                           title="Переместить правее"
                           aria-label="Переместить правее"
                         >
-                          <ArrowRight className="w-3 h-3" />
+                          <ArrowRight className="w-3.5 h-3.5 shrink-0" />
                         </button>
                       )}
                     </div>
@@ -334,11 +366,11 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
                           e.stopPropagation();
                           setPreviewZoomImage(imgUrl);
                         }}
-                        className="w-6 h-6 flex items-center justify-center rounded bg-white/20 hover:bg-white/40 text-white cursor-pointer"
+                        className="w-8 h-8 flex items-center justify-center rounded-xl neu-photo-btn shrink-0"
                         title="Увеличить фото"
                         aria-label="Увеличить фото"
                       >
-                        <Maximize2 className="w-3 h-3" />
+                        <Maximize2 className="w-3.5 h-3.5 shrink-0" />
                       </button>
                       {idx !== 0 && (
                         <button
@@ -347,7 +379,7 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
                             e.stopPropagation();
                             handleSetCoverImage(idx);
                           }}
-                          className="min-h-6 text-[11px] font-extrabold bg-accent hover:bg-accent text-white px-1.5 py-0.5 rounded cursor-pointer"
+                          className="min-h-8 text-[11px] font-extrabold neu-photo-btn neu-photo-btn-active px-2 py-0.5 rounded-xl cursor-pointer shrink-0"
                           title="Сделать главной обложкой"
                         >
                           Обложка
@@ -368,7 +400,7 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
               value={newImageUrlInput}
               onChange={(e) => setNewImageUrlInput(e.target.value)}
               placeholder="Ссылка на фото (https://…)"
-              className="flex-1 min-w-0 h-9 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
+              className="flex-1 min-w-0 h-9 px-3 neu-inset rounded-xl text-xs text-text-primary placeholder:text-text-muted"
             />
             <button
               type="button"
@@ -381,7 +413,7 @@ export function ProductFormGallery({ form, onShowToast }: { form: ProductForm; o
                 }
               }}
               disabled={!newImageUrlInput.trim()}
-              className="h-9 px-3 neu-button rounded-xl text-xs font-bold text-accent disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shrink-0 whitespace-nowrap"
+              className="h-9 px-3 neu-button rounded-xl text-xs font-bold text-accent disabled:cursor-not-allowed transition-all cursor-pointer shrink-0 whitespace-nowrap"
             >
               + Ссылка
             </button>

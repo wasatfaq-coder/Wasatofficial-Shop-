@@ -10,7 +10,7 @@ import {
   reviewedOrder,
   type ReceiptDecision,
 } from '../../utils/paymentDetails';
-import { motion, AnimatePresence } from 'motion/react';
+import { m, AnimatePresence } from 'motion/react';
 import { X, ShieldCheck, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -70,7 +70,7 @@ const AdminNav = lazyWithRetry(() => loadAdminNav().then((m) => ({ default: m.Ad
 
 /** While a section of the admin panel (a separate chunk) is loading */
 const AdminLoading: React.FC = () => (
-  <div role="status" className="flex items-center justify-center gap-2 py-16 text-xs font-bold text-[#4E5C70]">
+  <div role="status" className="flex items-center justify-center gap-2 py-16 text-xs font-bold text-text-secondary">
     <RefreshCw className="w-4 h-4 animate-spin text-accent" aria-hidden="true" />
     Загрузка раздела…
   </div>
@@ -279,6 +279,13 @@ export const ProfileAdminPanel = ({
 
 
   const [supportTargetOrderId, setSupportTargetOrderId] = useState<string | null>(null);
+  const [supportTargetThreadUid, setSupportTargetThreadUid] = useState<string | null>(null);
+  const [ordersFilterPreset, setOrdersFilterPreset] = useState<{
+    key: number;
+    status?: Order['status'] | 'all';
+    payment?: 'all' | NonNullable<Order['paymentStatus']>;
+    search?: string;
+  } | null>(null);
   // Unsaved edits in the panel's forms: closing or switching the section asks first
   const { registry: unsavedRegistry, unsavedLabels, hasUnsaved } = useUnsavedRegistry();
   type PendingAdminAction = ({ type: 'close' } | { type: 'tab'; tab: AdminTab }) & { labels: string[] };
@@ -354,7 +361,7 @@ export const ProfileAdminPanel = ({
       {/* ================= MODAL: ADMIN PANEL ================= */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div
+          <m.div
             key="admin-panel-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -365,10 +372,10 @@ export const ProfileAdminPanel = ({
             {/* Backdrop */}
             <div
               onClick={requestCloseAdmin}
-              className="fixed inset-0 bg-[#2D3A4E]/40 backdrop-blur-xs cursor-pointer"
+              className="fixed inset-0 bg-text-primary/40 backdrop-blur-xs cursor-pointer"
             />
 
-            <motion.div
+            <m.div
               key="admin-modal"
               ref={adminDialog.ref}
               {...adminDialog.props}
@@ -377,20 +384,20 @@ export const ProfileAdminPanel = ({
               exit={{ scale: 0.94, opacity: 0, y: 12 }}
               transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
               // Phone: the whole screen (no rounded frame and gaps eating ~40 px), from sm a window
-              className="neu-modal rounded-none sm:rounded-3xl p-3 sm:p-6 max-w-5xl lg:max-w-none w-full sm:my-auto space-y-3 sm:space-y-4 h-[100dvh] sm:h-auto max-h-none sm:max-h-[92vh] lg:max-h-none lg:h-[calc(100vh-2rem)] flex flex-col sm:border border-white/80 text-[#2D3A4E] min-w-0 overflow-hidden relative z-10"
+              className="neu-modal rounded-none sm:rounded-3xl p-3 sm:p-6 max-w-5xl lg:max-w-none w-full sm:my-auto space-y-3 sm:space-y-4 h-[100dvh] sm:h-auto max-h-none sm:max-h-[92vh] lg:max-h-none lg:h-[calc(100vh-2rem)] flex flex-col sm:text-text-primary min-w-0 overflow-hidden relative z-10"
             >
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-2 sm:pb-3 shrink-0 gap-2">
+            <div className="flex items-center justify-between neu-divider-b pb-2 sm:pb-3 shrink-0 gap-2">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="hidden sm:flex w-9 h-9 rounded-xl neu-flat-sm items-center justify-center text-accent shrink-0">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 id={adminDialog.titleId} className="text-sm sm:text-base font-extrabold text-[#2D3A4E] leading-tight">
+                    <h3 id={adminDialog.titleId} className="text-sm sm:text-base font-extrabold text-text-primary leading-tight">
                       Панель администратора
                     </h3>
-                    <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-extrabold text-success bg-success-soft border border-success/25">
+                    <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-extrabold neu-tone-success">
                       <span className="w-1.5 h-1.5 rounded-full bg-success" />
                       {currentUser?.email}
                     </span>
@@ -398,7 +405,7 @@ export const ProfileAdminPanel = ({
                   {IS_PREVIEW_BUILD ? (
                     <p className="text-xs font-bold text-warning">Проверочная версия: изменения попадут в настоящий магазин</p>
                   ) : (
-                    <p className="hidden sm:block text-xs font-medium text-[#4E5C70] truncate">Каталог, склад, заказы и витрина</p>
+                    <p className="hidden sm:block text-xs font-medium text-text-secondary truncate">Каталог, склад, заказы и витрина</p>
                   )}
                 </div>
               </div>
@@ -407,7 +414,7 @@ export const ProfileAdminPanel = ({
                   id="admin-modal-close-btn"
                   type="button"
                   onClick={requestCloseAdmin}
-                  className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer shrink-0"
+                  className="w-9 h-9 rounded-xl neu-button flex items-center justify-center text-text-secondary hover:text-text-primary transition-all cursor-pointer shrink-0"
                   title="Закрыть"
                   aria-label="Закрыть"
                 >
@@ -441,7 +448,7 @@ export const ProfileAdminPanel = ({
                   above it would remount it and show the fallback on every first open */}
               <Suspense fallback={<AdminLoading />}>
               <SectionErrorBoundary key={adminTab}>
-                <motion.div
+                <m.div
                   key={adminTab}
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -455,10 +462,15 @@ export const ProfileAdminPanel = ({
                   chatMessages={localChatMessages}
                   products={productsList}
                   lowStockThreshold={lowStockThresholdOf(storefrontSettings)}
+                  unpaidCancelDays={storefrontSettings.unpaidOrderCancelDays}
                   launchSteps={launchSteps(productsList, localDeliveryMethods, storefrontSettings)}
                   isStoreOffline={storefrontSettings.isStoreOnline === false}
                   pendingReviews={pendingReviews}
                   onOpenTab={requestAdminTab}
+                  onOpenOrdersWithFilter={(preset) => {
+                    setOrdersFilterPreset({ key: Date.now(), ...preset });
+                    requestAdminTab('orders');
+                  }}
                 />
               )}
 
@@ -478,6 +490,7 @@ export const ProfileAdminPanel = ({
                 <AdminProductsTab
                   categories={getCategories(storefrontSettings)}
                   products={productsList}
+                  settings={storefrontSettings}
                   onUpdateProducts={handleUpdateProductsList}
                   onShowToast={onShowToast}
                   lowStockThreshold={lowStockThresholdOf(storefrontSettings)}
@@ -543,8 +556,10 @@ export const ProfileAdminPanel = ({
                   onUpdateOrders={handleUpdateOrders}
                   onShowToast={onShowToast}
                   onReviewReceipt={handleReviewReceipt}
+                  externalFilter={ordersFilterPreset}
                   onOpenSupportChat={(orderId, customerName) => {
                     setSupportTargetOrderId(orderId);
+                    setSupportTargetThreadUid(null);
                     requestAdminTab('support');
                     onShowToast(`Переход в чат поддержки по заказу #${orderId}${customerName ? ` (${customerName})` : ''}`, 'info');
                   }}
@@ -569,8 +584,18 @@ export const ProfileAdminPanel = ({
                 <AdminCustomersTab
                   products={productsList}
                   orders={orders}
-                  onOpenSupportChat={(orderId, customerName) => {
-                    if (orderId) setSupportTargetOrderId(orderId);
+                  onOpenCustomerOrders={(query) => {
+                    setOrdersFilterPreset({
+                      key: Date.now(),
+                      status: 'all',
+                      payment: 'all',
+                      search: query,
+                    });
+                    requestAdminTab('orders');
+                  }}
+                  onOpenSupportChat={(orderId, customerName, customerUid) => {
+                    setSupportTargetOrderId(orderId ?? null);
+                    setSupportTargetThreadUid(customerUid ?? null);
                     requestAdminTab('support');
                     if (customerName) {
                       onShowToast(`Переход в диалог с клиентом ${customerName}`, 'info');
@@ -612,7 +637,9 @@ export const ProfileAdminPanel = ({
                   products={productsList}
                   promos={localPromos}
                   categories={getCategories(storefrontSettings)}
+                  storefrontSettings={storefrontSettings}
                   initialOrderId={supportTargetOrderId}
+                  initialThreadUid={supportTargetThreadUid}
                   onSend={handleSendAdminMessage}
                   onUpdateOrders={handleUpdateOrders}
                   onReviewReceipt={handleReviewReceipt}
@@ -674,20 +701,21 @@ export const ProfileAdminPanel = ({
                   />
                   <AdminStorefrontTab
                     settings={storefrontSettings}
+                    products={productsList}
                     onUpdateSettings={onUpdateStorefrontSettings}
                     onShowToast={onShowToast}
                   />
                 </div>
               )}
-                </motion.div>
+                </m.div>
               </SectionErrorBoundary>
               </Suspense>
             </AdminNav>
             </Suspense>
             </SectionErrorBoundary>
             </UnsavedChangesContext.Provider>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       )}
     </AnimatePresence>
 

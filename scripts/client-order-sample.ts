@@ -10,7 +10,18 @@ const product = {
   material: 'Шерсть', colors: ['Черный'], sizes: ['M'], images: ['data:image/png;base64,AAAA'], description: 'Текст',
   skus: [{ id: 'p1-m', color: 'Черный', size: 'M', stock: 3 }], inStock: true,
 } as unknown as Product;
-const items: CartItem[] = [{ id: 'cart-1', product: { ...toOrderLineProduct(product), images: [] }, quantity: 1, selectedColor: 'Черный', selectedSize: 'M' }];
+const items: CartItem[] = [
+  { id: 'cart-1', product: { ...toOrderLineProduct(product), images: [] }, quantity: 1, selectedColor: 'Черный', selectedSize: 'M' },
+  {
+    id: 'cart-2',
+    product: { ...toOrderLineProduct(product), images: [], wholesalePrice: 8000, saleChannel: 'both' },
+    quantity: 1,
+    selectedColor: 'Черный',
+    selectedSize: 'M',
+    priceKind: 'broken',
+    unitPrice: 7200,
+  },
+];
 const placedAt = new Date('2026-10-03T12:00:00.000Z');
 
 // every optional field filled: a field the rules do not know fails the test

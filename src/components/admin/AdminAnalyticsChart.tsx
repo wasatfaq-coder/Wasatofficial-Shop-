@@ -73,7 +73,7 @@ const AdminAnalyticsChart: React.FC<AdminAnalyticsChartProps> = ({
       <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#BAC5D5" strokeOpacity={0.35} />
       <XAxis
         dataKey="label"
-        stroke="#4E5C70"
+        stroke="#3B4758"
         tickLine={false}
         axisLine={{ stroke: '#BAC5D5', strokeOpacity: 0.6 }}
         dy={4}
@@ -81,7 +81,7 @@ const AdminAnalyticsChart: React.FC<AdminAnalyticsChartProps> = ({
         tick={<NeumorphicAxisTick selectedDate={selectedDate} grouping={grouping} dense={dense} dailyData={dailyData} />}
       />
       <YAxis
-        stroke="#4E5C70"
+        stroke="#3B4758"
         fontSize={11}
         fontWeight={700}
         tickLine={false}

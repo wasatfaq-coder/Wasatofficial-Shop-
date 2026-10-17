@@ -26,13 +26,16 @@ export default defineConfig(() => {
     // was already loaded keeps the old React copy («Cannot read properties of null (reading 'useRef')»), and chunk
     // addresses with the old ?v= hash fail with «Failed to fetch dynamically imported module».
     optimizeDeps: {
-      include: ['react', 'react-dom', 'react-dom/client', 'motion/react', '@base-ui/react', 'recharts', 'lucide-react'],
+      include: ['react', 'react-dom', 'react-dom/client', 'motion/react', 'framer-motion', '@base-ui/react', 'recharts', 'lucide-react'],
     },
     resolve: {
       // one copy of React for all packages (Base UI, recharts, motion)
       dedupe: ['react', 'react-dom'],
       alias: {
         '@': path.resolve(import.meta.dirname, '.'),
+        // motion/react evaluates `const motion = fm.motion` at module top-level, keeping the full 39 KB bundle;
+        // aliasing to framer-motion lets Rollup tree-shake `motion` when `LazyMotion` + `m.*` is used (performance-plan.md, stage 5)
+        'motion/react': 'framer-motion',
         // Firestore pipelines' regular expressions are not used: −43 КБ gzip of the main chunk (finding 36)
         re2js: path.resolve(import.meta.dirname, 'src/vendor/re2js-stub.ts'),
       },

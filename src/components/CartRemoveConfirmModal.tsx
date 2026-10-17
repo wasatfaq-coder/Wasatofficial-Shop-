@@ -1,7 +1,7 @@
 import React from 'react';
 import { ProductThumbImage } from './ProductThumbImage';
 import { Trash2, Heart, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { m, AnimatePresence } from 'motion/react';
 import { CartItem } from '../types';
 import { useDialogA11y } from '../utils/useDialogA11y';
 import { linePrice } from '../shared/orderLine';
@@ -27,7 +27,7 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && item && (
-        <motion.div
+        <m.div
           key="cart-remove-overlay"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -37,9 +37,9 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
         >
           <div
             onClick={onClose}
-            className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer"
+            className="fixed inset-0 bg-text-primary/50 backdrop-blur-xs cursor-pointer"
           />
-          <motion.div
+          <m.div
             ref={dialog.ref}
             {...dialog.props}
             key="cart-remove-modal"
@@ -50,16 +50,16 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
             className="relative w-full max-w-sm neu-modal rounded-3xl p-5 space-y-4 z-10"
           >
           {/* Header */}
-          <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
-            <div className="flex items-center gap-2 text-danger">
-              <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center">
-                <Trash2 className="w-4 h-4 text-danger" />
+          <div className="flex items-center justify-between gap-2 pb-2 neu-divider-b">
+            <div className="flex items-center gap-2 text-danger min-w-0">
+              <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center shrink-0">
+                <Trash2 className="w-4 h-4 text-danger shrink-0" />
               </div>
-              <h3 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">Удаление товара</h3>
+              <h3 id={dialog.titleId} className="text-sm font-extrabold text-text-primary">Удаление товара</h3>
             </div>
             <button
               onClick={onClose}
-              className="w-7 h-7 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer shrink-0"
               aria-label="Закрыть"
             >
               <X className="w-4 h-4 stroke-[2.5]" />
@@ -74,16 +74,16 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
               className="w-12 h-12 rounded-xl object-cover neu-flat shrink-0"
             />
             <div className="flex-1 min-w-0">
-              <p className="font-extrabold text-xs text-[#2D3A4E] truncate">{item.product.title}</p>
+              <p className="font-extrabold text-xs text-text-primary truncate">{item.product.title}</p>
               {pack ? (
                 <>
-                  <p className="text-xs text-[#4E5C70]">
+                  <p className="text-xs text-text-secondary">
                     {item.selectedColor} • {pack.title} ({pack.packs} уп.)
                   </p>
-                  <p className="text-xs text-[#4E5C70]">{pack.composition}</p>
+                  <p className="text-xs text-text-secondary">{pack.composition}</p>
                 </>
               ) : (
-                <p className="text-xs text-[#4E5C70]">
+                <p className="text-xs text-text-secondary">
                   {item.selectedColor} • {item.selectedSize} ({item.quantity} шт.)
                 </p>
               )}
@@ -93,7 +93,7 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
             </div>
           </div>
 
-          <p className="text-xs text-[#4E5C70] leading-relaxed text-center">
+          <p className="text-xs text-text-secondary leading-relaxed text-center">
             Вы можете удалить товар из корзины или сохранить его в <strong>Избранное</strong>, чтобы вернуться к покупке позже.
           </p>
 
@@ -113,7 +113,7 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
             <div className="flex items-center gap-2">
               <button
                 onClick={onClose}
-                className="flex-1 py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                className="flex-1 py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary cursor-pointer"
               >
                 Оставить
               </button>
@@ -129,8 +129,8 @@ export const CartRemoveConfirmModal: React.FC<CartRemoveConfirmModalProps> = ({
               </button>
             </div>
           </div>
-        </motion.div>
-      </motion.div>
+        </m.div>
+      </m.div>
     )}
   </AnimatePresence>
 );

@@ -7,7 +7,7 @@ export const LegalText: React.FC<{ text: string }> = ({ text }) => {
   const inline = (value: string) =>
     value.split(/(\[не заполнено: [^\]]+\])/).map((part, i) =>
       part.startsWith('[не заполнено') ? (
-        <mark key={i} className="bg-warning-soft text-warning font-semibold rounded px-1">
+        <mark key={i} className="neu-tone-warning font-semibold rounded px-1">
           {part}
         </mark>
       ) : (
@@ -15,7 +15,7 @@ export const LegalText: React.FC<{ text: string }> = ({ text }) => {
       )
     );
   return (
-    <div className="space-y-3 text-[13px] leading-relaxed text-[#2D3A4E]">
+    <div className="space-y-3 text-[13px] leading-relaxed text-text-primary">
       {blocks.map((b, i) =>
         b.type === 'h2' ? (
           <h2 key={i} className="text-base font-extrabold pt-2">

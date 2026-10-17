@@ -55,4 +55,26 @@ describe('pricesAtOrderTime', () => {
     expect(pricesAtOrderTime({ price: 4000 }, t('2026-10-01T10:00:00Z'))).toEqual([4000]);
     expect(pricesAtOrderTime(product, null)).toEqual([4400]);
   });
+
+  test('wholesalePriceHistory tracks wholesale price changes and orderPriceIssues accepts the wholesale price at order time', async () => {
+    const { wholesalePricesAtOrderTime } = await import('../../src/utils/priceHistory');
+    const { orderPriceIssues } = await import('../../src/utils/orderPriceCheck');
+    const before: Product = { id: 'w1', title: 'Худи', price: 3000, wholesalePrice: 1800 } as Product;
+    const after: Product = { id: 'w1', title: 'Худи', price: 3200, wholesalePrice: 2000 } as Product;
+    const [saved] = withPriceHistories([before], [after], at('2026-10-09T10:00:00Z'));
+    expect(saved.priceHistory).toEqual([{ price: 3000, until: '2026-10-09T10:00:00.000Z' }]);
+    expect(saved.wholesalePriceHistory).toEqual([{ price: 1800, until: '2026-10-09T10:00:00.000Z' }]);
+    expect(wholesalePricesAtOrderTime(saved, t('2026-10-08T10:00:00Z'))).toEqual([1800]);
+    expect(wholesalePricesAtOrderTime(saved, t('2026-10-10T10:00:00Z'))).toEqual([2000]);
+
+    const orderBeforeChange = {
+      id: 'WS-100',
+      createdAt: '2026-10-08T10:00:00.000Z',
+      status: 'accepted',
+      paymentStatus: 'pending',
+      totalPrice: 9000,
+      items: [{ id: 'l1', product: saved, selectedColor: 'Синий', selectedSize: '48', quantity: 5, priceKind: 'wholesale', unitPrice: 1800 }],
+    } as never;
+    expect(orderPriceIssues(orderBeforeChange, [saved])).toEqual([]);
+  });
 });

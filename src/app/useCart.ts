@@ -1,9 +1,15 @@
 import React, { useMemo, useState } from 'react';
 import type { ActiveTab, AppliedPromoInfo, CartItem, Product, PromoCode } from '../types';
 import {
+  brokenPackDiscountedPrice,
+  goesBrokenPack,
+  hasWholesalePrice,
+  isBrokenPackLine,
   isWholesaleLine,
   packSizeOf,
   priceCartLines,
+  readBrokenPackDiscount,
+  saleChannelOf,
   sellsRetail,
   sellsWholesale,
   type WholesaleSettings,
@@ -15,7 +21,7 @@ import { promoDiscountText } from '../utils/promoLabel';
 import { packsText } from '../utils/wholesaleOffer';
 import { heldByOtherLines, packsLeft } from '../utils/cartLines';
 import { isCartPackLine, pricePackLine } from '../shared/packLines';
-import { sizePackPieces } from '../shared/sizePacks';
+import { brokenPackPieces, sizePackPieces } from '../shared/sizePacks';
 import { hasOrderableVariant, needsVariantChoice } from '../utils/variantSelection';
 import type { AddToast } from './useToasts';
 
@@ -76,6 +82,18 @@ export function useCart({
   // (priceCartLines, the same as in placeOrder); the stored lines keep only the buyer's choice
   const cartItems = useMemo(() => priceCartLines(storedCart, wholesale), [storedCart, wholesale]);
 
+  // Stage 13 of docs/broken-pack-plan.md: if a product's saleChannel changed away from 'both' (or lost wholesalePrice),
+  // remove its 'broken' lines from the cart with a toast
+  React.useEffect(() => {
+    const invalidBroken = storedCart.filter(
+      (item) => item.priceKind === 'broken' && (saleChannelOf(item.product) !== 'both' || !hasWholesalePrice(item.product))
+    );
+    if (invalidBroken.length === 0) return;
+    const ids = new Set(invalidBroken.map((i) => i.id));
+    setCartItems((prev) => prev.filter((item) => !ids.has(item.id)));
+    addToast('Режим продажи товара изменился: позиции из разбитой упаковки убраны из корзины', 'info');
+  }, [storedCart]);
+
   React.useEffect(() => {
     try {
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(toStoredCart(storedCart)));
@@ -98,6 +116,11 @@ export function useCart({
     }
   };
 
+  const handleClearFavorites = () => {
+    setFavorites([]);
+    addToast('Избранное очищено', 'info');
+  };
+
   // «+» on a product card: one variant is added at once, several — the customer picks one first
   const [variantPickerProduct, setVariantPickerProduct] = useState<Product | null>(null);
   const openCartAction = { label: 'В корзину', onClick: () => setActiveTab('cart') };
@@ -108,7 +131,7 @@ export function useCart({
       addToast(`Товар "${product.title}" временно закончился`, 'error');
       return false;
     }
-    // «Только оптом» is bought in whole packs: the product page shows the pack, the minimum and the steps
+    // «Только оптом» is bought in whole packs from the minimum: the product page shows the pack, the minimum and the steps
     if (!sellsRetail(product)) {
       onOpenProduct(product);
       return false;
@@ -128,16 +151,26 @@ export function useCart({
   };
 
   // Add a chosen variant to the cart. The customer stays on the page: the toast links to the cart.
-  // `wholesale` — bought wholesale: a line of its own, next to a retail line of the same variant, in whole packs
-  // (`quantity` — items). A product sold only wholesale always goes wholesale
+  // `wholesale` — bought wholesale (`true`), from a broken pack (`'broken'`), or retail (`false`).
   const handleAddToCartWithOptions = (
     product: Product,
     color: string,
     size: string,
     quantity: number,
-    wholesale = false
+    wholesaleChoice: boolean | 'broken' = false,
+    // the shah-matrix adds many lines at once and says «Добавлено» itself: no toast per line (review 16.10, finding 8)
+    quiet = false
   ): boolean => {
-    const asWholesale = sellsWholesale(product) && (wholesale || !sellsRetail(product));
+    const notify: typeof addToast = quiet ? () => {} : addToast;
+    const asBroken =
+      wholesaleChoice === 'broken' &&
+      goesBrokenPack(product, color, size, (sz) => getOrderableStock(product, color, sz, false));
+    // asked for a broken pack this size does not have: refuse, never a retail line at a higher price (review 16.10)
+    if (wholesaleChoice === 'broken' && !asBroken) {
+      addToast(`${product.title} (${color}, ${size}): разбитой упаковкой этот размер не продаётся`, 'error');
+      return false;
+    }
+    const asWholesale = !asBroken && sellsWholesale(product) && (wholesaleChoice === true || !sellsRetail(product));
     const step = asWholesale ? packSizeOf(product) : 1;
     const variant = { product, selectedColor: color, selectedSize: size };
     const existing = cartItems.find(
@@ -145,12 +178,19 @@ export function useCart({
         item.product.id === product.id &&
         item.selectedColor === color &&
         item.selectedSize === size &&
-        isWholesaleLine(item) === asWholesale
+        (asBroken
+          ? isBrokenPackLine(item)
+          : !isBrokenPackLine(item) && isWholesaleLine(item) === asWholesale)
     );
-    // the other line of this variant (retail next to wholesale) takes from the same stock
+    // broken pack never allows preorder; retail and wholesale respect preorderMode
     const availableStock = Math.max(
       0,
-      getOrderableStock(product, color, size, preorderMode) - heldByOtherLines(cartItems, variant, existing?.id ?? '')
+      Math.min(
+        getOrderableStock(product, color, size, asBroken ? false : preorderMode) -
+          heldByOtherLines(cartItems, variant, existing?.id ?? ''),
+        // a broken pack sells only the pieces left above whole packs (review 16.10, finding 1)
+        asBroken ? brokenPackPieces(product, color, size) : Number.POSITIVE_INFINITY
+      )
     );
     // only whole packs can be ordered wholesale
     const maxQty = Math.floor(availableStock / step) * step;
@@ -170,7 +210,7 @@ export function useCart({
     if (existing) {
       const currentQty = existing.quantity;
       if (currentQty >= maxQty) {
-        addToast(
+        notify(
           `В корзине уже максимум: ${product.title} (${asWholesale ? packsText(maxQty, step) : `${maxQty} шт.`})`,
           'info',
           openCartAction
@@ -180,25 +220,38 @@ export function useCart({
       // whole packs even when the line was not (the pack size changed since it was added)
       const newTotalQty = Math.min(Math.floor((currentQty + clampedQuantity) / step) * step, maxQty);
       setCartItems((prev) => prev.map((item) => (item.id === existing.id ? { ...item, quantity: newTotalQty } : item)));
-      addToast(
-        asWholesale
+      notify(
+        asBroken
+          ? `Разбитая упаковка в корзине: ${variantText} — ${newTotalQty} шт.`
+          : asWholesale
           ? `Оптом в корзине: ${variantText} — ${packsText(newTotalQty, step)}`
           : `В корзине ${newTotalQty} шт.: ${variantText}`,
         'success',
         openCartAction
       );
     } else {
+      const baseAddedPrice = asBroken
+        ? brokenPackDiscountedPrice(
+            product.wholesalePrice ?? product.price,
+            readBrokenPackDiscount(wholesale?.brokenPackDiscount)
+          )
+        : asWholesale
+        ? (product.wholesalePrice ?? product.price)
+        : product.price;
       const newItem: CartItem = {
-        id: `cart-${Date.now()}`,
+        id: `cart-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         product,
         selectedColor: color,
         selectedSize: size,
         quantity: clampedQuantity,
-        ...(asWholesale ? { priceKind: 'wholesale' as const } : {}),
+        addedPrice: baseAddedPrice,
+        ...(asBroken ? { priceKind: 'broken' as const } : asWholesale ? { priceKind: 'wholesale' as const } : {}),
       };
       setCartItems((prev) => [...prev, newItem]);
-      addToast(
-        asWholesale
+      notify(
+        asBroken
+          ? `Разбитая упаковка в корзину: ${variantText} — ${clampedQuantity} шт.`
+          : asWholesale
           ? `Оптом в корзину: ${variantText} — ${packsText(clampedQuantity, step)}`
           : `${isPreorderVariant(product, color, size, preorderMode) ? 'Предзаказ добавлен' : 'Добавлено'} в корзину: ${variantText}`,
         'success',
@@ -212,9 +265,10 @@ export function useCart({
    * Add a size pack («ростовка», stage 20): one line of the pack in the colour, `packs` — whole packs, as many as every
    * size of the pack allows after the other lines of the cart (no preorder for packs, owner's decision 12.10)
    */
-  const handleAddPackToCart = (product: Product, packId: string, color: string, packs: number): boolean => {
+  const handleAddPackToCart = (product: Product, packId: string, color: string, packs: number, quiet = false): boolean => {
+    const notify: typeof addToast = quiet ? () => {} : addToast;
     const draft = pricePackLine<CartItem>({
-      id: `cart-${Date.now()}`,
+      id: `cart-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       product,
       selectedColor: color,
       selectedSize: '',
@@ -236,20 +290,20 @@ export function useCart({
     }
     const current = existing?.quantity ?? 0;
     if (current >= max) {
-      addToast(`В корзине уже максимум: ${name} — ${max} уп.`, 'info', openCartAction);
+      notify(`В корзине уже максимум: ${name} — ${max} уп.`, 'info', openCartAction);
       return false;
     }
     const next = Math.min(current + Math.max(1, Math.floor(packs)), max);
     if (existing) {
       setCartItems((prev) => prev.map((item) => (item.id === existing.id ? { ...item, quantity: next } : item)));
     } else {
-      setCartItems((prev) => [...prev, { ...draft, quantity: next }]);
+      setCartItems((prev) => [...prev, { ...draft, quantity: next, addedPrice: draft.packPrice }]);
     }
-    addToast(`Ростовка в корзине: ${name} — ${next} уп.`, 'success', openCartAction);
+    notify(`Ростовка в корзине: ${name} — ${next} уп.`, 'success', openCartAction);
     return true;
   };
 
-  /** Items a line is counted in: a whole pack for a wholesale line, one item for a retail one */
+  /** Items a line is counted in: a whole pack for a wholesale line, one item for a retail or broken pack one */
   const lineStep = (cartItemId: string): number => {
     const priced = cartItems.find((item) => item.id === cartItemId);
     // a size pack is counted in packs: its quantity is packs already
@@ -282,9 +336,14 @@ export function useCart({
             return { ...item, quantity: Math.max(1, Math.min(Math.floor(newQty), max)) };
           }
           if (item.id === cartItemId) {
-            const stock =
-              getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode) -
-              heldByOtherLines(prev, item, item.id);
+            const allowPreorder = item.priceKind === 'broken' ? false : preorderMode;
+            const stock = Math.min(
+              getOrderableStock(item.product, item.selectedColor, item.selectedSize, allowPreorder) -
+                heldByOtherLines(prev, item, item.id),
+              item.priceKind === 'broken'
+                ? brokenPackPieces(item.product, item.selectedColor, item.selectedSize)
+                : Number.POSITIVE_INFINITY
+            );
             return { ...item, quantity: fitQuantity(newQty, stock, step) };
           }
           return item;
@@ -308,9 +367,12 @@ export function useCart({
     setCartItems((prev) =>
       prev.map((item) => {
         if (item.id === cartItemId) {
-          const availableStock =
-            getOrderableStock(item.product, newColor, newSize, preorderMode) -
-            heldByOtherLines(prev, { product: item.product, selectedColor: newColor, selectedSize: newSize }, item.id);
+          const allowPreorder = item.priceKind === 'broken' ? false : preorderMode;
+          const availableStock = Math.min(
+            getOrderableStock(item.product, newColor, newSize, allowPreorder) -
+              heldByOtherLines(prev, { product: item.product, selectedColor: newColor, selectedSize: newSize }, item.id),
+            item.priceKind === 'broken' ? brokenPackPieces(item.product, newColor, newSize) : Number.POSITIVE_INFINITY
+          );
           // none of the new variant left — one pack stays: the checkout names it in «Не хватает на складе»
           const clampedQty = availableStock >= step ? fitQuantity(item.quantity, availableStock, step) : step;
           return {
@@ -471,6 +533,7 @@ export function useCart({
     setVariantPickerProduct,
     totalCartCount,
     handleToggleFavorite,
+    handleClearFavorites,
     handleAddToCartQuick,
     handleAddToCartWithOptions,
     handleAddPackToCart,

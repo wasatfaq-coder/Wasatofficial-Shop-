@@ -14,6 +14,7 @@ import {
   Bike,
   Zap,
   Mail,
+  Search,
 } from 'lucide-react';
 import { Product } from '../../types';
 import { isQuickOrderDelivery, QUICK_ORDER_DELIVERY_TITLE } from '../../shared/orderPricing';
@@ -52,6 +53,7 @@ export const ProfileOrdersModal = ({
 }: ProfileOrdersModalProps) => {
   // Filter for orders modal
   const [orderFilter, setOrderFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const ordersDialog = useDialogA11y(isOpen, onCloseModals);
   // the orders subscription failed (finding 15): said instead of «Заказов не найдено»
@@ -59,9 +61,15 @@ export const ProfileOrdersModal = ({
   const linePhoto = useOrderLinePhotos(isOpen ? orders.flatMap((o) => groupOrderLines(o.items).slice(0, 4).map((g) => g.item.product)) : [], products);
 
   const filteredOrders = orders.filter((ord) => {
-    if (orderFilter === 'active') return !ord.isCancelled && ord.status !== 'delivered';
-    if (orderFilter === 'completed') return ord.isCancelled || ord.status === 'delivered';
-    return true;
+    if (orderFilter === 'active' && (ord.isCancelled || ord.status === 'delivered')) return false;
+    if (orderFilter === 'completed' && !ord.isCancelled && ord.status !== 'delivered') return false;
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      ord.id.toLowerCase().includes(q) ||
+      (ord.trackingNumber && ord.trackingNumber.toLowerCase().includes(q)) ||
+      ord.items.some((item) => item.product?.title?.toLowerCase().includes(q))
+    );
   });
 
 
@@ -69,50 +77,65 @@ export const ProfileOrdersModal = ({
     <>
       {/* ================= MODAL: ORDER HISTORY & TRACKING ================= */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-text-primary/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div
             ref={ordersDialog.ref}
             {...ordersDialog.props}
-            className="neu-modal rounded-3xl max-w-lg w-full max-h-[88vh] flex flex-col border border-white/80 text-[#2D3A4E] overflow-hidden transform-gpu">
+            className="neu-modal rounded-3xl max-w-lg w-full max-h-[88vh] flex flex-col text-text-primary overflow-hidden transform-gpu">
             {/* Sticky Fixed Header */}
-            <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 p-4 sm:p-5 shrink-0 bg-[#E3E8EF]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl neu-inset flex items-center justify-center text-accent">
-                  <Package className="w-5 h-5 stroke-[2.2]" />
+            <div className="flex items-center justify-between gap-2 neu-divider-b p-4 sm:p-5 shrink-0 bg-[#E3E8EF]">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-2xl neu-inset flex items-center justify-center text-accent shrink-0">
+                  <Package className="w-5 h-5 stroke-[2.2] shrink-0" />
                 </div>
-                <div>
-                  <h3 id={ordersDialog.titleId} className="text-base font-extrabold text-[#2D3A4E]">История и трекинг заказов</h3>
-                  <p className="text-xs text-[#4E5C70] font-medium">Все ваши заказы в одном месте</p>
+                <div className="min-w-0">
+                  <h3 id={ordersDialog.titleId} className="text-base font-extrabold text-text-primary">История и трекинг заказов</h3>
+                  <p className="text-xs text-text-secondary font-medium">Все ваши заказы в одном месте</p>
                 </div>
               </div>
               <button
                 onClick={() => onCloseModals()}
-                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer transition-transform"
+                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer transition-transform shrink-0"
                 aria-label="Закрыть"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4 shrink-0" />
               </button>
             </div>
 
-            {/* Sticky Fixed Filter Pills */}
-            <div className="flex items-center gap-2 border-b border-[#BAC5D5]/50 px-4 sm:px-5 py-2.5 shrink-0 bg-[#E3E8EF]">
-              {[
-                { id: 'all', label: 'Все заказы' },
-                { id: 'active', label: 'Активные' },
-                { id: 'completed', label: 'Завершенные' },
-              ].map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => setOrderFilter(f.id as any)}
-                  className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    orderFilter === f.id
-                      ? 'neu-pill-active font-extrabold'
-                      : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
+            {/* Sticky Fixed Filter Pills & Search */}
+            <div className="neu-divider-b px-4 sm:px-5 py-2.5 shrink-0 bg-[#E3E8EF] space-y-2">
+              {orders.length > 2 && (
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" aria-hidden="true" />
+                  <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Номер заказа, трек-номер или товар"
+                    aria-label="Поиск по заказам"
+                    className="w-full h-9 pl-8 pr-3 rounded-xl neu-inset text-xs text-text-primary placeholder:text-text-muted"
+                  />
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                {[
+                  { id: 'all', label: 'Все заказы' },
+                  { id: 'active', label: 'Активные' },
+                  { id: 'completed', label: 'Завершенные' },
+                ].map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => setOrderFilter(f.id as any)}
+                    className={`min-h-8 py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      orderFilter === f.id
+                        ? 'neu-pill-active font-extrabold'
+                        : 'neu-button text-text-secondary hover:text-text-primary'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Smooth Scrollable Order List Container */}
@@ -120,9 +143,9 @@ export const ProfileOrdersModal = ({
               {ordersLoadFailed && <LoadFailedNotice title="Не удалось загрузить заказы" />}
               {filteredOrders.length === 0 ? (
                 ordersLoadFailed ? null : <div className="text-center py-10 space-y-2 neu-inset rounded-2xl p-6">
-                  <ShoppingBag className="w-10 h-10 text-[#4E5C70] mx-auto opacity-50" />
-                  <p className="text-xs font-extrabold text-[#2D3A4E]">Заказов не найдено</p>
-                  <p className="text-xs text-[#4E5C70]">Сделайте первый заказ в нашем каталоге!</p>
+                  <ShoppingBag className="w-10 h-10 text-text-secondary mx-auto opacity-50" />
+                  <p className="text-xs font-extrabold text-text-primary">Заказов не найдено</p>
+                  <p className="text-xs text-text-secondary">Сделайте первый заказ в нашем каталоге!</p>
                 </div>
               ) : (
                 <div className="space-y-3.5">
@@ -138,25 +161,25 @@ export const ProfileOrdersModal = ({
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                            <span className="text-sm font-extrabold text-[#2D3A4E] whitespace-nowrap">№ {ord.id}</span>
+                            <span className="text-sm font-extrabold text-text-primary whitespace-nowrap">№ {ord.id}</span>
                             <span
                               className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full whitespace-nowrap inline-flex items-center gap-1 ${
                                 !ord.isCancelled && ord.status !== 'delivered'
-                                  ? 'neu-inset-deep neu-inset-deep-animated text-accent border border-accent/30'
+                                  ? 'neu-pill-active neu-inset-deep-animated text-accent'
                                   : `${statusInfo.text} neu-flat`
                               }`}
                             >
                               {statusInfo.label}
                             </span>
                           </div>
-                          <p className="text-xs text-[#4E5C70] font-medium">{ord.date}</p>
+                          <p className="text-xs text-text-secondary font-medium">{ord.date}</p>
                         </div>
 
                         <div className="text-right">
-                          <span className="text-sm font-extrabold text-[#2D3A4E]">
+                          <span className="text-sm font-extrabold text-text-primary">
                             {(ord.totalPrice ?? 0).toLocaleString('ru-RU')} ₽
                           </span>
-                          <p className="text-xs text-[#4E5C70]">
+                          <p className="text-xs text-text-secondary">
                             {ord.items.reduce((a, b) => a + b.quantity, 0)} тов.
                           </p>
                         </div>
@@ -164,7 +187,7 @@ export const ProfileOrdersModal = ({
 
                       {/* Mini visual status progress line */}
                       <div className="space-y-1">
-                        <div className="flex justify-between text-[11px] font-bold text-[#4E5C70]">
+                        <div className="flex justify-between text-[11px] font-bold text-text-secondary">
                           <span>Прогресс доставки</span>
                           <span className="text-accent font-extrabold">{statusInfo.percent}%</span>
                         </div>
@@ -193,7 +216,7 @@ export const ProfileOrdersModal = ({
                           <div className="flex items-center justify-between text-xs pt-0.5 flex-wrap gap-1.5">
                             {isPost ? (
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[11px] font-bold text-accent neu-flat px-2 py-0.5 rounded-lg flex items-center gap-1 border border-accent/12">
+                                <span className="text-[11px] font-bold text-accent neu-flat px-2 py-0.5 rounded-lg flex items-center gap-1">
                                   <Mail className="w-3 h-3 text-accent" />
                                   Почта России
                                 </span>
@@ -224,7 +247,7 @@ export const ProfileOrdersModal = ({
                               )
                             ) : (
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[11px] font-bold text-[#2D3A4E] neu-inset px-2 py-0.5 rounded-lg flex items-center gap-1">
+                                <span className="text-[11px] font-bold text-text-primary neu-inset px-2 py-0.5 rounded-lg flex items-center gap-1">
                                   {isPickup ? (
                                     <Store className="w-3 h-3 text-accent" />
                                   ) : isQuick ? (
@@ -239,7 +262,7 @@ export const ProfileOrdersModal = ({
                               </div>
                             )}
 
-                            <span className="text-[11px] text-[#4E5C70] font-medium">
+                            <span className="text-[11px] text-text-secondary font-medium">
                               {isPost
                                 ? 'Почтовое отправление'
                                 : isTK
@@ -266,7 +289,7 @@ export const ProfileOrdersModal = ({
                             />
                           ))}
                           {groupOrderLines(ord.items).length > 4 && (
-                            <span className="text-[11px] font-extrabold text-[#4E5C70] neu-inset px-2 py-1 rounded-xl">
+                            <span className="text-[11px] font-extrabold text-text-secondary neu-inset px-2 py-1 rounded-xl">
                               +{groupOrderLines(ord.items).length - 4}
                             </span>
                           )}
@@ -294,7 +317,7 @@ export const ProfileOrdersModal = ({
                                 onCloseModals();
                                 onOpenSupportChat(ord.id);
                               }}
-                              className="p-2 rounded-xl neu-button text-[#4E5C70] hover:text-accent hover:scale-105 transition-transform flex items-center justify-center cursor-pointer"
+                              className="p-2 rounded-xl neu-button text-text-secondary hover:text-accent hover:scale-105 transition-transform flex items-center justify-center cursor-pointer"
                               title="Написать в службу поддержки"
                               aria-label="Написать в службу поддержки"
                             >

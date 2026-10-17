@@ -47,13 +47,13 @@ export const BannerProductPhotos: React.FC<BannerProductPhotosProps> = ({ produc
   };
 
   if (withPhotos.length === 0) {
-    return <p className="text-xs text-[#4E5C70]">Фото товаров появятся здесь, когда у товаров будут фото.</p>;
+    return <p className="text-xs text-text-secondary">Фото товаров появятся здесь, когда у товаров будут фото.</p>;
   }
 
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-1">
-        <span className="text-[11px] font-bold text-[#4E5C70]">Фото товара магазина:</span>
+        <span className="text-[11px] font-bold text-text-secondary">Фото товара магазина:</span>
         <AdminHint label="Фото товара магазина">Фото подставится для телефона и компьютера. Потом его можно заменить своим.</AdminHint>
       </div>
       <NeumorphicSelect
@@ -82,8 +82,8 @@ export const BannerProductPhotos: React.FC<BannerProductPhotosProps> = ({ produc
                 <span className="block w-full h-full bg-[#D8DFE8]" />
               )}
               {picking === index && (
-                <span className="absolute inset-0 flex items-center justify-center bg-black/40">
-                  <Loader2 className="w-4 h-4 text-white animate-spin" aria-hidden="true" />
+                <span className="absolute inset-0 flex items-center justify-center neu-photo-btn">
+                  <Loader2 className="w-4 h-4 text-accent animate-spin shrink-0" aria-hidden="true" />
                 </span>
               )}
             </button>

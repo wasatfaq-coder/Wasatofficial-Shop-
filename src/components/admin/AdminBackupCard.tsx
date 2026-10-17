@@ -103,19 +103,19 @@ export const AdminBackupCard: React.FC<AdminBackupCardProps> = ({ onShowToast })
   };
 
   return (
-    <div className="neu-flat p-4 sm:p-5 rounded-3xl space-y-3 border border-white/60">
+    <div className="neu-flat p-4 sm:p-5 rounded-3xl space-y-3 ">
       <div className="flex items-start gap-2.5 min-w-0">
         <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0">
           <DatabaseBackup className="w-5 h-5" />
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-1">
-            <h4 className="text-sm font-extrabold text-[#2D3A4E]">Резервная копия базы</h4>
+            <h4 className="text-sm font-extrabold text-text-primary">Резервная копия базы</h4>
             <AdminHint label="Резервная копия базы">
               Файл со всем магазином на ваш телефон. Делайте раз в неделю, храните тайно.
             </AdminHint>
           </div>
-          <p className="text-xs text-[#4E5C70] leading-snug">
+          <p className="text-xs text-text-secondary leading-snug">
             Файл со всеми товарами, заказами, покупателями и перепиской сохранится на этом устройстве. Делайте копию
             раз в неделю и перед большими изменениями. В файле личные данные покупателей — храните его только у себя.
           </p>
@@ -139,7 +139,7 @@ export const AdminBackupCard: React.FC<AdminBackupCardProps> = ({ onShowToast })
           onClick={() => fileInput.current?.click()}
           disabled={isReading}
           className={`h-10 px-4 rounded-2xl text-xs font-extrabold flex items-center gap-2 ${
-            isReading ? 'neu-button-disabled' : 'neu-button text-[#2D3A4E] cursor-pointer'
+            isReading ? 'neu-button-disabled' : 'neu-button text-text-primary cursor-pointer'
           }`}
         >
           <Upload className="w-4 h-4" aria-hidden="true" />
@@ -157,7 +157,7 @@ export const AdminBackupCard: React.FC<AdminBackupCardProps> = ({ onShowToast })
           aria-hidden="true"
           onChange={(e) => handleFile(e.target.files?.[0])}
         />
-        {lastResult && <p className="text-xs text-[#4E5C70]">Скачано: {lastResult}</p>}
+        {lastResult && <p className="text-xs text-text-secondary">Скачано: {lastResult}</p>}
       </div>
       <AdminRestoreDialog
         backup={restoring?.backup ?? null}
@@ -171,7 +171,7 @@ export const AdminBackupCard: React.FC<AdminBackupCardProps> = ({ onShowToast })
 
 /** The date of the last copy; a warning when there is none or it's older than a week */
 const BackupAge: React.FC<{ mark: BackupMark | null | undefined; failed: boolean }> = ({ mark, failed }) => {
-  if (failed) return <p className="text-xs text-[#4E5C70]">Не удалось узнать дату последней копии</p>;
+  if (failed) return <p className="text-xs text-text-secondary">Не удалось узнать дату последней копии</p>;
   if (mark === undefined) return null;
   const days = daysSinceBackup(mark);
   const due = days === null || days >= BACKUP_DUE_DAYS || mark?.complete === false;
@@ -179,7 +179,7 @@ const BackupAge: React.FC<{ mark: BackupMark | null | undefined; failed: boolean
   return (
     <p
       role="status"
-      className={`text-xs font-bold rounded-2xl px-3 py-2 ${due ? 'bg-warning-soft text-warning border border-warning/30' : 'text-[#4E5C70]'}`}
+      className={`text-xs font-bold rounded-2xl px-3 py-2 ${due ? 'neu-tone-warning' : 'text-text-secondary'}`}
     >
       {text}
       {due && '. Скачайте свежую копию'}

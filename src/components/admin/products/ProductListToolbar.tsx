@@ -40,21 +40,21 @@ export function ProductListToolbar({ list, products, categories, handleOpenAddPr
       {/* Top Search & Actions Toolbar */}
       <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#4E5C70]" />
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
           <input
             type="text"
             aria-label="Поиск товаров"
             placeholder="Название, артикул или штрихкод"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
+            className="w-full pl-8 pr-3 py-2 neu-inset rounded-xl text-xs text-text-primary placeholder:text-text-muted"
           />
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-1.5">
           <button
             onClick={() => exportProductsToCSV(products)}
-            className="py-2 px-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-accent flex items-center gap-1 cursor-pointer transition-colors"
+            className="py-2 px-2.5 neu-button rounded-xl text-xs font-bold text-text-secondary hover:text-accent flex items-center gap-1 cursor-pointer transition-colors"
             title="Экспортировать весь каталог в файл CSV для Excel"
           >
             <Download className="w-3.5 h-3.5 text-accent" />
@@ -64,7 +64,7 @@ export function ProductListToolbar({ list, products, categories, handleOpenAddPr
 
           <button
             onClick={() => setIsCSVImportModalOpen(true)}
-            className="py-2 px-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-accent flex items-center gap-1 cursor-pointer transition-colors"
+            className="py-2 px-2.5 neu-button rounded-xl text-xs font-bold text-text-secondary hover:text-accent flex items-center gap-1 cursor-pointer transition-colors"
             title="Импортировать товары из CSV"
           >
             <Upload className="w-3.5 h-3.5 text-accent" />
@@ -82,7 +82,7 @@ export function ProductListToolbar({ list, products, categories, handleOpenAddPr
                 value: '',
               })
             }
-            className="py-2 px-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-accent flex items-center gap-1 cursor-pointer transition-colors"
+            className="py-2 px-2.5 neu-button rounded-xl text-xs font-bold text-text-secondary hover:text-accent flex items-center gap-1 cursor-pointer transition-colors"
             title="Управление быстрыми фразами и акцентами для всех категорий одежды"
           >
             <Sparkles className="w-3.5 h-3.5 text-accent" />
@@ -94,7 +94,7 @@ export function ProductListToolbar({ list, products, categories, handleOpenAddPr
             onClick={handleOpenAddProduct}
             disabled={categories.length === 0}
             title={categories.length === 0 ? 'Сначала добавьте категории в разделе «Категории»' : undefined}
-            className="py-2 px-3.5 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 shrink-0 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="py-2 px-3.5 neu-button-accent rounded-xl text-xs font-extrabold text-white flex items-center gap-1.5 shrink-0 transition-all cursor-pointer disabled:cursor-not-allowed"
           >
             <Plus className="w-4 h-4 text-white" />
             <span>Добавить товар</span>
@@ -120,10 +120,10 @@ export function ProductListToolbar({ list, products, categories, handleOpenAddPr
             <button
               key={sf.id}
               onClick={() => setStockFilter(sf.id as any)}
-              className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] transition-all cursor-pointer text-center ${
+              className={`flex-1 py-1.5 min-h-8 px-2 rounded-lg text-[11px] transition-all cursor-pointer text-center ${
                 stockFilter === sf.id
                   ? 'neu-pill-active font-extrabold'
-                  : 'text-[#4E5C70] font-bold hover:text-[#2D3A4E]'
+                  : 'text-text-secondary font-bold hover:text-text-primary'
               }`}
             >
               {sf.label}
@@ -153,7 +153,7 @@ export function ProductListToolbar({ list, products, categories, handleOpenAddPr
             onClick={() => setWholesaleFilter(!wholesaleFilter)}
             aria-pressed={wholesaleFilter}
             className={`min-h-8 px-3 py-1.5 rounded-xl text-[11px] transition-all cursor-pointer ${
-              wholesaleFilter ? 'neu-pill-active font-extrabold' : 'neu-button font-bold text-[#4E5C70] hover:text-[#2D3A4E]'
+              wholesaleFilter ? 'neu-pill-active font-extrabold' : 'neu-button font-bold text-text-secondary hover:text-text-primary'
             }`}
           >
             Опт ({wholesaleCount})
@@ -170,7 +170,7 @@ export function ProductListToolbar({ list, products, categories, handleOpenAddPr
             role="checkbox"
             aria-checked={isAllFilteredSelected}
             onClick={handleToggleSelectAll}
-            className="flex items-center gap-2.5 py-1.5 cursor-pointer select-none group rounded-xl"
+            className="flex items-center gap-2.5 py-1.5 min-h-8 cursor-pointer select-none group rounded-xl"
           >
             <span
               aria-hidden="true"
@@ -182,13 +182,13 @@ export function ProductListToolbar({ list, products, categories, handleOpenAddPr
             >
               <Check className="w-3 h-3 stroke-[3]" />
             </span>
-            <span className="text-xs font-extrabold text-[#2D3A4E] group-hover:text-accent transition-colors">
+            <span className="text-xs font-extrabold text-text-primary group-hover:text-accent transition-colors">
               {isAllFilteredSelected ? 'Снять выделение со всех' : 'Выбрать все отфильтрованные'}
             </span>
           </button>
 
           {selectedProductIds.length === 0 && (
-            <span className="text-xs text-[#4E5C70] text-right">Действия с отмеченными — внизу списка</span>
+            <span className="text-xs text-text-secondary text-right">Действия с отмеченными — внизу списка</span>
           )}
         </div>
       </div>

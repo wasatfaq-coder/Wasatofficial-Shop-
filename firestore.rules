@@ -14,7 +14,8 @@ service cloud.firestore {
     // (создаётся только через Firebase Console / Admin SDK).
     function isAdmin() {
       return isSignedIn() && (
-        (request.auth.token.email == 'gunh83975@gmail.com'
+        // asatfaq@gmail.com — второй администратор (решение владельца 16.10); список — ADMIN_EMAILS в AuthContext.tsx
+        (request.auth.token.email in ['gunh83975@gmail.com', 'asatfaq@gmail.com']
           && request.auth.token.email_verified == true)
         || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
@@ -117,8 +118,13 @@ service cloud.firestore {
       let data = request.resource.data;
       let movementId = data.get('lastStockMovement', '');
       let movementPath = /databases/$(database)/documents/stock_movements/$(movementId);
-      return movementId is string && movementId.matches('^[A-Za-z0-9-]{1,40}_[0-9]{1,2}$')
+      let order = get(/databases/$(database)/documents/orders/$(getAfter(movementPath).data.orderId)).data;
+      return isSignedIn()
+        && movementId is string && movementId.matches('^[A-Za-z0-9-]{1,40}_[0-9]{1,2}$')
         && !exists(movementPath) && existsAfter(movementPath)
+        && order.get('customerUid', null) == request.auth.uid
+        && order.get('isCancelled', false) == false
+        && order.get('status', '') != 'cancelled'
         && isSkuDeductedBy(productId, resource.data.skus, data.skus, getAfter(movementPath).data)
         && (data.inStock == resource.data.get('inStock', true)
           || (data.inStock == false && data.skus[getAfter(movementPath).data.skuIndex].stock == 0));
@@ -648,6 +654,7 @@ service cloud.firestore {
         && resource.data.get('customerUid', null) == request.auth.uid
         && resource.data.status == 'accepted'
         && resource.data.get('isCancelled', false) == false
+        && resource.data.get('isAdjusted', false) == false
         && !('cancelledAt' in resource.data)
         && onlyChanges(['isCancelled', 'cancelledBy', 'cancelReason', 'cancelComment', 'cancelledAt',
           'estimatedDelivery', 'stockReturned', 'updatedAt'])
@@ -969,9 +976,11 @@ service cloud.firestore {
     function isOrderStockMovement(movementId) {
       let data = request.resource.data;
       let orderPath = /databases/$(database)/documents/orders/$(data.orderId);
-      let line = get(orderPath).data.items[data.lineIndex];
+      let order = get(orderPath).data;
+      let line = order.items[data.lineIndex];
       let productPath = /databases/$(database)/documents/products/$(data.productId);
-      return !serverOrdersEnabled()
+      return isSignedIn()
+        && !serverOrdersEnabled()
         && data.keys().hasOnly(['id', 'createdAt', 'date', 'type', 'orderId', 'lineIndex', 'productId',
           'productTitle', 'skuCode', 'color', 'size', 'changeQuantity', 'reason', 'operator', 'skuIndex'])
         && data.type == 'order'
@@ -980,7 +989,10 @@ service cloud.firestore {
         && movementId == data.orderId + '_' + string(data.lineIndex)
         && data.id == movementId
         && exists(orderPath)
-        && data.lineIndex < get(orderPath).data.items.size()
+        && order.get('customerUid', null) == request.auth.uid
+        && order.get('isCancelled', false) == false
+        && order.get('status', '') != 'cancelled'
+        && data.lineIndex < order.items.size()
         && data.productId == line.product.id
         && line.get('isPreorder', false) == false
         && data.skuIndex is int && data.skuIndex >= 0
@@ -1018,6 +1030,8 @@ service cloud.firestore {
         && order.get('customerUid', null) == request.auth.uid
         && order.get('isCancelled', false) == true
         && order.get('cancelledBy', '') == 'customer'
+        && order.get('isAdjusted', false) == false
+        && order.get('stockReturned', false) == false
         && exists(takenPath)
         && data.productId == get(takenPath).data.productId
         && data.productId == line.product.id
@@ -1054,6 +1068,22 @@ service cloud.firestore {
         && request.resource.data.orderId == orderId
         && request.resource.data.lines is list && request.resource.data.lines.size() <= 60;
       allow delete: if isAdmin();
+    }
+
+    // Отметка «упаковка вскрыта» (docs/broken-pack-spec.md, этап 5; docs/unified-plan.md, этап 16):
+    // хранится отдельно от публичного товара, чтобы покупатели не видели почту сотрудника (openedBy).
+    // Читает и пишет только администратор; склад отметкой не меняется.
+    match /pack_marks/{markId} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && isValidId(markId)
+        && request.resource.data.keys().hasOnly(['id', 'productId', 'packId', 'color', 'openedAt', 'openedBy'])
+        && request.resource.data.id == markId
+        && request.resource.data.productId is string && request.resource.data.productId.size() > 0 && request.resource.data.productId.size() <= 120
+        && request.resource.data.packId is string && request.resource.data.packId.size() > 0 && request.resource.data.packId.size() <= 120
+        && isOptionalText(request.resource.data, 'color', 80)
+        && request.resource.data.openedAt is string && request.resource.data.openedAt.size() > 0 && request.resource.data.openedAt.size() <= 40
+        && request.resource.data.openedBy is string && request.resource.data.openedBy.size() > 0 && request.resource.data.openedBy.size() <= 160;
+      allow delete: if isAdmin() && isValidId(markId);
     }
 
     // Журнал цен (аудит админки 09.10, находка 11): было, стало, курс и кто — пишет и читает только администратор.

@@ -101,13 +101,13 @@ export const PaymentRequisitesModal: React.FC<PaymentRequisitesModalProps> = ({ 
   return (
     <ModalPortal>
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
-        <div onClick={() => !busy && onClose()} className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer" />
+        <div onClick={() => !busy && onClose()} className="fixed inset-0 bg-text-primary/50 backdrop-blur-xs cursor-pointer" />
         <div
           ref={dialog.ref}
           {...dialog.props}
           className="relative w-full max-w-md max-h-[90dvh] flex flex-col neu-modal rounded-3xl p-4 sm:p-5 gap-3 z-10"
         >
-          <div className="flex items-center justify-between gap-3 pb-2 border-b border-[#BAC5D5]/50 shrink-0">
+          <div className="flex items-center justify-between gap-3 pb-2 neu-divider-b shrink-0">
             <div className="flex items-center gap-2 min-w-0">
               {step !== 'choose' && (kinds.length > 1 || step === 'receipt') ? (
                 <button
@@ -115,18 +115,18 @@ export const PaymentRequisitesModal: React.FC<PaymentRequisitesModalProps> = ({ 
                   onClick={() => setStep(step === 'receipt' ? 'details' : 'choose')}
                   disabled={busy}
                   aria-label="Назад"
-                  className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] cursor-pointer shrink-0"
+                  className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary cursor-pointer shrink-0"
                 >
-                  <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+                  <ArrowLeft className="w-4 h-4 shrink-0" aria-hidden="true" />
                 </button>
               ) : (
                 <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center shrink-0 text-accent">
-                  <Landmark className="w-4 h-4" aria-hidden="true" />
+                  <Landmark className="w-4 h-4 shrink-0" aria-hidden="true" />
                 </div>
               )}
-              <h3 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E] min-w-0">
+              <h3 id={dialog.titleId} className="text-sm font-extrabold text-text-primary min-w-0">
                 {step === 'receipt' ? 'Чек об оплате' : step === 'details' && kind ? PAYMENT_KIND_TITLES[kind] : 'Способ оплаты'}
-                <span className="block text-[11px] font-bold text-[#4E5C70]">
+                <span className="block text-[11px] font-bold text-text-secondary tabular-nums">
                   Заказ № {order.id} · {total.toLocaleString('ru-RU')} ₽
                 </span>
               </h3>
@@ -136,9 +136,9 @@ export const PaymentRequisitesModal: React.FC<PaymentRequisitesModalProps> = ({ 
               onClick={onClose}
               disabled={busy}
               aria-label="Закрыть"
-              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer shrink-0"
+              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer shrink-0"
             >
-              <X className="w-4 h-4 stroke-[2.5]" aria-hidden="true" />
+              <X className="w-4 h-4 stroke-[2.5] shrink-0" aria-hidden="true" />
             </button>
           </div>
 
@@ -155,7 +155,7 @@ export const PaymentRequisitesModal: React.FC<PaymentRequisitesModalProps> = ({ 
                       aria-checked={selected}
                       onClick={() => setKind(k)}
                       className={`w-full min-h-11 px-3 py-2.5 rounded-2xl text-left text-sm font-bold flex items-center gap-3 cursor-pointer ${
-                        selected ? 'neu-pill-active text-[#2D3A4E]' : 'neu-button text-[#2D3A4E]'
+                        selected ? 'neu-pill-active text-text-primary' : 'neu-button text-text-primary'
                       }`}
                     >
                       <span className={`w-4 h-4 rounded-full shrink-0 flex items-center justify-center ${selected ? 'neu-fill-accent' : 'neu-inset'}`} aria-hidden="true">
@@ -182,11 +182,11 @@ export const PaymentRequisitesModal: React.FC<PaymentRequisitesModalProps> = ({ 
                 {transferComment ? (
                   <CopyValueRow label="Комментарий к переводу" value={transferComment} />
                 ) : (
-                  <p className="rounded-xl bg-warning-soft border border-warning/30 px-3 py-2 text-xs font-bold text-[#2D3A4E]" role="note">
+                  <p className="rounded-xl neu-tone-warning px-3 py-2 text-xs font-bold text-text-primary" role="note">
                     Комментарий к переводу не нужен — магазин его не указал
                   </p>
                 )}
-                <p className="text-xs text-[#4E5C70] leading-relaxed">
+                <p className="text-xs text-text-secondary leading-relaxed">
                   Переведите сумму заказа по этим реквизитам, затем нажмите «Оплачено» и приложите фото чека.
                 </p>
               </>
@@ -194,7 +194,7 @@ export const PaymentRequisitesModal: React.FC<PaymentRequisitesModalProps> = ({ 
 
             {step === 'receipt' && (
               <>
-                <p className="text-xs text-[#4E5C70] leading-relaxed">
+                <p className="text-xs text-text-secondary leading-relaxed">
                   Сфотографируйте чек или сделайте снимок экрана из приложения банка: должны читаться сумма, дата и получатель.
                   Формат JPG или PNG, до 15 МБ.
                 </p>
@@ -210,17 +210,17 @@ export const PaymentRequisitesModal: React.FC<PaymentRequisitesModalProps> = ({ 
                     setDragOver(false);
                     void takeFile(e.dataTransfer.files?.[0]);
                   }}
-                  className={`block rounded-2xl p-4 text-center cursor-pointer border-2 border-dashed ${
-                    dragOver ? 'border-accent bg-accent/10' : error ? 'border-danger/60' : 'border-[#BAC5D5]'
-                  } neu-inset`}
+                  className={`block rounded-2xl p-4 text-center cursor-pointer transition-all ${
+                    dragOver ? 'neu-pill-active' : error ? 'neu-tone-danger' : 'neu-inset'
+                  }`}
                 >
                   {image ? (
                     <img src={image} alt="Чек об оплате" className="max-h-56 w-auto mx-auto rounded-xl object-contain" />
                   ) : (
-                    <span className="flex flex-col items-center gap-1.5 text-xs text-[#2D3A4E]">
+                    <span className="flex flex-col items-center gap-1.5 text-xs text-text-primary">
                       {preparing ? <Loader2 className="w-6 h-6 animate-spin text-accent" aria-hidden="true" /> : <ImagePlus className="w-6 h-6 text-accent" aria-hidden="true" />}
                       <span className="font-extrabold">{preparing ? 'Готовим фото…' : 'Выбрать фото чека'}</span>
-                      <span className="text-[#4E5C70]">или перетащите файл сюда</span>
+                      <span className="text-text-secondary">или перетащите файл сюда</span>
                     </span>
                   )}
                   {image && <span className="block mt-2 text-[11px] font-bold text-accent">{fileName} · заменить</span>}
@@ -243,7 +243,7 @@ export const PaymentRequisitesModal: React.FC<PaymentRequisitesModalProps> = ({ 
                     {error}
                   </p>
                 )}
-                <p className="text-[11px] text-[#4E5C70]">Фото уйдёт в чат магазина, магазин сверит поступление и подтвердит оплату.</p>
+                <p className="text-[11px] text-text-secondary">Фото уйдёт в чат магазина, магазин сверит поступление и подтвердит оплату.</p>
               </>
             )}
           </div>
@@ -254,7 +254,7 @@ export const PaymentRequisitesModal: React.FC<PaymentRequisitesModalProps> = ({ 
                 type="button"
                 onClick={() => kind && setStep('details')}
                 disabled={!kind}
-                className={`w-full py-3 rounded-2xl text-sm font-extrabold cursor-pointer ${kind ? 'neu-button-accent text-white' : 'neu-button-disabled text-[#4E5C70]'}`}
+                className={`w-full py-3 rounded-2xl text-sm font-extrabold cursor-pointer ${kind ? 'neu-button-accent text-white' : 'neu-button-disabled text-text-secondary'}`}
               >
                 Показать реквизиты
               </button>
@@ -275,7 +275,7 @@ export const PaymentRequisitesModal: React.FC<PaymentRequisitesModalProps> = ({ 
                 onClick={submit}
                 disabled={!image || busy}
                 className={`w-full py-3 rounded-2xl text-sm font-extrabold cursor-pointer flex items-center justify-center gap-2 ${
-                  image && !busy ? 'neu-button-accent text-white' : 'neu-button-disabled text-[#4E5C70]'
+                  image && !busy ? 'neu-button-accent text-white' : 'neu-button-disabled text-text-secondary'
                 }`}
               >
                 {sending && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}

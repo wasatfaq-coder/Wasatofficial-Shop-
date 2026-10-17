@@ -87,9 +87,9 @@ export const BrandRenameCard: React.FC<BrandRenameCardProps> = ({
           <Replace className="w-4 h-4" />
         </div>
         <div className="min-w-0 space-y-1">
-          <h4 className="text-sm font-extrabold text-[#2D3A4E]">Название магазина в данных</h4>
+          <h4 className="text-sm font-extrabold text-text-primary">Название магазина в данных</h4>
           {lines.length > 0 ? (
-            <p className="text-xs text-[#4E5C70] leading-relaxed">
+            <p className="text-xs text-text-secondary leading-relaxed">
               В базе остались тексты шаблона со старым названием MANSTYLE: {lines.join('; ')}. Покупатели уже видят «{newName}», но
               в админке и в новых выгрузках старое название останется, пока вы его не замените.
             </p>

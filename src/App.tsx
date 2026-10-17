@@ -2,7 +2,7 @@ import { SizeCalculatorModal } from './components/lazyWindows';
 import React, { Suspense, useState } from 'react';
 import { lazyWithRetry } from './utils/lazyWithRetry';
 import { SectionErrorBoundary } from './components/SectionErrorBoundary';
-import { motion, AnimatePresence } from 'motion/react';
+import { m, AnimatePresence } from 'motion/react';
 import { Product } from './types';
 import { DeviceFrameWrapper } from './components/DeviceFrameWrapper';
 import { DesktopTitleRow, Header, screenTitle } from './components/Header';
@@ -57,12 +57,13 @@ import { screenDocumentTitle } from './utils/screenMeta';
 import { VariantPickerSheet } from './components/VariantPickerSheet';
 import { DEFAULT_CATALOG_VIEW, type CatalogView } from './utils/productListing';
 import { linePrice } from './shared/orderLine';
+import { IS_PREVIEW_BUILD } from './utils/previewBuild';
 
 // Legal documents: a separate chunk with the templates, loaded when a document is opened
 const LegalDocumentScreen = lazyWithRetry(() => import('./views/LegalDocumentScreen'));
 /** A screen loaded on demand (usually already prefetched): a quiet line instead of an empty page */
 const ScreenLoading: React.FC = () => (
-  <p className="px-4 py-10 text-center text-xs text-[#4E5C70]" role="status">
+  <p className="px-4 py-10 text-center text-xs text-text-secondary" role="status">
     Загрузка…
   </p>
 );
@@ -142,9 +143,26 @@ export default function App() {
       const code = (err as { code?: string })?.code ?? '';
       // the buyer closed the Google window: nothing to report
       if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return;
+      // a preview address not in «Authorized domains»: the owner checking the preview needs the reason, a buyer does not
+      if (code === 'auth/unauthorized-domain' && IS_PREVIEW_BUILD) {
+        const host = typeof window !== 'undefined' ? window.location.hostname : '';
+        addToast(
+          `Домен ${host} не добавлен в список разрешённых (Authorized domains) в Firebase Console → Authentication → Settings.`,
+          'error'
+        );
+        return;
+      }
       addToast('Не удалось войти через Google. Попробуйте ещё раз или войдите в «Профиле»', 'error');
     });
   };
+
+  const effectiveWholesale = React.useMemo(
+    () =>
+      storefrontSettings?.brokenPackDiscount
+        ? { ...storefrontSettings.wholesale, brokenPackDiscount: storefrontSettings.brokenPackDiscount }
+        : storefrontSettings?.wholesale,
+    [storefrontSettings?.wholesale, storefrontSettings?.brokenPackDiscount]
+  );
 
   // Favorites, the cart and the applied promo (useCart.ts)
   const {
@@ -157,6 +175,7 @@ export default function App() {
     setVariantPickerProduct,
     totalCartCount,
     handleToggleFavorite,
+    handleClearFavorites,
     handleAddToCartQuick,
     handleAddToCartWithOptions,
     handleAddPackToCart,
@@ -178,7 +197,7 @@ export default function App() {
     onOpenProduct: handleSelectProduct,
     signedInWithGoogle: Boolean(currentUser && !currentUser.isAnonymous),
     onSignIn: signInForPromo,
-    wholesale: storefrontSettings?.wholesale,
+    wholesale: effectiveWholesale,
   });
   // Catalog with its reviews (useCatalog.ts). Every snapshot brings the cart's stock and prices up to date and
   // refreshes the open product
@@ -445,12 +464,17 @@ export default function App() {
       <div className="relative min-h-full flex flex-col justify-between">
         <ToastContainer toasts={toasts} onDismiss={removeToast} />
 
-        {/* «+» on a card with several sizes or colours: the customer picks the variant */}
+        {/* «+» on a card with several sizes, colours, wholesale or size packs: the customer picks the variant */}
         <VariantPickerSheet
           product={variantPickerProduct}
           preorderMode={preorderMode}
           onClose={() => setVariantPickerProduct(null)}
-          onAdd={(product, color, size) => handleAddToCartWithOptions(product, color, size, 1)}
+          onAdd={(product, color, size, quantity = 1, wholesale = false) =>
+            handleAddToCartWithOptions(product, color, size, quantity, wholesale)
+          }
+          onAddPackToCart={handleAddPackToCart}
+          cartItems={cartItems}
+          wholesale={effectiveWholesale}
           onOpenProduct={handleSelectProduct}
         />
 
@@ -495,6 +519,9 @@ export default function App() {
           isOpen={isSupportChatOpen}
           draftText={chatDraft}
           imageDb={chatIdentity?.db}
+          products={products}
+          recentOrderId={orders[0]?.id ?? latestOrder?.id}
+          userMeasurements={userProfile.bodyMeasurements}
           storePhone={getStoreContacts(storefrontSettings).phone}
           storeSchedule={storefrontSettings.schedule}
           onClose={() => {
@@ -552,6 +579,7 @@ export default function App() {
           cartSubtotal={cartItems.reduce((acc, item) => acc + linePrice(item) * item.quantity, 0)}
           cartItems={cartItems}
           promos={promos}
+          categories={getCategories(storefrontSettings)}
         />
         </LazyMount>
 
@@ -560,7 +588,7 @@ export default function App() {
         {/* Promo message from Admin → «Витрина»: shown when switched on and filled in */}
         {storefrontSettings?.isStoreBannerVisible && publicSetting(storefrontSettings.storeBannerText) && (
           <aside aria-label="Объявление магазина" className="px-4 pt-2 lg:px-6">
-            <p className="max-w-lg lg:max-w-none mx-auto neu-flat-sm rounded-2xl px-3 py-2 flex items-center justify-center gap-2 text-center text-xs font-bold text-[#2D3A4E]">
+            <p className="max-w-lg lg:max-w-none mx-auto neu-flat-sm rounded-2xl px-3 py-2 flex items-center justify-center gap-2 text-center text-xs font-bold text-text-primary">
               {storefrontSettings.bannerBadgeText?.trim() && (
                 <span className="px-1.5 py-0.5 rounded-md bg-accent text-white text-[11px] font-extrabold uppercase shrink-0">
                   {storefrontSettings.bannerBadgeText.trim()}
@@ -618,7 +646,7 @@ export default function App() {
               if (y !== null) requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, y)));
             }}
           >
-            <motion.div
+            <m.div
               key={activeTab === 'product-detail' && selectedProduct ? `tab-product-${selectedProduct.id}` : `tab-${activeTab}`}
               initial={{ opacity: 0, y: 8, scale: 0.992 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -653,6 +681,8 @@ export default function App() {
               onOpenFilters={() => setIsAdvancedFilterOpen(true)}
               onSaveMeasurements={handleSaveMeasurements}
               onAddToCartWithOptions={handleAddToCartWithOptions}
+              onAddPackToCart={handleAddPackToCart}
+              cartItems={cartItems}
               preorderMode={preorderMode}
             />
           )}
@@ -674,6 +704,9 @@ export default function App() {
               onToggleFavorite={handleToggleFavorite}
               onAddToCart={handleAddToCartQuick}
               onAddToCartWithOptions={handleAddToCartWithOptions}
+              onAddPackToCart={handleAddPackToCart}
+              cartItems={cartItems}
+              wholesale={effectiveWholesale}
               preorderMode={preorderMode}
               filterState={catalogFilterState}
               onChangeFilterState={setCatalogFilterState}
@@ -693,7 +726,7 @@ export default function App() {
               product={products.find((p) => p.id === selectedProduct.id) ?? selectedProduct}
               returnPeriodDays={storefrontSettings.returnPeriodDays}
               freeDelivery={freeDelivery}
-              wholesale={storefrontSettings.wholesale}
+              wholesale={effectiveWholesale}
               isFavorite={favorites.includes(selectedProduct.id)}
               recentlyViewed={recentlyViewed.filter((p) => p.id !== selectedProduct.id)}
               onClearRecentlyViewed={handleClearRecentlyViewed}
@@ -732,6 +765,7 @@ export default function App() {
               onCompleteOrder={handleCompleteOrder}
               storefrontSettings={customerStorefront}
               deliveryMethods={customerDeliveryMethods}
+              userProfile={userProfile}
               checkoutBlocker={
                 !deliveryMethods.some((m) => m.isActive !== false)
                   ? 'Способы доставки'
@@ -748,6 +782,7 @@ export default function App() {
               cartItems={cartItems}
               stockProblems={checkoutStockProblems}
               userProfile={userProfile}
+              onUpdateProfile={handleUpdateProfile}
               onCompleteOrder={handleCompleteOrder}
               setActiveTab={setActiveTab}
               appliedPromo={appliedPromo}
@@ -768,6 +803,8 @@ export default function App() {
               onSelectProduct={handleSelectProduct}
               onToggleFavorite={handleToggleFavorite}
               onAddToCart={handleAddToCartQuick}
+              onClearFavorites={handleClearFavorites}
+              preorderMode={preorderMode}
               setActiveTab={setActiveTab}
             />
           )}
@@ -817,6 +854,10 @@ export default function App() {
               deliveryAddress={latestOrder.deliveryAddress}
               paymentMethod={latestOrder.paymentMethod}
               notSavedInBrowser={latestOrder.notSavedInBrowser}
+              order={orders.find((o) => o.id === latestOrder.id) ?? null}
+              onSubmitPaymentReceipt={handleSubmitPaymentReceipt}
+              onOpenSupportChat={openSupportChat}
+              onShowToast={addToast}
               paymentInstructions={
                 (storefrontSettings.paymentMethods ?? []).find(
                   (m) => m.title.trim() && latestOrder.paymentMethod?.startsWith(m.title.trim())
@@ -829,7 +870,7 @@ export default function App() {
           {(activeTab === 'offer' || activeTab === 'privacy') && (
             <Suspense
               fallback={
-                <p className="px-4 py-10 text-center text-xs text-[#4E5C70]" role="status">
+                <p className="px-4 py-10 text-center text-xs text-text-secondary" role="status">
                   Загрузка документа…
                 </p>
               }
@@ -839,7 +880,7 @@ export default function App() {
           )}
               </Suspense>
               </SectionErrorBoundary>
-            </motion.div>
+            </m.div>
           </AnimatePresence>
         </main>
 

@@ -16,9 +16,15 @@ export type LabelTemplate =
   | 'showcase'
   | 'price-info'
   | 'premium'
-  | 'sale';
+  | 'sale'
+  | 'wholesale-pack'
+  | 'wholesale-box'
+  | 'dual-price'
+  | 'wholesale-tiers';
 
-export type LabelTemplateGroup = 'basic' | 'extended' | 'accent' | 'sale';
+export type LabelTemplateGroup = 'basic' | 'extended' | 'wholesale' | 'accent' | 'sale';
+
+export type LabelPriceMode = 'auto' | 'retail' | 'wholesale' | 'both';
 
 export interface LabelTemplateInfo {
   id: LabelTemplate;
@@ -38,6 +44,34 @@ export const LABEL_TEMPLATES: LabelTemplateInfo[] = [
   { id: 'size-price', name: 'Размер и цена', hint: 'Крупные размер и цена, состав, артикул', group: 'extended', showsSize: true },
   { id: 'card', name: 'Карточка', hint: 'Полоса с размером и ценой, название, состав', group: 'extended', showsSize: true },
   { id: 'tag', name: 'Бирка', hint: 'Все по центру: размер, цена, товар, состав', group: 'extended', showsSize: true },
+  {
+    id: 'wholesale-pack',
+    name: 'Ростовка',
+    hint: 'Упаковочный лист: сетка размеров, кол-во штук, артикул, сумма пачки и цена за 1 шт.',
+    group: 'wholesale',
+    showsSize: false,
+  },
+  {
+    id: 'wholesale-box',
+    name: 'Оптовый короб',
+    hint: 'Складская этикетка для короба: крупный артикул на плашке, пачка, штрихкод и цена',
+    group: 'wholesale',
+    showsSize: false,
+  },
+  {
+    id: 'dual-price',
+    name: 'Опт и Розница',
+    hint: 'Двойной ценник: розничная и оптовая цена, стоимость упаковки и условия выкупа',
+    group: 'wholesale',
+    showsSize: true,
+  },
+  {
+    id: 'wholesale-tiers',
+    name: 'Опт от объема',
+    hint: 'Оптовая цена и таблица скидок от количества упаковок',
+    group: 'wholesale',
+    showsSize: false,
+  },
   { id: 'showcase', name: 'Витрина', hint: 'Крупное название, цвет, размер, состав, цена на темной полосе', group: 'accent', showsSize: true },
   { id: 'price-info', name: 'Цена и детали', hint: 'Цена во всю ширину, название и таблица: цвет, размер, состав, артикул', group: 'accent', showsSize: true },
   { id: 'premium', name: 'Премиум', hint: 'В рамке по центру: название, детали, крупная цена', group: 'accent', showsSize: true },
@@ -47,6 +81,7 @@ export const LABEL_TEMPLATES: LabelTemplateInfo[] = [
 export const LABEL_TEMPLATE_GROUPS: { id: LabelTemplateGroup; title: string }[] = [
   { id: 'basic', title: 'Без размера' },
   { id: 'extended', title: 'С размером и составом' },
+  { id: 'wholesale', title: 'Опт и упаковка' },
   { id: 'accent', title: 'Акцент на цене и названии' },
   { id: 'sale', title: 'Скидка' },
 ];
@@ -59,16 +94,17 @@ export const LABEL_FORMAT_PRESETS: Omit<LabelFormat, 'id'>[] = [
   { name: 'Ценник', widthMm: 70, heightMm: 50 },
   { name: 'Малая этикетка', widthMm: 43, heightMm: 25 },
   { name: 'Бирка', widthMm: 40, heightMm: 60 },
+  { name: 'Короб / Ростовка', widthMm: 100, heightMm: 70 },
 ];
 
 export const LABEL_SIZE_LIMITS = { min: 20, max: 120 };
 
-/** Everything on a label comes from the catalog (product and its variation) */
+/** Everything on a label comes from the catalog (product and its variation or size pack) */
 export interface LabelData {
   title: string;
   color: string;
   size: string;
-  /** Article without the size (MS-JK03-BLU) */
+  /** True article code without the size (MS-JK03-BLU) */
   article: string;
   /** Fabric composition text («75% хлопок, 25% шерсть») */
   composition: string;
@@ -80,6 +116,22 @@ export interface LabelData {
    * template prints it (the size has no place on a pack label: `size` is empty).
    */
   packLine?: string;
+  /** Name of the size pack or wholesale pack («Ростовка 48–52» or «Упаковка 5 шт.») */
+  packTitle?: string;
+  /** Structured size breakdown of a size pack for grid rendering */
+  packSizes?: { size: string; qty: number }[];
+  /** Total pieces in one pack or size-run pack */
+  packPieces?: number;
+  /** Retail unit price when available */
+  retailPrice?: number;
+  /** Wholesale price per single unit when available */
+  wholesaleUnitPrice?: number;
+  /** Total wholesale price for the whole pack or size-run pack */
+  packPrice?: number;
+  /** Minimum order / pack terms («Упаковка — 5 шт. · от 2 уп.») */
+  wholesaleTerms?: string;
+  /** Volume discount tiers from storefront wholesale settings */
+  wholesaleSteps?: { threshold: string; price: number; discount: string }[];
   /** The pack has no price: the label has no price block, like `showPrice: false` */
   noPrice?: boolean;
 }
@@ -90,6 +142,7 @@ export const hasSaleOldPrice = (data: Pick<LabelData, 'price' | 'oldPrice'>) =>
 export interface LabelOptions {
   showPrice: boolean;
   showBarcode: boolean;
+  priceMode?: LabelPriceMode;
 }
 
 type Weight = 500 | 600 | 700 | 800;
@@ -159,6 +212,103 @@ const MONO = "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace";
 const fontCss = (sizePx: number, weight: Weight, mono?: boolean) => `${weight} ${sizePx}px ${mono ? MONO : FONT}`;
 
 const formatLabelPrice = (value: number) => `${Math.round(value).toLocaleString('ru-RU')} ₽`;
+
+interface ResolvedPrices {
+  primaryPrice: number;
+  primaryLabel: string;
+  secondaryLine: string;
+  hasPrice: boolean;
+}
+
+/** Resolves which price(s) to display based on LabelData and the chosen LabelPriceMode */
+export function resolveLabelPrices(data: LabelData, mode: LabelPriceMode = 'auto'): ResolvedPrices {
+  const isPack = Boolean(data.packLine);
+  const pieces = data.packPieces && data.packPieces > 0 ? data.packPieces : 1;
+
+  if (mode === 'retail') {
+    const p = data.retailPrice ?? data.price;
+    return {
+      primaryPrice: p,
+      primaryLabel: 'Розница',
+      secondaryLine: isPack && pieces > 1 ? `В пачке ${pieces} шт.` : '',
+      hasPrice: p > 0 && (!data.noPrice || Boolean(data.retailPrice)),
+    };
+  }
+
+  if (mode === 'wholesale') {
+    if (isPack) {
+      const p = data.packPrice ?? data.price;
+      const unit = data.wholesaleUnitPrice ?? (p > 0 && pieces > 0 ? Math.round(p / pieces) : 0);
+      return {
+        primaryPrice: p,
+        primaryLabel: pieces > 1 ? `Пачка (${pieces} шт.)` : 'Опт',
+        secondaryLine: unit > 0 && pieces > 1 ? `За 1 шт.: ${formatLabelPrice(unit)}` : '',
+        hasPrice: p > 0 && !data.noPrice,
+      };
+    }
+    const unit = data.wholesaleUnitPrice ?? data.price;
+    const packTotal = data.packPrice ?? (pieces > 1 ? unit * pieces : 0);
+    return {
+      primaryPrice: unit,
+      primaryLabel: 'Опт',
+      secondaryLine:
+        packTotal > 0 && pieces > 1
+          ? `Уп. ${pieces} шт.: ${formatLabelPrice(packTotal)}`
+          : data.wholesaleTerms ?? '',
+      hasPrice: unit > 0,
+    };
+  }
+
+  if (mode === 'both') {
+    if (isPack) {
+      const p = data.packPrice ?? data.price;
+      const unit = data.wholesaleUnitPrice ?? (p > 0 && pieces > 0 ? Math.round(p / pieces) : 0);
+      const parts = [
+        unit > 0 ? `1 шт.: ${formatLabelPrice(unit)}` : '',
+        data.retailPrice ? `Розн.: ${formatLabelPrice(data.retailPrice)}` : '',
+      ].filter(Boolean);
+      return {
+        primaryPrice: p,
+        primaryLabel: `Пачка ${pieces} шт.`,
+        secondaryLine: parts.join(' · '),
+        hasPrice: p > 0 && !data.noPrice,
+      };
+    }
+    const retail = data.retailPrice ?? data.price;
+    const wh = data.wholesaleUnitPrice;
+    const parts = [
+      wh && wh !== retail ? `Опт: ${formatLabelPrice(wh)}/шт.` : '',
+      data.packPrice && pieces > 1 ? `Уп. ${pieces} шт.: ${formatLabelPrice(data.packPrice)}` : '',
+    ].filter(Boolean);
+    return {
+      primaryPrice: retail,
+      primaryLabel: wh ? 'Розница' : 'Цена',
+      secondaryLine: parts.join(' · '),
+      hasPrice: retail > 0,
+    };
+  }
+
+  // 'auto'
+  if (isPack) {
+    const p = data.packPrice ?? data.price;
+    const unit = data.wholesaleUnitPrice ?? (p > 0 && pieces > 0 ? Math.round(p / pieces) : 0);
+    return {
+      primaryPrice: p,
+      primaryLabel: pieces > 1 ? `Пачка ${pieces} шт.` : 'Цена',
+      secondaryLine: unit > 0 && pieces > 1 ? `${formatLabelPrice(unit)} / шт.` : '',
+      hasPrice: p > 0 && !data.noPrice,
+    };
+  }
+  return {
+    primaryPrice: data.price,
+    primaryLabel: data.wholesaleUnitPrice && data.price === data.wholesaleUnitPrice ? 'Опт' : 'Цена',
+    secondaryLine:
+      data.price === data.wholesaleUnitPrice && data.packPrice && pieces > 1
+        ? `Уп. ${pieces} шт.: ${formatLabelPrice(data.packPrice)}`
+        : '',
+    hasPrice: data.price > 0 && !data.noPrice,
+  };
+}
 
 /** Cuts a text with «…» to fit the width */
 function fit(text: string, maxWidth: number, size: number, weight: Weight, measure: MeasureText, mono?: boolean) {
@@ -276,13 +426,13 @@ function shrinkBlock(c: Ctx, value: string, style: TextStyle & { max?: number },
 }
 
 /** Barcode with its digits; grows from a readable minimum to a maximum, never taller than wide */
-function barcodeBlock(c: Ctx, code: EncodedBarcode): Block {
+function barcodeBlock(c: Ctx, code: EncodedBarcode, tallBoost = 1): Block {
   const quiet = code.kind === 'ean13' ? 11 + 7 : 20;
   const moduleWidth = Math.min(0.5, c.cw / (code.modules.length + quiet));
   const barsWidth = moduleWidth * code.modules.length;
   const digits = (s: number) => Math.max(1.8, Math.min(2.2 * s, 3.2));
-  const minBars = Math.max(4, Math.min(c.h * 0.2, 9));
-  const maxBars = Math.max(minBars, Math.min(c.h * 0.4, 22, barsWidth * 0.55));
+  const minBars = Math.max(4, Math.min(c.h * 0.2 * tallBoost, 9 * tallBoost));
+  const maxBars = Math.max(minBars, Math.min(c.h * 0.44 * tallBoost, 24, barsWidth * 0.6));
   return {
     height: (s) => minBars + digits(s) * 1.3,
     grow: () => maxBars - minBars,
@@ -343,6 +493,142 @@ function tableBlock(c: Ctx, rows: [string, string][], size: number, extra: Parti
         const y = top + f * ASCENT + i * (f * LEADING + 0.35 * s);
         c.items.push({ kind: 'text', text: k, x: c.m, y, size: f, weight: 600, align: 'left' });
         c.items.push({ kind: 'text', text: fit(v, c.cw - keyWidth, f, 800, c.measure), x: c.m + keyWidth, y, size: f, weight: 800, align: 'left' });
+      });
+    },
+    ...extra,
+  };
+}
+
+/**
+ * Graphic size-run grid for «Ростовка» (`wholesale-pack`):
+ * Top row: size labels (48 | 50 | 52 | Σ), Bottom row: quantities (1 | 2 | 1 | 4 шт.)
+ */
+function sizeGridBlock(
+  c: Ctx,
+  sizes: { size: string; qty: number }[] | undefined,
+  totalPieces: number | undefined,
+  fallbackSize: string,
+  extra: Partial<Block> = {}
+): Block | null {
+  const cols =
+    sizes && sizes.length > 0
+      ? [
+          ...sizes.slice(0, 7).map((s) => ({ head: s.size.split('(')[0]?.trim() || s.size, val: `${s.qty}` })),
+          { head: 'Итого', val: `${totalPieces ?? sizes.reduce((sum, s) => sum + s.qty, 0)} шт.` },
+        ]
+      : [
+          { head: 'Размер', val: fallbackSize || 'Стандарт' },
+          { head: 'В уп.', val: `${totalPieces ?? 1} шт.` },
+        ];
+
+  return {
+    height: (s) => 7.2 * s,
+    draw: (top, s) => {
+      const h = 7.2 * s;
+      const rowH = h / 2;
+      const colW = c.cw / cols.length;
+      c.items.push({ kind: 'rect', x: c.m, y: top, w: c.cw, h, radius: 0.9 * s, lineWidth: 0.35 });
+      c.items.push({ kind: 'line', x1: c.m, y1: top + rowH, x2: c.right, y2: top + rowH, width: 0.3 });
+
+      cols.forEach((col, i) => {
+        const x0 = c.m + i * colW;
+        const cx = x0 + colW / 2;
+        const isLast = i === cols.length - 1;
+        if (i > 0) {
+          c.items.push({ kind: 'line', x1: x0, y1: top, x2: x0, y2: top + h, width: isLast ? 0.45 : 0.25 });
+        }
+        const fHead = Math.min(2.1 * s, ((colW - 1.0 * s) / Math.max(0.1, c.measure(col.head, 1, 700))) * 0.94);
+        const fVal = Math.min(2.4 * s, ((colW - 1.0 * s) / Math.max(0.1, c.measure(col.val, 1, 800))) * 0.94);
+        c.items.push({
+          kind: 'text',
+          text: col.head,
+          x: cx,
+          y: top + rowH / 2 + fHead * 0.36,
+          size: fHead,
+          weight: isLast ? 800 : 700,
+          align: 'center',
+        });
+        c.items.push({
+          kind: 'text',
+          text: col.val,
+          x: cx,
+          y: top + rowH + rowH / 2 + fVal * 0.36,
+          size: fVal,
+          weight: 800,
+          align: 'center',
+          mono: !isLast,
+        });
+      });
+    },
+    ...extra,
+  };
+}
+
+/**
+ * Two-column price box for wholesale & dual-price templates:
+ * Left side: unit/retail price, Right side: highlighted box with wholesale/pack price
+ */
+function dualPriceBlock(
+  c: Ctx,
+  leftCaption: string,
+  leftPrice: string,
+  rightCaption: string,
+  rightPrice: string,
+  extra: Partial<Block> = {}
+): Block {
+  return {
+    height: (s) => 9.2 * s,
+    draw: (top, s) => {
+      const h = 9.2 * s;
+      const gap = 1.4 * s;
+      const halfW = (c.cw - gap) / 2;
+      const capSize = 1.9 * s;
+
+      // Left box (outlined)
+      c.items.push({ kind: 'rect', x: c.m, y: top, w: halfW, h, radius: 1 * s, lineWidth: 0.35 });
+      c.items.push({
+        kind: 'text',
+        text: fit(leftCaption, halfW - 1.6 * s, capSize, 700, c.measure),
+        x: c.m + halfW / 2,
+        y: top + 2.5 * s,
+        size: capSize,
+        weight: 700,
+        align: 'center',
+      });
+      const lpSize = Math.min(3.4 * s, ((halfW - 1.8 * s) / Math.max(0.1, c.measure(leftPrice, 1, 800))) * 0.95);
+      c.items.push({
+        kind: 'text',
+        text: leftPrice,
+        x: c.m + halfW / 2,
+        y: top + h - 1.5 * s,
+        size: lpSize,
+        weight: 800,
+        align: 'center',
+      });
+
+      // Right box (filled black for high contrast wholesale emphasis)
+      const rx = c.m + halfW + gap;
+      c.items.push({ kind: 'rect', x: rx, y: top, w: halfW, h, radius: 1 * s, fill: true });
+      c.items.push({
+        kind: 'text',
+        text: fit(rightCaption, halfW - 1.6 * s, capSize, 700, c.measure),
+        x: rx + halfW / 2,
+        y: top + 2.5 * s,
+        size: capSize,
+        weight: 700,
+        align: 'center',
+        inverse: true,
+      });
+      const rpSize = Math.min(3.4 * s, ((halfW - 1.8 * s) / Math.max(0.1, c.measure(rightPrice, 1, 800))) * 0.95);
+      c.items.push({
+        kind: 'text',
+        text: rightPrice,
+        x: rx + halfW / 2,
+        y: top + h - 1.5 * s,
+        size: rpSize,
+        weight: 800,
+        align: 'center',
+        inverse: true,
       });
     },
     ...extra,
@@ -435,16 +721,25 @@ export function layoutLabel(
   const sMax = Math.min(Math.max(k, w / 58) * 2.2, 2.4);
 
   const code = options.showBarcode && data.barcode ? encodeBarcode(data.barcode) : null;
-  const bars = code ? barcodeBlock(c, code) : null;
-  const price = formatLabelPrice(data.price);
-  const showPrice = options.showPrice && !data.noPrice;
+  const bars = code ? barcodeBlock(c, code, template === 'wholesale-box' ? 1.25 : 1) : null;
+  const resolved = resolveLabelPrices(data, options.priceMode ?? 'auto');
+  const price = formatLabelPrice(resolved.primaryPrice);
+  const showPrice = options.showPrice && resolved.hasPrice;
   const pack = (data.packLine ?? '').trim();
+  const packHeader = [data.packTitle, pack].filter(Boolean).join(': ') || pack;
   /** The pack composition (wraps between the sizes and the items, never cut): a pack label shows it in every template */
   const packBlock = (style: Partial<TextStyle> = {}, extra: Partial<Block> = {}) =>
-    pack ? textBlock(c, pack, { size: 3, weight: 800, maxLines: 2, ...style }, { gap: 0.7, ...extra }) : null;
+    pack ? textBlock(c, packHeader, { size: 2.8, weight: 800, maxLines: 2, ...style }, { gap: 0.7, ...extra }) : null;
+  const subPriceBlock = (align: TextItem['align'] = 'right', extra: Partial<Block> = {}) =>
+    showPrice && resolved.secondaryLine
+      ? textBlock(c, resolved.secondaryLine, { size: 2.2, weight: 700, align }, { gap: 0.4, ...opt('доп. цена', 2), ...extra })
+      : null;
+
   const tall = h / w > 1.1;
   const titleLines = tall ? 4 : 2;
   const colorArticle = [data.color, data.article].filter(Boolean).join(' · ');
+  // a pack's «article» is its name («Ростовка 48–52»), not an article: no «Арт.» before it (stage 18)
+  const articleText = data.article ? (pack ? data.article : `Арт. ${data.article}`) : '';
   const opt = (name: string, rank: number): Partial<Block> => ({ optional: rank, name });
 
   let blocks: (Block | null)[] = [];
@@ -453,11 +748,15 @@ export function layoutLabel(
     blocks = [
       textBlock(c, data.title, { size: 3.6, weight: 800, maxLines: titleLines }),
       textBlock(c, data.color ? `Цвет: ${data.color}` : '', { size: 2.5, weight: 700 }, { gap: 0.7, ...opt('цвет', 2) }),
-      packBlock({ size: 2.8 }, { gap: 0.6 }),
-      textBlock(c, data.article ? `Арт. ${data.article}` : '', { size: 2.3, weight: 700, mono: true }, { gap: 0.4, ...opt('артикул', 1) }),
+      packBlock({ size: 2.7 }, { gap: 0.6 }),
+      textBlock(c, articleText, { size: 2.3, weight: 700, mono: true }, { gap: 0.4, ...opt('артикул', 1) }),
       bars ?? spacer(),
       ...(showPrice
-        ? [ruleBlock(c, bars ? 1.2 : 0), pairBlock(c, 'Цена', price, { size: 2.6, weight: 700 }, { size: 6.2 }, { gap: 0.9 })]
+        ? [
+            ruleBlock(c, bars ? 1.2 : 0),
+            pairBlock(c, resolved.primaryLabel, price, { size: 2.5, weight: 700 }, { size: 6.2 }, { gap: 0.9 }),
+            subPriceBlock('right'),
+          ]
         : []),
     ];
   }
@@ -469,6 +768,7 @@ export function layoutLabel(
       packBlock({ size: 2.6 }, { gap: 0.5 }),
       bars ?? spacer(),
       pairBlock(c, data.article, showPrice ? price : '', { size: 2.2, weight: 700, mono: true }, { size: 4.6 }, { gap: 1 }),
+      subPriceBlock('right'),
     ];
   }
 
@@ -479,31 +779,37 @@ export function layoutLabel(
       packBlock({ size: 2.8 }, { gap: 0.6 }),
       bars ? null : spacer(),
       showPrice ? shrinkBlock(c, price, { size: 10 }, { gap: 1.2 }) : null,
+      subPriceBlock('left'),
       ...(bars ? [spacer(), ruleBlock(c, 0), bars] : []),
     ];
   }
 
   if (template === 'size-price') {
-    const sizeText = data.size || '—';
+    const sizeText = data.size || (data.packPieces ? `${data.packPieces} шт.` : '—');
     blocks = [
-      // a pack has no single size for the box: the price and, under it, the composition
       ...(pack
-        ? [showPrice ? shrinkBlock(c, price, { size: 8 }) : null, packBlock({ size: 4 }, { gap: 0.8 })]
-        : [sizePriceRow(c, sizeText, showPrice ? price : '')]),
-      textBlock(c, data.title, { size: 3.4, weight: 800, maxLines: titleLines }, { gap: 1.4 }),
+        ? [showPrice ? shrinkBlock(c, price, { size: 8 }) : null, subPriceBlock('left'), packBlock({ size: 3.6 }, { gap: 0.8 })]
+        : [sizePriceRow(c, sizeText, showPrice ? price : ''), subPriceBlock('right')]),
+      textBlock(c, data.title, { size: 3.4, weight: 800, maxLines: titleLines }, { gap: 1.2 }),
       textBlock(c, data.composition ? `Состав: ${data.composition}` : '', { size: 2.4, weight: 700 }, { gap: 0.6, ...opt('состав', 2) }),
-      textBlock(c, data.article ? `Арт. ${data.article}` : '', { size: 2.3, weight: 700, mono: true }, { gap: 0.4, ...opt('артикул', 1) }),
+      textBlock(c, articleText, { size: 2.3, weight: 700, mono: true }, { gap: 0.4, ...opt('артикул', 1) }),
       bars ?? spacer(),
     ];
   }
 
   if (template === 'card') {
+    const bandLeft = data.size
+      ? [`Размер ${data.size}`, data.size]
+      : data.packTitle
+      ? [data.packTitle]
+      : [resolved.primaryLabel];
     blocks = [
-      pack && !showPrice ? null : bandBlock(c, data.size ? [`Размер ${data.size}`, data.size] : [], showPrice ? price : '', 'top'),
-      packBlock({ size: 3.8 }, { gap: 1.4 }),
-      textBlock(c, data.title, { size: 3.5, weight: 800, maxLines: titleLines }, { gap: 1.4 }),
+      pack && !showPrice && !data.packTitle ? null : bandBlock(c, bandLeft, showPrice ? price : '', 'top'),
+      subPriceBlock('right'),
+      packBlock({ size: 3.4 }, { gap: 1.1 }),
+      textBlock(c, data.title, { size: 3.5, weight: 800, maxLines: titleLines }, { gap: 1.2 }),
       textBlock(c, data.composition ? `Состав: ${data.composition}` : '', { size: 2.4, weight: 700 }, { gap: 0.6, ...opt('состав', 2) }),
-      textBlock(c, data.article ? `Арт. ${data.article}` : '', { size: 2.3, weight: 700, mono: true }, { gap: 0.4, ...opt('артикул', 1) }),
+      textBlock(c, articleText, { size: 2.3, weight: 700, mono: true }, { gap: 0.4, ...opt('артикул', 1) }),
       bars ?? spacer(),
     ];
   }
@@ -513,25 +819,188 @@ export function layoutLabel(
     blocks = [
       bars ? null : spacer(),
       data.size ? shrinkBlock(c, data.size, { size: 7, align: 'center' }) : null,
-      packBlock({ size: 4.2, align: 'center' }),
+      packBlock({ size: 3.8, align: 'center' }),
       showPrice ? shrinkBlock(c, price, { size: 6, align: 'center' }, { gap: 0.6 }) : null,
+      subPriceBlock('center'),
       textBlock(c, data.title, { size: 3.3, weight: 800, maxLines: titleLines, ...center }, { gap: 1.2 }),
       textBlock(c, data.composition ? `Состав: ${data.composition}` : '', { size: 2.4, weight: 700, ...center }, { gap: 0.6, ...opt('состав', 2) }),
-      textBlock(c, data.article ? `Арт. ${data.article}` : '', { size: 2.3, weight: 700, mono: true, ...center }, { gap: 0.4, ...opt('артикул', 1) }),
+      textBlock(c, articleText, { size: 2.3, weight: 700, mono: true, ...center }, { gap: 0.4, ...opt('артикул', 1) }),
+      bars ?? spacer(),
+    ];
+  }
+
+  if (template === 'wholesale-pack') {
+    const unitPrice =
+      data.wholesaleUnitPrice ??
+      (resolved.primaryPrice > 0 && (data.packPieces ?? 1) > 1
+        ? Math.round(resolved.primaryPrice / (data.packPieces ?? 1))
+        : resolved.primaryPrice);
+    const packTotal =
+      data.packPrice ??
+      (unitPrice > 0 && (data.packPieces ?? 1) > 1 ? unitPrice * (data.packPieces ?? 1) : resolved.primaryPrice);
+
+    blocks = [
+      textBlock(c, data.title, { size: 3.4, weight: 800, maxLines: 2 }),
+      pairBlock(
+        c,
+        articleText || data.packTitle || 'Партия',
+        data.color,
+        { size: 2.4, weight: 800, mono: Boolean(data.article) },
+        { size: 2.4, weight: 700 },
+        { gap: 0.5 }
+      ),
+      // the size grid needs the pack's sizes; a pack known only by its composition line prints that line instead
+      data.packSizes?.length || !pack
+        ? sizeGridBlock(c, data.packSizes, data.packPieces, data.size || data.packTitle || '—', { gap: 0.8 })
+        : packBlock({ size: 3 }, { gap: 0.8 }),
+      textBlock(c, data.composition ? `Состав: ${data.composition}` : '', { size: 2.1, weight: 600 }, { gap: 0.5, ...opt('состав', 1) }),
+      ...(showPrice
+        ? (data.packPieces ?? 1) > 1 && unitPrice > 0 && packTotal > unitPrice
+          ? [
+              dualPriceBlock(
+                c,
+                'За 1 шт.',
+                formatLabelPrice(unitPrice),
+                `Пачка (${data.packPieces} шт.)`,
+                formatLabelPrice(packTotal),
+                { gap: 0.8 }
+              ),
+            ]
+          : [pairBlock(c, resolved.primaryLabel, price, { size: 2.5, weight: 700 }, { size: 5.4 }, { gap: 0.8 })]
+        : []),
+      bars ?? spacer(),
+    ];
+  }
+
+  if (template === 'wholesale-box') {
+    // a pack's name («Ростовка 48–52») is too long for the band: the band says what it is, the name goes below in full
+    const topLeft = pack ? ['РОСТОВКА'] : data.article ? [ `АРТ. ${data.article}`, data.article ] : [ data.packTitle || 'ОПТ КОРОБ' ];
+    const topRight = data.packPieces ? `${data.packPieces} ШТ.` : data.size || data.color;
+    const summaryLine = [
+      pack ? data.article ?? '' : '',
+      data.color ? `Цвет: ${data.color}` : '',
+      data.packTitle || (data.size ? `Размер: ${data.size}` : ''),
+      pack ? `Ряд: ${pack}` : '',
+    ]
+      .filter(Boolean)
+      .join(' · ');
+
+    blocks = [
+      bandBlock(c, topLeft, topRight, 'top'),
+      textBlock(c, data.title, { size: 3.5, weight: 800, maxLines: 2 }, { gap: 1 }),
+      textBlock(c, summaryLine, { size: 2.5, weight: 700, maxLines: 2 }, { gap: 0.6 }),
+      textBlock(c, data.wholesaleTerms ?? '', { size: 2.2, weight: 600 }, { gap: 0.4, ...opt('условия опта', 1) }),
+      bars ?? spacer(),
+      ...(showPrice
+        ? [
+            ruleBlock(c, 0.8),
+            pairBlock(
+              c,
+              resolved.secondaryLine || resolved.primaryLabel,
+              price,
+              { size: 2.3, weight: 700 },
+              { size: 5.0 },
+              { gap: 0.7 }
+            ),
+          ]
+        : []),
+    ];
+  }
+
+  if (template === 'dual-price') {
+    const retailVal = data.retailPrice ?? data.price;
+    const whUnit = data.wholesaleUnitPrice ?? data.price;
+    const isPack = Boolean(data.packLine);
+    const leftCap = isPack && data.packPieces ? 'Опт / 1 шт.' : 'Розница';
+    const leftVal = formatLabelPrice(isPack ? whUnit : retailVal);
+    const rightCap = isPack
+      ? `Пачка (${data.packPieces ?? 1} шт.)`
+      : data.packPieces && data.packPieces > 1
+      ? `Опт (уп. ${data.packPieces} шт.)`
+      : 'Опт / 1 шт.';
+    const rightVal = formatLabelPrice(isPack ? data.packPrice ?? data.price : whUnit);
+
+    const subDetails = [
+      data.color,
+      data.size ? `р. ${data.size}` : data.packTitle,
+      pack,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+
+    const extraLine =
+      !isPack && data.packPrice && (data.packPieces ?? 1) > 1
+        ? `Сумма упаковки (${data.packPieces} шт.): ${formatLabelPrice(data.packPrice)}${data.wholesaleTerms ? ` · ${data.wholesaleTerms}` : ''}`
+        : data.wholesaleTerms ?? '';
+
+    blocks = [
+      textBlock(c, data.title, { size: 3.4, weight: 800, maxLines: titleLines }),
+      pairBlock(c, articleText, subDetails, { size: 2.2, weight: 700, mono: true }, { size: 2.3, weight: 700 }, { gap: 0.5 }),
+      showPrice ? dualPriceBlock(c, leftCap, leftVal, rightCap, rightVal, { gap: 0.8 }) : null,
+      textBlock(c, extraLine, { size: 2.1, weight: 700, align: 'center' }, { gap: 0.5, ...opt('условия выкупа', 1) }),
+      textBlock(c, data.composition ? `Состав: ${data.composition}` : '', { size: 2.1, weight: 600 }, { gap: 0.4, ...opt('состав', 2) }),
+      bars ?? spacer(),
+    ];
+  }
+
+  if (template === 'wholesale-tiers') {
+    const baseWh = data.wholesaleUnitPrice ?? resolved.primaryPrice;
+    const tierRows: [string, string][] = (data.wholesaleSteps ?? []).slice(0, 4).map((step) => [
+      step.threshold,
+      `${formatLabelPrice(step.price)} (${step.discount})`,
+    ]);
+    if (tierRows.length === 0 && data.packPrice && (data.packPieces ?? 1) > 1) {
+      tierRows.push([`Упаковка ${data.packPieces} шт.`, formatLabelPrice(data.packPrice)]);
+    }
+    if (tierRows.length === 0 && data.retailPrice && data.retailPrice !== baseWh) {
+      tierRows.push(['Розница', formatLabelPrice(data.retailPrice)]);
+    }
+    if (tierRows.length === 0) {
+      tierRows.push(['Фасовка', `${data.packPieces ?? 1} шт. в уп.`]);
+      if (data.color || data.size) {
+        tierRows.push(['Партия', [data.color, data.size ? `р. ${data.size}` : ''].filter(Boolean).join(', ')]);
+      }
+    }
+
+    blocks = [
+      textBlock(c, data.title, { size: 3.4, weight: 800, maxLines: titleLines }),
+      textBlock(
+        c,
+        [articleText, data.color, data.size ? `р. ${data.size}` : ''].filter(Boolean).join(' · '),
+        { size: 2.2, weight: 700 },
+        { gap: 0.5, ...opt('реквизиты', 2) }
+      ),
+      packBlock({ size: 2.6 }, { gap: 0.5 }),
+      ...(showPrice
+        ? [
+            ruleBlock(c, 0.6),
+            pairBlock(
+              c,
+              data.packPieces && data.packPieces > 1 ? `Опт (уп. ${data.packPieces})` : 'Опт / 1 шт.',
+              `${formatLabelPrice(baseWh)}`,
+              { size: 2.3, weight: 700 },
+              { size: 4.8 },
+              { gap: 0.6 }
+            ),
+            tableBlock(c, tierRows, 2.2, { gap: 0.6, ...opt('ступени скидок', 1) }),
+          ]
+        : []),
       bars ?? spacer(),
     ];
   }
 
   if (template === 'showcase') {
-    // Big name on top, details, the price on a filled band at the bottom edge
+    // Big name on top, details, article, the price on a filled band at the bottom edge
     blocks = [
       textBlock(c, data.title, { size: 4.4, weight: 800, maxLines: titleLines + 1 }),
       textBlock(c, [data.color, data.size ? `размер ${data.size}` : ''].filter(Boolean).join(' · '), { size: 2.7, weight: 700 }, { gap: 0.8, ...opt('цвет и размер', 2) }),
-      packBlock({ size: 3.2 }, { gap: 0.6 }),
-      textBlock(c, data.composition, { size: 2.4, weight: 600 }, { gap: 0.4, ...opt('состав', 1) }),
+      packBlock({ size: 3.0 }, { gap: 0.6 }),
+      textBlock(c, data.composition, { size: 2.4, weight: 600 }, { gap: 0.4, ...opt('состав', 2) }),
+      textBlock(c, articleText, { size: 2.2, weight: 700, mono: true }, { gap: 0.4, ...opt('артикул', 1) }),
+      subPriceBlock('left'),
       bars ? null : spacer(),
       bars,
-      showPrice ? bandBlock(c, ['Цена', ''], price, 'bottom') : textBlock(c, data.article ? `Арт. ${data.article}` : '', { size: 2.3, weight: 700, mono: true }),
+      showPrice ? bandBlock(c, [resolved.primaryLabel, ''], price, 'bottom') : null,
     ];
   }
 
@@ -539,6 +1008,7 @@ export function layoutLabel(
     // The price as wide as the label, the name, then a table of details
     blocks = [
       showPrice ? shrinkBlock(c, price, { size: 11 }) : null,
+      subPriceBlock('left'),
       textBlock(c, data.title, { size: 3.6, weight: 800, maxLines: titleLines }, { gap: 0.8 }),
       showPrice ? ruleBlock(c, 1) : null,
       packBlock({ size: 2.8 }, { gap: 0.8 }),
@@ -546,9 +1016,9 @@ export function layoutLabel(
         c,
         [
           ['Цвет', data.color],
-          ['Размер', data.size],
+          ['Размер', data.size || (data.packTitle ?? '')],
           ['Состав', data.composition],
-          ['Артикул', data.article],
+          [pack ? 'Упаковка' : 'Артикул', data.article],
         ],
         2.4,
         { gap: 1, ...opt('таблица', 1) }
@@ -558,7 +1028,7 @@ export function layoutLabel(
   }
 
   if (template === 'premium') {
-    // A frame, everything centred: name, details, a rule and the price
+    // A frame, everything centred: name, details, article, a rule and the price
     const center = { align: 'center' as const };
     const inner = 1.2 * k;
     c.items.push({ kind: 'rect', x: m / 2, y: m / 2, w: w - m, h: h - m, radius: 1.2 * k, lineWidth: 0.35 });
@@ -568,10 +1038,12 @@ export function layoutLabel(
     blocks = [
       textBlock(c, data.title, { size: 3.8, weight: 800, maxLines: titleLines, ...center }),
       textBlock(c, [data.color, data.size].filter(Boolean).join(' · '), { size: 2.5, weight: 700, ...center }, { gap: 0.7, ...opt('цвет и размер', 2) }),
-      packBlock({ size: 3, ...center }, { gap: 0.5 }),
-      textBlock(c, data.composition, { size: 2.3, weight: 600, ...center }, { gap: 0.4, ...opt('состав', 1) }),
+      packBlock({ size: 2.8, ...center }, { gap: 0.5 }),
+      textBlock(c, data.composition, { size: 2.3, weight: 600, ...center }, { gap: 0.4, ...opt('состав', 2) }),
+      textBlock(c, articleText, { size: 2.2, weight: 700, mono: true, ...center }, { gap: 0.4, ...opt('артикул', 1) }),
       spacer(),
       showPrice ? shrinkBlock(c, price, { size: 8.5, align: 'center' }) : null,
+      subPriceBlock('center'),
       bars ? spacer(0.4) : null,
       bars,
     ];
@@ -585,6 +1057,7 @@ export function layoutLabel(
       packBlock({ size: 2.8 }, { gap: 0.6 }),
       bars ? null : spacer(),
       saleRow(c, price, oldPrice, data.price),
+      subPriceBlock('left'),
       ...(bars ? [spacer(), ruleBlock(c, 0), bars] : []),
     ];
   }
@@ -781,30 +1254,38 @@ const PDF_PX_PER_MM = 16; // ≈406 dpi for the text; bars are vectors
 export const LABEL_COPIES_MAX = 200;
 
 /**
- * One PDF page per label, page size = label size; each label `copies` times in a row (one per piece on the shelf,
- * admin audit 09.10, finding 29). Returns the file name.
+ * One PDF page per label, page size = label size; each label `copies` times in a row (either a fixed number
+ * or an individual count per label when printing by physical stock). Returns the file name.
  */
 export async function downloadLabelsPdf(
   format: LabelFormat,
   template: LabelTemplate,
   labels: LabelData[],
   options: LabelOptions,
-  copies = 1
+  copies: number | number[] = 1
 ): Promise<string> {
-  const times = Math.min(LABEL_COPIES_MAX, Math.max(1, Math.floor(copies) || 1));
   // jspdf is loaded on demand (as for the analytics report), not with the main bundle
   const [{ default: jsPDF }] = await Promise.all([import('jspdf'), loadLabelFonts()]);
   const measure = canvasMeasure();
   const orientation = format.widthMm >= format.heightMm ? 'landscape' : 'portrait';
   const pdf = new jsPDF({ unit: 'mm', format: [format.widthMm, format.heightMm], orientation, compress: true });
   const canvas = document.createElement('canvas');
+  let hasFirstPage = false;
+
   labels.forEach((data, index) => {
+    const rawCount = Array.isArray(copies) ? (copies[index] ?? 0) : copies;
+    const times = Array.isArray(copies)
+      ? Math.min(LABEL_COPIES_MAX, Math.max(0, Math.floor(rawCount) || 0))
+      : Math.min(LABEL_COPIES_MAX, Math.max(1, Math.floor(rawCount) || 1));
+    if (times <= 0) return;
+
     const layout = layoutLabel(template, format, data, options, measure);
     drawLabel(canvas, layout, PDF_PX_PER_MM, { bars: false });
     // drawn once, placed on every copy's page (jspdf keeps one image for the same alias)
     const image = canvas.toDataURL('image/png');
     for (let copy = 0; copy < times; copy++) {
-      if (index > 0 || copy > 0) pdf.addPage([format.widthMm, format.heightMm], orientation);
+      if (hasFirstPage) pdf.addPage([format.widthMm, format.heightMm], orientation);
+      hasFirstPage = true;
       pdf.addImage(image, 'PNG', 0, 0, format.widthMm, format.heightMm, `label-${index}`, 'FAST');
       pdf.setFillColor(0, 0, 0);
       for (const item of layout.items) {

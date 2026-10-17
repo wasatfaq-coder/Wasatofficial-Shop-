@@ -1,6 +1,13 @@
-// Индекс заказов (docs/orders-scale-plan.md, этап 4): src/utils/ordersIndex.ts
+// Индекс заказов (docs/orders-scale-plan.md, этапы 4–5): src/utils/ordersIndex.ts
 import { describe, expect, test } from 'bun:test';
-import { buildOrdersIndex, isWholeOrdersIndex, ordersIndexParts, readOrdersIndex, type OrderIndexRow } from '../../src/utils/ordersIndex';
+import {
+  buildOrdersIndex,
+  isWholeOrdersIndex,
+  mergeOrdersIndex,
+  ordersIndexParts,
+  readOrdersIndex,
+  type OrderIndexRow,
+} from '../../src/utils/ordersIndex';
 
 const row = (id: string, updatedAt?: number, over: Record<string, unknown> = {}): OrderIndexRow => ({
   id,
@@ -23,6 +30,21 @@ describe('индекс заказов', () => {
     expect(buildOrdersIndex([row('WS-1', 1), row('WS-2', 3, { status: 'assembling' })]).hash).not.toBe(hash);
     expect(buildOrdersIndex([row('WS-1', 1), row('WS-2', 2, { paymentStatus: 'paid' })]).hash).not.toBe(hash);
     expect(buildOrdersIndex([row('WS-1', 1)]).hash).not.toBe(hash);
+  });
+
+  test('наложение изменённых заказов на индекс (этап 5): выбирает более свежий updatedAt и удаляет удалённые', () => {
+    const indexRows = [row('WS-1', 1_000, { status: 'accepted' }), row('WS-2', 2_000, { status: 'accepted' }), row('WS-3', 3_000)];
+    const changedRows = [
+      row('WS-2', 2_500, { status: 'assembling' }),
+      row('WS-1', 500, { status: 'delivered' }), // старше индекса — игнорируется
+      row('WS-4', 4_000, { status: 'accepted' }), // новый заказ
+    ];
+    const merged = mergeOrdersIndex(indexRows, changedRows, ['WS-3']);
+    expect(merged.map((r) => [r.id, r.data.status])).toEqual([
+      ['WS-1', 'accepted'],
+      ['WS-2', 'assembling'],
+      ['WS-4', 'accepted'],
+    ]);
   });
 
   test('части сжимаются и читаются обратно; части разных записей не смешиваются', async () => {

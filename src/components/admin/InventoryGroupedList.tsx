@@ -125,14 +125,14 @@ const GroupCheck: React.FC<{ state: boolean | 'mixed'; onToggle: () => void; lab
     aria-checked={state}
     aria-label={label}
     onClick={onToggle}
-    className="shrink-0 cursor-pointer"
+    className="w-8 h-8 rounded-xl inline-flex items-center justify-center shrink-0 cursor-pointer"
   >
     <span
-      className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
+      className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
         state ? 'neu-fill-accent text-white' : 'neu-inset'
       }`}
     >
-      {state === true && <Check className="w-3.5 h-3.5" />}
+      {state === true && <Check className="w-4 h-4 stroke-[2.5] shrink-0" />}
       {state === 'mixed' && <span className="w-2.5 h-0.5 rounded-full bg-white" />}
     </span>
   </button>
@@ -210,17 +210,17 @@ export const InventoryGroupedList: React.FC<InventoryGroupedListProps> = ({
             aria-expanded={open}
             aria-controls={panelId}
             onClick={() => onToggle(id)}
-            className="flex-1 min-w-0 flex items-center gap-2.5 text-left cursor-pointer rounded-xl"
+            className="flex-1 min-w-0 min-h-8 flex items-center gap-2.5 text-left cursor-pointer rounded-xl"
           >
             <span className="w-10 h-12 rounded-xl overflow-hidden neu-flat-sm shrink-0">
               <ProductThumbImage product={model.product} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             </span>
             <span className="min-w-0 flex-1 space-y-0.5">
-              <span className="block text-xs font-extrabold text-[#2D3A4E] truncate">{model.product.title}</span>
-              <span className="block text-[11px] font-semibold text-[#4E5C70]">
+              <span className="block text-xs font-extrabold text-text-primary truncate">{model.product.title}</span>
+              <span className="block text-[11px] font-semibold text-text-secondary">
                 {model.articles.length} {pluralRu(model.articles.length, ['артикул', 'артикула', 'артикулов'])} ·{' '}
                 {s.variants} {pluralRu(s.variants, ['вариант', 'варианта', 'вариантов'])} ·{' '}
-                <span className="font-extrabold text-[#2D3A4E]">{s.units} шт.</span>
+                <span className="font-extrabold text-text-primary">{s.units} шт.</span>
               </span>
               <span className="flex items-center gap-2 flex-wrap">
                 <StockFlags low={s.low} out={s.out} />
@@ -228,13 +228,13 @@ export const InventoryGroupedList: React.FC<InventoryGroupedListProps> = ({
             </span>
             <ChevronDown
               aria-hidden="true"
-              className={`w-4 h-4 text-[#4E5C70] shrink-0 transition-transform ${open ? 'rotate-180 text-accent' : ''}`}
+              className={`w-4 h-4 text-text-secondary shrink-0 transition-transform ${open ? 'rotate-180 text-accent' : ''}`}
             />
           </button>
           <button
             type="button"
             onClick={() => onLabels(targets(model.rows))}
-            className="h-8 px-2.5 rounded-xl neu-button text-[11px] font-bold text-[#4E5C70] hover:text-accent flex items-center gap-1 cursor-pointer shrink-0"
+            className="h-8 px-2.5 rounded-xl neu-button text-[11px] font-bold text-text-secondary hover:text-accent flex items-center gap-1 cursor-pointer shrink-0"
             aria-label={`Этикетки: ${model.product.title}`}
             title="Этикетки всех вариантов модели"
           >
@@ -253,11 +253,11 @@ export const InventoryGroupedList: React.FC<InventoryGroupedListProps> = ({
                     onToggle={() => toggleGroup(article.rows)}
                     label={`Выбрать для этикеток: ${model.product.title}, ${article.color}`}
                   />
-                  <span className="text-[11px] font-extrabold text-[#2D3A4E] truncate">{article.color || 'Без цвета'}</span>
+                  <span className="text-[11px] font-extrabold text-text-primary truncate">{article.color || 'Без цвета'}</span>
                   {article.article && (
-                    <span className="text-[11px] font-mono font-bold text-[#4E5C70] truncate">{article.article}</span>
+                    <span className="text-[11px] font-mono font-bold text-text-secondary truncate">{article.article}</span>
                   )}
-                  <span className="ml-auto text-[11px] font-extrabold text-[#2D3A4E] whitespace-nowrap">
+                  <span className="ml-auto text-[11px] font-extrabold text-text-primary whitespace-nowrap">
                     {summary(article.rows).units} шт.
                   </span>
                 </div>
@@ -300,25 +300,25 @@ export const InventoryGroupedList: React.FC<InventoryGroupedListProps> = ({
                 aria-expanded={open}
                 aria-controls={panelId}
                 onClick={() => onToggle(id)}
-                className="flex-1 min-w-0 flex items-center gap-2.5 text-left cursor-pointer rounded-xl"
+                className="flex-1 min-w-0 min-h-8 flex items-center gap-2.5 text-left cursor-pointer rounded-xl"
               >
-                <span className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-[#2D3A4E] shrink-0">
+                <span className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-text-primary shrink-0">
                   <Icon className="w-[18px] h-[18px]" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-extrabold text-[#2D3A4E] truncate">{cat.name}</span>
-                  <span className="flex items-center gap-x-2 gap-y-0.5 flex-wrap text-[11px] font-semibold text-[#4E5C70]">
+                  <span className="block text-sm font-extrabold text-text-primary truncate">{cat.name}</span>
+                  <span className="flex items-center gap-x-2 gap-y-0.5 flex-wrap text-[11px] font-semibold text-text-secondary">
                     <span>
                       {cat.models.length} {pluralRu(cat.models.length, ['модель', 'модели', 'моделей'])} · {s.variants}{' '}
                       {pluralRu(s.variants, ['вариант', 'варианта', 'вариантов'])} ·{' '}
-                      <span className="font-extrabold text-[#2D3A4E]">{s.units} шт.</span>
+                      <span className="font-extrabold text-text-primary">{s.units} шт.</span>
                     </span>
                     <StockFlags low={s.low} out={s.out} />
                   </span>
                 </span>
                 <ChevronDown
                   aria-hidden="true"
-                  className={`w-4 h-4 text-[#4E5C70] shrink-0 transition-transform ${open ? 'rotate-180 text-accent' : ''}`}
+                  className={`w-4 h-4 text-text-secondary shrink-0 transition-transform ${open ? 'rotate-180 text-accent' : ''}`}
                 />
               </button>
             </div>

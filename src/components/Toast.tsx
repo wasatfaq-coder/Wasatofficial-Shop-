@@ -78,42 +78,42 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
   const renderIcon = () => {
     if (toast.icon === 'truck') {
       return (
-        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0">
+        <div className="w-9 h-9 rounded-xl neu-tone-info flex items-center justify-center text-accent shrink-0">
           <Truck className="w-4 h-4 stroke-[2.5]" />
         </div>
       );
     }
     if (toast.icon === 'package') {
       return (
-        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-warning shrink-0">
+        <div className="w-9 h-9 rounded-xl neu-tone-warning flex items-center justify-center text-warning shrink-0">
           <Package className="w-4 h-4 stroke-[2.5]" />
         </div>
       );
     }
     if (toast.icon === 'store') {
       return (
-        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-success shrink-0">
+        <div className="w-9 h-9 rounded-xl neu-tone-success flex items-center justify-center text-success shrink-0">
           <Store className="w-4 h-4 stroke-[2.5]" />
         </div>
       );
     }
     if (toast.icon === 'check' || toast.type === 'success') {
       return (
-        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-success shrink-0">
+        <div className="w-9 h-9 rounded-xl neu-tone-success flex items-center justify-center text-success shrink-0">
           <CheckCircle className="w-4 h-4 stroke-[2.5]" />
         </div>
       );
     }
     if (toast.icon === 'alert' || toast.type === 'error') {
       return (
-        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-danger shrink-0">
+        <div className="w-9 h-9 rounded-xl neu-tone-danger flex items-center justify-center text-danger shrink-0">
           <AlertCircle className="w-4 h-4 stroke-[2.5]" />
         </div>
       );
     }
     if (toast.icon === 'sparkles') {
       return (
-        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-warning shrink-0">
+        <div className="w-9 h-9 rounded-xl neu-tone-warning flex items-center justify-center text-warning shrink-0">
           <Sparkles className="w-4 h-4 stroke-[2.5]" />
         </div>
       );
@@ -121,7 +121,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
 
     // Default icon
     return (
-      <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0">
+      <div className="w-9 h-9 rounded-xl neu-tone-info flex items-center justify-center text-accent shrink-0">
         <Bell className="w-4 h-4 stroke-[2.5]" />
       </div>
     );
@@ -132,7 +132,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
   if (isRichNotification) {
     return (
       <div
-        className="pointer-events-auto neu-modal rounded-2xl p-3.5 border border-white/90 space-y-2.5 animate-in fade-in slide-in-from-top-4 lg:slide-in-from-bottom-4 duration-300 relative"
+        className="pointer-events-auto neu-modal rounded-2xl p-3.5 space-y-2.5 animate-in fade-in slide-in-from-top-4 lg:slide-in-from-bottom-4 duration-300 relative"
         role="alert"
         {...pauseHandlers}
       >
@@ -142,13 +142,13 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
             {renderIcon()}
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs font-extrabold text-[#2D3A4E] leading-tight truncate">
+                <span className="text-xs font-extrabold text-text-primary leading-tight truncate">
                   {toast.title || 'Push-уведомление'}
                 </span>
                 {toast.badgeText && (
                   <span
                     className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full border ${
-                      toast.badgeBg || 'bg-accent/10 text-accent border-accent/20'
+                      toast.badgeBg || 'neu-tone-info border-transparent'
                     }`}
                   >
                     {toast.badgeText}
@@ -166,15 +166,15 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
           <button
             type="button"
             onClick={() => onDismiss(toast.id)}
-            className="w-7 h-7 flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] rounded-full neu-button transition-colors cursor-pointer shrink-0"
+            className="w-8 h-8 flex items-center justify-center text-text-secondary hover:text-text-primary rounded-full neu-button transition-colors cursor-pointer shrink-0"
             aria-label="Закрыть уведомление"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4 shrink-0" />
           </button>
         </div>
 
         {/* Message body */}
-        <p className="text-xs text-[#4E5C70] leading-snug pl-0.5">
+        <p className="text-xs text-text-secondary leading-snug pl-0.5">
           {toast.text}
         </p>
 
@@ -187,10 +187,10 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
                 toast.action?.onClick();
                 onDismiss(toast.id);
               }}
-              className="py-1.5 px-3 neu-button-accent rounded-xl text-[11px] font-extrabold text-white flex items-center gap-1 cursor-pointer transition-transform"
+              className="min-h-8 py-1.5 px-3 neu-button-accent rounded-xl text-[11px] font-extrabold text-white flex items-center gap-1 cursor-pointer transition-transform shrink-0"
             >
               <span>{toast.action.label}</span>
-              <ArrowRight className="w-3 h-3" />
+              <ArrowRight className="w-3.5 h-3.5 shrink-0" />
             </button>
           </div>
         )}
@@ -201,7 +201,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
   // Standard Compact Toast Item
   return (
     <div
-      className="pointer-events-auto neu-dropdown rounded-2xl p-3 px-4 flex items-center justify-between gap-2.5 border border-white/80 animate-in fade-in slide-in-from-top-4 lg:slide-in-from-bottom-4 duration-300"
+      className="pointer-events-auto neu-dropdown rounded-2xl p-3 px-4 flex items-center justify-between gap-2.5 animate-in fade-in slide-in-from-top-4 lg:slide-in-from-bottom-4 duration-300"
       role={toast.type === 'error' ? 'alert' : 'status'}
       {...pauseHandlers}
     >
@@ -209,7 +209,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
         {toast.type === 'success' && <CheckCircle className="w-5 h-5 text-success shrink-0" />}
         {toast.type === 'info' && <Info className="w-5 h-5 text-accent shrink-0" />}
         {toast.type === 'error' && <AlertCircle className="w-5 h-5 text-danger shrink-0" />}
-        <span className="text-xs sm:text-sm font-bold text-[#2D3A4E] leading-snug line-clamp-4 pt-0.5">{toast.text}</span>
+        <span className="text-xs sm:text-sm font-bold text-text-primary leading-snug line-clamp-4 pt-0.5">{toast.text}</span>
       </div>
       {toast.action && (
         <button
@@ -226,10 +226,10 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
       <button
         type="button"
         onClick={() => onDismiss(toast.id)}
-        className="w-7 h-7 flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] rounded-full neu-button transition-colors cursor-pointer shrink-0"
+        className="w-8 h-8 flex items-center justify-center text-text-secondary hover:text-text-primary rounded-full neu-button transition-colors cursor-pointer shrink-0"
         aria-label="Закрыть уведомление"
       >
-        <X className="w-3.5 h-3.5" />
+        <X className="w-4 h-4 shrink-0" />
       </button>
     </div>
   );

@@ -17,7 +17,7 @@ test('копия товара со своими фото, удаление то�
   const search = panel.getByRole('textbox', { name: 'Поиск товаров' });
 
   await search.fill(item.title);
-  await panel.getByRole('button', { name: 'Дублировать товар (копировать)' }).click();
+  await panel.getByRole('button', { name: `Дублировать товар: «${item.title}»` }).click();
   await expect.poll(async () => (await queryDocs('products', 'title', copyTitle)).length).toBe(1);
   const [copy] = await queryDocs('products', 'title', copyTitle);
   const copyPhotoIds = copy.photoIds as string[];

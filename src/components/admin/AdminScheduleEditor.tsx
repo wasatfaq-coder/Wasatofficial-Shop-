@@ -29,7 +29,7 @@ interface AdminScheduleEditorProps {
 const ALL_DAY: Pick<StoreScheduleHours, 'from' | 'to'> = { from: '00:00', to: '24:00' };
 const isAllDay = (h: { from?: string; to?: string }) => h.from === ALL_DAY.from && h.to === ALL_DAY.to;
 const timeClass =
-  'h-9 min-w-0 w-full px-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-semibold disabled:opacity-50 disabled:cursor-not-allowed';
+  'h-9 min-w-0 w-full px-2 neu-inset rounded-xl text-xs text-text-primary font-semibold disabled:opacity-50 disabled:cursor-not-allowed';
 
 /**
  * «График работы» in Admin → «Витрина» (docs/store-schedule-spec.md): the week, special days and the comment.
@@ -66,7 +66,7 @@ export const AdminScheduleEditor: React.FC<AdminScheduleEditorProps> = ({
   return (
     <div className="space-y-3" id="storefront-schedule">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <p className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider flex items-center gap-1.5">
+        <p className="text-[11px] font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1.5">
           <Clock className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
           График работы (время московское)
           <AdminHint label="График работы">
@@ -90,7 +90,7 @@ export const AdminScheduleEditor: React.FC<AdminScheduleEditorProps> = ({
           return (
             <li key={key} className="neu-inset rounded-2xl px-3 py-2 space-y-2">
               <div className="flex items-center gap-2">
-                <span className="w-7 text-xs font-extrabold text-[#2D3A4E]" title={full}>
+                <span className="w-7 text-xs font-extrabold text-text-primary" title={full}>
                   {short}
                 </span>
                 <NeumorphicSwitch
@@ -98,7 +98,7 @@ export const AdminScheduleEditor: React.FC<AdminScheduleEditorProps> = ({
                   onChange={(open) => setDay(key, { open })}
                   label={`${full}: работает`}
                 />
-                <span className="flex-1 min-w-0 text-xs text-[#4E5C70]">
+                <span className="flex-1 min-w-0 text-xs text-text-secondary">
                   {!day.open ? 'Выходной' : allDay ? 'Круглосуточно' : ''}
                 </span>
                 {day.open && (
@@ -107,7 +107,7 @@ export const AdminScheduleEditor: React.FC<AdminScheduleEditorProps> = ({
                     onClick={() => setDay(key, allDay ? { from: '10:00', to: '21:00' } : ALL_DAY)}
                     aria-pressed={allDay}
                     className={`h-8 px-2.5 rounded-xl text-[11px] font-bold shrink-0 cursor-pointer ${
-                      allDay ? 'neu-pill-active text-accent' : 'neu-button text-[#4E5C70]'
+                      allDay ? 'neu-pill-active text-accent' : 'neu-button text-text-secondary'
                     }`}
                     title={allDay ? 'Задать часы' : 'Работает круглосуточно'}
                   >
@@ -125,7 +125,7 @@ export const AdminScheduleEditor: React.FC<AdminScheduleEditorProps> = ({
                     aria-invalid={showErrors && errors.some((m) => m.startsWith(full)) ? true : undefined}
                     className={timeClass}
                   />
-                  <span className="text-xs text-[#4E5C70]" aria-hidden="true">
+                  <span className="text-xs text-text-secondary" aria-hidden="true">
                     –
                   </span>
                   <input
@@ -145,7 +145,7 @@ export const AdminScheduleEditor: React.FC<AdminScheduleEditorProps> = ({
 
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider flex items-center gap-1.5">
+          <p className="text-[11px] font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1.5">
             <CalendarDays className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
             Особые дни ({exceptions.length})
           </p>
@@ -153,14 +153,14 @@ export const AdminScheduleEditor: React.FC<AdminScheduleEditorProps> = ({
             type="button"
             onClick={addException}
             disabled={exceptions.length >= MAX_SCHEDULE_EXCEPTIONS}
-            className="h-8 px-3 rounded-xl neu-button text-[11px] font-bold text-accent inline-flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-8 px-3 rounded-xl neu-button text-[11px] font-bold text-accent inline-flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed "
           >
             <Plus className="w-3.5 h-3.5" aria-hidden="true" />
             Особый день
           </button>
         </div>
         {exceptions.length === 0 && (
-          <p className="text-xs text-[#4E5C70]">Праздники и дни с другими часами. Прошедшие покупатели не видят.</p>
+          <p className="text-xs text-text-secondary">Праздники и дни с другими часами. Прошедшие покупатели не видят.</p>
         )}
         <ul className="space-y-1.5">
           {exceptions.map((e, index) => {
@@ -174,9 +174,9 @@ export const AdminScheduleEditor: React.FC<AdminScheduleEditorProps> = ({
                     onChange={(ev) => setException(index, { date: ev.target.value })}
                     aria-label={`Особый день ${name}: дата`}
                     aria-invalid={showErrors && !e.date ? true : undefined}
-                    className="h-9 px-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-semibold"
+                    className="h-9 px-2 neu-inset rounded-xl text-xs text-text-primary font-semibold"
                   />
-                  <label className="flex items-center gap-1.5 text-xs font-semibold text-[#2D3A4E]">
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
                     <NeumorphicSwitch
                       checked={e.closed}
                       onChange={(closed) => setException(index, { closed })}
@@ -202,7 +202,7 @@ export const AdminScheduleEditor: React.FC<AdminScheduleEditorProps> = ({
                       aria-label={`Особый день ${name}: открытие`}
                       className={timeClass}
                     />
-                    <span className="text-xs text-[#4E5C70]" aria-hidden="true">
+                    <span className="text-xs text-text-secondary" aria-hidden="true">
                       –
                     </span>
                     <input
@@ -221,7 +221,7 @@ export const AdminScheduleEditor: React.FC<AdminScheduleEditorProps> = ({
                   onChange={(ev) => setException(index, { note: ev.target.value })}
                   placeholder="Подпись, например: Новый год"
                   aria-label={`Особый день ${name}: подпись`}
-                  className="w-full h-9 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
+                  className="w-full h-9 px-3 neu-inset rounded-xl text-xs text-text-primary placeholder:text-text-muted"
                 />
               </li>
             );
@@ -230,7 +230,7 @@ export const AdminScheduleEditor: React.FC<AdminScheduleEditorProps> = ({
       </div>
 
       <div>
-        <label htmlFor="storefront-workingHours" className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+        <label htmlFor="storefront-workingHours" className="block text-[11px] font-bold text-text-secondary mb-1">
           Комментарий к графику (необязательно)
         </label>
         <input
@@ -240,24 +240,24 @@ export const AdminScheduleEditor: React.FC<AdminScheduleEditorProps> = ({
           maxLength={160}
           onChange={(e) => onCommentChange(e.target.value)}
           placeholder="Например: в праздники — по согласованию"
-          className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
+          className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-text-primary placeholder:text-text-muted"
         />
       </div>
 
       {showErrors && errors.length > 0 ? (
-        <div role="alert" className="rounded-2xl bg-danger-soft border border-danger/40 p-3 space-y-1">
+        <div role="alert" className="rounded-2xl neu-tone-danger p-3 space-y-1">
           <p className="text-xs font-extrabold text-danger">График не сохранён:</p>
-          <ul className="list-disc pl-4 text-xs text-[#2D3A4E] space-y-0.5">
+          <ul className="list-disc pl-4 text-xs text-text-primary space-y-0.5">
             {errors.map((message) => (
               <li key={message}>{message}</li>
             ))}
           </ul>
         </div>
       ) : (
-        <p className="text-xs text-[#4E5C70]">
+        <p className="text-xs text-text-secondary">
           {isScheduleConfigured(current) && status ? (
             <>
-              Покупатели сейчас видят: <span className="font-bold text-[#2D3A4E]">{statusText(status)}</span>
+              Покупатели сейчас видят: <span className="font-bold text-text-primary">{statusText(status)}</span>
             </>
           ) : comment.trim() ? (
             'Рабочие дни не отмечены — покупатели видят только комментарий'
@@ -273,7 +273,7 @@ export const AdminScheduleEditor: React.FC<AdminScheduleEditorProps> = ({
         message="Покупатели снова увидят обычные часы этого дня недели."
         preview={
           removeIndex !== null && exceptions[removeIndex] ? (
-            <p className="text-xs font-extrabold text-[#2D3A4E]">
+            <p className="text-xs font-extrabold text-text-primary">
               {exceptions[removeIndex].date ? shortDate(exceptions[removeIndex].date) : 'Без даты'} ·{' '}
               {exceptions[removeIndex].closed
                 ? 'выходной'

@@ -1,13 +1,21 @@
 import React, { useRef, useState } from 'react';
-import { AlertTriangle, Check, Loader2, Plus, Trash2 } from 'lucide-react';
+import { AlertTriangle, Check, Loader2, Plus, Trash2, Download, FileText } from 'lucide-react';
 import type { Product, SaveStorefrontSettings, StorefrontSettings } from '../../types';
 import {
+  brokenPackDiscountErrors,
+  brokenPackDiscountedPrice,
+  hasWholesalePrice,
+  MAX_MIN_WHOLESALE_AMOUNT,
   MAX_VOLUME_PERCENT,
   MAX_VOLUME_TIERS,
+  readBrokenPackDiscount,
+  readMinWholesaleAmount,
   readVolumeDiscount,
+  saleChannelOf,
   sellsWholesale,
   volumeDiscountErrors,
   volumeDiscountedPrice,
+  type BrokenPackDiscount,
   type VolumeCountBy,
   type VolumeDiscountKind,
   type VolumeDiscountScale,
@@ -16,6 +24,8 @@ import { parseDecimal } from '../../utils/currencyPricing';
 import { wholeNumber } from '../../utils/wholesaleEditing';
 import { useUnsavedChanges } from '../../utils/unsavedChanges';
 import { pluralRu } from '../../utils/pluralize';
+import { exportWholesalePriceListCSV, generateWholesalePriceListPDF } from '../../utils/wholesalePriceList';
+import { preloadPdfLibraries } from '../../utils/pdfExport';
 import { AdminHint } from './AdminHint';
 import { AdminExample } from './AdminExample';
 
@@ -36,6 +46,9 @@ interface Draft {
   kind: VolumeDiscountKind;
   countBy: VolumeCountBy;
   tiers: TierDraft[];
+  minOrderAmount: string;
+  brokenKind: VolumeDiscountKind;
+  brokenValue: string;
 }
 
 const rub = (n: number) => `${n.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ₽`;
@@ -49,42 +62,70 @@ const COUNT_BY: { id: VolumeCountBy; title: string; about: string }[] = [
 ];
 
 let nextKey = 1;
-const toDraft = (scale: VolumeDiscountScale | undefined): Draft => ({
+const toDraft = (
+  scale: VolumeDiscountScale | undefined,
+  minOrderAmount: number | undefined,
+  broken: BrokenPackDiscount | undefined
+): Draft => ({
   kind: scale?.kind ?? 'percent',
   countBy: scale?.countBy ?? 'product',
   tiers: (scale?.tiers ?? []).map((t) => ({ key: nextKey++, minPacks: String(t.minPacks), value: String(t.value).replace('.', ',') })),
+  minOrderAmount: minOrderAmount ? String(minOrderAmount) : '',
+  brokenKind: broken?.kind ?? 'percent',
+  brokenValue: broken ? String(broken.value).replace('.', ',') : '',
 });
 const fromDraft = (d: Draft): VolumeDiscountScale => ({
   kind: d.kind,
   countBy: d.countBy,
   tiers: d.tiers.map((t) => ({ minPacks: wholeNumber(t.minPacks), value: parseDecimal(t.value) })),
 });
+const brokenFromDraft = (d: Draft): BrokenPackDiscount | undefined => {
+  const raw = d.brokenValue.trim();
+  if (raw === '' || raw === '0') return undefined;
+  return { kind: d.brokenKind, value: parseDecimal(raw) };
+};
 const sameDraft = (a: Draft, b: Draft) =>
-  JSON.stringify({ ...a, tiers: a.tiers.map(({ key: _k, ...t }) => t) }) ===
-  JSON.stringify({ ...b, tiers: b.tiers.map(({ key: _k, ...t }) => t) });
+  JSON.stringify({
+    ...a,
+    minOrderAmount: a.minOrderAmount.trim(),
+    brokenValue: a.brokenValue.trim(),
+    tiers: a.tiers.map(({ key: _k, ...t }) => t),
+  }) ===
+  JSON.stringify({
+    ...b,
+    minOrderAmount: b.minOrderAmount.trim(),
+    brokenValue: b.brokenValue.trim(),
+    tiers: b.tiers.map(({ key: _k, ...t }) => t),
+  });
 
 /** «от 10 уп. — 5 %» / «от 10 уп. — 30 ₽ с шт.» */
 const tierText = (minPacks: number, value: number, kind: VolumeDiscountKind) =>
   `от ${minPacks} уп. — ${kind === 'percent' ? `${value.toLocaleString('ru-RU')} %` : `${rub(value)} с шт.`}`;
 
 /**
- * Admin → «Опт»: the volume discount of wholesale lines (src/shared/wholesalePricing.ts). Steps «from N packs» —
- * a percent of the wholesale price or roubles off each item; packs are counted per product or over the whole order.
- * Promo codes and the shop's discounts never apply to wholesale lines — only this scale. Saved into
- * `settings/storefront.wholesale` after a check; the cart and `placeOrder` count by it.
+ * Admin → «Опт»: the volume discount of wholesale lines and the discount on broken size packs (src/shared/wholesalePricing.ts).
  */
 export const AdminWholesaleTab: React.FC<AdminWholesaleTabProps> = ({ settings, onUpdateSettings, products, onShowToast }) => {
   const saved = readVolumeDiscount(settings.wholesale?.volumeDiscount);
+  const savedMinAmount = readMinWholesaleAmount(settings.wholesale);
+  const savedBroken = readBrokenPackDiscount(settings);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const errorsRef = useRef<HTMLDivElement>(null);
 
-  const current = draft ?? toDraft(saved);
-  const dirty = draft !== null && !sameDraft(draft, toDraft(saved));
+  const savedDraft = toDraft(saved, savedMinAmount, savedBroken);
+  const current = draft ?? savedDraft;
+  const dirty = draft !== null && !sameDraft(draft, savedDraft);
   useUnsavedChanges(dirty, 'Опт: скидка за объём');
   const scale = fromDraft(current);
-  const valid = volumeDiscountErrors(scale).length === 0;
+  const brokenDraft = brokenFromDraft(current);
+  const rawMin = current.minOrderAmount.trim();
+  const parsedMin = rawMin === '' || rawMin === '0' ? undefined : wholeNumber(rawMin);
+  const minValid = parsedMin === undefined || (Number.isInteger(parsedMin) && parsedMin >= 1 && parsedMin <= MAX_MIN_WHOLESALE_AMOUNT);
+  const brokenErrs = brokenPackDiscountErrors(brokenDraft);
+  const valid = volumeDiscountErrors(scale).length === 0 && minValid && brokenErrs.length === 0;
 
   const edit = (patch: (d: Draft) => Draft) => {
     setDraft(patch(current));
@@ -100,6 +141,7 @@ export const AdminWholesaleTab: React.FC<AdminWholesaleTabProps> = ({ settings, 
   const removeTier = (key: number) => edit((d) => ({ ...d, tiers: d.tiers.filter((t) => t.key !== key) }));
 
   const wholesaleProducts = products.filter(sellsWholesale);
+  const bothChannelProducts = products.filter((p) => saleChannelOf(p) === 'both' && hasWholesalePrice(p));
   // the deepest step must not sell below the cost: a list, not a ban (the owner may clear old stock on purpose)
   const deepest = valid && scale.tiers.length ? [...scale.tiers].sort((a, b) => a.minPacks - b.minPacks).at(-1)! : null;
   const belowCost = deepest
@@ -112,13 +154,49 @@ export const AdminWholesaleTab: React.FC<AdminWholesaleTabProps> = ({ settings, 
   const givenAway = deepest
     ? wholesaleProducts.filter((p) => volumeDiscountedPrice(p.wholesalePrice as number, deepest, scale.kind) <= 0)
     : [];
+
+  // Stage 14 (owner's decision 12.10): broken pack discount CANNOT drop the price below costPrice or to 0 ₽ — blocks saving!
+  const brokenBelowCost =
+    brokenDraft && brokenErrs.length === 0
+      ? bothChannelProducts.filter((p) => {
+          const price = brokenPackDiscountedPrice(p.wholesalePrice as number, brokenDraft);
+          return typeof p.costPrice === 'number' && p.costPrice > 0 && price < p.costPrice;
+        })
+      : [];
+  const brokenGivenAway =
+    brokenDraft && brokenErrs.length === 0
+      ? bothChannelProducts.filter((p) => brokenPackDiscountedPrice(p.wholesalePrice as number, brokenDraft) <= 0)
+      : [];
+
   const sample = wholesaleProducts[0];
+  const brokenSample = bothChannelProducts[0];
 
   const save = async () => {
-    const found = volumeDiscountErrors(scale);
+    const found = [...volumeDiscountErrors(scale), ...brokenErrs];
+    if (!minValid) {
+      found.push(`Минимальная сумма оптового заказа — целое число рублей от 1 до ${MAX_MIN_WHOLESALE_AMOUNT.toLocaleString('ru-RU')} (или оставьте пустым)`);
+    }
     if (!found.length && givenAway.length) {
       const names = givenAway.slice(0, 3).map((p) => `«${p.title}»`).join(', ');
       found.push(`На последней ступени цена станет 0 ₽: ${names}${givenAway.length > 3 ? ` и ещё ${givenAway.length - 3}` : ''}. Уменьшите скидку`);
+    }
+    if (!found.length && brokenGivenAway.length) {
+      const names = brokenGivenAway.slice(0, 3).map((p) => `«${p.title}»`).join(', ');
+      found.push(`Скидка на разбитую упаковку делает цену 0 ₽: ${names}${brokenGivenAway.length > 3 ? ` и ещё ${brokenGivenAway.length - 3}` : ''}. Уменьшите скидку`);
+    }
+    if (!found.length && brokenBelowCost.length) {
+      const details = brokenBelowCost
+        .slice(0, 3)
+        .map(
+          (p) =>
+            `«${p.title}» (${rub(brokenPackDiscountedPrice(p.wholesalePrice as number, brokenDraft))} < себестоимости ${rub(p.costPrice as number)})`
+        )
+        .join(', ');
+      found.push(
+        `Цена разбитой упаковки ниже себестоимости: ${details}${
+          brokenBelowCost.length > 3 ? ` и ещё ${brokenBelowCost.length - 3}` : ''
+        }. Уменьшите скидку на разбитую упаковку`
+      );
     }
     setErrors(found);
     if (found.length) {
@@ -127,35 +205,111 @@ export const AdminWholesaleTab: React.FC<AdminWholesaleTabProps> = ({ settings, 
     }
     if (!onUpdateSettings) return;
     const sorted = { ...scale, tiers: [...scale.tiers].sort((a, b) => a.minPacks - b.minPacks) };
-    const { volumeDiscount: _old, ...restWholesale } = settings.wholesale ?? {};
+    const { volumeDiscount: _old, minOrderAmount: _oldMin, brokenPackDiscount: _oldBroken, ...restWholesale } = settings.wholesale ?? {};
+    const { brokenPackDiscount: _topBroken, ...restSettings } = settings;
     setSaving(true);
     const ok = await onUpdateSettings({
-      ...settings,
-      wholesale: sorted.tiers.length ? { ...restWholesale, volumeDiscount: sorted } : restWholesale,
+      ...restSettings,
+      ...(brokenDraft ? { brokenPackDiscount: brokenDraft } : {}),
+      wholesale: {
+        ...restWholesale,
+        ...(sorted.tiers.length ? { volumeDiscount: sorted } : {}),
+        ...(parsedMin !== undefined ? { minOrderAmount: parsedMin } : {}),
+        ...(brokenDraft ? { brokenPackDiscount: brokenDraft } : {}),
+      },
     });
     setSaving(false);
     if (ok === false) return;
     setDraft(null);
-    onShowToast(sorted.tiers.length ? 'Скидка за объём сохранена' : 'Скидка за объём выключена', 'success');
+    onShowToast(
+      sorted.tiers.length || parsedMin !== undefined || brokenDraft ? 'Настройки опта сохранены' : 'Скидки опта выключены',
+      'success'
+    );
   };
 
   return (
     <div className="space-y-4">
       <div className="neu-flat rounded-3xl p-4 space-y-2">
-        <h3 className="text-base font-extrabold text-[#2D3A4E]">Опт: скидка за объём</h3>
-        <p className="text-xs text-[#4E5C70] leading-snug">
+        <h3 className="text-base font-extrabold text-text-primary">Опт: скидка за объём</h3>
+        <p className="text-xs text-text-secondary leading-snug">
           Оптовая цена уже снижена, поэтому промокоды и скидки магазина на оптовые товары не действуют. Действует только эта
           шкала: чем больше упаковок, тем ниже цена штуки. Оптовую цену, упаковку и минимум задаёт форма товара → «Цены» → «Опт»,
           наценку опта для всех товаров — «Курсы и наценка».
         </p>
-        <p className="text-xs font-bold text-[#2D3A4E]">
+        <p className="text-xs font-bold text-text-primary">
           Оптом продаётся {wholesaleProducts.length} {pluralRu(wholesaleProducts.length, ['товар', 'товара', 'товаров'])}
         </p>
+        {wholesaleProducts.length > 0 && (
+          <div className="pt-2 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const ok = exportWholesalePriceListCSV(products, settings.wholesale, settings.storeName);
+                onShowToast(
+                  ok ? 'Оптовый прайс-лист (CSV) скачан' : 'Нет открытых оптовых товаров для прайс-листа',
+                  ok ? 'success' : 'info'
+                );
+              }}
+              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl neu-button text-xs font-extrabold text-text-primary hover:text-accent cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
+              <span>Скачать прайс CSV</span>
+            </button>
+            <button
+              type="button"
+              disabled={exportingPdf}
+              onMouseEnter={preloadPdfLibraries}
+              onFocus={preloadPdfLibraries}
+              onClick={async () => {
+                setExportingPdf(true);
+                try {
+                  const ok = await generateWholesalePriceListPDF(products, settings.wholesale, settings);
+                  onShowToast(
+                    ok ? 'Оптовый прайс-лист (PDF с фото и ростовками) скачан' : 'Нет открытых оптовых товаров для прайс-листа',
+                    ok ? 'success' : 'info'
+                  );
+                } catch {
+                  onShowToast('Не удалось сформировать PDF прайс-лист', 'error');
+                } finally {
+                  setExportingPdf(false);
+                }
+              }}
+              className={`inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs font-extrabold ${
+                exportingPdf ? 'neu-button-disabled' : 'neu-button text-text-primary hover:text-accent cursor-pointer'
+              }`}
+            >
+              {exportingPdf ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" aria-hidden="true" />
+              ) : (
+                <FileText className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
+              )}
+              <span>{exportingPdf ? 'Формируем PDF…' : 'Скачать прайс PDF с фото'}</span>
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="neu-flat rounded-3xl p-4 space-y-4">
+        <div className="space-y-1.5">
+          <label htmlFor="wholesale-min-order-amount" className="flex items-center gap-1 text-sm font-extrabold text-text-primary">
+            Минимальная сумма оптового заказа, ₽
+            <AdminHint label="Минимальная сумма оптового заказа">
+              Общая сумма оптовых строк и ростовок в корзине, меньше которой оптовый заказ не оформляется. Пусто или 0 — без минимальной суммы.
+            </AdminHint>
+          </label>
+          <input
+            id="wholesale-min-order-amount"
+            type="text"
+            inputMode="numeric"
+            value={current.minOrderAmount}
+            onChange={(e) => edit((d) => ({ ...d, minOrderAmount: e.target.value }))}
+            placeholder="Без минимума (например: 15000)"
+            className="w-full sm:max-w-xs h-10 px-3 neu-inset rounded-xl text-sm font-bold text-text-primary"
+          />
+        </div>
+
         <fieldset className="space-y-2">
-          <legend className="text-sm font-extrabold text-[#2D3A4E]">Как задаётся скидка</legend>
+          <legend className="text-sm font-extrabold text-text-primary">Как задаётся скидка</legend>
           <div role="radiogroup" aria-label="Как задаётся скидка" className="flex flex-wrap gap-2">
             {KINDS.map((k) => (
               <button
@@ -164,8 +318,8 @@ export const AdminWholesaleTab: React.FC<AdminWholesaleTabProps> = ({ settings, 
                 role="radio"
                 aria-checked={current.kind === k.id}
                 onClick={() => edit((d) => ({ ...d, kind: k.id }))}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer ${
-                  current.kind === k.id ? 'neu-pill-active' : 'neu-button text-[#2D3A4E] hover:text-accent'
+                className={`px-3 py-1.5 min-h-8 rounded-xl text-xs font-bold cursor-pointer ${
+                  current.kind === k.id ? 'neu-pill-active' : 'neu-button text-text-primary hover:text-accent'
                 }`}
               >
                 {k.title}
@@ -175,7 +329,7 @@ export const AdminWholesaleTab: React.FC<AdminWholesaleTabProps> = ({ settings, 
         </fieldset>
 
         <fieldset className="space-y-2">
-          <legend className="flex items-center gap-1 text-sm font-extrabold text-[#2D3A4E]">
+          <legend className="flex items-center gap-1 text-sm font-extrabold text-text-primary">
             Как считать упаковки
             <AdminHint label="Как считать упаковки">
               По каждому товару — ступень у каждой модели своя. По всему заказу — все оптовые упаковки складываются.
@@ -190,26 +344,26 @@ export const AdminWholesaleTab: React.FC<AdminWholesaleTabProps> = ({ settings, 
                 aria-checked={current.countBy === c.id}
                 onClick={() => edit((d) => ({ ...d, countBy: c.id }))}
                 className={`text-left px-3 py-2 rounded-xl cursor-pointer ${
-                  current.countBy === c.id ? 'neu-pill-active' : 'neu-button text-[#2D3A4E] hover:text-accent'
+                  current.countBy === c.id ? 'neu-pill-active' : 'neu-button text-text-primary hover:text-accent'
                 }`}
               >
                 <span className="block text-xs font-bold">{c.title}</span>
-                <span className="block text-[11px] text-[#4E5C70]">{c.about}</span>
+                <span className="block text-[11px] text-text-secondary">{c.about}</span>
               </button>
             ))}
           </div>
         </fieldset>
 
         <fieldset className="space-y-2">
-          <legend className="text-sm font-extrabold text-[#2D3A4E]">Ступени</legend>
+          <legend className="text-sm font-extrabold text-text-primary">Ступени</legend>
           {current.tiers.length === 0 ? (
-            <p className="text-xs text-[#4E5C70]">Ступеней нет — оптовые товары продаются по оптовой цене без скидки за объём.</p>
+            <p className="text-xs text-text-secondary">Ступеней нет — оптовые товары продаются по оптовой цене без скидки за объём.</p>
           ) : (
             <ul className="space-y-2" aria-label="Ступени скидки">
               {current.tiers.map((t, i) => (
                 <li key={t.key} className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
                   <div className="min-w-0">
-                    <label htmlFor={`tier-${t.key}-packs`} className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+                    <label htmlFor={`tier-${t.key}-packs`} className="text-[11px] font-bold text-text-secondary block mb-1">
                       От упаковок
                     </label>
                     <input
@@ -218,11 +372,11 @@ export const AdminWholesaleTab: React.FC<AdminWholesaleTabProps> = ({ settings, 
                       inputMode="numeric"
                       value={t.minPacks}
                       onChange={(e) => editTier(t.key, 'minPacks', e.target.value)}
-                      className="w-full h-10 px-3 neu-inset rounded-xl text-sm font-bold text-[#2D3A4E]"
+                      className="w-full h-10 px-3 neu-inset rounded-xl text-sm font-bold text-text-primary"
                     />
                   </div>
                   <div className="min-w-0">
-                    <label htmlFor={`tier-${t.key}-value`} className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+                    <label htmlFor={`tier-${t.key}-value`} className="text-[11px] font-bold text-text-secondary block mb-1">
                       {current.kind === 'percent' ? 'Скидка, %' : 'Скидка, ₽ с шт.'}
                     </label>
                     <input
@@ -232,7 +386,7 @@ export const AdminWholesaleTab: React.FC<AdminWholesaleTabProps> = ({ settings, 
                       value={t.value}
                       onChange={(e) => editTier(t.key, 'value', e.target.value)}
                       placeholder={current.kind === 'percent' ? 'напр. 5' : 'напр. 30'}
-                      className="w-full h-10 px-3 neu-inset rounded-xl text-sm font-bold text-[#2D3A4E]"
+                      className="w-full h-10 px-3 neu-inset rounded-xl text-sm font-bold text-text-primary"
                     />
                   </div>
                   <button
@@ -257,7 +411,7 @@ export const AdminWholesaleTab: React.FC<AdminWholesaleTabProps> = ({ settings, 
             </button>
           )}
           {current.kind === 'percent' && (
-            <p className="text-[11px] text-[#4E5C70]">Скидка — не больше {MAX_VOLUME_PERCENT} %.</p>
+            <p className="text-[11px] text-text-secondary">Скидка — не больше {MAX_VOLUME_PERCENT} %.</p>
           )}
         </fieldset>
 
@@ -277,7 +431,7 @@ export const AdminWholesaleTab: React.FC<AdminWholesaleTabProps> = ({ settings, 
         )}
 
         {belowCost.length > 0 && (
-          <div role="status" className="rounded-2xl p-3 bg-warning-soft border border-warning/30 text-xs text-[#2D3A4E]">
+          <div role="status" className="rounded-2xl p-3 neu-tone-warning text-xs text-text-primary">
             <p className="flex items-center gap-1.5 font-bold text-warning">
               <AlertTriangle className="w-4 h-4" aria-hidden="true" /> На последней ступени цена ниже себестоимости:
             </p>
@@ -293,12 +447,94 @@ export const AdminWholesaleTab: React.FC<AdminWholesaleTabProps> = ({ settings, 
           </div>
         )}
 
+        <div className="pt-3 neu-divider-t space-y-3">
+          <div className="space-y-1">
+            <h4 className="flex items-center gap-1 text-sm font-extrabold text-text-primary">
+              Скидка на разбитую упаковку
+              <AdminHint label="Скидка на разбитую упаковку">
+                Если у товара «И опт, и розница» не хватает размера до целой ростовки, оставшиеся штуки продаются со скидкой от оптовой цены.
+              </AdminHint>
+            </h4>
+            <p className="text-xs text-text-secondary leading-snug">
+              Скидка от оптовой цены за штуку для товаров «И опт, и розница», когда на складе не хватает хотя бы одного размера до целой ростовки. Пусто или 0 — без дополнительной скидки (по обычной оптовой цене).
+            </p>
+          </div>
+
+          <fieldset className="space-y-2">
+            <legend className="text-xs font-bold text-text-secondary">Способ скидки на разбитую упаковку</legend>
+            <div role="radiogroup" aria-label="Способ скидки на разбитую упаковку" className="flex flex-wrap gap-2">
+              {KINDS.map((k) => (
+                <button
+                  key={k.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={current.brokenKind === k.id}
+                  onClick={() => edit((d) => ({ ...d, brokenKind: k.id }))}
+                  className={`px-3 py-1.5 min-h-8 rounded-xl text-xs font-bold cursor-pointer ${
+                    current.brokenKind === k.id ? 'neu-pill-active' : 'neu-button text-text-primary hover:text-accent'
+                  }`}
+                >
+                  {k.title}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          <div className="space-y-1.5">
+            <label htmlFor="broken-pack-discount-value" className="text-xs font-bold text-text-secondary block">
+              {current.brokenKind === 'percent' ? 'Скидка от оптовой цены, %' : 'Скидка от оптовой цены, ₽ с шт.'}
+            </label>
+            <input
+              id="broken-pack-discount-value"
+              type="text"
+              inputMode="decimal"
+              value={current.brokenValue}
+              onChange={(e) => edit((d) => ({ ...d, brokenValue: e.target.value }))}
+              placeholder={current.brokenKind === 'percent' ? 'напр. 10 (пусто — без скидки)' : 'напр. 100 (пусто — без скидки)'}
+              className="w-full sm:max-w-xs h-10 px-3 neu-inset rounded-xl text-sm font-bold text-text-primary"
+            />
+          </div>
+
+          {brokenDraft && brokenErrs.length === 0 && brokenSample && (
+            <AdminExample
+              title={`${brokenSample.title} (разбитая упаковка)`}
+              lines={[
+                `опт ${rub(brokenSample.wholesalePrice as number)} за штуку`,
+                `разбитая упаковка (−${brokenDraft.kind === 'percent' ? `${brokenDraft.value} %` : rub(brokenDraft.value)}) → ${rub(
+                  brokenPackDiscountedPrice(brokenSample.wholesalePrice as number, brokenDraft)
+                )} за штуку${
+                  typeof brokenSample.costPrice === 'number' && brokenSample.costPrice > 0
+                    ? ` (себестоимость ${rub(brokenSample.costPrice)})`
+                    : ''
+                }`,
+              ]}
+            />
+          )}
+
+          {brokenBelowCost.length > 0 && (
+            <div role="alert" className="rounded-2xl p-3 neu-tone-danger text-xs text-text-primary">
+              <p className="flex items-center gap-1.5 font-bold text-danger">
+                <AlertTriangle className="w-4 h-4" aria-hidden="true" /> Разбитая упаковка дешевле себестоимости (сохранение заблокировано):
+              </p>
+              <ul className="list-disc pl-5 mt-1 space-y-0.5">
+                {brokenBelowCost.slice(0, 10).map((p) => (
+                  <li key={p.id}>
+                    {p.title}: {rub(brokenPackDiscountedPrice(p.wholesalePrice as number, brokenDraft))} при себестоимости{' '}
+                    {rub(p.costPrice as number)}
+                  </li>
+                ))}
+              </ul>
+              {brokenBelowCost.length > 10 && <p className="mt-1">и ещё {brokenBelowCost.length - 10}</p>}
+            </div>
+          )}
+        </div>
+
         {errors.length > 0 && (
           <div
             ref={errorsRef}
             tabIndex={-1}
             role="alert"
-            className="rounded-2xl p-3 bg-danger-soft border border-danger/30 text-xs text-[#2D3A4E]"
+            className="rounded-2xl p-3 neu-tone-danger text-xs text-text-primary"
           >
             <p className="flex items-center gap-1.5 font-bold text-danger">
               <AlertTriangle className="w-4 h-4" aria-hidden="true" /> Исправьте, чтобы сохранить:
@@ -323,7 +559,11 @@ export const AdminWholesaleTab: React.FC<AdminWholesaleTabProps> = ({ settings, 
             {saving ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Check className="w-4 h-4" aria-hidden="true" />}
             Сохранить
           </button>
-          {!dirty && <span className="text-xs text-[#4E5C70]">{saved ? 'Сохранено' : 'Скидка за объём не задана'}</span>}
+          {!dirty && (
+            <span className="text-xs text-text-secondary">
+              {saved || savedMinAmount || savedBroken ? 'Сохранено' : 'Скидки опта не заданы'}
+            </span>
+          )}
         </div>
       </div>
     </div>

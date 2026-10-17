@@ -10,13 +10,14 @@ import {
   isPreorderVariant,
   extractColorName,
   extractSizeName,
+  getOrderableStock,
 } from '../utils/inventory';
 import { formatAddress } from '../utils/addressFormat';
 import { buildClientOrder } from '../utils/clientOrder';
 import { pluralRu } from '../utils/pluralize';
 import { QUICK_ORDER_DELIVERY_ID, promoSignInProblem } from '../shared/orderPricing';
 import { linePrice, toOrderLineProduct } from '../shared/orderLine';
-import { isWholesaleLine, priceCartLines, wholesaleLineProblems } from '../shared/wholesalePricing';
+import { brokenPackExcess, goesBrokenPack, isBrokenPackLine, isWholesaleLine, priceCartLines, wholesaleLineProblems } from '../shared/wholesalePricing';
 import { expandPackLines, isCartPackLine, ORDER_LINES_MAX, packLineProblems, soldPack } from '../shared/packLines';
 import { STORE_PAUSED_TEXT, storeAcceptsOrders } from '../shared/orderApi';
 import { cleanAddressParts, fullName, hasNameParts, namePartsOf, type AddressParts, type PersonName } from '../shared/personName';
@@ -158,12 +159,29 @@ export function useCheckout({
     setActiveTab('order-success');
   };
 
+  // Synchronous guard against concurrent double-click submissions and stable orderId across network retries
+  const inFlightRef = React.useRef(false);
+  const pendingAttemptRef = React.useRef<{ fingerprint: string; orderId: string } | null>(null);
+
+  const getAttemptOrderId = (orderData: CompleteOrderData): string => {
+    const fingerprint = orderData.items
+      .map((it) => `${it.product.id}:${extractColorName(it.selectedColor)}:${extractSizeName(it.selectedSize)}:${it.quantity}:${it.priceKind ?? ''}:${it.packId ?? ''}`)
+      .join('|');
+    if (pendingAttemptRef.current && pendingAttemptRef.current.fingerprint === fingerprint) {
+      return pendingAttemptRef.current.orderId;
+    }
+    const orderId = `WS-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
+    pendingAttemptRef.current = { fingerprint, orderId };
+    return orderId;
+  };
+
   // Server-validated checkout: the placeOrder Cloud Function recalculates prices,
   // delivery and promo discount and deducts stock in a transaction.
-  const completeOrderOnServer = async (orderData: CompleteOrderData): Promise<boolean> => {
+  const completeOrderOnServer = async (orderData: CompleteOrderData, orderId: string): Promise<boolean> => {
     const details = resolveOrderDetails(orderData);
     try {
       const { order } = await placeOrderOnServer({
+        orderId,
         items: orderData.items.map((item) =>
           // a size pack: the server takes its sizes and price from the product (stage 20)
           isCartPackLine(item)
@@ -174,6 +192,7 @@ export function useCheckout({
                 size: extractSizeName(item.selectedSize),
                 quantity: item.quantity,
                 ...(isWholesaleLine(item) ? { wholesale: true } : {}),
+                ...(isBrokenPackLine(item) ? { broken: true } : {}),
               }
         ),
         deliveryMethodId: orderData.deliveryMethodId || QUICK_ORDER_DELIVERY_ID,
@@ -188,6 +207,7 @@ export function useCheckout({
         },
         addressParts: details.addressParts,
       });
+      pendingAttemptRef.current = null;
       setOrders((prev) => [order, ...prev.filter((o) => o.id !== order.id)]);
       const keptInBrowser = currentUser ? true : saveGuestOrder(order);
       finishOrder(order, orderData, !keptInBrowser);
@@ -213,18 +233,19 @@ export function useCheckout({
     [activeTab, cartItems, products, preorderMode]
   );
 
-  const handleCompleteOrder = (orderData: CompleteOrderData): Promise<boolean> => {
+  const handleCompleteOrder = async (orderData: CompleteOrderData): Promise<boolean> => {
+    if (inFlightRef.current) return false;
     // «Технические работы» in «Витрина»: no orders (the checkout and the 1-click window say so before this)
     if (!storeAcceptsOrders(storefrontSettings)) {
       addToast(`${STORE_PAUSED_TEXT}. Напишите в чат поддержки.`, 'error');
-      return Promise.resolve(false);
+      return false;
     }
     // Without a network the order would wait in this tab with a spinner: a closed tab lost it, a second attempt made
     // a duplicate (audit 07.10, finding 12). The buyer's network, not the site's failure — a warning
     if (isBrowserOffline()) {
       console.warn('Checkout without a network: the order was not sent');
       addToast('Нет соединения с интернетом: заказ не отправлен. Проверьте сеть и нажмите «Подтвердить» ещё раз.', 'error');
-      return Promise.resolve(false);
+      return false;
     }
     // A code with a usage limit goes only with a Google sign-in (owner's decision 08.10, audit 07.10, finding 9). The
     // cart drops it on sign-out; this stops an order whose code slipped through: the totals were counted with it, so
@@ -236,15 +257,46 @@ export function useCheckout({
     if (promoProblem) {
       setAppliedPromo(null);
       addToast(`Промокод ${promo?.code} снят. ${promoProblem}. Проверьте сумму и подтвердите заказ снова.`, 'error');
-      return Promise.resolve(false);
+      return false;
     }
-    // Wholesale lines (src/shared/wholesalePricing.ts): whole packs, the product's minimum, and the prices the buyer saw
-    // are the ones counted now — «Опт» or the wholesale price may have changed while the checkout was open
-    const priced = priceCartLines(orderData.items, storefrontSettings?.wholesale);
-    const wholesaleProblems = wholesaleLineProblems(priced);
+    const effectiveWholesale = storefrontSettings?.brokenPackDiscount
+      ? { ...storefrontSettings.wholesale, brokenPackDiscount: storefrontSettings.brokenPackDiscount }
+      : storefrontSettings?.wholesale;
+    // Wholesale lines (src/shared/wholesalePricing.ts): whole packs, the product's minimum, minOrderAmount, and the prices
+    // the buyer saw are the ones counted now — «Опт» or the wholesale price may have changed while the checkout was open
+    const priced = priceCartLines(orderData.items, effectiveWholesale);
+    const wholesaleProblems = wholesaleLineProblems(priced, effectiveWholesale);
     if (wholesaleProblems.length > 0) {
       addToast(`${wholesaleProblems.join('; ')}. Измените корзину.`, 'error');
-      return Promise.resolve(false);
+      return false;
+    }
+    // Stage 13: broken pack lines must still belong to a broken pack in the catalog
+    const brokenProblems = priced
+      .filter((item) => isBrokenPackLine(item))
+      .filter((item) => {
+        const live = products.find((p) => p.id === item.product.id) ?? item.product;
+        const color = extractColorName(item.selectedColor);
+        const size = extractSizeName(item.selectedSize);
+        return !goesBrokenPack(live, color, size, (sz) => getOrderableStock(live, color, sz, false));
+      })
+      .map((item) => `«${item.product.title}» (${item.selectedColor}, ${item.selectedSize}): больше не продаётся как разбитая упаковка — обновите корзину`);
+    brokenProblems.push(
+      ...brokenPackExcess(
+        priced
+          .filter((item) => isBrokenPackLine(item))
+          .map((item) => ({
+            product: products.find((p) => p.id === item.product.id) ?? item.product,
+            color: extractColorName(item.selectedColor),
+            size: extractSizeName(item.selectedSize),
+            quantity: item.quantity,
+          }))
+      )
+        .filter((e) => e.pieces > 0)
+        .map((e) => `«${e.product.title}» (${e.color}, ${e.size}): разбитой упаковкой — не больше ${e.pieces} шт.`)
+    );
+    if (brokenProblems.length > 0) {
+      addToast([...new Set(brokenProblems)].join('; '), 'error');
+      return false;
     }
     // a size pack: the product in the catalog must still have it (the stored cart may keep one the owner removed)
     const packProblems = [
@@ -256,22 +308,28 @@ export function useCheckout({
     ];
     if (packProblems.length > 0) {
       addToast([...new Set(packProblems)].join('; '), 'error');
-      return Promise.resolve(false);
+      return false;
     }
     // a size pack is a line per size in the order: the rules take up to ORDER_LINES_MAX lines from a browser
     if (expandPackLines(priced).length > ORDER_LINES_MAX) {
       addToast(`В заказе больше ${ORDER_LINES_MAX} позиций (ростовка — строка на каждый размер). Разделите корзину на два заказа.`, 'error');
-      return Promise.resolve(false);
+      return false;
     }
     if (priced.some((item, i) => linePrice(item) !== linePrice(orderData.items[i]))) {
       addToast('Оптовые цены изменились, пока открыто оформление. Проверьте сумму и подтвердите заказ снова.', 'error');
-      return Promise.resolve(false);
+      return false;
     }
-    return serverOrdersEnabled ? completeOrderOnServer(orderData) : completeOrderLocally(orderData);
+    const orderId = getAttemptOrderId(orderData);
+    inFlightRef.current = true;
+    try {
+      return serverOrdersEnabled ? await completeOrderOnServer(orderData, orderId) : await completeOrderLocally(orderData, orderId);
+    } finally {
+      inFlightRef.current = false;
+    }
   };
 
   // Legacy client-side checkout, used until the Cloud Function is deployed and enabled
-  const completeOrderLocally = async (orderData: CompleteOrderData): Promise<boolean> => {
+  const completeOrderLocally = async (orderData: CompleteOrderData, newOrderId: string): Promise<boolean> => {
     // The stock as the catalog has it now (finding 4): the checkout shows the same list next to «Подтвердить», this
     // stops a 1-click order and a catalog that changed after the page was opened
     // a size pack becomes a line per size here (stage 19): the stock, the order and the journal go line by line
@@ -298,8 +356,6 @@ export function useCheckout({
       }
     }
 
-    // Orders are create-only for customers, so IDs must not collide with existing ones
-    const newOrderId = `WS-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
     const placedAt = new Date();
 
     const { customerName, customerPhone, customerEmail, deliveryAddress, deliveryMethod, paymentMethod, nameParts, addressParts } =
@@ -313,10 +369,12 @@ export function useCheckout({
     // Sold-out variants ordered in preorder mode are marked and not taken from stock; the order keeps a light
     // copy of the product (toOrderLineProduct) without photo links: the rules refuse links in a browser's order
     // (an outside picture would open at the staff's screen), and order screens take photos from the catalog
-    const orderItems: CartItem[] = orderLines.map(({ packSizes: _sizes, packUnavailable: _gone, ...item }) => ({
+    const orderItems: CartItem[] = orderLines.map(({ packSizes: _sizes, packUnavailable: _gone, addedPrice: _addedPrice, ...item }) => ({
       ...item,
       product: { ...toOrderLineProduct(item.product), images: [] },
-      ...(!item.packGroup && isPreorderVariant(item.product, item.selectedColor, item.selectedSize, preorderMode) ? { isPreorder: true } : {}),
+      ...(!item.packGroup && !isBrokenPackLine(item) && isPreorderVariant(item.product, item.selectedColor, item.selectedSize, preorderMode)
+        ? { isPreorder: true }
+        : {}),
     }));
 
     const orderMethod = orderData.deliveryMethodId
@@ -344,6 +402,7 @@ export function useCheckout({
 
     // A refused order (rules, the 30 s limit): the buyer is told why and can try again
     const reportNotSaved = async (err: unknown) => {
+      pendingAttemptRef.current = null;
       console.error('Order was not saved:', err);
       // the rules take one order in 30 s from a sign-in: say how long to wait instead of «check the connection»
       const wait = await orderRateWaitSeconds(orderOwner.uid, orderOwner.db);
@@ -357,6 +416,7 @@ export function useCheckout({
 
     // What follows a saved order: the stock, the promo's use, the order in the lists, the confirmation
     const afterOrderSaved = () => {
+      pendingAttemptRef.current = null;
       // The new stock shows at once; the database is changed by the line transactions below
       setProducts((prev) => withOrderDeducted(prev, orderItems));
       // If active product was modified, sync selectedProduct

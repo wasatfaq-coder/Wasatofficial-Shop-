@@ -2,8 +2,8 @@ import type { DeliveryMethod, Order, Product, PromoCode, StorefrontSettings } fr
 import { calcPromoDiscount, getAvailableDeliveryMethods, isQuickOrderDelivery, type PricingLine } from '../shared/orderPricing';
 import { linePrice } from '../shared/orderLine';
 import { orderTimestamp } from '../shared/orderDate';
-import { pricesAtOrderTime } from './priceHistory';
-import { isWholesaleLine, priceCartLines, sellsWholesale } from '../shared/wholesalePricing';
+import { pricesAtOrderTime, wholesalePricesAtOrderTime } from './priceHistory';
+import { isBrokenPackLine, isWholesaleLine, priceCartLines, sellsWholesale } from '../shared/wholesalePricing';
 import { groupOrderLines, isPackLine, packGroupCompositionText, soldPack } from '../shared/packLines';
 import { sizePackPrice } from '../shared/sizePacks';
 
@@ -11,7 +11,7 @@ import { sizePackPrice } from '../shared/sizePacks';
 export interface OrderCheckContext {
   promos?: PromoCode[];
   deliveryMethods?: DeliveryMethod[];
-  settings?: Partial<Pick<StorefrontSettings, 'paymentMethods' | 'freeDeliveryThreshold' | 'isExpressEnabled' | 'wholesale'>>;
+  settings?: Partial<Pick<StorefrontSettings, 'paymentMethods' | 'freeDeliveryThreshold' | 'isExpressEnabled' | 'wholesale' | 'brokenPackDiscount'>>;
 }
 
 /** A 1-click order and an old one without a choice: the manager agrees payment with the buyer */
@@ -49,13 +49,14 @@ function checkedOrderTime(order: Order): number | null {
  * «Цены не совпадают с каталогом» (audit 02.10, stage 5 without Blaze): an order from the browser is written by the
  * buyer, and its prices nobody but `placeOrder` checks — a made-up order could cost 1 ₽. The owner confirms the payment
  * by hand, so before «Подтвердить оплату» the order is compared with the catalog's prices at the time of the order
- * (`priceHistory`) and with its own sum, and — with
+ * (`priceHistory` and `wholesalePriceHistory`) and with its own sum, and — with
  * `shop` — its discount with the promo code, its delivery fee with the delivery method and its payment method with
  * «Оплата» (check 04.10, finding 2: a made-up discount, a missing fee or «при получении» passed unnoticed).
  * A price could also change after the order — the text asks to check, it does not accuse.
  */
 export function orderPriceIssues(order: Order, products: Product[], shop: OrderCheckContext = {}): string[] {
-  // the server already checked its prices; a paid, refunded or cancelled order is past the moment of checking
+  // the server already checked its prices; a paid, refunded or cancelled order is past the moment of checking. An
+  // adjusted order is still checked: the buyer's own lines stay in it (review 16.10, finding 6)
   if (order.placedVia === 'server' || order.isCancelled) return [];
   if (order.paymentStatus === 'paid' || order.paymentStatus === 'refunded') return [];
 
@@ -63,21 +64,25 @@ export function orderPriceIssues(order: Order, products: Product[], shop: OrderC
   const byId = new Map(products.map((p) => [p.id, p]));
   const orderTime = checkedOrderTime(order);
   const lines: PricingLine[] = [];
-  // Wholesale lines as the catalog prices them now: the wholesale price and the volume step of «Опт» (the wholesale
-  // price has no history yet — a change after the order shows here too, and the text asks to check)
   const items = order.items ?? [];
+  // the broken pack discount is a storefront field next to «Опт» (as in the checkout and placeOrder)
+  const wholesaleSettings = shop.settings?.brokenPackDiscount
+    ? { ...shop.settings.wholesale, brokenPackDiscount: shop.settings.brokenPackDiscount }
+    : shop.settings?.wholesale;
   const expectedWholesale = priceCartLines(
     items.map((item) => {
       const catalog = item.product?.id ? byId.get(item.product.id) : undefined;
       return catalog ? { ...item, product: catalog } : item;
     }),
-    shop.settings?.wholesale
+    wholesaleSettings
   );
   items.forEach((item, i) => {
     const price = linePrice(item);
     const quantity = Number(item.quantity) || 0;
     const catalog = item.product?.id ? byId.get(item.product.id) : undefined;
     const wholesale = isWholesaleLine(item);
+    // a broken pack line: wholesale minus the broken pack discount, no promo (review 16.10, finding 2)
+    const broken = isBrokenPackLine(item);
     // the category for the promo is the catalog's: the line's copy is written by the buyer
     lines.push({
       productId: item.product?.id ?? '',
@@ -85,17 +90,40 @@ export function orderPriceIssues(order: Order, products: Product[], shop: OrderC
       price,
       quantity,
       ...(wholesale ? { wholesale: true } : {}),
+      ...(broken ? { broken: true } : {}),
     });
     // a size pack is checked whole below: its lines carry the pack's price split per item
     if (isPackLine(item)) {
       if (quantity <= 0) issues.push(`«${item.product?.title ?? 'строка'}»: количество ${quantity}`);
       return;
     }
-    if (wholesale) {
+    if (wholesale || broken) {
       if (catalog && !sellsWholesale(catalog)) {
         issues.push(`«${catalog.title}»: в заказе оптовая цена ${rub(price)}, а товар оптом не продаётся`);
-      } else if (catalog && linePrice(expectedWholesale[i]) !== price) {
-        issues.push(`«${catalog.title}»: в заказе опт ${rub(price)}, в каталоге ${rub(linePrice(expectedWholesale[i]))}`);
+      } else if (catalog) {
+        const bases = wholesalePricesAtOrderTime(catalog, orderTime);
+        const allowed =
+          bases.length > 0
+            ? Array.from(
+                new Set(
+                  bases.map((wp) => {
+                    const priced = priceCartLines(
+                      items.map((it) => {
+                        const cat = it.product?.id ? byId.get(it.product.id) : undefined;
+                        if (!cat) return it;
+                        return { ...it, product: cat.id === catalog.id ? { ...cat, wholesalePrice: wp } : cat };
+                      }),
+                      wholesaleSettings
+                    );
+                    return linePrice(priced[i]);
+                  })
+                )
+              )
+            : [linePrice(expectedWholesale[i])];
+        if (!allowed.includes(price)) {
+          const kind = broken ? 'разбитая упаковка' : 'опт';
+          issues.push(`«${catalog.title}»: в заказе ${kind} ${rub(price)}, в каталоге ${allowed.map(rub).join(' или ')}`);
+        }
       }
       if (quantity <= 0) issues.push(`«${item.product?.title ?? 'строка'}»: количество ${quantity}`);
       return;
@@ -108,8 +136,8 @@ export function orderPriceIssues(order: Order, products: Product[], shop: OrderC
     }
     if (quantity <= 0) issues.push(`«${item.product?.title ?? 'строка'}»: количество ${quantity}`);
   });
-  // a size pack (stage 20): the price of one pack and its composition as the catalog sells them now (packs have no
-  // price history yet — a change after the order shows here too, and the text asks to check)
+  // a size pack (stage 20): the price of one pack (including wholesale/retail price history when the pack derives its
+  // price from per-unit price) and its composition as the catalog sells them
   for (const group of groupOrderLines(items)) {
     if (group.kind !== 'pack') continue;
     const catalog = group.item.product?.id ? byId.get(group.item.product.id) : undefined;
@@ -120,9 +148,16 @@ export function orderPriceIssues(order: Order, products: Product[], shop: OrderC
       issues.push(`${name}: такой ростовки в этом цвете в каталоге нет`);
       continue;
     }
-    const expected = sizePackPrice(catalog, pack);
-    if (expected !== undefined && group.packPrice !== expected) {
-      issues.push(`${name}: в заказе ${rub(group.packPrice)} за упаковку, в каталоге ${rub(expected)}`);
+    const allowedPackPrices = Array.from(
+      new Set(
+        [
+          ...wholesalePricesAtOrderTime(catalog, orderTime).map((wp) => sizePackPrice({ wholesalePrice: wp }, pack)),
+          sizePackPrice(catalog, pack),
+        ].filter((p): p is number => typeof p === 'number')
+      )
+    );
+    if (allowedPackPrices.length > 0 && !allowedPackPrices.includes(group.packPrice)) {
+      issues.push(`${name}: в заказе ${rub(group.packPrice)} за упаковку, в каталоге ${allowedPackPrices.map(rub).join(' или ')}`);
     }
     if (packGroupCompositionText(group.sizes) !== packGroupCompositionText(pack.sizes)) {
       issues.push(`${name}: в заказе состав ${packGroupCompositionText(group.sizes)}, в каталоге ${packGroupCompositionText(pack.sizes)}`);

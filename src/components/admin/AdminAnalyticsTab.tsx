@@ -62,7 +62,7 @@ const AdminAnalyticsChart = lazy(() => import('./AdminAnalyticsChart'));
 
 /** Keeps the chart's place while its code loads */
 const ChartLoading: React.FC = () => (
-  <div role="status" className="h-full w-full flex items-center justify-center gap-2 text-[11px] font-bold text-[#4E5C70]">
+  <div role="status" className="h-full w-full flex items-center justify-center gap-2 text-[11px] font-bold text-text-secondary">
     <Loader2 className="w-4 h-4 animate-spin text-accent" aria-hidden="true" />
     Загрузка графика…
   </div>
@@ -115,12 +115,13 @@ const formatMoment = (ms: number) =>
 
 /** Change against the previous period of the same length: sign and colour follow the value */
 const Growth: React.FC<{ value: number; hasBase: boolean }> = ({ value, hasBase }) => {
-  if (!hasBase) return <span className="text-[#4E5C70] font-medium">нет данных за прошлый период</span>;
-  const cls = value > 0 ? 'text-success' : value < 0 ? 'text-danger' : 'text-[#4E5C70]';
+  if (!hasBase) return <span className="text-text-secondary font-medium">нет данных за прошлый период</span>;
+  const cls = value > 0 ? 'text-success' : value < 0 ? 'text-danger' : 'text-text-secondary';
+  const formatted = Math.abs(value).toLocaleString('ru-RU', { maximumFractionDigits: 1 });
   return (
     <span className={`font-bold ${cls}`}>
       {value > 0 ? '+' : value < 0 ? '−' : ''}
-      {Math.abs(value)}% к прошлому периоду
+      {formatted}% к прошлому периоду
     </span>
   );
 };
@@ -169,7 +170,7 @@ const Segments = <T extends string>({
   /** Grid classes instead of a wrapping row (all options the same width, no lone option on a second line) */
   grid?: string;
 }) => (
-  <div className={`neu-flat-sm rounded-xl p-1 gap-1 ${grid ? `grid ${grid}` : 'flex flex-wrap'}`} role="radiogroup" aria-label={label}>
+  <div className={`neu-inset rounded-xl p-1 gap-1 ${grid ? `grid ${grid}` : 'flex flex-wrap'}`} role="radiogroup" aria-label={label}>
     {options.map((o) => (
       <button
         key={o.id}
@@ -179,7 +180,7 @@ const Segments = <T extends string>({
         title={o.title}
         onClick={() => onChange(o.id)}
         className={`flex-1 h-8 px-2.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-          value === o.id ? 'neu-pill-active' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
+          value === o.id ? 'neu-button text-accent font-extrabold' : 'text-text-secondary hover:text-text-primary'
         }`}
       >
         {o.label}
@@ -338,7 +339,12 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
         returnRate,
         totalReturnsCount: totalReturns,
         categoryStats: breakdown.categories,
-        topProducts: breakdown.topProducts.map((p) => ({ title: p.title, quantity: p.quantity, revenue: p.revenue })),
+        topProducts: breakdown.topProducts.map((p) => ({
+          title: p.title,
+          quantity: p.quantity,
+          packs: p.packs,
+          revenue: p.revenue,
+        })),
         recentOrders,
         resetNote: resetAt ? `Статистика считается с ${formatMoment(resetAt)}` : undefined,
       });
@@ -385,7 +391,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       value: `${approx}${rub(profit.netProfit)}`,
       footer: <Growth value={netProfitGrowth} hasBase={prevNetProfit > 0} />,
       extra: (
-        <span className="text-[11px] text-[#4E5C70]">
+        <span className="text-[11px] text-text-secondary">
           Маржа {profit.marginPercent === null ? '—' : `${approx}${profit.marginPercent}%`} · без доставки
           {profit.missingCostLines > 0 && (
             <span className="block text-warning font-bold">Завышен: не у всех товаров есть себестоимость</span>
@@ -408,8 +414,8 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       value: `${totalOrders.toLocaleString('ru-RU')} шт.`,
       footer: <Growth value={ordersGrowth} hasBase={prevTotalOrders > 0} />,
       extra: (
-        <span className="text-[11px] text-[#4E5C70]">
-          В среднем {(totalOrders / Math.max(1, dailyData.length)).toFixed(1)} {perBucketText(grouping)}
+        <span className="text-[11px] text-text-secondary">
+          В среднем {(totalOrders / Math.max(1, dailyData.length)).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} {perBucketText(grouping)}
         </span>
       ),
     },
@@ -419,7 +425,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       icon: Receipt,
       value: rub(avgCheck),
       footer: (
-        <span className="text-[11px] text-[#4E5C70]">
+        <span className="text-[11px] text-text-secondary">
           Выручка {perBucketText(grouping)}: {rub(avgDailyRevenue)}
         </span>
       ),
@@ -430,13 +436,13 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
       title: 'Отмены',
       icon: RotateCcw,
       value: `${totalReturns} шт.`,
-      footer: <span className="text-[11px] text-[#4E5C70]">{returnRate}% оформленных заказов</span>,
+      footer: <span className="text-[11px] text-text-secondary">{returnRate}% оформленных заказов</span>,
       extra: null,
     },
   ];
 
   return (
-    <div className="space-y-4 sm:space-y-5 text-[#2D3A4E]">
+    <div className="flex flex-col gap-4 sm:gap-5 text-text-primary">
       <AdminSiteErrorsCard onShowToast={onShowToast} />
       {/* 1. Header: title, period, reset state */}
       <section className="neu-flat rounded-3xl p-4 space-y-3">
@@ -446,7 +452,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
               <TrendingUp className="w-5 h-5 text-accent shrink-0" />
               Аналитика продаж
             </h3>
-            <p className="text-xs text-[#4E5C70]">
+            <p className="text-xs text-text-secondary">
               {channel === 'all' ? 'Розница и опт' : channelName}, {groupingText(grouping)}. Сравнение — с предыдущим периодом той
               же длины
             </p>
@@ -461,9 +467,9 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
             <CalendarRange className="w-4 h-4 text-accent shrink-0" />
             <span className="min-w-0 flex-1">
               <span className="block text-xs font-extrabold">{periodName}</span>
-              <span className="block text-[11px] text-[#4E5C70]">{periodRangeText(period)}</span>
+              <span className="block text-[11px] text-text-secondary">{periodRangeText(period)}</span>
             </span>
-            <ChevronDown className="w-4 h-4 text-[#4E5C70] shrink-0" />
+            <ChevronDown className="w-4 h-4 text-text-secondary shrink-0" />
           </button>
           <AdminHint label="Период">За какой срок считать цифры и с каким прошлым сроком сравнивать</AdminHint>
           </div>
@@ -501,7 +507,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
         </div>
         {resetAt !== null && (
           <div className="neu-inset rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <p className="text-xs text-[#2D3A4E] flex items-start gap-2">
+            <p className="text-xs text-text-primary flex items-start gap-2">
               <CalendarClock className="w-4 h-4 text-accent shrink-0 mt-0.5" />
               <span>
                 Статистика считается с <strong>{formatMoment(resetAt)}</strong>. Выполненные и отменённые заказы до этого
@@ -539,7 +545,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
               }`}
             >
               <span className="flex items-center justify-between gap-2">
-                <span className={`text-[11px] font-bold uppercase tracking-wider pr-7 ${selected ? 'text-accent' : 'text-[#4E5C70]'}`}>
+                <span className={`text-[11px] font-bold uppercase tracking-wider pr-7 ${selected ? 'text-accent' : 'text-text-secondary'}`}>
                   {k.title}
                 </span>
                 <span
@@ -555,7 +561,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
               </span>
               <span className="block text-[11px] leading-snug">{k.footer}</span>
               {k.extra}
-              <span className="block text-xs leading-snug text-[#4E5C70]">{kpiCaption(k.metric, statusFilter)}</span>
+              <span className="block text-xs leading-snug text-text-secondary">{kpiCaption(k.metric, statusFilter)}</span>
             </button>
             <AdminHint label={k.title} className="absolute top-3 right-[46px]">
               {KPI_HINTS[k.metric]}
@@ -579,7 +585,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
                 type="button"
                 onClick={showPeakDay}
                 title={grouping === 'day' ? 'Открыть пиковый день' : `Открыть лучш${grouping === 'week' ? 'ую неделю' : 'ий месяц'}`}
-                className="h-8 px-2.5 neu-button rounded-xl text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1 cursor-pointer shrink-0"
+                className="h-8 px-2.5 neu-button rounded-xl text-[11px] font-bold text-text-primary flex items-center gap-1 cursor-pointer shrink-0"
               >
                 <Flame className="w-3.5 h-3.5 text-accent" />
                 Пик: {peakDay.label} · {rub(peakDay.revenue)}
@@ -617,7 +623,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
             </Suspense>
           </div>
         </div>
-        <div className="text-[11px] text-[#4E5C70] space-y-1">
+        <div className="text-[11px] text-text-secondary space-y-1">
           <p>Нажмите на {bucketName} на графике, чтобы увидеть заказы.</p>
           {undatedCount > 0 && (
             <p>
@@ -671,7 +677,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
                         <span className="text-accent font-extrabold mr-1">{idx + 1}.</span>
                         {p.title}
                       </p>
-                      <p className="text-xs text-[#4E5C70]">
+                      <p className="text-xs text-text-secondary">
                         Продано: {p.quantity} шт.{p.packs > 0 ? `, из них ростовок: ${p.packs} уп.` : ''}
                       </p>
                     </div>
@@ -697,7 +703,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
                   <div className="flex items-center justify-between gap-2 text-xs">
                     <span className="font-bold truncate">{c.name}</span>
                     <span className="font-extrabold text-accent shrink-0">
-                      {c.share}% <span className="text-[11px] text-[#4E5C70] font-normal">({rub(c.revenue)})</span>
+                      {c.share}% <span className="text-[11px] text-text-secondary font-normal">({rub(c.revenue)})</span>
                     </span>
                   </div>
                   <div className="neu-inset rounded-full h-2 overflow-hidden p-0.5">
@@ -722,7 +728,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
           aria-busy={isExportingPDF}
           onPointerEnter={preloadPdfLibraries}
           onFocus={preloadPdfLibraries}
-          className="w-full sm:flex-1 min-h-14 px-4 py-2.5 neu-button-accent rounded-2xl text-white flex items-center gap-3 text-left cursor-pointer disabled:opacity-70 disabled:cursor-wait"
+          className="w-full sm:flex-1 min-h-14 px-4 py-2.5 neu-button-accent rounded-2xl text-white flex items-center gap-3 text-left cursor-pointer disabled:cursor-wait"
         >
           <span className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
             {isExportingPDF ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
@@ -739,7 +745,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
           onClick={() => setIsResetConfirmOpen(true)}
           disabled={countedNow.count === 0}
           title={countedNow.count === 0 ? 'С момента последнего сброса нет выполненных или отменённых заказов' : undefined}
-          className="w-full sm:w-auto min-h-14 px-4 neu-button-danger rounded-2xl font-extrabold text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto min-h-14 px-4 neu-button-danger rounded-2xl font-extrabold text-xs flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
         >
           <Trash2 className="w-4 h-4" />
           Сбросить статистику
@@ -757,8 +763,8 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ orders, pr
         confirmLabel="Сбросить"
         preview={
           <div className="text-xs min-w-0">
-            <p className="font-bold text-[#2D3A4E]">Перестанут учитываться: {countedNow.count} {pluralRu(countedNow.count, ['заказ', 'заказа', 'заказов'])}</p>
-            <p className="text-[#4E5C70]">на сумму {rub(countedNow.revenue)}</p>
+            <p className="font-bold text-text-primary">Перестанут учитываться: {countedNow.count} {pluralRu(countedNow.count, ['заказ', 'заказа', 'заказов'])}</p>
+            <p className="text-text-secondary">на сумму {rub(countedNow.revenue)}</p>
           </div>
         }
         message="Выполненные, отменённые и архивные заказы перестанут учитываться в графиках, показателях, топе товаров, категориях и промокодах. Активные заказы — которые собирают, везут или ждут в пункте — остаются в статистике со всеми данными, их статусы не меняются. Сами заказы не удаляются, всю историю можно вернуть."

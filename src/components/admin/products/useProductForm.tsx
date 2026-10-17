@@ -10,8 +10,9 @@ import {
   mergeFormStock,
   stockMovementId,
   withMissingSkus,
+  generateSkuCode,
 } from '../../../utils/inventory';
-import { normalizeProductColors } from '../../../utils/colorCode';
+import { normalizeProductColors, storeColorsOf, storeSizesOf } from '../../../utils/colorCode';
 import {
   droppedPhotoIds,
   splitProductPhotos,
@@ -47,6 +48,7 @@ import { EDITED_PRODUCT_OPEN_BLOCKS, PRODUCT_FORM_BLOCKS, type ProductFormBlockI
 type ProductFormOptions = {
   categories: StoreCategory[];
   products: Product[];
+  settings?: AdminProductsTabProps['settings'];
   onUpdateProducts: AdminProductsTabProps['onUpdateProducts'];
   onShowToast: AdminProductsTabProps['onShowToast'];
   CATEGORY_OPTIONS: ProductCategoryOption[];
@@ -56,7 +58,9 @@ type ProductFormOptions = {
  * The product form: its fields, the check on «Сохранить», unsaved edits, the article and barcode checks across the
  * catalog, opening a new or an existing product and saving it (photos first, then the product and the stock journal).
  */
-export function useProductForm({ categories, products, onUpdateProducts, onShowToast, CATEGORY_OPTIONS }: ProductFormOptions) {
+export function useProductForm({ categories, products, settings, onUpdateProducts, onShowToast, CATEGORY_OPTIONS }: ProductFormOptions) {
+  const storeColors = useMemo(() => storeColorsOf(settings, products), [settings, products]);
+  const storeSizes = useMemo(() => storeSizesOf(settings, products), [settings, products]);
   // Modals
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
   /** Problems found on «Сохранить»: listed next to the button instead of a pile of error toasts */
@@ -101,6 +105,8 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
   const [formPurchaseCurrency, setFormPurchaseCurrency] = useState<PurchaseCurrency | ''>('');
   const [formPurchaseAmount, setFormPurchaseAmount] = useState('');
   const [formPurchaseMarkup, setFormPurchaseMarkup] = useState('');
+  const [formPurchaseExtraCost, setFormPurchaseExtraCost] = useState('');
+  const [formPurchaseExtraCostKind, setFormPurchaseExtraCostKind] = useState<'rub' | 'percent'>('rub');
   // Wholesale (src/shared/wholesalePricing.ts): who the product is sold to, the wholesale price of one item, the pack and
   // the fewest packs; the own wholesale markup lives in the purchase, like the retail one
   const [formSaleChannel, setFormSaleChannel] = useState<SaleChannel>('both');
@@ -132,6 +138,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
   const [formImages, setFormImages] = useState<string[]>([]);
   const [newImageUrlInput, setNewImageUrlInput] = useState('');
   const galleryFileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraFileInputRef = useRef<HTMLInputElement | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   /** A photo that could not be read goes to the form's error list, not to a toast (UX audit 03.10, finding 17) */
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -151,6 +158,10 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
   const [formSkus, setFormSkus] = useState<ProductSKU[]>([]);
   /** The variants as the form opened them: a stock not changed in the form is saved as it is in the database now */
   const [formSkusOpened, setFormSkusOpened] = useState<ProductSKU[]>([]);
+  /** Initial stock per variant when adding colors/sizes or pressing «Заполнить варианты» (default 1 for new products) */
+  const [defaultVariantStock, setDefaultVariantStock] = useState('1');
+  /** «Задать всем: [ N ] шт. → Применить» in Step 2 of variant matrix */
+  const [bulkStockInput, setBulkStockInput] = useState('');
   // Card sections (description highlights, composition, characteristics, care)
   const [formCard, setFormCard] = useState<ProductCardStructure>(EMPTY_CARD_STRUCTURE);
   // «Размерная сетка»: measurements in cm per size (wholesale plan, stage 14); saved without empty ones
@@ -179,11 +190,15 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     if (!formPurchaseCurrency || !(amount > 0)) return undefined;
     const markup = decimal(formPurchaseMarkup);
     const wholesaleMarkup = decimal(formWholesaleMarkup);
+    const extraCost = decimal(formPurchaseExtraCost);
     return {
       currency: formPurchaseCurrency,
       amount,
       ...(formPurchaseMarkup.trim() !== '' && markup >= 0 ? { markupPercent: markup } : {}),
       ...(formWholesaleMarkup.trim() !== '' && wholesaleMarkup >= 0 ? { wholesaleMarkupPercent: wholesaleMarkup } : {}),
+      ...(formPurchaseExtraCost.trim() !== '' && extraCost > 0
+        ? { extraCost, extraCostKind: formPurchaseExtraCostKind }
+        : {}),
     };
   };
 
@@ -223,6 +238,15 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
       formPurchaseCurrency && !(decimal(formPurchaseAmount) > 0) && 'Укажите закупку в валюте больше нуля или выберите «Нет»',
       formPurchaseMarkup.trim() !== '' && !(decimal(formPurchaseMarkup) >= 0 && decimal(formPurchaseMarkup) <= 1000) &&
         'Своя наценка — от 0 до 1000 %; пустое поле — наценка для всех товаров',
+      formPurchaseCurrency &&
+        formPurchaseExtraCost.trim() !== '' &&
+        !(
+          decimal(formPurchaseExtraCost) >= 0 &&
+          decimal(formPurchaseExtraCost) <= (formPurchaseExtraCostKind === 'percent' ? 1000 : 100_000)
+        ) &&
+        (formPurchaseExtraCostKind === 'percent'
+          ? 'Доп. расходы — от 0 до 1000 % или пусто'
+          : 'Доп. расходы — от 0 до 100 000 ₽ за штуку или пусто'),
       ...wholesaleFormErrors({
         channel: formSaleChannel,
         price: formWholesalePrice,
@@ -243,7 +267,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
         `Товар занимает ${formatMegabytes(formSizeBytes)} из ${formatMegabytes(PRODUCT_SIZE_BUDGET_BYTES)}: база его не примет. Уберите часть фото`,
     ].filter((m): m is string => Boolean(m));
 
-  }, [formTitle, formCategory, formPrice, formColors, formSizes, formImages, formOldPrice, formCard, formSizeChart, formSizeBytes, formPurchaseCurrency, formPurchaseAmount, formPurchaseMarkup, formSaleChannel, formWholesalePrice, formWholesalePackSize, formWholesaleMinPacks, formWholesaleMarkup, formWeight, formPackageL, formPackageW, formPackageH, formPacks]);
+  }, [formTitle, formCategory, formPrice, formColors, formSizes, formImages, formOldPrice, formCard, formSizeChart, formSizeBytes, formPurchaseCurrency, formPurchaseAmount, formPurchaseMarkup, formPurchaseExtraCost, formPurchaseExtraCostKind, formSaleChannel, formWholesalePrice, formWholesalePackSize, formWholesaleMinPacks, formWholesaleMarkup, formWeight, formPackageL, formPackageW, formPackageH, formPacks]);
   const formErrors = [
     ...(showFormErrors ? validationErrors : []),
     ...(photoError ? [photoError] : []),
@@ -273,6 +297,8 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     formPurchaseCurrency,
     formPurchaseAmount,
     formPurchaseMarkup,
+    formPurchaseExtraCost,
+    formPurchaseExtraCostKind,
     formSaleChannel,
     formWholesalePrice,
     formWholesalePackSize,
@@ -369,6 +395,8 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormPurchaseCurrency('');
     setFormPurchaseAmount('');
     setFormPurchaseMarkup('');
+    setFormPurchaseExtraCost('');
+    setFormPurchaseExtraCostKind('rub');
     setFormSaleChannel('both');
     setFormWholesalePrice('');
     setFormWholesalePackSize('');
@@ -388,6 +416,8 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormColors([]);
     setFormSkus([]);
     setFormSkusOpened([]);
+    setDefaultVariantStock('1');
+    setBulkStockInput('');
     setFormCard(EMPTY_CARD_STRUCTURE);
     setFormSizeChart(EMPTY_SIZE_CHART);
     setFormWeight('');
@@ -395,6 +425,83 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormPackageW('');
     setFormPackageH('');
     setFormPacks([]);
+    setShowFormErrors(false);
+    setPhotoError(null);
+    setSaveError(null);
+    setOpenFormBlocks(new Set(PRODUCT_FORM_BLOCKS));
+    setIsProductFormOpen(true);
+  };
+
+  /**
+   * Opens the product form for a new product pre-filled from `prod` (category, prices, colors, sizes, card structure,
+   * size chart, weight/package), with title «… (копия)» and empty photos so the owner can shoot/upload new photos.
+   */
+  const handleOpenDuplicateProduct = (prod: Product) => {
+    const draftId = `prod-${Date.now()}`;
+    const normalizedColors = normalizeProductColors(prod.colors).map(({ name, hex }) => ({ name, hex }));
+    const sizes = [...(prod.sizes ?? [])];
+    const initialStock = Math.max(0, parseInt(defaultVariantStock, 10) || 1);
+    const taken = collectBarcodes(products);
+    const colorBarcodes = new Map<string, string>();
+    const skus: ProductSKU[] = [];
+    for (const c of normalizedColors) {
+      const colorKey = c.name.trim().toLowerCase();
+      if (!colorBarcodes.has(colorKey)) colorBarcodes.set(colorKey, generateBarcode(taken));
+      for (const sz of sizes) {
+        skus.push({
+          id: `${draftId}-${c.name}-${sz}`,
+          color: c.name,
+          size: sz,
+          stock: initialStock,
+          skuCode: generateSkuCode({ id: draftId, category: prod.category }, c.name, sz, 'WS'),
+          barcode: colorBarcodes.get(colorKey),
+        });
+      }
+    }
+
+    setEditingProduct(null);
+    setFormTitle(`${prod.title} (копия)`);
+    setFormCategory(prod.category || '');
+    setFormPrice(prod.price);
+    setFormCostPrice(prod.costPrice);
+    setFormPurchaseCurrency(prod.purchase?.currency ?? '');
+    setFormPurchaseAmount(prod.purchase ? String(prod.purchase.amount).replace('.', ',') : '');
+    setFormPurchaseMarkup(prod.purchase?.markupPercent !== undefined ? String(prod.purchase.markupPercent).replace('.', ',') : '');
+    setFormPurchaseExtraCost(prod.purchase?.extraCost ? String(prod.purchase.extraCost).replace('.', ',') : '');
+    setFormPurchaseExtraCostKind(prod.purchase?.extraCostKind === 'percent' ? 'percent' : 'rub');
+    setFormSaleChannel(saleChannelOf(prod));
+    setFormWholesalePrice(typeof prod.wholesalePrice === 'number' ? String(prod.wholesalePrice) : '');
+    setFormWholesalePackSize(typeof prod.wholesalePackSize === 'number' ? String(prod.wholesalePackSize) : '');
+    setFormWholesaleMinPacks(typeof prod.wholesaleMinPacks === 'number' ? String(prod.wholesaleMinPacks) : '');
+    setFormWholesaleMarkup(
+      prod.purchase?.wholesaleMarkupPercent !== undefined ? String(prod.purchase.wholesaleMarkupPercent).replace('.', ',') : ''
+    );
+    setFormSupplier(prod.supplier ?? '');
+    setFormSupplierSku('');
+    setFormOldPrice(prod.originalPrice);
+    setFormDiscountPercent(prod.discountPercent);
+    autoPriceRef.current = null;
+    setFormBadge(prod.badge || '');
+    setFormInStock(true);
+    setFormImages([]);
+    setNewImageUrlInput('');
+    setFormDescription(prod.description || '');
+    setFormSizes(sizes);
+    setFormColors(normalizedColors);
+    setFormSkus(skus);
+    setFormSkusOpened([]);
+    setDefaultVariantStock(String(initialStock));
+    setBulkStockInput('');
+    setFormCard(cardStructureFromProduct(prod));
+    setFormSizeChart(sizeChartForForm(prod));
+    const weight = productWeightGrams(prod);
+    const box = productPackageCm(prod);
+    const side = (n: number | undefined) => (n === undefined ? '' : String(n).replace('.', ','));
+    setFormWeight(side(weight));
+    setFormPackageL(side(box?.l));
+    setFormPackageW(side(box?.w));
+    setFormPackageH(side(box?.h));
+    setFormPacks(packDraftsFromProduct(prod));
     setShowFormErrors(false);
     setPhotoError(null);
     setSaveError(null);
@@ -425,6 +532,8 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormPurchaseCurrency(prod.purchase?.currency ?? '');
     setFormPurchaseAmount(prod.purchase ? String(prod.purchase.amount).replace('.', ',') : '');
     setFormPurchaseMarkup(prod.purchase?.markupPercent !== undefined ? String(prod.purchase.markupPercent).replace('.', ',') : '');
+    setFormPurchaseExtraCost(prod.purchase?.extraCost ? String(prod.purchase.extraCost).replace('.', ',') : '');
+    setFormPurchaseExtraCostKind(prod.purchase?.extraCostKind === 'percent' ? 'percent' : 'rub');
     setFormSaleChannel(saleChannelOf(prod));
     setFormWholesalePrice(typeof prod.wholesalePrice === 'number' ? String(prod.wholesalePrice) : '');
     setFormWholesalePackSize(typeof prod.wholesalePackSize === 'number' ? String(prod.wholesalePackSize) : '');
@@ -449,6 +558,8 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     const openedSkus = withMissingSkus(prod);
     setFormSkus(openedSkus);
     setFormSkusOpened(openedSkus);
+    setDefaultVariantStock('0');
+    setBulkStockInput('');
     setFormCard(cardStructureFromProduct(prod));
     setFormSizeChart(sizeChartForForm(prod));
     const weight = productWeightGrams(prod);
@@ -475,9 +586,9 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     el.closest('[data-enter-adds]')?.querySelector<HTMLButtonElement>('button:not([disabled])')?.click();
   };
 
-  const handleSaveProduct = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSavingProduct) return;
+  const saveProduct = async (e?: React.FormEvent, options?: { keepOpenForNext?: boolean }): Promise<boolean> => {
+    e?.preventDefault();
+    if (isSavingProduct) return false;
     const numPrice = Number(formPrice);
     setShowFormErrors(true);
     setPhotoError(null);
@@ -486,7 +597,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
       // every field the list names is on the screen: a closed block would hide it
       setOpenFormBlocks(new Set(PRODUCT_FORM_BLOCKS));
       requestAnimationFrame(() => formErrorsRef.current?.focus());
-      return;
+      return false;
     }
 
     // A category missing from Admin → «Категории» keeps the product's current name
@@ -517,7 +628,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
       console.error('Product photos were not saved:', err);
       setSaveError('База не приняла фото товара. Введённое осталось в форме: проверьте соединение и нажмите ещё раз');
       setIsSavingProduct(false);
-      return;
+      return false;
     }
     setIsSavingProduct(false);
     const finalImages = photos.images;
@@ -601,10 +712,12 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
       if (saved && dropped.length > 0) {
         deleteProductPhotos(dropped).catch((err) => console.error('Old product photos were not removed:', err));
       }
+      return saved;
     } else {
+      const createdTitle = formTitle.trim();
       const newProd: Product = withPacks({
         id: productId,
-        title: formTitle.trim(),
+        title: createdTitle,
         category: formCategory,
         categoryLabel: catLabel,
         price: numPrice,
@@ -632,12 +745,60 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
         isNew: true,
       });
 
-      await finishSave([newProd, ...products], `Товар «${formTitle.trim()}» добавлен в каталог`, journal(newProd.id, newProd.title));
+      const keepOpen = Boolean(options?.keepOpenForNext);
+      const saved = await finishSave(
+        [newProd, ...products],
+        keepOpen
+          ? `Товар «${createdTitle}» создан — можно вводить следующий`
+          : `Товар «${createdTitle}» добавлен в каталог`,
+        journal(newProd.id, newProd.title),
+        { keepOpen }
+      );
+      if (saved && keepOpen) {
+        // Keep category, selected sizes, defaultVariantStock, card structure (composition, fit, care), size chart, shipping, supplier
+        setEditingProduct(null);
+        setFormTitle('');
+        setFormDescription('');
+        setFormImages([]);
+        setNewImageUrlInput('');
+        setFormPrice(0);
+        setFormCostPrice(undefined);
+        setFormPurchaseAmount('');
+        setFormWholesalePrice('');
+        setFormOldPrice(undefined);
+        setFormDiscountPercent(undefined);
+        setFormSupplierSku('');
+        autoPriceRef.current = null;
+        setFormBadge('');
+        setFormColors([]);
+        setFormSkus([]);
+        setFormSkusOpened([]);
+        setShowFormErrors(false);
+        setPhotoError(null);
+        setSaveError(null);
+        requestAnimationFrame(() => {
+          document.getElementById('product-form-title')?.focus();
+        });
+      }
+      return saved;
     }
   };
 
+  const handleSaveProduct = async (e: React.FormEvent) => {
+    await saveProduct(e);
+  };
+
+  const handleSaveAndAddAnother = async () => {
+    await saveProduct(undefined, { keepOpenForNext: true });
+  };
+
   /** The form closes and says «сохранен» only after the database accepted the product; otherwise the input stays */
-  const finishSave = async (next: Product[], successText: string, movements: StockMovementLog[] = []): Promise<boolean> => {
+  const finishSave = async (
+    next: Product[],
+    successText: string,
+    movements: StockMovementLog[] = [],
+    options?: { keepOpen?: boolean }
+  ): Promise<boolean> => {
     setIsSavingProduct(true);
     try {
       if ((await onUpdateProducts(next)) === false) {
@@ -652,7 +813,9 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
         });
       }
       onShowToast(successText, 'success');
-      setIsProductFormOpen(false);
+      if (!options?.keepOpen) {
+        setIsProductFormOpen(false);
+      }
       return true;
     } finally {
       setIsSavingProduct(false);
@@ -669,6 +832,8 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
   }, [totalFormStock, formPrice]);
 
   return {
+    storeColors,
+    storeSizes,
     isProductFormOpen,
     setIsProductFormOpen,
     showFormErrors,
@@ -696,6 +861,10 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormPurchaseAmount,
     formPurchaseMarkup,
     setFormPurchaseMarkup,
+    formPurchaseExtraCost,
+    setFormPurchaseExtraCost,
+    formPurchaseExtraCostKind,
+    setFormPurchaseExtraCostKind,
     formPurchase,
     formSaleChannel,
     setFormSaleChannel,
@@ -727,6 +896,7 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     newImageUrlInput,
     setNewImageUrlInput,
     galleryFileInputRef,
+    cameraFileInputRef,
     isUploadingImage,
     setIsUploadingImage,
     photoError,
@@ -748,6 +918,10 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     setFormSkus,
     formSkusOpened,
     setFormSkusOpened,
+    defaultVariantStock,
+    setDefaultVariantStock,
+    bulkStockInput,
+    setBulkStockInput,
     formCard,
     setFormCard,
     formSizeChart,
@@ -782,12 +956,15 @@ export function useProductForm({ categories, products, onUpdateProducts, onShowT
     takenBarcodes,
     barcodeForColor,
     handleOpenAddProduct,
+    handleOpenDuplicateProduct,
     handleOpenEditProduct,
     handleFormKeyDown,
     handleSaveProduct,
+    handleSaveAndAddAnother,
     finishSave,
     totalFormStock,
     totalFormInventoryValue,
+    settings,
   };
 }
 

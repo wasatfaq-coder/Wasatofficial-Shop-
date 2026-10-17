@@ -55,7 +55,7 @@ const hasPackComposition = (item: CartItem): item is CartPackLine =>
 export function expandPackLines(items: CartItem[]): CartItem[] {
   return items.flatMap((item) => {
     if (!hasPackComposition(item)) return [item];
-    const { packSizes, ...line } = item;
+    const { packSizes, addedPrice: _addedPrice, ...line } = item;
     const count = Math.max(1, Math.floor(item.quantity));
     return splitPackPrice(item.packPrice, packSizes).map((part, i) => ({
       ...line,
@@ -181,6 +181,119 @@ export function setPackGroupCount(items: CartItem[], packGroup: string, count: n
 /** Removes every line of the pack: one size of a pack is not removed alone */
 export const removePackGroup = (items: CartItem[], packGroup: string): CartItem[] =>
   items.filter((item) => item.packGroup !== packGroup);
+
+type WholesaleSource = { id?: string; wholesalePrice?: number };
+
+function findCatalogWholesale(
+  productId: string | undefined,
+  catalog?: WholesaleSource | WholesaleSource[] | null
+): number | undefined {
+  if (!catalog) return undefined;
+  const source = Array.isArray(catalog)
+    ? catalog.find((p) => p?.id && p.id === productId)
+    : !catalog.id || catalog.id === productId
+      ? catalog
+      : undefined;
+  return typeof source?.wholesalePrice === 'number' && source.wholesalePrice > 0 ? source.wholesalePrice : undefined;
+}
+
+/**
+ * Unit price of each item when the admin disassembles a size pack («Разобрать упаковку», stage 19 follow-up):
+ * the product's `wholesalePrice` if set (> 0), otherwise the average item price of the pack (`round(packPrice / piecesPerPack)`).
+ */
+export function unpackUnitPrice(
+  group: Pick<Extract<OrderLineGroup, { kind: 'pack' }>, 'item' | 'packPrice' | 'packCount' | 'pieces'>,
+  catalogProduct?: WholesaleSource | WholesaleSource[] | null
+): number {
+  const fromCatalog = findCatalogWholesale(group.item.product?.id, catalogProduct);
+  const wholesale =
+    fromCatalog ??
+    (typeof group.item.product?.wholesalePrice === 'number' && group.item.product.wholesalePrice > 0
+      ? group.item.product.wholesalePrice
+      : undefined);
+  if (wholesale !== undefined) return Math.round(wholesale);
+  const perPack = Math.max(1, Math.round(group.pieces / Math.max(1, group.packCount)));
+  return Math.max(0, Math.round(group.packPrice / perPack));
+}
+
+/**
+ * Disassembles a size pack (`packGroup`) in «Корректировка состава заказа» into individual wholesale lines per size:
+ * - merges lines of the same size that `splitPackPrice` split across two prices back into one line per size;
+ * - strips pack fields (`packGroup`, `packId`, `packTitle`, `packCount`, `packPieces`, `packPrice`);
+ * - sets `priceKind: 'wholesale'` and `unitPrice` from `unpackUnitPrice`.
+ */
+export function unpackOrderGroup(
+  items: CartItem[],
+  packGroup: string,
+  catalogProduct?: WholesaleSource | WholesaleSource[] | null
+): CartItem[] {
+  const group = groupOrderLines(items).find(
+    (g): g is Extract<OrderLineGroup, { kind: 'pack' }> => g.kind === 'pack' && g.packGroup === packGroup
+  );
+  if (!group) return items;
+  const unitPrice = unpackUnitPrice(group, catalogProduct);
+  const bySize = new Map<string, number>();
+  for (const idx of group.indexes) {
+    const line = items[idx];
+    const qty = Math.max(0, Number(line.quantity) || 0);
+    if (qty > 0) bySize.set(line.selectedSize, (bySize.get(line.selectedSize) ?? 0) + qty);
+  }
+  const {
+    packGroup: _pg,
+    packId: _pid,
+    packTitle: _pt,
+    packCount: _pc,
+    packPieces: _pp,
+    packPrice: _ppr,
+    packSizes: _psz,
+    packUnavailable: _pu,
+    volumeDiscountPerUnit: _vd,
+    ...baseLine
+  } = group.item as CartItem & { packSizes?: unknown; packUnavailable?: boolean };
+  const unpackedLines: CartItem[] = [...bySize.entries()].map(([size, quantity], i) => ({
+    ...baseLine,
+    id: `${packGroup}-unpacked-${i + 1}`,
+    selectedSize: size,
+    quantity,
+    priceKind: 'wholesale',
+    unitPrice,
+  }));
+  const firstIdx = group.indexes[0];
+  const result: CartItem[] = [];
+  items.forEach((item, idx) => {
+    if (idx === firstIdx) {
+      for (const unpacked of unpackedLines) {
+        const existing = result.find(
+          (r) =>
+            !isPackLine(r) &&
+            r.product.id === unpacked.product.id &&
+            r.selectedColor === unpacked.selectedColor &&
+            r.selectedSize === unpacked.selectedSize &&
+            linePrice(r) === unitPrice
+        );
+        if (existing) existing.quantity += unpacked.quantity;
+        else result.push(unpacked);
+      }
+      return;
+    }
+    if (item.packGroup === packGroup) return;
+    const sameUnpacked = result.find(
+      (r) =>
+        !isPackLine(r) &&
+        r.id.startsWith(`${packGroup}-unpacked-`) &&
+        r.product.id === item.product.id &&
+        r.selectedColor === item.selectedColor &&
+        r.selectedSize === item.selectedSize &&
+        linePrice(item) === unitPrice
+    );
+    if (!isPackLine(item) && sameUnpacked) {
+      sameUnpacked.quantity += item.quantity;
+      return;
+    }
+    result.push(item);
+  });
+  return result;
+}
 
 /**
  * A cart line of a size pack: `priceKind: 'pack'` with the pack's id, quantity — packs. A line of an order that came from

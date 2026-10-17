@@ -1,9 +1,13 @@
 import { FirebaseApp, initializeApp } from 'firebase/app';
 import {
   Auth,
+  browserLocalPersistence,
+  browserPopupRedirectResolver,
   connectAuthEmulator,
   getAuth,
   GoogleAuthProvider,
+  indexedDBLocalPersistence,
+  initializeAuth,
   onAuthStateChanged,
   signInAnonymously,
   signInWithCredential,
@@ -11,7 +15,14 @@ import {
   signOut,
   User,
 } from 'firebase/auth';
-import { Firestore, connectFirestoreEmulator, initializeFirestore, getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import {
+  Firestore,
+  connectFirestoreEmulator,
+  initializeFirestore,
+  getFirestore,
+  doc,
+  getDocFromServer,
+} from 'firebase/firestore';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import firebaseConfig from '../firebase-applet-config.json';
 import { FUNCTIONS_REGION, PLACE_ORDER_FUNCTION, PlaceOrderRequest, PlaceOrderResponse } from './shared/orderApi';
@@ -37,31 +48,68 @@ function protectWithAppCheck(firebaseApp: FirebaseApp) {
 }
 protectWithAppCheck(app);
 
-function connectEmulators(firebaseApp: FirebaseApp, firestore: Firestore) {
+function connectEmulators(firestore: Firestore, targetAuth: Auth) {
   if (!USE_EMULATORS) return;
   connectFirestoreEmulator(firestore, '127.0.0.1', 8080);
-  connectAuthEmulator(getAuth(firebaseApp), 'http://127.0.0.1:9099', { disableWarnings: true });
+  connectAuthEmulator(targetAuth, 'http://127.0.0.1:9099', { disableWarnings: true });
 }
 
+// Stage 4 of docs/performance-plan.md: `initializeAuth` without `browserPopupRedirectResolver`, so on mobile browsers
+// Firebase Auth does not load Google's `apis.google.com/js/api.js` and auth iframe on every visit before «Войти» is tapped
+function createAuth(firebaseApp: FirebaseApp): Auth {
+  try {
+    return initializeAuth(firebaseApp, {
+      persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+    });
+  } catch {
+    return getAuth(firebaseApp);
+  }
+}
+
+export const NAMED_FIRESTORE_DATABASE_ID = firebaseConfig.firestoreDatabaseId;
+export const DEFAULT_FIRESTORE_DATABASE_ID = '(default)';
+export const FIRESTORE_DATABASE_ID =
+  (import.meta.env.VITE_FIRESTORE_DATABASE_ID as string | undefined)?.trim() || NAMED_FIRESTORE_DATABASE_ID;
+
+
 // CRITICAL: Must specify firestoreDatabaseId from configuration
-// Using initializeFirestore with auto-detect long polling prevents 10s backend stream timeout warnings in sandboxes
-function createFirestore(firebaseApp: FirebaseApp): Firestore {
+// Using initializeFirestore with auto-detect long polling prevents 10s backend stream timeout warnings in sandboxes.
+// No persistent IndexedDB cache (owner's decision 16.10): +21 KB on the first load, and orders, chats and costs would
+// stay in the browser after «Выйти» (stage 6 of docs/performance-plan.md waits for 100+ products)
+function createFirestore(firebaseApp: FirebaseApp, databaseId = FIRESTORE_DATABASE_ID): Firestore {
   try {
     return initializeFirestore(
       firebaseApp,
       {
         experimentalAutoDetectLongPolling: true,
       },
-      firebaseConfig.firestoreDatabaseId
+      databaseId
     );
   } catch {
-    return getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
+    return getFirestore(firebaseApp, databaseId);
   }
 }
 
+const firestoreInstances = new Map<string, Firestore>();
+
+export function getFirestoreById(databaseId: string): Firestore {
+  const normalized = databaseId.trim() || DEFAULT_FIRESTORE_DATABASE_ID;
+  const existing = firestoreInstances.get(normalized);
+  if (existing) return existing;
+  const instance = createFirestore(app, normalized);
+  if (USE_EMULATORS) {
+    try {
+      connectFirestoreEmulator(instance, '127.0.0.1', 8080);
+    } catch {}
+  }
+  firestoreInstances.set(normalized, instance);
+  return instance;
+}
+
 export const db = createFirestore(app);
-export const auth = getAuth(app);
-connectEmulators(app, db);
+firestoreInstances.set(FIRESTORE_DATABASE_ID, db);
+export const auth = createAuth(app);
+connectEmulators(db, auth);
 
 // Scenario tests (tests/e2e) sign in to the Auth emulator without Google's popup. Only in the emulator build:
 // the production build drops this block
@@ -118,8 +166,10 @@ function getGuestChat() {
   if (!guestChat) {
     const guestApp = initializeApp(firebaseConfig, 'guest-chat');
     protectWithAppCheck(guestApp);
-    guestChat = { auth: getAuth(guestApp), db: createFirestore(guestApp) };
-    connectEmulators(guestApp, guestChat.db);
+    const guestAuth = createAuth(guestApp);
+    const guestDb = createFirestore(guestApp);
+    guestChat = { auth: guestAuth, db: guestDb };
+    connectEmulators(guestDb, guestAuth);
   }
   return guestChat;
 }
@@ -182,6 +232,7 @@ export async function forgetGuestChatIdentity(): Promise<void> {
 }
 
 const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 export enum OperationType {
   CREATE = 'create',
@@ -214,10 +265,11 @@ export async function testFirestoreConnection() {
 
 export async function signInWithGoogle(): Promise<User | null> {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
+    googleProvider.setCustomParameters({ prompt: 'select_account' });
+    const result = await signInWithPopup(auth, googleProvider, browserPopupRedirectResolver);
     return result.user;
   } catch (error) {
-    console.error('Google Sign-In Error:', error);
+    console.warn('Google Sign-In did not finish:', error);
     throw error;
   }
 }

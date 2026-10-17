@@ -50,7 +50,7 @@ export function ProductFormSizeChart({
           <span className="w-8 h-8 rounded-xl neu-flat flex items-center justify-center text-accent shrink-0">
             <Ruler className="w-4 h-4" aria-hidden="true" />
           </span>
-          <p className="font-extrabold text-xs text-[#2D3A4E] min-w-0">{label.trim() || 'Замер без названия'}</p>
+          <p className="font-extrabold text-xs text-text-primary min-w-0">{label.trim() || 'Замер без названия'}</p>
         </>
       ),
       run: () => setFormSizeChart((chart) => withoutColumn(chart, key)),
@@ -58,24 +58,24 @@ export function ProductFormSizeChart({
   };
 
   return (
-    <section aria-labelledby="product-form-size-chart" className="neu-inset rounded-2xl p-3.5 border border-white/60 space-y-3">
-      <div className="flex items-center justify-between gap-2 pb-1 border-b border-[#BAC5D5]/30">
+    <section aria-labelledby="product-form-size-chart" className="neu-inset rounded-2xl p-3.5 space-y-3">
+      <div className="flex items-center justify-between gap-2 pb-1.5 neu-divider-b">
         <h4
           id="product-form-size-chart"
-          className="text-[11px] font-extrabold text-[#2D3A4E] flex items-center gap-1.5 uppercase tracking-wider"
+          className="text-[11px] font-extrabold text-text-primary flex items-center gap-1.5 uppercase tracking-wider"
         >
           <Ruler className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
           Размерная сетка
         </h4>
-        <span className="text-[11px] font-semibold text-[#4E5C70]">Необязательно</span>
+        <span className="text-[11px] font-semibold text-text-secondary">Необязательно</span>
       </div>
-      <p className="text-xs text-[#4E5C70] leading-snug">
+      <p className="text-xs text-text-secondary leading-snug">
         Замеры в сантиметрах для каждого размера. Покупатель увидит таблицу под выбором размера; пустые замеры не
         показываются.
       </p>
 
       {formSizes.length === 0 ? (
-        <p className="text-xs font-bold text-[#4E5C70]">Сначала добавьте размеры товара — строки сетки появятся по ним.</p>
+        <p className="text-xs font-bold text-text-secondary">Сначала добавьте размеры товара — строки сетки появятся по ним.</p>
       ) : (
         <>
           {chips.length > 0 && (
@@ -85,7 +85,7 @@ export function ProductFormSizeChart({
                   key={label}
                   type="button"
                   onClick={() => addMeasurement(label)}
-                  className="min-h-8 px-2.5 rounded-xl neu-button text-[11px] font-bold text-[#2D3A4E] hover:text-accent flex items-center gap-1 cursor-pointer"
+                  className="min-h-8 px-2.5 rounded-xl neu-button text-[11px] font-bold text-text-primary hover:text-accent flex items-center gap-1 cursor-pointer"
                 >
                   <Plus className="w-3 h-3 text-accent" aria-hidden="true" />
                   {label}
@@ -95,7 +95,7 @@ export function ProductFormSizeChart({
           )}
 
           {isFull ? (
-            <p className="text-xs text-[#4E5C70]">Замеров уже {SIZE_CHART_MAX_COLUMNS} — больше таблица не поместится на телефоне.</p>
+            <p className="text-xs text-text-secondary">Замеров уже {SIZE_CHART_MAX_COLUMNS} — больше таблица не поместится на телефоне.</p>
           ) : (
             <div data-enter-adds className="flex items-center gap-2">
               <input
@@ -105,14 +105,14 @@ export function ProductFormSizeChart({
                 maxLength={SIZE_CHART_LABEL_MAX}
                 onChange={(e) => setNewMeasurement(e.target.value)}
                 placeholder="Свой замер, напр. Длина по спинке"
-                className="flex-1 min-w-0 h-9 px-3 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
+                className="flex-1 min-w-0 h-9 px-3 neu-inset rounded-xl text-xs text-text-primary placeholder:text-text-muted"
               />
               <button
                 type="button"
                 onClick={() => addMeasurement(newMeasurement)}
                 disabled={!newMeasurement.trim()}
                 className={`h-9 px-3 rounded-xl text-xs font-extrabold shrink-0 whitespace-nowrap ${
-                  newMeasurement.trim() ? 'neu-button text-accent cursor-pointer' : 'neu-button-disabled text-[#4E5C70]'
+                  newMeasurement.trim() ? 'neu-button text-accent cursor-pointer' : 'neu-button-disabled text-text-secondary'
                 }`}
               >
                 + Замер
@@ -126,7 +126,7 @@ export function ProductFormSizeChart({
               <table className="text-xs border-collapse">
                 <thead>
                   <tr>
-                    <th scope="col" className="sticky left-0 z-[1] bg-[var(--neu-bg)] pr-2 py-1 text-left text-[11px] font-bold text-[#4E5C70] whitespace-nowrap">
+                    <th scope="col" className="sticky left-0 z-[1] bg-[var(--neu-bg)] pr-2 py-1 text-left text-[11px] font-bold text-text-secondary whitespace-nowrap">
                       Замер
                     </th>
                     {formSizes.map((size) => (
@@ -148,14 +148,14 @@ export function ProductFormSizeChart({
                             onChange={(e) => setFormSizeChart((chart) => withColumnLabel(chart, column.key, e.target.value))}
                             aria-label={`Название замера ${i + 1}`}
                             placeholder="Название замера"
-                            className="flex-1 min-w-0 h-9 px-2.5 neu-inset rounded-xl text-xs font-bold text-[#2D3A4E] placeholder:text-[#56647A]"
+                            className="flex-1 min-w-0 h-9 px-2.5 neu-inset rounded-xl text-xs font-bold text-text-primary placeholder:text-text-muted"
                           />
                           <button
                             type="button"
                             onClick={() => removeMeasurement(column.key, column.label)}
                             aria-label={`Удалить замер: ${column.label.trim() || `замер ${i + 1}`}`}
                             title="Удалить замер"
-                            className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-[#4E5C70] hover:text-danger cursor-pointer"
+                            className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-text-secondary hover:text-danger cursor-pointer"
                           >
                             <Trash2 className="w-4 h-4" aria-hidden="true" />
                           </button>
@@ -171,7 +171,7 @@ export function ProductFormSizeChart({
                             onChange={(e) => setFormSizeChart((chart) => withValue(chart, size, column.key, e.target.value))}
                             aria-label={`${column.label.trim() || `Замер ${i + 1}`}, размер ${size}, см`}
                             placeholder="см"
-                            className="w-[4.5rem] h-9 px-1.5 neu-inset rounded-xl text-xs font-bold text-[#2D3A4E] text-center placeholder:text-[#56647A] placeholder:font-normal"
+                            className="w-[4.5rem] h-9 px-1.5 neu-inset rounded-xl text-xs font-bold text-text-primary text-center placeholder:text-text-muted placeholder:font-normal"
                           />
                         </td>
                       ))}
@@ -184,7 +184,7 @@ export function ProductFormSizeChart({
 
           {preview && (
             <div className="space-y-1.5">
-              <p className="text-[11px] font-extrabold text-[#2D3A4E] uppercase tracking-wider">Как увидит покупатель</p>
+              <p className="text-[11px] font-extrabold text-text-primary uppercase tracking-wider">Как увидит покупатель</p>
               <SizeChartTable chart={preview} />
             </div>
           )}

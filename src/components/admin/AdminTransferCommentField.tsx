@@ -28,7 +28,7 @@ export function AdminTransferCommentField({ value, onChange, error, idPrefix }: 
   const describedBy = [error ? `${inputId}-error` : '', `${inputId}-preview`].filter(Boolean).join(' ');
   return (
     <div className="space-y-1.5">
-      <span id={`${idPrefix}-comment-label`} className="block text-[11px] font-bold text-[#4E5C70]">
+      <span id={`${idPrefix}-comment-label`} className="block text-[11px] font-bold text-text-secondary">
         Комментарий к переводу
       </span>
       <div role="radiogroup" aria-labelledby={`${idPrefix}-comment-label`} className="flex flex-wrap gap-1.5">
@@ -41,7 +41,7 @@ export function AdminTransferCommentField({ value, onChange, error, idPrefix }: 
               role="radio"
               aria-checked={selected}
               onClick={() => onChange(mode === 'custom' ? { mode, text: value.text ?? '' } : { mode })}
-              className={`min-h-8 px-3 rounded-xl text-xs font-bold cursor-pointer ${selected ? 'neu-pill-active text-[#2D3A4E]' : 'neu-button text-[#2D3A4E]'}`}
+              className={`min-h-8 px-3 rounded-xl text-xs font-bold cursor-pointer ${selected ? 'neu-pill-active text-text-primary' : 'neu-button text-text-primary'}`}
             >
               {TRANSFER_COMMENT_MODE_LABELS[mode]}
             </button>
@@ -61,9 +61,9 @@ export function AdminTransferCommentField({ value, onChange, error, idPrefix }: 
             autoComplete="off"
             aria-invalid={Boolean(error)}
             aria-describedby={describedBy}
-            className="w-full neu-inset rounded-xl px-3 py-2 text-xs text-[#2D3A4E] outline-none"
+            className="w-full neu-inset rounded-xl px-3 py-2 text-xs text-text-primary"
           />
-          <p className="text-[11px] text-[#4E5C70]">
+          <p className="text-[11px] text-text-secondary">
             {TRANSFER_COMMENT_PLACEHOLDER} заменится на номер заказа · {(value.text ?? '').trim().length}/{TRANSFER_COMMENT_MAX}
           </p>
           {error && (
@@ -73,10 +73,10 @@ export function AdminTransferCommentField({ value, onChange, error, idPrefix }: 
           )}
         </div>
       )}
-      <p id={`${inputId}-preview`} className="text-[11px] text-[#4E5C70]">
+      <p id={`${inputId}-preview`} className="text-[11px] text-text-secondary">
         {preview ? (
           <>
-            Покупатель увидит: <span className="font-bold text-[#2D3A4E]">{preview}</span> (пример для заказа {TRANSFER_COMMENT_SAMPLE_ID})
+            Покупатель увидит: <span className="font-bold text-text-primary">{preview}</span> (пример для заказа {TRANSFER_COMMENT_SAMPLE_ID})
           </>
         ) : (
           'Покупатель увидит: «Комментарий к переводу не нужен — магазин его не указал»'

@@ -1,4 +1,4 @@
-import { Edit2, X, Eye } from 'lucide-react';
+import { Edit2, X, Eye, Copy } from 'lucide-react';
 import { ProductThumbImage } from '../../ProductThumbImage';
 import { Product } from '../../../types';
 import { getProductTotalStock } from '../../../utils/inventory';
@@ -8,7 +8,15 @@ import { useDialogA11y } from '../../../utils/useDialogA11y';
 import type { ProductList } from './useProductList';
 
 /** «Карточка товара»: a quick look at a product with its variations; «Редактировать товар» opens the form */
-export function ProductInspectModal({ list, handleOpenEditProduct }: { list: ProductList; handleOpenEditProduct: (prod: Product) => void }) {
+export function ProductInspectModal({
+  list,
+  handleOpenEditProduct,
+  handleOpenDuplicateProduct,
+}: {
+  list: ProductList;
+  handleOpenEditProduct: (prod: Product) => void;
+  handleOpenDuplicateProduct?: (prod: Product) => void;
+}) {
   const {
     productToInspect,
     setProductToInspect,
@@ -19,24 +27,24 @@ export function ProductInspectModal({ list, handleOpenEditProduct }: { list: Pro
     <>
       {/* ================= MODAL: QUICK PRODUCT INSPECT ================= */}
       {productToInspect && (
-        <ModalPortal><div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div ref={inspectDialog.ref} {...inspectDialog.props} className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-5 sm:p-6 max-w-lg w-full space-y-4 text-[#2D3A4E] border border-white/80 max-h-[90vh] overflow-y-auto my-auto">
+        <ModalPortal><div className="admin-no-glow fixed inset-0 z-[80] bg-text-primary/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div ref={inspectDialog.ref} {...inspectDialog.props} className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-5 sm:p-6 max-w-lg w-full space-y-4 text-text-primary max-h-[90vh] overflow-y-auto my-auto">
             {/* Header */}
-            <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
+            <div className="flex items-center justify-between pb-2 neu-divider-b">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center text-accent">
                   <Eye className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 id={inspectDialog.titleId} className="text-sm font-extrabold uppercase text-[#2D3A4E]">
+                  <h3 id={inspectDialog.titleId} className="text-sm font-extrabold uppercase text-text-primary">
                     Карточка товара
                   </h3>
-                  <span className="text-[11px] font-mono text-[#4E5C70]">{productToInspect.id}</span>
+                  <span className="text-[11px] font-mono text-text-secondary">{productToInspect.id}</span>
                 </div>
               </div>
               <button
                 onClick={() => setProductToInspect(null)}
-                className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer"
+                className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-text-secondary hover:text-text-primary transition-all cursor-pointer"
                 aria-label="Закрыть"
               >
                 <X className="w-4 h-4" />
@@ -60,7 +68,7 @@ export function ProductInspectModal({ list, handleOpenEditProduct }: { list: Pro
 
             <div className="space-y-3 text-xs">
               <div className="flex justify-between items-baseline gap-2">
-                <h4 className="text-base font-extrabold text-[#2D3A4E] leading-tight">
+                <h4 className="text-base font-extrabold text-text-primary leading-tight">
                   {productToInspect.title}
                 </h4>
                 <div className="text-right shrink-0">
@@ -68,7 +76,7 @@ export function ProductInspectModal({ list, handleOpenEditProduct }: { list: Pro
                     {productToInspect.price.toLocaleString('ru-RU')} ₽
                   </div>
                   {productToInspect.originalPrice && (
-                    <div className="text-[11px] text-[#4E5C70] line-through">
+                    <div className="text-[11px] text-text-secondary line-through">
                       {productToInspect.originalPrice.toLocaleString('ru-RU')} ₽
                     </div>
                   )}
@@ -76,22 +84,22 @@ export function ProductInspectModal({ list, handleOpenEditProduct }: { list: Pro
               </div>
 
               {productToInspect.description && (
-                <p className="text-[#4E5C70] text-xs leading-relaxed">
+                <p className="text-text-secondary text-xs leading-relaxed">
                   {productToInspect.description}
                 </p>
               )}
 
               <div className="grid grid-cols-2 gap-2 text-[11px]">
                 <div className="neu-inset rounded-xl p-2.5">
-                  <span className="text-[#4E5C70] block">Категория:</span>
-                  <strong className="text-[#2D3A4E]">
+                  <span className="text-text-secondary block">Категория:</span>
+                  <strong className="text-text-primary">
                     {productToInspect.categoryLabel || productToInspect.category}
                   </strong>
                 </div>
                 {productToInspect.material?.trim() && (
                   <div className="neu-inset rounded-xl p-2.5">
-                    <span className="text-[#4E5C70] block">Состав:</span>
-                    <strong className="text-[#2D3A4E]">{productToInspect.material}</strong>
+                    <span className="text-text-secondary block">Состав:</span>
+                    <strong className="text-text-primary">{productToInspect.material}</strong>
                   </div>
                 )}
               </div>
@@ -99,7 +107,7 @@ export function ProductInspectModal({ list, handleOpenEditProduct }: { list: Pro
               {/* SKU Breakdown in inspect modal */}
               {productToInspect.skus && productToInspect.skus.length > 0 && (
                 <div className="space-y-1.5 pt-1">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-[#4E5C70]">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-text-secondary">
                     <span>Вариации SKU ({productToInspect.skus.length})</span>
                     <span className="text-accent font-extrabold">
                       Всего: {getProductTotalStock(productToInspect)} шт.
@@ -111,10 +119,10 @@ export function ProductInspectModal({ list, handleOpenEditProduct }: { list: Pro
                         key={`inspect-sku-${sku.color}-${sku.size}-${sku.id || sIdx}-${sIdx}`}
                         className="flex items-center justify-between py-1 px-2 neu-flat rounded-lg"
                       >
-                        <span className="font-bold text-[#2D3A4E]">
+                        <span className="font-bold text-text-primary">
                           {sku.color} • {sku.size}
                         </span>
-                        <div className="flex items-center gap-2 font-mono text-[11px] text-[#4E5C70]">
+                        <div className="flex items-center gap-2 font-mono text-[11px] text-text-secondary">
                           <span>{sku.skuCode}</span>
                           <span className="font-extrabold text-accent">{sku.stock} шт.</span>
                         </div>
@@ -126,14 +134,29 @@ export function ProductInspectModal({ list, handleOpenEditProduct }: { list: Pro
             </div>
 
             {/* Inspect Actions */}
-            <div className="flex gap-2.5 pt-2 border-t border-[#BAC5D5]/50">
+            <div className="flex flex-wrap gap-2 pt-2 neu-divider-t">
               <button
                 type="button"
                 onClick={() => setProductToInspect(null)}
-                className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer"
+                className="py-2.5 px-4 neu-button rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary transition-all cursor-pointer"
               >
                 Закрыть
               </button>
+              {handleOpenDuplicateProduct && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const targetProd = productToInspect;
+                    setProductToInspect(null);
+                    handleOpenDuplicateProduct(targetProd);
+                  }}
+                  className="flex-1 py-2.5 px-3 neu-button rounded-xl text-xs font-extrabold text-accent hover:text-accent-strong cursor-pointer transition-all flex items-center justify-center gap-1.5 whitespace-nowrap"
+                  title="Открыть форму создания нового товара с характеристиками и ценой этого товара"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>По образцу (в форму)</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -141,7 +164,7 @@ export function ProductInspectModal({ list, handleOpenEditProduct }: { list: Pro
                   setProductToInspect(null);
                   handleOpenEditProduct(targetProd);
                 }}
-                className="flex-1 py-2.5 neu-button-accent rounded-xl text-xs font-extrabold text-white cursor-pointer transition-all flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 px-4 neu-button-accent rounded-xl text-xs font-extrabold text-white cursor-pointer transition-all flex items-center justify-center gap-2 whitespace-nowrap"
               >
                 <Edit2 className="w-3.5 h-3.5" />
                 <span>Редактировать товар</span>

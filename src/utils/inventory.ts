@@ -412,7 +412,7 @@ export interface OrderStockProblem {
  * expanded, `expandPackLines`): a variant with a line of a size pack is never a preorder (owner's decision 12.10).
  */
 export function orderStockProblems(items: CartItem[], products: Product[], preorderMode: boolean): OrderStockProblem[] {
-  const groups = new Map<string, { item: CartItem; wanted: number; pack: boolean }>();
+  const groups = new Map<string, { item: CartItem; wanted: number; noPreorder: boolean }>();
   for (const item of items) {
     const key = [
       item.product.id,
@@ -420,14 +420,14 @@ export function orderStockProblems(items: CartItem[], products: Product[], preor
       extractSizeName(item.selectedSize).trim().toLowerCase(),
     ].join('|');
     const group = groups.get(key);
-    const pack = Boolean(item.packGroup);
+    const noPreorder = Boolean(item.packGroup) || item.priceKind === 'broken';
     if (group) {
       group.wanted += item.quantity;
-      group.pack = group.pack || pack;
-    } else groups.set(key, { item, wanted: item.quantity, pack });
+      group.noPreorder = group.noPreorder || noPreorder;
+    } else groups.set(key, { item, wanted: item.quantity, noPreorder });
   }
   const problems: OrderStockProblem[] = [];
-  for (const { item, wanted, pack } of groups.values()) {
+  for (const { item, wanted, noPreorder } of groups.values()) {
     const product = products.find((p) => p.id === item.product.id);
     const base = {
       productId: item.product.id,
@@ -440,7 +440,7 @@ export function orderStockProblems(items: CartItem[], products: Product[], preor
       problems.push({ ...base, available: 0, reason: 'removed' });
       continue;
     }
-    const available = getOrderableStock(product, item.selectedColor, item.selectedSize, preorderMode && !pack);
+    const available = getOrderableStock(product, item.selectedColor, item.selectedSize, preorderMode && !noPreorder);
     if (wanted > available) problems.push({ ...base, available, reason: isHiddenFromSale(product) ? 'hidden' : 'short' });
   }
   return problems;

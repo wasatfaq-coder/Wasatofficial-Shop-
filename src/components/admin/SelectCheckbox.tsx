@@ -21,7 +21,7 @@ export const SelectCheckbox: React.FC<SelectCheckboxProps> = ({ checked, onToggl
     aria-label={label}
     title={label}
     onClick={onToggle}
-    className={`p-1.5 -m-1 shrink-0 rounded-xl cursor-pointer group ${className}`}
+    className={`min-w-8 min-h-8 p-1.5 -m-1 shrink-0 inline-flex items-center justify-center rounded-xl cursor-pointer group ${className}`}
   >
     <span
       aria-hidden="true"

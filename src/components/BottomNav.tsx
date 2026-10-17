@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Home, Grid, ShoppingBag, Heart, User } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { m, AnimatePresence } from 'motion/react';
 import { ActiveTab } from '../types';
 import { pluralRu } from '../utils/pluralize';
 
@@ -69,7 +69,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
   return (
     <div className="fixed bottom-3 left-1/2 -translate-x-1/2 w-full max-w-md md:max-w-lg z-40 px-3 pointer-events-none lg:hidden">
-      <nav aria-label="Основная навигация" className="pointer-events-auto max-w-sm mx-auto neu-flat rounded-[26px] p-1.5 flex items-center justify-between gap-1 border border-white/70">
+      <nav aria-label="Основная навигация" className="pointer-events-auto max-w-sm mx-auto neu-flat rounded-[26px] p-1.5 flex items-center justify-between gap-1 ">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           // As in DesktopHeader: checkout belongs to the cart, a product page to the catalog
@@ -88,7 +88,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               className={`relative flex-1 h-11 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-colors duration-200 select-none ${
                 isActive
                   ? 'text-accent font-bold'
-                  : 'text-[#4E5C70] hover:text-[#2D3A4E] active:scale-95'
+                  : 'text-text-secondary hover:text-text-primary active:scale-95'
               }`}
               // The number on the badge is heard too, as on the computer's header (audit 07.10, finding 35)
               aria-label={
@@ -99,7 +99,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               aria-current={isActive ? 'page' : undefined}
             >
               {isActive && (
-                <motion.div
+                <m.div
                   layoutId="bottomNavPill"
                   className="absolute inset-0 rounded-2xl neu-pill-active z-0"
                   transition={{ type: 'spring', stiffness: 450, damping: 35 }}
@@ -110,7 +110,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               {isCartTab && (
                 <AnimatePresence>
                   {cartAnimationCount > 0 && (
-                    <motion.div
+                    <m.div
                       key={`cart-ripple-${cartAnimationCount}`}
                       initial={{ scale: 0.6, opacity: 0.8 }}
                       animate={{ scale: 2, opacity: 0 }}
@@ -126,7 +126,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               {isCartTab && (
                 <AnimatePresence>
                   {cartPlusBadge && (
-                    <motion.span
+                    <m.span
                       key={`cart-plus-${cartPlusBadge.id}`}
                       initial={{ opacity: 0, y: 2, scale: 0.6 }}
                       animate={{
@@ -139,7 +139,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                       className="absolute -top-1 left-1/2 -translate-x-1/2 z-30 bg-accent text-white text-[11px] font-extrabold px-1.5 py-0.5 rounded-full shadow-[var(--neu-fill-accent-shadow)] pointer-events-none ring-1 ring-white/80"
                     >
                       {cartPlusBadge.text}
-                    </motion.span>
+                    </m.span>
                   )}
                 </AnimatePresence>
               )}
@@ -147,7 +147,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               <div className="relative z-10 flex flex-col items-center justify-center">
                 {/* Icon with micro-animation */}
                 {isCartTab ? (
-                  <motion.div
+                  <m.div
                     key={`cart-icon-anim-${cartAnimationCount}`}
                     animate={
                       cartAnimationCount > 0
@@ -165,9 +165,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                         isActive ? 'stroke-[2.2] text-accent scale-105' : 'stroke-[1.8]'
                       }`}
                     />
-                  </motion.div>
+                  </m.div>
                 ) : isFavTab ? (
-                  <motion.div
+                  <m.div
                     key={`fav-icon-anim-${favAnimationCount}`}
                     animate={
                       favAnimationCount > 0
@@ -183,7 +183,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                         isActive ? 'stroke-[2.2] text-accent scale-105' : 'stroke-[1.8]'
                       }`}
                     />
-                  </motion.div>
+                  </m.div>
                 ) : (
                   <Icon
                     className={`w-5 h-5 transition-transform duration-200 ${
@@ -199,15 +199,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
               {/* Badge with micro-animation pop */}
               {tab.badge !== undefined && tab.badge > 0 && (
-                <motion.span
+                <m.span
                   key={`badge-${tab.id}-${tab.badge}`}
                   initial={{ scale: 0.4, opacity: 0 }}
                   animate={{ scale: [0.4, 1.3, 0.9, 1.05, 1], opacity: 1 }}
                   transition={{ duration: 0.35, ease: 'backOut' }}
-                  className="absolute -top-1 -right-1 z-20 bg-accent text-white font-bold text-[11px] min-w-[17px] h-[17px] px-1 rounded-full flex items-center justify-center ring-2 ring-[#E3E8EF] shadow-sm shadow-accent/30"
+                  className="absolute -top-1 -right-1 z-20 bg-accent text-white font-bold text-[11px] min-w-[17px] h-[17px] px-1 rounded-full flex items-center justify-center ring-2 ring-[#E3E8EF] shadow-[var(--neu-fill-accent-shadow)]"
                 >
                   {tab.badge > 99 ? '99+' : tab.badge}
-                </motion.span>
+                </m.span>
               )}
             </button>
           );

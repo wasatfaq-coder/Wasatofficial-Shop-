@@ -90,14 +90,14 @@ export const DeliveryCommonSettings: React.FC<DeliveryCommonSettingsProps> = ({ 
     <section aria-labelledby="delivery-common-title" className="neu-flat rounded-3xl p-4 space-y-3">
       <div className="flex items-center gap-2">
         <Sparkles className="w-4 h-4 text-accent shrink-0" aria-hidden="true" />
-        <h3 id="delivery-common-title" className="text-sm font-extrabold text-[#2D3A4E]">
+        <h3 id="delivery-common-title" className="text-sm font-extrabold text-text-primary">
           Для всех способов
         </h3>
       </div>
 
       <div className="space-y-1.5">
         <div className="flex items-center gap-1">
-          <label htmlFor="delivery-free-threshold" className="text-xs font-bold text-[#2D3A4E]">
+          <label htmlFor="delivery-free-threshold" className="text-xs font-bold text-text-primary">
             Бесплатная доставка от, ₽
           </label>
           <AdminHint label="Бесплатная доставка от">
@@ -124,7 +124,7 @@ export const DeliveryCommonSettings: React.FC<DeliveryCommonSettingsProps> = ({ 
             }}
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? 'delivery-free-threshold-error' : undefined}
-            className="w-36 px-3 py-2 neu-inset rounded-xl text-sm font-extrabold text-[#2D3A4E]"
+            className="w-36 px-3 py-2 neu-inset rounded-xl text-sm font-extrabold text-text-primary"
           />
           {dirty && (
             <button
@@ -148,14 +148,14 @@ export const DeliveryCommonSettings: React.FC<DeliveryCommonSettingsProps> = ({ 
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-1">
-            <span id="delivery-express-label" className="text-xs font-bold text-[#2D3A4E]">
+            <span id="delivery-express-label" className="text-xs font-bold text-text-primary">
               Экспресс-доставка
             </span>
             <AdminHint label="Экспресс-доставка">
               Выключите — способы с типом «Экспресс» пропадут у покупателей, сами способы останутся
             </AdminHint>
           </div>
-          <p className="text-xs text-[#4E5C70]">{expressOn ? 'Показывается покупателям' : 'Скрыта от покупателей'}</p>
+          <p className="text-xs text-text-secondary">{expressOn ? 'Показывается покупателям' : 'Скрыта от покупателей'}</p>
         </div>
         <NeumorphicSwitch checked={expressOn} onChange={toggleExpress} label="Экспресс-доставка" disabled={expressSaving} />
       </div>

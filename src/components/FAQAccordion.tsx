@@ -1,6 +1,6 @@
 import React, { useId } from 'react';
 import { ChevronDown, CheckCircle2, HelpCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { m, AnimatePresence } from 'motion/react';
 
 export interface FAQAccordionItem {
   id: string;
@@ -27,9 +27,9 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
   const idPrefix = useId();
   if (items.length === 0) {
     return (
-      <div className="neu-flat rounded-2xl p-6 text-center space-y-2 text-[#4E5C70]">
+      <div className="neu-flat rounded-2xl p-6 text-center space-y-2 text-text-secondary">
         <HelpCircle className="w-8 h-8 mx-auto text-[#BAC5D5]" />
-        <p className="font-bold text-sm text-[#2D3A4E]">{emptyMessage}</p>
+        <p className="font-bold text-sm text-text-primary">{emptyMessage}</p>
         <p className="text-xs">
           Попробуйте изменить формулировку запроса или обратитесь напрямую в нашу службу заботы.
         </p>
@@ -54,24 +54,24 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
               onClick={() => onToggle(item.id)}
               aria-expanded={isExpanded}
               aria-controls={isExpanded ? panelId : undefined}
-              className={`w-full p-3.5 sm:p-4 rounded-2xl neu-button flex items-start justify-between gap-3 text-left transition-all duration-200 cursor-pointer active:scale-[0.99] ${
+              className={`w-full p-3.5 sm:p-4 rounded-2xl flex items-start justify-between gap-3 text-left transition-all duration-200 cursor-pointer ${
                 isExpanded
-                  ? 'border border-accent/30 bg-white/80'
-                  : 'hover:border-white/90'
+                  ? 'neu-pill-active'
+                  : 'neu-button'
               }`}
             >
               <div className="flex items-start gap-2.5 min-w-0 flex-1">
                 <span className="w-2 h-2 rounded-full bg-accent mt-1.5 shrink-0" />
-                <span className="text-xs sm:text-sm font-extrabold text-[#2D3A4E] leading-snug">
+                <span className="text-xs sm:text-sm font-extrabold text-text-primary leading-snug">
                   {item.question}
                 </span>
               </div>
 
               <div
-                className={`w-7 h-7 rounded-xl neu-inset flex items-center justify-center shrink-0 transition-transform duration-300 ${
+                className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-300 ${
                   isExpanded
-                    ? 'rotate-180 text-white bg-accent'
-                    : 'text-accent bg-[#E3E8EF]'
+                    ? 'neu-fill-accent rotate-180'
+                    : 'neu-inset text-accent'
                 }`}
               >
                 <ChevronDown aria-hidden="true" className={`w-4 h-4 ${isExpanded ? 'text-white' : 'text-accent'}`} />
@@ -81,7 +81,7 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
             {/* Accordion Answer Panel styled with neu-inset */}
             <AnimatePresence>
               {isExpanded && (
-                <motion.div
+                <m.div
                   id={panelId}
                   initial={{ height: 0, opacity: 0, marginTop: 0 }}
                   animate={{ height: 'auto', opacity: 1, marginTop: 8 }}
@@ -89,17 +89,17 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
                   transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
                   className="overflow-hidden"
                 >
-                  <div className="neu-inset rounded-2xl p-4 border border-white/60 space-y-3">
-                    <p className="text-xs sm:text-[13px] text-[#4A5568] leading-relaxed font-medium">
+                  <div className="neu-inset rounded-2xl p-4 space-y-3">
+                    <p className="text-xs sm:text-[13px] text-text-secondary leading-relaxed font-medium">
                       {item.answer}
                     </p>
 
                     {item.highlights && item.highlights.length > 0 && (
-                      <div className="flex flex-wrap gap-2 pt-1 border-t border-[#BAC5D5]/40">
+                      <div className="flex flex-wrap gap-2 pt-2 neu-divider-t">
                         {item.highlights.map((h, i) => (
                           <span
                             key={i}
-                            className="neu-flat px-2.5 py-1 rounded-xl text-[11px] sm:text-[11px] font-bold text-success border border-success/40 flex items-center gap-1.5"
+                            className="neu-tone-success px-2.5 py-1 rounded-xl text-[11px] font-bold text-success flex items-center gap-1.5"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0" />
                             <span>{h}</span>
@@ -108,7 +108,7 @@ export const FAQAccordion: React.FC<FAQAccordionProps> = ({
                       </div>
                     )}
                   </div>
-                </motion.div>
+                </m.div>
               )}
             </AnimatePresence>
           </div>

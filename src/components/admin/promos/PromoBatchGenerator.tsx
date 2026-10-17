@@ -13,8 +13,8 @@ interface PromoBatchGeneratorProps {
   onClose: () => void;
 }
 
-const fieldLabel = 'text-[11px] font-bold text-[#4E5C70] block';
-const fieldInput = 'w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-bold';
+const fieldLabel = 'text-[11px] font-bold text-text-secondary block';
+const fieldInput = 'w-full px-3 py-2 neu-inset rounded-xl text-xs text-text-primary font-bold';
 
 /**
  * «Пачка кодов» — single-use codes for a mailing, a screen of its own (stage 8 of docs/admin-wholesale-plan.md, part 2,
@@ -107,18 +107,18 @@ export const PromoBatchGenerator: React.FC<PromoBatchGeneratorProps> = ({ promos
         <button
           type="button"
           onClick={onClose}
-          className="h-9 px-3 neu-button rounded-xl text-xs font-bold text-[#2D3A4E] hover:text-accent flex items-center gap-1.5 cursor-pointer shrink-0"
+          className="h-9 px-3 neu-button rounded-xl text-xs font-bold text-text-primary hover:text-accent flex items-center gap-1.5 cursor-pointer shrink-0"
         >
           <ArrowLeft className="w-4 h-4" aria-hidden="true" />
           <span>К списку</span>
         </button>
-        <h4 ref={headingRef} tabIndex={-1} className="text-sm font-extrabold text-[#2D3A4E] truncate">
+        <h4 ref={headingRef} tabIndex={-1} className="text-sm font-extrabold text-text-primary truncate">
           Пачка одноразовых кодов
         </h4>
       </div>
 
       <div className="neu-inset rounded-2xl p-3.5 sm:p-4 space-y-3">
-        <p className="text-xs text-[#4E5C70]">
+        <p className="text-xs text-text-secondary">
           Каждый код можно применить один раз — для рассылки в SMS, Telegram или по почте. Код с лимитом работает только
           у покупателя, вошедшего через Google.
         </p>
@@ -181,7 +181,7 @@ export const PromoBatchGenerator: React.FC<PromoBatchGeneratorProps> = ({ promos
                     setDiscountValue(option.reset);
                   }}
                   className={`flex-1 min-h-8 text-[11px] font-extrabold rounded-lg transition-all cursor-pointer ${
-                    discountType === option.id ? 'neu-pill-active' : 'text-[#4E5C70]'
+                    discountType === option.id ? 'neu-pill-active' : 'text-text-secondary'
                   }`}
                 >
                   {option.label}
@@ -229,7 +229,7 @@ export const PromoBatchGenerator: React.FC<PromoBatchGeneratorProps> = ({ promos
               aria-describedby="batch-expires-at-hint"
               className={fieldInput}
             />
-            <p id="batch-expires-at-hint" className="text-[11px] text-[#4E5C70] mt-1">
+            <p id="batch-expires-at-hint" className="text-[11px] text-text-secondary mt-1">
               До конца дня по Москве. Пусто — без срока.
             </p>
           </div>
@@ -240,7 +240,7 @@ export const PromoBatchGenerator: React.FC<PromoBatchGeneratorProps> = ({ promos
             ref={errorsRef}
             tabIndex={-1}
             role="alert"
-            className="bg-danger-soft border border-danger/40 rounded-xl p-2.5 text-xs font-bold text-danger space-y-1"
+            className="neu-tone-danger rounded-xl p-2.5 text-xs font-bold text-danger space-y-1"
           >
             {errors.map((err) => (
               <p key={err}>{err}</p>
@@ -268,13 +268,13 @@ export const PromoBatchGenerator: React.FC<PromoBatchGeneratorProps> = ({ promos
       {generated.length > 0 && (
         <section aria-label="Созданные коды" className="neu-inset rounded-2xl p-3.5 space-y-2.5">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <p className="text-xs font-extrabold text-[#2D3A4E]">
+            <p className="text-xs font-extrabold text-text-primary">
               Создано {generated.length} {pluralRu(generated.length, ['код', 'кода', 'кодов'])}
             </p>
             <button
               type="button"
               onClick={handleCopy}
-              className="h-9 px-3.5 neu-button rounded-xl text-xs font-bold text-[#2D3A4E] hover:text-accent flex items-center gap-1.5 cursor-pointer"
+              className="h-9 px-3.5 neu-button rounded-xl text-xs font-bold text-text-primary hover:text-accent flex items-center gap-1.5 cursor-pointer"
             >
               {isCopied ? (
                 <CheckCircle2 className="w-3.5 h-3.5 text-success" aria-hidden="true" />
@@ -286,12 +286,12 @@ export const PromoBatchGenerator: React.FC<PromoBatchGeneratorProps> = ({ promos
           </div>
           <ul className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
             {generated.map((c) => (
-              <li key={c} className="font-mono text-[11px] font-bold text-[#2D3A4E] neu-flat-sm px-2 py-1 rounded-lg">
+              <li key={c} className="font-mono text-[11px] font-bold text-text-primary neu-flat-sm px-2 py-1 rounded-lg">
                 {c}
               </li>
             ))}
           </ul>
-          <p className="text-[11px] text-[#4E5C70]">
+          <p className="text-[11px] text-text-secondary">
             Потом коды пачки — одной строкой в списке промокодов: там «Скопировать неиспользованные».
           </p>
         </section>

@@ -40,7 +40,7 @@ test('гость с промокодом: скидка в заказе, счёт
 
   await page.getByRole('button', { name: 'Редактировать адрес' }).click();
   const address = page.getByRole('dialog', { name: 'Редактировать адрес' });
-  await address.getByRole('textbox', { name: 'Город' }).fill('Москва');
+  await address.getByRole('textbox', { name: 'Город', exact: true }).fill('Москва');
   await address.getByRole('textbox', { name: 'Улица' }).fill('Тверская');
   await address.getByRole('textbox', { name: 'Номер дома' }).fill('7');
   await address.getByRole('textbox', { name: 'Подъезд' }).fill('1');

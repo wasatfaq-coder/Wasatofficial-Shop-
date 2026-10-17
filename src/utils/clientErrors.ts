@@ -77,11 +77,12 @@ export function isStaleBuildError(message: string): boolean {
   return /dynamically imported module|Importing a module script failed|Unable to preload CSS|error loading dynamically imported module|Failed to fetch dynamically/i.test(message);
 }
 
-// Not the site's fault: no network, a closed Google window, browser extensions, the browser's own noise
+// Not the site's fault: no network, a closed Google window, browser extensions, multi-tab IndexedDB lease contention, the browser's own noise
 const NOISE = [
   /popup-closed-by-user|cancelled-popup-request|popup-blocked|user-cancelled/i,
   /network-request-failed|client is offline|Could not reach Cloud Firestore backend|Failed to fetch$|NetworkError when attempting|Load failed$/i,
   /\[code=unavailable\]|code=unavailable|deadline-exceeded/i,
+  /Failed to obtain primary lease for action/i,
   /ResizeObserver loop/i,
   /^Script error\.?$/i,
   /AbortError|The user aborted a request|signal is aborted/i,

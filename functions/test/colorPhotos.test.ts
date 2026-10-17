@@ -63,7 +63,7 @@ describe('normalizeProductColors keeps the binding', () => {
 
 describe('CSV import and the colour photo', () => {
   const header = 'ID;Название;Категория;Цена;Старая цена;В наличии;Остаток;Размеры;Цвета;Фото;Описание';
-  const catalog = [{ id: 'p1', colors }];
+  const catalog = [{ id: 'p1', colors, sizes: [] }];
   test('a row without photos keeps the binding', () => {
     const { products } = parseProductsFromCSV(`${header}\np1;Рубашка;shirts;1000;;да;;;Красный;;`, catalog);
     expect(products[0].colors?.[0].imageIndex).toBe(2);

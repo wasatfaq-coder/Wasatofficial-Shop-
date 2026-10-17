@@ -1,7 +1,7 @@
 import type { AddressParts } from './shared/personName';
 import type { DeliveryKind, OrderStatusLogEntry } from './shared/orderFlow';
 import type { ProductPurchase } from './utils/currencyPricing';
-import type { SaleChannel, WholesaleSettings } from './shared/wholesalePricing';
+import type { BrokenPackDiscount, SaleChannel, WholesaleSettings } from './shared/wholesalePricing';
 import type { SizePack } from './shared/sizePacks';
 export interface BodyMeasurements {
   height: number;
@@ -220,6 +220,8 @@ export interface Product {
    * is compared with the price in effect when it was placed. Written by the admin's saves and «Курсы и наценка»
    */
   priceHistory?: PriceHistoryEntry[];
+  /** Earlier wholesale prices with the time each ended (`src/utils/priceHistory.ts`, stage 21): for unpaid wholesale order checks */
+  wholesalePriceHistory?: PriceHistoryEntry[];
   badge?: string;
   description: string;
   material: string;
@@ -284,8 +286,14 @@ export interface CartItem {
    * product's price. Read only through `linePrice` (`src/shared/orderLine.ts`); nothing sets it yet
    */
   unitPrice?: number;
+  /**
+   * Base catalog price of one item (or one pack for a size pack) when the line was added to the cart:
+   * kept in the browser only to show «Цена изменилась: было … ₽» if the catalog price changes while in the cart;
+   * never used to calculate order totals.
+   */
+  addedPrice?: number;
   /** Which price `unitPrice` is; absent — retail. The buyer's choice; the price itself is counted by `priceCartLines` */
-  priceKind?: 'retail' | 'wholesale' | 'pack';
+  priceKind?: 'retail' | 'wholesale' | 'pack' | 'broken';
   /** Wholesale line: the volume discount of one item, ₽, already taken off `unitPrice` (for showing it) */
   volumeDiscountPerUnit?: number;
   /** Wholesale line: items in one pack at the moment of the order (the quantity is packs × this) */
@@ -775,6 +783,8 @@ export interface PriceChangeLog {
   productTitle: string;
   oldPrice: number;
   newPrice: number;
+  /** Тип изменённой цены: розничная (по умолчанию) или оптовая */
+  priceKind?: 'retail' | 'wholesale';
   /** «Применить» of the rates, or the admin's own edit (form, list, bulk action, CSV import) */
   source: 'rates' | 'admin';
   /** Rates only: the purchase currency and the working rate the price came from */
@@ -890,8 +900,14 @@ export interface StorefrontSettings {
   labelFormats?: LabelFormat[];
   /** Admin → «Категории»: the single list used by the storefront and the admin panel */
   categories?: StoreCategory[];
+  /** Admin → «Витрина»: palette of up to 40 colours shown as quick chips in the product form (docs/fast-product-entry-spec.md) */
+  productColors?: { name: string; hex: string }[];
+  /** Admin → «Витрина»: up to 30 sizes shown as quick chips in the product form (docs/fast-product-entry-spec.md) */
+  productSizes?: string[];
   /** Admin → «Опт»: the volume discount of wholesale lines (src/shared/wholesalePricing.ts); absent — none */
   wholesale?: WholesaleSettings;
+  /** Admin → «Опт»: discount on broken size packs (% or ₽ per item off wholesalePrice; stage 14 of docs/unified-plan.md) */
+  brokenPackDiscount?: BrokenPackDiscount;
 }
 
 /** Label size for the label generator (Admin → «Склад») */

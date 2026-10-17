@@ -31,11 +31,11 @@ export function ProductFormBlock({
 }) {
   const panelId = `product-form-block-${id}`;
   return (
-    <section aria-labelledby={`${panelId}-title`} className="neu-flat-sm rounded-2xl border border-white/60">
+    <section aria-labelledby={`${panelId}-title`} className="neu-flat-sm rounded-2xl ">
       {/* the button is stretched over the whole row: the summary and the arrow open the block too */}
       <div className="relative min-h-12 px-3.5 py-2.5 flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h4 id={`${panelId}-title`} className="text-sm font-extrabold text-[#2D3A4E] font-display">
+          <h4 id={`${panelId}-title`} className="text-sm font-extrabold text-text-primary font-display">
             <button
               type="button"
               onClick={() => onToggle(id)}
@@ -52,7 +52,7 @@ export function ProductFormBlock({
               )}
             </button>
           </h4>
-          <p id={`${panelId}-summary`} className="text-xs text-[#4E5C70] leading-snug truncate">
+          <p id={`${panelId}-summary`} className="text-xs text-text-secondary leading-snug truncate">
             {summary}
           </p>
         </div>

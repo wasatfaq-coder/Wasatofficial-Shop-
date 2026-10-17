@@ -30,13 +30,13 @@ export const NeumorphicSwitch: React.FC<NeumorphicSwitchProps> = ({
     aria-label={label}
     disabled={disabled}
     onClick={() => onChange(!checked)}
-    className={`w-12 h-7 rounded-full p-1 shrink-0 flex items-center transition-colors duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-55 ${
-      checked ? 'neu-fill-accent' : 'neu-inset'
+    className={`w-12 h-7 rounded-full p-1 shrink-0 flex items-center transition-colors duration-200 cursor-pointer disabled:cursor-not-allowed ${
+      disabled ? 'neu-button-disabled' : checked ? 'neu-fill-accent' : 'neu-inset'
     } ${className}`}
   >
     <span
       aria-hidden="true"
-      className={`w-5 h-5 rounded-full neu-flat-sm border border-white/90 transition-transform duration-200 ${
+      className={`w-5 h-5 rounded-full neu-switch-thumb transition-transform duration-200 ${
         checked ? 'translate-x-5' : 'translate-x-0'
       }`}
     />

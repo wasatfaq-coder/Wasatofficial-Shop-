@@ -5,11 +5,7 @@ import { previewsMoved, withProductPreviews, type ProductPreviewsDoc } from './p
 
 type PhotoSource = Pick<Product, 'id' | 'images' | 'photoIds' | 'previewKey'>;
 
-/**
- * The previews of a product shown whole (docs/catalog-scale-plan.md, stage 6): from the product, or read from
- * `product_previews` while it is shown; '' meanwhile
- */
-export function useProductPreviews(product: PhotoSource | null | undefined): string[] {
+function useProductPreviewsState(product: PhotoSource | null | undefined): { previews: string[]; settled: boolean } {
   const [read, setRead] = useState<{ key: string; doc: ProductPreviewsDoc | null } | null>(null);
   const key = product && previewsMoved(product) ? `${product.id}:${product.previewKey}` : '';
   useEffect(() => {
@@ -21,20 +17,32 @@ export function useProductPreviews(product: PhotoSource | null | undefined): str
     };
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   const images = product?.images ?? [];
-  return key && read?.key === key ? withProductPreviews({ images }, read.doc).images : images;
+  const settled = !key || read?.key === key;
+  return {
+    previews: key && read?.key === key ? withProductPreviews({ images }, read.doc).images : images,
+    settled,
+  };
+}
+
+/**
+ * The previews of a product shown whole (docs/catalog-scale-plan.md, stage 6): from the product, or read from
+ * `product_previews` while it is shown; '' meanwhile
+ */
+export function useProductPreviews(product: PhotoSource | null | undefined): string[] {
+  return useProductPreviewsState(product).previews;
 }
 
 /**
  * Full photos of a product for its page and the zoom (stage 6 of the audit 02.10): the previews at once, a full photo
- * replaces its preview when it arrives from `product_photos`. Only the photos that are shown are read
- * (docs/catalog-scale-plan.md, stage 4): the slide on screen (`shownIndex`) and those `show(i)` asks for — a full photo
- * is ≈ 250 КБ, and most visitors never swipe to the last one.
+ * replaces its preview when it arrives from `product_photos`. Previews come first (docs/performance-plan.md, stage 3)
+ * so the 260 KB full photo does not delay showing the slide's preview; only the photos that are shown are read
+ * (docs/catalog-scale-plan.md, stage 4): the slide on screen (`shownIndex`) and those `show(i)` asks for.
  */
 export function useProductPhotos(
   product: PhotoSource | null | undefined,
   shownIndex = 0
 ): { photos: string[]; show: (index: number) => void } {
-  const previews = useProductPreviews(product);
+  const { previews, settled: previewsSettled } = useProductPreviewsState(product);
   const ids = product?.photoIds ?? [];
   const [full, setFull] = useState<Record<string, string>>({});
   const [wanted, setWanted] = useState<string[]>([]);
@@ -52,7 +60,7 @@ export function useProductPhotos(
     [key]
   );
 
-  const load = [shownId, ...wanted].filter(Boolean).join('|');
+  const load = previewsSettled ? [shownId, ...wanted].filter(Boolean).join('|') : '';
   useEffect(() => {
     if (!load) return;
     let alive = true;

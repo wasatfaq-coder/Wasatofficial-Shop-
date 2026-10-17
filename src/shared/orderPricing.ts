@@ -4,7 +4,7 @@
  */
 import type { AppliedPromoInfo, CartItem, DeliveryMethod, PromoCode, StorefrontSettings } from '../types';
 import { linePrice } from './orderLine';
-import { isWholesaleLine } from './wholesalePricing';
+import { isBrokenPackLine, isWholesaleLine } from './wholesalePricing';
 
 /** Delivery method id used by the one-click "quick order" flow (no fee, no promo). */
 export const QUICK_ORDER_DELIVERY_ID = 'quick-order';
@@ -30,6 +30,11 @@ export interface PricingLine {
    * does not count toward a promo's minimum order amount
    */
   wholesale?: boolean;
+  /**
+   * A broken pack line (`priceKind === 'broken'`, stage 15 of docs/unified-plan.md): already discounted off wholesale,
+   * so promo codes never apply to it and it does not count toward a promo's minimum order amount
+   */
+  broken?: boolean;
 }
 
 /** The promo fields pricing needs; satisfied by both PromoCode and AppliedPromoInfo. */
@@ -48,6 +53,7 @@ export function toPricingLine(item: Pick<CartItem, 'product' | 'quantity' | 'uni
     price: linePrice(item),
     quantity: item.quantity,
     ...(isWholesaleLine(item) ? { wholesale: true } : {}),
+    ...(isBrokenPackLine(item) ? { broken: true } : {}),
   };
 }
 
@@ -59,8 +65,8 @@ function isRestricted(promo: Partial<PromoForPricing>): boolean {
   return Boolean(promo.applicableProductIds?.length || promo.applicableCategories?.length);
 }
 
-/** The lines a promo may touch: retail only — wholesale prices are already lowered (owner's decision 09.10) */
-const retailLines = (lines: PricingLine[]) => lines.filter((l) => !l.wholesale);
+/** The lines a promo may touch: retail only — wholesale and broken pack prices are already lowered (owner's decisions 09.10 & 12.10) */
+const retailLines = (lines: PricingLine[]) => lines.filter((l) => !l.wholesale && !l.broken);
 
 /** Subtotal of the retail lines: what a promo's minimum order amount is compared with */
 export function calcRetailSubtotal(lines: PricingLine[]): number {
@@ -186,12 +192,12 @@ export function validatePromo(promo: PromoCode, lines: PricingLine[], now: numbe
   if (expiry !== null && expiry < now) {
     return `Срок действия промокода ${promo.code} истек`;
   }
-  if (lines.length > 0 && lines.every((l) => l.wholesale)) {
+  if (lines.length > 0 && lines.every((l) => l.wholesale || l.broken)) {
     return WHOLESALE_NO_PROMO_TEXT;
   }
   const subtotal = calcRetailSubtotal(lines);
   if (promo.minOrderAmount && subtotal < promo.minOrderAmount) {
-    const where = lines.some((l) => l.wholesale) ? 'в рознице в корзине' : 'в корзине';
+    const where = lines.some((l) => l.wholesale || l.broken) ? 'в рознице в корзине' : 'в корзине';
     return `Минимальная сумма заказа для промокода ${promo.code}: ${promo.minOrderAmount.toLocaleString('ru-RU')} ₽ (${where}: ${subtotal.toLocaleString('ru-RU')} ₽)`;
   }
   if (lines.length > 0 && isRestricted(promo) && calcEligibleSubtotal(lines, promo) === 0) {

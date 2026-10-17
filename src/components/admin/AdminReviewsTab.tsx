@@ -43,9 +43,9 @@ const STATUS_CHIPS: { id: AdminReviewStatusFilter; label: string }[] = [
 const RATING_CHIPS: AdminReviewRatingFilter[] = ['all', 5, 4, 3, 2, 1];
 
 const STATUS_BADGE: Record<ReviewVisibility, string> = {
-  pending: 'bg-warning-soft border border-warning/30 text-[#2D3A4E]',
-  published: 'bg-success-soft border border-success/30 text-[#2D3A4E]',
-  rejected: 'bg-danger-soft border border-danger/30 text-[#2D3A4E]',
+  pending: 'neu-tone-warning text-text-primary',
+  published: 'neu-tone-success text-text-primary',
+  rejected: 'neu-tone-danger text-text-primary',
 };
 
 const BADGE_LABEL: Record<ReviewVisibility, string> = {
@@ -60,7 +60,7 @@ const Stars: React.FC<{ rating: number }> = ({ rating }) => (
       <Star
         key={star}
         aria-hidden="true"
-        className={`w-3.5 h-3.5 ${star <= rating ? 'fill-warning text-warning' : 'text-[#4E5C70]'}`}
+        className={`w-3.5 h-3.5 ${star <= rating ? 'fill-warning text-warning' : 'text-text-secondary'}`}
       />
     ))}
   </span>
@@ -84,11 +84,11 @@ const RejectDialog: React.FC<{
   const review = shown.current?.review ?? row.review;
   return (
     <ModalPortal>
-      <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/50 backdrop-blur-xs">
+      <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 bg-text-primary/50 backdrop-blur-xs">
         <div
           ref={dialog.ref}
           {...dialog.props}
-          className="neu-modal rounded-3xl p-5 max-w-md w-full space-y-3 border border-white/80 text-[#2D3A4E]"
+          className="neu-modal rounded-3xl p-5 max-w-md w-full space-y-3 text-text-primary"
         >
           <div className="flex items-start justify-between gap-3">
             <h3 id={dialog.titleId} className="text-base font-extrabold">Отклонить отзыв?</h3>
@@ -96,12 +96,12 @@ const RejectDialog: React.FC<{
               type="button"
               onClick={onClose}
               aria-label="Закрыть"
-              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] cursor-pointer shrink-0"
+              className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary cursor-pointer shrink-0"
             >
               <X className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
-          <p className="text-xs text-[#4E5C70]">
+          <p className="text-xs text-text-secondary">
             Отзыв {review.authorName} исчезнет у других покупателей и из рейтинга. Автор увидит, что он отклонён, и причину, если вы её напишете.
           </p>
           <div className="space-y-1">
@@ -114,12 +114,12 @@ const RejectDialog: React.FC<{
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Например: отзыв не про товар"
-              className="w-full p-3 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A] resize-y"
+              className="w-full p-3 rounded-xl neu-inset text-xs text-text-primary placeholder:text-text-muted resize-y"
             />
-            <p className="text-[11px] text-[#4E5C70] text-right">{reason.length} / {MODERATION_REASON_MAX}</p>
+            <p className="text-[11px] text-text-secondary text-right">{reason.length} / {MODERATION_REASON_MAX}</p>
           </div>
           <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="flex-1 h-10 neu-button rounded-xl text-xs font-extrabold text-[#2D3A4E] cursor-pointer">
+            <button type="button" onClick={onClose} className="flex-1 h-10 neu-button rounded-xl text-xs font-extrabold text-text-primary cursor-pointer">
               Отмена
             </button>
             <button
@@ -153,6 +153,7 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({ settings, onUp
   const [toDelete, setToDelete] = useState<AdminReviewRow | null>(null);
   const [savingSwitch, setSavingSwitch] = useState(false);
   const [confirmPremoderation, setConfirmPremoderation] = useState(false);
+  const [bulkPublishing, setBulkPublishing] = useState(false);
 
   const rows = useMemo(
     () => buildAdminReviewRows(reviews, decisions, products, premoderation),
@@ -163,6 +164,35 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({ settings, onUp
   const { visible, showMore } = usePagedList(filtered, `${status}|${rating}|${query}`);
 
   const statusCount = (id: AdminReviewStatusFilter) => (id === 'all' ? rows.length : counts[id]);
+  const pendingFiltered = useMemo(() => filtered.filter((r) => r.status === 'pending'), [filtered]);
+
+  const handlePublishAllPending = async () => {
+    if (pendingFiltered.length === 0 || bulkPublishing) return;
+    setBulkPublishing(true);
+    try {
+      await Promise.all(
+        pendingFiltered.map((row) =>
+          saveReviewModerationToFirestore({
+            id: row.review.id,
+            productId: row.review.productId,
+            status: 'published',
+            at: decisionTime(row.review),
+            reviewedVersion: reviewVersion(row.review),
+            ...(currentUser?.email ? { by: currentUser.email } : {}),
+          })
+        )
+      );
+      onShowToast(
+        `Опубликовано ${pendingFiltered.length} ${pluralRu(pendingFiltered.length, ['отзыв', 'отзыва', 'отзывов'])}`,
+        'success'
+      );
+    } catch (err) {
+      console.error('Bulk review publish failed:', err);
+      onShowToast('Не удалось опубликовать все отзывы', 'error');
+    } finally {
+      setBulkPublishing(false);
+    }
+  };
 
   const decide = async (row: AdminReviewRow, next: 'published' | 'rejected', reason?: string) => {
     setBusyId(row.review.id);
@@ -246,14 +276,14 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({ settings, onUp
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-extrabold text-[#2D3A4E] font-display">Отзывы</h3>
+      <h3 className="text-lg font-extrabold text-text-primary font-display">Отзывы</h3>
 
       <section aria-label="Проверка отзывов" className="neu-flat rounded-2xl p-4 flex items-start gap-3">
         <div className="min-w-0 flex-1 space-y-1">
-          <label htmlFor="review-premoderation" className="block text-sm font-extrabold text-[#2D3A4E]">
+          <label htmlFor="review-premoderation" className="block text-sm font-extrabold text-text-primary">
             Проверять отзывы перед публикацией
           </label>
-          <p className="text-xs text-[#4E5C70]">
+          <p className="text-xs text-text-secondary">
             {premoderation
               ? 'Новый или изменённый отзыв видит только его автор, пока вы не нажмёте «Опубликовать». Уже опубликованные остаются.'
               : 'Отзывы появляются у покупателей сразу. Любой можно скрыть кнопкой «Отклонить».'}
@@ -269,27 +299,27 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({ settings, onUp
       </section>
 
       {failed ? (
-        <p role="alert" className="rounded-2xl bg-danger-soft border border-danger/30 p-3 text-xs font-bold text-[#2D3A4E]">
+        <p role="alert" className="rounded-2xl neu-tone-danger p-3 text-xs font-bold text-text-primary">
           Не удалось загрузить отзывы. Обновите страницу.
         </p>
       ) : !loaded ? (
-        <p role="status" className="py-8 text-center text-xs font-bold text-[#4E5C70]">Загружаем отзывы…</p>
+        <p role="status" className="py-8 text-center text-xs font-bold text-text-secondary">Загружаем отзывы…</p>
       ) : rows.length === 0 ? (
-        <p role="status" className="neu-inset rounded-2xl p-3 text-xs text-[#4E5C70]">
+        <p role="status" className="neu-inset rounded-2xl p-3 text-xs text-text-secondary">
           Отзывов пока нет. Покупатель может оставить отзыв после получения заказа с этим товаром.
         </p>
       ) : (
         <>
           <div className="space-y-2.5">
             <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#4E5C70]" aria-hidden="true" />
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" aria-hidden="true" />
               <input
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 aria-label="Найти отзыв"
                 placeholder="Автор, текст, товар или номер заказа"
-                className="w-full h-10 pl-9 pr-3 neu-inset rounded-xl text-xs text-[#2D3A4E]"
+                className="w-full h-10 pl-9 pr-3 neu-inset rounded-xl text-xs text-text-primary"
               />
             </div>
             <div role="radiogroup" aria-label="Какие отзывы показать" className="flex flex-wrap gap-1.5">
@@ -301,7 +331,7 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({ settings, onUp
                   aria-checked={status === chip.id}
                   onClick={() => setStatus(chip.id)}
                   className={`min-h-8 px-3 rounded-xl text-xs font-bold cursor-pointer ${
-                    status === chip.id ? 'neu-pill-active font-extrabold' : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
+                    status === chip.id ? 'neu-pill-active font-extrabold' : 'neu-button text-text-secondary hover:text-text-primary'
                   }`}
                 >
                   {chip.label} ({statusCount(chip.id)})
@@ -318,7 +348,7 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({ settings, onUp
                   aria-label={value === 'all' ? 'Любая оценка' : `Оценка ${value} из 5`}
                   onClick={() => setRating(value)}
                   className={`min-h-8 px-3 rounded-xl text-xs font-bold cursor-pointer inline-flex items-center gap-1 ${
-                    rating === value ? 'neu-pill-active font-extrabold' : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
+                    rating === value ? 'neu-pill-active font-extrabold' : 'neu-button text-text-secondary hover:text-text-primary'
                   }`}
                 >
                   {value === 'all' ? (
@@ -334,12 +364,31 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({ settings, onUp
             </div>
           </div>
 
-          <p className="text-xs text-[#4E5C70]" role="status">
-            {filtered.length} {pluralRu(filtered.length, ['отзыв', 'отзыва', 'отзывов'])}
-          </p>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-xs text-text-secondary" role="status">
+              {filtered.length} {pluralRu(filtered.length, ['отзыв', 'отзыва', 'отзывов'])}
+            </p>
+            {pendingFiltered.length > 1 && (
+              <button
+                type="button"
+                disabled={bulkPublishing}
+                onClick={() => void handlePublishAllPending()}
+                className={`h-8 px-3 rounded-xl text-xs font-extrabold inline-flex items-center gap-1.5 ${
+                  bulkPublishing ? 'neu-button-disabled' : 'neu-button text-accent cursor-pointer'
+                }`}
+              >
+                <Check className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>
+                  {bulkPublishing
+                    ? 'Публикуем…'
+                    : `Опубликовать все на проверке (${pendingFiltered.length})`}
+                </span>
+              </button>
+            )}
+          </div>
 
           {filtered.length === 0 ? (
-            <p className="py-6 text-center text-xs font-bold text-[#4E5C70]">
+            <p className="py-6 text-center text-xs font-bold text-text-secondary">
               {status === 'pending' && !query && rating === 'all'
                 ? 'Нет отзывов, которые ждут проверки'
                 : 'Ничего не найдено. Измените поиск или фильтры'}
@@ -352,13 +401,13 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({ settings, onUp
                 return (
                   <li key={review.id} className="neu-flat rounded-2xl p-4 space-y-2.5">
                     <div className="flex items-start justify-between gap-2 flex-wrap">
-                      <p className="text-sm font-extrabold text-[#2D3A4E] min-w-0 break-words">{row.productTitle}</p>
+                      <p className="text-sm font-extrabold text-text-primary min-w-0 break-words">{row.productTitle}</p>
                       <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-extrabold whitespace-nowrap ${STATUS_BADGE[row.status]}`}>
                         {BADGE_LABEL[row.status]}
                       </span>
                     </div>
-                    <div className="flex items-center gap-x-3 gap-y-1 flex-wrap text-xs text-[#4E5C70]">
-                      <span className="font-bold text-[#2D3A4E]">{review.authorName}</span>
+                    <div className="flex items-center gap-x-3 gap-y-1 flex-wrap text-xs text-text-secondary">
+                      <span className="font-bold text-text-primary">{review.authorName}</span>
                       <Stars rating={review.rating} />
                       <span>{review.date}</span>
                     </div>
@@ -368,30 +417,30 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({ settings, onUp
                         Покупка подтверждена · заказ № {review.orderId}
                       </p>
                     ) : (
-                      <p className="text-[11px] font-bold text-[#4E5C70]">Без привязки к заказу</p>
+                      <p className="text-[11px] font-bold text-text-secondary">Без привязки к заказу</p>
                     )}
                     {(review.sizePurchased || review.colorPurchased) && (
-                      <p className="text-xs text-[#4E5C70]">
+                      <p className="text-xs text-text-secondary">
                         {[review.sizePurchased && `Размер: ${review.sizePurchased}`, review.colorPurchased && `Цвет: ${review.colorPurchased}`]
                           .filter(Boolean)
                           .join(' · ')}
                       </p>
                     )}
-                    <p className="text-xs text-[#2D3A4E] leading-relaxed whitespace-pre-line break-words">{review.comment}</p>
+                    <p className="text-xs text-text-primary leading-relaxed whitespace-pre-line break-words">{review.comment}</p>
                     {review.pros && (
-                      <p className="text-xs text-[#2D3A4E] break-words">
+                      <p className="text-xs text-text-primary break-words">
                         <span className="font-extrabold text-success">Достоинства: </span>
                         {review.pros}
                       </p>
                     )}
                     {review.cons && (
-                      <p className="text-xs text-[#2D3A4E] break-words">
+                      <p className="text-xs text-text-primary break-words">
                         <span className="font-extrabold text-danger">Недостатки: </span>
                         {review.cons}
                       </p>
                     )}
                     {row.status === 'rejected' && row.decision?.reason && (
-                      <p className="text-xs text-[#2D3A4E] break-words">
+                      <p className="text-xs text-text-primary break-words">
                         <span className="font-extrabold">Причина отказа: </span>
                         {row.decision.reason}
                       </p>
@@ -414,7 +463,7 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({ settings, onUp
                           disabled={busy}
                           onClick={() => setToReject(row)}
                           aria-label={`Отклонить отзыв: ${review.authorName}, ${row.productTitle}`}
-                          className={`h-9 px-4 rounded-xl text-xs font-extrabold ${busy ? 'neu-button-disabled' : 'neu-button text-[#2D3A4E] cursor-pointer'}`}
+                          className={`h-9 px-4 rounded-xl text-xs font-extrabold ${busy ? 'neu-button-disabled' : 'neu-button text-text-primary cursor-pointer'}`}
                         >
                           Отклонить
                         </button>
@@ -465,11 +514,11 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({ settings, onUp
         preview={
           toDelete && (
             <div className="space-y-1 text-left min-w-0">
-              <p className="text-xs font-extrabold text-[#2D3A4E] break-words">
+              <p className="text-xs font-extrabold text-text-primary break-words">
                 {toDelete.review.authorName} · {toDelete.productTitle}
               </p>
               <Stars rating={toDelete.review.rating} />
-              <p className="text-xs text-[#4E5C70] break-words line-clamp-3">{toDelete.review.comment}</p>
+              <p className="text-xs text-text-secondary break-words line-clamp-3">{toDelete.review.comment}</p>
             </div>
           )
         }

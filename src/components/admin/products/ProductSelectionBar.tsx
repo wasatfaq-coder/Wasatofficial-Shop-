@@ -21,8 +21,8 @@ export function ProductSelectionBar({ list }: { list: ProductList }) {
       disabled={isBulkSaving}
       className={`h-8 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 whitespace-nowrap ${
         isBulkSaving
-          ? 'neu-button-disabled text-[#4E5C70]'
-          : `neu-button text-[#2D3A4E] cursor-pointer ${inStock ? 'hover:text-success' : 'hover:text-warning'}`
+          ? 'neu-button-disabled text-text-secondary'
+          : `neu-button text-text-primary cursor-pointer ${inStock ? 'hover:text-success' : 'hover:text-warning'}`
       }`}
     >
       {inStock ? (
@@ -64,16 +64,16 @@ export function ProductSelectionBar({ list }: { list: ProductList }) {
       <div
         role="region"
         aria-label="Выбранные товары"
-        className="neu-flat rounded-2xl px-3 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2 border border-white/80"
+        className="neu-flat rounded-2xl px-3 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2 "
       >
         <div className="flex items-center justify-between gap-2 sm:mr-auto">
-          <p className="text-xs font-bold text-[#2D3A4E] flex items-center gap-1" aria-live="polite">
+          <p className="text-xs font-bold text-text-primary flex items-center gap-1" aria-live="polite">
             Выбрано: <strong className="text-accent">{count}</strong>
             <span className="sr-only">{pluralRu(count, ['товар', 'товара', 'товаров'])}</span>
             <button
               type="button"
               onClick={() => setSelectedProductIds([])}
-              className="w-8 h-8 -my-1 rounded-xl flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+              className="w-8 h-8 -my-1 rounded-xl flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer"
               aria-label="Снять выбор"
               title="Снять выбор"
             >

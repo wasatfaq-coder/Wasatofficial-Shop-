@@ -119,34 +119,34 @@ export const OrderTrackingModal = ({
     <>
       {/* ================= DETAILED ORDER TRACKING MODAL ================= */}
       {selectedOrderForTracking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-text-primary/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div
             ref={trackingDialog.ref}
             {...trackingDialog.props}
-            className="neu-modal rounded-3xl max-w-md w-full max-h-[90vh] flex flex-col border border-white/80 text-[#2D3A4E] overflow-hidden transform-gpu">
+            className="neu-modal rounded-3xl max-w-md w-full max-h-[90vh] flex flex-col text-text-primary overflow-hidden transform-gpu">
             {/* Sticky Fixed Header */}
-            <div className="flex items-center justify-between gap-3 p-4 sm:p-5 border-b border-[#BAC5D5]/50 shrink-0 bg-[#E3E8EF]">
+            <div className="flex items-center justify-between gap-3 p-4 sm:p-5 neu-divider-b shrink-0 bg-[#E3E8EF]">
               <div className="min-w-0">
                 {/* On 320 px the «Трекинг» chip moves under the number instead of sliding under the close button */}
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <h3 id={trackingDialog.titleId} className="text-base font-extrabold text-[#2D3A4E] whitespace-nowrap">
+                  <h3 id={trackingDialog.titleId} className="text-base font-extrabold text-text-primary whitespace-nowrap">
                     Заказ № {selectedOrderForTracking.id}
                   </h3>
                   <span className="text-[11px] font-extrabold text-accent neu-inset px-2.5 py-0.5 rounded-full">
                     Трекинг
                   </span>
                 </div>
-                <p className="text-xs text-[#4E5C70] font-medium">
+                <p className="text-xs text-text-secondary font-medium">
                   Оформлен: {selectedOrderForTracking.date}
                 </p>
               </div>
 
               <button
                 onClick={() => setSelectedOrderIdForTracking(null)}
-                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer transition-transform shrink-0"
+                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer transition-transform shrink-0"
                 aria-label="Закрыть"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4 shrink-0" />
               </button>
             </div>
 
@@ -163,14 +163,14 @@ export const OrderTrackingModal = ({
 
               if (isPost) {
                 return (
-                  <div className="neu-inset rounded-2xl p-3.5 border border-accent/16 space-y-2.5">
+                  <div className="neu-tone-info rounded-2xl p-3.5 space-y-2.5">
                     <div className="flex items-center justify-between gap-2">
                       <div className="space-y-0.5">
                         <span className="text-[11px] font-bold text-accent uppercase tracking-wider flex items-center gap-1.5">
                           <Mail className="w-3.5 h-3.5 text-accent" />
                           {selectedOrderForTracking.deliveryMethod || 'Почтовое отправление'}
                         </span>
-                        <p className="text-xs font-extrabold text-[#2D3A4E]">
+                        <p className="text-xs font-extrabold text-text-primary">
                           {selectedOrderForTracking.trackingNumber ? `Трек-номер: ${selectedOrderForTracking.trackingNumber}` : 'Доставка в почтовое отделение связи'}
                         </p>
                       </div>
@@ -181,9 +181,9 @@ export const OrderTrackingModal = ({
                             copyToClipboard(selectedOrderForTracking.trackingNumber || '');
                             onShowToast('Трек-номер Почты России скопирован в буфер', 'success');
                           }}
-                          className="neu-button p-2 rounded-xl text-accent hover:text-accent-strong flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                          className="min-h-8 neu-button px-2.5 py-1.5 rounded-xl text-accent hover:text-accent-strong flex items-center gap-1 text-[11px] font-bold cursor-pointer shrink-0"
                         >
-                          <Copy className="w-3.5 h-3.5" />
+                          <Copy className="w-3.5 h-3.5 shrink-0" />
                           <span>Копия трека</span>
                         </button>
                       ) : (
@@ -192,7 +192,7 @@ export const OrderTrackingModal = ({
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-[#4E5C70] leading-snug">
+                    <p className="text-xs text-text-secondary leading-snug">
                       Адрес доставки: {selectedOrderForTracking.deliveryAddress || 'Почтовый адрес получателя'}. Получение осуществляется в отделении связи по паспорту или SMS-коду без курьерского сопровождения.
                     </p>
                   </div>
@@ -205,11 +205,11 @@ export const OrderTrackingModal = ({
                     <div className="neu-inset rounded-2xl p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="space-y-0.5">
-                          <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider flex items-center gap-1">
-                            <Truck className="w-3.5 h-3.5 text-accent" />
+                          <span className="text-[11px] font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1">
+                            <Truck className="w-3.5 h-3.5 text-accent shrink-0" />
                             Трек-номер отправления (ТК)
                           </span>
-                          <p className="text-xs font-extrabold text-[#2D3A4E] tracking-wide font-mono">
+                          <p className="text-xs font-extrabold text-text-primary tracking-wide font-mono">
                             {selectedOrderForTracking.trackingNumber}
                           </p>
                         </div>
@@ -218,13 +218,13 @@ export const OrderTrackingModal = ({
                             copyToClipboard(selectedOrderForTracking.trackingNumber || '');
                             onShowToast('Трек-номер скопирован в буфер', 'success');
                           }}
-                          className="neu-button p-2 rounded-xl text-[#4E5C70] hover:text-[#2D3A4E] flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                          className="min-h-8 neu-button px-2.5 py-1.5 rounded-xl text-text-secondary hover:text-text-primary flex items-center gap-1 text-[11px] font-bold cursor-pointer shrink-0"
                         >
-                          <Copy className="w-3.5 h-3.5" />
+                          <Copy className="w-3.5 h-3.5 shrink-0" />
                           <span>Копия</span>
                         </button>
                       </div>
-                      <p className="text-xs text-[#4E5C70] leading-snug">
+                      <p className="text-xs text-text-secondary leading-snug">
                         Направление: {selectedOrderForTracking.deliveryAddress || 'Пункт назначения ТК'}
                       </p>
                     </div>
@@ -232,7 +232,7 @@ export const OrderTrackingModal = ({
                 }
 
                 return (
-                  <div className="neu-inset rounded-2xl p-3.5 border border-warning/70 space-y-2 text-warning">
+                  <div className="neu-tone-warning rounded-2xl p-3.5 space-y-2 text-warning">
                     <div className="flex items-start gap-2.5">
                       <AlertCircle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
                       <div className="space-y-0.5">
@@ -250,15 +250,15 @@ export const OrderTrackingModal = ({
 
               // Non-TK: Courier / Pickup / Express
               return (
-                <div className="neu-inset rounded-2xl p-3.5 border border-white/60 space-y-2.5">
+                <div className="neu-inset rounded-2xl p-3.5 space-y-2.5">
                   <div className="flex items-center justify-between gap-2">
                     <div className="space-y-0.5 min-w-0">
-                      <span className="text-[11px] font-bold text-[#4E5C70] uppercase tracking-wider flex items-center gap-1">
+                      <span className="text-[11px] font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1">
                         {isPickup ? <Store className="w-3.5 h-3.5 text-accent" /> : isQuick ? <MessageCircle className="w-3.5 h-3.5 text-accent" /> : isExpress ? <Zap className="w-3.5 h-3.5 text-warning" /> : <Bike className="w-3.5 h-3.5 text-accent" />}
                         {/* the store's own words only: no «бутик» or «курьерская служба магазина» it may not have */}
                         {isPickup ? 'Самовывоз' : isQuick ? 'Доставку согласует менеджер' : isExpress ? 'Срочная экспресс-доставка' : 'Доставка курьером'}
                       </span>
-                      <p className="text-xs font-extrabold text-[#2D3A4E]">
+                      <p className="text-xs font-extrabold text-text-primary">
                         {isQuick ? QUICK_ORDER_DELIVERY_TITLE : selectedOrderForTracking.deliveryMethod || (isPickup ? 'Самовывоз' : 'Курьерская доставка')}
                       </p>
                     </div>
@@ -267,7 +267,7 @@ export const OrderTrackingModal = ({
                     )}
                   </div>
 
-                  <p className="text-xs text-[#4E5C70] leading-snug">
+                  <p className="text-xs text-text-secondary leading-snug">
                     {isPickup
                       ? `Где забрать: ${pickupPlace(selectedOrderForTracking.deliveryAddress) || 'сообщит магазин'}. Трек-номера у самовывоза нет — заказ выдают по коду получения.`
                       : isQuick
@@ -296,7 +296,7 @@ export const OrderTrackingModal = ({
                 <div className="neu-inset rounded-2xl p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3 flex-wrap sm:flex-nowrap">
                     <div className="min-w-0">
-                      <span className="text-[11px] uppercase tracking-wider font-extrabold text-[#4E5C70] block mb-1">
+                      <span className="text-[11px] uppercase tracking-wider font-extrabold text-text-secondary block mb-1">
                         Текущий статус
                       </span>
                       <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
@@ -316,8 +316,8 @@ export const OrderTrackingModal = ({
 
                     {selectedOrderForTracking.estimatedDelivery && (
                       <div className="text-left sm:text-right shrink-0">
-                        <span className="text-[11px] text-[#4E5C70] font-bold block mb-1">Ожидается:</span>
-                        <p className="text-xs font-extrabold text-[#2D3A4E] flex items-center sm:justify-end gap-1 whitespace-nowrap neu-inset px-2.5 py-1 rounded-lg">
+                        <span className="text-[11px] text-text-secondary font-bold block mb-1">Ожидается:</span>
+                        <p className="text-xs font-extrabold text-text-primary flex items-center sm:justify-end gap-1 whitespace-nowrap neu-inset px-2.5 py-1 rounded-lg">
                           <Clock className="w-3.5 h-3.5 text-accent shrink-0" />
                           <span>{selectedOrderForTracking.estimatedDelivery}</span>
                         </p>
@@ -339,16 +339,16 @@ export const OrderTrackingModal = ({
                           // No min-w-0: a column is as wide as its longest word, labels wrap only between words
                           <div key={step.key} className="flex flex-col items-center flex-1">
                             <div
-                              className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-extrabold transition-all shrink-0 ${
+                              className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-extrabold transition-all shrink-0 ${
                                 isStepDone
                                   ? 'neu-fill-accent text-white'
                                   : isStepActive
-                                  ? 'neu-inset-deep text-accent border border-accent ring-1 ring-accent/30 font-extrabold'
-                                  : 'neu-inset text-[#4E5C70]'
+                                  ? 'neu-pill-active font-extrabold'
+                                  : 'neu-inset text-text-secondary'
                               }`}
                             >
                               {isStepDone ? (
-                                <Check className="w-3.5 h-3.5 stroke-[2.8]" />
+                                <Check className="w-3.5 h-3.5 stroke-[2.8] shrink-0" />
                               ) : (
                                 idx + 1
                               )}
@@ -356,10 +356,10 @@ export const OrderTrackingModal = ({
                             <span
                               className={`text-[11px] mt-1 font-bold leading-tight transition-colors text-center ${
                                 isStepDone
-                                  ? 'text-[#2D3A4E]'
+                                  ? 'text-text-primary'
                                   : isStepActive
                                   ? 'text-accent font-extrabold'
-                                  : 'text-[#4E5C70]'
+                                  : 'text-text-secondary'
                               }`}
                               title={step.label}
                             >
@@ -396,24 +396,24 @@ export const OrderTrackingModal = ({
               const hint = paymentHint(order, currentUser?.uid);
               return (
                 <div className="neu-inset rounded-2xl p-3.5 space-y-2.5">
-                  <p className="text-xs text-[#2D3A4E] flex items-center justify-between gap-2">
+                  <p className="text-xs text-text-primary flex items-center justify-between gap-2">
                     <span className="font-extrabold">Оплата</span>
                     <span
-                      className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full border ${
+                      className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full ${
                         status === 'paid'
-                          ? 'bg-success-soft text-success border-success/30'
-                          : 'bg-warning-soft text-warning border-warning/30'
+                          ? 'neu-tone-success'
+                          : 'neu-tone-warning'
                       }`}
                     >
                       {PAYMENT_STATUS_LABELS[status]}
                     </span>
                   </p>
                   {status === 'pending' && order.paymentRejectReason && (
-                    <p role="status" className="rounded-xl bg-danger-soft border border-danger/25 px-2.5 py-2 text-xs text-[#2D3A4E]">
+                    <p role="status" className="rounded-xl neu-tone-danger px-2.5 py-2 text-xs text-text-primary">
                       <strong className="text-danger">Чек отклонён:</strong> {order.paymentRejectReason}. Проверьте оплату и отправьте новый чек.
                     </p>
                   )}
-                  {hint && status !== 'paid' && <p className="text-xs text-[#4E5C70] leading-relaxed">{hint}</p>}
+                  {hint && status !== 'paid' && <p className="text-xs text-text-secondary leading-relaxed">{hint}</p>}
                   {canPay && (
                     <button
                       type="button"
@@ -431,9 +431,9 @@ export const OrderTrackingModal = ({
             {/* Pickup code: the buyer names it to the courier or at the pickup point («Доработки 4») */}
             {showsPickupCode(selectedOrderForTracking) && (
               <div className="neu-inset rounded-2xl p-4 text-center space-y-1">
-                <p className="text-[11px] font-extrabold text-[#4E5C70] uppercase tracking-wider">Код получения</p>
-                <p className="text-2xl font-extrabold font-mono tracking-widest text-[#2D3A4E]">{selectedOrderForTracking.pickupCode}</p>
-                <p className="text-xs text-[#4E5C70]">
+                <p className="text-[11px] font-extrabold text-text-secondary uppercase tracking-wider">Код получения</p>
+                <p className="text-2xl font-extrabold font-mono tracking-widest text-text-primary">{selectedOrderForTracking.pickupCode}</p>
+                <p className="text-xs text-text-secondary">
                   {orderDeliveryKind(selectedOrderForTracking) === 'pickup'
                     ? 'Назовите код сотруднику пункта выдачи'
                     : 'Назовите код курьеру при получении'}
@@ -444,7 +444,7 @@ export const OrderTrackingModal = ({
             {/* «Я получил заказ»: a carrier's order is closed by the buyer (or by the store for a guest) */}
             {isAwaitingReceipt(selectedOrderForTracking) && (
               <div className="neu-inset rounded-2xl p-3.5 space-y-2.5">
-                <p className="text-xs text-[#2D3A4E] leading-relaxed">
+                <p className="text-xs text-text-primary leading-relaxed">
                   {canCustomerConfirmReceipt(selectedOrderForTracking, currentUser?.uid)
                     ? 'Забрали посылку? Подтвердите получение — так магазин узнает, что заказ у вас.'
                     : 'Когда заберёте посылку, магазин отметит заказ полученным. Вопросы — в чат магазина.'}
@@ -468,8 +468,8 @@ export const OrderTrackingModal = ({
             </div>
 
             {/* Order Items Preview */}
-            <div className="space-y-2 pt-1 border-t border-[#BAC5D5]/50">
-              <span className="text-xs font-bold text-[#2D3A4E]">Состав заказа:</span>
+            <div className="space-y-2 pt-2 neu-divider-t">
+              <span className="text-xs font-bold text-text-primary">Состав заказа:</span>
               <div className="space-y-2">
                 {groupOrderLines(selectedOrderForTracking.items).map((group) => {
                   const it = group.item;
@@ -488,10 +488,10 @@ export const OrderTrackingModal = ({
                         className="w-10 h-10 rounded-lg object-cover neu-flat"
                       />
                       <div>
-                        <p className="text-xs font-bold text-[#2D3A4E] leading-tight">
+                        <p className="text-xs font-bold text-text-primary leading-tight">
                           {it.product.title}
                         </p>
-                        <p className="text-xs text-[#4E5C70]">
+                        <p className="text-xs text-text-secondary">
                           {pack ? (
                             <>
                               {[it.selectedColor, `${pack.title} · ${pack.packCount} уп.`].filter(Boolean).join(', ')}
@@ -508,7 +508,7 @@ export const OrderTrackingModal = ({
                           )}
                         </p>
                         {pack && (
-                          <p className="text-xs text-[#4E5C70]">
+                          <p className="text-xs text-text-secondary">
                             {packGroupCompositionText(pack.sizes)} • {pack.packPrice.toLocaleString('ru-RU')} ₽/уп.
                           </p>
                         )}
@@ -525,7 +525,7 @@ export const OrderTrackingModal = ({
                         )}
                       </div>
                     </div>
-                    <span className="text-xs font-extrabold text-[#2D3A4E]">
+                    <span className="text-xs font-extrabold text-text-primary">
                       {(pack ? pack.total : linePrice(it) * (it.quantity ?? 1)).toLocaleString('ru-RU')} ₽
                     </span>
                   </div>
@@ -534,7 +534,7 @@ export const OrderTrackingModal = ({
               </div>
               {/* Adjusted Order & Partial Refund Notice for Client */}
               {selectedOrderForTracking.isAdjusted && (
-                <div className="neu-inset rounded-2xl p-3 border border-success/60 space-y-1.5 text-xs text-success">
+                <div className="neu-tone-success rounded-2xl p-3 space-y-1.5 text-xs text-success">
                   <div className="flex items-center justify-between">
                     <span className="font-extrabold flex items-center gap-1.5 text-success">
                       <Sparkles className="w-3.5 h-3.5 text-success" />
@@ -552,8 +552,8 @@ export const OrderTrackingModal = ({
                     </p>
                   )}
                   {selectedOrderForTracking.originalTotalPrice && (
-                    <p className="text-xs text-[#4E5C70]">
-                      Исходная сумма: <span className="line-through">{selectedOrderForTracking.originalTotalPrice.toLocaleString('ru-RU')} ₽</span> • Текущая сумма: <strong className="text-[#2D3A4E]">{selectedOrderForTracking.totalPrice.toLocaleString('ru-RU')} ₽</strong>
+                    <p className="text-xs text-text-secondary">
+                      Исходная сумма: <span className="line-through">{selectedOrderForTracking.originalTotalPrice.toLocaleString('ru-RU')} ₽</span> • Текущая сумма: <strong className="text-text-primary">{selectedOrderForTracking.totalPrice.toLocaleString('ru-RU')} ₽</strong>
                     </p>
                   )}
                 </div>
@@ -561,12 +561,12 @@ export const OrderTrackingModal = ({
             </div>
 
             {/* Delivery address & Payment info */}
-            <div className="space-y-1.5 text-xs text-[#4E5C70] neu-inset p-3.5 rounded-2xl">
+            <div className="space-y-1.5 text-xs text-text-secondary neu-inset p-3.5 rounded-2xl">
               <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-accent shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-bold text-[#2D3A4E]">Адрес доставки:</span>
-                  <p className="text-xs text-[#4E5C70]">
+                  <span className="font-bold text-text-primary">Адрес доставки:</span>
+                  <p className="text-xs text-text-secondary">
                     {selectedOrderForTracking.deliveryAddress} ({selectedOrderForTracking.deliveryMethod})
                   </p>
                 </div>
@@ -574,7 +574,7 @@ export const OrderTrackingModal = ({
               {selectedOrderForTracking.paymentMethod && (
                 <div className="flex items-center gap-2 pt-1">
                   <CreditCard className="w-4 h-4 text-accent shrink-0" />
-                  <span className="text-[11px] text-[#2D3A4E] font-semibold">
+                  <span className="text-[11px] text-text-primary font-semibold">
                     Оплата: {selectedOrderForTracking.paymentMethod}
                   </span>
                 </div>
@@ -589,14 +589,14 @@ export const OrderTrackingModal = ({
 
               if (isPost) {
                 return (
-                  <div className="neu-inset rounded-2xl p-3 sm:p-3.5 border border-accent/12 flex items-center justify-between gap-3">
+                  <div className="neu-inset rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center text-accent font-extrabold text-xs shrink-0 border border-accent/16">
+                      <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center text-accent font-extrabold text-xs shrink-0">
                         ПР
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-extrabold text-[#2D3A4E] leading-snug">Почта России</p>
-                        <p className="text-xs text-[#4E5C70] leading-snug">Выдача в почтовом отделении</p>
+                        <p className="text-xs font-extrabold text-text-primary leading-snug">Почта России</p>
+                        <p className="text-xs text-text-secondary leading-snug">Выдача в почтовом отделении</p>
                       </div>
                     </div>
                     {onOpenSupportChat && (
@@ -608,10 +608,10 @@ export const OrderTrackingModal = ({
                           onCloseModals();
                           onOpenSupportChat(orderId);
                         }}
-                        className="py-1.5 px-3 rounded-xl neu-button text-accent hover:text-accent-strong hover:scale-105 transition-transform flex items-center gap-1 text-[11px] font-bold cursor-pointer shrink-0"
+                        className="min-h-8 py-1.5 px-3 rounded-xl neu-button text-accent hover:text-accent-strong hover:scale-105 transition-transform flex items-center gap-1 text-[11px] font-bold cursor-pointer shrink-0"
                         title="Написать в чат поддержки"
                       >
-                        <MessageCircle className="w-3.5 h-3.5 text-accent" />
+                        <MessageCircle className="w-3.5 h-3.5 text-accent shrink-0" />
                         <span>Чат заботы</span>
                       </button>
                     )}
@@ -621,14 +621,14 @@ export const OrderTrackingModal = ({
 
               if (isPickup) {
                 return (
-                  <div className="neu-inset rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3 border border-white/70">
+                  <div className="neu-inset rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3 ">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center text-accent font-extrabold text-xs shrink-0 border border-white/90">
+                      <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center text-accent font-extrabold text-xs shrink-0 ">
                         {storeInitials(storeName)}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-extrabold text-[#2D3A4E] leading-snug">{storeName}</p>
-                        <p className="text-xs text-[#4E5C70] leading-snug">Вопросы о выдаче заказа</p>
+                        <p className="text-xs font-extrabold text-text-primary leading-snug">{storeName}</p>
+                        <p className="text-xs text-text-secondary leading-snug">Вопросы о выдаче заказа</p>
                       </div>
                     </div>
                     {onOpenSupportChat && (
@@ -640,10 +640,10 @@ export const OrderTrackingModal = ({
                           onCloseModals();
                           onOpenSupportChat(orderId);
                         }}
-                        className="py-1.5 px-3 rounded-xl neu-button text-[#2D3A4E] hover:text-accent hover:scale-105 transition-transform flex items-center gap-1 text-[11px] font-bold cursor-pointer shrink-0"
+                        className="min-h-8 py-1.5 px-3 rounded-xl neu-button text-text-primary hover:text-accent hover:scale-105 transition-transform flex items-center gap-1 text-[11px] font-bold cursor-pointer shrink-0"
                         title="Написать в чат поддержки"
                       >
-                        <MessageCircle className="w-3.5 h-3.5 text-accent" />
+                        <MessageCircle className="w-3.5 h-3.5 text-accent shrink-0" />
                         <span>Чат</span>
                       </button>
                     )}
@@ -653,15 +653,15 @@ export const OrderTrackingModal = ({
 
               if (isCourier) {
                 return (
-                  <div className="neu-inset rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3 border border-white/70">
+                  <div className="neu-inset rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3 ">
                     <div className="flex items-center gap-2.5 min-w-0">
                       {/* No made-up courier: the store answers about delivery itself (owner's request 02.10) */}
-                      <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center text-accent shrink-0 border border-white/90">
-                        <Headphones className="w-4 h-4" aria-hidden="true" />
+                      <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center text-accent shrink-0 ">
+                        <Headphones className="w-4 h-4 shrink-0" aria-hidden="true" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-extrabold text-[#2D3A4E] leading-snug">Менеджер по доставке</p>
-                        <p className="text-xs text-[#4E5C70] leading-snug">{storeName}</p>
+                        <p className="text-xs font-extrabold text-text-primary leading-snug">Менеджер по доставке</p>
+                        <p className="text-xs text-text-secondary leading-snug">{storeName}</p>
                       </div>
                     </div>
 
@@ -669,10 +669,10 @@ export const OrderTrackingModal = ({
                       {storePhone && !selectedOrderForTracking.isCancelled && selectedOrderForTracking.status !== 'delivered' && (
                         <a
                           href={telHref(storePhone)}
-                          className="py-1.5 px-2.5 rounded-xl neu-button text-accent hover:scale-105 transition-transform flex items-center gap-1 text-[11px] font-extrabold cursor-pointer"
+                          className="min-h-8 py-1.5 px-2.5 rounded-xl neu-button text-accent hover:scale-105 transition-transform flex items-center gap-1 text-[11px] font-extrabold cursor-pointer"
                           title={`Позвонить в магазин (${storePhone})`}
                         >
-                          <Phone className="w-3.5 h-3.5" />
+                          <Phone className="w-3.5 h-3.5 shrink-0" />
                           <span>Позвонить</span>
                         </a>
                       )}
@@ -685,10 +685,10 @@ export const OrderTrackingModal = ({
                             onCloseModals();
                             onOpenSupportChat(orderId);
                           }}
-                          className="py-1.5 px-2.5 rounded-xl neu-button text-[#2D3A4E] hover:text-accent hover:scale-105 transition-transform flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                          className="min-h-8 py-1.5 px-2.5 rounded-xl neu-button text-text-primary hover:text-accent hover:scale-105 transition-transform flex items-center gap-1 text-[11px] font-bold cursor-pointer"
                           title="Написать в чат поддержки"
                         >
-                          <MessageCircle className="w-3.5 h-3.5 text-accent" />
+                          <MessageCircle className="w-3.5 h-3.5 text-accent shrink-0" />
                           <span>Чат</span>
                         </button>
                       )}
@@ -699,14 +699,14 @@ export const OrderTrackingModal = ({
 
               // General Transport Company (СДЭК / DPD / etc)
               return (
-                <div className="neu-inset rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3 border border-white/70">
+                <div className="neu-inset rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3 ">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center text-success font-extrabold text-xs shrink-0 border border-success/25">
+                    <div className="w-9 h-9 rounded-xl neu-flat flex items-center justify-center text-success font-extrabold text-xs shrink-0">
                       ТК
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-extrabold text-[#2D3A4E] leading-snug">Транспортная компания</p>
-                      <p className="text-xs text-[#4E5C70] leading-snug">Доставка до ПВЗ / по адресу</p>
+                      <p className="text-xs font-extrabold text-text-primary leading-snug">Транспортная компания</p>
+                      <p className="text-xs text-text-secondary leading-snug">Доставка до ПВЗ / по адресу</p>
                     </div>
                   </div>
                   {onOpenSupportChat && (
@@ -718,10 +718,10 @@ export const OrderTrackingModal = ({
                         onCloseModals();
                         onOpenSupportChat(orderId);
                       }}
-                      className="py-1.5 px-3 rounded-xl neu-button text-[#2D3A4E] hover:text-accent hover:scale-105 transition-transform flex items-center gap-1 text-[11px] font-bold cursor-pointer shrink-0"
+                      className="min-h-8 py-1.5 px-3 rounded-xl neu-button text-text-primary hover:text-accent hover:scale-105 transition-transform flex items-center gap-1 text-[11px] font-bold cursor-pointer shrink-0"
                       title="Написать в чат поддержки"
                     >
-                      <MessageCircle className="w-3.5 h-3.5 text-accent" />
+                      <MessageCircle className="w-3.5 h-3.5 text-accent shrink-0" />
                       <span>Чат заботы</span>
                     </button>
                   )}
@@ -732,7 +732,7 @@ export const OrderTrackingModal = ({
             </div>
 
             {/* Sticky Action Footer */}
-            <div className="p-3.5 sm:p-4 border-t border-[#BAC5D5]/50 shrink-0 bg-[#E3E8EF]">
+            <div className="p-3.5 sm:p-4 neu-divider-t shrink-0 bg-[#E3E8EF]">
               <button
                 type="button"
                 onClick={() => {
@@ -746,7 +746,7 @@ export const OrderTrackingModal = ({
                 <span>Повторить заказ</span>
               </button>
               {selectedOrderForTracking.isCancelled ? (
-                <p className="mt-2.5 text-xs text-[#4E5C70] leading-relaxed">
+                <p className="mt-2.5 text-xs text-text-secondary leading-relaxed">
                   <span className="font-bold text-danger">{cancelledByLabel(selectedOrderForTracking, 'customer')}</span>
                   {formatCancelledAt(selectedOrderForTracking) && ` · ${formatCancelledAt(selectedOrderForTracking)}`}
                   {cancelReasonText(selectedOrderForTracking) && (
@@ -763,7 +763,7 @@ export const OrderTrackingModal = ({
                   <span>Отменить заказ</span>
                 </button>
               ) : customerCancelHint(selectedOrderForTracking, currentUser?.uid) ? (
-                <p className="mt-2.5 text-xs text-[#4E5C70] leading-relaxed text-center">
+                <p className="mt-2.5 text-xs text-text-secondary leading-relaxed text-center">
                   {customerCancelHint(selectedOrderForTracking, currentUser?.uid)}
                 </p>
               ) : null}

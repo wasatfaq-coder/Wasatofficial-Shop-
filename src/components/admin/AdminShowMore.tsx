@@ -6,7 +6,7 @@ export const AdminShowMore: React.FC<{ shown: number; total: number; onShowMore:
   if (shown >= total) return null;
   return (
     <div className="flex flex-col items-center gap-2 pt-2">
-      <p className="text-xs text-[#4E5C70]">
+      <p className="text-xs text-text-secondary">
         Показано {shown} из {total}
       </p>
       <button

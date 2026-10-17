@@ -1,7 +1,9 @@
-import { gzipText, gunzipText, shortHash } from './catalogIndex';
+import { canReadCatalogIndex, gzipText, gunzipText, shortHash } from './catalogIndex';
+
+export const canReadOrdersIndex = canReadCatalogIndex;
 
 /**
- * Индекс заказов (docs/orders-scale-plan.md, этап 4): все заказы магазина как они лежат в базе, сжатые в один-два
+ * Индекс заказов (docs/orders-scale-plan.md, этапы 4–5): все заказы магазина как они лежат в базе, сжатые в один-два
  * документа `orders_index`. Владелец читает их вместо 1 800 документов заказов (этап 5), а поверх — заказы, изменённые
  * после записи индекса (`updatedAt` новее `syncedUpTo`). Пишет его сессия администратора (`useOrdersIndexSync`), пока нет
  * Cloud Functions; читает и пишет только администратор: в заказах имена, телефоны и адреса покупателей. Код без
@@ -43,6 +45,31 @@ export function buildOrdersIndex(rows: OrderIndexRow[]): { rows: OrderIndexRow[]
   const sorted = [...rows].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const syncedUpTo = sorted.reduce((latest, row) => Math.max(latest, row.updatedAt ?? 0), 0);
   return { rows: sorted, hash: `${ORDERS_INDEX_FORMAT}-${shortHash(JSON.stringify(sorted))}`, syncedUpTo };
+}
+
+/**
+ * Overlays changed orders (`updatedAt >= syncedUpTo`, or pending local writes) onto the index rows and drops deleted
+ * order ids (docs/orders-scale-plan.md, stage 5). When two versions of one order meet, the one with the newer `updatedAt`
+ * (or a pending local write without `updatedAt` yet) wins.
+ */
+export function mergeOrdersIndex(
+  indexRows: OrderIndexRow[],
+  changedRows: OrderIndexRow[],
+  removedIds: Iterable<string> = []
+): OrderIndexRow[] {
+  const removed = new Set(removedIds);
+  const byId = new Map<string, OrderIndexRow>();
+  for (const row of indexRows) {
+    if (!removed.has(row.id)) byId.set(row.id, row);
+  }
+  for (const row of changedRows) {
+    if (removed.has(row.id)) continue;
+    const prev = byId.get(row.id);
+    if (!prev || row.updatedAt === undefined || (row.updatedAt ?? 0) >= (prev.updatedAt ?? 0)) {
+      byId.set(row.id, row);
+    }
+  }
+  return [...byId.values()].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
 
 /** The index as documents of `orders_index` (p0, p1, …): one part while it fits, about 2 000–4 000 orders */

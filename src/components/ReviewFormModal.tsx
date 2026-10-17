@@ -177,36 +177,36 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
   const shownRating = hoverRating ?? selectedRating;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/50 backdrop-blur-sm animate-in fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-text-primary/50 backdrop-blur-sm animate-in fade-in">
       <div
         ref={dialog.ref}
         {...dialog.props}
-        className="neu-modal rounded-3xl p-5 max-w-md w-full space-y-4 max-h-[90vh] overflow-y-auto no-scrollbar border border-white/80 text-[#2D3A4E]"
+        className="neu-modal rounded-3xl p-5 max-w-md w-full space-y-4 max-h-[90vh] overflow-y-auto no-scrollbar text-text-primary"
       >
-        <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl neu-inset flex items-center justify-center text-accent">
-              <MessageSquarePlus className="w-5 h-5 stroke-[2.2]" />
+        <div className="flex items-center justify-between gap-2 neu-divider-b pb-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-2xl neu-inset flex items-center justify-center text-accent shrink-0">
+              <MessageSquarePlus className="w-5 h-5 stroke-[2.2] shrink-0" />
             </div>
-            <div>
-              <h3 id={dialog.titleId} className="text-base font-extrabold text-[#2D3A4E]">{myReview ? 'Изменить отзыв' : 'Оставить отзыв'}</h3>
-              <p className="text-xs text-[#4E5C70] truncate max-w-[220px]">{product.title}</p>
+            <div className="min-w-0">
+              <h3 id={dialog.titleId} className="text-base font-extrabold text-text-primary">{myReview ? 'Изменить отзыв' : 'Оставить отзыв'}</h3>
+              <p className="text-xs text-text-secondary truncate max-w-[220px]">{product.title}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+            className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer shrink-0"
             aria-label="Закрыть"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 shrink-0" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
           {/* Rating: a radio group of five stars, the word under it says the choice */}
           <div className="space-y-1.5 text-center p-3 neu-inset rounded-2xl">
-            <p id={fieldId('rating')} className="text-xs font-bold text-[#2D3A4E]">Ваша оценка товару:</p>
+            <p id={fieldId('rating')} className="text-xs font-bold text-text-primary">Ваша оценка товару:</p>
             <div
               role="radiogroup"
               aria-labelledby={fieldId('rating')}
@@ -231,7 +231,7 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
                 >
                   <Star
                     aria-hidden="true"
-                    className={`w-6 h-6 ${st <= shownRating ? 'fill-warning text-warning' : 'text-[#4E5C70]'}`}
+                    className={`w-6 h-6 ${st <= shownRating ? 'fill-warning text-warning' : 'text-text-secondary'}`}
                   />
                 </button>
               ))}
@@ -244,7 +244,7 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
           {/* The review is for a received order: its number is required */}
           {(orders.length > 0 || !orderOptional) && (
             <div className="space-y-1">
-              <label htmlFor={fieldId('order')} className="block font-bold text-[#2D3A4E]">По заказу № *:</label>
+              <label htmlFor={fieldId('order')} className="block font-bold text-text-primary">По заказу № *:</label>
               {orders.length > 0 ? (
                 <NeumorphicSelect
                   id={fieldId('order')}
@@ -254,7 +254,7 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
                   placeholder="Выберите заказ"
                 />
               ) : (
-                <p id={fieldId('order')} className="text-xs text-[#4E5C70]">{REVIEW_NEEDS_ORDER_TEXT}</p>
+                <p id={fieldId('order')} className="text-xs text-text-secondary">{REVIEW_NEEDS_ORDER_TEXT}</p>
               )}
               {orderMissing && (
                 <p role="alert" className="text-xs font-bold text-danger">Выберите заказ, по которому пишете отзыв</p>
@@ -263,7 +263,7 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
           )}
 
           <div className="space-y-1">
-            <label htmlFor={fieldId('name')} className="block font-bold text-[#2D3A4E]">Ваше имя:</label>
+            <label htmlFor={fieldId('name')} className="block font-bold text-text-primary">Ваше имя:</label>
             <input
               id={fieldId('name')}
               type="text"
@@ -271,13 +271,13 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
               value={authorName}
               onChange={(e) => setAuthorName(e.target.value)}
               placeholder="Например, Александр В."
-              className="w-full py-2.5 px-3.5 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
+              className="w-full py-2.5 px-3.5 rounded-xl neu-inset text-xs text-text-primary placeholder:text-text-muted"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1">
-              <label htmlFor={fieldId('size')} className="block font-bold text-[#2D3A4E]">Размер:</label>
+              <label htmlFor={fieldId('size')} className="block font-bold text-text-primary">Размер:</label>
               <NeumorphicSelect
                 id={fieldId('size')}
                 value={selectedSize}
@@ -287,7 +287,7 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
               />
             </div>
             <div className="space-y-1">
-              <label htmlFor={fieldId('color')} className="block font-bold text-[#2D3A4E]">Цвет:</label>
+              <label htmlFor={fieldId('color')} className="block font-bold text-text-primary">Цвет:</label>
               <NeumorphicSelect
                 id={fieldId('color')}
                 value={selectedColor}
@@ -303,7 +303,7 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
           </div>
 
           <div className="space-y-1">
-            <label htmlFor={fieldId('comment')} className="block font-bold text-[#2D3A4E]">Текст отзыва *:</label>
+            <label htmlFor={fieldId('comment')} className="block font-bold text-text-primary">Текст отзыва *:</label>
             <textarea
               id={fieldId('comment')}
               rows={3}
@@ -311,12 +311,12 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               placeholder="Опишите ваши впечатления от посадки, ткани, деталей кроя..."
-              className="w-full p-3 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A] resize-none"
+              className="w-full p-3 rounded-xl neu-inset text-xs text-text-primary placeholder:text-text-muted resize-none"
             />
           </div>
 
           <div className="space-y-1">
-            <label htmlFor={fieldId('pros')} className="block font-bold text-[#2D3A4E]">Достоинства (необязательно):</label>
+            <label htmlFor={fieldId('pros')} className="block font-bold text-text-primary">Достоинства (необязательно):</label>
             <input
               id={fieldId('pros')}
               type="text"
@@ -324,12 +324,12 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
               value={prosText}
               onChange={(e) => setProsText(e.target.value)}
               placeholder="Например: качественная ткань, идеальный воротник"
-              className="w-full py-2 px-3.5 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
+              className="w-full py-2 px-3.5 rounded-xl neu-inset text-xs text-text-primary placeholder:text-text-muted"
             />
           </div>
 
           <div className="space-y-1">
-            <label htmlFor={fieldId('cons')} className="block font-bold text-[#2D3A4E]">Недостатки (необязательно):</label>
+            <label htmlFor={fieldId('cons')} className="block font-bold text-text-primary">Недостатки (необязательно):</label>
             <input
               id={fieldId('cons')}
               type="text"
@@ -337,14 +337,14 @@ export const ReviewFormModal: React.FC<ReviewFormModalProps> = ({
               value={consText}
               onChange={(e) => setConsText(e.target.value)}
               placeholder="Например: маломерит на полразмера"
-              className="w-full py-2 px-3.5 rounded-xl neu-inset text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
+              className="w-full py-2 px-3.5 rounded-xl neu-inset text-xs text-text-primary placeholder:text-text-muted"
             />
           </div>
 
           <button
             type="submit"
             disabled={isSaving}
-            className="w-full py-3 rounded-2xl neu-button-accent text-white text-xs font-bold hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+            className="w-full py-3 rounded-2xl neu-button-accent text-white text-xs font-bold transition-all cursor-pointer disabled:cursor-wait"
           >
             {myReview ? 'Сохранить отзыв' : 'Опубликовать отзыв'}
           </button>

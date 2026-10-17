@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, Check, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { AdminHint } from './AdminHint';
@@ -85,6 +85,13 @@ export function AdminListEditor<T extends { id: string }>({
   useUnsavedChanges(Boolean(draft) && shallowChanged(draft, draftStart), title);
   const [toDelete, setToDelete] = useState<T | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (draft) {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [draft?.id, isNew]);
 
   /** The item's name for its row buttons and the delete dialog: the first text field (title, question, name) */
   const nameField = fields.find((f) => f.type === 'text');
@@ -159,10 +166,10 @@ export function AdminListEditor<T extends { id: string }>({
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0">
             <div className="flex items-center gap-1">
-              <h3 className="text-sm font-extrabold text-[#2D3A4E]">{title}</h3>
+              <h3 className="text-sm font-extrabold text-text-primary">{title}</h3>
               {titleHint && <AdminHint label={title}>{titleHint}</AdminHint>}
             </div>
-            <p className="text-xs text-[#4E5C70] leading-snug mt-0.5">
+            <p className="text-xs text-text-secondary leading-snug mt-0.5">
               {description}
               {descriptionHint && (
                 <AdminHint label={descriptionHint.label} className="ml-0.5">
@@ -192,7 +199,7 @@ export function AdminListEditor<T extends { id: string }>({
               type="button"
               onClick={startAdd}
               disabled={Boolean(draft)}
-              className="py-2 px-3 neu-button-accent rounded-xl text-xs font-extrabold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="py-2 px-3 neu-button-accent rounded-xl text-xs font-extrabold flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
             >
               <Plus className="w-3.5 h-3.5" />
               {addLabel}
@@ -201,7 +208,7 @@ export function AdminListEditor<T extends { id: string }>({
         </div>
 
         {draft && (
-          <div className="neu-inset rounded-2xl p-3.5 space-y-3">
+          <div ref={formRef} className="neu-inset rounded-2xl p-3.5 space-y-3">
             {fields.map((field) => {
               const value = (draft as Record<string, unknown>)[field.key];
               const id = `field-${field.key}`;
@@ -216,8 +223,8 @@ export function AdminListEditor<T extends { id: string }>({
                       className="mt-0.5 w-4 h-4 accent-accent"
                     />
                     <span>
-                      <span className="text-xs font-bold text-[#2D3A4E] block">{field.label}</span>
-                      {field.hint && <span className="text-[11px] text-[#4E5C70] block">{field.hint}</span>}
+                      <span className="text-xs font-bold text-text-primary block">{field.label}</span>
+                      {field.hint && <span className="text-[11px] text-text-secondary block">{field.hint}</span>}
                     </span>
                   </label>
                 );
@@ -232,7 +239,7 @@ export function AdminListEditor<T extends { id: string }>({
               return (
                 <div key={field.key} className="space-y-1">
                   <div className="flex items-center gap-1">
-                    <label htmlFor={id} className="text-[11px] font-bold text-[#4E5C70] block">
+                    <label htmlFor={id} className="text-[11px] font-bold text-text-secondary block">
                       {field.label}
                       {field.required && ' *'}
                     </label>
@@ -245,7 +252,7 @@ export function AdminListEditor<T extends { id: string }>({
                       value={String(value ?? '')}
                       placeholder={field.placeholder}
                       onChange={(e) => setField(field.key, e.target.value)}
-                      className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] resize-y leading-relaxed"
+                      className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-text-primary resize-y leading-relaxed"
                     />
                   ) : field.type === 'select' ? (
                     <NeumorphicSelect
@@ -264,7 +271,7 @@ export function AdminListEditor<T extends { id: string }>({
                       value={String(value ?? '')}
                       placeholder={field.placeholder}
                       onChange={(e) => setField(field.key, e.target.value)}
-                      className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E]"
+                      className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-text-primary"
                     />
                   )}
                 </div>
@@ -274,7 +281,7 @@ export function AdminListEditor<T extends { id: string }>({
               <button
                 type="button"
                 onClick={cancel}
-                className="py-2 px-3 neu-button rounded-xl text-xs font-bold text-[#4E5C70] flex items-center gap-1.5 cursor-pointer"
+                className="py-2 px-3 neu-button rounded-xl text-xs font-bold text-text-secondary flex items-center gap-1.5 cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
                 Отмена
@@ -283,7 +290,7 @@ export function AdminListEditor<T extends { id: string }>({
                 type="button"
                 onClick={saveDraft}
                 disabled={missing.length > 0 || isSaving}
-                className="py-2 px-3 neu-button rounded-xl text-xs font-extrabold text-accent flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="py-2 px-3 neu-button rounded-xl text-xs font-extrabold text-accent flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
               >
                 <Check className="w-3.5 h-3.5" />
                 {isSaving ? 'Сохранение…' : 'Сохранить'}
@@ -309,7 +316,7 @@ export function AdminListEditor<T extends { id: string }>({
                       disabled={togglingId !== null || isSaving}
                       label={`Показывать покупателям: ${nameOf(item)}`}
                     />
-                    <span aria-hidden="true" className={`text-xs font-bold ${isShown(item) ? 'text-[#2D3A4E]' : 'text-warning'}`}>
+                    <span aria-hidden="true" className={`text-xs font-bold ${isShown(item) ? 'text-text-primary' : 'text-warning'}`}>
                       {isShown(item) ? 'Показан покупателям' : 'Скрыт от покупателей'}
                     </span>
                   </div>
@@ -320,7 +327,7 @@ export function AdminListEditor<T extends { id: string }>({
                   type="button"
                   onClick={() => move(index, -1)}
                   disabled={index === 0}
-                  className="w-8 h-8 neu-button rounded-xl flex items-center justify-center text-[#4E5C70] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-8 h-8 neu-button rounded-xl flex items-center justify-center text-text-secondary cursor-pointer disabled:cursor-not-allowed"
                   aria-label={`Выше: ${nameOf(item)}`}
                   title={`Выше: ${nameOf(item)}`}
                 >
@@ -330,7 +337,7 @@ export function AdminListEditor<T extends { id: string }>({
                   type="button"
                   onClick={() => move(index, 1)}
                   disabled={index === items.length - 1}
-                  className="w-8 h-8 neu-button rounded-xl flex items-center justify-center text-[#4E5C70] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-8 h-8 neu-button rounded-xl flex items-center justify-center text-text-secondary cursor-pointer disabled:cursor-not-allowed"
                   aria-label={`Ниже: ${nameOf(item)}`}
                   title={`Ниже: ${nameOf(item)}`}
                 >
@@ -340,7 +347,7 @@ export function AdminListEditor<T extends { id: string }>({
                   type="button"
                   onClick={() => startEdit(item)}
                   disabled={Boolean(draft)}
-                  className="w-8 h-8 neu-button rounded-xl flex items-center justify-center text-accent cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-8 h-8 neu-button rounded-xl flex items-center justify-center text-accent cursor-pointer disabled:cursor-not-allowed"
                   aria-label={`Изменить: ${nameOf(item)}`}
                   title={`Изменить: ${nameOf(item)}`}
                 >
@@ -367,7 +374,7 @@ export function AdminListEditor<T extends { id: string }>({
         message={
           (toDelete && deleteMessage?.(toDelete)) || 'Запись будет удалена из базы, покупатели перестанут её видеть.'
         }
-        preview={toDelete ? <span className="text-xs font-bold text-[#2D3A4E] break-words">{nameOf(toDelete)}</span> : undefined}
+        preview={toDelete ? <span className="text-xs font-bold text-text-primary break-words">{nameOf(toDelete)}</span> : undefined}
         onConfirm={() => {
           if (!toDelete) return;
           void commit(items.filter((it) => it.id !== toDelete.id), 'Удалено', 'info');

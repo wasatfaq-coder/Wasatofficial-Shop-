@@ -5,7 +5,7 @@ import { Order, Product, StorefrontSettings } from '../../types';
 import { currentStoreName, getLegalDetails, getStoreContacts } from '../../utils/storeContacts';
 import { copyToClipboard } from '../../utils/clipboard';
 import { isCarrierOrder } from '../../utils/orderFlow';
-import { motion, AnimatePresence } from 'motion/react';
+import { m, AnimatePresence } from 'motion/react';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { ModalPortal } from '../ModalPortal';
 import { linePrice } from '../../shared/orderLine';
@@ -93,7 +93,7 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
     <ModalPortal>
     <AnimatePresence>
       {isOpen && order && (
-        <motion.div
+        <m.div
           key="admin-order-invoice-overlay"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -105,10 +105,10 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
           {/* Backdrop */}
           <div
             onClick={onClose}
-            className="fixed inset-0 bg-[#2D3A4E]/60 backdrop-blur-xs cursor-pointer"
+            className="fixed inset-0 bg-text-primary/60 backdrop-blur-xs cursor-pointer"
           />
 
-          <motion.div
+          <m.div
             ref={dialog.ref}
             {...dialog.props}
             key="invoice-modal"
@@ -116,33 +116,33 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.93, opacity: 0, y: 12 }}
             transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-            className="neu-modal text-[#2D3A4E] rounded-3xl max-w-2xl w-full p-4 sm:p-8 space-y-6 border border-slate-200 max-h-[92vh] overflow-y-auto my-auto print:m-0 print:p-0 print:border-none print:shadow-none relative z-10"
+            className="neu-modal text-text-primary rounded-3xl max-w-2xl w-full p-4 sm:p-8 space-y-6 border border-[#E3E8EF] max-h-[92vh] overflow-y-auto my-auto print:m-0 print:p-0 print:border-none print:shadow-none relative z-10"
           >
             {/* Modal Controls Bar (Hidden during print) */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100 print:hidden">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-accent">
-              <FileText className="w-4 h-4" />
+        <div className="flex items-center justify-between pb-4 neu-divider-b print:hidden">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0">
+              <FileText className="w-4 h-4 shrink-0" />
             </div>
-            <div>
-              <h3 id={dialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">Товарная накладная и чек</h3>
-              <p className="text-xs text-[#4E5C70]">Печатная форма для комплектации и передачи клиенту</p>
+            <div className="min-w-0">
+              <h3 id={dialog.titleId} className="text-sm font-extrabold text-text-primary truncate">Товарная накладная и чек</h3>
+              <p className="text-xs text-text-secondary truncate">Печатная форма для комплектации и передачи клиенту</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={handlePrint}
-              className="py-2 px-3.5 bg-accent text-white rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-accent transition-colors cursor-pointer active:scale-95"
+              className="min-h-8 py-2 px-3.5 neu-button-accent text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0"
             >
-              <Printer className="w-3.5 h-3.5" />
+              <Printer className="w-3.5 h-3.5 shrink-0" />
               Печать
             </button>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
+              className="w-8 h-8 rounded-xl neu-button text-text-secondary hover:text-text-primary flex items-center justify-center cursor-pointer shrink-0"
               aria-label="Закрыть"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4 shrink-0" />
             </button>
           </div>
         </div>
@@ -150,91 +150,93 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
         {/* Printable Document Sheet */}
         <div className="space-y-6 p-2 print:p-4">
           {/* Header */}
-          <div className="flex justify-between items-start border-b border-slate-200 pb-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-extrabold tracking-tight text-[#2D3A4E]">{currentStoreName()}</span>
-                <span className="text-[11px] font-extrabold bg-accent/10 text-accent px-2 py-0.5 rounded-full uppercase">
-                  Официальный документ
+          <div className="flex justify-between items-start gap-3 neu-divider-b pb-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xl font-extrabold tracking-tight text-text-primary">{currentStoreName()}</span>
+                <span className="text-[11px] font-extrabold neu-tone-info text-accent px-2 py-0.5 rounded-full uppercase">
+                  Накладная
                 </span>
               </div>
-              <p className="text-xs text-[#4E5C70] mt-1 font-medium">
-                Интернет-магазин премиальной мужской одежды
-              </p>
-              {sellerLine && <p className="text-xs text-[#4E5C70]">{sellerLine}</p>}
+              {storefrontSettings?.storeSlogan?.trim() && (
+                <p className="text-xs text-text-secondary mt-1 font-medium">
+                  {storefrontSettings.storeSlogan.trim()}
+                </p>
+              )}
+              {sellerLine && <p className="text-xs text-text-secondary mt-0.5">{sellerLine}</p>}
             </div>
-            <div className="text-right">
+            <div className="text-right shrink-0">
               <button
                 type="button"
                 onClick={handleCopyInvoiceNumber}
                 className="block ml-auto text-right cursor-pointer hover:opacity-80 transition-opacity"
                 title="Нажмите, чтобы скопировать номер"
               >
-                <span className="text-xs font-bold text-[#4E5C70] block uppercase">Накладная №</span>
-                <span className="text-base font-extrabold text-accent tracking-wide">
-                  WS-INV-{order.id.slice(-6).toUpperCase()}
+                <span className="text-xs font-bold text-text-secondary block uppercase">Накладная №</span>
+                <span className="text-sm sm:text-base font-extrabold text-accent tracking-wide font-mono">
+                  WS-INV-{order.id}
                 </span>
               </button>
-              <p className="text-xs text-[#4E5C70] font-semibold mt-0.5">
+              <p className="text-xs text-text-secondary font-semibold mt-0.5">
                 от {order.date || new Date().toLocaleDateString('ru-RU')}
               </p>
             </div>
           </div>
 
           {/* Logistics & Order Metadata */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-100 text-xs">
-            <div>
-              <span className="text-[11px] uppercase font-bold text-[#4E5C70] block">Заказчик</span>
-              <span className="font-bold text-slate-800">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3.5 neu-inset rounded-2xl text-xs">
+            <div className="min-w-0">
+              <span className="text-[11px] uppercase font-bold text-text-secondary block">Заказчик</span>
+              <span className="font-bold text-text-primary">
                 {order.customerName || 'Покупатель'}
               </span>
-              <span className="text-[11px] text-[#4E5C70] block">
+              <span className="text-[11px] text-text-secondary block">
                 {order.customerPhone || '—'}
               </span>
               {order.customerEmail && (
-                <span className="text-[11px] text-[#4E5C70] block truncate">
+                <span className="text-[11px] text-text-secondary block truncate">
                   {order.customerEmail}
                 </span>
               )}
             </div>
-            <div>
-              <span className="text-[11px] uppercase font-bold text-[#4E5C70] block">Доставка</span>
-              <span className="font-bold text-slate-800 flex items-center gap-1">
-                <Truck className="w-3 h-3 text-accent" />
-                {order.deliveryMethod || 'Способ не указан'}
+            <div className="min-w-0">
+              <span className="text-[11px] uppercase font-bold text-text-secondary block">Доставка</span>
+              <span className="font-bold text-text-primary flex items-center gap-1">
+                <Truck className="w-3.5 h-3.5 text-accent shrink-0" />
+                <span className="truncate">{order.deliveryMethod || 'Способ не указан'}</span>
               </span>
-              <span className="text-[11px] text-[#4E5C70] block truncate" title={order.deliveryAddress}>
+              <span className="text-[11px] text-text-secondary block truncate" title={order.deliveryAddress}>
                 {order.deliveryAddress || 'Адрес не указан'}
               </span>
             </div>
-            <div>
-              <span className="text-[11px] uppercase font-bold text-[#4E5C70] block">Оплата и доставка</span>
-              <span className="font-bold text-slate-800 flex items-center gap-1">
-                <CreditCard className="w-3 h-3 text-success" />
-                {order.paymentMethod || 'Банковская карта онлайн'}
+            <div className="min-w-0">
+              <span className="text-[11px] uppercase font-bold text-text-secondary block">Оплата</span>
+              <span className="font-bold text-text-primary flex items-center gap-1">
+                <CreditCard className="w-3.5 h-3.5 text-success shrink-0" />
+                <span className="truncate">{order.paymentMethod || 'Согласует менеджер'}</span>
               </span>
-              <span className="text-[11px] text-[#4E5C70] font-mono block">
-                {isCarrierOrder(order)
-                  ? `Трек (ТК): ${order.trackingNumber || 'Формируется'}`
-                  : 'Трек: Не требуется (прямая доставка)'}
-              </span>
+              {isCarrierOrder(order) && (
+                <span className="text-[11px] text-text-secondary font-mono block">
+                  Трек (ТК): {order.trackingNumber || 'Формируется'}
+                </span>
+              )}
             </div>
           </div>
 
           {/* Items Table */}
           <div>
-            <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 mb-2">
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-text-secondary mb-2">
               Состав отправления ({totalQuantity} шт.)
             </h4>
             {weightText && (
-              <p className="text-xs text-slate-700 mb-2">
-                <strong>Вес товаров:</strong> {weightText}
+              <p className="text-xs text-text-secondary mb-2">
+                <strong className="text-text-primary">Вес товаров:</strong> {weightText}
               </p>
             )}
-            <div className="border border-slate-200 rounded-xl overflow-hidden">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-100 text-slate-600 font-bold border-b border-slate-200 text-[11px]">
-                  <tr>
+            <div className="neu-inset rounded-xl overflow-x-auto p-1">
+              <table className="w-full min-w-[460px] text-left text-xs">
+                <thead className="text-text-secondary font-bold text-[11px]">
+                  <tr className="neu-divider-b">
                     <th className="py-2 px-3">№</th>
                     <th className="py-2 px-3">Наименование</th>
                     <th className="py-2 px-3">Цвет / Размер</th>
@@ -243,29 +245,29 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
                     <th className="py-2 px-3 text-right">Сумма</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                <tbody className="font-medium text-text-primary">
                   {groupOrderLines(order.items || []).map((group, idx) => {
                     if (group.kind === 'pack') {
                       const it = group.item;
                       return (
-                        <tr key={`pack-${group.packGroup}`} className="hover:bg-slate-50">
-                          <td className="py-2.5 px-3 text-[#4E5C70] font-mono text-[11px]">{idx + 1}</td>
-                          <td className="py-2.5 px-3 font-bold text-slate-800">
+                        <tr key={`pack-${group.packGroup}`} className="neu-divider-b last:neu-divider-b-0">
+                          <td className="py-2.5 px-3 text-text-secondary font-mono text-[11px]">{idx + 1}</td>
+                          <td className="py-2.5 px-3 font-bold text-text-primary">
                             {`${it.product?.title || 'Товар каталога'} — ${group.title}, ${it.selectedColor}`}
-                            <span className="block text-[11px] text-[#4E5C70] font-normal">
+                            <span className="block text-[11px] text-text-secondary font-normal">
                               {packGroupCompositionText(group.sizes)}
                             </span>
                           </td>
                           <td className="py-2.5 px-3">
-                            <span className="inline-block bg-slate-100 px-1.5 py-0.5 rounded text-[11px] font-semibold text-slate-700 mr-1">
+                            <span className="inline-block neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-semibold text-text-primary mr-1">
                               {it.selectedColor}
                             </span>
                           </td>
                           <td className="py-2.5 px-3 text-center font-bold">
                             {group.packCount} уп. ({group.pieces} шт.)
                           </td>
-                          <td className="py-2.5 px-3 text-right">{group.packPrice.toLocaleString('ru-RU')} ₽</td>
-                          <td className="py-2.5 px-3 text-right font-extrabold text-slate-900">
+                          <td className="py-2.5 px-3 text-right tabular-nums">{group.packPrice.toLocaleString('ru-RU')} ₽</td>
+                          <td className="py-2.5 px-3 text-right font-extrabold text-text-primary tabular-nums">
                             {group.total.toLocaleString('ru-RU')} ₽
                           </td>
                         </tr>
@@ -275,27 +277,27 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
                     const price = linePrice(it);
                     const sum = price * (it.quantity || 1);
                     return (
-                      <tr key={it.id || idx} className="hover:bg-slate-50">
-                        <td className="py-2.5 px-3 text-[#4E5C70] font-mono text-[11px]">{idx + 1}</td>
-                        <td className="py-2.5 px-3 font-bold text-slate-800">
+                      <tr key={it.id || idx} className="neu-divider-b last:neu-divider-b-0">
+                        <td className="py-2.5 px-3 text-text-secondary font-mono text-[11px]">{idx + 1}</td>
+                        <td className="py-2.5 px-3 font-bold text-text-primary">
                           {it.product?.title || 'Товар каталога'}
                           {it.product?.material && (
-                            <span className="block text-[11px] text-[#4E5C70] font-normal">
+                            <span className="block text-[11px] text-text-secondary font-normal">
                               {it.product.material}
                             </span>
                           )}
                         </td>
                         <td className="py-2.5 px-3">
-                          <span className="inline-block bg-slate-100 px-1.5 py-0.5 rounded text-[11px] font-semibold text-slate-700 mr-1">
+                          <span className="inline-block neu-flat-sm px-2 py-0.5 rounded-lg text-[11px] font-semibold text-text-primary mr-1">
                             {it.selectedColor}
                           </span>
-                          <span className="inline-block bg-accent/5 px-1.5 py-0.5 rounded text-[11px] font-bold text-accent">
+                          <span className="inline-block neu-tone-info px-2 py-0.5 rounded-lg text-[11px] font-bold text-accent">
                             {it.selectedSize}
                           </span>
                         </td>
                         <td className="py-2.5 px-3 text-center font-bold">{it.quantity || 1} шт.</td>
-                        <td className="py-2.5 px-3 text-right">{price.toLocaleString('ru-RU')} ₽</td>
-                        <td className="py-2.5 px-3 text-right font-extrabold text-slate-900">
+                        <td className="py-2.5 px-3 text-right tabular-nums">{price.toLocaleString('ru-RU')} ₽</td>
+                        <td className="py-2.5 px-3 text-right font-extrabold text-text-primary tabular-nums">
                           {sum.toLocaleString('ru-RU')} ₽
                         </td>
                       </tr>
@@ -308,64 +310,67 @@ export const AdminOrderInvoiceModal: React.FC<AdminOrderInvoiceModalProps> = ({
 
           {/* Totals Breakdown */}
           {totals && !totals.matches && (
-            <p role="alert" className="text-xs font-semibold text-danger bg-danger-soft border border-danger/30 rounded-xl p-3 print:hidden">
+            <p role="alert" className="text-xs font-semibold neu-tone-danger rounded-xl p-3 print:hidden">
               Сумма строк ({rub(totals.subtotal)}) − скидка + доставка не равна итогу заказа ({rub(totals.total)}).
               Проверьте заказ в «Заказах», прежде чем печатать.
             </p>
           )}
           {totals && (
             <div className="flex justify-end pt-2">
-              <dl className="w-64 space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+              <dl className="w-64 space-y-1.5 text-xs text-text-secondary neu-inset p-3.5 rounded-2xl">
                 <div className="flex justify-between gap-2">
                   <dt>Товары:</dt>
-                  <dd className="font-semibold whitespace-nowrap">{rub(totals.subtotal)}</dd>
+                  <dd className="font-semibold text-text-primary whitespace-nowrap tabular-nums">{rub(totals.subtotal)}</dd>
                 </div>
                 {totals.recorded && totals.discount > 0 && (
                   <div className="flex justify-between gap-2 text-success font-semibold">
                     <dt>Скидка{order.promoCode ? ` по промокоду ${order.promoCode}` : ''}:</dt>
-                    <dd className="whitespace-nowrap">−{rub(totals.discount)}</dd>
+                    <dd className="whitespace-nowrap tabular-nums">−{rub(totals.discount)}</dd>
                   </div>
                 )}
                 {totals.recorded ? (
                 <div className="flex justify-between gap-2">
                   <dt>Доставка:</dt>
-                  <dd className={`font-semibold whitespace-nowrap ${deliveryText === 'Бесплатно' ? 'text-success' : ''}`}>
+                  <dd className={`font-semibold whitespace-nowrap ${deliveryText === 'Бесплатно' ? 'text-success' : 'text-text-primary'}`}>
                     {deliveryText}
                   </dd>
                 </div>
                 ) : (
-                  <div className="text-[11px] text-[#4E5C70]">
+                  <div className="text-[11px] text-text-secondary">
                     <dt className="inline">Скидка и доставка: </dt>
                     <dd className="inline">в заказе не записаны отдельно, итог — из заказа</dd>
                   </div>
                 )}
-                <div className="border-t border-slate-200 pt-2 flex justify-between items-baseline font-extrabold text-slate-900 text-sm">
+                <div className="neu-divider-t pt-2 flex justify-between items-baseline font-extrabold text-text-primary text-sm">
                   <dt>ИТОГО К ОПЛАТЕ:</dt>
-                  <dd className="text-base text-accent font-extrabold whitespace-nowrap">{rub(totals.total)}</dd>
+                  <dd className="text-base text-accent font-extrabold whitespace-nowrap tabular-nums">{rub(totals.total)}</dd>
                 </div>
               </dl>
             </div>
           )}
 
-          {/* Footer with return policy & stamp placeholder */}
-          <div className="border-t border-slate-200 pt-4 grid grid-cols-2 gap-4 text-[11px] text-[#4E5C70]">
+          {/* Footer with return policy (only if configured) & signature line */}
+          <div className="neu-divider-t pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-[11px] text-text-secondary">
             <div>
-              <p className="font-bold text-slate-700">Правила возврата и примерки:</p>
-              <p className="leading-tight mt-0.5">
-                Возврат товара надлежащего качества возможен в течение 14 дней с момента получения при
-                сохранении товарного вида, ярлыков и чека.
-              </p>
+              {typeof storefrontSettings?.returnPeriodDays === 'number' && storefrontSettings.returnPeriodDays > 0 && (
+                <>
+                  <p className="font-bold text-text-primary">Правила возврата:</p>
+                  <p className="leading-tight mt-0.5">
+                    Возврат товара надлежащего качества возможен в течение {storefrontSettings.returnPeriodDays} дн. с момента получения при
+                    сохранении товарного вида, ярлыков и чека.
+                  </p>
+                </>
+              )}
             </div>
             <div className="text-right flex flex-col items-end justify-end">
-              <div className="w-36 border-b border-slate-400 border-dashed pb-0.5 text-center text-[#4E5C70] font-mono text-[11px]">
+              <div className="w-36 border-b border-slate-400 border-dashed pb-0.5 text-center text-text-secondary font-mono text-[11px]">
                 Отпустил со склада (подпись)
               </div>
-              <p className="text-xs text-[#4E5C70] mt-1">Штамп отдела контроля качества {currentStoreName()}</p>
             </div>
           </div>
         </div>
-      </motion.div>
-    </motion.div>
+      </m.div>
+    </m.div>
   )}
 </AnimatePresence>
     </ModalPortal>

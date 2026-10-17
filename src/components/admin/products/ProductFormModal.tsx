@@ -1,4 +1,4 @@
-import { Check, X, Layers, AlertTriangle, Maximize2, Tag, Wand2 } from 'lucide-react';
+import { Check, X, Layers, AlertTriangle, Maximize2, Tag, Wand2, Plus } from 'lucide-react';
 import { descriptionDraft, withDescriptionDraft } from '../../../utils/descriptionDraft';
 import { recategorizeSkuCode } from '../../../utils/inventory';
 import { compositionToMaterial } from '../../../utils/productAttributes';
@@ -87,6 +87,7 @@ export function ProductFormModal({
     skuConflictInfo,
     handleFormKeyDown,
     handleSaveProduct,
+    handleSaveAndAddAnother,
     totalFormStock,
     totalFormInventoryValue,
   } = form;
@@ -145,17 +146,17 @@ export function ProductFormModal({
   return (
     <>
       {isProductFormOpen && (
-        <ModalPortal><div className="admin-no-glow fixed inset-0 z-[70] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div ref={productFormDialog.ref} {...productFormDialog.props} className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-4 sm:p-6 max-w-4xl w-full space-y-4 text-[#2D3A4E] border border-white/80 max-h-[92vh] overflow-y-auto my-auto">
+        <ModalPortal><div className="admin-no-glow fixed inset-0 z-[70] bg-text-primary/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div ref={productFormDialog.ref} {...productFormDialog.props} className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-4 sm:p-6 max-w-4xl w-full space-y-4 text-text-primary max-h-[92vh] overflow-y-auto my-auto">
             {/* Header: title on the left, status and close on the right (status wraps under the title on phones) */}
-            <div className="flex flex-wrap items-start justify-between pb-3 border-b border-[#BAC5D5]/50 gap-x-3 gap-y-2.5">
+            <div className="flex flex-wrap items-start justify-between pb-3 neu-divider-b gap-x-3 gap-y-2.5">
               <div className="flex items-start gap-2.5 min-w-0 flex-1">
                 <div className="w-10 h-10 rounded-2xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
                   <Layers className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 id={productFormDialog.titleId} className="text-sm sm:text-base font-extrabold uppercase tracking-wider text-[#2D3A4E]">
+                    <h3 id={productFormDialog.titleId} className="text-sm sm:text-base font-extrabold uppercase tracking-wider text-text-primary">
                       {editingProduct ? 'Редактирование товара' : 'Новый товар каталога'}
                     </h3>
                     {editingProduct && (
@@ -164,7 +165,7 @@ export function ProductFormModal({
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-[#4E5C70] font-medium mt-0.5 leading-snug">
+                  <p className="text-xs text-text-secondary font-medium mt-0.5 leading-snug">
                     Параметры, цены, себестоимость и остатки SKU
                   </p>
                 </div>
@@ -174,7 +175,7 @@ export function ProductFormModal({
               <button
                 type="button"
                 onClick={productFormGuard.requestClose}
-                className="order-2 sm:order-3 w-9 h-9 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer shrink-0"
+                className="order-2 sm:order-3 w-9 h-9 rounded-xl neu-button flex items-center justify-center text-text-secondary hover:text-text-primary transition-all cursor-pointer shrink-0"
                 title="Закрыть"
                 aria-label="Закрыть"
               >
@@ -193,7 +194,7 @@ export function ProductFormModal({
                   onClick={() => setFormInStock(true)}
                   aria-pressed={formInStock}
                   className={`h-8 px-3 rounded-lg text-[11px] font-extrabold whitespace-nowrap transition-all cursor-pointer active:scale-95 ${
-                    formInStock ? 'neu-pill-active' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
+                    formInStock ? 'neu-pill-active' : 'text-text-secondary hover:text-text-primary'
                   }`}
                 >
                   <span className={formInStock ? 'text-success' : ''}>В продаже</span>
@@ -203,7 +204,7 @@ export function ProductFormModal({
                   onClick={() => setFormInStock(false)}
                   aria-pressed={!formInStock}
                   className={`h-8 px-3 rounded-lg text-[11px] font-extrabold whitespace-nowrap transition-all cursor-pointer active:scale-95 ${
-                    !formInStock ? 'neu-pill-active' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
+                    !formInStock ? 'neu-pill-active' : 'text-text-secondary hover:text-text-primary'
                   }`}
                 >
                   <span className={!formInStock ? 'text-danger' : ''}>Снят с витрины</span>
@@ -216,7 +217,7 @@ export function ProductFormModal({
             <form onSubmit={handleSaveProduct} onKeyDown={handleFormKeyDown} noValidate className="space-y-3">
               {/* SKU Uniqueness & Integrity Banner */}
               {skuConflictInfo.hasConflicts ? (
-                <div className="neu-inset rounded-2xl p-3 border border-danger/25 text-danger text-xs space-y-1.5">
+                <div className="neu-tone-danger rounded-2xl p-3 text-danger text-xs space-y-1.5">
                   <div className="flex items-center gap-2 font-extrabold">
                     <AlertTriangle className="w-4 h-4 text-danger shrink-0" />
                     <span>Повторяются артикулы или штрихкоды</span>
@@ -236,7 +237,7 @@ export function ProductFormModal({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {/* Title */}
                   <div>
-                    <label htmlFor="product-form-title" className="text-[11px] font-bold text-[#4E5C70] block mb-1">
+                    <label htmlFor="product-form-title" className="text-[11px] font-bold text-text-secondary block mb-1">
                       Название товара *
                     </label>
                     <input
@@ -245,7 +246,7 @@ export function ProductFormModal({
                       value={formTitle}
                       onChange={(e) => setFormTitle(e.target.value)}
                       placeholder="например, Рубашка льняная Slim Fit"
-                      className="w-full px-3.5 py-2 neu-inset rounded-xl text-xs font-bold text-[#2D3A4E] placeholder:text-[#56647A]"
+                      className="w-full px-3.5 py-2 neu-inset rounded-xl text-xs font-bold text-text-primary placeholder:text-text-muted"
                       required
                     />
                   </div>
@@ -254,7 +255,7 @@ export function ProductFormModal({
                     <div className="min-w-0">
                       <div className="flex items-center justify-between gap-2 mb-1 min-h-5">
                         <span className="inline-flex items-center gap-1">
-                        <label htmlFor="product-form-category" className="text-[11px] font-bold text-[#4E5C70]">
+                        <label htmlFor="product-form-category" className="text-[11px] font-bold text-text-secondary">
                           Категория *
                         </label>
                         <AdminHint label="Категория">Где покупатель найдёт товар. Список ведётся в «Категориях».</AdminHint>
@@ -287,10 +288,10 @@ export function ProductFormModal({
                   </div>
                 </div>
                 {/* Marketing Badge Selector - Unified Inset Container */}
-                <div className="neu-inset rounded-2xl p-3.5 border border-white/60 space-y-2.5">
-                  <div className="flex items-start justify-between gap-2 pb-1 border-b border-[#BAC5D5]/30">
+                <div className="neu-inset rounded-2xl p-3.5 space-y-2.5">
+                  <div className="flex items-start justify-between gap-2 pb-1.5 neu-divider-b">
                     <div className="min-w-0 flex items-start gap-1">
-                    <label className="min-w-0 text-[11px] font-extrabold text-[#2D3A4E] flex items-start gap-1.5 uppercase tracking-wider leading-snug">
+                    <label className="min-w-0 text-[11px] font-extrabold text-text-primary flex items-start gap-1.5 uppercase tracking-wider leading-snug">
                       <Tag className="w-3.5 h-3.5 text-accent shrink-0 mt-px" />
                       <span>Маркетинговый ярлык (Бейдж)</span>
                     </label>
@@ -300,12 +301,12 @@ export function ProductFormModal({
                       <button
                         type="button"
                         onClick={() => setFormBadge('')}
-                        className="shrink-0 whitespace-nowrap text-[11px] font-bold text-danger hover:text-danger hover:underline cursor-pointer"
+                        className="min-h-8 inline-flex items-center shrink-0 whitespace-nowrap text-[11px] font-bold text-danger hover:text-danger hover:underline cursor-pointer"
                       >
                         Снять ярлык
                       </button>
                     ) : (
-                      <span className="shrink-0 whitespace-nowrap text-[11px] font-semibold text-[#4E5C70]">Опционально</span>
+                      <span className="shrink-0 whitespace-nowrap text-[11px] font-semibold text-text-secondary">Опционально</span>
                     )}
                   </div>
                   <div className="flex flex-wrap gap-1.5 pt-0.5">
@@ -315,10 +316,10 @@ export function ProductFormModal({
                         type="button"
                         onClick={() => setFormBadge(formBadge.trim().toUpperCase() === b ? '' : b)}
                         aria-pressed={formBadge.trim().toUpperCase() === b}
-                        className={`h-7 px-2.5 rounded-xl text-[11px] font-extrabold whitespace-nowrap cursor-pointer transition-all active:scale-95 flex items-center justify-center border ${
+                        className={`h-8 px-2.5 rounded-xl text-[11px] font-extrabold whitespace-nowrap cursor-pointer transition-all flex items-center justify-center ${
                           formBadge.trim().toUpperCase() === b
-                            ? 'neu-pill-active border-transparent'
-                            : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E] border-white/60'
+                            ? 'neu-pill-active'
+                            : 'neu-button text-text-secondary hover:text-text-primary'
                         }`}
                       >
                         {b}
@@ -331,7 +332,7 @@ export function ProductFormModal({
                     value={formBadge}
                     onChange={(e) => setFormBadge(e.target.value)}
                     placeholder="Или свой текст (например: -30% или ХИТ СЕЗОНА)"
-                    className="w-full px-3 py-2 neu-inset rounded-xl text-xs font-bold text-accent placeholder:text-[#56647A]"
+                    className="w-full px-3 py-2 neu-inset rounded-xl text-xs font-bold text-accent placeholder:text-text-muted"
                   />
                 </div>
               </ProductFormBlock>
@@ -364,7 +365,7 @@ export function ProductFormModal({
                 {/* Description: the draft is written from the characteristics above */}
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-1 min-h-5">
-                    <label htmlFor="product-form-description" className="text-[11px] font-bold text-[#4E5C70]">
+                    <label htmlFor="product-form-description" className="text-[11px] font-bold text-text-secondary">
                       Описание товара
                     </label>
                     <button
@@ -378,7 +379,7 @@ export function ProductFormModal({
                           value: formDescription,
                         })
                       }
-                      className="shrink-0 min-h-6 text-[11px] font-bold text-accent hover:text-accent-strong flex items-center gap-1 cursor-pointer"
+                      className="shrink-0 min-h-8 text-[11px] font-bold text-accent hover:text-accent-strong flex items-center gap-1 cursor-pointer"
                       title="Открыть окно редактирования описания"
                     >
                       <Maximize2 className="w-3 h-3" />
@@ -392,7 +393,7 @@ export function ProductFormModal({
                       value={formDescription}
                       onChange={(e) => setFormDescription(e.target.value)}
                       placeholder="Краткое описание преимуществ ткани и кроя..."
-                      className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] resize-y leading-relaxed"
+                      className="w-full px-3 py-2 neu-inset rounded-xl text-xs text-text-primary resize-y leading-relaxed"
                     />
                   </div>
                   {/* The description repeats the characteristics: the form writes those sentences (fast entry, stage 3) */}
@@ -406,14 +407,14 @@ export function ProductFormModal({
                           onClick={() => setFormDescription(withDescriptionDraft(formDescription, draft))}
                           disabled={!draft || added}
                           className={`min-h-8 px-3 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all ${
-                            draft && !added ? 'neu-button text-accent cursor-pointer' : 'neu-button-disabled text-[#4E5C70]'
+                            draft && !added ? 'neu-button text-accent cursor-pointer' : 'neu-button-disabled text-text-secondary'
                           }`}
                         >
                           <Wand2 className="w-3.5 h-3.5" aria-hidden="true" />
                           Черновик из характеристик
                         </button>
                         <AdminHint label="Черновик из характеристик" className="-ml-1.5">Дописывает в описание состав, покрой и страну. Текст можно править.</AdminHint>
-                        <span className="text-[11px] text-[#4E5C70] leading-snug">
+                        <span className="text-[11px] text-text-secondary leading-snug">
                           {!draft
                             ? 'Заполните состав, покрой или страну в «Структуре карточки»'
                             : added
@@ -431,19 +432,19 @@ export function ProductFormModal({
               </ProductFormBlock>
 
               {/* Form Action Buttons & Summaries */}
-              <div className="pt-3 border-t border-[#BAC5D5]/50 space-y-3">
+              <div className="pt-3 neu-divider-t space-y-3">
                 {/* Neumorphic Recessed Summary Columns */}
                 <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   <div className="p-2 sm:p-2.5 neu-inset rounded-xl flex flex-col justify-center text-center">
-                    <span className="text-[11px] font-bold text-[#4E5C70] leading-tight mb-0.5">Остаток</span>
+                    <span className="text-[11px] font-bold text-text-secondary leading-tight mb-0.5">Остаток</span>
                     <span className="text-xs sm:text-sm font-extrabold text-accent whitespace-nowrap">
                       {totalFormStock} <span className="text-[11px] font-bold">шт.</span>
                     </span>
                   </div>
 
                   <div className="p-2 sm:p-2.5 neu-inset rounded-xl flex flex-col justify-center text-center">
-                    <span className="text-[11px] font-bold text-[#4E5C70] leading-tight mb-0.5">Стоимость</span>
-                    <span className="text-xs sm:text-sm font-extrabold text-[#2D3A4E] whitespace-nowrap">
+                    <span className="text-[11px] font-bold text-text-secondary leading-tight mb-0.5">Стоимость</span>
+                    <span className="text-xs sm:text-sm font-extrabold text-text-primary whitespace-nowrap">
                       {totalFormInventoryValue.toLocaleString('ru-RU')} <span className="text-[11px] font-bold">₽</span>
                     </span>
                   </div>
@@ -465,25 +466,36 @@ export function ProductFormModal({
                     ref={formErrorsRef}
                     tabIndex={-1}
                     role="alert"
-                    className="bg-danger-soft border border-danger/40 rounded-xl p-2.5 text-xs font-bold text-danger space-y-1"
+                    className="neu-tone-danger rounded-xl p-2.5 text-xs font-bold text-danger space-y-1"
                   >
                     {formErrors.map((err) => (
                       <p key={err}>{err}</p>
                     ))}
                   </div>
                 )}
-                <div className="flex items-center gap-2.5 justify-end">
+                <div className="flex flex-wrap items-center gap-2 justify-end">
                 <button
                   type="button"
                   onClick={productFormGuard.requestClose}
-                  className="h-11 shrink-0 px-5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer text-center"
+                  className="h-11 shrink-0 px-4 sm:px-5 neu-button rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary transition-all cursor-pointer text-center"
                 >
                   Отмена
                 </button>
+                {!editingProduct && (
+                  <button
+                    type="button"
+                    disabled={isSavingProduct}
+                    onClick={() => void handleSaveAndAddAnother()}
+                    className="h-11 shrink-0 px-4 neu-button rounded-xl text-xs font-extrabold text-accent hover:text-accent-strong whitespace-nowrap cursor-pointer transition-all flex items-center justify-center gap-1.5 disabled:cursor-wait"
+                  >
+                    <Plus className="w-4 h-4 stroke-[2.5]" />
+                    <span>Сохранить и добавить ещё</span>
+                  </button>
+                )}
                 <button
                   type="submit"
                   disabled={isSavingProduct}
-                  className="h-11 flex-1 sm:flex-initial min-w-0 px-6 neu-button-accent rounded-xl text-xs font-extrabold text-white whitespace-nowrap cursor-pointer transition-all flex items-center justify-center gap-2 disabled:cursor-wait"
+                  className="h-11 flex-1 sm:flex-initial min-w-0 px-5 sm:px-6 neu-button-accent rounded-xl text-xs font-extrabold text-white whitespace-nowrap cursor-pointer transition-all flex items-center justify-center gap-2 disabled:cursor-wait"
                 >
                   <Check className="w-4 h-4 stroke-[2.5]" />
                   <span>{isSavingProduct ? 'Сохранение…' : editingProduct ? 'Сохранить изменения' : 'Создать товар'}</span>

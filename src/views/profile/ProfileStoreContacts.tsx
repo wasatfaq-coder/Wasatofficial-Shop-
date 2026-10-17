@@ -20,7 +20,7 @@ export function ProfileStoreContacts({ storeName, storeSlogan, pickupAddress, st
     <>
       {(pickupAddress || hasHours || storePhone || storeTelegram) && (
       <div className="space-y-2">
-        <h3 className="text-xs font-bold text-[#2D3A4E] tracking-wider uppercase px-1">
+        <h3 className="text-xs font-bold text-text-primary tracking-wider uppercase px-1">
           Контакты магазина
         </h3>
         <div className="neu-flat rounded-3xl p-4 space-y-3">
@@ -29,13 +29,13 @@ export function ProfileStoreContacts({ storeName, storeSlogan, pickupAddress, st
               <MapPin className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-bold text-[#2D3A4E]">{storeName}</p>
-              {storeSlogan && <p className="text-xs text-[#4E5C70]">{storeSlogan}</p>}
+              <p className="text-sm font-bold text-text-primary">{storeName}</p>
+              {storeSlogan && <p className="text-xs text-text-secondary">{storeSlogan}</p>}
             </div>
           </div>
 
           {(pickupAddress || hasHours) && (
-            <div className="neu-inset rounded-2xl p-3 space-y-1.5 text-xs text-[#2D3A4E]">
+            <div className="neu-inset rounded-2xl p-3 space-y-1.5 text-xs text-text-primary">
               {pickupAddress && (
                 <div className="flex items-start gap-2">
                   <MapPin className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
@@ -51,7 +51,7 @@ export function ProfileStoreContacts({ storeName, storeSlogan, pickupAddress, st
               {storePhone && (
                 <a
                   href={telHref(storePhone)}
-                  className="flex-1 min-w-[150px] py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-[#2D3A4E] hover:text-accent flex items-center justify-center gap-1.5 whitespace-nowrap transition-all"
+                  className="flex-1 min-w-[150px] py-2.5 px-3 neu-button rounded-xl text-xs font-bold text-text-primary hover:text-accent flex items-center justify-center gap-1.5 whitespace-nowrap transition-all"
                 >
                   <Phone className="w-3.5 h-3.5 text-accent shrink-0" />
                   <span>{storePhone}</span>

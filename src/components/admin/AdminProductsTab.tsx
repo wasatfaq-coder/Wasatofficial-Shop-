@@ -11,7 +11,7 @@ import { collectBarcodes, withSizePackBarcodes } from '../../shared/barcode';
 import { AdminBulkOperationsModal } from './AdminBulkOperationsModal';
 import { ModalPortal } from '../ModalPortal';
 import { TextEditModal } from './TextEditModal';
-import type { StoreCategory } from '../../types';
+import type { StoreCategory, StorefrontSettings } from '../../types';
 import { DiscardChangesDialog } from '../DiscardChangesDialog';
 import { useProductList } from './products/useProductList';
 import { ProductListToolbar } from './products/ProductListToolbar';
@@ -29,6 +29,8 @@ export interface AdminProductsTabProps {
   /** Admin → «Категории»: the only category list for products */
   categories?: StoreCategory[];
   products: Product[];
+  /** Storefront settings (colour & size palette of the shop) */
+  settings?: StorefrontSettings;
   /** Resolves to false when the database refused the write (the error toast is already shown) */
   onUpdateProducts: (updated: Product[]) => Promise<boolean> | void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
@@ -43,6 +45,7 @@ export type ProductCategoryOption = { id: string; name: string };
 export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   categories = [],
   products,
+  settings,
   onUpdateProducts,
   onShowToast,
   lowStockThreshold,
@@ -68,7 +71,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
   const priceEditProduct = priceEditId ? products.find((p) => p.id === priceEditId) : undefined;
   const stockEditProduct = stockEditId ? products.find((p) => p.id === stockEditId) : undefined;
 
-  const form = useProductForm({ categories, products, onUpdateProducts, onShowToast, CATEGORY_OPTIONS });
+  const form = useProductForm({ categories, products, settings, onUpdateProducts, onShowToast, CATEGORY_OPTIONS });
   const {
     formCategory,
     formCategoryOptions,
@@ -82,6 +85,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     setPendingRemoval,
     productFormGuard,
     handleOpenAddProduct,
+    handleOpenDuplicateProduct,
     handleOpenEditProduct,
   } = form;
   /** The product whose copy is being made (its photos are read and written first) */
@@ -190,7 +194,11 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
       />
 
       {/* ================= MODAL: QUICK PRODUCT INSPECT ================= */}
-      <ProductInspectModal list={list} handleOpenEditProduct={handleOpenEditProduct} />
+      <ProductInspectModal
+        list={list}
+        handleOpenEditProduct={handleOpenEditProduct}
+        handleOpenDuplicateProduct={handleOpenDuplicateProduct}
+      />
 
       {/* ================= MODAL: DELETE PRODUCT CONFIRMATION, BULK DISCOUNT ================= */}
       <ProductListDialogs list={list} products={products} onUpdateProducts={onUpdateProducts} onShowToast={onShowToast} />
@@ -224,16 +232,16 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
           <div
             ref={zoomDialog.ref}
             {...zoomDialog.props}
-            className="relative max-w-2xl max-h-[85vh] neu-flat rounded-3xl overflow-hidden p-2 border border-white/60 animate-in zoom-in-95 duration-200"
+            className="relative max-w-2xl max-h-[85vh] neu-flat rounded-3xl overflow-hidden p-2 animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
               onClick={() => setPreviewZoomImage(null)}
-              className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center cursor-pointer transition-colors shadow-[var(--neu-on-photo)]"
+              className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full neu-photo-btn text-text-primary hover:text-accent flex items-center justify-center cursor-pointer transition-all"
               aria-label="Закрыть"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5 shrink-0" />
             </button>
             <img
               src={previewZoomImage}

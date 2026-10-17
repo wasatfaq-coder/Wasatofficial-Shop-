@@ -8,7 +8,7 @@ export const StorefrontRequisitesSection: React.FC<StorefrontSectionProps> = ({ 
   const field = { settings, patch };
   return (
     <div className="space-y-4">
-      <p className="text-xs text-[#4E5C70]">
+      <p className="text-xs text-text-secondary">
         Нужны для оферты и счетов. Без них документы покупателям не показываются. Покупатель копирует эти данные для
         счетов и договоров.
       </p>

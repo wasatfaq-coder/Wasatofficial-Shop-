@@ -53,8 +53,8 @@ const CODE_WORDS = ['STYLE', 'LOOK', 'SALE', 'VIP'];
 const PERCENT_PRESETS = [10, 15, 20, 25, 30, 50];
 const FIXED_PRESETS = [300, 500, 1000, 1500, 2000, 3000];
 
-const fieldLabel = 'text-[11px] font-bold text-[#4E5C70] block';
-const fieldInput = 'w-full px-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E] font-bold';
+const fieldLabel = 'text-[11px] font-bold text-text-secondary block';
+const fieldInput = 'w-full px-3 py-2 neu-inset rounded-xl text-xs text-text-primary font-bold';
 
 function scopeOf(promo: PromoCode | null): ScopeType {
   if (promo?.applicableProductIds?.length) return 'products';
@@ -77,7 +77,7 @@ export const PromoForm: React.FC<PromoFormProps> = ({
   onShowToast,
   onClose,
 }) => {
-  const editingId = promo?.id ?? null;
+  const editingId = promo?.id || null;
   const usedCount = promo?.usedCount ?? 0;
   const [code, setCode] = useState(promo?.code ?? '');
   const [discountType, setDiscountType] = useState<'percent' | 'fixed'>(
@@ -288,18 +288,18 @@ export const PromoForm: React.FC<PromoFormProps> = ({
         <button
           type="button"
           onClick={guard.requestClose}
-          className="h-9 px-3 neu-button rounded-xl text-xs font-bold text-[#2D3A4E] hover:text-accent flex items-center gap-1.5 cursor-pointer shrink-0"
+          className="h-9 px-3 neu-button rounded-xl text-xs font-bold text-text-primary hover:text-accent flex items-center gap-1.5 cursor-pointer shrink-0"
         >
           <ArrowLeft className="w-4 h-4" aria-hidden="true" />
           <span>К списку</span>
         </button>
-        <h4 ref={headingRef} tabIndex={-1} className="text-sm font-extrabold text-[#2D3A4E] truncate">
+        <h4 ref={headingRef} tabIndex={-1} className="text-sm font-extrabold text-text-primary truncate">
           {promo ? `Промокод ${promo.code}` : 'Новый промокод'}
         </h4>
       </div>
 
       {usedCount > 0 && (
-        <p className="text-xs text-[#2D3A4E] bg-warning-soft border border-warning/30 rounded-xl p-2.5">
+        <p className="text-xs text-text-primary neu-tone-warning rounded-xl p-2.5">
           Код уже применён {usedCount} {pluralRu(usedCount, ['раз', 'раза', 'раз'])}. Новая скидка и условия подействуют
           на следующие заказы; оформленные заказы не меняются.
         </p>
@@ -314,7 +314,7 @@ export const PromoForm: React.FC<PromoFormProps> = ({
             <button
               type="button"
               onClick={handleGenerateCode}
-              className="min-h-6 text-[11px] font-bold text-accent hover:underline cursor-pointer shrink-0"
+              className="min-h-8 text-[11px] font-bold text-accent hover:underline cursor-pointer shrink-0"
             >
               Сгенерировать код
             </button>
@@ -358,7 +358,7 @@ export const PromoForm: React.FC<PromoFormProps> = ({
                     setDiscountValue(option.reset);
                   }}
                   className={`flex-1 min-h-8 py-1.5 text-xs font-extrabold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                    discountType === option.id ? 'neu-pill-active' : 'text-[#4E5C70]'
+                    discountType === option.id ? 'neu-pill-active' : 'text-text-secondary'
                   }`}
                 >
                   {option.icon}
@@ -389,7 +389,7 @@ export const PromoForm: React.FC<PromoFormProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label="Быстрый выбор скидки">
-          <span className="text-[11px] font-bold text-[#4E5C70]">Быстрый выбор:</span>
+          <span className="text-[11px] font-bold text-text-secondary">Быстрый выбор:</span>
           {presets.map((val) => (
             <button
               key={val}
@@ -397,7 +397,7 @@ export const PromoForm: React.FC<PromoFormProps> = ({
               aria-pressed={discountValue === val}
               onClick={() => setDiscountValue(val)}
               className={`min-h-8 text-[11px] font-bold px-2.5 rounded-lg cursor-pointer ${
-                discountValue === val ? 'neu-pill-active font-extrabold' : 'neu-button text-[#4E5C70]'
+                discountValue === val ? 'neu-pill-active font-extrabold' : 'neu-button text-text-secondary'
               }`}
             >
               {discountType === 'percent' ? `-${val}%` : `-${val.toLocaleString('ru-RU')} ₽`}
@@ -423,7 +423,7 @@ export const PromoForm: React.FC<PromoFormProps> = ({
               aria-describedby="promo-expires-at-hint"
               className={fieldInput}
             />
-            <p id="promo-expires-at-hint" className="text-[11px] text-[#4E5C70] mt-1">
+            <p id="promo-expires-at-hint" className="text-[11px] text-text-secondary mt-1">
               До конца дня по Москве. Пусто — без срока.
             </p>
           </div>
@@ -448,7 +448,7 @@ export const PromoForm: React.FC<PromoFormProps> = ({
             />
             <p
               id="promo-usage-limit-hint"
-              className={`text-[11px] mt-1 ${hasLimit ? 'text-[#2D3A4E] bg-warning-soft border border-warning/30 rounded-lg p-2' : 'text-[#4E5C70]'}`}
+              className={`text-[11px] mt-1 ${hasLimit ? 'text-text-primary neu-tone-warning rounded-lg p-2' : 'text-text-secondary'}`}
             >
               {hasLimit
                 ? 'Код с лимитом применит только покупатель, вошедший через Google: гость увидит «Код действует только после входа через Google». Для рекламы и рассылки гостям оставьте поле пустым.'
@@ -468,11 +468,11 @@ export const PromoForm: React.FC<PromoFormProps> = ({
           className="w-full min-h-11 px-3.5 py-2.5 flex items-center justify-between gap-2 text-left cursor-pointer"
         >
           <span className="min-w-0">
-            <span className="block text-xs font-extrabold text-[#2D3A4E]">Ещё условия</span>
-            {!moreOpen && <span className="block text-[11px] text-[#4E5C70] truncate">{moreSummary}</span>}
+            <span className="block text-xs font-extrabold text-text-primary">Ещё условия</span>
+            {!moreOpen && <span className="block text-[11px] text-text-secondary truncate">{moreSummary}</span>}
           </span>
           <ChevronDown
-            className={`w-4 h-4 text-[#4E5C70] shrink-0 transition-transform ${moreOpen ? 'rotate-180' : ''}`}
+            className={`w-4 h-4 text-text-secondary shrink-0 transition-transform ${moreOpen ? 'rotate-180' : ''}`}
             aria-hidden="true"
           />
         </button>
@@ -499,9 +499,9 @@ export const PromoForm: React.FC<PromoFormProps> = ({
             </div>
 
             {/* Scope: all vs categories vs specific products */}
-            <div className="pt-2 border-t border-[#BAC5D5]/40 space-y-2.5">
+            <div className="pt-2 neu-divider-t space-y-2.5">
               <div className="flex items-center gap-1">
-                <p id="promo-scope-label" className="text-[11px] font-bold text-[#2D3A4E] flex items-center gap-1.5">
+                <p id="promo-scope-label" className="text-[11px] font-bold text-text-primary flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-accent shrink-0" aria-hidden="true" />
                   <span>Область действия скидки</span>
                 </p>
@@ -522,7 +522,7 @@ export const PromoForm: React.FC<PromoFormProps> = ({
                     aria-checked={scopeType === option.id}
                     onClick={() => setScopeType(option.id)}
                     className={`min-h-8 px-2.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                      scopeType === option.id ? 'neu-pill-active font-extrabold' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
+                      scopeType === option.id ? 'neu-pill-active font-extrabold' : 'text-text-secondary hover:text-text-primary'
                     }`}
                   >
                     {option.label}
@@ -533,12 +533,12 @@ export const PromoForm: React.FC<PromoFormProps> = ({
               {scopeType === 'categories' && (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between gap-2 text-[11px]">
-                    <span className="text-[#4E5C70]">Скидка — на товары выбранных категорий:</span>
+                    <span className="text-text-secondary">Скидка — на товары выбранных категорий:</span>
                     {selectedCategories.length > 0 && (
                       <button
                         type="button"
                         onClick={() => setSelectedCategories([])}
-                        className="min-h-6 text-accent font-bold hover:underline cursor-pointer shrink-0"
+                        className="min-h-8 text-accent font-bold hover:underline cursor-pointer shrink-0"
                       >
                         Сбросить выбор
                       </button>
@@ -546,7 +546,7 @@ export const PromoForm: React.FC<PromoFormProps> = ({
                   </div>
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {categories.length === 0 && (
-                      <span className="text-[11px] font-bold text-[#4E5C70]">Категории: не настроено</span>
+                      <span className="text-[11px] font-bold text-text-secondary">Категории: не настроено</span>
                     )}
                     {categories.map((cat) => {
                       const isSelected = selectedCategories.includes(cat.id);
@@ -557,7 +557,7 @@ export const PromoForm: React.FC<PromoFormProps> = ({
                           aria-pressed={isSelected}
                           onClick={() => setSelectedCategories((list) => toggleIn(list, cat.id))}
                           className={`min-h-8 px-3 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                            isSelected ? 'neu-pill-active text-accent font-extrabold' : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
+                            isSelected ? 'neu-pill-active text-accent font-extrabold' : 'neu-button text-text-secondary hover:text-text-primary'
                           }`}
                         >
                           {isSelected && <Check className="w-3 h-3 text-accent shrink-0" aria-hidden="true" />}
@@ -572,26 +572,26 @@ export const PromoForm: React.FC<PromoFormProps> = ({
               {scopeType === 'products' && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2 text-[11px]">
-                    <span className="text-[#4E5C70]">Скидка — только на выбранные товары:</span>
+                    <span className="text-text-secondary">Скидка — только на выбранные товары:</span>
                     {selectedProductIds.length > 0 && (
                       <button
                         type="button"
                         onClick={() => setSelectedProductIds([])}
-                        className="min-h-6 text-accent font-bold hover:underline cursor-pointer shrink-0"
+                        className="min-h-8 text-accent font-bold hover:underline cursor-pointer shrink-0"
                       >
                         Очистить выбор ({selectedProductIds.length})
                       </button>
                     )}
                   </div>
                   <div className="relative">
-                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#4E5C70]" aria-hidden="true" />
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" aria-hidden="true" />
                     <input
                       type="search"
                       aria-label="Найти товар для промокода"
                       placeholder="Найти товар"
                       value={productSearchQuery}
                       onChange={(e) => setProductSearchQuery(e.target.value)}
-                      className="w-full pl-8 pr-3 py-2 neu-inset rounded-xl text-xs text-[#2D3A4E]"
+                      className="w-full pl-8 pr-3 py-2 neu-inset rounded-xl text-xs text-text-primary"
                     />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-48 overflow-y-auto no-scrollbar p-1 neu-flat-sm rounded-xl">
@@ -606,7 +606,7 @@ export const PromoForm: React.FC<PromoFormProps> = ({
                           aria-checked={isSelected}
                           onClick={() => setSelectedProductIds((list) => toggleIn(list, prod.id))}
                           className={`w-full text-left p-2 rounded-xl flex items-center justify-between gap-2 transition-all cursor-pointer ${
-                            isSelected ? 'neu-pill-active' : 'hover:bg-white/40 border border-transparent'
+                            isSelected ? 'neu-pill-active' : 'neu-button'
                           }`}
                         >
                           <span className="flex items-center gap-2 min-w-0">
@@ -614,8 +614,8 @@ export const PromoForm: React.FC<PromoFormProps> = ({
                               <ProductThumbImage product={prod} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                             </span>
                             <span className="min-w-0">
-                              <span className="block text-xs font-bold text-[#2D3A4E] truncate">{prod.title}</span>
-                              <span className="block text-xs text-[#4E5C70]">{prod.price.toLocaleString('ru-RU')} ₽</span>
+                              <span className="block text-xs font-bold text-text-primary truncate">{prod.title}</span>
+                              <span className="block text-xs text-text-secondary">{prod.price.toLocaleString('ru-RU')} ₽</span>
                             </span>
                           </span>
                           <span
@@ -634,7 +634,7 @@ export const PromoForm: React.FC<PromoFormProps> = ({
               )}
             </div>
 
-            <div className="pt-2 border-t border-[#BAC5D5]/40 space-y-2.5">
+            <div className="pt-2 neu-divider-t space-y-2.5">
               <div>
                 <label htmlFor="promo-title" className={`${fieldLabel} mb-1`}>
                   Заголовок для покупателя
@@ -682,12 +682,12 @@ export const PromoForm: React.FC<PromoFormProps> = ({
                 />
               </div>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[11px] font-bold text-[#2D3A4E]">
+                <span className="text-[11px] font-bold text-text-primary">
                   <span className="flex items-center gap-1">
                     Показывать покупателям в «Промокодах»
                     <AdminHint label="Показывать покупателям">Включено — код виден всем в «Промокодах». Выключено — работает только у того, кому дали код.</AdminHint>
                   </span>
-                  <span className="block font-normal text-[#4E5C70]">
+                  <span className="block font-normal text-text-secondary">
                     Выключите для личных кодов: их знает только тот, кому вы их дали
                   </span>
                 </span>
@@ -696,16 +696,16 @@ export const PromoForm: React.FC<PromoFormProps> = ({
             </div>
 
             {/* Partner (influencer) code */}
-            <div className="pt-2 border-t border-[#BAC5D5]/40 space-y-2.5">
+            <div className="pt-2 neu-divider-t space-y-2.5">
               <div className="flex items-center justify-between gap-3">
                 <span className="flex items-center gap-2 min-w-0">
                   <Share2 className="w-4 h-4 text-accent shrink-0" aria-hidden="true" />
                   <span className="min-w-0">
                     <span className="flex items-center gap-1">
-                      <span className="text-[11px] font-extrabold text-[#2D3A4E]">Партнёрский промокод</span>
+                      <span className="text-[11px] font-extrabold text-text-primary">Партнёрский промокод</span>
                       <AdminHint label="Партнёрский промокод">Считает продажи по коду и комиссию блогера. Деньги сайт не выплачивает.</AdminHint>
                     </span>
-                    <span className="block text-[11px] text-[#4E5C70]">Продажи по коду и комиссия блогера</span>
+                    <span className="block text-[11px] text-text-secondary">Продажи по коду и комиссия блогера</span>
                   </span>
                 </span>
                 <NeumorphicSwitch checked={isReferral} onChange={setIsReferral} label="Партнёрский промокод" />
@@ -751,7 +751,7 @@ export const PromoForm: React.FC<PromoFormProps> = ({
         )}
       </div>
 
-      <p className="text-[11px] text-[#4E5C70]">Промокоды не действуют на оптовые товары: оптовая цена уже снижена.</p>
+      <p className="text-[11px] text-text-secondary">Промокоды не действуют на оптовые товары: оптовая цена уже снижена.</p>
 
       {/* Problems found on submit: one list above the buttons, no error toasts (as in the product form) */}
       {formErrors.length > 0 && (
@@ -759,7 +759,7 @@ export const PromoForm: React.FC<PromoFormProps> = ({
           ref={formErrorsRef}
           tabIndex={-1}
           role="alert"
-          className="bg-danger-soft border border-danger/40 rounded-xl p-2.5 text-xs font-bold text-danger space-y-1"
+          className="neu-tone-danger rounded-xl p-2.5 text-xs font-bold text-danger space-y-1"
         >
           {formErrors.map((err) => (
             <p key={err}>{err}</p>
@@ -771,7 +771,7 @@ export const PromoForm: React.FC<PromoFormProps> = ({
         <button
           type="button"
           onClick={guard.requestClose}
-          className="h-10 px-4 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+          className="h-10 px-4 neu-button rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary cursor-pointer"
         >
           Отмена
         </button>

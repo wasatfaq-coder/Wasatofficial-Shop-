@@ -5,6 +5,7 @@ import {
   PURCHASE_CURRENCIES,
   effectiveMarkup,
   priceFromRate,
+  purchaseExtraCostLabel,
   repriceProduct,
   workingRate,
   type ExchangeRates,
@@ -41,6 +42,10 @@ export function ProductFormPrices({ form }: { form: ProductForm }) {
     setFormPurchaseAmount,
     formPurchaseMarkup,
     setFormPurchaseMarkup,
+    formPurchaseExtraCost,
+    setFormPurchaseExtraCost,
+    formPurchaseExtraCostKind,
+    setFormPurchaseExtraCostKind,
     formPurchase,
   } = form;
 
@@ -112,17 +117,17 @@ export function ProductFormPrices({ form }: { form: ProductForm }) {
   return (
     <>
       {formPrice > 0 && cost !== undefined && cost > 0 && (
-        <div className="flex items-center justify-between text-[11px] font-extrabold text-[#2D3A4E] flex-wrap gap-1">
+        <div className="flex items-center justify-between text-[11px] font-extrabold text-text-primary flex-wrap gap-1">
           <span className="flex items-center gap-1 flex-wrap">
             Маржа
             <AdminHint label="Маржа">Ваша прибыль с одной штуки: цена минус закупка.</AdminHint>
             {cost !== formCostPrice && (
-              <span className="font-bold text-[#4E5C70]">по закупке по курсу, {rub(cost)}</span>
+              <span className="font-bold text-text-secondary">по закупке по курсу, {rub(cost)}</span>
             )}
           </span>
           <span
-            className={`text-[11px] px-2 py-0.5 rounded-lg font-extrabold border ${
-              formPrice >= cost ? 'bg-success-soft text-success border-success/25' : 'bg-danger-soft text-danger border-danger/25'
+            className={`text-[11px] px-2 py-0.5 rounded-lg font-extrabold ${
+              formPrice >= cost ? 'neu-tone-success' : 'neu-tone-danger'
             }`}
           >
             {Math.round(((formPrice - cost) / formPrice) * 100)}% ({formPrice >= cost ? '+' : '−'}
@@ -134,7 +139,7 @@ export function ProductFormPrices({ form }: { form: ProductForm }) {
       <div className="grid grid-cols-3 gap-2 items-end">
         <div className="min-w-0">
           <div className="flex items-center gap-0.5 mb-1">
-            <label htmlFor="product-form-price" className="text-[11px] font-bold text-[#4E5C70] leading-tight">
+            <label htmlFor="product-form-price" className="text-[11px] font-bold text-text-secondary leading-tight">
               Цена, ₽ *
             </label>
             <AdminHint label="Цена, ₽">Цена, по которой покупатель закажет товар.</AdminHint>
@@ -154,7 +159,7 @@ export function ProductFormPrices({ form }: { form: ProductForm }) {
 
         <div className="min-w-0">
           <div className="flex items-center gap-0.5 mb-1">
-            <label htmlFor="product-form-cost" className="text-[11px] font-bold text-[#4E5C70] leading-tight">
+            <label htmlFor="product-form-cost" className="text-[11px] font-bold text-text-secondary leading-tight">
               Закупка, ₽
             </label>
             <AdminHint label="Закупка">Во сколько товар обошёлся вам. Покупатель не видит.</AdminHint>
@@ -165,13 +170,13 @@ export function ProductFormPrices({ form }: { form: ProductForm }) {
             value={formCostPrice ?? ''}
             onChange={(e) => setFormCostPrice(e.target.value ? Number(e.target.value) : undefined)}
             placeholder="напр. 1 400"
-            className="w-full h-9 px-2.5 neu-inset rounded-xl text-xs font-bold text-[#2D3A4E] placeholder:text-[#56647A]"
+            className="w-full h-9 px-2.5 neu-inset rounded-xl text-xs font-bold text-text-primary placeholder:text-text-muted"
           />
         </div>
 
         <div className="min-w-0">
           <div className="flex items-center gap-0.5 mb-1">
-            <label htmlFor="product-form-old-price" className="text-[11px] font-bold text-[#4E5C70] leading-tight">
+            <label htmlFor="product-form-old-price" className="text-[11px] font-bold text-text-secondary leading-tight">
               Старая цена, ₽
             </label>
             <AdminHint label="Старая цена">Зачёркнутая цена рядом с новой. Должна быть выше текущей.</AdminHint>
@@ -182,7 +187,7 @@ export function ProductFormPrices({ form }: { form: ProductForm }) {
             value={formOldPrice ?? ''}
             onChange={(e) => setFormOldPrice(e.target.value ? Number(e.target.value) : undefined)}
             placeholder="если есть"
-            className={`w-full h-9 px-2.5 neu-inset rounded-xl text-xs font-bold text-[#4E5C70] placeholder:text-[#56647A] ${
+            className={`w-full h-9 px-2.5 neu-inset rounded-xl text-xs font-bold text-text-secondary placeholder:text-text-muted ${
               formOldPrice ? 'line-through' : ''
             }`}
           />
@@ -192,7 +197,7 @@ export function ProductFormPrices({ form }: { form: ProductForm }) {
       {belowCost > 0 && (
         <p
           id="product-form-below-cost"
-          className="flex items-start gap-2 rounded-xl p-2.5 bg-warning-soft border border-warning/30 text-xs font-bold text-[#2D3A4E] leading-snug"
+          className="flex items-start gap-2 rounded-xl p-2.5 neu-tone-warning text-xs font-bold text-text-primary leading-snug"
         >
           <AlertTriangle className="w-4 h-4 text-warning shrink-0" aria-hidden="true" />
           <span>
@@ -202,7 +207,7 @@ export function ProductFormPrices({ form }: { form: ProductForm }) {
       )}
 
       <fieldset className="space-y-2 pt-1">
-        <legend className="text-[11px] font-bold text-[#4E5C70]">Закупка в валюте</legend>
+        <legend className="text-[11px] font-bold text-text-secondary">Закупка в валюте</legend>
         <div role="radiogroup" aria-label="Валюта закупки" className="flex gap-2">
           {([['', 'Нет'], ...PURCHASE_CURRENCIES.map((c) => [c.id, `${c.sign} ${c.title}`])] as [PurchaseCurrency | '', string][]).map(
             ([id, label]) => (
@@ -212,8 +217,8 @@ export function ProductFormPrices({ form }: { form: ProductForm }) {
                 role="radio"
                 aria-checked={formPurchaseCurrency === id}
                 onClick={() => setFormPurchaseCurrency(id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer ${
-                  formPurchaseCurrency === id ? 'neu-pill-active' : 'neu-button text-[#2D3A4E] hover:text-accent'
+                className={`px-3 py-1.5 min-h-8 rounded-xl text-xs font-bold cursor-pointer ${
+                  formPurchaseCurrency === id ? 'neu-pill-active' : 'neu-button text-text-primary hover:text-accent'
                 }`}
               >
                 {label}
@@ -222,34 +227,77 @@ export function ProductFormPrices({ form }: { form: ProductForm }) {
           )}
         </div>
         {formPurchaseCurrency && (
-          <div className="grid grid-cols-2 gap-2">
-            <div className="min-w-0">
-              <label htmlFor="product-form-purchase" className="text-[11px] font-bold text-[#4E5C70] block mb-1 leading-tight">
-                Закупка, {sign} *
-              </label>
-              <input
-                id="product-form-purchase"
-                type="text"
-                inputMode="decimal"
-                value={formPurchaseAmount}
-                onChange={(e) => setFormPurchaseAmount(e.target.value)}
-                placeholder="напр. 4,20"
-                className="w-full h-9 px-2.5 neu-inset rounded-xl text-xs font-bold text-[#2D3A4E] placeholder:text-[#56647A]"
-              />
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="min-w-0">
+                <label htmlFor="product-form-purchase" className="text-[11px] font-bold text-text-secondary block mb-1 leading-tight">
+                  Закупка, {sign} *
+                </label>
+                <input
+                  id="product-form-purchase"
+                  type="text"
+                  inputMode="decimal"
+                  value={formPurchaseAmount}
+                  onChange={(e) => setFormPurchaseAmount(e.target.value)}
+                  placeholder="напр. 4,20"
+                  className="w-full h-9 px-2.5 neu-inset rounded-xl text-xs font-bold text-text-primary placeholder:text-text-muted"
+                />
+              </div>
+              <div className="min-w-0">
+                <label htmlFor="product-form-purchase-markup" className="text-[11px] font-bold text-text-secondary block mb-1 leading-tight">
+                  Своя наценка, %
+                </label>
+                <input
+                  id="product-form-purchase-markup"
+                  type="text"
+                  inputMode="decimal"
+                  value={formPurchaseMarkup}
+                  onChange={(e) => setFormPurchaseMarkup(e.target.value)}
+                  placeholder={rates ? `общая, ${rates.markupPercent.toLocaleString('ru-RU')}` : 'общая'}
+                  className="w-full h-9 px-2.5 neu-inset rounded-xl text-xs font-bold text-text-primary placeholder:text-text-muted"
+                />
+              </div>
             </div>
+
             <div className="min-w-0">
-              <label htmlFor="product-form-purchase-markup" className="text-[11px] font-bold text-[#4E5C70] block mb-1 leading-tight">
-                Своя наценка, %
-              </label>
-              <input
-                id="product-form-purchase-markup"
-                type="text"
-                inputMode="decimal"
-                value={formPurchaseMarkup}
-                onChange={(e) => setFormPurchaseMarkup(e.target.value)}
-                placeholder={rates ? `общая, ${rates.markupPercent.toLocaleString('ru-RU')}` : 'общая'}
-                className="w-full h-9 px-2.5 neu-inset rounded-xl text-xs font-bold text-[#2D3A4E] placeholder:text-[#56647A]"
-              />
+              <div className="flex items-center gap-0.5 mb-1">
+                <label htmlFor="product-form-purchase-extra" className="text-[11px] font-bold text-text-secondary leading-tight">
+                  Доп. расходы (доставка, пошлина)
+                </label>
+                <AdminHint label="Доп. расходы">
+                  Накладные расходы на одну штуку товара (логистика, таможня, маркировка) — в рублях за штуку или в процентах от закупки. Прибавляются к рублёвой себестоимости до наценки.
+                </AdminHint>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  id="product-form-purchase-extra"
+                  type="text"
+                  inputMode="decimal"
+                  value={formPurchaseExtraCost}
+                  onChange={(e) => setFormPurchaseExtraCost(e.target.value)}
+                  placeholder={formPurchaseExtraCostKind === 'percent' ? 'напр. 10 (% от закупки)' : 'напр. 150 (₽ за шт.)'}
+                  className="flex-1 min-w-0 h-9 px-2.5 neu-inset rounded-xl text-xs font-bold text-text-primary placeholder:text-text-muted"
+                />
+                <div role="radiogroup" aria-label="Формат доп. расходов" className="flex gap-1 shrink-0">
+                  {([
+                    ['rub', '₽ / шт.'],
+                    ['percent', '%'],
+                  ] as const).map(([kind, label]) => (
+                    <button
+                      key={kind}
+                      type="button"
+                      role="radio"
+                      aria-checked={formPurchaseExtraCostKind === kind}
+                      onClick={() => setFormPurchaseExtraCostKind(kind)}
+                      className={`h-9 px-2.5 rounded-xl text-xs font-bold cursor-pointer ${
+                        formPurchaseExtraCostKind === kind ? 'neu-pill-active' : 'neu-button text-text-primary hover:text-accent'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -261,14 +309,15 @@ export function ProductFormPrices({ form }: { form: ProductForm }) {
                 <div className="flex items-start gap-2">
                   <Coins className="w-4 h-4 text-accent shrink-0 mt-0.5" aria-hidden="true" />
                   <div className="min-w-0 space-y-0.5">
-                    <p className="text-sm font-extrabold text-[#2D3A4E]">
+                    <p className="text-sm font-extrabold text-text-primary">
                       По курсу: {rub(fromRate.price)}
                       {fromRate.originalPrice !== null && (
-                        <span className="text-xs font-bold text-[#4E5C70]"> со скидкой, старая {rub(fromRate.originalPrice)}</span>
+                        <span className="text-xs font-bold text-text-secondary"> со скидкой, старая {rub(fromRate.originalPrice)}</span>
                       )}
                     </p>
-                    <p className="text-xs text-[#4E5C70] leading-snug">
-                      Закупка {rub(fromRate.costPrice)} по курсу {rub(rate)} за {sign}1, наценка{' '}
+                    <p className="text-xs text-text-secondary leading-snug">
+                      Закупка {rub(fromRate.costPrice)} по курсу {rub(rate)} за {sign}1
+                      {purchaseExtraCostLabel(purchase) ? ` (доп. расходы ${purchaseExtraCostLabel(purchase)})` : ''}, наценка{' '}
                       {effectiveMarkup(purchase, rates).toLocaleString('ru-RU')} %, вверх до 10 ₽.
                     </p>
                   </div>
@@ -288,16 +337,16 @@ export function ProductFormPrices({ form }: { form: ProductForm }) {
             ) : ratesFailed ? (
               <p className="text-xs text-danger font-bold">Курсы не прочитались: проверьте соединение.</p>
             ) : rates ? (
-              <p className="text-xs text-[#4E5C70] leading-snug">
+              <p className="text-xs text-text-secondary leading-snug">
                 Курс ЦБ для {sign} не задан: задайте его в «Курсы и наценка», и здесь появится цена по курсу.
               </p>
             ) : (
-              <p className="text-xs text-[#4E5C70]">Загружаем курс…</p>
+              <p className="text-xs text-text-secondary">Загружаем курс…</p>
             )}
           </div>
         )}
 
-        <p className="text-xs text-[#4E5C70] leading-snug">
+        <p className="text-xs text-text-secondary leading-snug">
           {formPurchaseCurrency
             ? 'При новом курсе цены всех таких товаров пересчитает «Применить» в «Курсы и наценка». Пустая своя наценка — общая для всех товаров.'
             : 'Товар закуплен в долларах или юанях — выберите валюту, и его цена пойдёт за курсом.'}

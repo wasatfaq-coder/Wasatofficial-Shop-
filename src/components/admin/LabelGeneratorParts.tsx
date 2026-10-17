@@ -40,7 +40,7 @@ export const FormatThumb: React.FC<{ format: Pick<LabelFormat, 'widthMm' | 'heig
   return (
     <span
       aria-hidden="true"
-      className="block rounded-[3px] bg-white border border-[#2D3A4E]/60 shrink-0"
+      className="block rounded-[3px] bg-white border border-text-primary/60 shrink-0"
       style={{ width: format.widthMm * scale, height: format.heightMm * scale }}
     />
   );
@@ -52,13 +52,17 @@ export const Switch: React.FC<{ checked: boolean; onChange: (v: boolean) => void
     role="switch"
     aria-checked={checked}
     onClick={() => onChange(!checked)}
-    className="w-full h-11 px-3 rounded-xl neu-button flex items-center justify-between gap-3 text-xs font-bold text-[#2D3A4E] cursor-pointer"
+    className="w-full h-11 px-3 rounded-xl neu-button flex items-center justify-between gap-3 text-xs font-bold text-text-primary cursor-pointer"
   >
     <span>{label}</span>
-    <span className="w-10 h-6 rounded-full neu-inset p-0.5 flex items-center shrink-0">
+    <span
+      className={`w-12 h-7 rounded-full p-1 flex items-center shrink-0 transition-colors duration-200 ${
+        checked ? 'neu-fill-accent' : 'neu-inset'
+      }`}
+    >
       <span
-        className={`w-5 h-5 rounded-full transition-transform duration-200 ${
-          checked ? 'translate-x-4 neu-fill-accent' : 'translate-x-0 neu-button'
+        className={`w-5 h-5 rounded-full neu-switch-thumb transition-transform duration-200 ${
+          checked ? 'translate-x-5' : 'translate-x-0'
         }`}
       />
     </span>

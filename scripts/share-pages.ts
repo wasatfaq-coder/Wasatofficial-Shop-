@@ -14,6 +14,8 @@ import firebaseConfig from '../firebase-applet-config.json';
 import type { Product, StorefrontSettings } from '../src/types';
 import { CATALOG_INDEX_COLLECTION, readCatalogIndex, type CatalogEntry, type CatalogIndexPart } from '../src/utils/catalogIndex';
 import { isHiddenFromSale } from '../src/utils/inventory';
+import { sellsRetail } from '../src/shared/wholesalePricing';
+import { buyerPrice } from '../src/utils/wholesaleOffer';
 import { getStoreName, withStoreName, withStoreNameFields } from '../src/utils/storeContacts';
 import {
   INDEXED_SCREENS,
@@ -263,7 +265,7 @@ type RestDocument = { name: string; fields?: Record<string, RestValue>; updateTi
  * The fields of a product that its preview and the hidden-from-sale check use. Photos and variants are not among them:
  * the previews inside a product are ≈ 45 КБ each, and the run reads every product (docs/catalog-scale-plan.md, finding 3)
  */
-const PREVIEW_FIELDS = ['title', 'price', 'originalPrice', 'description', 'inStock', 'hiddenFromSale', 'photoIds'];
+const PREVIEW_FIELDS = ['title', 'price', 'originalPrice', 'saleChannel', 'wholesalePrice', 'description', 'inStock', 'hiddenFromSale', 'photoIds'];
 
 async function readProducts(): Promise<{ product: Product; updatedAt?: string }[]> {
   // runQuery, not a collection GET: the REST list endpoint is refused to anonymous visitors even with «allow read: if true»
@@ -356,8 +358,8 @@ export function shareProductFromEntry(entry: CatalogEntry, storeName: string): S
     id: entry.id,
     title: p.title,
     description: p.description ?? '',
-    price: entry.price,
-    originalPrice: entry.originalPrice,
+    price: buyerPrice(entry),
+    originalPrice: sellsRetail(entry) ? entry.originalPrice : undefined,
     available: entry.inStock !== false,
     image: '',
     imageKey,
@@ -436,8 +438,8 @@ async function toShareProduct(
     id: product.id,
     title: p.title,
     description: p.description ?? '',
-    price: product.price,
-    originalPrice: product.originalPrice,
+    price: buyerPrice(product),
+    originalPrice: sellsRetail(product) ? product.originalPrice : undefined,
     available: product.inStock !== false,
     image,
     imageKey,

@@ -134,25 +134,25 @@ export function ProductCsvImportModal({ list, products, categories, onUpdateProd
     <>
       {/* ================= MODAL: CSV IMPORT ================= */}
       {isCSVImportModalOpen && (
-        <ModalPortal><div className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div ref={csvDialog.ref} {...csvDialog.props} className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-5 sm:p-6 max-w-xl w-full space-y-4 text-[#2D3A4E] border border-white/80 max-h-[90vh] overflow-y-auto my-auto">
-            <div className="flex items-start sm:items-center justify-between pb-2 border-b border-[#BAC5D5]/50 gap-2">
+        <ModalPortal><div className="admin-no-glow fixed inset-0 z-[80] bg-text-primary/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div ref={csvDialog.ref} {...csvDialog.props} className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-5 sm:p-6 max-w-xl w-full space-y-4 text-text-primary max-h-[90vh] overflow-y-auto my-auto">
+            <div className="flex items-start sm:items-center justify-between pb-2 neu-divider-b gap-2">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
                   <FileSpreadsheet className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
-                  <h3 id={csvDialog.titleId} className="text-sm sm:text-base font-extrabold uppercase tracking-wider text-[#2D3A4E] truncate">
+                  <h3 id={csvDialog.titleId} className="text-sm sm:text-base font-extrabold uppercase tracking-wider text-text-primary truncate">
                     Импорт каталога из CSV
                   </h3>
-                  <p className="text-xs text-[#4E5C70] font-medium truncate sm:whitespace-normal leading-tight">
+                  <p className="text-xs text-text-secondary font-medium truncate sm:whitespace-normal leading-tight">
                     Загрузите файл или вставьте строки CSV для пакетного добавления
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsCSVImportModalOpen(false)}
-                className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer shrink-0"
+                className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-text-secondary hover:text-text-primary transition-all cursor-pointer shrink-0"
                 aria-label="Закрыть"
               >
                 <X className="w-4 h-4" />
@@ -161,19 +161,19 @@ export function ProductCsvImportModal({ list, products, categories, onUpdateProd
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                <label className="block text-[11px] font-bold text-text-secondary mb-1">
                   1. Выберите файл на диске (.csv)
                 </label>
                 <input
                   type="file"
                   accept=".csv"
                   onChange={handleFileUpload}
-                  className="w-full text-xs text-[#2D3A4E] file:py-2 file:px-3 file:rounded-xl file:border-0 file:bg-accent file:text-white file:font-bold file:mr-3 file:cursor-pointer cursor-pointer neu-inset p-2 rounded-xl"
+                  className="w-full text-xs text-text-primary file:py-2 file:px-3 file:rounded-xl file:border-0 file:bg-accent file:text-white file:font-bold file:mr-3 file:cursor-pointer cursor-pointer neu-inset p-2 rounded-xl"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-[#4E5C70] mb-1">
+                <label className="block text-[11px] font-bold text-text-secondary mb-1">
                   2. Либо вставьте текст CSV в поле ниже
                 </label>
                 <textarea
@@ -182,26 +182,27 @@ export function ProductCsvImportModal({ list, products, categories, onUpdateProd
                   onChange={(e) => setCsvInputText(e.target.value)}
                   placeholder={`ID,Название,Категория,Цена (₽),Старая цена (₽),В наличии,Остаток,Размеры,Цвета,Картинка,Описание
 "prod-1","Рубашка льняная","linen",2990,3500,"Да",12,"S; M; L","Бежевый; Синий","https://images.unsplash.com/...","Премиальный лен"`}
-                  className="w-full p-3 neu-inset rounded-xl font-mono text-[11px] text-[#2D3A4E] leading-relaxed"
+                  className="w-full p-3 neu-inset rounded-xl font-mono text-[11px] text-text-primary leading-relaxed"
                 />
               </div>
-              <p className="text-xs text-[#4E5C70] leading-snug">
+              <p className="text-xs text-text-secondary leading-snug">
                 Закупка в валюте — столбцы «Валюта закупки» (USD или CNY), «Закупка» (цена одной штуки в этой валюте)
                 и «Своя наценка (%)», если она не общая. Пустые ячейки оставляют закупку товара как есть, «₽» её убирает.
                 Цену по курсу пересчитает «Курсы и наценка» → «Применить». Дальше два столбца — «Поставщик»
                 и «Артикул поставщика»: пустая ячейка их не меняет, «-» или «нет» убирает. Покупатель их не видит.
                 Ещё два — «Вес, г» (целое число граммов одной штуки) и «Габариты, см» (три числа: 30×20×5);
-                пустая ячейка их не меняет, «-» или «нет» убирает. Последний — «Ростовки»: размеры и штук каждого
+                пустая ячейка их не меняет, «-» или «нет» убирает. «Ростовки»: размеры и штук каждого
                 «48:1; 50:2; 52:1», цвета в скобках впереди, если не все, «(Синий)», своя цена после «=», упаковки
-                через «|». Пустая ячейка не меняет, «-» убирает; штрихкоды упаковок выдаются сами.
+                через «|». Последний столбец — «Доп. расходы (₽ или %)»: накладные расходы на штуку в рублях (150) или
+                в процентах от закупки (10%).
               </p>
             </div>
 
-            <div className="flex gap-2.5 pt-2 border-t border-[#BAC5D5]/50">
+            <div className="flex gap-2.5 pt-2 neu-divider-t">
               <button
                 type="button"
                 onClick={() => setIsCSVImportModalOpen(false)}
-                className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer"
+                className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary transition-all cursor-pointer"
               >
                 Отмена
               </button>

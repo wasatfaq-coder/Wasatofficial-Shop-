@@ -43,8 +43,8 @@ export function ProductListGrid({ list, products, categories, duplicatingId, han
             }
           />
         ) : filteredProducts.length === 0 ? (
-          <div className="neu-inset rounded-2xl p-8 text-center space-y-1 text-[#4E5C70]">
-            <p className="text-xs font-bold text-[#2D3A4E]">Товары не найдены</p>
+          <div className="neu-inset rounded-2xl p-8 text-center space-y-1 text-text-secondary">
+            <p className="text-xs font-bold text-text-primary">Товары не найдены</p>
             <p className="text-xs">Попробуйте изменить поисковый запрос или фильтры</p>
           </div>
         ) : (
@@ -56,8 +56,8 @@ export function ProductListGrid({ list, products, categories, duplicatingId, han
             return (
               <div
                 key={`admin-product-${prod.id}-${pIdx}`}
-                className={`neu-inset rounded-2xl p-3 sm:p-3.5 transition-all border ${
-                  isSelected ? 'border-accent ring-1 ring-accent/40' : 'border-transparent'
+                className={`rounded-2xl p-3 sm:p-3.5 transition-all ${
+                  isSelected ? 'neu-pill-active' : 'neu-inset'
                 } flex flex-col sm:flex-row sm:items-center justify-between gap-3`}
               >
                 {/* Product Main Content */}
@@ -84,7 +84,7 @@ export function ProductListGrid({ list, products, categories, duplicatingId, han
                   <div className="flex-1 min-w-0 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h4
-                        className="text-xs sm:text-sm font-extrabold text-[#2D3A4E] leading-snug line-clamp-1 sm:truncate"
+                        className="text-xs sm:text-sm font-extrabold text-text-primary leading-snug line-clamp-1 sm:truncate"
                         title={prod.title}
                       >
                         {prod.title}
@@ -99,20 +99,20 @@ export function ProductListGrid({ list, products, categories, duplicatingId, han
                       )}
                       {isHiddenFromSale(prod) ? (
                         <span className="inline-flex items-center gap-0.5 shrink-0">
-                          <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-md neu-inset text-danger border border-danger/25 whitespace-nowrap">
+                          <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-md neu-tone-danger text-danger whitespace-nowrap">
                             Снят с витрины
                           </span>
                           <AdminHint label="Снят с витрины">Покупатели не видят товар и не могут его заказать.</AdminHint>
                         </span>
                       ) : prod.inStock === false ? (
-                        <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-md neu-inset text-[#4E5C70] shrink-0 whitespace-nowrap">
+                        <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-md neu-inset text-text-secondary shrink-0 whitespace-nowrap">
                           Распродан
                         </span>
                       ) : null}
                     </div>
 
-                    <div className="flex items-center gap-2 text-[11px] text-[#4E5C70] font-semibold flex-wrap">
-                      <span className="font-mono text-accent font-bold text-[11px] bg-[#D8DFE8] px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                    <div className="flex items-center gap-2 text-[11px] text-text-secondary font-semibold flex-wrap">
+                      <span className="font-mono text-accent font-bold text-[11px] neu-flat-sm px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
                         {primarySku}
                       </span>
                       <button
@@ -120,13 +120,13 @@ export function ProductListGrid({ list, products, categories, duplicatingId, han
                         onClick={() => setPriceEditId(prod.id)}
                         aria-label={`${prod.price.toLocaleString('ru-RU')} ₽ — изменить цену «${prod.title}»`}
                         title="Изменить цену"
-                        className="min-h-6 -mx-1 px-1 rounded-lg font-extrabold text-[#2D3A4E] hover:text-accent text-xs shrink-0 whitespace-nowrap inline-flex items-center gap-1 underline decoration-dotted decoration-accent/60 underline-offset-2 cursor-pointer"
+                        className="min-h-8 -mx-1 px-1 rounded-lg font-extrabold text-text-primary hover:text-accent text-xs shrink-0 whitespace-nowrap inline-flex items-center gap-1 underline decoration-dotted decoration-accent/60 underline-offset-2 cursor-pointer"
                       >
                         {prod.price.toLocaleString('ru-RU')} ₽
                         <Pencil className="w-3 h-3 text-accent" aria-hidden="true" />
                       </button>
                       {prod.originalPrice && (
-                        <span className="line-through text-[#4E5C70] text-[11px] shrink-0 whitespace-nowrap">
+                        <span className="line-through text-text-secondary text-[11px] shrink-0 whitespace-nowrap">
                           {prod.originalPrice.toLocaleString('ru-RU')} ₽
                         </span>
                       )}
@@ -136,12 +136,12 @@ export function ProductListGrid({ list, products, categories, duplicatingId, han
                           onClick={() => setStockEditId(prod.id)}
                           aria-label={`Остаток: ${totalStock} шт. — изменить «${prod.title}»`}
                           title="Изменить остаток по цветам и размерам"
-                          className={`min-h-6 font-extrabold text-[11px] px-2 py-0.5 rounded-lg whitespace-nowrap inline-flex items-center gap-1 cursor-pointer hover:underline underline-offset-2 ${
+                          className={`min-h-8 font-extrabold text-[11px] px-2 py-0.5 rounded-lg whitespace-nowrap inline-flex items-center gap-1 cursor-pointer hover:underline underline-offset-2 ${
                             stockLevel(totalStock, lowStockThreshold) === 'out'
-                              ? 'text-danger bg-danger-soft border border-danger/25'
+                              ? 'neu-tone-danger'
                               : stockLevel(totalStock, lowStockThreshold) === 'low'
-                              ? 'text-warning bg-warning-soft border border-warning/25'
-                              : 'text-success bg-success-soft border border-success/25'
+                              ? 'neu-tone-warning'
+                              : 'neu-tone-success'
                           }`}
                         >
                           Остаток: {totalStock} шт.
@@ -154,15 +154,15 @@ export function ProductListGrid({ list, products, categories, duplicatingId, han
                 </div>
 
                 {/* Action Buttons Toolbar with Clear Visual Hierarchy */}
-                <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-2 sm:pt-0 border-t border-[#BAC5D5]/30 sm:border-t-0">
+                <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-2 sm:pt-0 neu-divider-t sm:shadow-none">
                   {/* Secondary & Destructive Tools */}
                   <div className="flex items-center gap-1.5">
                     {/* Secondary: Preview */}
                     <button
                       onClick={() => setProductToInspect(prod)}
-                      className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-accent transition-all cursor-pointer shrink-0"
-                      title="Быстрый просмотр карточки"
-                      aria-label="Быстрый просмотр карточки"
+                      className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-text-secondary hover:text-accent transition-all cursor-pointer shrink-0"
+                      title={`Быстрый просмотр карточки: «${prod.title}»`}
+                      aria-label={`Быстрый просмотр карточки: «${prod.title}»`}
                     >
                       <Eye className="w-3.5 h-3.5" />
                     </button>
@@ -172,11 +172,11 @@ export function ProductListGrid({ list, products, categories, duplicatingId, han
                       onClick={() => void handleDuplicateProduct(prod)}
                       disabled={duplicatingId !== null}
                       aria-busy={duplicatingId === prod.id}
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center text-[#4E5C70] transition-all shrink-0 ${
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center text-text-secondary transition-all shrink-0 ${
                         duplicatingId === null ? 'neu-button hover:text-success cursor-pointer' : 'neu-button-disabled'
                       }`}
-                      title="Дублировать товар (копировать)"
-                      aria-label="Дублировать товар (копировать)"
+                      title={`Дублировать товар: «${prod.title}»`}
+                      aria-label={`Дублировать товар: «${prod.title}»`}
                     >
                       <Copy className="w-3.5 h-3.5" />
                     </button>
@@ -185,8 +185,8 @@ export function ProductListGrid({ list, products, categories, duplicatingId, han
                     <button
                       onClick={() => setProductToDelete(prod)}
                       className="w-8 h-8 rounded-xl neu-button-danger flex items-center justify-center transition-all cursor-pointer shrink-0"
-                      title="Удалить товар"
-                      aria-label="Удалить товар"
+                      title={`Удалить товар: «${prod.title}»`}
+                      aria-label={`Удалить товар: «${prod.title}»`}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -196,7 +196,8 @@ export function ProductListGrid({ list, products, categories, duplicatingId, han
                   <button
                     onClick={() => handleOpenEditProduct(prod)}
                     className="h-8 px-3.5 neu-button rounded-xl text-xs font-extrabold text-accent flex items-center gap-1.5 cursor-pointer transition-all shrink-0"
-                    title="Редактировать товар"
+                    title={`Редактировать товар: «${prod.title}»`}
+                    aria-label={`Редактировать товар: «${prod.title}»`}
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                     <span>Редактировать</span>

@@ -6,7 +6,7 @@ import { IS_PREVIEW_BUILD } from '../utils/previewBuild';
 export const PreviewBanner: React.FC = () => {
   if (!IS_PREVIEW_BUILD) return null;
   return (
-    <div role="note" className="bg-warning-soft border-b border-warning/40 px-4 py-2 text-center">
+    <div role="note" className="neu-tone-warning px-4 py-2 text-center">
       <p className="max-w-3xl mx-auto text-xs font-bold text-warning flex items-center justify-center gap-1.5">
         <AlertTriangle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
         Проверочная версия сайта с настоящими данными магазина: заказы и изменения в админке сохраняются по-настоящему.

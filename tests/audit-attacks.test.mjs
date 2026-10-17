@@ -302,8 +302,7 @@ describe('Проверка перед запуском 04.10 (docs/audit-2026-10
       }));
     });
 
-  test('D3 списание и запись журнала по строке заказа пишет только владелец заказа и не после отмены (находка 6)',
-    { todo: 'находка 6 (04.10): этап 3 — гость списывает под своим входом; этап 4 — правило требует владельца заказа' }, async () => {
+  test('D3 списание и запись журнала по строке заказа пишет только владелец заказа и не после отмены (находка 6)', async () => {
       await assertSucceeds(signedOrder(customer('alice'), 'alice', realOrder('WS-D3')));
       // посторонний без входа заранее пишет нулевую запись — настоящее списание по этой строке уже не пройдёт
       await assertFails(setDoc(doc(anon(), 'stock_movements/WS-D3_0'), lineMovement('WS-D3', 0)));
@@ -400,7 +399,7 @@ describe('Аудит агентами ECC 07.10 (docs/audit-2026-10-07-plan.md)'
   test('E3 имя в отзыве и чате не выдаёт себя за магазин похожими буквами и невидимыми знаками (находка 10)', async () => {
       const review = (authorName) => ({
         id: 'p1_mallory', productId: 'p1', uid: 'mallory', authorName, rating: 5, comment: 'Отлично',
-        date: '8 октября 2026 г.', createdAt: '2026-10-08T10:00:00.000Z',
+        date: '8 октября 2026 г.', createdAt: '2026-10-08T10:00:00.000Z', hidden: false,
       });
       const db = customer('mallory');
       for (const name of ['Аdmin', 'Wasat​Shop', 'Wаsаt Shор', 'Адми­нистратор', 'Служба поддeржки']) {

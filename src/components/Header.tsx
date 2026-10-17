@@ -55,17 +55,17 @@ export const DesktopTitleRow: React.FC<{ title: { main: string; sub: string }; o
     <button
       type="button"
       onClick={onBack}
-      className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent shrink-0 cursor-pointer"
+      className="w-10 h-10 rounded-xl neu-button flex items-center justify-center text-text-primary hover:text-accent shrink-0 cursor-pointer"
       aria-label="Назад"
     >
       <ArrowLeft className="w-5 h-5" />
     </button>
     <div className="min-w-0">
       {/* data-screen-heading: a new screen moves the focus here (useScreenHeadingFocus) */}
-      <h1 data-screen-heading tabIndex={-1} className="text-2xl font-extrabold text-[#2D3A4E] leading-tight truncate tracking-tight">
+      <h1 data-screen-heading tabIndex={-1} className="text-2xl font-extrabold text-text-primary leading-tight truncate tracking-tight">
         {title.main}
       </h1>
-      {title.sub && <p className="text-xs font-semibold text-[#4E5C70] truncate">{title.sub}</p>}
+      {title.sub && <p className="text-xs font-semibold text-text-secondary truncate">{title.sub}</p>}
     </div>
   </div>
 );
@@ -90,7 +90,7 @@ export const Header: React.FC<HeaderProps> = ({
         {isHome ? (
           <button
             onClick={onOpenDrawer}
-            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent transition-colors shrink-0"
+            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-text-primary hover:text-accent transition-colors shrink-0"
             aria-label="Открыть меню"
           >
             <Menu className="w-5 h-5 stroke-[2]" />
@@ -101,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
               if (onBack) onBack();
               else setActiveTab(activeTab === 'checkout' ? 'cart' : 'home');
             }}
-            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent transition-colors shrink-0"
+            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-text-primary hover:text-accent transition-colors shrink-0"
             aria-label="Назад"
           >
             <ArrowLeft className="w-5 h-5 stroke-[2]" />
@@ -114,7 +114,7 @@ export const Header: React.FC<HeaderProps> = ({
           <h1
             data-screen-heading
             tabIndex={-1}
-            className="text-lg max-[359px]:text-base font-extrabold text-[#2D3A4E] leading-tight truncate tracking-tight"
+            className="text-lg max-[359px]:text-base font-extrabold text-text-primary leading-tight truncate tracking-tight"
           >
             {titleInfo.main}
             {/* Brand mark: a gold dot after the store name */}
@@ -123,7 +123,7 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </h1>
           {titleInfo.sub && (
-            <p className="text-xs font-semibold text-[#4E5C70] leading-none mt-0.5 truncate">
+            <p className="text-xs font-semibold text-text-secondary leading-none mt-0.5 truncate">
               {titleInfo.sub}
             </p>
           )}
@@ -133,7 +133,7 @@ export const Header: React.FC<HeaderProps> = ({
         {activeTab === 'profile' ? (
           <button
             onClick={onOpenDrawer}
-            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent transition-colors shrink-0"
+            className="w-11 h-11 rounded-full neu-button flex items-center justify-center text-text-primary hover:text-accent transition-colors shrink-0"
             aria-label="Открыть меню"
           >
             <Menu className="w-5 h-5 stroke-[2]" />

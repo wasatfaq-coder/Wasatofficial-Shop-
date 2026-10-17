@@ -108,7 +108,7 @@ export const AdminPaymentTemplatesCard: React.FC<{
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <div className="flex items-center gap-1">
-            <h3 id="payment-templates-title" className="text-sm font-extrabold text-[#2D3A4E] flex items-center gap-2">
+            <h3 id="payment-templates-title" className="text-sm font-extrabold text-text-primary flex items-center gap-2">
               <Landmark className="w-4 h-4 text-accent" aria-hidden="true" />
               Шаблоны реквизитов
             </h3>
@@ -116,7 +116,7 @@ export const AdminPaymentTemplatesCard: React.FC<{
               Заготовки СБП, карты и счёта. Выбираете в заказе — покупатель видит реквизиты.
             </AdminHint>
           </div>
-          <p className="text-xs text-[#4E5C70] mt-0.5">
+          <p className="text-xs text-text-secondary mt-0.5">
             СБП, карта и расчётный счёт. В «Заказах» шаблон применяется к заказу, и покупатель видит реквизиты в своём заказе.
           </p>
         </div>
@@ -149,7 +149,7 @@ export const AdminPaymentTemplatesCard: React.FC<{
                     setDraft({ ...draft, kind, fields: emptyRequisites(kind) });
                   }}
                   className={`min-h-8 px-3 rounded-xl text-xs font-bold cursor-pointer ${
-                    selected ? 'neu-pill-active text-[#2D3A4E]' : !draft.isNew ? 'neu-button-disabled text-[#4E5C70]' : 'neu-button text-[#2D3A4E]'
+                    selected ? 'neu-pill-active text-text-primary' : !draft.isNew ? 'neu-button-disabled text-text-secondary' : 'neu-button text-text-primary'
                   }`}
                 >
                   {PAYMENT_KIND_TITLES[kind]}
@@ -158,7 +158,7 @@ export const AdminPaymentTemplatesCard: React.FC<{
             })}
           </div>
           <div className="space-y-1">
-            <label htmlFor="payment-template-name" className="block text-[11px] font-bold text-[#4E5C70]">
+            <label htmlFor="payment-template-name" className="block text-[11px] font-bold text-text-secondary">
               Название шаблона
             </label>
             <input
@@ -169,7 +169,7 @@ export const AdminPaymentTemplatesCard: React.FC<{
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
               aria-invalid={Boolean(errors.name)}
               aria-describedby={errors.name ? 'payment-template-name-error' : undefined}
-              className="w-full neu-inset rounded-xl px-3 py-2 text-xs text-[#2D3A4E] outline-none"
+              className="w-full neu-inset rounded-xl px-3 py-2 text-xs text-text-primary"
             />
             {errors.name && (
               <p id="payment-template-name-error" className="text-[11px] font-bold text-danger">
@@ -195,7 +195,7 @@ export const AdminPaymentTemplatesCard: React.FC<{
               type="button"
               onClick={() => setDraft(null)}
               disabled={saving}
-              className="h-9 px-4 neu-button rounded-xl text-xs font-bold text-[#4E5C70] cursor-pointer"
+              className="h-9 px-4 neu-button rounded-xl text-xs font-bold text-text-secondary cursor-pointer"
             >
               Отмена
             </button>
@@ -213,17 +213,17 @@ export const AdminPaymentTemplatesCard: React.FC<{
       )}
 
       {templates === null ? (
-        <p className="text-xs text-[#4E5C70]">Загрузка шаблонов…</p>
+        <p className="text-xs text-text-secondary">Загрузка шаблонов…</p>
       ) : templates.length === 0 ? (
-        !draft && <p className="text-xs text-[#4E5C70]">Шаблонов пока нет: реквизиты можно ввести и в самом заказе.</p>
+        !draft && <p className="text-xs text-text-secondary">Шаблонов пока нет: реквизиты можно ввести и в самом заказе.</p>
       ) : (
         <ul className="space-y-1.5">
           {templates.map((t) => (
             <li key={t.id} className="neu-flat-sm rounded-xl px-3 py-2 flex items-center gap-2">
               <span className="text-[11px] font-extrabold text-accent shrink-0 w-10">{PAYMENT_KIND_SHORT[t.kind]}</span>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-[#2D3A4E] truncate">{t.name}</p>
-                <p className="text-[11px] text-[#4E5C70] font-mono truncate">{summaryOf(t)}</p>
+                <p className="text-xs font-bold text-text-primary truncate">{t.name}</p>
+                <p className="text-[11px] text-text-secondary font-mono truncate">{summaryOf(t)}</p>
               </div>
               <button
                 type="button"
@@ -250,7 +250,7 @@ export const AdminPaymentTemplatesCard: React.FC<{
         isOpen={Boolean(toDelete)}
         title="Удалить шаблон?"
         message="Реквизиты, уже применённые к заказам, останутся в заказах."
-        preview={toDelete ? <span className="text-xs font-bold text-[#2D3A4E]">{toDelete.name}</span> : undefined}
+        preview={toDelete ? <span className="text-xs font-bold text-text-primary">{toDelete.name}</span> : undefined}
         onConfirm={() => {
           if (toDelete) void remove(toDelete);
           setToDelete(null);

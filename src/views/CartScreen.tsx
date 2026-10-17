@@ -30,7 +30,13 @@ import { freeDeliveryMethodsText } from '../utils/freeDelivery';
 import { promoDiscountText } from '../utils/promoLabel';
 import { useDialogA11y } from '../utils/useDialogA11y';
 import { linePrice } from '../shared/orderLine';
-import { isWholesaleLine, packSizeOf, wholesaleLineProblems } from '../shared/wholesalePricing';
+import {
+  isWholesaleLine,
+  packSizeOf,
+  readMinWholesaleAmount,
+  wholesaleLineProblems,
+  wholesaleOrderSubtotal,
+} from '../shared/wholesalePricing';
 import { packsText } from '../utils/wholesaleOffer';
 import { WholesaleMark } from '../components/WholesaleMark';
 import { heldByOtherLines, packsLeft } from '../utils/cartLines';
@@ -64,6 +70,7 @@ interface CartScreenProps {
   preorderMode?: boolean;
   /** Delivery methods from «Доставка и ПВЗ»: the cart shows their price range, the method is picked at checkout */
   deliveryMethods?: DeliveryMethod[];
+  userProfile?: import('../types').UserProfile;
 }
 
 export const CartScreen: React.FC<CartScreenProps> = ({
@@ -88,6 +95,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   preorderMode = false,
   deliveryMethods = [],
   hasActivePromos = false,
+  userProfile,
 }) => {
   const [promoInput, setPromoInput] = useState('');
   const [itemToRemove, setItemToRemove] = useState<CartItem | null>(null);
@@ -107,12 +115,38 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         )
       : Math.max(
           0,
-          getOrderableStock(item.product, item.selectedColor, item.selectedSize, preorderMode) - heldByOtherLines(cartItems, item, item.id)
+          getOrderableStock(item.product, item.selectedColor, item.selectedSize, item.priceKind === 'broken' ? false : preorderMode) -
+            heldByOtherLines(cartItems, item, item.id)
         );
   const unavailableCount = cartItems.filter((item) => item.quantity > lineStock(item)).length;
-  // Wholesale lines in part packs or under the product's minimum, a size pack the shop no longer sells: the checkout
-  // would refuse them, so say it here
-  const wholesaleProblems = [...wholesaleLineProblems(cartItems), ...packLineProblems(cartItems)];
+  const handleFixUnavailableItems = () => {
+    for (const item of cartItems) {
+      const avail = lineStock(item);
+      if (item.quantity <= avail) continue;
+      const step = isWholesaleLine(item) && !isCartPackLine(item) ? packSizeOf(item.product) : 1;
+      const targetQty = Math.floor(avail / step) * step;
+      if (targetQty < step || targetQty <= 0) {
+        onRemoveItem(item.id);
+      } else {
+        onUpdateQuantity(item.id, targetQty);
+      }
+    }
+    onShowToast('Количество товаров приведено к доступному остатку', 'info');
+  };
+  // Wholesale lines in part packs, under the product's minimum or under `minOrderAmount`, or a size pack the shop no
+  // longer sells: the checkout would refuse them, so say it here
+  const effectiveWholesale = storefrontSettings?.brokenPackDiscount
+    ? { ...storefrontSettings.wholesale, brokenPackDiscount: storefrontSettings.brokenPackDiscount }
+    : storefrontSettings?.wholesale;
+  const wholesaleProblems = [
+    ...wholesaleLineProblems(cartItems, effectiveWholesale),
+    ...packLineProblems(cartItems),
+  ];
+  const minWholesaleAmount = readMinWholesaleAmount(storefrontSettings?.wholesale);
+  const hasWholesaleInCart = cartItems.some(isWholesaleLine);
+  const wholesaleSubtotal = hasWholesaleInCart ? wholesaleOrderSubtotal(cartItems) : 0;
+  const remainingForMinWholesale =
+    minWholesaleAmount !== undefined && hasWholesaleInCart ? Math.max(0, minWholesaleAmount - wholesaleSubtotal) : 0;
   const cartBlocked = unavailableCount > 0 || wholesaleProblems.length > 0;
   const [isClearCartConfirmOpen, setIsClearCartConfirmOpen] = useState(false);
   const clearDialog = useDialogA11y(isClearCartConfirmOpen, () => setIsClearCartConfirmOpen(false));
@@ -167,10 +201,10 @@ export const CartScreen: React.FC<CartScreenProps> = ({
   if (cartItems.length === 0) {
     return (
       <div className="py-12 space-y-5 text-center animate-in fade-in duration-300">
-        <div className="w-24 h-24 rounded-full neu-flat flex items-center justify-center mx-auto text-[#4E5C70]">
+        <div className="w-24 h-24 rounded-full neu-flat flex items-center justify-center mx-auto text-text-secondary">
           <ShoppingBag className="w-10 h-10 stroke-[1.5]" />
         </div>
-        <h2 className="text-xl font-bold text-[#2D3A4E]">Ваша корзина пуста</h2>
+        <h2 className="text-xl font-bold text-text-primary">Ваша корзина пуста</h2>
         <button
           onClick={() => setActiveTab('catalog')}
           className="neu-button-accent rounded-full px-6 py-3 font-bold text-xs inline-flex items-center gap-2 cursor-pointer"
@@ -190,11 +224,11 @@ export const CartScreen: React.FC<CartScreenProps> = ({
       {/* Free Delivery Threshold Dynamic Progress Banner: only when some method becomes free from a sum; names the
           methods when not all of them do */}
       {freeThreshold > 0 && (
-      <div className="neu-flat rounded-2xl p-3.5 border border-white/60 space-y-2">
+      <div className="neu-flat rounded-2xl p-3.5 space-y-2">
         <div className="flex items-center justify-between text-xs font-bold">
           <div className="flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-accent" />
-            <span className="text-[#2D3A4E]">
+            <span className="text-text-primary">
               {remainingForFreeDelivery === 0
                 ? freeDeliveryMethods
                   ? `Бесплатная доставка: ${freeDeliveryMethods}`
@@ -217,10 +251,36 @@ export const CartScreen: React.FC<CartScreenProps> = ({
       </div>
       )}
 
+      {minWholesaleAmount !== undefined && hasWholesaleInCart && (
+        <div className="neu-flat rounded-2xl p-3.5 space-y-2">
+          <div className="flex items-center justify-between text-xs font-bold">
+            <div className="flex items-center gap-1.5">
+              <WholesaleMark />
+              <span className="text-text-primary">
+                {remainingForMinWholesale === 0
+                  ? `Минимальная сумма оптового заказа (${minWholesaleAmount.toLocaleString('ru-RU')} ₽) набрана`
+                  : `До минимальной суммы опта (${minWholesaleAmount.toLocaleString('ru-RU')} ₽): ещё ${remainingForMinWholesale.toLocaleString('ru-RU')} ₽`}
+              </span>
+            </div>
+            <span className="text-[11px] font-extrabold text-accent">
+              {Math.min(100, Math.floor((wholesaleSubtotal / minWholesaleAmount) * 100))}%
+            </span>
+          </div>
+          <div className="w-full h-2 rounded-full overflow-hidden neu-inset">
+            <div
+              className={`h-full transition-all duration-500 rounded-full ${
+                remainingForMinWholesale === 0 ? 'bg-success' : 'bg-accent'
+              }`}
+              style={{ width: `${Math.min(100, (wholesaleSubtotal / minWholesaleAmount) * 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Header bar with item counter & clear cart button */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-[#2D3A4E]">Товаров в корзине:</span>
+          <span className="text-sm font-bold text-text-primary">Товаров в корзине:</span>
           <span className="neu-inset px-2.5 py-0.5 rounded-full text-xs font-extrabold text-accent">
             {totalItemsCount}
           </span>
@@ -229,7 +289,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         <button
           type="button"
           onClick={() => setIsClearCartConfirmOpen(true)}
-          className="min-h-8 px-2 -mr-2 rounded-xl text-xs font-bold text-[#4E5C70] hover:text-danger transition-colors flex items-center gap-1 cursor-pointer"
+          className="min-h-8 px-2 -mr-2 rounded-xl text-xs font-bold text-text-secondary hover:text-danger transition-colors flex items-center gap-1 cursor-pointer"
         >
           <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
           <span>Очистить все</span>
@@ -260,7 +320,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
           return (
             <div
               key={`cart-item-${item.id}-${itemIdx}`}
-              className="neu-flat rounded-3xl p-3.5 border border-white/60 relative space-y-3 transition-all"
+              className="neu-flat rounded-3xl p-3.5 relative space-y-3 transition-all"
             >
               <div className="flex gap-3.5 items-center">
                 {/* Thumbnail Image */}
@@ -271,7 +331,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     className="w-full h-full object-cover object-top rounded-xl"
                   />
                   {availableStock <= 2 && availableStock > 0 && (
-                    <span className="absolute bottom-1 right-1 neu-flat text-[#2D3A4E] text-[11px] font-extrabold px-1.5 py-0.5 rounded-md border border-white/60">
+                    <span className="absolute bottom-1 right-1 neu-photo-badge text-text-primary text-[11px] font-extrabold px-1.5 py-0.5 rounded-md">
                       {availableStock} {unit}
                     </span>
                   )}
@@ -280,7 +340,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                 {/* Info Column */}
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-start justify-between gap-1">
-                    <h3 className="text-sm font-bold text-[#2D3A4E] truncate">
+                    <h3 className="text-sm font-bold text-text-primary truncate">
                       {item.product.title}
                     </h3>
                     {/* Favorite Heart Icon */}
@@ -288,7 +348,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                       type="button"
                       onClick={(e) => onToggleFavorite(item.product, e)}
                       className={`w-8 h-8 rounded-full neu-button flex items-center justify-center transition-colors shrink-0 ${
-                        isFav ? 'text-accent' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
+                        isFav ? 'text-accent' : 'text-text-secondary hover:text-text-primary'
                       }`}
                       title={isFav ? 'В избранном' : 'Добавить в избранное'}
                       aria-label={`В избранное: ${title}`}
@@ -312,7 +372,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                       ) : item.quantity > availableStock ? (
                         <span className="text-[11px] font-bold text-danger">Доступно: {availableStock} уп.</span>
                       ) : (
-                        <span className="text-[11px] font-semibold text-[#4E5C70]">
+                        <span className="text-[11px] font-semibold text-text-secondary">
                           {availableStock <= 2 ? `Осталось: ${availableStock} уп.` : `В наличии: ${availableStock} уп.`}
                         </span>
                       )}
@@ -340,7 +400,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                         ) : item.quantity > availableStock ? (
                           <span className="text-[11px] font-bold text-danger">Доступно: {availableStock} шт.</span>
                         ) : (
-                          <span className="text-[11px] font-semibold text-[#4E5C70]">
+                          <span className="text-[11px] font-semibold text-text-secondary">
                             {availableStock <= 2 ? `Осталось: ${availableStock} шт.` : `В наличии: ${availableStock} шт.`}
                           </span>
                         )}
@@ -349,10 +409,10 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                   )}
 
                   {pack && (
-                    <div className="text-xs text-[#4E5C70] space-y-0.5">
+                    <div className="text-xs text-text-secondary space-y-0.5">
                       <p>
                         <WholesaleMark className="mr-1.5" />
-                        <span className="font-bold text-[#2D3A4E]">{pack.title}</span>
+                        <span className="font-bold text-text-primary">{pack.title}</span>
                       </p>
                       <p>{pack.composition}</p>
                       <p>
@@ -361,7 +421,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     </div>
                   )}
                   {wholesale && (
-                    <p className="text-xs text-[#4E5C70]">
+                    <p className="text-xs text-text-secondary">
                       <WholesaleMark className="mr-1.5" />
                       {packsText(item.quantity, step)} · {linePrice(item).toLocaleString('ru-RU')} ₽/шт.
                       {item.volumeDiscountPerUnit ? (
@@ -371,7 +431,27 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                       ) : null}
                     </p>
                   )}
-                  <p className="text-sm font-extrabold text-[#2D3A4E] pt-0.5">
+                  {(() => {
+                    const currentBasePrice = pack
+                      ? linePrice(item)
+                      : wholesale
+                        ? linePrice(item) + (item.volumeDiscountPerUnit ?? 0)
+                        : linePrice(item);
+                    if (
+                      typeof item.addedPrice !== 'number' ||
+                      !Number.isFinite(item.addedPrice) ||
+                      item.addedPrice <= 0 ||
+                      item.addedPrice === currentBasePrice
+                    ) {
+                      return null;
+                    }
+                    return (
+                      <p className="text-[11px] font-bold text-warning">
+                        Цена изменилась: было {item.addedPrice.toLocaleString('ru-RU')} ₽{pack ? '/уп.' : ''}
+                      </p>
+                    );
+                  })()}
+                  <p className="text-sm font-extrabold text-text-primary pt-0.5">
                     {(linePrice(item) * item.quantity).toLocaleString('ru-RU')} ₽
                   </p>
 
@@ -387,14 +467,14 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                           }
                         }}
                         type="button"
-                        className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] hover:text-accent cursor-pointer"
+                        className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-primary hover:text-accent cursor-pointer"
                         title={item.quantity <= step ? 'Удалить товар' : 'Уменьшить количество'}
                         aria-label={`${item.quantity <= step ? 'Удалить товар' : 'Уменьшить количество'}: ${rowName}`}
                       >
                         <Minus className="w-3 h-3 stroke-[2.5]" />
                       </button>
                       <span
-                        className={`text-xs font-bold text-[#2D3A4E] text-center ${step > 1 || pack ? 'min-w-5 px-0.5 whitespace-nowrap' : 'w-5'}`}
+                        className={`text-xs font-bold text-text-primary text-center ${step > 1 || pack ? 'min-w-5 px-0.5 whitespace-nowrap' : 'w-5'}`}
                         aria-live="polite"
                       >
                         {pack ? `${item.quantity} уп.` : step > 1 ? `${Math.floor(item.quantity / step)} уп.` : item.quantity}
@@ -409,8 +489,10 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                         }}
                         type="button"
                         disabled={isAtMaxStock}
-                        className={`w-8 h-8 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] transition-opacity cursor-pointer ${
-                          isAtMaxStock ? 'opacity-30 cursor-not-allowed' : 'hover:text-accent'
+                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                          isAtMaxStock
+                            ? 'neu-button-disabled'
+                            : 'neu-button text-text-primary hover:text-accent cursor-pointer'
                         }`}
                         title={
                           isAtMaxStock
@@ -441,15 +523,15 @@ export const CartScreen: React.FC<CartScreenProps> = ({
 
               {/* Interactive In-Cart Variant Selector Drawer */}
               {isEditingVariant && onUpdateVariant && (
-                <div id={variantPanelId} className="neu-inset rounded-2xl p-3.5 sm:p-4 space-y-3 border border-white/70 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div id={variantPanelId} className="neu-inset rounded-2xl p-3.5 sm:p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
                   {/* Header */}
-                  <div className="flex items-center justify-between pb-2 border-b border-[#BAC5D5]/50">
+                  <div className="flex items-center justify-between pb-2 neu-divider-b">
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-6 h-6 rounded-lg neu-flat flex items-center justify-center text-accent shrink-0 border border-white/60">
-                        <SlidersHorizontal className="w-3.5 h-3.5" />
+                      <div className="w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
+                        <SlidersHorizontal className="w-4 h-4 shrink-0" />
                       </div>
-                      <div className="truncate">
-                        <span className="text-[11px] font-extrabold text-[#2D3A4E] uppercase tracking-wider block">
+                      <div className="truncate min-w-0">
+                        <span className="text-[11px] font-extrabold text-text-primary uppercase tracking-wider block truncate">
                           Выбор вариации
                         </span>
                       </div>
@@ -457,7 +539,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => setEditingVariantItemId(null)}
-                      className="px-2.5 py-1 rounded-xl neu-button text-[11px] font-extrabold text-[#4E5C70] hover:text-[#2D3A4E] transition-all cursor-pointer shrink-0"
+                      className="min-h-8 px-3 py-1 rounded-xl neu-button text-[11px] font-extrabold text-text-secondary hover:text-text-primary transition-all cursor-pointer shrink-0"
                     >
                       Закрыть
                     </button>
@@ -466,7 +548,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                   {/* Colors */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-[#4E5C70]">Цвет:</span>
+                      <span className="text-[11px] font-bold text-text-secondary">Цвет:</span>
                       <span className="text-[11px] font-extrabold text-accent neu-inset px-2 py-0.5 rounded-lg">
                         {item.selectedColor}
                       </span>
@@ -494,7 +576,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                                 ? 'neu-pill-active font-extrabold'
                                 : isOutOfStock
                                 ? 'neu-button-disabled line-through'
-                                : 'neu-button text-[#2D3A4E] hover:text-[#1E293B]'
+                                : 'neu-button text-text-primary hover:text-[#1E293B]'
                             }`}
                           >
                             <span
@@ -512,7 +594,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                   {/* Sizes */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-[#4E5C70]">Размер:</span>
+                      <span className="text-[11px] font-bold text-text-secondary">Размер:</span>
                       <span className="text-[11px] font-extrabold text-accent neu-inset px-2 py-0.5 rounded-lg">
                         {item.selectedSize}
                       </span>
@@ -538,7 +620,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                                 ? 'neu-pill-active font-extrabold'
                                 : isOutOfStock
                                 ? 'neu-button-disabled line-through'
-                                : 'neu-button text-[#2D3A4E] hover:text-[#1E293B]'
+                                : 'neu-button text-text-primary hover:text-[#1E293B]'
                             }`}
                           >
                             <span>{sz}</span>
@@ -555,8 +637,8 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                   </div>
 
                   {/* Stock footer & Confirm Button */}
-                  <div className="pt-2 border-t border-[#BAC5D5]/50 flex items-center justify-between gap-2 text-[11px]">
-                    <div className="flex items-center gap-1.5 text-[#4E5C70] font-bold min-w-0">
+                  <div className="pt-2 neu-divider-t flex items-center justify-between gap-2 text-[11px]">
+                    <div className="flex items-center gap-1.5 text-text-secondary font-bold min-w-0">
                       <span className="shrink-0">Наличие:</span>
                       <span
                         className={`truncate font-extrabold ${
@@ -581,7 +663,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => setEditingVariantItemId(null)}
-                      className="px-3 py-1.5 rounded-xl neu-button text-[11px] font-extrabold text-accent hover:text-[#2D3A4E] transition-all cursor-pointer shrink-0"
+                      className="min-h-8 px-3 py-1.5 rounded-xl neu-button text-[11px] font-extrabold text-accent hover:text-text-primary transition-all cursor-pointer shrink-0"
                     >
                       Готово
                     </button>
@@ -597,22 +679,22 @@ export const CartScreen: React.FC<CartScreenProps> = ({
 
       <div className="space-y-4 lg:col-span-5 lg:sticky lg:top-24">
       {/* Promo Code Card with Modal Trigger */}
-      <div className="neu-flat rounded-2xl p-3 border border-white/60 space-y-2.5">
+      <div className="neu-flat rounded-2xl p-3 space-y-2.5">
         <div className="flex items-center justify-between">
           <button
             type="button"
             onClick={onOpenPromoModal}
-            className="flex-1 flex items-center justify-between text-xs font-bold text-[#2D3A4E] hover:text-accent transition-colors group cursor-pointer"
+            className="flex-1 flex items-center justify-between text-xs font-bold text-text-primary hover:text-accent transition-colors group cursor-pointer"
           >
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-xl neu-button flex items-center justify-center text-accent group-hover:scale-105 transition-transform">
-                <Tag className="w-3.5 h-3.5 stroke-[2.2]" />
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-accent group-hover:scale-105 transition-transform shrink-0">
+                <Tag className="w-4 h-4 stroke-[2.2] shrink-0" />
               </div>
-              <div className="text-left">
-                <p className="text-xs font-bold text-[#2D3A4E]">
+              <div className="text-left min-w-0">
+                <p className="text-xs font-bold text-text-primary truncate">
                   {appliedPromo ? `Промокод: ${appliedPromo.code}` : 'Промокод'}
                 </p>
-                <p className="text-xs text-[#4E5C70] font-normal">
+                <p className="text-xs text-text-secondary font-normal truncate">
                   {appliedPromo
                     ? `Скидка ${promoDiscountText(appliedPromo)} применена`
                     : hasActivePromos
@@ -621,14 +703,14 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                 </p>
               </div>
             </div>
-            <span className="flex items-center gap-1 text-accent font-extrabold text-xs">
+            <span className="flex items-center gap-1 text-accent font-extrabold text-xs shrink-0">
               {appliedPromo ? 'Изменить' : 'Выбрать'}
-              <ChevronRight className="w-4 h-4 text-[#4E5C70] group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
+              <ChevronRight className="w-4 h-4 text-text-secondary group-hover:translate-x-0.5 transition-transform shrink-0" aria-hidden="true" />
             </span>
           </button>
         </div>
 
-        <form onSubmit={handlePromoSubmit} className="flex items-center gap-2 pt-1 border-t border-[#BAC5D5]/50">
+        <form onSubmit={handlePromoSubmit} className="flex items-center gap-2 pt-2 neu-divider-t">
           <div className="relative flex-1 min-w-0">
             <input
               type="text"
@@ -637,12 +719,12 @@ export const CartScreen: React.FC<CartScreenProps> = ({
               value={promoInput}
               onChange={(e) => setPromoInput(e.target.value)}
               placeholder={appliedPromo ? `Активен: ${appliedPromo.code}` : 'Или введите код вручную'}
-              className="w-full neu-inset rounded-xl py-2 px-3 text-xs font-medium text-[#2D3A4E] placeholder:text-[#56647A] uppercase placeholder:normal-case"
+              className="w-full min-h-8 neu-inset rounded-xl py-2 px-3 text-xs font-medium text-text-primary placeholder:text-text-muted uppercase placeholder:normal-case"
             />
           </div>
           <button
             type="submit"
-            className="neu-button rounded-xl px-3.5 py-2 text-xs font-bold text-[#2D3A4E] hover:text-accent shrink-0 cursor-pointer"
+            className="min-h-8 neu-button rounded-xl px-3.5 py-2 text-xs font-bold text-text-primary hover:text-accent shrink-0 cursor-pointer"
           >
             Применить
           </button>
@@ -651,10 +733,10 @@ export const CartScreen: React.FC<CartScreenProps> = ({
 
       {/* Applied Promo discount pill */}
       {appliedPromo && (
-        <div className="neu-inset rounded-xl p-2.5 px-3.5 flex items-center justify-between text-xs font-bold text-accent border border-accent/30">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-accent" />
-            <span>
+        <div className="neu-pill-active rounded-xl p-2.5 px-3.5 flex items-center justify-between gap-2 text-xs font-bold text-accent">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
+            <span className="truncate">
               Промокод {appliedPromo.code} (
               {appliedPromo.discountType === 'fixed'
                 ? `-${(appliedPromo.discountValue || 0).toLocaleString('ru-RU')} ₽`
@@ -662,12 +744,12 @@ export const CartScreen: React.FC<CartScreenProps> = ({
               )
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <span>-{discountAmount.toLocaleString('ru-RU')} ₽</span>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="tabular-nums">-{discountAmount.toLocaleString('ru-RU')} ₽</span>
             <button
               type="button"
               onClick={onRemovePromo}
-              className="text-[11px] font-extrabold text-[#4E5C70] hover:text-danger ml-1 underline cursor-pointer"
+              className="min-h-8 px-2.5 py-1 rounded-xl neu-button text-[11px] font-extrabold text-text-secondary hover:text-danger cursor-pointer shrink-0"
             >
               Сбросить
             </button>
@@ -675,13 +757,13 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         </div>
       )}
 
-      {/* Summary Cost Card */}
-      <div className="neu-flat rounded-3xl p-3.5 border border-white/80 space-y-3">
-        <div className="neu-inset rounded-2xl p-4 space-y-2.5">
-          <div className="space-y-2 text-xs font-semibold text-[#4E5C70]">
+      {/* Summary Cost Card (Single elevation level, no redundant full-width inset inside flat) */}
+      <div className="neu-flat rounded-3xl p-4 space-y-3.5">
+        <div className="space-y-2.5">
+          <div className="space-y-2 text-xs font-semibold text-text-secondary">
             <div className="flex justify-between">
               <span>Товары ({totalItemsCount})</span>
-              <span className="text-[#2D3A4E] font-bold">{rawSubtotal.toLocaleString('ru-RU')} ₽</span>
+              <span className="text-text-primary font-bold">{rawSubtotal.toLocaleString('ru-RU')} ₽</span>
             </div>
 
             {discountAmount > 0 && (
@@ -693,7 +775,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
 
             <div className="flex justify-between gap-3">
               <span>Доставка</span>
-              <span className={`text-right ${deliveryKnown && deliveryFee === 0 ? 'text-success font-bold' : 'text-[#2D3A4E]'}`}>
+              <span className={`text-right ${deliveryKnown && deliveryFee === 0 ? 'text-success font-bold' : 'text-text-primary'}`}>
                 {minDelivery === null
                   ? 'При оформлении'
                   : deliveryKnown
@@ -705,9 +787,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
             </div>
           </div>
 
-          <div className="border-t border-[#BAC5D5]/60 pt-2.5 flex items-baseline justify-between">
-            <span className="text-base font-bold text-[#2D3A4E]">{deliveryKnown ? 'Итого' : 'Итого без доставки'}</span>
-            <span className="text-xl font-extrabold text-[#2D3A4E]">
+          <div className="neu-divider-t pt-2.5 flex items-baseline justify-between">
+            <span className="text-base font-bold text-text-primary">{deliveryKnown ? 'Итого' : 'Итого без доставки'}</span>
+            <span className="text-xl font-extrabold text-text-primary tabular-nums">
               {finalTotal.toLocaleString('ru-RU')} ₽
             </span>
           </div>
@@ -716,12 +798,21 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         {/* Action Buttons: 1-Click Quick Order + Full Checkout */}
         <div className="space-y-2">
           {unavailableCount > 0 && (
-            <p className="neu-inset rounded-2xl p-3 text-xs font-bold text-danger">
-              Часть товаров закончилась: уменьшите количество или удалите их из корзины ({unavailableCount}).
-            </p>
+            <div className="neu-tone-danger rounded-2xl p-3 text-xs font-bold space-y-2">
+              <p>
+                Часть товаров закончилась: уменьшите количество или удалите их из корзины ({unavailableCount}).
+              </p>
+              <button
+                type="button"
+                onClick={handleFixUnavailableItems}
+                className="w-full py-2 px-3 rounded-xl neu-button text-xs font-extrabold text-accent hover:text-accent-strong cursor-pointer transition-all"
+              >
+                Выровнять по остатку / убрать недоступные
+              </button>
+            </div>
           )}
           {wholesaleProblems.length > 0 && (
-            <div role="status" className="neu-inset rounded-2xl p-3 text-xs font-bold text-danger space-y-1">
+            <div role="status" className="neu-tone-danger rounded-2xl p-3 text-xs font-bold space-y-1">
               {wholesaleProblems.map((problem) => (
                 <p key={problem}>{problem}</p>
               ))}
@@ -738,7 +829,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
             disabled={Boolean(checkoutBlocker) || cartBlocked}
             className={`w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
               !checkoutBlocker && !cartBlocked
-                ? 'neu-button-accent btn-confirm-order active:neu-inset-deep active:scale-[0.98] cursor-pointer'
+                ? 'neu-button-accent btn-confirm-order active:neu-inset-deep cursor-pointer'
                 : 'neu-button-disabled'
             }`}
           >
@@ -750,7 +841,11 @@ export const CartScreen: React.FC<CartScreenProps> = ({
             type="button"
             onClick={() => setIsQuickOrderOpen(true)}
             disabled={cartBlocked}
-            className="w-full py-2.5 rounded-2xl neu-button font-bold text-xs text-accent flex items-center justify-center transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`w-full py-2.5 rounded-2xl font-bold text-xs flex items-center justify-center transition-all ${
+              cartBlocked
+                ? 'neu-button-disabled'
+                : 'neu-button text-accent cursor-pointer'
+            }`}
           >
             <span>Заказать в 1 клик</span>
           </button>
@@ -782,22 +877,22 @@ export const CartScreen: React.FC<CartScreenProps> = ({
 
       {/* Clear Cart Confirmation Modal */}
       {isClearCartConfirmOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/50 backdrop-blur-xs animate-in fade-in duration-200">
-          <div ref={clearDialog.ref} {...clearDialog.props} className="relative w-full max-w-sm neu-modal rounded-3xl p-5 space-y-4 border border-white/80">
-            <div className="flex items-center gap-2 text-danger pb-2 border-b border-[#BAC5D5]/50">
-              <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center">
-                <Trash2 className="w-4 h-4 text-danger" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-text-primary/50 backdrop-blur-xs animate-in fade-in duration-200">
+          <div ref={clearDialog.ref} {...clearDialog.props} className="relative w-full max-w-sm neu-modal rounded-3xl p-5 space-y-4 ">
+            <div className="flex items-center gap-2 text-danger pb-2 neu-divider-b">
+              <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center shrink-0">
+                <Trash2 className="w-4 h-4 text-danger shrink-0" />
               </div>
-              <h3 id={clearDialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">Очистка всей корзины</h3>
+              <h3 id={clearDialog.titleId} className="text-sm font-extrabold text-text-primary">Очистка всей корзины</h3>
             </div>
-            <p className="text-xs text-[#4E5C70] leading-relaxed">
+            <p className="text-xs text-text-secondary leading-relaxed">
               Вы уверены, что хотите удалить все <strong>{totalItemsCount}</strong> поз. из корзины?
             </p>
             <div className="flex items-center gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setIsClearCartConfirmOpen(false)}
-                className="flex-1 py-2.5 rounded-xl neu-button text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl neu-button text-xs font-bold text-text-secondary hover:text-text-primary cursor-pointer"
               >
                 Отмена
               </button>
@@ -807,7 +902,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                   onClearCart();
                   setIsClearCartConfirmOpen(false);
                 }}
-                className="flex-1 py-2.5 rounded-xl neu-button text-xs font-extrabold text-danger hover:text-[#2D3A4E] cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl neu-button text-xs font-extrabold text-danger hover:text-text-primary cursor-pointer"
               >
                 Да, очистить
               </button>
@@ -823,6 +918,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         onClose={() => setIsQuickOrderOpen(false)}
         cartItems={cartItems}
         totalPrice={rawSubtotal}
+        userProfile={userProfile}
         promoNotApplied={Boolean(appliedPromo)}
         ordersPaused={ordersPaused}
         onSuccess={handleQuickOrderSuccess}

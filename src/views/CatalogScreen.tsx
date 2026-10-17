@@ -7,9 +7,15 @@ import {
   ArrowUpDown,
   RotateCcw,
   Sparkles,
+  Download,
+  FileText,
+  Loader2,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Product, UserProfile, BodyMeasurements } from '../types';
+import { m, AnimatePresence } from 'motion/react';
+import { Product, UserProfile, BodyMeasurements, CartItem } from '../types';
+import { sellsWholesale, type WholesaleSettings } from '../shared/wholesalePricing';
+import { exportWholesalePriceListCSV, generateWholesalePriceListPDF } from '../utils/wholesalePriceList';
+import { preloadPdfLibraries } from '../utils/pdfExport';
 import { ProductCard } from '../components/ProductCard';
 import { AutocompleteSearch } from '../components/AutocompleteSearch';
 import {
@@ -27,6 +33,7 @@ import type { StoreCategory } from '../types';
 import { categoryIcon } from '../utils/categories';
 import { pluralRu } from '../utils/pluralize';
 import { buyerPrice } from '../utils/wholesaleOffer';
+import { articleCode } from '../shared/barcode';
 import {
   DEFAULT_CATALOG_VIEW,
   PRODUCTS_PAGE_SIZE,
@@ -56,7 +63,10 @@ interface CatalogScreenProps {
   onToggleFavorite: (product: Product, e: React.MouseEvent) => void;
   /** false — nothing added yet (the customer is asked for a size) */
   onAddToCart: (product: Product, e: React.MouseEvent) => boolean | void;
-  onAddToCartWithOptions?: (product: Product, color: string, size: string, quantity: number) => boolean | void;
+  onAddToCartWithOptions?: (product: Product, color: string, size: string, quantity: number, wholesale?: boolean | 'wholesale' | 'broken') => boolean | void;
+  onAddPackToCart?: (product: Product, packId: string, color: string, packs: number) => boolean;
+  cartItems?: CartItem[];
+  wholesale?: WholesaleSettings;
   /** Admin → «Витрина» → «Предзаказ» (quick view shows sold-out sizes as orderable) */
   preorderMode?: boolean;
   filterState?: FilterState;
@@ -86,6 +96,9 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
   onToggleFavorite,
   onAddToCart,
   onAddToCartWithOptions,
+  onAddPackToCart,
+  cartItems,
+  wholesale,
   preorderMode = false,
   filterState: externalFilterState,
   onChangeFilterState: externalOnChangeFilterState,
@@ -119,6 +132,9 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
 
   // Quick View state
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+  const [isExportingWholesalePdf, setIsExportingWholesalePdf] = useState(false);
+  const [wholesalePdfFailed, setWholesalePdfFailed] = useState(false);
+  const wholesaleProductsCount = useMemo(() => products.filter(sellsWholesale).length, [products]);
 
   const activeFiltersCount = useMemo(() => {
     let count = 0;
@@ -160,9 +176,21 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
         const matchesQuery =
           !cleanSearch ||
           (p.title || '').toLowerCase().includes(cleanSearch) ||
+          (p.id || '').toLowerCase().includes(cleanSearch) ||
           (p.description || '').toLowerCase().includes(cleanSearch) ||
           (p.categoryLabel || '').toLowerCase().includes(cleanSearch) ||
-          (p.material || '').toLowerCase().includes(cleanSearch);
+          (p.material || '').toLowerCase().includes(cleanSearch) ||
+          (p.colors || []).some(
+            (c) =>
+              c?.name &&
+              (c.name.toLowerCase().includes(cleanSearch) ||
+                articleCode(p, c.name).toLowerCase().includes(cleanSearch))
+          ) ||
+          (p.skus || []).some(
+            (s) =>
+              (s.skuCode || '').toLowerCase().includes(cleanSearch) ||
+              (s.barcode || '').toLowerCase().includes(cleanSearch)
+          );
         return matchesQuery && matchesCatalogFilters(p, selectedCategory, filterState);
       })
       .sort((a, b) => {
@@ -223,10 +251,10 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
         {/* Master Filter Button */}
         <button
           onClick={handleOpenFilterModal}
-          className={`relative w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-all active:scale-95 cursor-pointer bg-[#E3E8EF] ${
+          className={`relative w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-all cursor-pointer bg-[#E3E8EF] ${
             activeFiltersCount > 0
               ? 'neu-pill-active font-bold'
-              : 'neu-button text-[#2D3A4E] hover:text-accent'
+              : 'neu-button text-text-primary hover:text-accent'
           }`}
           title="Параметры фильтрации"
           aria-label="Фильтры"
@@ -259,12 +287,12 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                 className={`relative px-4 py-2.5 rounded-2xl text-[13px] transition-all whitespace-nowrap shrink-0 flex items-center gap-2 cursor-pointer select-none bg-[#E3E8EF] ${
                   isSelected
                     ? 'neu-pill-active font-bold'
-                    : 'neu-button font-semibold text-[#2D3A4E] hover:text-accent'
+                    : 'neu-button font-semibold text-text-primary hover:text-accent'
                 }`}
               >
                 <IconComp
                   className={`w-4 h-4 ${
-                    isSelected ? 'stroke-[2.2] text-accent' : 'stroke-[1.8] text-[#4E5C70]'
+                    isSelected ? 'stroke-[2.2] text-accent' : 'stroke-[1.8] text-text-secondary'
                   }`}
                 />
                 <span>{cat.name}</span>
@@ -299,25 +327,27 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
       {activeFiltersCount > 0 && (
         <div className="flex items-center gap-2 flex-wrap py-1">
           {filterState.onlyInStock && (
-            <span className="neu-inset text-[11px] font-bold text-accent pl-3 pr-1 py-1 rounded-full flex items-center gap-1 border border-accent/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-success inline-block" />
-              Только в наличии
+            <span className="neu-pill-active text-[11px] font-bold text-accent pl-3 pr-0.5 py-0.5 min-h-8 rounded-full flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-success inline-block shrink-0" />
+              <span>Только в наличии</span>
               <button
                 onClick={() =>
                   setFilterState((prev) => ({ ...prev, onlyInStock: false }))
                 }
-                className="w-6 h-6 rounded-full flex items-center justify-center text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
+                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary hover:text-danger cursor-pointer transition-colors shrink-0"
                 aria-label="Убрать фильтр «Только в наличии»"
               >
-                <X className="w-3 h-3 stroke-[2.5]" />
+                <X className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
               </button>
             </span>
           )}
 
           {hasPriceFilter(filterState) && (
-            <span className="neu-inset text-[11px] font-bold text-[#2D3A4E] pl-3 pr-1 py-1 rounded-full flex items-center gap-1 border border-accent/30">
-              Цена: {filterState.minPrice > 0 ? `от ${filterState.minPrice.toLocaleString('ru-RU')} ₽ ` : ''}
-              {Number.isFinite(filterState.maxPrice) ? `до ${filterState.maxPrice.toLocaleString('ru-RU')} ₽` : ''}
+            <span className="neu-pill-active text-[11px] font-bold text-text-primary pl-3 pr-0.5 py-0.5 min-h-8 rounded-full flex items-center gap-1.5">
+              <span>
+                Цена: {filterState.minPrice > 0 ? `от ${filterState.minPrice.toLocaleString('ru-RU')} ₽ ` : ''}
+                {Number.isFinite(filterState.maxPrice) ? `до ${filterState.maxPrice.toLocaleString('ru-RU')} ₽` : ''}
+              </span>
               <button
                 onClick={() =>
                   setFilterState((prev) => ({
@@ -326,10 +356,10 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                     maxPrice: NO_MAX_PRICE,
                   }))
                 }
-                className="w-6 h-6 rounded-full flex items-center justify-center text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
+                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary hover:text-danger cursor-pointer transition-colors shrink-0"
                 aria-label="Убрать фильтр по цене"
               >
-                <X className="w-3 h-3 stroke-[2.5]" />
+                <X className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
               </button>
             </span>
           )}
@@ -339,9 +369,9 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
             return (
               <span
                 key={matId}
-                className="neu-inset text-[11px] font-bold text-[#2D3A4E] pl-3 pr-1 py-1 rounded-full flex items-center gap-1 border border-accent/30"
+                className="neu-pill-active text-[11px] font-bold text-text-primary pl-3 pr-0.5 py-0.5 min-h-8 rounded-full flex items-center gap-1.5"
               >
-                Ткань: {matObj ? matObj.name : matId}
+                <span>Ткань: {matObj ? matObj.name : matId}</span>
                 <button
                   onClick={() =>
                     setFilterState((prev) => ({
@@ -349,10 +379,10 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                       selectedMaterials: prev.selectedMaterials.filter((m) => m !== matId),
                     }))
                   }
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
+                  className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary hover:text-danger cursor-pointer transition-colors shrink-0"
                   aria-label={`Убрать фильтр «Ткань: ${matObj ? matObj.name : matId}»`}
                 >
-                  <X className="w-3 h-3 stroke-[2.5]" />
+                  <X className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
                 </button>
               </span>
             );
@@ -361,9 +391,9 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           {filterState.selectedSizes.map((sz) => (
             <span
               key={sz}
-              className="neu-inset text-[11px] font-bold text-[#2D3A4E] pl-3 pr-1 py-1 rounded-full flex items-center gap-1 border border-accent/30"
+              className="neu-pill-active text-[11px] font-bold text-text-primary pl-3 pr-0.5 py-0.5 min-h-8 rounded-full flex items-center gap-1.5"
             >
-              Размер: {sz}
+              <span>Размер: {sz}</span>
               <button
                 onClick={() =>
                   setFilterState((prev) => ({
@@ -371,80 +401,133 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                     selectedSizes: prev.selectedSizes.filter((s) => s !== sz),
                   }))
                 }
-                className="w-6 h-6 rounded-full flex items-center justify-center text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
+                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary hover:text-danger cursor-pointer transition-colors shrink-0"
                 aria-label={`Убрать фильтр «Размер: ${sz}»`}
               >
-                <X className="w-3 h-3 stroke-[2.5]" />
+                <X className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
               </button>
             </span>
           ))}
 
           {filterState.onlyNew && (
-            <span className="neu-inset text-[11px] font-bold text-[#2D3A4E] pl-3 pr-1 py-1 rounded-full flex items-center gap-1 border border-accent/30">
-              Только новинки
+            <span className="neu-pill-active text-[11px] font-bold text-text-primary pl-3 pr-0.5 py-0.5 min-h-8 rounded-full flex items-center gap-1.5">
+              <span>Только новинки</span>
               <button
                 onClick={() =>
                   setFilterState((prev) => ({ ...prev, onlyNew: false }))
                 }
-                className="w-6 h-6 rounded-full flex items-center justify-center text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
+                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary hover:text-danger cursor-pointer transition-colors shrink-0"
                 aria-label="Убрать фильтр «Только новинки»"
               >
-                <X className="w-3 h-3 stroke-[2.5]" />
+                <X className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
               </button>
             </span>
           )}
 
           {filterState.onlyDiscount && (
-            <span className="neu-inset text-[11px] font-bold text-[#2D3A4E] pl-3 pr-1 py-1 rounded-full flex items-center gap-1 border border-accent/30">
-              Со скидкой
+            <span className="neu-pill-active text-[11px] font-bold text-text-primary pl-3 pr-0.5 py-0.5 min-h-8 rounded-full flex items-center gap-1.5">
+              <span>Со скидкой</span>
               <button
                 onClick={() =>
                   setFilterState((prev) => ({ ...prev, onlyDiscount: false }))
                 }
-                className="w-6 h-6 rounded-full flex items-center justify-center text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
+                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary hover:text-danger cursor-pointer transition-colors shrink-0"
                 aria-label="Убрать фильтр «Со скидкой»"
               >
-                <X className="w-3 h-3 stroke-[2.5]" />
+                <X className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
               </button>
             </span>
           )}
 
           {filterState.onlyWholesale && (
-            <span className="neu-inset text-[11px] font-bold text-[#2D3A4E] pl-3 pr-1 py-1 rounded-full flex items-center gap-1 border border-accent/30">
-              Оптом
+            <span className="neu-pill-active text-[11px] font-bold text-text-primary pl-3 pr-0.5 py-0.5 min-h-8 rounded-full flex items-center gap-1.5">
+              <span>Оптом</span>
               <button
                 onClick={() => setFilterState((prev) => ({ ...prev, onlyWholesale: false }))}
-                className="w-6 h-6 rounded-full flex items-center justify-center text-[#4E5C70] hover:text-danger cursor-pointer transition-colors"
+                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary hover:text-danger cursor-pointer transition-colors shrink-0"
                 aria-label="Убрать фильтр «Оптом»"
               >
-                <X className="w-3 h-3 stroke-[2.5]" />
+                <X className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
               </button>
             </span>
           )}
 
           <button
             onClick={handleResetAll}
-            className="text-xs font-bold text-danger hover:text-danger flex items-center gap-1.5 ml-auto cursor-pointer active:scale-95 transition-transform py-1 px-2.5 rounded-xl hover:neu-inset"
+            className="min-h-8 text-xs font-bold text-danger hover:text-danger flex items-center gap-1.5 ml-auto cursor-pointer py-1.5 px-3 rounded-xl neu-button shrink-0"
           >
-            <RotateCcw className="w-3.5 h-3.5 stroke-[2.2]" />
+            <RotateCcw className="w-3.5 h-3.5 stroke-[2.2] shrink-0" />
             <span>Сбросить все</span>
           </button>
+        </div>
+      )}
+
+      {/* Wholesale Price List Download Bar (shown when the store sells wholesale) */}
+      {wholesaleProductsCount > 0 && (
+        <div className="neu-flat-sm rounded-2xl px-3.5 py-2.5 flex items-center justify-between gap-2.5 flex-wrap ">
+          <div className="text-xs font-bold text-text-primary flex items-center gap-2">
+            <span>Оптовый прайс-лист ({wholesaleProductsCount} {pluralRu(wholesaleProductsCount, ['модель', 'модели', 'моделей'])})</span>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => exportWholesalePriceListCSV(products, wholesale)}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl neu-button text-xs font-bold text-text-primary hover:text-accent cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
+              <span>Прайс CSV</span>
+            </button>
+            <button
+              type="button"
+              disabled={isExportingWholesalePdf}
+              onMouseEnter={preloadPdfLibraries}
+              onFocus={preloadPdfLibraries}
+              onClick={async () => {
+                setIsExportingWholesalePdf(true);
+                setWholesalePdfFailed(false);
+                try {
+                  await generateWholesalePriceListPDF(products, wholesale);
+                } catch (error) {
+                  // e.g. the canvas height limit of a phone with a long catalog: the buyer is told, CSV still works
+                  console.warn('Wholesale price list PDF failed:', error);
+                  setWholesalePdfFailed(true);
+                } finally {
+                  setIsExportingWholesalePdf(false);
+                }
+              }}
+              className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-bold ${
+                isExportingWholesalePdf ? 'neu-button-disabled' : 'neu-button text-text-primary hover:text-accent cursor-pointer'
+              }`}
+            >
+              {isExportingWholesalePdf ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" aria-hidden="true" />
+              ) : (
+                <FileText className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
+              )}
+              <span>{isExportingWholesalePdf ? 'PDF…' : 'Прайс PDF'}</span>
+            </button>
+          </div>
+          {wholesalePdfFailed && (
+            <p role="alert" className="w-full text-xs font-semibold text-danger">
+              Не удалось собрать PDF на этом устройстве — скачайте прайс CSV.
+            </p>
+          )}
         </div>
       )}
 
       {/* 5. Sorting & Product Count Bar (not shown while the catalog is empty) */}
       {products.length > 0 && (
       <div className="flex items-center justify-between min-h-[42px] px-1">
-        <span className="text-xs font-semibold text-[#4E5C70]">
+        <span className="text-xs font-semibold text-text-secondary">
           Найдено:{' '}
-          <span className="text-[#2D3A4E] font-extrabold text-sm">{filteredProducts.length}</span>{' '}
+          <span className="text-text-primary font-extrabold text-sm">{filteredProducts.length}</span>{' '}
           {pluralRu(filteredProducts.length, ['товар', 'товара', 'товаров'])}
         </span>
 
         <div className="relative">
           <button
             onClick={() => setShowSortMenu(!showSortMenu)}
-            className={`rounded-2xl px-4 py-2 flex items-center gap-2 text-[#2D3A4E] font-bold text-xs transition-all cursor-pointer ${
+            className={`rounded-2xl px-4 py-2 flex items-center gap-2 text-text-primary font-bold text-xs transition-all cursor-pointer ${
               showSortMenu ? 'neu-pill-active' : 'neu-button hover:text-accent'
             }`}
             aria-haspopup="menu"
@@ -461,16 +544,16 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
 
           {/* Sort Dropdown */}
           {showSortMenu && (
-            <div className="absolute right-0 mt-2 w-48 rounded-2xl p-1.5 z-30 neu-dropdown border border-white/80 space-y-1">
+            <div className="absolute right-0 mt-2 w-48 rounded-2xl p-1.5 z-30 neu-dropdown space-y-1">
               <button
                 onClick={() => {
                   setSortBy('popular');
                   setShowSortMenu(false);
                 }}
-                className={`w-full text-left px-3 py-2 text-xs rounded-xl transition-colors cursor-pointer ${
+                className={`w-full text-left px-3 py-2 text-xs rounded-xl transition-all cursor-pointer ${
                   sortBy === 'popular'
                     ? 'neu-pill-active font-bold'
-                    : 'text-[#2D3A4E] font-semibold hover:bg-white/60'
+                    : 'neu-option text-text-primary font-semibold hover:text-accent'
                 }`}
               >
                 По популярности
@@ -480,10 +563,10 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                   setSortBy('price-asc');
                   setShowSortMenu(false);
                 }}
-                className={`w-full text-left px-3 py-2 text-xs rounded-xl transition-colors cursor-pointer ${
+                className={`w-full text-left px-3 py-2 text-xs rounded-xl transition-all cursor-pointer ${
                   sortBy === 'price-asc'
                     ? 'neu-pill-active font-bold'
-                    : 'text-[#2D3A4E] font-semibold hover:bg-white/60'
+                    : 'neu-option text-text-primary font-semibold hover:text-accent'
                 }`}
               >
                 Сначала дешевле
@@ -493,10 +576,10 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                   setSortBy('price-desc');
                   setShowSortMenu(false);
                 }}
-                className={`w-full text-left px-3 py-2 text-xs rounded-xl transition-colors cursor-pointer ${
+                className={`w-full text-left px-3 py-2 text-xs rounded-xl transition-all cursor-pointer ${
                   sortBy === 'price-desc'
                     ? 'neu-pill-active font-bold'
-                    : 'text-[#2D3A4E] font-semibold hover:bg-white/60'
+                    : 'neu-option text-text-primary font-semibold hover:text-accent'
                 }`}
               >
                 Сначала дороже
@@ -506,10 +589,10 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
                   setSortBy('newest');
                   setShowSortMenu(false);
                 }}
-                className={`w-full text-left px-3 py-2 text-xs rounded-xl transition-colors cursor-pointer ${
+                className={`w-full text-left px-3 py-2 text-xs rounded-xl transition-all cursor-pointer ${
                   sortBy === 'newest'
                     ? 'neu-pill-active font-bold'
-                    : 'text-[#2D3A4E] font-semibold hover:bg-white/60'
+                    : 'neu-option text-text-primary font-semibold hover:text-accent'
                 }`}
               >
                 Сначала новинки
@@ -522,7 +605,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
 
       {/* 6. Product Grid */}
       <AnimatePresence mode="wait">
-        <motion.div
+        <m.div
           key={`${selectedCategory}-${sortBy}-${filterState.minPrice}-${filterState.maxPrice}-${filterState.selectedSizes.join('-')}-${filterState.selectedMaterials.join('-')}-${filterState.onlyInStock}`}
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
@@ -534,17 +617,17 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           ) : products.length === 0 ? (
             <NotConfigured title="Каталог" hint="Товары появятся здесь, когда магазин их добавит." />
           ) : filteredProducts.length === 0 ? (
-            <div className="neu-inset rounded-3xl p-8 text-center space-y-3 border border-white/60">
+            <div className="neu-inset rounded-3xl p-8 text-center space-y-3">
               <div className="w-12 h-12 rounded-2xl neu-flat-sm mx-auto flex items-center justify-center text-accent">
                 <SlidersHorizontal className="w-6 h-6 stroke-[1.8]" />
               </div>
-              <p className="text-sm font-bold text-[#2D3A4E]">Товары по выбранным параметрам не найдены</p>
-              <p className="text-xs text-[#4E5C70] max-w-sm mx-auto">
+              <p className="text-sm font-bold text-text-primary">Товары по выбранным параметрам не найдены</p>
+              <p className="text-xs text-text-secondary max-w-sm mx-auto">
                 Попробуйте расширить диапазон цен, выбрать другие размеры, ткани или сбросить фильтры наличия.
               </p>
               <button
                 onClick={handleResetAll}
-                className="mt-2 neu-button rounded-2xl px-5 py-2.5 text-xs font-extrabold text-accent hover:text-[#2D3A4E] transition-transform cursor-pointer inline-flex items-center gap-2"
+                className="mt-2 neu-button rounded-2xl px-5 py-2.5 text-xs font-extrabold text-accent hover:text-text-primary transition-transform cursor-pointer inline-flex items-center gap-2"
               >
                 <RotateCcw className="w-3.5 h-3.5 stroke-[2]" />
                 <span>Сбросить все фильтры</span>
@@ -568,7 +651,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
             </div>
             {hiddenCount > 0 && (
               <div className="flex flex-col items-center gap-2 pt-5">
-                <p className="text-xs text-[#4E5C70]">
+                <p className="text-xs text-text-secondary">
                   Показано {visibleProducts.length} из {filteredProducts.length}
                 </p>
                 <button
@@ -582,7 +665,7 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
             )}
             </>
           )}
-        </motion.div>
+        </m.div>
       </AnimatePresence>
       </div>
       </div>
@@ -601,9 +684,12 @@ export const CatalogScreen: React.FC<CatalogScreenProps> = ({
           onSelectProduct(prod);
         }}
         onToggleFavorite={onToggleFavorite}
-        onAddToCartWithOptions={(prod, color, size, qty) =>
-          onAddToCartWithOptions ? onAddToCartWithOptions(prod, color, size, qty) : onAddToCart(prod, null as any)
+        onAddToCartWithOptions={(prod, color, size, qty, isWholesale) =>
+          onAddToCartWithOptions ? onAddToCartWithOptions(prod, color, size, qty, isWholesale) : onAddToCart(prod, null as any)
         }
+        onAddPackToCart={onAddPackToCart}
+        cartItems={cartItems}
+        wholesale={wholesale}
         preorderMode={preorderMode}
       />
       </LazyMount>

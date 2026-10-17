@@ -26,7 +26,7 @@ export function SizeChartTable({
       >
         <table className="min-w-full text-xs text-center border-collapse">
           <thead>
-            <tr className="text-[#4E5C70] border-b border-[#BAC5D5]/60">
+            <tr className="text-text-secondary neu-divider-b">
               <th scope="col" className="sticky left-0 bg-[var(--neu-bg)] py-2 pl-3 pr-2 text-left font-bold whitespace-nowrap">
                 Размер
               </th>
@@ -43,8 +43,8 @@ export function SizeChartTable({
               return (
                 <tr
                   key={row.size}
-                  className={`border-b border-[#BAC5D5]/40 last:border-b-0 ${
-                    isSelected ? 'text-accent font-extrabold' : 'text-[#2D3A4E]'
+                  className={`neu-divider-b last:neu-divider-b-0 ${
+                    isSelected ? 'text-accent font-extrabold' : 'text-text-primary'
                   }`}
                 >
                   <th
@@ -72,7 +72,7 @@ export function SizeChartTable({
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-[#4E5C70] leading-snug">Все значения — в сантиметрах.</p>
+      <p className="text-xs text-text-secondary leading-snug">Все значения — в сантиметрах.</p>
     </div>
   );
 }

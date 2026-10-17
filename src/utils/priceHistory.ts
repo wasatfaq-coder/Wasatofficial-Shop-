@@ -24,29 +24,54 @@ export function withPriceChange(before: Pick<Product, 'price' | 'priceHistory'>,
   return [...kept, { price: before.price, until: now.toISOString() }].slice(-PRICE_HISTORY_LIMIT);
 }
 
-/** Products whose price changed get the old one in their history; the rest stay as they are */
+/**
+ * The product's wholesale price history after `wholesalePrice` changes from `before` to `afterWholesalePrice` at `now`.
+ */
+export function withWholesalePriceChange(
+  before: Pick<Product, 'wholesalePrice' | 'wholesalePriceHistory'>,
+  afterWholesalePrice: number | undefined,
+  now: Date = new Date()
+): PriceHistoryEntry[] {
+  const kept = (before.wholesalePriceHistory ?? []).filter(
+    (e) => now.getTime() - Date.parse(e.until) <= PRICE_HISTORY_DAYS * DAY_MS
+  );
+  const oldWholesale = before.wholesalePrice;
+  if (typeof oldWholesale !== 'number' || !(oldWholesale > 0) || oldWholesale === afterWholesalePrice) return kept;
+  return [...kept, { price: oldWholesale, until: now.toISOString() }].slice(-PRICE_HISTORY_LIMIT);
+}
+
+/** Products whose retail or wholesale price changed get the old one in their history; the rest stay as they are */
 export function withPriceHistories(previous: Product[], next: Product[], now: Date = new Date()): Product[] {
   const before = new Map(previous.map((p) => [p.id, p]));
   return next.map((p) => {
     const old = before.get(p.id);
-    if (!old || old.price === p.price) return p;
-    return { ...p, priceHistory: withPriceChange(old, p.price, now) };
+    if (!old) return p;
+    const retailChanged = old.price !== p.price;
+    const wholesaleChanged =
+      typeof old.wholesalePrice === 'number' && old.wholesalePrice > 0 && old.wholesalePrice !== p.wholesalePrice;
+    if (!retailChanged && !wholesaleChanged) return p;
+    return {
+      ...p,
+      ...(retailChanged ? { priceHistory: withPriceChange(old, p.price, now) } : {}),
+      ...(wholesaleChanged ? { wholesalePriceHistory: withWholesalePriceChange(old, p.wholesalePrice, now) } : {}),
+    };
   });
 }
 
-/**
- * The prices the product had around the moment of an order: those in effect from a little before it (the buyer's clock,
- * a cart opened just before a change) up to the order. Without the order's time — today's price only.
- */
-export function pricesAtOrderTime(product: Pick<Product, 'price' | 'priceHistory'>, orderTime: number | null): number[] {
-  if (orderTime === null) return [product.price];
+function activePricesInWindow(
+  currentPrice: number | undefined,
+  history: PriceHistoryEntry[] | undefined,
+  orderTime: number | null
+): number[] {
+  const hasCurrent = typeof currentPrice === 'number' && currentPrice > 0;
+  if (orderTime === null) return hasCurrent ? [currentPrice!] : [];
   const from = orderTime - ORDER_CLOCK_SLACK_MS;
-  const entries = (product.priceHistory ?? [])
+  const entries = (history ?? [])
+    .filter((e) => typeof e.price === 'number' && e.price > 0)
     .map((e) => ({ price: e.price, until: Date.parse(e.until) }))
     .filter((e) => !Number.isNaN(e.until))
     .sort((a, b) => a.until - b.until);
-  // each price was in effect from the previous one's end up to its own; today's — from the last end on
-  const periods = [...entries, { price: product.price, until: Infinity }];
+  const periods = hasCurrent ? [...entries, { price: currentPrice!, until: Infinity }] : entries;
   const prices = new Set<number>();
   let start = -Infinity;
   for (const { price, until } of periods) {
@@ -54,4 +79,22 @@ export function pricesAtOrderTime(product: Pick<Product, 'price' | 'priceHistory
     start = until;
   }
   return [...prices];
+}
+
+/**
+ * The prices the product had around the moment of an order: those in effect from a little before it (the buyer's clock,
+ * a cart opened just before a change) up to the order. Without the order's time — today's price only.
+ */
+export function pricesAtOrderTime(product: Pick<Product, 'price' | 'priceHistory'>, orderTime: number | null): number[] {
+  return activePricesInWindow(product.price, product.priceHistory, orderTime);
+}
+
+/**
+ * The wholesale prices the product had around the moment of an order (`wholesalePriceHistory`, stage 21).
+ */
+export function wholesalePricesAtOrderTime(
+  product: Pick<Product, 'wholesalePrice' | 'wholesalePriceHistory'>,
+  orderTime: number | null
+): number[] {
+  return activePricesInWindow(product.wholesalePrice, product.wholesalePriceHistory, orderTime);
 }

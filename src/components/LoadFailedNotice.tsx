@@ -12,11 +12,11 @@ export const LoadFailedNotice: React.FC<{ title: string; text?: string; classNam
   text = 'Проверьте соединение и обновите страницу.',
   className = '',
 }) => (
-  <div role="alert" className={`rounded-2xl p-3.5 bg-warning-soft border border-warning/40 flex items-start gap-3 text-left ${className}`}>
+  <div role="alert" className={`rounded-2xl p-3.5 neu-tone-warning flex items-start gap-3 text-left ${className}`}>
     <WifiOff className="w-5 h-5 text-warning shrink-0 mt-0.5" aria-hidden="true" />
     <div className="min-w-0 flex-1 space-y-2">
-      <p className="text-xs font-extrabold text-[#2D3A4E]">{title}</p>
-      <p className="text-xs text-[#2D3A4E]">{text}</p>
+      <p className="text-xs font-extrabold text-text-primary">{title}</p>
+      <p className="text-xs text-text-primary">{text}</p>
       <button
         type="button"
         onClick={reload}

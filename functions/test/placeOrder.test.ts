@@ -331,12 +331,38 @@ describe('placeOrderCore', () => {
     expect((await db.doc('promos/p4').get()).data()!.commissionEarned).toBe(0);
   });
 
+  // ревью 16.10, находка 1: разбитой упаковкой — только штуки сверх целых ростовок, и не у товара без ростовок
+  test('a broken pack sells only the pieces left above whole packs', async () => {
+    await db.doc('products/tee').set({
+      id: 'tee', title: 'Футболка', category: 'shirts', price: 1500, wholesalePrice: 1000, inStock: true,
+      sizes: ['S', 'L'], colors: [{ name: 'Синий', hex: '#1F3A93' }],
+      skus: [
+        { id: 'tee-s', color: 'Синий', size: 'S', stock: 3 },
+        { id: 'tee-l', color: 'Синий', size: 'L', stock: 4 },
+      ],
+      sizePacks: [{ id: 'a', sizes: [{ size: 'S', qty: 1 }, { size: 'L', qty: 1 }] }],
+    });
+    const broken = (size: string, quantity: number) =>
+      request({ items: [{ productId: 'tee', color: 'Синий', size, quantity, broken: true }] });
+    await expectOrderError(placeOrderCore(db, broken('L', 2), 'alice'), 'failed-precondition', /не больше 1 шт/);
+    await expectOrderError(placeOrderCore(db, broken('S', 1), 'alice'), 'failed-precondition', /разбитая упаковка/);
+    const order = await placeOrderCore(db, broken('L', 1), 'alice');
+    expect(order.items[0].priceKind).toBe('broken');
+    await expectOrderError(
+      placeOrderCore(db, request({ items: [{ productId: 'shirt', color: 'Белый', size: 'M', quantity: 1, broken: true }] }), 'alice'),
+      'failed-precondition',
+      /разбитая упаковка/
+    );
+  });
+
   test('rejects exhausted, inactive and unknown promos', async () => {
     await db.doc('promos/p2').set({
       id: 'p2', code: 'ONCE', title: '', description: '', discountPercent: 50,
       active: true, usedCount: 1, usageLimit: 1,
     });
-    await expectOrderError(placeOrderCore(db, request({ promoCode: 'ONCE' }), null), 'failed-precondition', /Лимит/);
+    // a limited code is for a Google sign-in only: the limit is checked for such a buyer
+    await expectOrderError(placeOrderCore(db, request({ promoCode: 'ONCE' }), 'alice', new Date(), true), 'failed-precondition', /Лимит/);
+    await expectOrderError(placeOrderCore(db, request({ promoCode: 'ONCE' }), null), 'failed-precondition', /входа через Google/);
     await expectOrderError(placeOrderCore(db, request({ promoCode: 'NOPE' }), null), 'not-found');
   });
 
@@ -369,6 +395,20 @@ describe('placeOrderCore', () => {
       placeOrderCore(db, request({ deliveryMethodId: 'quick-order', promoCode: 'X' }), null),
       'invalid-argument'
     );
+  });
+
+  test('captures order_costs snapshot at the moment of server order placement when product_costs exist', async () => {
+    await db.doc('product_costs/shirt').set({ costPrice: 1250 });
+    const now = new Date('2026-10-15T10:00:00.000Z');
+    const order = await placeOrderCore(db, request(), 'alice', now);
+    const snap = await db.doc(`order_costs/${order.id}`).get();
+    expect(snap.exists).toBe(true);
+    expect(snap.data()).toEqual({
+      orderId: order.id,
+      orderCreatedAt: '2026-10-15T10:00:00.000Z',
+      capturedAt: '2026-10-15T10:00:00.000Z',
+      lines: [{ productId: 'shirt', size: 'M', color: 'Белый', unitCost: 1250 }],
+    });
   });
 
   // Находка 43 (07.10): способ оплаты сервер не сверяет с «Оплатой» в «Витрине» — заказ проходит с любым текстом,
@@ -442,5 +482,51 @@ describe('parsePlaceOrderRequest', () => {
     const parsed = parsePlaceOrderRequest({ ...request(), promoCode: ' sale10 ', totalPrice: 1 });
     expect(parsed.promoCode).toBe('SALE10');
     expect('totalPrice' in parsed).toBe(false);
+  });
+
+  test('preserves broken pack flag and orderId in parsePlaceOrderRequest', () => {
+    const parsed = parsePlaceOrderRequest({
+      ...request({ items: [{ productId: 'shirt', color: 'Белый', size: 'M', quantity: 1, broken: true }] }),
+      orderId: 'WS-12345678',
+    });
+    expect(parsed.orderId).toBe('WS-12345678');
+    expect(parsed.items[0].broken).toBe(true);
+    expect(() => parsePlaceOrderRequest({ ...request(), orderId: 'bad id!' })).toThrow(/номер заказа/);
+  });
+
+  test('records promo_uses document and blocks anonymous users on limited promos', async () => {
+    await db.doc('promos/LIM1').set({
+      id: 'LIM1',
+      code: 'LIM1',
+      discountPercent: 10,
+      discountType: 'percent',
+      discountValue: 10,
+      active: true,
+      usageLimit: 5,
+      usedCount: 0,
+    });
+    await expectOrderError(
+      placeOrderCore(db, request({ promoCode: 'LIM1' }), 'anon-uid', new Date(), false),
+      'failed-precondition'
+    );
+    const order = await placeOrderCore(db, request({ promoCode: 'LIM1' }), 'alice', new Date(), true);
+    const useSnap = await db.doc(`promo_uses/${order.id}`).get();
+    expect(useSnap.exists).toBe(true);
+    expect(useSnap.data()?.promoId).toBe('LIM1');
+    const promoSnap = await db.doc('promos/LIM1').get();
+    expect(promoSnap.data()?.usedCount).toBe(1);
+    expect(promoSnap.data()?.lastOrderId).toBe(order.id);
+  });
+
+  test('idempotent orderId returns existing order for the same customer without deducting stock twice', async () => {
+    const req = { ...request(), orderId: 'WS-99998888' };
+    const first = await placeOrderCore(db, req, 'alice');
+    const second = await placeOrderCore(db, req, 'alice');
+    expect(second.id).toBe(first.id);
+    const prodSnap = await db.doc('products/shirt').get();
+    const mSku = (prodSnap.data()?.skus ?? []).find((s: { size: string }) => s.size === 'M');
+    expect(mSku.stock).toBe(1); // 2 in stock − 1 ordered, once
+    const movements = await db.collection('stock_movements').where('orderId', '==', first.id).get();
+    expect(movements.size).toBe(1);
   });
 });

@@ -92,22 +92,22 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
   return (
     <div
       id={id}
-      className="neu-inset rounded-2xl p-3.5 space-y-3 select-none transition-all duration-200 border border-white/40"
+      className="neu-inset rounded-2xl p-3.5 space-y-3 select-none transition-all duration-200 "
     >
       {/* Header: Label, Icon, and Stepper Controls */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {icon && (
-            <div className="w-7 h-7 rounded-xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
+            <div className="w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center text-accent shrink-0">
               {icon}
             </div>
           )}
           <div className="min-w-0">
-            <span className="text-xs font-extrabold text-[#2D3A4E] block truncate">
+            <span className="text-xs font-extrabold text-text-primary block truncate">
               {label}
             </span>
             {subtitle && (
-              <span className="text-[11px] text-[#4E5C70] block truncate">
+              <span className="text-[11px] text-text-secondary block truncate">
                 {subtitle}
               </span>
             )}
@@ -121,19 +121,19 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
             onClick={() => onChange(Math.max(min, value - step))}
             disabled={value <= min}
             aria-label={`Уменьшить ${label}`}
-            className="w-6 h-6 rounded-lg neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-text-secondary hover:text-text-primary disabled:cursor-not-allowed cursor-pointer shrink-0"
           >
-            <Minus className="w-3 h-3 stroke-[2.5]" />
+            <Minus className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
           </button>
 
           <div
-            className={`px-2.5 py-1 rounded-xl font-extrabold text-xs tracking-tight transition-transform duration-100 ${
+            className={`min-h-8 px-2.5 py-1 rounded-xl font-extrabold text-xs tracking-tight flex items-center justify-center tabular-nums transition-transform duration-100 ${
               isDragging
                 ? 'neu-inset-deep text-accent scale-105'
                 : 'neu-inset text-accent'
             }`}
           >
-            {value} <span className="text-[11px] font-bold text-[#4E5C70]">{unit}</span>
+            {value} <span className="text-[11px] font-bold text-text-secondary ml-1">{unit}</span>
           </div>
 
           <button
@@ -141,9 +141,9 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
             onClick={() => onChange(Math.min(max, value + step))}
             disabled={value >= max}
             aria-label={`Увеличить ${label}`}
-            className="w-6 h-6 rounded-lg neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-text-secondary hover:text-text-primary disabled:cursor-not-allowed cursor-pointer shrink-0"
           >
-            <Plus className="w-3 h-3 stroke-[2.5]" />
+            <Plus className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
           </button>
         </div>
       </div>
@@ -163,7 +163,7 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
           aria-valuemax={max}
           aria-valuenow={value}
           aria-label={label}
-          className="relative w-full h-3 rounded-full neu-inset cursor-pointer touch-none select-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="relative w-full h-3 rounded-full neu-inset cursor-pointer touch-none select-none"
         >
           {/* Active Gradient Rail */}
           <div
@@ -176,7 +176,7 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
           {/* Recommended marker if present (subtle recessed dot on track rail) */}
           {recommendedValue && (
             <div
-              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#4E5C70]/40 pointer-events-none z-0"
+              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-text-secondary/50 pointer-events-none z-0"
               style={{
                 left: `${((recommendedValue - min) / (max - min)) * 100}%`,
               }}
@@ -192,15 +192,15 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
             }}
           >
             <div
-              className={`w-6 h-6 rounded-full bg-[#E3E8EF] flex items-center justify-center border-2 border-white transition-transform duration-100 ease-out ${
+              className={`w-6 h-6 rounded-full flex items-center justify-center transition-transform duration-100 ease-out ${
                 isDragging
-                  ? 'scale-115 shadow-[2px_2px_5px_rgba(150,163,185,0.9),-2px_-2px_5px_rgba(255,255,255,1)] ring-4 ring-accent/25'
-                  : 'shadow-[3px_3px_6px_rgba(150,163,185,0.75),-3px_-3px_6px_rgba(255,255,255,1)] hover:scale-105'
+                  ? 'neu-pill-active scale-115'
+                  : 'neu-flat-sm hover:scale-105'
               }`}
             >
               {/* Center Tactile Accent Core */}
               <div
-                className={`w-2.5 h-2.5 rounded-full shadow-inner transition-all duration-150 ${
+                className={`w-2.5 h-2.5 rounded-full shadow-[var(--neu-fill-accent-shadow)] transition-all duration-150 ${
                   isDragging ? 'bg-accent scale-110' : 'bg-accent'
                 }`}
               />
@@ -209,10 +209,10 @@ export const NeumorphicSlider: React.FC<NeumorphicSliderProps> = ({
         </div>
 
         {/* Min & Max Labels */}
-        <div className="flex justify-between items-center text-[11px] font-bold text-[#4E5C70] pt-2 px-0.5">
+        <div className="flex justify-between items-center text-[11px] font-bold text-text-secondary pt-2 px-0.5">
           <span>{min} {unit}</span>
           {recommendedValue && (
-            <span className="text-[11px] font-semibold text-accent/80">
+            <span className="text-[11px] font-semibold text-accent">
               База: {recommendedValue} {unit}
             </span>
           )}

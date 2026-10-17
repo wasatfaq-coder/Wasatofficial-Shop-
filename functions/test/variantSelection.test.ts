@@ -1,6 +1,6 @@
 // Страница товара и быстрый просмотр открываются на цвете, который можно заказать (аудит 07.10, находка 24)
 import { describe, expect, test } from 'bun:test';
-import { initialColor } from '../../src/utils/variantSelection';
+import { initialColor, needsVariantChoice } from '../../src/utils/variantSelection';
 import type { Product } from '../../src/types';
 
 const color = (name: string) => ({ name, hex: '#111111' });
@@ -47,4 +47,18 @@ describe('the colour a product opens on', () => {
   test('no colours: no colour', () => {
     expect(initialColor(shirt([], { colors: [] }), false)).toBe('');
   });
+
+  test('needsVariantChoice opens the picker for wholesale and size-pack products even with one size and colour', () => {
+    const single = { colors: [color('Белый')], sizes: ['M'], price: 2000 };
+    expect(needsVariantChoice(single)).toBe(false);
+    expect(needsVariantChoice({ ...single, wholesalePrice: 1200 })).toBe(true);
+    expect(needsVariantChoice({ ...single, saleChannel: 'wholesale', wholesalePrice: 1200 })).toBe(true);
+    expect(
+      needsVariantChoice({
+        ...single,
+        sizePacks: [{ id: 'pk1', sizes: [{ size: 'M', qty: 2 }], price: 3000 }],
+      })
+    ).toBe(true);
+  });
 });
+

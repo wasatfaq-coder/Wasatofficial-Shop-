@@ -37,7 +37,7 @@ export const ChatPhoto: React.FC<{
 
   if (src) return <>{children(src)}</>;
   return (
-    <div className="w-40 h-32 rounded-xl neu-inset flex items-center justify-center text-[11px] text-[#4E5C70]">
+    <div className="w-40 h-32 rounded-xl neu-inset flex items-center justify-center text-[11px] text-text-secondary">
       {missing ? 'Фото недоступно' : 'Фото загружается…'}
     </div>
   );

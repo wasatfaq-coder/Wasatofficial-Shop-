@@ -18,6 +18,8 @@ import {
   CheckCircle2,
   Search,
   Sparkles,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 import { DeliveryMethod, PickupPoint, StorefrontSettings } from '../../types';
 import { NeumorphicSelect } from '../NeumorphicSelect';
@@ -283,6 +285,17 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
     onShowToast(`Способ «${toDelete?.title || ''}» удален`, 'info');
   };
 
+  const handleMoveMethod = async (id: string, direction: -1 | 1) => {
+    const index = deliveryMethods.findIndex((m) => m.id === id);
+    const nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= deliveryMethods.length) return;
+    const updated = [...deliveryMethods];
+    const [moved] = updated.splice(index, 1);
+    updated.splice(nextIndex, 0, moved);
+    if (!(await allSaved(onUpdateDeliveryMethods(updated)))) return;
+    onShowToast(`Порядок отображения «${moved.title}» изменён`, 'info');
+  };
+
   // Open Pickup Point Modal
   const handleOpenAddPoint = () => {
     setEditingPoint(null);
@@ -442,10 +455,10 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         <div className="neu-inset rounded-2xl p-3 flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-bold text-[#4E5C70] block uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-text-secondary block uppercase tracking-wider">
               Всего способов
             </span>
-            <span className="text-xl font-extrabold text-[#2D3A4E] block mt-0.5">
+            <span className="text-xl font-extrabold text-text-primary block mt-0.5">
               {deliveryMethods.length}
             </span>
           </div>
@@ -456,7 +469,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
         <div className="neu-inset rounded-2xl p-3 flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-bold text-[#4E5C70] block uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-text-secondary block uppercase tracking-wider">
               Активных модулей
             </span>
             <span className="text-xl font-extrabold text-success block mt-0.5">
@@ -470,7 +483,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
         <div className="neu-inset rounded-2xl p-3 flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-bold text-[#4E5C70] block uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-text-secondary block uppercase tracking-wider">
               Пунктов выдачи
             </span>
             <span className="text-xl font-extrabold text-accent block mt-0.5">
@@ -484,10 +497,10 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
         <div className="neu-inset rounded-2xl p-3 flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-bold text-[#4E5C70] block uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-text-secondary block uppercase tracking-wider">
               Бесплатно от
             </span>
-            <span className="text-lg font-extrabold text-[#2D3A4E] block mt-0.5">
+            <span className="text-lg font-extrabold text-text-primary block mt-0.5">
               {storefrontSettings?.freeDeliveryThreshold ? `${storefrontSettings.freeDeliveryThreshold.toLocaleString('ru-RU')} ₽` : 'не задан'}
             </span>
           </div>
@@ -514,7 +527,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
             className={`flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeSubTab === 'methods'
                 ? 'neu-pill-active'
-                : 'text-[#4E5C70] hover:text-[#2D3A4E]'
+                : 'text-text-secondary hover:text-text-primary'
             }`}
           >
             <Truck className="w-3.5 h-3.5 shrink-0" />
@@ -532,7 +545,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
             className={`flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeSubTab === 'pickup_points'
                 ? 'neu-pill-active'
-                : 'text-[#4E5C70] hover:text-[#2D3A4E]'
+                : 'text-text-secondary hover:text-text-primary'
             }`}
           >
             <Store className="w-3.5 h-3.5 shrink-0" />
@@ -575,7 +588,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
       {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 text-[#4E5C70] absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-text-secondary absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
@@ -585,13 +598,13 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 ? 'Поиск по названию или описанию способа...'
                 : 'Поиск по названию, адресу, метро, городу...'
             }
-            className="w-full neu-inset rounded-xl py-2 pl-9 pr-3 text-xs font-medium text-[#2D3A4E] placeholder:text-[#56647A]"
+            className="w-full neu-inset rounded-xl py-2 pl-9 pr-3 text-xs font-medium text-text-primary placeholder:text-text-muted"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4E5C70] hover:text-[#2D3A4E]"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 inline-flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary cursor-pointer"
               aria-label="Закрыть"
             >
               <X className="w-3.5 h-3.5" />
@@ -615,10 +628,10 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 role="radio"
                 aria-checked={typeFilter === f.id}
                 onClick={() => setTypeFilter(f.id as any)}
-                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all shrink-0 cursor-pointer ${
+                className={`px-2.5 py-1.5 min-h-8 rounded-xl text-[11px] font-bold transition-all shrink-0 cursor-pointer ${
                   typeFilter === f.id
                     ? 'neu-pill-active'
-                    : 'text-[#4E5C70] hover:text-[#2D3A4E]'
+                    : 'text-text-secondary hover:text-text-primary'
                 }`}
               >
                 {f.label}
@@ -633,13 +646,13 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
         <div className="space-y-3">
           {filteredMethods.length === 0 ? (
             <div className="neu-inset rounded-2xl p-8 text-center space-y-2">
-              <Truck className="w-8 h-8 text-[#4E5C70] mx-auto opacity-50" />
-              <p className="text-xs font-bold text-[#2D3A4E]">Способы доставки не найдены</p>
-              <p className="text-xs text-[#4E5C70]">Попробуйте изменить поисковый запрос или добавьте новый способ</p>
+              <Truck className="w-8 h-8 text-text-secondary mx-auto opacity-50" />
+              <p className="text-xs font-bold text-text-primary">Способы доставки не найдены</p>
+              <p className="text-xs text-text-secondary">Попробуйте изменить поисковый запрос или добавьте новый способ</p>
               <button
                 type="button"
                 onClick={handleOpenAddMethod}
-                className="mt-2 px-3 py-1.5 neu-button rounded-xl text-xs font-bold text-accent"
+                className="mt-2 px-3 py-1.5 min-h-8 neu-button rounded-xl text-xs font-bold text-accent"
               >
                 + Добавить способ доставки
               </button>
@@ -662,14 +675,14 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                           className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
                             isActive
                               ? 'neu-pill-active'
-                              : 'neu-button text-[#4E5C70]'
+                              : 'neu-button text-text-secondary'
                           }`}
                         >
                           {renderMethodIcon(method.icon, 'w-5 h-5')}
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <h4 className="text-xs sm:text-sm font-extrabold text-[#2D3A4E] truncate">
+                            <h4 className="text-xs sm:text-sm font-extrabold text-text-primary truncate">
                               {method.title}
                             </h4>
                             {method.highlightBadge && (
@@ -678,13 +691,37 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                               </span>
                             )}
                           </div>
-                          <p className="text-xs font-bold text-[#4E5C70] mt-0.5">
-                            Срок: <span className="text-[#2D3A4E]">{method.duration}</span>
+                          <p className="text-xs font-bold text-text-secondary mt-0.5">
+                            Срок: <span className="text-text-primary">{method.duration}</span>
                           </p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-1 shrink-0">
+                        {deliveryMethods.length > 1 && (
+                          <>
+                            <button
+                              type="button"
+                              disabled={deliveryMethods.findIndex((m) => m.id === method.id) === 0}
+                              onClick={() => void handleMoveMethod(method.id, -1)}
+                              className="p-1.5 min-w-8 min-h-8 inline-flex items-center justify-center neu-button rounded-xl text-text-secondary hover:text-text-primary disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer"
+                              title={`Поднять выше: ${method.title}`}
+                              aria-label={`Поднять выше: ${method.title}`}
+                            >
+                              <ChevronUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={deliveryMethods.findIndex((m) => m.id === method.id) === deliveryMethods.length - 1}
+                              onClick={() => void handleMoveMethod(method.id, 1)}
+                              className="p-1.5 min-w-8 min-h-8 inline-flex items-center justify-center neu-button rounded-xl text-text-secondary hover:text-text-primary disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer"
+                              title={`Опустить ниже: ${method.title}`}
+                              aria-label={`Опустить ниже: ${method.title}`}
+                            >
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
                         {/* Active toggle */}
                         <button
                           type="button"
@@ -693,10 +730,10 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                           aria-checked={isActive}
                           aria-label={`Способ «${method.title}» показан покупателям`}
                           onClick={(e) => handleToggleMethodActive(method.id, e)}
-                          className={`p-1.5 rounded-xl transition-all cursor-pointer ${
+                          className={`p-1.5 min-w-8 min-h-8 inline-flex items-center justify-center rounded-xl transition-all cursor-pointer ${
                             isActive
                               ? 'neu-button text-success hover:text-success'
-                              : 'neu-inset text-[#4E5C70]'
+                              : 'neu-inset text-text-secondary'
                           }`}
                           title={isActive ? 'Отключить способ' : 'Включить способ'}
                         >
@@ -709,7 +746,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                         <button
                           type="button"
                           onClick={() => handleOpenEditMethod(method)}
-                          className="p-1.5 neu-button rounded-xl text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                          className="p-1.5 min-w-8 min-h-8 inline-flex items-center justify-center neu-button rounded-xl text-text-secondary hover:text-text-primary cursor-pointer"
                           title={`Изменить способ: ${method.title}`}
                           aria-label={`Изменить способ: ${method.title}`}
                         >
@@ -719,7 +756,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                         <button
                           type="button"
                           onClick={() => setDeletingMethodId(method.id)}
-                          className="p-1.5 neu-button-danger rounded-xl cursor-pointer"
+                          className="p-1.5 min-w-8 min-h-8 inline-flex items-center justify-center neu-button-danger rounded-xl cursor-pointer"
                           title={`Удалить способ: ${method.title}`}
                           aria-label={`Удалить способ: ${method.title}`}
                         >
@@ -730,18 +767,18 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
                     {/* Method Description & Details */}
                     {method.description && (
-                      <p className="text-xs text-[#4E5C70] leading-snug line-clamp-2">
+                      <p className="text-xs text-text-secondary leading-snug line-clamp-2">
                         {method.description}
                       </p>
                     )}
 
                     {/* Footer Row: Pricing & Badges */}
-                    <div className="pt-2 border-t border-[#BAC5D5]/40 flex items-center justify-between text-xs flex-wrap gap-2">
+                    <div className="pt-2 neu-divider-t flex items-center justify-between text-xs flex-wrap gap-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-bold text-[#4E5C70]">Стоимость:</span>
+                        <span className="text-[11px] font-bold text-text-secondary">Стоимость:</span>
                         <span
                           className={`font-extrabold ${
-                            method.price === 0 ? 'text-success font-extrabold' : 'text-[#2D3A4E]'
+                            method.price === 0 ? 'text-success font-extrabold' : 'text-text-primary'
                           }`}
                         >
                           {method.price === 0 ? 'Бесплатно' : `${method.price.toLocaleString('ru-RU')} ₽`}
@@ -767,15 +804,15 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
         <div className="space-y-3">
           {filteredPoints.length === 0 ? (
             <div className="neu-inset rounded-2xl p-8 text-center space-y-2">
-              <Store className="w-8 h-8 text-[#4E5C70] mx-auto opacity-50" />
-              <p className="text-xs font-bold text-[#2D3A4E]">Пункты выдачи не найдены</p>
-              <p className="text-xs text-[#4E5C70]">
+              <Store className="w-8 h-8 text-text-secondary mx-auto opacity-50" />
+              <p className="text-xs font-bold text-text-primary">Пункты выдачи не найдены</p>
+              <p className="text-xs text-text-secondary">
                 Добавьте физические адреса бутиков и шоурумов для выбора самовывоза клиентами
               </p>
               <button
                 type="button"
                 onClick={handleOpenAddPoint}
-                className="mt-2 px-3 py-1.5 neu-button rounded-xl text-xs font-bold text-accent"
+                className="mt-2 px-3 py-1.5 min-h-8 neu-button rounded-xl text-xs font-bold text-accent"
               >
                 + Добавить пункт выдачи
               </button>
@@ -789,9 +826,9 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                 return (
                   <div
                     key={point.id}
-                    className={`neu-flat rounded-2xl p-4 transition-all space-y-3 relative ${
+                    className={`rounded-2xl p-4 transition-all space-y-3 relative ${
                       !isActive ? 'opacity-60 grayscale-[30%]' : ''
-                    } ${isDefault ? 'ring-1.5 ring-accent/50' : ''}`}
+                    } ${isDefault ? 'neu-pill-active' : 'neu-flat'}`}
                   >
                     {/* Header: Name, City & Actions */}
                     <div className="flex items-start justify-between gap-2">
@@ -800,14 +837,14 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                           className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
                             isDefault
                               ? 'neu-button text-accent'
-                              : 'neu-inset text-[#4E5C70]'
+                              : 'neu-inset text-text-secondary'
                           }`}
                         >
                           <Store className="w-5 h-5" />
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <h4 className="text-xs sm:text-sm font-extrabold text-[#2D3A4E] truncate">
+                            <h4 className="text-xs sm:text-sm font-extrabold text-text-primary truncate">
                               {point.name}
                             </h4>
                             {isDefault && (
@@ -833,7 +870,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                           <button
                             type="button"
                             onClick={(e) => handleSetDefaultPoint(point.id, e)}
-                            className="p-1.5 neu-button rounded-xl text-[#4E5C70] hover:text-accent cursor-pointer"
+                            className="p-1.5 min-w-8 min-h-8 inline-flex items-center justify-center neu-button rounded-xl text-text-secondary hover:text-accent cursor-pointer"
                             title="Сделать основным пунктом самовывоза"
                             aria-label={`Сделать основным пунктом самовывоза: ${point.name}`}
                           >
@@ -844,7 +881,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                         <button
                           type="button"
                           onClick={() => handleOpenEditPoint(point)}
-                          className="p-1.5 neu-button rounded-xl text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                          className="p-1.5 min-w-8 min-h-8 inline-flex items-center justify-center neu-button rounded-xl text-text-secondary hover:text-text-primary cursor-pointer"
                           title={`Изменить пункт: ${point.name}`}
                           aria-label={`Изменить пункт: ${point.name}`}
                         >
@@ -854,7 +891,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                         <button
                           type="button"
                           onClick={() => setDeletingPointId(point.id)}
-                          className="p-1.5 neu-button-danger rounded-xl cursor-pointer"
+                          className="p-1.5 min-w-8 min-h-8 inline-flex items-center justify-center neu-button-danger rounded-xl cursor-pointer"
                           title={`Удалить пункт: ${point.name}`}
                           aria-label={`Удалить пункт: ${point.name}`}
                         >
@@ -865,7 +902,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
                     {/* Address Block - Detailed & Readable */}
                     <div className="neu-inset rounded-xl p-3 space-y-1.5">
-                      <div className="text-xs font-extrabold text-[#2D3A4E] leading-relaxed">
+                      <div className="text-xs font-extrabold text-text-primary leading-relaxed">
                         {point.address}
                       </div>
 
@@ -878,20 +915,20 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                     </div>
 
                     {/* Schedule & Phone */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-[#4E5C70]">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-text-secondary">
                       <div className="flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5 text-accent shrink-0" />
                         <span className="truncate">{point.schedule}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Phone className="w-3.5 h-3.5 text-accent shrink-0" />
-                        <span className="truncate font-semibold text-[#2D3A4E]">{point.phone}</span>
+                        <span className="truncate font-semibold text-text-primary">{point.phone}</span>
                       </div>
                     </div>
 
                     {/* Note / Amenities */}
                     {point.note && (
-                      <div className="pt-2 border-t border-[#BAC5D5]/40 text-[11px] text-[#4E5C70] flex items-start gap-1.5">
+                      <div className="pt-2 neu-divider-t text-[11px] text-text-secondary flex items-start gap-1.5">
                         <Info className="w-3 h-3 text-accent shrink-0 mt-0.5" />
                         <span className="leading-snug">{point.note}</span>
                       </div>
@@ -906,21 +943,21 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
       {/* ================= MODAL: ADD / EDIT DELIVERY METHOD ================= */}
       {isMethodModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-xs animate-in fade-in">
-          <div ref={methodDialog.ref} {...methodDialog.props} className="neu-modal rounded-3xl p-5 max-w-lg w-full space-y-4 border border-white/80 text-[#2D3A4E] max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-2.5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-text-primary/40 backdrop-blur-xs animate-in fade-in">
+          <div ref={methodDialog.ref} {...methodDialog.props} className="neu-modal rounded-3xl p-5 max-w-lg w-full space-y-4 text-text-primary max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between neu-divider-b pb-2.5">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center text-accent">
                   <Truck className="w-4 h-4" />
                 </div>
-                <h3 id={methodDialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">
-                  {editingMethod ? 'Редактировать способ доставки' : 'Новый модуль доставки'}
+                <h3 id={methodDialog.titleId} className="text-sm font-extrabold text-text-primary">
+                  {editingMethod ? 'Редактировать способ доставки' : 'Новый способ доставки'}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={methodGuard.requestClose}
-                className="w-7 h-7 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer"
                 aria-label="Закрыть"
               >
                 <X className="w-3.5 h-3.5" />
@@ -929,7 +966,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
             <form onSubmit={handleSaveMethod} className="space-y-3.5 text-xs">
               <div>
-                <label htmlFor="delivery-method-title" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                <label htmlFor="delivery-method-title" className="block text-[11px] font-bold text-text-primary mb-1">
                   Название способа доставки *
                 </label>
                 <input
@@ -938,14 +975,14 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                   value={formMethodTitle}
                   onChange={(e) => setFormMethodTitle(e.target.value)}
                   placeholder="Курьером до двери, СДЭК, Яндекс Go..."
-                  className="w-full neu-inset rounded-xl py-2 px-3 text-[#2D3A4E]"
+                  className="w-full neu-inset rounded-xl py-2 px-3 text-text-primary"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="delivery-method-duration" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="delivery-method-duration" className="block text-[11px] font-bold text-text-primary mb-1">
                     Срок доставки
                   </label>
                   <input
@@ -954,13 +991,13 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                     value={formMethodDuration}
                     onChange={(e) => setFormMethodDuration(e.target.value)}
                     placeholder="1–2 дня, 2–4 часа..."
-                    className="w-full neu-inset rounded-xl py-2 px-3 text-[#2D3A4E]"
+                    className="w-full neu-inset rounded-xl py-2 px-3 text-text-primary"
                     required
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="delivery-method-price" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="delivery-method-price" className="block text-[11px] font-bold text-text-primary mb-1">
                     Базовая стоимость (₽)
                   </label>
                   <input
@@ -972,15 +1009,15 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                     onChange={(e) => setFormMethodPrice(e.target.value ? Number(e.target.value) : undefined)}
                     placeholder="0 — бесплатно"
                     required
-                    className="w-full neu-inset rounded-xl py-2 px-3 text-[#2D3A4E] font-bold"
+                    className="w-full neu-inset rounded-xl py-2 px-3 text-text-primary font-bold"
                   />
                 </div>
               </div>
 
               <div>
                 <div className="flex items-center gap-1 mb-1">
-                  <label htmlFor="delivery-method-type" className="block text-[11px] font-bold text-[#2D3A4E]">
-                    Тип модуля
+                  <label htmlFor="delivery-method-type" className="block text-[11px] font-bold text-text-primary">
+                    Тип доставки
                   </label>
                   {formMethodType === 'express' && (
                     <AdminHint label="Экспресс-доставка">
@@ -1008,8 +1045,8 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               </div>
 
               <div>
-                <p id="delivery-method-icon-label" className="block text-xs font-bold text-[#2D3A4E] mb-1">
-                  Иконка модуля
+                <p id="delivery-method-icon-label" className="block text-xs font-bold text-text-primary mb-1">
+                  Значок
                 </p>
                 <div
                   role="radiogroup"
@@ -1029,7 +1066,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                         aria-label={ic.label}
                         title={ic.label}
                         className={`h-10 flex items-center justify-center rounded-xl transition-all cursor-pointer ${
-                          isSel ? 'neu-pill-active' : 'neu-button text-[#4E5C70] hover:text-[#2D3A4E]'
+                          isSel ? 'neu-pill-active' : 'neu-button text-text-secondary hover:text-text-primary'
                         }`}
                       >
                         <IconComp className="w-4 h-4" />
@@ -1042,7 +1079,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <div className="flex items-center gap-1 mb-1">
-                    <label htmlFor="delivery-method-free" className="block text-[11px] font-bold text-[#2D3A4E]">
+                    <label htmlFor="delivery-method-free" className="block text-[11px] font-bold text-text-primary">
                       Бесплатно при заказе от (₽)
                     </label>
                     <AdminHint label="Бесплатно при заказе от">
@@ -1059,16 +1096,16 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                       setFormMethodFreeThreshold(e.target.value ? Number(e.target.value) : undefined)
                     }
                     placeholder="Например: 5000"
-                    className="w-full neu-inset rounded-xl py-2 px-3 text-[#2D3A4E]"
+                    className="w-full neu-inset rounded-xl py-2 px-3 text-text-primary"
                   />
                 </div>
 
                 <div>
                   <div className="flex items-center gap-1 mb-1">
-                    <label htmlFor="delivery-method-badge" className="block text-[11px] font-bold text-[#2D3A4E]">
-                      Бейдж-метка (опционально)
+                    <label htmlFor="delivery-method-badge" className="block text-[11px] font-bold text-text-primary">
+                      Короткая пометка (необязательно)
                     </label>
-                    <AdminHint label="Бейдж-метка">
+                    <AdminHint label="Короткая пометка">
                       Короткая метка на карточке способа: «Быстро», «Хит». Можно оставить пустой.
                     </AdminHint>
                   </div>
@@ -1078,13 +1115,13 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                     value={formMethodBadge}
                     onChange={(e) => setFormMethodBadge(e.target.value)}
                     placeholder="Удобно, Быстро, Хит..."
-                    className="w-full neu-inset rounded-xl py-2 px-3 text-[#2D3A4E]"
+                    className="w-full neu-inset rounded-xl py-2 px-3 text-text-primary"
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="delivery-method-desc" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                <label htmlFor="delivery-method-desc" className="block text-[11px] font-bold text-text-primary mb-1">
                   Подробное описание и условия для покупателя
                 </label>
                 <textarea
@@ -1093,27 +1130,27 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                   value={formMethodDesc}
                   onChange={(e) => setFormMethodDesc(e.target.value)}
                   placeholder="Примерка до 15 минут, оплата картой курьеру..."
-                  className="w-full neu-inset rounded-xl py-2 px-3 text-[#2D3A4E] resize-none"
+                  className="w-full neu-inset rounded-xl py-2 px-3 text-text-primary resize-none"
                 />
               </div>
 
               <div className="neu-flat-sm rounded-xl px-3 py-2.5 flex items-center justify-between gap-3">
-                <span id="formMethodIsActive-label" className="text-xs font-bold text-[#2D3A4E] leading-snug">
-                  Модуль активен и отображается при оформлении заказа
+                <span id="formMethodIsActive-label" className="text-xs font-bold text-text-primary leading-snug">
+                  Показывать покупателям при оформлении
                 </span>
                 <NeumorphicSwitch
                   id="formMethodIsActive"
                   checked={formMethodIsActive}
                   onChange={setFormMethodIsActive}
-                  label="Модуль активен"
+                  label="Показывать покупателям при оформлении"
                 />
               </div>
 
-              <div className="flex gap-2 pt-2 border-t border-[#BAC5D5]/50">
+              <div className="flex gap-2 pt-2 neu-divider-t">
                 <button
                   type="button"
                   onClick={methodGuard.requestClose}
-                  className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                  className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary cursor-pointer"
                 >
                   Отмена
                 </button>
@@ -1121,7 +1158,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                   type="submit"
                   className="flex-1 py-2.5 neu-button-accent rounded-xl text-xs font-extrabold text-white cursor-pointer transition-transform"
                 >
-                  {editingMethod ? 'Сохранить изменения' : 'Создать модуль'}
+                  {editingMethod ? 'Сохранить изменения' : 'Добавить способ'}
                 </button>
               </div>
             </form>
@@ -1131,21 +1168,21 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
       {/* ================= MODAL: ADD / EDIT PICKUP POINT ================= */}
       {isPointModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2D3A4E]/40 backdrop-blur-xs animate-in fade-in">
-          <div ref={pointDialog.ref} {...pointDialog.props} className="neu-modal rounded-3xl p-5 max-w-lg w-full space-y-4 border border-white/80 text-[#2D3A4E] max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-[#BAC5D5]/50 pb-2.5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-text-primary/40 backdrop-blur-xs animate-in fade-in">
+          <div ref={pointDialog.ref} {...pointDialog.props} className="neu-modal rounded-3xl p-5 max-w-lg w-full space-y-4 text-text-primary max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between neu-divider-b pb-2.5">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center text-accent">
                   <Store className="w-4 h-4" />
                 </div>
-                <h3 id={pointDialog.titleId} className="text-sm font-extrabold text-[#2D3A4E]">
+                <h3 id={pointDialog.titleId} className="text-sm font-extrabold text-text-primary">
                   {editingPoint ? 'Редактировать пункт самовывоза' : 'Новый пункт выдачи заказов'}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={pointGuard.requestClose}
-                className="w-7 h-7 rounded-full neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer"
                 aria-label="Закрыть"
               >
                 <X className="w-3.5 h-3.5" />
@@ -1154,7 +1191,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
 
             <form onSubmit={handleSavePoint} className="space-y-3 text-xs">
               <div>
-                <label htmlFor="point-name" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                <label htmlFor="point-name" className="block text-[11px] font-bold text-text-primary mb-1">
                   Название бутика / пункта *
                 </label>
                 <input
@@ -1163,14 +1200,14 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                   value={formPointName}
                   onChange={(e) => setFormPointName(e.target.value)}
                   placeholder="Название пункта выдачи"
-                  className="w-full neu-inset rounded-xl py-2 px-3 text-[#2D3A4E]"
+                  className="w-full neu-inset rounded-xl py-2 px-3 text-text-primary"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="point-city" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="point-city" className="block text-[11px] font-bold text-text-primary mb-1">
                     Город *
                   </label>
                   <input
@@ -1179,13 +1216,13 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                     value={formPointCity}
                     onChange={(e) => setFormPointCity(e.target.value)}
                     placeholder="Город"
-                    className="w-full neu-inset rounded-xl py-2 px-3 text-[#2D3A4E]"
+                    className="w-full neu-inset rounded-xl py-2 px-3 text-text-primary"
                     required
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="point-metro" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="point-metro" className="block text-[11px] font-bold text-text-primary mb-1">
                     Станция метро (опционально)
                   </label>
                   <input
@@ -1194,13 +1231,46 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                     value={formPointMetro}
                     onChange={(e) => setFormPointMetro(e.target.value)}
                     placeholder="Деловой центр, Выставочная..."
-                    className="w-full neu-inset rounded-xl py-2 px-3 text-[#2D3A4E]"
+                    className="w-full neu-inset rounded-xl py-2 px-3 text-text-primary"
                   />
                 </div>
               </div>
 
+              {/* Quick city chips for fast pickup point creation */}
+              <div className="flex flex-wrap gap-1.5">
+                {Array.from(
+                  new Set([
+                    ...pickupPoints.map((p) => p.city.trim()).filter(Boolean),
+                    'Москва',
+                    'Санкт-Петербург',
+                    'Казань',
+                    'Екатеринбург',
+                    'Новосибирск',
+                    'Краснодар',
+                  ])
+                )
+                  .slice(0, 8)
+                  .map((city) => {
+                    const active = formPointCity.trim().toLowerCase() === city.toLowerCase();
+                    return (
+                      <button
+                        key={city}
+                        type="button"
+                        onClick={() => setFormPointCity(city)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                          active
+                            ? 'neu-inset text-accent ring-1 ring-accent/40'
+                            : 'neu-button text-text-secondary hover:text-text-primary'
+                        }`}
+                      >
+                        {city}
+                      </button>
+                    );
+                  })}
+              </div>
+
               <div>
-                <label htmlFor="point-address" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                <label htmlFor="point-address" className="block text-[11px] font-bold text-text-primary mb-1">
                   Точный полный адрес для клиента *
                 </label>
                 <textarea
@@ -1209,14 +1279,14 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                   value={formPointAddress}
                   onChange={(e) => setFormPointAddress(e.target.value)}
                   placeholder="Пресненская наб., 12, Башня Федерация Восток, 45 этаж, бутик 4502"
-                  className="w-full neu-inset rounded-xl py-2 px-3 text-[#2D3A4E] resize-none font-medium"
+                  className="w-full neu-inset rounded-xl py-2 px-3 text-text-primary resize-none font-medium"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="point-schedule" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="point-schedule" className="block text-[11px] font-bold text-text-primary mb-1">
                     График работы
                   </label>
                   <input
@@ -1225,13 +1295,13 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                     value={formPointSchedule}
                     onChange={(e) => setFormPointSchedule(e.target.value)}
                     placeholder="Ежедневно 10:00 – 22:00"
-                    className="w-full neu-inset rounded-xl py-2 px-3 text-[#2D3A4E]"
+                    className="w-full neu-inset rounded-xl py-2 px-3 text-text-primary"
                     required
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="point-phone" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                  <label htmlFor="point-phone" className="block text-[11px] font-bold text-text-primary mb-1">
                     Контактный телефон
                   </label>
                   <input
@@ -1240,14 +1310,14 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                     value={formPointPhone}
                     onChange={(e) => setFormPointPhone(e.target.value)}
                     placeholder="+7 (495) 123-45-67"
-                    className="w-full neu-inset rounded-xl py-2 px-3 text-[#2D3A4E]"
+                    className="w-full neu-inset rounded-xl py-2 px-3 text-text-primary"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="point-note" className="block text-[11px] font-bold text-[#2D3A4E] mb-1">
+                <label htmlFor="point-note" className="block text-[11px] font-bold text-text-primary mb-1">
                   Ориентир, вход и условия примерки
                 </label>
                 <textarea
@@ -1256,43 +1326,43 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
                   value={formPointNote}
                   onChange={(e) => setFormPointNote(e.target.value)}
                   placeholder="Вход через центральный ресепшн. Примерка до 5 вещей, кофе, подгонка по фигуре..."
-                  className="w-full neu-inset rounded-xl py-2 px-3 text-[#2D3A4E] resize-none"
+                  className="w-full neu-inset rounded-xl py-2 px-3 text-text-primary resize-none"
                 />
               </div>
 
               <div className="space-y-1.5 pt-1">
-                <div className="flex items-center gap-2">
+                <label htmlFor="formPointIsDefault" className="flex items-center gap-2.5 min-h-8 cursor-pointer">
                   <input
                     type="checkbox"
                     id="formPointIsDefault"
                     checked={formPointIsDefault}
                     onChange={(e) => setFormPointIsDefault(e.target.checked)}
-                    className="rounded text-accent focus:ring-0 w-4 h-4 cursor-pointer"
+                    className="rounded text-accent w-5 h-5 shrink-0 cursor-pointer"
                   />
-                  <label htmlFor="formPointIsDefault" className="text-xs font-bold text-[#2D3A4E] cursor-pointer">
+                  <span className="text-xs font-bold text-text-primary">
                     Основной пункт самовывоза (по умолчанию)
-                  </label>
-                </div>
+                  </span>
+                </label>
 
-                <div className="flex items-center gap-2">
+                <label htmlFor="formPointIsActive" className="flex items-center gap-2.5 min-h-8 cursor-pointer">
                   <input
                     type="checkbox"
                     id="formPointIsActive"
                     checked={formPointIsActive}
                     onChange={(e) => setFormPointIsActive(e.target.checked)}
-                    className="rounded text-accent focus:ring-0 w-4 h-4 cursor-pointer"
+                    className="rounded text-accent w-5 h-5 shrink-0 cursor-pointer"
                   />
-                  <label htmlFor="formPointIsActive" className="text-xs font-bold text-[#2D3A4E] cursor-pointer">
+                  <span className="text-xs font-bold text-text-primary">
                     Пункт активен и доступен для выбора покупателями
-                  </label>
-                </div>
+                  </span>
+                </label>
               </div>
 
-              <div className="flex gap-2 pt-2 border-t border-[#BAC5D5]/50">
+              <div className="flex gap-2 pt-2 neu-divider-t">
                 <button
                   type="button"
                   onClick={pointGuard.requestClose}
-                  className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                  className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary cursor-pointer"
                 >
                   Отмена
                 </button>
@@ -1317,7 +1387,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
         title="Удалить способ доставки?"
         message="Этот способ доставки перестанет отображаться при оформлении заказов на сайте."
         preview={
-          deletingMethod ? <span className="text-xs font-bold text-[#2D3A4E]">{deletingMethod.title}</span> : undefined
+          deletingMethod ? <span className="text-xs font-bold text-text-primary">{deletingMethod.title}</span> : undefined
         }
         onConfirm={() => {
           if (deletingMethodId) void handleDeleteMethod(deletingMethodId);
@@ -1329,7 +1399,7 @@ export const AdminDeliveryTab: React.FC<AdminDeliveryTabProps> = ({
         isOpen={Boolean(deletingPointId)}
         title="Удалить пункт самовывоза?"
         message="Пункт выдачи будет удален из списка доступных адресов для самовывоза клиентами."
-        preview={deletingPoint ? <span className="text-xs font-bold text-[#2D3A4E]">{deletingPoint.name}</span> : undefined}
+        preview={deletingPoint ? <span className="text-xs font-bold text-text-primary">{deletingPoint.name}</span> : undefined}
         onConfirm={() => {
           if (deletingPointId) void handleDeletePoint(deletingPointId);
         }}

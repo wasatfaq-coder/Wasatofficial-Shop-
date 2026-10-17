@@ -20,6 +20,7 @@ import {
   Layers,
   Share2,
   Ruler,
+  Grid,
 } from 'lucide-react';
 import { formatDays } from '../utils/pluralize';
 import { Product, UserProfile, BodyMeasurements, CartItem } from '../types';
@@ -48,11 +49,23 @@ import { useProductPhotos } from '../utils/useProductPhotos';
 import { useLiveReviews } from '../utils/liveReviews';
 import { QUICK_ORDER_DELIVERY_TITLE, type FreeDeliveryOffer } from '../shared/orderPricing';
 import { freeDeliveryMethodsText } from '../utils/freeDelivery';
-import { sellsRetail, sellsWholesale, type WholesaleSettings } from '../shared/wholesalePricing';
+import {
+  brokenPackDiscountedPrice,
+  hasWholesalePrice,
+  readBrokenPackDiscount,
+  saleChannelOf,
+  sellsRetail,
+  sellsWholesale,
+  type WholesaleSettings,
+} from '../shared/wholesalePricing';
 import { wholesaleOfferOf } from '../utils/wholesaleOffer';
 import { ProductWholesaleBlock, type BuyMode } from '../components/ProductWholesaleBlock';
+import { WholesaleMatrixPicker } from '../components/WholesaleMatrixPicker';
 import {
+  brokenPackState,
+  findProductBrokenPack,
   productSizePacks,
+  brokenPackPieces,
   sameColor,
   sizePackColors,
   sizePackCompositionText,
@@ -85,10 +98,11 @@ interface ProductDetailScreenProps {
     color: string,
     size: string,
     quantity: number,
-    wholesale?: boolean
+    wholesale?: boolean | 'wholesale' | 'broken',
+    quiet?: boolean
   ) => boolean | void;
   /** A size pack («ростовка», stage 20) into the cart: `packs` whole packs of the colour; `false` — nothing added */
-  onAddPackToCart?: (product: Product, packId: string, color: string, packs: number) => boolean;
+  onAddPackToCart?: (product: Product, packId: string, color: string, packs: number, quiet?: boolean) => boolean;
   /** The cart's lines: what they already hold is taken off the packs the buyer can still add */
   cartItems?: CartItem[];
   onSelectProduct?: (product: Product) => void;
@@ -185,19 +199,34 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     io.observe(el);
     return () => io.disconnect();
   }, [product?.id]);
-  // Units of the counter: items when buying retail, whole packs when buying wholesale
+  // Units of the counter: items when buying retail or broken pack, whole packs when buying wholesale
   const [quantity, setQuantity] = useState(1);
   // «Оптом» (stages 16–17 of docs/admin-wholesale-plan.md): a product sold only wholesale is always bought wholesale
   const offer = wholesaleOfferOf(product, wholesale);
-  // «Ростовкой» (stage 20): the packs of the product that have a price; only for a product sold wholesale
+  // Stage 11: size packs of the product that have a price; when present, «Оптом» sells whole size packs
   const sizePacks = useMemo(
     () => (sellsWholesale(product) ? productSizePacks(product).filter((pack) => sizePackPrice(product, pack) !== undefined) : []),
     [product]
   );
   const packsOffered = sizePacks.length > 0;
+  // Stage 12: «Разбитая упаковка» — only when saleChannel === 'both' and an incomplete pack exists
+  const firstBrokenState = useMemo(() => findProductBrokenPack(product), [product]);
+  const brokenDiscount = useMemo(() => readBrokenPackDiscount(wholesale), [wholesale]);
+  const brokenPackOffer = useMemo(() => {
+    if (saleChannelOf(product) !== 'both' || !hasWholesalePrice(product) || !firstBrokenState) return null;
+    const base = product.wholesalePrice as number;
+    return {
+      unitPrice: brokenPackDiscountedPrice(base, brokenDiscount),
+      baseWholesalePrice: base,
+    };
+  }, [product, firstBrokenState, brokenDiscount]);
+
   const [buyChoice, setBuyChoice] = useState<BuyMode>(() => (offer?.onlyWholesale ? 'wholesale' : 'retail'));
-  const packMode = packsOffered && buyChoice === 'pack';
-  const wholesaleMode = Boolean(offer) && !packMode && (buyChoice === 'wholesale' || Boolean(offer?.onlyWholesale));
+  const brokenMode = Boolean(brokenPackOffer) && buyChoice === 'broken';
+  const wantsWholesale = Boolean(offer) && !brokenMode && (buyChoice === 'wholesale' || buyChoice === 'pack' || Boolean(offer?.onlyWholesale));
+  // Stage 11: when sizePacks exist, «Оптом» sells whole size packs (`packMode`); otherwise wholesale packs (`wholesaleMode`)
+  const packMode = packsOffered && wantsWholesale;
+  const wholesaleMode = !packsOffered && wantsWholesale;
   const step = wholesaleMode && offer ? offer.packSize : 1;
   // packs mode: the pack picked and how many packs
   const [selectedPackId, setSelectedPackId] = useState('');
@@ -207,6 +236,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   const [isSizeCalcOpen, setIsSizeCalcOpen] = useState(false);
   // «Размерная сетка» of the model under the sizes: shown on a tap, the page stays short (wholesale plan, stage 14)
   const [isSizeChartOpen, setIsSizeChartOpen] = useState(false);
+  const [isMatrixOpen, setIsMatrixOpen] = useState(false);
   const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
   const [isQuickOrderOpen, setIsQuickOrderOpen] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
@@ -218,21 +248,46 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     setSelectedSize(initialSize(product));
     setSizeError(false);
     setIsSizeChartOpen(false);
+    setIsMatrixOpen(false);
   }, [product?.id]);
 
   // The way of buying and the counter start over with another product, and when the owner changes how it is sold
   // while the page is open: packs must not silently become items or the other way round
   const hasOffer = Boolean(offer);
   const onlyWholesale = Boolean(offer?.onlyWholesale);
+  const hasBrokenPack = Boolean(brokenPackOffer);
   useEffect(() => {
-    setBuyChoice(onlyWholesale ? 'wholesale' : 'retail');
+    setBuyChoice((prev) => {
+      if (onlyWholesale) return 'wholesale';
+      if (prev === 'broken' && !hasBrokenPack) return 'retail';
+      if ((prev === 'wholesale' || prev === 'pack') && !hasOffer) return 'retail';
+      return prev;
+    });
     setQuantity(onlyWholesale && offer ? offer.minPacks : 1);
     setSelectedPackId('');
     setPackCount(1);
-  }, [product?.id, hasOffer, onlyWholesale]);
+  }, [product?.id, hasOffer, onlyWholesale, hasBrokenPack]);
+
+  // Broken pack state for the currently selected colour (or fallback to first broken state)
+  const activeBrokenState = useMemo(() => {
+    if (!brokenMode) return null;
+    for (const pack of productSizePacks(product)) {
+      const st = brokenPackState(product, pack, selectedColor);
+      if (st) return st;
+    }
+    return firstBrokenState;
+  }, [brokenMode, product, selectedColor, firstBrokenState]);
+
+  // Sizes shown in the size picker: in broken pack mode, all sizes of the broken pack; otherwise all sizes of the product
+  const displayedSizes = useMemo(() => {
+    if (brokenMode && activeBrokenState) {
+      return activeBrokenState.sizes.map((s) => s.size);
+    }
+    return product.sizes;
+  }, [brokenMode, activeBrokenState, product.sizes]);
 
   // Stock of the chosen size; before a size is chosen — of the whole colour
-  const sizeChosen = !product.sizes?.length || Boolean(selectedSize);
+  const sizeChosen = !displayedSizes?.length || Boolean(selectedSize && displayedSizes.includes(selectedSize));
   const currentStock = sizeChosen
     ? getVariantStock(product, selectedColor, selectedSize)
     : colorStock(product, selectedColor);
@@ -265,11 +320,17 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     { id: 'care' as const, label: 'Уход и стирка', icon: Sparkles, show: cardCare.length > 0 },
   ].filter((tab) => tab.show);
   const activeDetailTab = detailTabs.some((tab) => tab.id === detailTab) ? detailTab : detailTabs[0]?.id;
-  // Units that can be ordered: the stock, or a preorder limit for a sold-out variant
-  const orderableStock = sizeChosen
-    ? getOrderableStock(product, selectedColor, selectedSize, preorderMode)
-    : maxOrderableForColor(product, selectedColor, preorderMode);
-  const isPreorder = currentStock === 0 && orderableStock > 0;
+  // Units that can be ordered: the stock, or a preorder limit for a sold-out variant (broken packs have no preorder)
+  const effectivePreorder = brokenMode ? false : preorderMode;
+  const variantOrderable = sizeChosen
+    ? getOrderableStock(product, selectedColor, selectedSize, effectivePreorder)
+    : maxOrderableForColor(product, selectedColor, effectivePreorder);
+  // a broken pack sells only the pieces left above whole packs (review 16.10, finding 1)
+  const orderableStock =
+    brokenMode && sizeChosen
+      ? Math.min(variantOrderable, brokenPackPieces(product, selectedColor, selectedSize))
+      : variantOrderable;
+  const isPreorder = !brokenMode && currentStock === 0 && orderableStock > 0;
   // What the counter can reach: items, or whole packs when buying wholesale
   const maxCount = Math.floor(orderableStock / step);
 
@@ -283,7 +344,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
     }
   }, [selectedColor, selectedSize, maxCount]);
 
-  // Size packs of the chosen colour (the mode «Ростовкой»): each pack's whole packs left after the cart's lines
+  // Size packs of the chosen colour (in «Оптом» when sizePacks exist): each pack's whole packs left after the cart's lines
   const packColorNames = sizePacks.flatMap((pack) => sizePackColors(product, pack));
   const packsForColor = packMode ? sizePacks.filter((pack) => sizePackColors(product, pack).some((c) => sameColor(c, selectedColor))) : [];
   const packsLeftOf = (pack: SizePack) =>
@@ -301,34 +362,57 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   // sizes of the pack the colour has too few of: named under the button
   const packMissingSizes = activePack ? activePack.sizes.filter((line) => getVariantStock(product, selectedColor, line.size) < line.qty).map((line) => line.size) : [];
   const packUnavailableText = !activePack
-    ? 'В этом цвете ростовок нет — выберите другой цвет'
+    ? 'В этом цвете упаковок нет — выберите другой цвет'
     : packMissingSizes.length > 0
-    ? `Нет ${packMissingSizes.length > 1 ? 'размеров' : 'размера'} ${packMissingSizes.join(', ')}: ростовка недоступна`
+    ? `Нет ${packMissingSizes.length > 1 ? 'размеров' : 'размера'} ${packMissingSizes.join(', ')}: целая упаковка недоступна`
     : isHiddenFromSale(product)
-    ? 'Ростовка недоступна'
-    : 'Весь остаток этой ростовки уже в вашей корзине';
+    ? 'Упаковка недоступна'
+    : 'Весь остаток этой упаковки уже в вашей корзине';
   const cheapestPack = sizePacks.reduce<number | null>((low, pack) => {
     const price = sizePackPrice(product, pack);
     return price !== undefined && (low === null || price < low) ? price : low;
   }, null);
-  const packFrom = packsOffered && cheapestPack !== null ? { price: cheapestPack, several: sizePacks.length > 1 } : null;
+  const packFrom =
+    packsOffered && cheapestPack !== null
+      ? {
+          price: cheapestPack,
+          several: sizePacks.length > 1,
+          composition: activePack ? sizePackCompositionText(activePack) : sizePacks[0] ? sizePackCompositionText(sizePacks[0]) : undefined,
+          pieces: activePack ? activePackPieces : sizePacks[0] ? sizePackPieces(sizePacks[0]) : undefined,
+        }
+      : null;
   /** «N шт. × 1 200 ₽/шт.»; «≈» when the pack price does not split into whole roubles */
   const perPieceText = (price: number, pieces: number) => {
     const each = price / pieces;
     return `${pieces} шт. × ${Number.isInteger(each) ? '' : '≈ '}${Math.round(each).toLocaleString('ru-RU')} ₽/шт.`;
   };
 
-  // The way of buying changes: «Оптом» starts at the product's minimum (as many packs as there are, if fewer); «Ростовкой»
-  // at one pack, in a colour that has packs
+  // The way of buying changes: «Оптом» starts at 1 pack (if sizePacks exist) or the product's minimum; «Разбитая упаковка» switches to a colour with broken stock
   const changeBuyMode = (mode: BuyMode) => {
     setBuyChoice(mode);
-    if (mode === 'pack') {
+    if ((mode === 'wholesale' || mode === 'pack') && packsOffered) {
       setPackCount(1);
       if (!packColorNames.some((c) => sameColor(c, selectedColor)) && packColorNames[0]) {
         setSelectedColor(packColorNames[0]);
-        // the photo of the colour, as a click on the colour shows it
         const boundPhoto = colorImageIndex(product, packColorNames[0]);
         if (boundPhoto !== null) setSelectedImageIndex(boundPhoto);
+      }
+      return;
+    }
+    if (mode === 'broken' && firstBrokenState) {
+      setQuantity(1);
+      const currentHasBroken = productSizePacks(product).some((p) => brokenPackState(product, p, selectedColor) !== null);
+      const targetColor = currentHasBroken ? selectedColor : firstBrokenState.color;
+      if (targetColor !== selectedColor) {
+        setSelectedColor(targetColor);
+        const boundPhoto = colorImageIndex(product, targetColor);
+        if (boundPhoto !== null) setSelectedImageIndex(boundPhoto);
+      }
+      const st = productSizePacks(product).map((p) => brokenPackState(product, p, targetColor)).find(Boolean) ?? firstBrokenState;
+      const firstAvailSize = st.sizes.find((s) => s.available)?.size;
+      if (firstAvailSize && (!selectedSize || getVariantStock(product, targetColor, selectedSize) === 0)) {
+        setSelectedSize(firstAvailSize);
+        setSizeError(false);
       }
       return;
     }
@@ -344,7 +428,6 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
   // a size pack has no size and no preorder
   const needsSize = !packMode && !sizeChosen;
   const showPreorder = !packMode && isPreorder;
-
 
   const handleNextImage = () => {
     if (!product?.images?.length) return;
@@ -398,8 +481,9 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
       askForSize();
       return;
     }
+    const addKind: boolean | 'wholesale' | 'broken' = brokenMode ? 'broken' : wholesaleMode;
     // Stays on the page: the toast has a «В корзину» link
-    if (onAddToCartWithOptions(product, selectedColor, selectedSize, quantity * step, wholesaleMode) === false) return;
+    if (onAddToCartWithOptions(product, selectedColor, selectedSize, quantity * step, addKind) === false) return;
     setIsAdded(true);
     setTimeout(() => {
       setIsAdded(false);
@@ -437,7 +521,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
       {/* Computer (lg): gallery on the left, the buying block on the right stays in view while the photos scroll */}
       <div className="space-y-5 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start">
       {/* Product Image Gallery with Large Showcase & Neumorphic Multi-angles */}
-      <div className="neu-flat rounded-3xl p-3 sm:p-4 border border-white/60 space-y-3 lg:col-span-7">
+      <div className="neu-flat rounded-3xl p-3 sm:p-4 space-y-3 lg:col-span-7">
         {/* Main Large Photo Box - Neumorphic Well with 3:4 Aspect Ratio */}
         <div
           onTouchStart={handleTouchStart}
@@ -463,7 +547,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
 
           {/* Photo counter in top-right */}
           <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
-            <div className="neu-photo-badge text-[#2D3A4E] text-[11px] font-bold px-3 py-1 rounded-full leading-none">
+            <div className="neu-photo-badge text-text-primary text-[11px] font-bold px-3 py-1 rounded-full leading-none">
               {selectedImageIndex + 1} / {product.images.length}
             </div>
           </div>
@@ -474,7 +558,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               e.stopPropagation();
               setIsZoomModalOpen(true);
             }}
-            className="absolute bottom-3 right-3 neu-photo-btn px-3 py-1.5 rounded-full z-10 flex items-center gap-1.5 text-xs font-bold text-[#2D3A4E] hover:scale-105 transition-transform"
+            className="absolute bottom-3 right-3 neu-photo-btn px-3 py-1.5 rounded-full z-10 flex items-center gap-1.5 text-xs font-bold text-text-primary hover:scale-105 transition-transform"
             title="Увеличить фото"
           >
             <ZoomIn className="w-3.5 h-3.5 text-accent" />
@@ -489,7 +573,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                   e.stopPropagation();
                   handlePrevImage();
                 }}
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full neu-photo-btn flex items-center justify-center text-[#2D3A4E] z-10 opacity-80 hover:opacity-100 transition-all"
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full neu-photo-btn flex items-center justify-center text-text-primary z-10 opacity-80 hover:opacity-100 transition-all"
                 aria-label="Предыдущее фото"
               >
                 <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
@@ -499,7 +583,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                   e.stopPropagation();
                   handleNextImage();
                 }}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full neu-photo-btn flex items-center justify-center text-[#2D3A4E] z-10 opacity-80 hover:opacity-100 transition-all"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full neu-photo-btn flex items-center justify-center text-text-primary z-10 opacity-80 hover:opacity-100 transition-all"
                 aria-label="Следующее фото"
               >
                 <ChevronRight className="w-4 h-4 stroke-[2.5]" />
@@ -559,18 +643,18 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
         {/* Title, rating & favorite. The badge is shown on the photo only: a second copy here repeated it */}
         <div className="space-y-1.5">
           <div className="flex items-start justify-between gap-3">
-            <h1 className="text-xl font-bold text-[#2D3A4E] tracking-tight leading-snug min-w-0 break-words">
+            <h1 className="text-xl font-bold text-text-primary tracking-tight leading-snug min-w-0 break-words">
               {product.title}
             </h1>
             <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
                 onClick={shareProduct}
-                className="neu-button w-8 h-8 rounded-full flex items-center justify-center text-[#4E5C70]"
+                className="neu-button w-8 h-8 rounded-full flex items-center justify-center text-text-secondary shrink-0 cursor-pointer"
                 aria-label="Поделиться ссылкой на товар"
                 title="Поделиться"
               >
-                <Share2 className="w-4 h-4" aria-hidden="true" />
+                <Share2 className="w-4 h-4 shrink-0" aria-hidden="true" />
               </button>
               <AnimatedFavoriteButton
                 isFavorite={isFavorite}
@@ -593,7 +677,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           {/* Color Choice Circles */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#2D3A4E]">Выберите цвет:</span>
+              <span className="text-xs font-semibold text-text-primary">Выберите цвет:</span>
               <span className="text-[11px] font-bold text-accent">{selectedColor}</span>
             </div>
             <div className="flex items-center gap-2.5 flex-wrap">
@@ -609,9 +693,9 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                       const boundPhoto = colorImageIndex(product, c.name);
                       if (boundPhoto !== null) setSelectedImageIndex(boundPhoto);
                     }}
-                    className={`w-9 h-9 rounded-full p-0.5 flex items-center justify-center transition-all cursor-pointer ${
+                    className={`w-9 h-9 rounded-full p-1 flex items-center justify-center transition-all cursor-pointer ${
                       isSelected
-                        ? 'neu-inset ring-2 ring-accent scale-105'
+                        ? 'neu-pill-active scale-105'
                         : 'neu-button hover:scale-105'
                     }`}
                     title={c.name}
@@ -623,7 +707,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                       style={{ backgroundColor: c.hex }}
                     >
                       {isSelected && (
-                        <Check className={`w-3.5 h-3.5 stroke-[3] ${isLight ? 'text-[#2D3A4E]' : 'text-white'}`} />
+                        <Check className={`w-3.5 h-3.5 stroke-[3] ${isLight ? 'text-text-primary' : 'text-white'}`} />
                       )}
                     </span>
                   </button>
@@ -638,11 +722,17 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               <>
               <div className="flex items-center justify-between gap-1.5 pb-0.5">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-semibold text-[#2D3A4E]">{selectedSize ? 'Размер:' : 'Выберите размер'}</span>
+                  <span className="text-xs font-semibold text-text-primary">
+                    {brokenMode
+                      ? 'Размеры в разбитой упаковке:'
+                      : selectedSize
+                      ? 'Размер:'
+                      : 'Выберите размер'}
+                  </span>
                   {selectedSize && <span className="text-[11px] font-extrabold text-accent">{selectedSize}</span>}
                 </div>
                 {mySize && (
-                  <span className="text-[11px] font-semibold text-[#4E5C70]">
+                  <span className="text-[11px] font-semibold text-text-secondary">
                     Ваш размер: <span className="font-extrabold text-accent">{mySize}</span>
                   </span>
                 )}
@@ -655,7 +745,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 aria-label="Размер"
                 aria-describedby={sizeError ? 'product-size-error' : undefined}
               >
-                {product.sizes.map((sz) => {
+                {displayedSizes.map((sz) => {
                   const isSelected = selectedSize === sz;
                   const szStock = getVariantStock(product, selectedColor, sz);
                   const isOutOfStock = szStock === 0;
@@ -675,11 +765,11 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                         // it can still be picked to see the preorder or «закончился» note
                         isOutOfStock
                           ? isSelected
-                            ? 'neu-pill-active text-[#4E5C70]'
-                            : 'neu-flat text-[#4E5C70]'
+                            ? 'neu-pill-active text-text-secondary'
+                            : 'neu-flat text-text-secondary'
                           : isSelected
                           ? 'neu-pill-active'
-                          : 'neu-button text-[#2D3A4E] hover:text-accent'
+                          : 'neu-button text-text-primary hover:text-accent'
                       }`}
                       aria-label={isOutOfStock ? `${sz}, нет в наличии` : undefined}
                     >
@@ -690,10 +780,10 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                       <span
                         className={`text-[11px] tracking-tight ${
                           isOutOfStock
-                            ? 'text-[#4E5C70] font-medium'
+                            ? 'text-text-secondary font-medium'
                             : isSelected
                             ? 'text-accent font-semibold'
-                            : 'text-[#4E5C70] font-medium'
+                            : 'text-text-secondary font-medium'
                         }`}
                       >
                         {isOutOfStock ? 'нет' : `${szStock} шт.`}
@@ -712,13 +802,13 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             {packMode && (
               <>
                 <div className="flex items-center justify-between gap-1.5 pb-0.5">
-                  <span className="text-xs font-semibold text-[#2D3A4E]">
-                    {packsForColor.length > 1 ? 'Выберите ростовку' : 'Ростовка'}
+                  <span className="text-xs font-semibold text-text-primary">
+                    {packsForColor.length > 1 ? 'Выберите упаковку' : 'Упаковка'}
                   </span>
                   {activePack && <span className="text-[11px] font-extrabold text-accent">{activePackPieces} шт. в упаковке</span>}
                 </div>
                 {packsForColor.length > 0 ? (
-                  <div role="radiogroup" aria-label="Ростовка" className="grid grid-cols-1 gap-2">
+                  <div role="radiogroup" aria-label="Упаковка" className="grid grid-cols-1 gap-2">
                     {packsForColor.map((pack) => {
                       const isSelected = activePack?.id === pack.id;
                       const left = packsLeftOf(pack);
@@ -733,29 +823,29 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                           className={`min-h-11 w-full px-3 py-2 rounded-2xl text-left flex items-center justify-between gap-3 cursor-pointer transition-all ${
                             left === 0
                               ? isSelected
-                                ? 'neu-pill-active text-[#4E5C70]'
-                                : 'neu-flat text-[#4E5C70]'
+                                ? 'neu-pill-active text-text-secondary'
+                                : 'neu-flat text-text-secondary'
                               : isSelected
                               ? 'neu-pill-active'
-                              : 'neu-button text-[#2D3A4E] hover:text-accent'
+                              : 'neu-button text-text-primary hover:text-accent'
                           }`}
                         >
                           <span className="min-w-0">
                             <span className="block text-xs font-extrabold">{sizePackTitle(pack)}</span>
-                            <span className="block text-xs text-[#4E5C70]">{sizePackCompositionText(pack)}</span>
+                            <span className="block text-xs text-text-secondary">{sizePackCompositionText(pack)}</span>
                           </span>
                           <span className="shrink-0 text-right">
                             {price !== undefined && (
                               <span className="block text-xs font-extrabold whitespace-nowrap">{price.toLocaleString('ru-RU')} ₽</span>
                             )}
-                            <span className="block text-[11px] font-medium text-[#4E5C70]">{left > 0 ? `${left} уп.` : 'нет'}</span>
+                            <span className="block text-[11px] font-medium text-text-secondary">{left > 0 ? `${left} уп.` : 'нет'}</span>
                           </span>
                         </button>
                       );
                     })}
                   </div>
                 ) : (
-                  <p className="text-xs font-bold text-[#4E5C70]">{packUnavailableText}</p>
+                  <p className="text-xs font-bold text-text-secondary">{packUnavailableText}</p>
                 )}
               </>
             )}
@@ -790,32 +880,44 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 <>
                   {/* no pack in this colour: no price of another colour's pack (review 12.10) */}
                   {activePack && activePackPrice !== undefined ? (
-                    <span className="text-2xl font-extrabold text-[#2D3A4E] whitespace-nowrap">
+                    <span className="text-2xl font-extrabold text-text-primary whitespace-nowrap">
                       {activePackPrice.toLocaleString('ru-RU')} ₽
-                      <span className="text-sm font-bold text-[#4E5C70]">/уп.</span>
+                      <span className="text-sm font-bold text-text-secondary">/уп. оптом</span>
                     </span>
                   ) : null}
                   {activePack && activePackPrice !== undefined && (
-                    <span className="text-xs font-semibold text-[#4E5C70] whitespace-nowrap">
+                    <span className="text-xs font-semibold text-text-secondary whitespace-nowrap">
                       {perPieceText(activePackPrice, activePackPieces)}
                     </span>
                   )}
                 </>
+              ) : brokenMode && brokenPackOffer ? (
+                <>
+                  <span className="text-2xl font-extrabold text-text-primary whitespace-nowrap">
+                    {brokenPackOffer.unitPrice.toLocaleString('ru-RU')} ₽
+                    <span className="text-sm font-bold text-text-secondary">/шт.</span>
+                  </span>
+                  {brokenPackOffer.unitPrice < product.price && (
+                    <span className="text-sm text-text-secondary line-through whitespace-nowrap">
+                      {product.price.toLocaleString('ru-RU')} ₽
+                    </span>
+                  )}
+                </>
               ) : (
-              <span className="text-2xl font-extrabold text-[#2D3A4E] whitespace-nowrap">
+              <span className="text-2xl font-extrabold text-text-primary whitespace-nowrap">
                 {(wholesaleMode && offer ? (offer.packSize > 1 ? offer.packPrice : offer.unitPrice) : product.price).toLocaleString('ru-RU')} ₽
                 {wholesaleMode && offer && (
-                  <span className="text-sm font-bold text-[#4E5C70]">{offer.packSize > 1 ? '/уп. оптом' : '/шт. оптом'}</span>
+                  <span className="text-sm font-bold text-text-secondary">{offer.packSize > 1 ? '/уп. оптом' : '/шт. оптом'}</span>
                 )}
               </span>
               )}
-              {!packMode && wholesaleMode && offer && offer.packSize > 1 && (
-                <span className="text-xs font-semibold text-[#4E5C70] whitespace-nowrap">
+              {!packMode && !brokenMode && wholesaleMode && offer && offer.packSize > 1 && (
+                <span className="text-xs font-semibold text-text-secondary whitespace-nowrap">
                   {offer.packSize} шт. × {offer.unitPrice.toLocaleString('ru-RU')} ₽
                 </span>
               )}
-              {!packMode && !wholesaleMode && shownOldPrice(product) !== null && (
-                <span className="text-sm text-[#4E5C70] line-through whitespace-nowrap">
+              {!packMode && !brokenMode && !wholesaleMode && shownOldPrice(product) !== null && (
+                <span className="text-sm text-text-secondary line-through whitespace-nowrap">
                   {shownOldPrice(product)!.toLocaleString('ru-RU')} ₽
                 </span>
               )}
@@ -823,27 +925,27 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
 
             {/* Dynamic SKU Stock Badge */}
             {packMode ? (
-              <div className="neu-flat text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-[#4E5C70] border border-white/60">
+              <div className="neu-inset text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-text-secondary">
                 <span className={`w-1.5 h-1.5 rounded-full ${packAvailable > 0 ? 'bg-accent' : 'bg-[#BAC5D5]'}`} />
                 <span>Доступно упаковок: {packAvailable}</span>
               </div>
             ) : currentStock > 2 ? (
-              <div className="neu-flat text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-[#4E5C70] border border-white/60">
+              <div className="neu-inset text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-text-secondary">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
                 <span>В наличии: {currentStock} шт.</span>
               </div>
             ) : currentStock > 0 ? (
-              <div className="neu-flat text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-[#2D3A4E] border border-white/60">
+              <div className="neu-inset text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-text-primary">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
                 <span>Осталось {currentStock} шт.</span>
               </div>
             ) : isPreorder ? (
-              <div className="neu-flat text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-accent border border-white/60">
+              <div className="neu-inset text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-accent">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
                 <span>Предзаказ</span>
               </div>
             ) : (
-              <div className="neu-flat text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-[#4E5C70] border border-white/60">
+              <div className="neu-inset text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 text-text-secondary">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#BAC5D5]" />
                 <span>Нет в наличии</span>
               </div>
@@ -854,23 +956,63 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             <ProductWholesaleBlock
               offer={offer}
               retailPrice={product.price}
-              mode={packMode ? 'pack' : wholesaleMode ? 'wholesale' : 'retail'}
+              mode={brokenMode ? 'broken' : packMode || wholesaleMode ? 'wholesale' : 'retail'}
               onChangeMode={changeBuyMode}
               packFrom={packFrom}
+              brokenPack={brokenPackOffer}
             />
+          )}
+
+          {offer && (wholesaleMode || packMode) && (
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setIsMatrixOpen((open) => !open)}
+                aria-expanded={isMatrixOpen}
+                className={`w-full min-h-10 px-3.5 py-2 rounded-2xl text-xs font-extrabold flex items-center justify-between gap-2 cursor-pointer transition-all ${
+                  isMatrixOpen ? 'neu-pill-active text-accent' : 'neu-button text-text-primary hover:text-accent'
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <Grid className="w-4 h-4 text-accent shrink-0" aria-hidden="true" />
+                  <span>
+                    {packMode
+                      ? 'Быстрый набор упаковок по цветам (шахматка)'
+                      : 'Быстрый набор нескольких цветов и размеров (шахматка)'}
+                  </span>
+                </span>
+                <ChevronRight
+                  aria-hidden="true"
+                  className={`w-4 h-4 shrink-0 transition-transform duration-200 ${isMatrixOpen ? 'rotate-90' : ''}`}
+                />
+              </button>
+
+              {isMatrixOpen && (
+                <WholesaleMatrixPicker
+                  product={product}
+                  mode={packMode ? 'pack' : 'wholesale'}
+                  offer={offer}
+                  sizePacks={sizePacks}
+                  cartItems={cartItems}
+                  preorderMode={preorderMode}
+                  onAddWholesaleLine={onAddToCartWithOptions}
+                  onAddPackLine={onAddPackToCart}
+                />
+              )}
+            </div>
           )}
 
           {/* Granular SKU Info helper message if variant is out of stock */}
           {!packMode && sizeChosen && currentStock === 0 && (
-            <div className="p-2.5 rounded-xl neu-inset border border-white/60 text-[11px] text-[#4E5C70] flex items-center gap-2">
+            <div className="p-2.5 rounded-xl neu-inset text-[11px] text-text-secondary flex items-center gap-2">
               <Info className="w-4 h-4 text-accent shrink-0" />
               {isPreorder ? (
                 <span>
-                  Размера <strong className="text-[#2D3A4E]">{selectedSize}</strong> в цвете <strong className="text-[#2D3A4E]">{selectedColor}</strong> сейчас нет на складе. Его можно заказать заранее: срок поставки сообщит менеджер.
+                  Размера <strong className="text-text-primary">{selectedSize}</strong> в цвете <strong className="text-text-primary">{selectedColor}</strong> сейчас нет на складе. Его можно заказать заранее: срок поставки сообщит менеджер.
                 </span>
               ) : (
                 <span>
-                  Размер <strong className="text-[#2D3A4E]">{selectedSize}</strong> в цвете <strong className="text-[#2D3A4E]">{selectedColor}</strong> временно закончился на складе. Попробуйте выбрать другой цвет или размер.
+                  Размер <strong className="text-text-primary">{selectedSize}</strong> в цвете <strong className="text-text-primary">{selectedColor}</strong> временно закончился на складе. Попробуйте выбрать другой цвет или размер.
                 </span>
               )}
             </div>
@@ -886,15 +1028,17 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               <button
                 onClick={() => setCounter(Math.max(1, counterValue - 1))}
                 disabled={counterValue <= 1 || counterMax === 0}
-                className={`w-9 h-9 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] transition-opacity cursor-pointer ${
-                  counterValue <= 1 || counterMax === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:text-accent'
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                  counterValue <= 1 || counterMax === 0
+                    ? 'neu-button-disabled'
+                    : 'neu-button text-text-primary hover:text-accent cursor-pointer'
                 }`}
                 aria-label={packMode ? 'Уменьшить число упаковок' : 'Уменьшить количество'}
               >
                 <Minus className="w-4 h-4 stroke-[2.5]" />
               </button>
               <span
-                className={`text-sm font-bold text-[#2D3A4E] text-center ${counterInPacks ? 'min-w-6 whitespace-nowrap' : 'w-6'}`}
+                className={`text-sm font-bold text-text-primary text-center ${counterInPacks ? 'min-w-6 whitespace-nowrap' : 'w-6'}`}
                 aria-live="polite"
               >
                 {counterMax === 0 ? 0 : counterValue}
@@ -903,8 +1047,10 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               <button
                 onClick={() => setCounter(Math.min(counterMax, counterValue + 1))}
                 disabled={counterValue >= counterMax || counterMax === 0}
-                className={`w-9 h-9 rounded-full neu-button flex items-center justify-center text-[#2D3A4E] transition-opacity cursor-pointer ${
-                  counterValue >= counterMax || counterMax === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:text-accent'
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                  counterValue >= counterMax || counterMax === 0
+                    ? 'neu-button-disabled'
+                    : 'neu-button text-text-primary hover:text-accent cursor-pointer'
                 }`}
                 aria-label={packMode ? 'Увеличить число упаковок' : 'Увеличить количество'}
               >
@@ -928,7 +1074,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
               {counterMax === 0 ? (
                 <>
                   <X className="w-4 h-4" />
-                  <span>{packMode && !activePack ? 'Нет в этом цвете' : !packMode && orderableStock > 0 ? 'Нет целой упаковки' : 'Нет в наличии'}</span>
+                  <span>{packMode && !activePack ? 'Нет в этом цвете' : !packMode && !brokenMode && orderableStock > 0 ? 'Нет целой упаковки' : 'Нет в наличии'}</span>
                 </>
               ) : isAdded ? (
                 <>
@@ -951,9 +1097,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
             </p>
           )}
 
-          {/* Fast 1-Click Order Button: retail only — a «Только оптом» product goes through the cart (packs, the
-              volume discount) */}
-          {orderableStock > 0 && sellsRetail(product) && !wholesaleMode && !packMode && (
+          {/* Fast 1-Click Order Button: retail only — a «Только оптом» or broken pack goes through the cart */}
+          {orderableStock > 0 && sellsRetail(product) && !wholesaleMode && !packMode && !brokenMode && (
             <button
               type="button"
               onClick={() => (sizeChosen ? setIsQuickOrderOpen(true) : askForSize())}
@@ -969,9 +1114,9 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
 
       {/* Product information tabs: only sections that have data are shown */}
       {detailTabs.length > 0 && activeDetailTab && (
-      <div className="neu-flat rounded-3xl p-4 border border-white/60 space-y-3">
-        {/* Tab Switcher Bar */}
-        <div className="neu-flat-sm p-1.5 rounded-2xl flex items-stretch justify-between gap-1" role="tablist">
+      <div className="neu-flat rounded-3xl p-4 space-y-3">
+        {/* Tab Switcher Bar (Canonical recessed trough with raised active key) */}
+        <div className="neu-inset p-1.5 rounded-2xl flex items-stretch justify-between gap-1" role="tablist">
           {detailTabs.map((tab) => {
             const TabIcon = tab.icon;
             return (
@@ -982,7 +1127,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 aria-selected={activeDetailTab === tab.id}
                 onClick={() => setDetailTab(tab.id)}
                 className={`flex-1 min-h-10 py-2 px-2 rounded-xl text-xs font-bold leading-tight transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
-                  activeDetailTab === tab.id ? 'neu-pill-active' : 'text-[#4E5C70] hover:text-[#2D3A4E]'
+                  activeDetailTab === tab.id ? 'neu-button text-accent font-extrabold' : 'text-text-secondary hover:text-text-primary'
                 }`}
               >
                 <TabIcon className="w-3.5 h-3.5 shrink-0" />
@@ -994,9 +1139,9 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
 
         {/* Active Tab Content Panel */}
         {/* panel without its own card: the block is already one (design pass 07.10 — no card inside a card) */}
-        <div className="px-1.5 pt-1 space-y-3 text-xs text-[#2D3A4E]">
+        <div className="px-1.5 pt-1 space-y-3 text-xs text-text-primary">
           {activeDetailTab === 'description' && (
-            <div className="space-y-3 leading-relaxed text-[#4E5C70]">
+            <div className="space-y-3 leading-relaxed text-text-secondary">
               {product.description?.trim() && <p className="whitespace-pre-line">{product.description.trim()}</p>}
               {cardFeatures.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
@@ -1004,8 +1149,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                     <div key={idx} className="neu-inset rounded-xl p-2.5 flex items-start gap-2">
                       <ShieldCheck className="w-4 h-4 text-accent shrink-0 mt-0.5" />
                       <div className="min-w-0">
-                        <p className="font-extrabold text-xs text-[#2D3A4E]">{feature.title}</p>
-                        {feature.text && <p className="text-xs text-[#4E5C70] leading-snug">{feature.text}</p>}
+                        <p className="font-extrabold text-xs text-text-primary">{feature.title}</p>
+                        {feature.text && <p className="text-xs text-text-secondary leading-snug">{feature.text}</p>}
                       </div>
                     </div>
                   ))}
@@ -1017,9 +1162,9 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           {activeDetailTab === 'specs' && (
             <div className="space-y-3">
               {(cardComposition.length > 0 || cardCertifications.length > 0) && (
-                <div className="neu-inset rounded-2xl p-3 space-y-2.5">
+                <div className="pb-3 neu-divider-b space-y-2.5">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#2D3A4E] flex items-center gap-1.5">
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-text-primary flex items-center gap-1.5">
                       <Layers className="w-3.5 h-3.5 text-accent shrink-0" />
                       Состав ткани
                     </span>
@@ -1029,9 +1174,9 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                     <div className="space-y-2 pt-1">
                       {cardComposition.map((item, idx) => (
                         <div key={idx} className="space-y-1">
-                          <div className="flex justify-between gap-2 text-xs font-bold text-[#2D3A4E]">
+                          <div className="flex justify-between gap-2 text-xs font-bold text-text-primary">
                             <span className="min-w-0">{item.fiber}</span>
-                            <span className="text-accent font-extrabold shrink-0">{item.percentage}%</span>
+                            <span className="text-accent font-extrabold shrink-0 tabular-nums">{item.percentage}%</span>
                           </div>
                           <div className="w-full h-2 rounded-full overflow-hidden neu-inset">
                             <div
@@ -1045,7 +1190,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                   )}
 
                   {cardCertifications.length > 0 && (
-                    <div className="pt-2 flex items-start gap-1.5 text-[11px] text-success font-semibold border-t border-[#BAC5D5]/40">
+                    <div className="pt-2 flex items-start gap-1.5 text-[11px] text-success font-semibold neu-divider-t">
                       <ShieldCheck className="w-4 h-4 text-success shrink-0" />
                       <span>{cardCertifications.join(' • ')}</span>
                     </div>
@@ -1055,14 +1200,14 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
 
               <dl className="space-y-0 text-xs">
                 {cardSpecRows.map((row, idx) => (
-                  <div key={idx} className="flex items-start justify-between gap-3 py-2 border-b border-[#BAC5D5]/40 last:border-b-0">
-                    <dt className="text-[#4E5C70] shrink-0">{row.label}</dt>
-                    <dd className="font-bold text-[#2D3A4E] text-right min-w-0">{row.value}</dd>
+                  <div key={idx} className="flex items-start justify-between gap-3 py-2 neu-divider-b last:neu-divider-b-0">
+                    <dt className="text-text-secondary shrink-0">{row.label}</dt>
+                    <dd className="font-bold text-text-primary text-right min-w-0">{row.value}</dd>
                   </div>
                 ))}
                 {currentSKU?.skuCode && (
-                  <div className="flex items-center justify-between gap-3 py-2 border-b border-[#BAC5D5]/40 last:border-b-0">
-                    <dt className="text-[#4E5C70] shrink-0">Артикул</dt>
+                  <div className="flex items-center justify-between gap-3 py-2 neu-divider-b last:neu-divider-b-0">
+                    <dt className="text-text-secondary shrink-0">Артикул</dt>
                     <dd className="font-mono font-bold text-accent text-[11px] px-2 py-0.5 rounded-lg neu-inset">
                       {currentSKU.skuCode}
                     </dd>
@@ -1070,8 +1215,8 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 )}
                 {currentSKU?.barcode && (
                   <div className="flex items-center justify-between gap-3 py-2">
-                    <dt className="text-[#4E5C70] shrink-0">Штрихкод (EAN)</dt>
-                    <dd className="font-mono text-[11px] text-[#2D3A4E] text-right">{currentSKU.barcode}</dd>
+                    <dt className="text-text-secondary shrink-0">Штрихкод (EAN)</dt>
+                    <dd className="font-mono text-[11px] text-text-primary text-right">{currentSKU.barcode}</dd>
                   </div>
                 )}
               </dl>
@@ -1085,12 +1230,12 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                   key={idx}
                   className="neu-inset rounded-xl p-2.5 flex items-start gap-2.5"
                 >
-                  <div className="w-6 h-6 rounded-lg neu-flat-sm flex items-center justify-center shrink-0 mt-0.5 text-accent">
-                    <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <div className="w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center shrink-0 text-accent">
+                    <Check className="w-4 h-4 stroke-[2.5] shrink-0" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold text-xs text-[#2D3A4E]">{care.label}</p>
-                    {care.desc && <p className="text-xs text-[#4E5C70] leading-snug mt-0.5">{care.desc}</p>}
+                    <p className="font-bold text-xs text-text-primary">{care.label}</p>
+                    {care.desc && <p className="text-xs text-text-secondary leading-snug mt-0.5">{care.desc}</p>}
                   </div>
                 </div>
               ))}
@@ -1103,18 +1248,23 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
       {/* Accordion Info Cards (Shipping, Returns, Size Guides) */}
       <div className="space-y-3">
         {/* Shipping Accordion */}
-        <div className="neu-flat rounded-2xl overflow-hidden border border-white/60">
+        <div className="space-y-2">
           <button
+            type="button"
+            aria-expanded={openAccordion === 'shipping'}
+            aria-controls="product-shipping-panel"
             onClick={() => setOpenAccordion(openAccordion === 'shipping' ? null : 'shipping')}
-            className="w-full p-4 flex items-center justify-between text-left transition-colors cursor-pointer"
+            className={`w-full p-4 rounded-2xl flex items-center justify-between gap-3 text-left transition-all duration-200 cursor-pointer ${
+              openAccordion === 'shipping' ? 'neu-pill-active' : 'neu-button'
+            }`}
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full neu-button flex items-center justify-center text-[#2D3A4E]">
-                <Truck className="w-5 h-5" />
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-accent shrink-0">
+                <Truck className="w-5 h-5 shrink-0" aria-hidden="true" />
               </div>
-              <div>
-                <p className="text-sm font-bold text-[#2D3A4E]">Доставка</p>
-                <p className="text-xs text-[#4E5C70]">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-text-primary">Доставка</p>
+                <p className="text-xs text-text-secondary leading-snug">
                   {freeDelivery
                     ? `Бесплатная доставка от ${freeDelivery.threshold.toLocaleString('ru-RU')} ₽${
                         freeDeliveryMethodsText(freeDelivery) ? `: ${freeDeliveryMethodsText(freeDelivery)}` : ''
@@ -1123,61 +1273,81 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 </p>
               </div>
             </div>
-            <ChevronRight
-              className={`w-4 h-4 text-[#4E5C70] transition-transform duration-200 ${
-                openAccordion === 'shipping' ? 'rotate-90' : ''
+            <div
+              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 ${
+                openAccordion === 'shipping' ? 'neu-fill-accent text-white rotate-90' : 'neu-inset text-accent'
               }`}
-            />
+            >
+              <ChevronRight aria-hidden="true" className="w-4 h-4 shrink-0" />
+            </div>
           </button>
           {openAccordion === 'shipping' && (
-            <div className="px-4 pb-4 pt-1 text-xs text-[#4E5C70] leading-relaxed border-t border-[#BAC5D5]/40">
+            <div
+              id="product-shipping-panel"
+              className="neu-inset rounded-2xl p-4 text-xs text-text-secondary leading-relaxed"
+            >
               Способы доставки, сроки и стоимость для вашего адреса видны при оформлении заказа.
             </div>
           )}
         </div>
 
         {/* Fit Advisor Card */}
-        <div className="neu-flat rounded-2xl overflow-hidden border border-white/60">
+        <div>
           <button
+            type="button"
             onClick={() => setIsSizeCalcOpen(true)}
-            className="w-full p-4 flex items-center justify-between text-left transition-colors group active:scale-[0.99] cursor-pointer"
+            className="w-full p-4 rounded-2xl neu-button flex items-center justify-between gap-3 text-left transition-all duration-200 group cursor-pointer"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full neu-button flex items-center justify-center text-accent group-hover:scale-105 transition-transform">
-                <Sparkles className="w-5 h-5 text-accent" />
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-accent shrink-0 group-hover:scale-105 transition-transform">
+                <Sparkles className="w-5 h-5 text-accent shrink-0" aria-hidden="true" />
               </div>
-              <div>
-                <p className="text-sm font-bold text-[#2D3A4E]">Подбор размера</p>
-                <p className="text-xs text-[#4E5C70]">Персональный расчет по весу и росту</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-text-primary">Подбор размера</p>
+                <p className="text-xs text-text-secondary leading-snug">Персональный расчет по весу и росту</p>
               </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-[#4E5C70] group-hover:translate-x-0.5 transition-transform" />
+            <div className="w-8 h-8 rounded-xl neu-inset flex items-center justify-center text-accent shrink-0 group-hover:translate-x-0.5 transition-transform">
+              <ChevronRight aria-hidden="true" className="w-4 h-4 shrink-0" />
+            </div>
           </button>
         </div>
 
         {/* Returns Accordion */}
-        <div className="neu-flat rounded-2xl overflow-hidden border border-white/60">
+        <div className="space-y-2">
           <button
+            type="button"
+            aria-expanded={openAccordion === 'returns'}
+            aria-controls="product-returns-panel"
             onClick={() => setOpenAccordion(openAccordion === 'returns' ? null : 'returns')}
-            className="w-full p-4 flex items-center justify-between text-left transition-colors cursor-pointer"
+            className={`w-full p-4 rounded-2xl flex items-center justify-between gap-3 text-left transition-all duration-200 cursor-pointer ${
+              openAccordion === 'returns' ? 'neu-pill-active' : 'neu-button'
+            }`}
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full neu-button flex items-center justify-center text-[#2D3A4E]">
-                <RotateCcw className="w-5 h-5" />
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-accent shrink-0">
+                <RotateCcw className="w-5 h-5 shrink-0" aria-hidden="true" />
               </div>
-              <div>
-                <p className="text-sm font-bold text-[#2D3A4E]">Возврат</p>
-                <p className="text-xs text-[#4E5C70]">{returnPeriodDays ? `${formatDays(returnPeriodDays)} на возврат` : 'Как вернуть товар'}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-text-primary">Возврат</p>
+                <p className="text-xs text-text-secondary leading-snug">
+                  {returnPeriodDays ? `${formatDays(returnPeriodDays)} на возврат` : 'Как вернуть товар'}
+                </p>
               </div>
             </div>
-            <ChevronRight
-              className={`w-4 h-4 text-[#4E5C70] transition-transform duration-200 ${
-                openAccordion === 'returns' ? 'rotate-90' : ''
+            <div
+              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 ${
+                openAccordion === 'returns' ? 'neu-fill-accent text-white rotate-90' : 'neu-inset text-accent'
               }`}
-            />
+            >
+              <ChevronRight aria-hidden="true" className="w-4 h-4 shrink-0" />
+            </div>
           </button>
           {openAccordion === 'returns' && (
-            <div className="px-4 pb-4 pt-1 text-xs text-[#4E5C70] leading-relaxed border-t border-[#BAC5D5]/40">
+            <div
+              id="product-returns-panel"
+              className="neu-inset rounded-2xl p-4 text-xs text-text-secondary leading-relaxed"
+            >
               {returnPeriodDays
                 ? `Возврат в течение ${formatDays(returnPeriodDays)} с момента получения при сохранении товарного вида и ярлыков. `
                 : ''}
@@ -1221,9 +1391,11 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
         <div className="lg:hidden fixed inset-x-0 bottom-[78px] z-30 px-3 pointer-events-none">
           <div className="max-w-md md:max-w-lg mx-auto neu-flat rounded-2xl p-2 flex items-center gap-3 pointer-events-auto">
             <div className="min-w-0 pl-1.5">
-              <p className="text-base font-extrabold text-[#2D3A4E] leading-tight whitespace-nowrap">
+              <p className="text-base font-extrabold text-text-primary leading-tight whitespace-nowrap">
                 {(packMode
                   ? activePackPrice ?? 0
+                  : brokenMode && brokenPackOffer
+                  ? brokenPackOffer.unitPrice
                   : wholesaleMode && offer
                   ? offer.packSize > 1
                     ? offer.packPrice
@@ -1232,13 +1404,15 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
                 ).toLocaleString('ru-RU')}{' '}
                 ₽
                 {packMode ? (
-                  <span className="text-xs font-bold text-[#4E5C70]">/уп.</span>
+                  <span className="text-xs font-bold text-text-secondary">/уп.</span>
+                ) : brokenMode ? (
+                  <span className="text-xs font-bold text-text-secondary">/шт.</span>
                 ) : (
                   wholesaleMode &&
-                  offer && <span className="text-xs font-bold text-[#4E5C70]">{offer.packSize > 1 ? '/уп.' : '/шт.'}</span>
+                  offer && <span className="text-xs font-bold text-text-secondary">{offer.packSize > 1 ? '/уп.' : '/шт.'}</span>
                 )}
               </p>
-              <p className="text-xs text-[#4E5C70] leading-tight">
+              <p className="text-xs text-text-secondary leading-tight">
                 {packMode
                   ? activePack
                     ? sizePackTitle(activePack)
@@ -1274,6 +1448,7 @@ export const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({
           quantity,
         }}
         totalPrice={product.price * quantity}
+        userProfile={userProfile}
         ordersPaused={ordersPaused}
         onSuccess={handleQuickOrderSuccess}
       />

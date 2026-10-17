@@ -15,9 +15,18 @@ import {
 } from 'lucide-react';
 import { Order, CartItem, Product, OrderAdjustmentLog, PromoCode } from '../../types';
 import { adjustedOrderTotals, refundedLinesText, variantStockDiff } from '../../utils/orderAdjustment';
-import { groupOrderLines, isPackLine, packGroupCompositionText, removePackGroup, setPackGroupCount } from '../../shared/packLines';
+import {
+  groupOrderLines,
+  isPackLine,
+  packGroupCompositionText,
+  removePackGroup,
+  setPackGroupCount,
+  unpackOrderGroup,
+  unpackUnitPrice,
+  type OrderLineGroup,
+} from '../../shared/packLines';
 import { NeumorphicSwitch } from '../NeumorphicSwitch';
-import { motion, AnimatePresence } from 'motion/react';
+import { m, AnimatePresence } from 'motion/react';
 import { NeumorphicSelect } from '../NeumorphicSelect';
 import {
   extractColorName,
@@ -29,7 +38,8 @@ import { ConfirmDialog } from '../ConfirmDialog';
 import { applyAdminStockChanges, type AdminStockChange } from '../../utils/firebaseSync';
 import { adminStatusLabel, isCarrierOrder } from '../../utils/orderFlow';
 import { OrderLineThumbImage } from '../ProductThumbImage';
-import { toOrderLineProduct, linePrice, orderProductIds } from '../../shared/orderLine';
+import { toOrderLineProduct, linePrice, orderProductIds, isWholesaleLine } from '../../shared/orderLine';
+import { WholesaleMark } from '../WholesaleMark';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { sameValue, useUnsavedChanges } from '../../utils/unsavedChanges';
 import { DiscardChangesDialog, useDiscardGuard } from '../DiscardChangesDialog';
@@ -42,6 +52,8 @@ interface AdminOrderAdjustmentModalProps {
   onSaveAdjustment: (updatedOrder: Order, adjustmentLog: OrderAdjustmentLog | null) => void;
   /** Promo codes: tells a percent code of the order (it keeps the order's own percent) from a fixed one */
   promos?: PromoCode[];
+  /** Optional packGroup to immediately prompt for «Разобрать упаковку» when opened from the order card */
+  initialUnpackGroup?: string | null;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
@@ -61,6 +73,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
   onClose,
   onSaveAdjustment,
   promos = [],
+  initialUnpackGroup = null,
   onShowToast,
 }) => {
   const [items, setItems] = useState<CartItem[]>(() =>
@@ -97,18 +110,26 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
   // Sync items and tracking number when order prop changes
   useEffect(() => {
     if (order) {
-      if (order.items) {
-        setItems(
-          order.items.map((it) => ({
+      const cloned = order.items
+        ? order.items.map((it) => ({
             ...it,
             product: { ...it.product },
           }))
-        );
-      }
+        : [];
+      setItems(cloned);
       setTrackingNumber(order.trackingNumber || '');
       setRefundDelivery(false);
+      if (initialUnpackGroup) {
+        const targetGroup = groupOrderLines(cloned).find(
+          (g): g is Extract<OrderLineGroup, { kind: 'pack' }> =>
+            g.kind === 'pack' && g.packGroup === initialUnpackGroup
+        );
+        setPendingUnpack(targetGroup ?? null);
+      } else {
+        setPendingUnpack(null);
+      }
     }
-  }, [order]);
+  }, [order, initialUnpackGroup]);
 
   // Update color/size options when chosen product changes
   useEffect(() => {
@@ -200,6 +221,21 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
     const first = items.find((it) => it.packGroup === packGroup);
     setItems((prev) => removePackGroup(prev, packGroup));
     if (first) onShowToast(`Ростовка «${first.packTitle || first.product.title}» удалена из заказа`, 'info');
+  };
+
+  /** Pack group chosen for «Разобрать упаковку» (`broken-pack`, stage 19 follow-up) */
+  const [pendingUnpack, setPendingUnpack] = useState<Extract<OrderLineGroup, { kind: 'pack' }> | null>(null);
+
+  const handleConfirmUnpack = () => {
+    if (!pendingUnpack) return;
+    const catalogProduct = products.find((p) => p.id === pendingUnpack.item.product.id);
+    const unitPrice = unpackUnitPrice(pendingUnpack, catalogProduct);
+    setItems((prev) => unpackOrderGroup(prev, pendingUnpack.packGroup, catalogProduct));
+    onShowToast(
+      `Ростовка «${pendingUnpack.title}» разобрана по размерам (${unitPrice.toLocaleString('ru-RU')} ₽/шт.)`,
+      'info'
+    );
+    setPendingUnpack(null);
   };
 
   /** Added goods that are not in stock: the admin sees the list and decides (audit 02.10, finding 6) */
@@ -327,7 +363,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
     <>
     <AnimatePresence>
       {isOpen && order && (
-        <motion.div
+        <m.div
           key="order-adj-overlay"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -338,10 +374,10 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
           {/* Backdrop */}
           <div
             onClick={guard.requestClose}
-            className="fixed inset-0 bg-[#2D3A4E]/50 backdrop-blur-xs cursor-pointer"
+            className="fixed inset-0 bg-text-primary/50 backdrop-blur-xs cursor-pointer"
           />
 
-          <motion.div
+          <m.div
             ref={dialog.ref}
             {...dialog.props}
             key="order-adj-modal"
@@ -349,24 +385,24 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.93, opacity: 0, y: 12 }}
             transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-            className="neu-modal rounded-3xl p-4 sm:p-6 max-w-2xl w-full text-[#2D3A4E] space-y-4 my-auto relative border border-white/80 max-h-[90vh] overflow-y-auto no-scrollbar z-10"
+            className="neu-modal rounded-3xl p-4 sm:p-6 max-w-2xl w-full text-text-primary space-y-4 my-auto relative max-h-[90vh] overflow-y-auto no-scrollbar z-10"
           >
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 border-b border-[#BAC5D5]/50 pb-3">
+        <div className="flex items-start justify-between gap-3 neu-divider-b pb-3">
           <div className="flex items-start gap-3 min-w-0">
             <div className="w-10 h-10 rounded-2xl neu-flat-sm flex items-center justify-center text-accent shrink-0 mt-0.5">
               <RefreshCw className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 id={dialog.titleId} className="text-base font-extrabold text-[#2D3A4E] leading-tight">
+                <h3 id={dialog.titleId} className="text-base font-extrabold text-text-primary leading-tight">
                   Корректировка состава заказа
                 </h3>
                 <span className="text-xs font-mono font-extrabold neu-inset px-2.5 py-0.5 rounded-lg text-accent shrink-0">
                   № {order.id}
                 </span>
               </div>
-              <p className="text-xs text-[#4E5C70] font-medium leading-relaxed mt-1">
+              <p className="text-xs text-text-secondary font-medium leading-relaxed mt-1">
                 Частичный возврат позиций и изменение комплектации до отправки клиенту
               </p>
             </div>
@@ -374,7 +410,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
           <button
             type="button"
             onClick={guard.requestClose}
-            className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer shrink-0"
+            className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer shrink-0"
             aria-label="Закрыть"
           >
             <X className="w-4 h-4" />
@@ -384,30 +420,30 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
         {/* Customer & Status Bar */}
         <div className="neu-inset rounded-2xl p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
           <div className="flex items-center gap-2">
-            <span className="text-[#4E5C70] font-bold shrink-0">Статус заказа:</span>
+            <span className="text-text-secondary font-bold shrink-0">Статус заказа:</span>
             <span className="neu-flat px-2.5 py-1 rounded-lg font-extrabold text-accent">
               {adminStatusLabel(order)}
             </span>
           </div>
-          <div className="flex items-center gap-2 text-[#4E5C70] min-w-0">
+          <div className="flex items-center gap-2 text-text-secondary min-w-0">
             <span className="font-bold shrink-0">Адрес:</span>
-            <span className="font-semibold text-[#2D3A4E] truncate" title={order.deliveryAddress}>
+            <span className="font-semibold text-text-primary truncate" title={order.deliveryAddress}>
               {order.deliveryAddress || 'Самовывоз / Не указан'}
             </span>
           </div>
         </div>
 
         {/* Items In Order Table / List */}
-        <div className="neu-flat rounded-2xl p-4 sm:p-5 space-y-3 border border-white/60">
+        <div className="neu-flat rounded-2xl p-4 sm:p-5 space-y-3 ">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-extrabold uppercase text-[#2D3A4E] tracking-wider flex items-center gap-1.5">
+            <label className="text-xs font-extrabold uppercase text-text-primary tracking-wider flex items-center gap-1.5">
               <Package className="w-3.5 h-3.5 text-accent" />
               Состав позиций в заказе ({items.length})
             </label>
             <button
               type="button"
               onClick={() => setIsAddingItem(!isAddingItem)}
-              className="py-1.5 px-3 neu-button rounded-xl text-xs font-extrabold text-accent flex items-center gap-1.5 hover:scale-105 transition-transform cursor-pointer whitespace-nowrap"
+              className="py-1.5 min-h-8 px-3 neu-button rounded-xl text-xs font-extrabold text-accent flex items-center gap-1.5 hover:scale-105 transition-transform cursor-pointer whitespace-nowrap"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Добавить товар</span>
@@ -416,8 +452,8 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
 
           {/* Add New Item Panel */}
           {isAddingItem && (
-            <div className="neu-flat rounded-2xl p-3.5 border border-accent/30 space-y-3 animate-in fade-in duration-150">
-              <div className="flex items-center justify-between border-b border-[#BAC5D5]/40 pb-2">
+            <div className="neu-flat rounded-2xl p-3.5 space-y-3 animate-in fade-in duration-150">
+              <div className="flex items-center justify-between neu-divider-b pb-2">
                 <span className="text-xs font-extrabold text-accent flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5" />
                   Выбор товара для добавления
@@ -425,7 +461,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                 <button
                   type="button"
                   onClick={() => setIsAddingItem(false)}
-                  className="text-xs text-[#4E5C70] hover:text-[#2D3A4E] font-bold"
+                  className="min-h-8 inline-flex items-center px-2 text-xs text-text-secondary hover:text-text-primary font-bold cursor-pointer"
                 >
                   Закрыть
                 </button>
@@ -434,7 +470,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 text-xs">
                 {/* Select Product */}
                 <div className="sm:col-span-6">
-                  <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">Товар</label>
+                  <label className="text-[11px] font-bold text-text-secondary block mb-1">Товар</label>
                   <NeumorphicSelect
                     ariaLabel="Товар"
                     value={selectedProductId}
@@ -449,7 +485,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
 
                 {/* Select Color */}
                 <div className="sm:col-span-3">
-                  <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">Цвет</label>
+                  <label className="text-[11px] font-bold text-text-secondary block mb-1">Цвет</label>
                   <NeumorphicSelect
                     ariaLabel="Цвет"
                     value={selectedColor}
@@ -463,7 +499,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
 
                 {/* Select Size */}
                 <div className="sm:col-span-3">
-                  <label className="text-[11px] font-bold text-[#4E5C70] block mb-1">Размер</label>
+                  <label className="text-[11px] font-bold text-text-secondary block mb-1">Размер</label>
                   <NeumorphicSelect
                     ariaLabel="Размер"
                     value={selectedSize}
@@ -478,20 +514,20 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
 
               <div className="flex items-center justify-between pt-1 flex-wrap gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-[#4E5C70]">Количество:</span>
+                  <span className="text-xs font-bold text-text-secondary">Количество:</span>
                   <div className="flex items-center gap-1 neu-inset rounded-xl p-1">
                     <button
                       type="button"
                       onClick={() => setAddQuantity(Math.max(1, addQuantity - 1))}
-                      className="w-6 h-6 neu-button rounded-lg flex items-center justify-center text-xs font-bold text-[#4E5C70]"
+                      className="w-8 h-8 neu-button rounded-lg flex items-center justify-center text-xs font-bold text-text-secondary"
                     >
                       -
                     </button>
-                    <span className="w-6 text-center font-extrabold text-xs text-[#2D3A4E]">{addQuantity}</span>
+                    <span className="w-6 text-center font-extrabold text-xs text-text-primary">{addQuantity}</span>
                     <button
                       type="button"
                       onClick={() => setAddQuantity(addQuantity + 1)}
-                      className="w-6 h-6 neu-button rounded-lg flex items-center justify-center text-xs font-bold text-[#4E5C70]"
+                      className="w-8 h-8 neu-button rounded-lg flex items-center justify-center text-xs font-bold text-text-secondary"
                     >
                       +
                     </button>
@@ -513,7 +549,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
           {/* List of current items in this order */}
           <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1 no-scrollbar">
             {items.length === 0 ? (
-              <div className="neu-inset rounded-2xl p-4 text-center text-xs text-[#4E5C70]">
+              <div className="neu-inset rounded-2xl p-4 text-center text-xs text-text-secondary">
                 В заказе не осталось позиций. Заказ будет аннулирован или оформлен полный возврат.
               </div>
             ) : (
@@ -523,7 +559,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                   return (
                     <div
                       key={group.packGroup}
-                      className="neu-flat rounded-2xl p-3 sm:p-3.5 space-y-2.5 border border-white/70"
+                      className="neu-flat rounded-2xl p-3 sm:p-3.5 space-y-2.5 "
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -534,18 +570,18 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                             className="w-12 h-12 rounded-xl object-cover shrink-0 neu-inset"
                           />
                           <div className="min-w-0 flex-1 space-y-1">
-                            <p className="text-xs sm:text-sm font-extrabold text-[#2D3A4E] leading-snug">
+                            <p className="text-xs sm:text-sm font-extrabold text-text-primary leading-snug">
                               {group.item.product.title}
                             </p>
                             <div className="flex items-center gap-2 flex-wrap text-xs">
-                              <span className="neu-inset px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E]">
+                              <span className="neu-inset px-2 py-0.5 rounded-lg text-[11px] font-bold text-text-primary">
                                 {group.item.selectedColor}
                               </span>
                               <span className="neu-flat px-2 py-0.5 rounded-lg text-[11px] font-extrabold text-accent">
                                 {group.title}
                               </span>
                             </div>
-                            <p className="text-[11px] text-[#4E5C70] font-medium">
+                            <p className="text-[11px] text-text-secondary font-medium">
                               {packGroupCompositionText(group.sizes)} · только целой упаковкой
                             </p>
                           </div>
@@ -560,35 +596,46 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
-                      <div className="flex items-center justify-between border-t border-[#BAC5D5]/40 pt-2 flex-wrap gap-2">
+                      <div className="flex items-center justify-between neu-divider-t pt-2 flex-wrap gap-2">
                         <div className="flex items-baseline gap-2">
-                          <span className="text-xs font-extrabold text-[#2D3A4E]">
+                          <span className="text-xs font-extrabold text-text-primary">
                             {group.total.toLocaleString('ru-RU')} ₽
                           </span>
-                          <span className="text-[11px] text-[#4E5C70] font-medium">
+                          <span className="text-[11px] text-text-secondary font-medium">
                             ({group.packPrice.toLocaleString('ru-RU')} ₽/уп.)
                           </span>
                         </div>
-                        <div className="flex items-center gap-1 neu-inset rounded-xl p-1">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <button
                             type="button"
-                            onClick={() => handlePackCount(group.packGroup, group.packCount - 1)}
-                            className="w-7 h-7 rounded-lg neu-button flex items-center justify-center text-xs font-extrabold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
-                            aria-label={`Уменьшить число упаковок: ${packName}`}
+                            onClick={() => setPendingUnpack(group)}
+                            className="h-8 px-2.5 rounded-xl neu-button text-[11px] font-extrabold text-accent hover:text-text-primary cursor-pointer whitespace-nowrap"
+                            title="Перевести ростовку в штучные строки по размерам"
+                            aria-label={`Разобрать упаковку: ${packName}`}
                           >
-                            <Minus className="w-3 h-3" />
+                            Разобрать упаковку
                           </button>
-                          <span className="min-w-12 px-1 text-center text-xs font-extrabold text-[#2D3A4E]">
-                            {group.packCount} уп.
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handlePackCount(group.packGroup, group.packCount + 1)}
-                            className="w-7 h-7 rounded-lg neu-button flex items-center justify-center text-xs font-extrabold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
-                            aria-label={`Увеличить число упаковок: ${packName}`}
-                          >
-                            <Plus className="w-3 h-3" />
-                          </button>
+                          <div className="flex items-center gap-1 neu-inset rounded-xl p-1">
+                            <button
+                              type="button"
+                              onClick={() => handlePackCount(group.packGroup, group.packCount - 1)}
+                              className="w-8 h-8 rounded-lg neu-button flex items-center justify-center text-xs font-extrabold text-text-secondary hover:text-text-primary cursor-pointer"
+                              aria-label={`Уменьшить число упаковок: ${packName}`}
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <span className="min-w-12 px-1 text-center text-xs font-extrabold text-text-primary">
+                              {group.packCount} уп.
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handlePackCount(group.packGroup, group.packCount + 1)}
+                              className="w-8 h-8 rounded-lg neu-button flex items-center justify-center text-xs font-extrabold text-text-secondary hover:text-text-primary cursor-pointer"
+                              aria-label={`Увеличить число упаковок: ${packName}`}
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -599,7 +646,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                 return (
                   <div
                     key={item.id || idx}
-                    className="neu-flat rounded-2xl p-3 sm:p-3.5 space-y-2.5 border border-white/70"
+                    className="neu-flat rounded-2xl p-3 sm:p-3.5 space-y-2.5 "
                   >
                     {/* Top Row: Thumbnail + Title & Tags + Remove Button */}
                     <div className="flex items-start justify-between gap-3">
@@ -611,16 +658,17 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                           className="w-12 h-12 rounded-xl object-cover shrink-0 neu-inset"
                         />
                         <div className="min-w-0 flex-1 space-y-1">
-                          <p className="text-xs sm:text-sm font-extrabold text-[#2D3A4E] leading-snug">
+                          <p className="text-xs sm:text-sm font-extrabold text-text-primary leading-snug">
                             {item.product.title}
                           </p>
                           <div className="flex items-center gap-2 flex-wrap text-xs">
-                            <span className="neu-inset px-2 py-0.5 rounded-lg text-[11px] font-bold text-[#2D3A4E]">
+                            <span className="neu-inset px-2 py-0.5 rounded-lg text-[11px] font-bold text-text-primary">
                               {item.selectedColor}
                             </span>
                             <span className="neu-flat px-2 py-0.5 rounded-lg text-[11px] font-extrabold text-accent">
                               {item.selectedSize}
                             </span>
+                            {isWholesaleLine(item) && <WholesaleMark />}
                           </div>
                         </div>
                       </div>
@@ -638,12 +686,12 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                     </div>
 
                     {/* Bottom Row: Price per piece & Total + Quantity Stepper */}
-                    <div className="flex items-center justify-between border-t border-[#BAC5D5]/40 pt-2 flex-wrap gap-2">
+                    <div className="flex items-center justify-between neu-divider-t pt-2 flex-wrap gap-2">
                       <div className="flex items-baseline gap-2">
-                        <span className="text-xs font-extrabold text-[#2D3A4E]">
+                        <span className="text-xs font-extrabold text-text-primary">
                           {itemTotal.toLocaleString('ru-RU')} ₽
                         </span>
-                        <span className="text-[11px] text-[#4E5C70] font-medium">
+                        <span className="text-[11px] text-text-secondary font-medium">
                           ({linePrice(item).toLocaleString('ru-RU')} ₽/шт.)
                         </span>
                       </div>
@@ -653,19 +701,19 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                         <button
                           type="button"
                           onClick={() => handleUpdateQuantity(idx, item.quantity - 1)}
-                          className="w-7 h-7 rounded-lg neu-button flex items-center justify-center text-xs font-extrabold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                          className="w-8 h-8 rounded-lg neu-button flex items-center justify-center text-xs font-extrabold text-text-secondary hover:text-text-primary cursor-pointer"
                           title="Уменьшить"
                           aria-label="Уменьшить"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="w-8 text-center text-xs font-extrabold text-[#2D3A4E]">
+                        <span className="w-8 text-center text-xs font-extrabold text-text-primary">
                           {item.quantity}
                         </span>
                         <button
                           type="button"
                           onClick={() => handleUpdateQuantity(idx, item.quantity + 1)}
-                          className="w-7 h-7 rounded-lg neu-button flex items-center justify-center text-xs font-extrabold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                          className="w-8 h-8 rounded-lg neu-button flex items-center justify-center text-xs font-extrabold text-text-secondary hover:text-text-primary cursor-pointer"
                           title="Увеличить"
                           aria-label="Увеличить"
                         >
@@ -681,8 +729,8 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
         </div>
 
         {/* Reason for Modification */}
-        <div className="neu-flat rounded-2xl p-4 sm:p-5 space-y-3 border border-white/60">
-          <label className="text-xs font-extrabold uppercase text-[#2D3A4E] tracking-wider flex items-center gap-1.5">
+        <div className="neu-flat rounded-2xl p-4 sm:p-5 space-y-3 ">
+          <label className="text-xs font-extrabold uppercase text-text-primary tracking-wider flex items-center gap-1.5">
             <UserCheck className="w-3.5 h-3.5 text-accent" />
             Причина корректировки / возврата *
           </label>
@@ -701,7 +749,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
             placeholder="Дополнительное примечание для менеджеров и клиента (необязательно)..."
             value={customNote}
             onChange={(e) => setCustomNote(e.target.value)}
-            className="w-full px-3 py-2.5 neu-inset rounded-xl text-xs text-[#2D3A4E] placeholder:text-[#56647A]"
+            className="w-full px-3 py-2.5 neu-inset rounded-xl text-xs text-text-primary placeholder:text-text-muted"
           />
         </div>
 
@@ -717,12 +765,12 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
               : 'курьерская служба';
 
             return (
-              <div className="neu-flat rounded-2xl p-4 sm:p-5 space-y-2 border border-white/60">
-                <label className="text-xs font-extrabold uppercase text-[#2D3A4E] tracking-wider flex items-center gap-1.5">
+              <div className="neu-flat rounded-2xl p-4 sm:p-5 space-y-2 ">
+                <label className="text-xs font-extrabold uppercase text-text-primary tracking-wider flex items-center gap-1.5">
                   <Truck className="w-3.5 h-3.5 text-accent" />
                   Трек-номер отправления
                 </label>
-                <div className="neu-inset rounded-xl p-3 text-[11px] text-[#4E5C70] leading-relaxed">
+                <div className="neu-inset rounded-xl p-3 text-[11px] text-text-secondary leading-relaxed">
                   Для способа доставки <strong>«{order?.deliveryMethod || 'Курьерская служба / Самовывоз'}»</strong> ({methodTypeLabel}) трек-номер не предусмотрен и не присваивается. Генерация трекинга доступна исключительно для отправлений через транспортные компании (СДЭК, Почта России, Boxberry).
                 </div>
               </div>
@@ -730,9 +778,9 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
           }
 
           return (
-            <div className="neu-flat rounded-2xl p-4 sm:p-5 space-y-3 border border-white/60">
+            <div className="neu-flat rounded-2xl p-4 sm:p-5 space-y-3 ">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-extrabold uppercase text-[#2D3A4E] tracking-wider flex items-center gap-1.5">
+                <label className="text-xs font-extrabold uppercase text-text-primary tracking-wider flex items-center gap-1.5">
                   <Truck className="w-3.5 h-3.5 text-accent" />
                   Трек-номер отправления (ТК)
                 </label>
@@ -754,13 +802,13 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
                     placeholder="Трек-номер от службы доставки"
                     value={trackingNumber}
                     onChange={(e) => setTrackingNumber(e.target.value)}
-                    className="w-full pl-3 pr-8 py-2.5 neu-inset rounded-xl text-xs font-mono font-bold text-[#2D3A4E] placeholder:text-[#56647A] placeholder:font-sans"
+                    className="w-full pl-3 pr-8 py-2.5 neu-inset rounded-xl text-xs font-mono font-bold text-text-primary placeholder:text-text-muted placeholder:font-sans"
                   />
                   {trackingNumber && (
                     <button
                       type="button"
                       onClick={() => setTrackingNumber('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 inline-flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary cursor-pointer"
                       title="Очистить трек-номер"
                       aria-label="Очистить трек-номер"
                     >
@@ -773,14 +821,14 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
 
               {/* Dynamic Preview Notice for Admin */}
               {trackingNumber.trim() ? (
-                <div className="neu-inset rounded-xl p-2.5 text-[11px] text-[#2D3A4E] flex items-center gap-2">
+                <div className="neu-inset rounded-xl p-2.5 text-[11px] text-text-primary flex items-center gap-2">
                   <Check className="w-3.5 h-3.5 text-success shrink-0" />
                   <span>
                     Клиент увидит трек-номер <strong className="font-mono text-accent">{trackingNumber.trim()}</strong> для отслеживания в транспортной компании.
                   </span>
                 </div>
               ) : (
-                <div className="neu-inset rounded-xl p-2.5 border border-warning/70 text-[11px] text-warning flex items-center gap-2">
+                <div className="neu-tone-warning rounded-xl p-2.5 text-[11px] text-warning flex items-center gap-2">
                   <AlertCircle className="w-3.5 h-3.5 text-warning shrink-0" />
                   <span>
                     Пока трек-номер не указан, у клиента в личном кабинете будет отображаться сообщение: <em>«Трек-номер формируется транспортной компанией»</em>.
@@ -792,29 +840,29 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
         })()}
 
         {/* Financial Recalculation & Refund Banner */}
-        <div className="neu-flat rounded-2xl p-4 space-y-2.5 border border-white/80">
-          <div className="flex items-center justify-between text-xs font-bold text-[#4E5C70]">
+        <div className="neu-flat rounded-2xl p-4 space-y-2.5 ">
+          <div className="flex items-center justify-between text-xs font-bold text-text-secondary">
             <span>{changed ? 'Было:' : 'Сумма заказа:'}</span>
-            <span className={`font-bold text-[#2D3A4E] ${changed ? 'line-through' : ''}`}>
+            <span className={`font-bold text-text-primary ${changed ? 'line-through' : ''}`}>
               {initialTotal.toLocaleString('ru-RU')} ₽
             </span>
           </div>
 
           {newTotals && (
-            <dl className="text-xs text-[#4E5C70] space-y-1">
+            <dl className="text-xs text-text-secondary space-y-1">
               <div className="flex items-center justify-between">
                 <dt>Товары</dt>
-                <dd className="font-bold text-[#2D3A4E]">{newTotals.subtotal.toLocaleString('ru-RU')} ₽</dd>
+                <dd className="font-bold text-text-primary">{newTotals.subtotal.toLocaleString('ru-RU')} ₽</dd>
               </div>
               {newTotals.discount > 0 && (
                 <div className="flex items-center justify-between">
                   <dt>Скидка{order?.promoCode ? ` (${order.promoCode})` : ''}</dt>
-                  <dd className="font-bold text-[#2D3A4E]">−{newTotals.discount.toLocaleString('ru-RU')} ₽</dd>
+                  <dd className="font-bold text-text-primary">−{newTotals.discount.toLocaleString('ru-RU')} ₽</dd>
                 </div>
               )}
               <div className="flex items-center justify-between">
                 <dt>Доставка</dt>
-                <dd className="font-bold text-[#2D3A4E]">
+                <dd className="font-bold text-text-primary">
                   {deliveryRefund > 0
                     ? `возвращается ${deliveryRefund.toLocaleString('ru-RU')} ₽`
                     : newTotals.deliveryFee > 0
@@ -827,7 +875,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
 
           {canRefundDelivery && (
             <div className="flex items-center justify-between gap-3 text-xs">
-              <span id="adjustment-refund-delivery" className="font-bold text-[#2D3A4E]">
+              <span id="adjustment-refund-delivery" className="font-bold text-text-primary">
                 Вернуть и доставку ({paidDelivery.toLocaleString('ru-RU')} ₽)
               </span>
               <NeumorphicSwitch
@@ -838,7 +886,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
             </div>
           )}
 
-          <div className="flex items-center justify-between text-sm font-extrabold text-[#2D3A4E]">
+          <div className="flex items-center justify-between text-sm font-extrabold text-text-primary">
             <span>{changed ? 'Станет:' : 'Итого:'}</span>
             <span className="text-accent font-extrabold text-base">
               {newItemsTotal.toLocaleString('ru-RU')} ₽
@@ -847,7 +895,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
 
           {/* Refund Notice */}
           {isRefund && (
-            <div className="neu-inset rounded-2xl p-3 border border-success/70 text-xs text-success flex items-center justify-between gap-3">
+            <div className="neu-tone-success rounded-2xl p-3 text-xs text-success flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <CreditCard className="w-4 h-4 text-success shrink-0" />
                 <div>
@@ -866,7 +914,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
           )}
 
           {isExtraCharge && (
-            <div className="neu-inset rounded-2xl p-3 border border-warning/70 text-xs text-warning flex items-center justify-between gap-3">
+            <div className="neu-tone-warning rounded-2xl p-3 text-xs text-warning flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <AlertCircle className="w-4 h-4 text-warning shrink-0" />
                 <div>
@@ -886,11 +934,11 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
         </div>
 
         {/* Modal Actions */}
-        <div className="pt-2 border-t border-[#BAC5D5]/50 flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5">
+        <div className="pt-2 neu-divider-t flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5">
           <button
             type="button"
             onClick={guard.requestClose}
-            className="w-full sm:w-auto h-10 sm:h-11 px-4 sm:px-5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer text-center transition-all"
+            className="w-full sm:w-auto h-10 sm:h-11 px-4 sm:px-5 neu-button rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary cursor-pointer text-center transition-all"
           >
             Отмена
           </button>
@@ -909,8 +957,8 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
             </span>
           </button>
         </div>
-      </motion.div>
-    </motion.div>
+      </m.div>
+    </m.div>
   )}
 </AnimatePresence>
 <DiscardChangesDialog {...guard.dialogProps} what="Изменения заказа" />
@@ -923,7 +971,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
   confirmIcon={<Check className="w-4 h-4" />}
   message="Остаток этих вариантов уйдёт в ноль, недостающее придётся заказать у поставщика."
   preview={
-    <ul className="text-xs text-[#2D3A4E] space-y-0.5">
+    <ul className="text-xs text-text-primary space-y-0.5">
       {(pendingShortages ?? []).map((s) => (
         <li key={`${s.productTitle}-${s.color}-${s.size}`}>
           {s.productTitle} ({s.color}, {s.size}): нужно {s.needed}, на складе {s.inStock}
@@ -936,6 +984,36 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
     handleConfirmAdjustment(true);
   }}
   onClose={() => setPendingShortages(null)}
+/>
+<ConfirmDialog
+  isOpen={pendingUnpack !== null}
+  title="Разобрать упаковку по размерам?"
+  tone="neutral"
+  confirmLabel="Разобрать упаковку"
+  cancelLabel="Оставить упаковкой"
+  confirmIcon={<Check className="w-4 h-4" />}
+  message={
+    pendingUnpack
+      ? `Ростовка станет отдельными строками по размерам по цене ${unpackUnitPrice(
+          pendingUnpack,
+          products.find((p) => p.id === pendingUnpack.item.product.id)
+        ).toLocaleString('ru-RU')} ₽/шт. После этого можно изменить количество или убрать отдельный размер.`
+      : ''
+  }
+  preview={
+    pendingUnpack ? (
+      <div className="text-xs text-text-primary space-y-0.5">
+        <p className="font-bold">
+          {pendingUnpack.item.product.title} — {pendingUnpack.title} ({pendingUnpack.item.selectedColor})
+        </p>
+        <p className="text-text-secondary">
+          {packGroupCompositionText(pendingUnpack.sizes)} · {pendingUnpack.packCount} уп. ({pendingUnpack.pieces} шт.)
+        </p>
+      </div>
+    ) : undefined
+  }
+  onConfirm={handleConfirmUnpack}
+  onClose={() => setPendingUnpack(null)}
 />
 </>
 );

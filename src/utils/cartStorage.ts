@@ -36,14 +36,17 @@ export function loadStoredCart(raw: string | null): CartItem[] {
       )
       // a line's own price is not taken from the browser: anyone can edit localStorage, and `linePrice` would put
       // that price into the order (docs/wholesale-spec.md — the cart recounts it from the catalog, `priceCartLines`).
+      // `addedPrice` stays only as a reference for the «Цена изменилась: было … ₽» notice in the cart.
       // Only the buyer's choice stays: «оптом», or a size pack — its id; the pack's price and composition stay only for
       // showing the cart before the product's document comes (`pricePackLine` takes them from the product; the checkout
       // and `placeOrder` count the order from the product, never from here)
-      .map(({ unitPrice: _unitPrice, priceKind, volumeDiscountPerUnit: _discount, packSize: _size, packUnavailable: _gone, ...item }) =>
-        priceKind === 'wholesale' || (priceKind === 'pack' && typeof item.packId === 'string')
-          ? { ...item, priceKind }
-          : stripPack(item)
-      );
+      .map(({ unitPrice: _unitPrice, priceKind, volumeDiscountPerUnit: _discount, packSize: _size, packUnavailable: _gone, addedPrice, ...item }) => {
+        const savedAddedPrice =
+          typeof addedPrice === 'number' && Number.isFinite(addedPrice) && addedPrice > 0 ? { addedPrice } : {};
+        return priceKind === 'wholesale' || priceKind === 'broken' || (priceKind === 'pack' && typeof item.packId === 'string')
+          ? { ...item, ...savedAddedPrice, priceKind }
+          : stripPack({ ...item, ...savedAddedPrice });
+      });
   } catch {
     return [];
   }

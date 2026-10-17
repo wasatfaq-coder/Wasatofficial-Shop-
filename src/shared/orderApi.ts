@@ -44,6 +44,8 @@ export interface PlaceOrderItem {
   quantity: number;
   /** The buyer chose the wholesale price (src/shared/wholesalePricing.ts); the server counts the price itself */
   wholesale?: boolean;
+  /** The buyer chose «Разбитая упаковка» (stage 13 of docs/broken-pack-plan.md); the server counts the price itself */
+  broken?: boolean;
   /**
    * A size pack (`product.sizePacks`, stage 20): `quantity` is packs, `size` is empty; the server takes the pack's sizes and
    * price from the product and orders a line per size (src/shared/packLines.ts)
@@ -52,6 +54,8 @@ export interface PlaceOrderItem {
 }
 
 export interface PlaceOrderRequest {
+  /** Optional client-generated idempotency order id (e.g. WS-12345678); when retried by the same user, returns the existing order */
+  orderId?: string;
   items: PlaceOrderItem[];
   deliveryMethodId: string;
   deliveryAddress: string;

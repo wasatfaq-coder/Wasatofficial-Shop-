@@ -15,7 +15,7 @@ export const AdminPaymentTab: React.FC<AdminPaymentTabProps> = ({ settings, onUp
   return (
   <div className="space-y-4">
   {noShownMethod && (
-    <p role="status" className="rounded-2xl p-3 text-xs font-bold text-[#2D3A4E] bg-warning-soft border border-warning/30">
+    <p role="status" className="rounded-2xl p-3 text-xs font-bold text-text-primary neu-tone-warning">
       Покупатели не смогут оформить заказ: нет ни одного показанного способа оплаты
     </p>
   )}
@@ -48,11 +48,11 @@ export const AdminPaymentTab: React.FC<AdminPaymentTabProps> = ({ settings, onUp
     visibleKey="isActive"
     renderSummary={(m) => (
       <div className="space-y-0.5">
-        <p className="text-xs font-extrabold text-[#2D3A4E] flex items-center gap-2 flex-wrap">
+        <p className="text-xs font-extrabold text-text-primary flex items-center gap-2 flex-wrap">
           {m.title}
-          {m.onDelivery && <span className="text-[11px] font-bold text-[#4E5C70]">при получении</span>}
+          {m.onDelivery && <span className="text-[11px] font-bold text-text-secondary">при получении</span>}
         </p>
-        <p className="text-xs text-[#4E5C70] line-clamp-2">{m.description || 'Инструкция: не настроено'}</p>
+        <p className="text-xs text-text-secondary line-clamp-2">{m.description || 'Инструкция: не настроено'}</p>
       </div>
     )}
     onSave={(paymentMethods) => onUpdateSettings?.({ ...settings, paymentMethods })}

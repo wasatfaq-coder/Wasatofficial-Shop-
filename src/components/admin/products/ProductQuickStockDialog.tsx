@@ -85,7 +85,7 @@ export function ProductQuickStockDialog({
   return (
     <ModalPortal>
       <div
-        className="admin-no-glow fixed inset-0 z-[80] bg-[#2D3A4E]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200"
+        className="admin-no-glow fixed inset-0 z-[80] bg-text-primary/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200"
         onClick={(e) => {
           if (e.target === e.currentTarget && !saving) guard.requestClose();
         }}
@@ -93,20 +93,20 @@ export function ProductQuickStockDialog({
         <div
           ref={dialog.ref}
           {...dialog.props}
-          className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-5 sm:p-6 max-w-md w-full space-y-3.5 text-[#2D3A4E] border border-white/80 my-auto"
+          className="neu-modal animate-in zoom-in-95 fade-in duration-200 rounded-3xl p-5 sm:p-6 max-w-md w-full space-y-3.5 text-text-primary my-auto"
         >
-          <div className="flex items-start justify-between gap-3 pb-2 border-b border-[#BAC5D5]/50">
+          <div className="flex items-start justify-between gap-3 pb-2 neu-divider-b">
             <div className="min-w-0">
-              <h3 id={dialog.titleId} className="text-sm sm:text-base font-extrabold text-[#2D3A4E]">
+              <h3 id={dialog.titleId} className="text-sm sm:text-base font-extrabold text-text-primary">
                 Остаток товара
               </h3>
-              <p className="text-xs text-[#4E5C70] truncate">{product.title}</p>
+              <p className="text-xs text-text-secondary truncate">{product.title}</p>
             </div>
             <button
               type="button"
               onClick={guard.requestClose}
               disabled={saving}
-              className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer shrink-0"
+              className="w-8 h-8 rounded-xl neu-button flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer shrink-0"
               aria-label="Закрыть"
             >
               <X className="w-4 h-4" />
@@ -114,7 +114,7 @@ export function ProductQuickStockDialog({
           </div>
 
           {variants.length === 0 ? (
-            <p className="text-xs text-[#4E5C70]">
+            <p className="text-xs text-text-secondary">
               У товара нет цветов и размеров — остаток задаётся по ним. Добавьте их в форме товара, блок «Варианты и
               остатки».
             </p>
@@ -127,7 +127,7 @@ export function ProductQuickStockDialog({
               }}
               className="space-y-3"
             >
-              <p className="text-xs text-[#4E5C70]">
+              <p className="text-xs text-text-secondary">
                 Впишите новый остаток там, где он изменился. Каждая правка попадёт в журнал склада.
               </p>
               <ul aria-label="Варианты" className="space-y-1.5 max-h-[50vh] overflow-y-auto pr-1">
@@ -138,10 +138,10 @@ export function ProductQuickStockDialog({
                   return (
                     <li key={key} className="neu-flat-sm rounded-xl px-3 py-2 flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <label htmlFor={id} className="block text-xs font-bold text-[#2D3A4E]">
+                        <label htmlFor={id} className="block text-xs font-bold text-text-primary">
                           {sku.color}, {sku.size}
                         </label>
-                        <span id={`${id}-now`} className="block text-[11px] font-bold text-[#4E5C70]">
+                        <span id={`${id}-now`} className="block text-[11px] font-bold text-text-secondary">
                           сейчас {shown} шт.
                         </span>
                       </div>
@@ -156,7 +156,7 @@ export function ProductQuickStockDialog({
                         value={values[key] ?? ''}
                         placeholder={String(shown)}
                         onChange={(e) => setValues((prev) => ({ ...prev, [key]: e.target.value }))}
-                        className="w-24 px-3 py-2 neu-inset rounded-xl text-sm font-extrabold text-[#2D3A4E] text-right"
+                        className="w-24 px-3 py-2 neu-inset rounded-xl text-sm font-extrabold text-text-primary text-right"
                       />
                     </li>
                   );
@@ -167,12 +167,12 @@ export function ProductQuickStockDialog({
                   {error}
                 </p>
               )}
-              <div className="flex gap-2.5 pt-2 border-t border-[#BAC5D5]/50">
+              <div className="flex gap-2.5 pt-2 neu-divider-t">
                 <button
                   type="button"
                   onClick={guard.requestClose}
                   disabled={saving}
-                  className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-[#4E5C70] hover:text-[#2D3A4E] cursor-pointer"
+                  className="flex-1 py-2.5 neu-button rounded-xl text-xs font-bold text-text-secondary hover:text-text-primary cursor-pointer"
                 >
                   Отмена
                 </button>
@@ -181,7 +181,7 @@ export function ProductQuickStockDialog({
                   disabled={saving}
                   aria-busy={saving}
                   className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold ${
-                    saving ? 'neu-button-disabled text-[#4E5C70]' : 'neu-button-accent text-white cursor-pointer'
+                    saving ? 'neu-button-disabled text-text-secondary' : 'neu-button-accent text-white cursor-pointer'
                   }`}
                 >
                   {saving ? 'Сохраняем…' : 'Сохранить'}

@@ -50,11 +50,15 @@ describe('этикетка ростовки', () => {
     }
   });
 
-  test('штрихкод и название остаются на этикетке ростовки', () => {
+  test('штрихкод и название остаются на этикетке ростовки без префикса «Арт.»', () => {
     const out = texts(pack, 'classic').join(' ');
     expect(out).toContain('Футболка базовая');
     expect(out).toContain('2000000000015');
-    expect(out).toContain('Арт. Ростовка 48–52');
+    expect(out).toContain('Ростовка 48–52');
+    expect(out).not.toContain('Арт. Ростовка');
+    expect(texts(variation, 'classic').join(' ')).toContain('Арт. WS-TS01-SIN');
+    expect(texts(pack, 'price-info').join(' ')).toContain('Упаковка');
+    expect(texts(pack, 'price-info').join(' ')).not.toContain('Артикул');
   });
 
   test('текст ростовки укладывается в этикетку 58×40 и 70×50', () => {
