@@ -64,7 +64,9 @@ export const labelData = (product: Product, sku: ProductSKU, settings?: Storefro
     composition: compositionToMaterial(getProductFabricComposition(product)) || (product.material ?? '').trim(),
     barcode: sku.barcode ?? '',
     price: effectivePrice,
-    oldPrice: product.originalPrice,
+    // the old price is a retail one: a product sold only wholesale shows its wholesale price, and the retail old price
+    // next to it read as a big made-up discount (audit 29.10, finding 23)
+    oldPrice: sellsRetail(product) ? product.originalPrice : undefined,
     retailPrice,
     wholesaleUnitPrice,
     packPieces: packSize,

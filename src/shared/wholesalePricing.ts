@@ -249,11 +249,29 @@ export function volumeTierFor(packs: number, scale: VolumeDiscountScale | undefi
   return reached;
 }
 
-/** One item's price after the step: whole roubles, never below zero */
+/**
+ * One item's price after the step: whole roubles, not below 1 ₽, as the broken pack (audit 29.10, finding 3): «Опт»
+ * checks a step only when it is saved, and a wholesale price lowered later (the form, «Курсы → Применить») made a fixed
+ * step reach 0 ₽ — the browser and `placeOrder` took the line for free
+ */
 export function volumeDiscountedPrice(base: number, tier: VolumeDiscountTier | null, kind: VolumeDiscountKind): number {
+  return Math.max(1, volumeStepPrice(base, tier, kind));
+}
+
+/**
+ * The step's price before the 1 ₽ floor: «Опт» refuses a step that would take a product's price to 0 or below
+ * (the floor is for a wholesale price lowered later, not a licence to save such a step — review of stage 3, 29.10)
+ */
+export function volumeStepPrice(base: number, tier: VolumeDiscountTier | null, kind: VolumeDiscountKind): number {
   if (!tier) return base;
-  const price = kind === 'fixed' ? base - tier.value : Math.round((base * (100 - tier.value)) / 100);
-  return Math.max(0, price);
+  return kind === 'fixed' ? base - tier.value : Math.round((base * (100 - tier.value)) / 100);
+}
+
+/** The broken pack price before its 1 ₽ floor: «Опт» refuses a discount that would give a product away */
+export function brokenPackRawPrice(baseWholesalePrice: number, discount: BrokenPackDiscount): number {
+  return discount.kind === 'fixed'
+    ? Math.round(baseWholesalePrice - discount.value)
+    : Math.round((baseWholesalePrice * (100 - discount.value)) / 100);
 }
 
 /**

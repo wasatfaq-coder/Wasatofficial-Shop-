@@ -1,9 +1,11 @@
 import React, { useRef, useState } from 'react';
 import { AlertTriangle, Check, Loader2, Plus, Trash2, Download, FileText } from 'lucide-react';
+import { withWholesaleSettingsChange } from '../../utils/priceHistory';
 import type { Product, SaveStorefrontSettings, StorefrontSettings } from '../../types';
 import {
   brokenPackDiscountErrors,
   brokenPackDiscountedPrice,
+  brokenPackRawPrice,
   hasWholesalePrice,
   MAX_MIN_WHOLESALE_AMOUNT,
   MAX_VOLUME_PERCENT,
@@ -15,6 +17,7 @@ import {
   sellsWholesale,
   volumeDiscountErrors,
   volumeDiscountedPrice,
+  volumeStepPrice,
   type BrokenPackDiscount,
   type VolumeCountBy,
   type VolumeDiscountKind,
@@ -152,7 +155,7 @@ export const AdminWholesaleTab: React.FC<AdminWholesaleTabProps> = ({ settings, 
     : [];
   // a fixed step larger than a product's wholesale price would give it away: that is never meant, so it is not saved
   const givenAway = deepest
-    ? wholesaleProducts.filter((p) => volumeDiscountedPrice(p.wholesalePrice as number, deepest, scale.kind) <= 0)
+    ? wholesaleProducts.filter((p) => volumeStepPrice(p.wholesalePrice as number, deepest, scale.kind) <= 0)
     : [];
 
   // Stage 14 (owner's decision 12.10): broken pack discount CANNOT drop the price below costPrice or to 0 ₽ — blocks saving!
@@ -165,7 +168,7 @@ export const AdminWholesaleTab: React.FC<AdminWholesaleTabProps> = ({ settings, 
       : [];
   const brokenGivenAway =
     brokenDraft && brokenErrs.length === 0
-      ? bothChannelProducts.filter((p) => brokenPackDiscountedPrice(p.wholesalePrice as number, brokenDraft) <= 0)
+      ? bothChannelProducts.filter((p) => brokenPackRawPrice(p.wholesalePrice as number, brokenDraft) <= 0)
       : [];
 
   const sample = wholesaleProducts[0];
@@ -207,9 +210,16 @@ export const AdminWholesaleTab: React.FC<AdminWholesaleTabProps> = ({ settings, 
     const sorted = { ...scale, tiers: [...scale.tiers].sort((a, b) => a.minPacks - b.minPacks) };
     const { volumeDiscount: _old, minOrderAmount: _oldMin, brokenPackDiscount: _oldBroken, ...restWholesale } = settings.wholesale ?? {};
     const { brokenPackDiscount: _topBroken, ...restSettings } = settings;
+    // the discounts it had end now: unpaid orders are checked by the discounts of their time (audit 29.10, finding 16)
+    const wholesaleHistory = withWholesaleSettingsChange(
+      settings.wholesaleHistory,
+      { volumeDiscount: settings.wholesale?.volumeDiscount, brokenPackDiscount: settings.brokenPackDiscount ?? settings.wholesale?.brokenPackDiscount },
+      { volumeDiscount: sorted.tiers.length ? sorted : undefined, brokenPackDiscount: brokenDraft ?? undefined }
+    );
     setSaving(true);
     const ok = await onUpdateSettings({
       ...restSettings,
+      ...(wholesaleHistory ? { wholesaleHistory } : {}),
       ...(brokenDraft ? { brokenPackDiscount: brokenDraft } : {}),
       wholesale: {
         ...restWholesale,

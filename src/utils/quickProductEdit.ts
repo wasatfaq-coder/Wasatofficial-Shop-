@@ -92,3 +92,23 @@ export function quickStockChanges(
   }
   return { changes, error: '' };
 }
+
+/** The rounded price may move from the computed one by this share at most (audit 29.10, finding 14) */
+const SEASONAL_ROUNDING_SLACK = 0.1;
+
+/**
+ * «Сезонная скидка» of «Массовые операции»: the price `percent` below `base`, ending in …90 when that stays close to it
+ * (audit 29.10, finding 14). Rounding to the nearest hundred minus 10 made 1480 −1 % into 1490 — a «скидка» above the
+ * old price — and 160 −10 % into 90 (44 % off). The rounded price is taken only below the old one and within 10 % of the
+ * computed one, otherwise the computed price stays. No price below the old one — null (the product keeps its price).
+ * The percent is the one the prices give: the badge and «Курсы → Применить» read it.
+ */
+export function seasonalDiscountPrice(base: number, percent: number): { price: number; discountPercent: number } | null {
+  if (!Number.isFinite(base) || base <= 0 || !(percent > 0) || percent >= 100) return null;
+  const computed = Math.round((base * (100 - percent)) / 100);
+  const rounded = Math.round(computed / 100) * 100 - 10;
+  const close = Math.abs(rounded - computed) <= computed * SEASONAL_ROUNDING_SLACK;
+  const price = rounded > 0 && rounded < base && close ? rounded : computed;
+  if (price <= 0 || price >= base) return null;
+  return { price, discountPercent: Math.round((1 - price / base) * 100) };
+}

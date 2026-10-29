@@ -1,7 +1,8 @@
 // История цен товара: заказ сверяется с ценой на момент оформления (аудит админки 09.10, находка 1)
 import { describe, expect, test } from 'bun:test';
-import { PRICE_HISTORY_LIMIT, pricesAtOrderTime, withPriceChange, withPriceHistories } from '../../src/utils/priceHistory';
-import type { Product } from '../../src/types';
+import { PRICE_HISTORY_LIMIT, pricesAtOrderTime, withPriceChange, withPriceHistories, withWholesaleSettingsChange, wholesaleSettingsAtOrderTime } from '../../src/utils/priceHistory';
+import { orderPriceIssues } from '../../src/utils/orderPriceCheck';
+import type { Order, Product } from '../../src/types';
 
 const at = (iso: string) => new Date(iso);
 const t = (iso: string) => Date.parse(iso);
@@ -76,5 +77,52 @@ describe('pricesAtOrderTime', () => {
       items: [{ id: 'l1', product: saved, selectedColor: 'Синий', selectedSize: '48', quantity: 5, priceKind: 'wholesale', unitPrice: 1800 }],
     } as never;
     expect(orderPriceIssues(orderBeforeChange, [saved])).toEqual([]);
+  });
+});
+
+// Аудит 29.10, находка 16: скидки «Опта» на момент заказа — смена скидки не делает неоплаченные заказы «не совпадающими»
+describe('wholesale discounts at order time', () => {
+  const tenPercent = { kind: 'percent' as const, countBy: 'product' as const, tiers: [{ minPacks: 1, value: 10 }] };
+  const fifteen = { kind: 'percent' as const, countBy: 'product' as const, tiers: [{ minPacks: 1, value: 15 }] };
+
+  test('a change appends the ended discounts; the same discounts change nothing', () => {
+    const now = at('2026-10-20T10:00:00.000Z');
+    expect(withWholesaleSettingsChange(undefined, { volumeDiscount: tenPercent }, { volumeDiscount: tenPercent }, now)).toBeUndefined();
+    // the database gives map keys in its own order: the same discounts are not a change (review of stage 3)
+    const fromDb = { tiers: [{ value: 10, minPacks: 1 }], countBy: 'product' as const, kind: 'percent' as const };
+    expect(withWholesaleSettingsChange(undefined, { volumeDiscount: fromDb }, { volumeDiscount: tenPercent }, now)).toBeUndefined();
+    const broken = { kind: 'percent' as const, value: 10 };
+    expect(withWholesaleSettingsChange(undefined, { brokenPackDiscount: { value: 10, kind: 'percent' } }, { brokenPackDiscount: broken }, now)).toBeUndefined();
+    expect(withWholesaleSettingsChange(undefined, { volumeDiscount: tenPercent }, { volumeDiscount: fifteen }, now)).toEqual([
+      { until: '2026-10-20T10:00:00.000Z', volumeDiscount: tenPercent },
+    ]);
+  });
+
+  test('an order placed before the change is checked by the discounts of its time and by today\'s', () => {
+    const history = [{ until: '2026-10-20T10:00:00.000Z', volumeDiscount: tenPercent }];
+    const current = { volumeDiscount: fifteen };
+    const before = wholesaleSettingsAtOrderTime(current, history, t('2026-10-19T12:00:00.000Z'));
+    expect(before.map((s) => s?.volumeDiscount)).toEqual([tenPercent]);
+    const after = wholesaleSettingsAtOrderTime(current, history, t('2026-10-21T12:00:00.000Z'));
+    expect(after.map((s) => s?.volumeDiscount)).toEqual([fifteen]);
+    // without the order's time — today's only
+    expect(wholesaleSettingsAtOrderTime(current, history, null)).toEqual([current]);
+  });
+
+  test('an unpaid wholesale order at the old discount is not flagged after the discount changed', () => {
+    const coat = {
+      id: 'coat', title: 'Пальто', price: 3000, wholesalePrice: 1000, wholesalePackSize: 1, saleChannel: 'both', category: 'c',
+      skus: [{ id: 'coat-m', color: 'Черный', size: 'M', stock: 50 }],
+    } as unknown as Product;
+    const order = {
+      id: 'WS-1', createdAt: '2026-10-19T12:00:00.000Z', date: '', status: 'accepted', paymentStatus: 'pending',
+      totalPrice: 9000, deliveryFee: 0,
+      items: [{ id: 'l1', product: { id: 'coat', title: 'Пальто', price: 3000 }, quantity: 10, selectedColor: 'Черный', selectedSize: 'M', priceKind: 'wholesale', unitPrice: 900 }],
+    } as unknown as Order;
+    const settings = { wholesale: { volumeDiscount: fifteen }, wholesaleHistory: [{ until: '2026-10-20T10:00:00.000Z', volumeDiscount: tenPercent }] };
+    const issues = orderPriceIssues(order, [coat], { settings });
+    expect(issues.filter((i) => i.includes('опт'))).toEqual([]);
+    // without the history the 900 ₽ line (−10 %) would be flagged against today's 850 ₽ (−15 %)
+    expect(orderPriceIssues(order, [coat], { settings: { wholesale: { volumeDiscount: fifteen } } }).some((i) => i.includes('опт'))).toBe(true);
   });
 });

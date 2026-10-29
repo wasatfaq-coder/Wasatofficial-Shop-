@@ -3,7 +3,8 @@
  * before the change still has the old price. «Цены не совпадают с каталогом» compares the order with the price that was
  * in the catalog when it was placed, not with today's. Plain data: no browser APIs.
  */
-import type { Product, PriceHistoryEntry } from '../types';
+import type { Product, PriceHistoryEntry, WholesaleSettingsChange } from '../types';
+import { readBrokenPackDiscount, readVolumeDiscount, type WholesaleSettings } from '../shared/wholesalePricing';
 
 /** How many earlier prices a product keeps */
 export const PRICE_HISTORY_LIMIT = 10;
@@ -97,4 +98,66 @@ export function wholesalePricesAtOrderTime(
   orderTime: number | null
 ): number[] {
   return activePricesInWindow(product.wholesalePrice, product.wholesalePriceHistory, orderTime);
+}
+
+/** Changes of the «Опт» discounts kept: enough for unpaid orders, small in `settings/storefront` that every visitor reads */
+const MAX_WHOLESALE_HISTORY = 20;
+
+type WholesaleDiscounts = Pick<WholesaleSettingsChange, 'volumeDiscount' | 'brokenPackDiscount'>;
+
+/** By the values read the same way the prices read them: the database gives map keys in its own order */
+const discountKey = (d: WholesaleDiscounts) => {
+  const scale = readVolumeDiscount(d.volumeDiscount);
+  const broken = d.brokenPackDiscount ? readBrokenPackDiscount({ brokenPackDiscount: d.brokenPackDiscount }) : undefined;
+  return JSON.stringify([
+    scale ? [scale.kind, scale.countBy, scale.tiers.map((t) => [t.minPacks, t.value])] : null,
+    broken ? [broken.kind, broken.value] : null,
+  ]);
+};
+const sameDiscounts = (a: WholesaleDiscounts, b: WholesaleDiscounts) => discountKey(a) === discountKey(b);
+
+/**
+ * «Опт» saved: the discounts it had end now (audit 29.10, finding 16). Unchanged discounts — the history as it was.
+ */
+export function withWholesaleSettingsChange(
+  history: WholesaleSettingsChange[] | undefined,
+  before: WholesaleDiscounts,
+  after: WholesaleDiscounts,
+  now: Date = new Date()
+): WholesaleSettingsChange[] | undefined {
+  if (sameDiscounts(before, after)) return history;
+  const entry: WholesaleSettingsChange = {
+    until: now.toISOString(),
+    ...(before.volumeDiscount ? { volumeDiscount: before.volumeDiscount } : {}),
+    ...(before.brokenPackDiscount ? { brokenPackDiscount: before.brokenPackDiscount } : {}),
+  };
+  return [...(history ?? []), entry].slice(-MAX_WHOLESALE_HISTORY);
+}
+
+/**
+ * The «Опт» settings in effect around the moment of an order: today's and those that ended after it (with the same
+ * clock slack as prices). Without the order's time — today's only.
+ */
+export function wholesaleSettingsAtOrderTime(
+  current: WholesaleSettings | undefined,
+  history: WholesaleSettingsChange[] | undefined,
+  orderTime: number | null
+): (WholesaleSettings | undefined)[] {
+  if (orderTime === null || !history?.length) return [current];
+  const from = orderTime - ORDER_CLOCK_SLACK_MS;
+  const ended = history
+    .map((e) => ({ e, until: Date.parse(e.until) }))
+    .filter(({ until }) => !Number.isNaN(until))
+    .sort((a, b) => a.until - b.until);
+  const found: (WholesaleSettings | undefined)[] = [];
+  let start = -Infinity;
+  for (const { e, until } of ended) {
+    if (until >= from && start <= orderTime) {
+      found.push({ ...current, volumeDiscount: e.volumeDiscount, brokenPackDiscount: e.brokenPackDiscount });
+    }
+    start = until;
+  }
+  // today's settings started at the last change: they count unless they began after the order
+  if (start <= orderTime) found.push(current);
+  return found.length > 0 ? found : [current];
 }
