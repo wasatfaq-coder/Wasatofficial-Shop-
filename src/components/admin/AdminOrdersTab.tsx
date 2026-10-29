@@ -110,7 +110,7 @@ interface AdminOrdersTabProps {
   storefrontSettings?: StorefrontSettings;
   products: Product[];
   /** Resolves to false when the database refused the write (the error toast is already shown) */
-  onUpdateOrders: (updated: Order[]) => Promise<boolean> | void;
+  onUpdateOrders: (updated: Order[], seen?: Order[]) => Promise<boolean> | void;
   /** For «Корректировка заказа»: a percent promo of the order is recalculated */
   promos?: PromoCode[];
   /** «Доставка и ПВЗ»: the order's delivery fee is compared with its method (check 04.10, finding 2) */
@@ -567,6 +567,9 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     // a cancelled order whose goods did not get back still holds them: they go back first, otherwise the restore takes
     // them a second time (audit 07.10, finding 5)
     const stuck: string[] = [];
+    // the return wrote `stockReturned: true` into the order: the save below compares with that, not with the card that
+    // still shows `false` (audit 29.10, finding 13: the first restore always failed with «изменил покупатель»)
+    const returnedNow: Order[] = [];
     for (const ord of orders.filter((o) => ids.has(o.id) && o.isCancelled && o.stockReturned === false)) {
       const back = await returnCancelledOrderStock(ord, { operator: 'Администратор', missingIsNothing: true }).catch((err) => {
         console.error(`Stock of the cancelled order ${ord.id} was not returned before its restore:`, err);
@@ -575,7 +578,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       if (!back) {
         stuck.push(ord.id);
         ids.delete(ord.id);
-      }
+      } else returnedNow.push({ ...ord, stockReturned: true });
     }
     if (stuck.length > 0) {
       onShowToast(
@@ -613,7 +616,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       };
     });
 
-    if ((await onUpdateOrders(updated)) === false) return null;
+    if ((await onUpdateOrders(updated, returnedNow)) === false) return null;
     for (const ord of reactivated) changeOrderStock(ord, -1, 'Заказ восстановлен после отмены');
     // the promo code use went back on the cancellation — the restored order takes it again (audit 07.10, finding 6)
     for (const ord of reactivated.filter((o) => o.promoReleased && o.promoCode)) {
@@ -730,7 +733,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
     }
     if (newStatus === 'delivered' && !order.isCancelled) {
       // courier and pickup — handed over by the code; a carrier's order — closed by hand when the buyer did not confirm
-      if (usesPickupCode(order)) openHandover(order);
+      if (usesPickupCode(order)) void openHandover(order);
       else setOrderToCloseManually(order);
       return;
     }
@@ -751,7 +754,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   };
 
   /** «Забрать заказ»: only a paid order (or «Оплата при получении»); the code is made now if the order has none */
-  const openHandover = (order: Order) => {
+  const openHandover = async (order: Order) => {
     if (!canHandOver(order)) {
       onShowToast(`Выдача невозможна: заказ № ${order.id} не оплачен`, 'error');
       return;
@@ -760,8 +763,9 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
       setHandoverOrder(order);
       return;
     }
+    // the window shows the code only once it is saved: the buyer sees the same code (audit 29.10, finding 11)
     const withCode = { ...order, pickupCode: generatePickupCode() };
-    onUpdateOrders(orders.map((o) => (o.id === order.id ? withCode : o)));
+    if ((await onUpdateOrders(orders.map((o) => (o.id === order.id ? withCode : o)))) === false) return;
     setHandoverOrder(withCode);
   };
 
@@ -786,7 +790,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   };
 
   // Quick Tracking Edit Save Handler
-  const handleSaveTracking = (orderId: string) => {
+  const handleSaveTracking = async (orderId: string) => {
     const trimmed = tempTrackValue.trim();
     const updated = orders.map((ord) => {
       if (ord.id !== orderId) return ord;
@@ -817,7 +821,8 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
         deliveryStages: currentStages,
       };
     });
-    onUpdateOrders(updated);
+    // «сохранен» only after the database answered; a refusal keeps the editor open with the typed number
+    if ((await onUpdateOrders(updated)) === false) return;
     setEditingTrackOrderId(null);
     onShowToast(
       trimmed
@@ -828,10 +833,10 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   };
 
   // Manager Note Save Handler
-  const handleSaveManagerNote = (orderId: string) => {
+  const handleSaveManagerNote = async (orderId: string) => {
     const trimmed = tempNoteValue.trim();
     const updated = orders.map((ord) => (ord.id === orderId ? { ...ord, managerNote: trimmed || undefined } : ord));
-    onUpdateOrders(updated);
+    if ((await onUpdateOrders(updated)) === false) return;
     setEditingNoteOrderId(null);
     onShowToast('Внутренняя заметка сохранена', 'success');
   };
@@ -995,8 +1000,8 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   };
 
   // «В архив» / «Из архива»: a cancelled order leaves the working list (or comes back to it)
-  const handleArchiveOrder = (order: Order, archived: boolean) => {
-    onUpdateOrders(orders.map((o) => (o.id === order.id ? { ...o, archived } : o)));
+  const handleArchiveOrder = async (order: Order, archived: boolean) => {
+    if ((await onUpdateOrders(orders.map((o) => (o.id === order.id ? { ...o, archived } : o)))) === false) return;
     onShowToast(archived ? `Заказ № ${order.id} в архиве` : `Заказ № ${order.id} снова в списке`, 'success');
   };
 
@@ -1019,12 +1024,17 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
   };
 
   // Order Adjustment Save Handler
-  const handleSaveOrderAdjustment = async (updatedOrder: Order, log: OrderAdjustmentLog | null) => {
+  const handleSaveOrderAdjustment = async (updatedOrder: Order, log: OrderAdjustmentLog | null): Promise<boolean> => {
     const updated = orders.map((ord) => (ord.id === updatedOrder.id ? updatedOrder : ord));
+    // «Сохранено» only after the database accepted the write; a refusal already shows «Не сохранено: …» and the window
+    // stays open: the stock of the adjustment changes only after this answer (audit 29.10, finding 1). The window holds the
+    // order as it opened: the save compares with that, so a second «Сохранить» after a refusal is refused too instead of
+    // writing the opened copy over the buyer's cancellation or receipt
+    const opened = selectedOrderForAdjustment?.id === updatedOrder.id ? [selectedOrderForAdjustment] : [];
+    if ((await onUpdateOrders(updated, opened)) === false) return false;
     setSelectedOrderForAdjustment(null);
-    // «Сохранено» only after the database accepted the write; a refusal already shows «Не сохранено: …»
-    if ((await onUpdateOrders(updated)) === false) return;
     onShowToast(log ? 'Состав и сумма заказа сохранены' : 'Заказ сохранен', 'success');
+    return true;
   };
 
   const handleCopyOrderId = (id: string) => {
@@ -1639,7 +1649,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                       {!isArchivedOrder(ord) && (
                         <button
                           type="button"
-                          onClick={() => handleArchiveOrder(ord, true)}
+                          onClick={() => void handleArchiveOrder(ord, true)}
                           className="h-8 px-3 neu-button rounded-xl text-xs font-bold text-accent flex items-center gap-1.5 cursor-pointer"
                         >
                           <Archive className="w-3.5 h-3.5" aria-hidden="true" />
@@ -1842,7 +1852,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                               autoFocus
                             />
                             <button
-                              onClick={() => handleSaveManagerNote(ord.id)}
+                              onClick={() => void handleSaveManagerNote(ord.id)}
                               className="p-1.5 min-w-8 min-h-8 inline-flex items-center justify-center neu-button-accent rounded-lg text-white"
                               title="Сохранить"
                               aria-label="Сохранить"
@@ -2063,7 +2073,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        handleSaveTracking(ord.id);
+                                        void handleSaveTracking(ord.id);
                                       }}
                                       className="px-4 py-1.5 min-h-8 neu-button-accent rounded-xl text-xs font-extrabold text-white hover:scale-102 active:neu-inset-deep transition-all cursor-pointer flex items-center gap-1.5"
                                     >
@@ -2172,7 +2182,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                     <span className="inline-flex items-center gap-0.5">
                     <button
                       type="button"
-                      onClick={() => openHandover(ord)}
+                      onClick={() => void openHandover(ord)}
                       aria-disabled={!canHandOver(ord)}
                       className={`h-8 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer ${
                         canHandOver(ord) ? 'neu-button text-success' : 'neu-button-disabled text-text-secondary'
@@ -2260,14 +2270,14 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                                   id: 'unarchive',
                                   label: 'Вернуть из архива',
                                   icon: <ArchiveRestore className="w-3.5 h-3.5 text-accent" />,
-                                  onSelect: () => handleArchiveOrder(ord, false),
+                                  onSelect: () => void handleArchiveOrder(ord, false),
                                   separatorBefore: true,
                                 }
                               : {
                                   id: 'archive',
                                   label: 'В архив',
                                   icon: <Archive className="w-3.5 h-3.5 text-accent" />,
-                                  onSelect: () => handleArchiveOrder(ord, true),
+                                  onSelect: () => void handleArchiveOrder(ord, true),
                                   separatorBefore: true,
                                 },
                             {
@@ -2489,7 +2499,7 @@ export const AdminOrdersTab: React.FC<AdminOrdersTabProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    handleArchiveOrder(orderToDelete, true);
+                    void handleArchiveOrder(orderToDelete, true);
                     setOrderToDelete(null);
                   }}
                   disabled={isDeletingOrder}

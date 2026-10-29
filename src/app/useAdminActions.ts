@@ -269,9 +269,13 @@ export function useAdminActions({
   // the database got meanwhile is never written back (admin audit 09.10, finding 7).
   const writtenOrdersRef = React.useRef(new Map<string, { from: Order; to: Order }>());
 
-  const handleUpdateOrders = async (updatedOrders: Order[]) => {
+  /** `known` — orders as the caller knows the database has them now (its own write just before), newer than the screen */
+  const handleUpdateOrders = async (updatedOrders: Order[], known: Order[] = []) => {
     const shown = new Map(orders.map((o) => [o.id, o]));
+    const knownById = new Map(known.map((o) => [o.id, o]));
     const baseOf = (id: string) => {
+      const knownNow = knownById.get(id);
+      if (knownNow) return knownNow;
       const written = writtenOrdersRef.current.get(id);
       const current = shown.get(id);
       return written && written.from === current ? written.to : current;
@@ -316,7 +320,7 @@ export function useAdminActions({
     const saved = persist(
       'промокоды',
       deleteRemovedDocs('promos', promos, updatedPromos),
-      syncAllPromosToFirestore(changedItems(promos, updatedPromos))
+      syncAllPromosToFirestore(changedItems(promos, updatedPromos), promos)
     );
     setPromos(updatedPromos);
     // «Промокоды» say «создан/обновлен» and close the form only after the database answered (UX audit 03.10, finding 5)

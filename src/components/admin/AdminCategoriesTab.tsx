@@ -9,7 +9,7 @@ interface AdminCategoriesTabProps {
   products: Product[];
   onUpdateSettings?: SaveStorefrontSettings;
   /** Renaming a category also updates the name stored on its products (categoryLabel) */
-  onUpdateProducts?: (products: Product[]) => void;
+  onUpdateProducts?: (products: Product[]) => Promise<boolean> | void;
   onShowToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
@@ -80,7 +80,7 @@ export const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({
           </div>
         );
       }}
-      onSave={(next) => {
+      onSave={async (next) => {
         // New categories get a stable latin id from their name (stored in product.category)
         const taken: string[] = [];
         const withIds = next.map((c) => {
@@ -88,7 +88,6 @@ export const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({
           taken.push(id);
           return { ...c, id, name: c.name.trim() };
         });
-        const saved = onUpdateSettings?.({ ...settings, categories: withIds });
         const nameById = new Map(withIds.map((c) => [c.id, c.name]));
         const removedIds = new Set(categories.map((c) => c.id).filter((id) => id && !nameById.has(id)));
         const affected = products.filter(
@@ -96,8 +95,10 @@ export const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({
             removedIds.has(p.category) ||
             (nameById.has(p.category) && p.categoryLabel !== nameById.get(p.category))
         );
+        // the products first, the list after (audit 29.10, finding 12): a refused product write (the catalog is still
+        // loading) used to leave a saved list with products on a deleted or renamed category
         if (affected.length > 0 && onUpdateProducts) {
-          onUpdateProducts(
+          const productsSaved = await onUpdateProducts(
             products.map((p) => {
               if (removedIds.has(p.category)) {
                 return { ...p, category: '', categoryLabel: '' };
@@ -108,8 +109,9 @@ export const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({
               return p;
             })
           );
+          if (productsSaved === false) return false;
         }
-        return saved;
+        return (await onUpdateSettings?.({ ...settings, categories: withIds })) !== false;
       }}
       onShowToast={onShowToast}
     />

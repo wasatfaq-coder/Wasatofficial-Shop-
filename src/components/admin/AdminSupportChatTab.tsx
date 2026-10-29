@@ -60,7 +60,9 @@ import {
   needsPickupCode,
   statusChangeBlocker,
   statusLogEntry,
+  usesPickupCode,
 } from '../../utils/orderFlow';
+import { getEstimatedDeliveryForStatus, syncStagesWithOrderStatus } from '../../utils/deliveryStages';
 import { useAuth } from '../../context/AuthContext';
 import { PRIORITY_LABELS, STATUS_LABELS, type SupportThreadSummary } from '../../utils/supportThreads';
 import type { ChatMessageChange } from '../../utils/firebaseSync';
@@ -441,12 +443,28 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
       onShowToast(blocker, 'error');
       return;
     }
+    // what «Заказы» do and the chat skipped (audit 29.10, finding 5): a cancelled order is restored only there, with its
+    // goods taken from stock again; courier and pickup orders are handed over only by the code («Забрать заказ»)
+    if (order.isCancelled) {
+      onShowToast(`Заказ № ${order.id} отменён: восстановите его в «Заказах» — там товар снова спишется со склада`, 'error');
+      return;
+    }
+    if (newStatus === 'delivered' && usesPickupCode(withTracking)) {
+      onShowToast(`Заказ № ${order.id} выдаётся по коду: «Забрать заказ» в карточке заказа в «Заказах»`, 'error');
+      return;
+    }
     const label = adminStatusLabel(withTracking, newStatus);
+    const paymentStatus = newStatus === 'delivered' && withTracking.paymentStatus === 'paid_on_delivery'
+      ? 'paid'
+      : withTracking.paymentStatus;
     // a code only for a paid order (owner task 11.10, item 1), as in «Заказы»
-    const needsCode = needsPickupCode({ ...withTracking, status: newStatus });
+    const needsCode = needsPickupCode({ ...withTracking, status: newStatus, paymentStatus });
     const updated: Order = {
       ...withTracking,
       status: newStatus,
+      paymentStatus,
+      deliveryStages: syncStagesWithOrderStatus(withTracking.deliveryStages, withTracking, newStatus),
+      estimatedDelivery: getEstimatedDeliveryForStatus(newStatus, withTracking.estimatedDelivery, false),
       statusLog: [
         ...(order.statusLog ?? []),
         statusLogEntry(newStatus, 'admin', {
@@ -475,7 +493,7 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
   };
 
   // --- return request ---
-  const handleCreateReturn = (e: React.FormEvent) => {
+  const handleCreateReturn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!order) return;
     const reason = [returnReason, returnComment.trim()].filter(Boolean).join('. ');
@@ -491,7 +509,9 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
         },
       ],
     };
-    onUpdateOrders?.(allOrders.map((o) => (o.id === order.id ? updated : o)));
+    // the buyer is told «оформлена» only after the order took the request (audit 29.10, finding 11): a message in the
+    // chat cannot be taken back
+    if ((await onUpdateOrders?.(allOrders.map((o) => (o.id === order.id ? updated : o)))) === false) return;
     send({
       text: `Заявка на возврат или обмен по заказу № ${order.id} оформлена.\nПричина: ${reason}.\nМы напишем здесь, как и когда передать товар.`,
     });
@@ -849,7 +869,8 @@ export const AdminSupportChatTab: React.FC<AdminSupportChatTabProps> = ({
             <button
               type="button"
               onClick={openStatusModal}
-              disabled={!onUpdateOrders}
+              disabled={!onUpdateOrders || order.isCancelled}
+              title={order.isCancelled ? 'Отменённый заказ восстанавливается в «Заказах»' : undefined}
               className="h-9 px-3 neu-button rounded-xl text-[11px] font-bold text-accent flex items-center gap-1.5 transition-all cursor-pointer "
             >
               <Truck className="w-3.5 h-3.5" />
