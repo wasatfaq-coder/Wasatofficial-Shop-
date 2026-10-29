@@ -157,7 +157,7 @@
 | Правила Firestore | `bun run test:rules`; два PR, если старый сайт записи отклонит; снять `todo`, если тест закрыт | `changing-firestore-data`, `CLAUDE.md` |
 | Новая коллекция | Правила и тесты; добавить в `BACKUP_COLLECTIONS` и `BACKUP_COLLECTION_TITLES`; проверить копию | `CLAUDE.md`, «Данные и доступ» |
 | Цена, заказ, склад | `bun run test:functions`; `test:e2e` заказа; образцы `scripts/client-order-sample.ts` | `.claude/rules/orders.md` |
-| Экран покупателя или админки | `bun run test:e2e` на 390 и 1280 px; «Как проверить» в PR; `ecc:code-reviewer` после правки | `CLAUDE.md` |
+| Экран покупателя или админки | `bun run test:e2e` на 390 и 1280 px; «Как проверить» в PR; субагент-ревьюер после правки | `CLAUDE.md` |
 | Чтение базы покупателем | `bun run measure:visit` до и после | `CLAUDE.md`, «Команды» |
 | Чтение админки о заказах и клиентах | `bun run measure:admin` до и после | `CLAUDE.md`, «Команды» |
 | Первый экран | `bun run measure:speed` до и после; главный чанк не растёт | `performance-plan.md` |
