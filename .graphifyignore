@@ -8,3 +8,6 @@ tests/
 
 # Скрипты-пробы аудитов (docs/audit-*/probes): не код магазина.
 docs/
+
+# Настройки и хуки Claude Code (.claude/): не код магазина, а скрипты самого Claude.
+.claude/
