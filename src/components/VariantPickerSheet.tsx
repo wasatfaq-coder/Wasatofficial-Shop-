@@ -8,7 +8,7 @@ import { getOrderableStock, getVariantStock } from '../utils/inventory';
 import { initialColor, initialSize, maxOrderableForColor } from '../utils/variantSelection';
 import { useDialogA11y } from '../utils/useDialogA11y';
 import { useLiveProduct } from '../utils/liveProducts';
-import { type WholesaleSettings } from '../shared/wholesalePricing';
+import { saleChannelOf, type WholesaleSettings } from '../shared/wholesalePricing';
 import { wholesaleOfferOf } from '../utils/wholesaleOffer';
 import { ProductWholesaleBlock, type BuyMode } from './ProductWholesaleBlock';
 import {
@@ -71,9 +71,10 @@ export const VariantPickerSheet: React.FC<VariantPickerSheetProps> = ({
 
   const offer = useMemo(() => (product ? wholesaleOfferOf(product, wholesale) : null), [product, wholesale]);
 
-  // Priced size packs («Ростовкой»)
+  // Priced size packs («Ростовкой»): a product «Только в розницу» keeps its packs in the database but does not sell them
+  // (audit 29.10, finding 17)
   const pricedPacks = useMemo((): { pack: SizePack; price: number }[] => {
-    if (!product) return [];
+    if (!product || saleChannelOf(product) === 'retail') return [];
     return productSizePacks(product).flatMap((pack) => {
       const price = sizePackPrice(product, pack);
       return price === undefined ? [] : [{ pack, price }];

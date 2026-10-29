@@ -13,5 +13,19 @@ export function digitsAfterCountryCode(phone: string): number {
 }
 
 export function isQuickOrderPhoneComplete(phone: string): boolean {
-  return digitsAfterCountryCode(phone) >= PHONE_DIGITS_AFTER_CODE;
+  return digitsAfterCountryCode(phone) === PHONE_DIGITS_AFTER_CODE;
+}
+
+/**
+ * The field's text as «+7 XXX XXX-XX-XX» (audit 29.10, finding 18): a number typed, pasted or autofilled with the
+ * leading 8 or 7 («89001234567», «8 (900) …») used to become «+7 89001234567» and pass — the manager could not call
+ * back. The 8 or 7 of an 11-digit number is the country code; more than 10 digits are cut.
+ */
+export function formatQuickOrderPhone(input: string): string {
+  let digits = input.replace(/\D/g, '');
+  if (input.trim().startsWith('+7')) digits = digits.slice(1);
+  if (digits.length === 11 && (digits[0] === '8' || digits[0] === '7')) digits = digits.slice(1);
+  digits = digits.slice(0, PHONE_DIGITS_AFTER_CODE);
+  const [code, first, second, third] = [digits.slice(0, 3), digits.slice(3, 6), digits.slice(6, 8), digits.slice(8, 10)];
+  return `+7 ${code}${first ? ` ${first}` : ''}${second ? `-${second}` : ''}${third ? `-${third}` : ''}`;
 }

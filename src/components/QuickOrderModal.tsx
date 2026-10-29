@@ -7,7 +7,7 @@ import { productImage } from '../utils/productImage';
 import { useProductThumbs } from '../utils/productThumbs';
 import { LegalConsentNote } from './LegalConsentNote';
 import { useDialogA11y } from '../utils/useDialogA11y';
-import { digitsAfterCountryCode, isQuickOrderPhoneComplete, PHONE_DIGITS_AFTER_CODE } from '../utils/phoneNumber';
+import { digitsAfterCountryCode, formatQuickOrderPhone, isQuickOrderPhoneComplete, PHONE_DIGITS_AFTER_CODE } from '../utils/phoneNumber';
 import { pluralRu } from '../utils/pluralize';
 import { linePrice } from '../shared/orderLine';
 import { packLineInfo } from '../utils/cartPackLine';
@@ -82,7 +82,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
       setName(realName);
     }
     if ((phone.trim() === '+7' || !phone.trim()) && realPhone) {
-      setPhone(realPhone.startsWith('+7') ? realPhone : `+7 ${realPhone.replace(/^\+?7?/, '')}`);
+      setPhone(formatQuickOrderPhone(realPhone));
     }
     if (!address.trim() && !house.trim()) {
       const defAddr =
@@ -114,6 +114,8 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
     if (parsed.intercom) setIntercom(parsed.intercom);
   };
 
+  // the typed text stays as typed (a fix in the middle keeps the caret); the number is written as «+7 XXX XXX-XX-XX» when
+  // the field is left and is sent that way (audit 29.10, finding 18)
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.value;
     if (!val.startsWith('+7')) {
@@ -121,11 +123,12 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
     }
     setPhone(val);
   };
+  const formattedPhone = formatQuickOrderPhone(phone);
 
   // The manager reaches the buyer only by this number: 10 digits after «+7», not the length of the text with its spaces
-  // (audit 07.10, finding 17)
-  const phoneComplete = isQuickOrderPhoneComplete(phone);
-  const phoneDigits = digitsAfterCountryCode(phone);
+  // (audit 07.10, finding 17); a leading 8 or 7 of 11 digits is the country code
+  const phoneComplete = isQuickOrderPhoneComplete(formattedPhone);
+  const phoneDigits = digitsAfterCountryCode(formattedPhone);
   const missingDigits = PHONE_DIGITS_AFTER_CODE - phoneDigits;
   const phoneHint = phoneComplete
     ? 'Менеджер перезвонит по этому номеру'
@@ -151,7 +154,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
     setIsSubmitting(true);
     let placed: boolean | void = false;
     try {
-      placed = await onSuccess({ name: name.trim(), phone: phone.trim(), address: finalAddr || 'Уточнит менеджер' });
+      placed = await onSuccess({ name: name.trim(), phone: formattedPhone.trim(), address: finalAddr || 'Уточнит менеджер' });
     } finally {
       setIsSubmitting(false);
     }
@@ -300,6 +303,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   aria-describedby="quick-order-phone-hint"
                   value={phone}
                   onChange={handlePhoneChange}
+                  onBlur={() => setPhone(formattedPhone)}
                   className="w-full py-2 px-3 neu-inset rounded-xl text-xs text-text-primary placeholder:text-text-muted"
                 />
                 <p id="quick-order-phone-hint" className="text-xs text-text-secondary">

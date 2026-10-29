@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 import { firestoreErrorCode, firestoreOperationError, needsOwnerAttention } from '../../src/utils/firestoreErrors';
 import { isBrowserOffline, retryWithDelays, settleWithin } from '../../src/utils/network';
-import { digitsAfterCountryCode, isQuickOrderPhoneComplete } from '../../src/utils/phoneNumber';
+import { digitsAfterCountryCode, formatQuickOrderPhone, isQuickOrderPhoneComplete } from '../../src/utils/phoneNumber';
 import { CHAT_PHOTO_MAX_LENGTH, isStorablePhoto } from '../../src/utils/imageUpload';
 import { buildReport, errorText } from '../../src/utils/clientErrors';
 
@@ -99,6 +99,24 @@ describe('the phone of «Заказ в 1 клик» (finding 17)', () => {
     expect(isQuickOrderPhoneComplete('+7 1 2 3 4')).toBe(false);
     expect(digitsAfterCountryCode('+7 ')).toBe(0);
     expect(digitsAfterCountryCode('+7 (999) 12')).toBe(5);
+    // an 11-digit number does not pass: the manager could not call it (audit 29.10, finding 18)
+    expect(isQuickOrderPhoneComplete('+7 89001234567')).toBe(false);
+  });
+
+  test('the field writes the number as «+7 XXX XXX-XX-XX», a leading 8 or 7 is the country code (audit 29.10, finding 18)', () => {
+    expect(formatQuickOrderPhone('89001234567')).toBe('+7 900 123-45-67');
+    expect(formatQuickOrderPhone('+7 89001234567')).toBe('+7 900 123-45-67');
+    expect(formatQuickOrderPhone('8 (900) 123-45-67')).toBe('+7 900 123-45-67');
+    expect(formatQuickOrderPhone('+79001234567')).toBe('+7 900 123-45-67');
+    expect(formatQuickOrderPhone('9001234567')).toBe('+7 900 123-45-67');
+    expect(isQuickOrderPhoneComplete(formatQuickOrderPhone('89001234567'))).toBe(true);
+    // typing step by step keeps what was typed
+    expect(formatQuickOrderPhone('+7 9')).toBe('+7 9');
+    expect(formatQuickOrderPhone('+7 9001')).toBe('+7 900 1');
+    expect(formatQuickOrderPhone('+7 ')).toBe('+7 ');
+    expect(formatQuickOrderPhone('')).toBe('+7 ');
+    // more than 10 digits are cut
+    expect(formatQuickOrderPhone('+7 900 123-45-6789')).toBe('+7 900 123-45-67');
   });
 });
 

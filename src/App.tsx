@@ -19,6 +19,7 @@ import {
 import { useAuth } from './context/AuthContext';
 import { useCatalog } from './app/useCatalog';
 import { ReviewOrdersContext } from './utils/reviewOrdersContext';
+import { liveProductsRead } from './utils/liveProducts';
 import { useStorefrontData } from './app/useStorefrontData';
 import { useAccountData } from './app/useAccountData';
 import { useToasts } from './app/useToasts';
@@ -327,6 +328,7 @@ export default function App() {
     currentUser,
     userProfile,
     products,
+    productsLoaded,
     setProducts,
     setSelectedProduct,
     cartItems,
@@ -745,6 +747,10 @@ export default function App() {
 
           {activeTab === 'cart' && (
             <CartScreen
+              // the stock of the cart is known once its products' documents are read, not the index lines (audit 29.10,
+              // findings 2 and 20): `useCatalog` puts them in `products`, so the screen renders again when they come
+              stockKnown={productsLoaded && liveProductsRead(cartItems.map((item) => item.product.id))}
+              catalogFailed={productsError}
               hasActivePromos={hasActivePromos}
               preorderMode={preorderMode}
               ordersPaused={!storeAcceptsOrders(storefrontSettings)}

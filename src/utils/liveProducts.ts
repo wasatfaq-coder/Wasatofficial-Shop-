@@ -53,6 +53,14 @@ export function setLiveProductsEnabled(on: boolean) {
 /** The documents read so far: a product, or null when it is gone */
 export const liveProducts = () => docs;
 
+/**
+ * The documents of these products have been read (or the catalog is read whole and holds them): the checkout compares
+ * the stock only with them, not with index lines that lag (audit 29.10, finding 20)
+ */
+export function liveProductsRead(ids: string[]): boolean {
+  return !enabled || ids.every((id) => docs.has(id));
+}
+
 function subscribe(listener: () => void) {
   listeners.add(listener);
   return () => {
