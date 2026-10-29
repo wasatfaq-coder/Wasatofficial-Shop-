@@ -88,6 +88,11 @@ describe('wholesale discounts at order time', () => {
   test('a change appends the ended discounts; the same discounts change nothing', () => {
     const now = at('2026-10-20T10:00:00.000Z');
     expect(withWholesaleSettingsChange(undefined, { volumeDiscount: tenPercent }, { volumeDiscount: tenPercent }, now)).toBeUndefined();
+    // the database gives map keys in its own order: the same discounts are not a change (review of stage 3)
+    const fromDb = { tiers: [{ value: 10, minPacks: 1 }], countBy: 'product' as const, kind: 'percent' as const };
+    expect(withWholesaleSettingsChange(undefined, { volumeDiscount: fromDb }, { volumeDiscount: tenPercent }, now)).toBeUndefined();
+    const broken = { kind: 'percent' as const, value: 10 };
+    expect(withWholesaleSettingsChange(undefined, { brokenPackDiscount: { value: 10, kind: 'percent' } }, { brokenPackDiscount: broken }, now)).toBeUndefined();
     expect(withWholesaleSettingsChange(undefined, { volumeDiscount: tenPercent }, { volumeDiscount: fifteen }, now)).toEqual([
       { until: '2026-10-20T10:00:00.000Z', volumeDiscount: tenPercent },
     ]);

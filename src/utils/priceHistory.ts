@@ -4,7 +4,7 @@
  * in the catalog when it was placed, not with today's. Plain data: no browser APIs.
  */
 import type { Product, PriceHistoryEntry, WholesaleSettingsChange } from '../types';
-import type { WholesaleSettings } from '../shared/wholesalePricing';
+import { readBrokenPackDiscount, readVolumeDiscount, type WholesaleSettings } from '../shared/wholesalePricing';
 
 /** How many earlier prices a product keeps */
 export const PRICE_HISTORY_LIMIT = 10;
@@ -105,9 +105,16 @@ const MAX_WHOLESALE_HISTORY = 20;
 
 type WholesaleDiscounts = Pick<WholesaleSettingsChange, 'volumeDiscount' | 'brokenPackDiscount'>;
 
-const sameDiscounts = (a: WholesaleDiscounts, b: WholesaleDiscounts) =>
-  JSON.stringify(a.volumeDiscount ?? null) === JSON.stringify(b.volumeDiscount ?? null) &&
-  JSON.stringify(a.brokenPackDiscount ?? null) === JSON.stringify(b.brokenPackDiscount ?? null);
+/** By the values read the same way the prices read them: the database gives map keys in its own order */
+const discountKey = (d: WholesaleDiscounts) => {
+  const scale = readVolumeDiscount(d.volumeDiscount);
+  const broken = d.brokenPackDiscount ? readBrokenPackDiscount({ brokenPackDiscount: d.brokenPackDiscount }) : undefined;
+  return JSON.stringify([
+    scale ? [scale.kind, scale.countBy, scale.tiers.map((t) => [t.minPacks, t.value])] : null,
+    broken ? [broken.kind, broken.value] : null,
+  ]);
+};
+const sameDiscounts = (a: WholesaleDiscounts, b: WholesaleDiscounts) => discountKey(a) === discountKey(b);
 
 /**
  * «Опт» saved: the discounts it had end now (audit 29.10, finding 16). Unchanged discounts — the history as it was.

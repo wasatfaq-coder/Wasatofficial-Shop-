@@ -5,6 +5,7 @@ import type { Product, SaveStorefrontSettings, StorefrontSettings } from '../../
 import {
   brokenPackDiscountErrors,
   brokenPackDiscountedPrice,
+  brokenPackRawPrice,
   hasWholesalePrice,
   MAX_MIN_WHOLESALE_AMOUNT,
   MAX_VOLUME_PERCENT,
@@ -16,6 +17,7 @@ import {
   sellsWholesale,
   volumeDiscountErrors,
   volumeDiscountedPrice,
+  volumeStepPrice,
   type BrokenPackDiscount,
   type VolumeCountBy,
   type VolumeDiscountKind,
@@ -153,7 +155,7 @@ export const AdminWholesaleTab: React.FC<AdminWholesaleTabProps> = ({ settings, 
     : [];
   // a fixed step larger than a product's wholesale price would give it away: that is never meant, so it is not saved
   const givenAway = deepest
-    ? wholesaleProducts.filter((p) => volumeDiscountedPrice(p.wholesalePrice as number, deepest, scale.kind) <= 0)
+    ? wholesaleProducts.filter((p) => volumeStepPrice(p.wholesalePrice as number, deepest, scale.kind) <= 0)
     : [];
 
   // Stage 14 (owner's decision 12.10): broken pack discount CANNOT drop the price below costPrice or to 0 ₽ — blocks saving!
@@ -166,7 +168,7 @@ export const AdminWholesaleTab: React.FC<AdminWholesaleTabProps> = ({ settings, 
       : [];
   const brokenGivenAway =
     brokenDraft && brokenErrs.length === 0
-      ? bothChannelProducts.filter((p) => brokenPackDiscountedPrice(p.wholesalePrice as number, brokenDraft) <= 0)
+      ? bothChannelProducts.filter((p) => brokenPackRawPrice(p.wholesalePrice as number, brokenDraft) <= 0)
       : [];
 
   const sample = wholesaleProducts[0];

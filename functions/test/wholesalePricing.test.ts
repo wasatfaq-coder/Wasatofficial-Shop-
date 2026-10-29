@@ -14,6 +14,7 @@ import {
   sellsWholesale,
   volumeDiscountErrors,
   volumeDiscountedPrice,
+  volumeStepPrice,
   volumeTierFor,
   wholesaleLineProblems,
   wholesaleOrderSubtotal,
@@ -95,6 +96,9 @@ describe('the volume discount', () => {
     expect(volumeDiscountedPrice(40, { minPacks: 5, value: 50 }, 'fixed')).toBe(1);
     expect(volumeDiscountedPrice(50, { minPacks: 5, value: 50 }, 'fixed')).toBe(1);
     expect(volumeDiscountedPrice(1, { minPacks: 5, value: 100 }, 'percent')).toBe(1);
+    // «Опт» checks the step before the floor: a step that would give the product away is not saved
+    expect(volumeStepPrice(500, { minPacks: 10, value: 600 }, 'fixed')).toBe(-100);
+    expect(volumeStepPrice(500, { minPacks: 10, value: 100 }, 'percent')).toBe(0);
   });
 
   test('a stored scale is checked: bad steps dropped, sorted, duplicates by the last', () => {
