@@ -237,6 +237,8 @@ describe('review 12.10: a pack order in «Цены не совпадают с к
   test('a pack not sold in the colour is not a pack', async () => {
     const { soldPack, pricePackLine } = await import('../../src/shared/packLines');
     expect(soldPack(catalogProduct, 'pack-1', 'Синий')?.id).toBe('pack-1');
+    // a product «Только в розницу» keeps its packs but sells none (audit 29.10, finding 17)
+    expect(soldPack({ ...catalogProduct, saleChannel: 'retail' } as Product, 'pack-1', 'Синий')).toBeNull();
     expect(soldPack({ ...catalogProduct, colors: [...catalogProduct.colors, { name: 'Красный', hex: '#f00' }] } as Product, 'pack-1', 'Красный')).toBeNull();
     const red = pricePackLine({ id: 'c', product: catalogProduct, selectedColor: 'Красный', selectedSize: '', quantity: 1, priceKind: 'pack', packId: 'pack-1' } as CartItem);
     expect(red.packUnavailable).toBe(true);

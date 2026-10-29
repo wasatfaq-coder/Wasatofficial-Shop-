@@ -301,6 +301,19 @@ describe('placeOrderCore', () => {
     expect(skus.map((s) => s.stock)).toEqual([2, 0]);
   });
 
+  test('size pack of a product «Только в розницу» is refused (audit 29.10, finding 17)', async () => {
+    await db.doc('products/shirt').update({
+      saleChannel: 'retail',
+      sizePacks: [{ id: 'pack-1', price: 9000, sizes: [{ size: 'M', qty: 1 }] }],
+    });
+    await db.doc('settings/storefront').set({ freeDeliveryThreshold: 0, isExpressEnabled: true });
+    await expectOrderError(
+      placeOrderCore(db, request({ items: [{ productId: 'shirt', color: 'Белый', size: '', quantity: 1, packId: 'pack-1' }] }), null),
+      'failed-precondition',
+      /Ростовка/
+    );
+  });
+
   test('parses the wholesale choice and nothing else from the request', () => {
     const parsed = parsePlaceOrderRequest({
       ...request(),

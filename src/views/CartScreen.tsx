@@ -41,10 +41,19 @@ import { packsText } from '../utils/wholesaleOffer';
 import { WholesaleMark } from '../components/WholesaleMark';
 import { heldByOtherLines, packsLeft } from '../utils/cartLines';
 import { isCartPackLine, packLineProblems } from '../shared/packLines';
+import { brokenPackPieces } from '../shared/sizePacks';
+import { LoadFailedNotice } from '../components/LoadFailedNotice';
 import { cartLinePieces, packLineCountText, packLineInfo } from '../utils/cartPackLine';
 
 interface CartScreenProps {
   cartItems: CartItem[];
+  /**
+   * The catalog answered (audit 29.10, finding 2): before it the cart holds light copies without stock, and every line
+   * read «Нет в наличии» — «убрать недоступные» then emptied the whole cart. Until then: «Проверяем наличие…»
+   */
+  stockKnown?: boolean;
+  /** The catalog did not load: «Проверяем наличие…» would never end, so the screen says what to do */
+  catalogFailed?: boolean;
   /** «Технические работы» in «Витрина»: the 1-click window says the site takes no orders */
   ordersPaused?: boolean;
   favorites: string[];
@@ -75,6 +84,8 @@ interface CartScreenProps {
 
 export const CartScreen: React.FC<CartScreenProps> = ({
   cartItems,
+  stockKnown = true,
+  catalogFailed = false,
   ordersPaused = false,
   favorites,
   onUpdateQuantity,
@@ -115,11 +126,19 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         )
       : Math.max(
           0,
-          getOrderableStock(item.product, item.selectedColor, item.selectedSize, item.priceKind === 'broken' ? false : preorderMode) -
-            heldByOtherLines(cartItems, item, item.id)
+          Math.min(
+            getOrderableStock(item.product, item.selectedColor, item.selectedSize, item.priceKind === 'broken' ? false : preorderMode) -
+              heldByOtherLines(cartItems, item, item.id),
+            // a «Разбитая упаковка» line has only the pieces of its opened pack, as `useCart` counts them (audit 29.10,
+            // finding 21: «+» stayed on and did nothing, the excess showed only at the checkout)
+            item.priceKind === 'broken'
+              ? brokenPackPieces(item.product, item.selectedColor, item.selectedSize)
+              : Number.POSITIVE_INFINITY
+          )
         );
-  const unavailableCount = cartItems.filter((item) => item.quantity > lineStock(item)).length;
+  const unavailableCount = stockKnown ? cartItems.filter((item) => item.quantity > lineStock(item)).length : 0;
   const handleFixUnavailableItems = () => {
+    if (!stockKnown) return;
     for (const item of cartItems) {
       const avail = lineStock(item);
       if (item.quantity <= avail) continue;
@@ -277,6 +296,10 @@ export const CartScreen: React.FC<CartScreenProps> = ({
         </div>
       )}
 
+      {!stockKnown && catalogFailed && (
+        <LoadFailedNotice title="Не удалось проверить наличие: каталог не загрузился" />
+      )}
+
       {/* Header bar with item counter & clear cart button */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
@@ -304,13 +327,14 @@ export const CartScreen: React.FC<CartScreenProps> = ({
           const pack = packLineInfo(item);
           const inStock = pack ? 0 : getVariantStock(item.product, item.selectedColor, item.selectedSize);
           const availableStock = lineStock(item);
-          const isPreorder = !pack && inStock === 0 && availableStock > 0;
+          const isPreorder = stockKnown && !pack && inStock === 0 && availableStock > 0;
           // A wholesale line changes by whole packs: «−» and «+» take or add one pack
           const wholesale = isWholesaleLine(item) && !pack;
           const step = wholesale ? packSizeOf(item.product) : 1;
           // the unit of the counter and of the stock texts
           const unit = pack ? 'уп.' : 'шт.';
-          const isAtMaxStock = item.quantity + step > availableStock;
+          // the stock is not known yet: «+» waits for the catalog (the cart would clamp the line to the 0 of a light copy)
+          const isAtMaxStock = !stockKnown || item.quantity + step > availableStock;
           const isEditingVariant = editingVariantItemId === item.id;
           // Buttons of a row name its product: «Удалить товар» eight times does not say which (audit 07.10, finding 37)
           const title = item.product.title;
@@ -330,7 +354,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     alt={item.product?.title || ''}
                     className="w-full h-full object-cover object-top rounded-xl"
                   />
-                  {availableStock <= 2 && availableStock > 0 && (
+                  {stockKnown && availableStock <= 2 && availableStock > 0 && (
                     <span className="absolute bottom-1 right-1 neu-photo-badge text-text-primary text-[11px] font-extrabold px-1.5 py-0.5 rounded-md">
                       {availableStock} {unit}
                     </span>
@@ -367,7 +391,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                     /* a size pack has no size to change: its colour and how many packs are left */
                     <div className="flex items-center justify-between gap-2 text-xs">
                       <span className="text-[11px] font-bold text-accent">{item.selectedColor}</span>
-                      {availableStock === 0 ? (
+                      {!stockKnown ? (
+                        <span className="text-[11px] font-semibold text-text-secondary">Проверяем наличие…</span>
+                      ) : availableStock === 0 ? (
                         <span className="text-[11px] font-bold text-danger">Нет в наличии</span>
                       ) : item.quantity > availableStock ? (
                         <span className="text-[11px] font-bold text-danger">Доступно: {availableStock} уп.</span>
@@ -383,6 +409,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                         <button
                           type="button"
                           onClick={() => setEditingVariantItemId(isEditingVariant ? null : item.id)}
+                          disabled={!stockKnown}
                           className="neu-button min-h-8 px-2.5 py-0.5 rounded-xl flex items-center gap-1.5 text-[11px] font-bold text-accent hover:scale-102 transition-transform cursor-pointer"
                           title="Нажмите, чтобы изменить цвет или размер"
                           aria-label={`Цвет и размер: ${item.selectedColor}, ${item.selectedSize}. Изменить — ${title}`}
@@ -393,7 +420,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                           <SlidersHorizontal className="w-3 h-3 text-accent" />
                         </button>
 
-                        {isPreorder ? (
+                        {!stockKnown ? (
+                          <span className="text-[11px] font-semibold text-text-secondary">Проверяем наличие…</span>
+                        ) : isPreorder ? (
                           <span className="text-[11px] font-bold text-accent">Предзаказ</span>
                         ) : availableStock === 0 ? (
                           <span className="text-[11px] font-bold text-danger">Нет в наличии</span>
@@ -495,7 +524,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({
                             : 'neu-button text-text-primary hover:text-accent cursor-pointer'
                         }`}
                         title={
-                          isAtMaxStock
+                          !stockKnown
+                            ? 'Проверяем наличие…'
+                            : isAtMaxStock
                             ? isPreorder
                               ? `Предзаказ — не больше ${availableStock} шт.`
                               : `На складе всего ${availableStock} ${unit}`

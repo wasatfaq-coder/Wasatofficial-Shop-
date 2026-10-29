@@ -21,7 +21,7 @@ import { brokenPackExcess, goesBrokenPack, isBrokenPackLine, isWholesaleLine, pr
 import { expandPackLines, isCartPackLine, ORDER_LINES_MAX, packLineProblems, soldPack } from '../shared/packLines';
 import { STORE_PAUSED_TEXT, storeAcceptsOrders } from '../shared/orderApi';
 import { cleanAddressParts, fullName, hasNameParts, namePartsOf, type AddressParts, type PersonName } from '../shared/personName';
-import { useLiveProducts } from '../utils/liveProducts';
+import { liveProductsRead, useLiveProducts } from '../utils/liveProducts';
 import { isBrowserOffline, ORDER_SAVE_TIMEOUT_MS, settleWithin, type Settled } from '../utils/network';
 import { saveGuestOrder } from './guestOrders';
 import type { AddToast } from './useToasts';
@@ -51,6 +51,8 @@ type CheckoutOptions = {
   currentUser: User | null;
   userProfile: UserProfile;
   products: Product[];
+  /** The catalog answered: before it the cart holds light copies without stock (audit 29.10, finding 2) */
+  productsLoaded: boolean;
   setProducts: SetState<Product[]>;
   setSelectedProduct: SetState<Product | null>;
   cartItems: CartItem[];
@@ -78,6 +80,7 @@ export function useCheckout({
   currentUser,
   userProfile,
   products,
+  productsLoaded,
   setProducts,
   setSelectedProduct,
   cartItems,
@@ -229,8 +232,9 @@ export function useCheckout({
 
   /** What the cart has beyond the stock now: the checkout lists it and does not send the order */
   const checkoutStockProblems = React.useMemo(
-    () => (activeTab === 'checkout' ? orderStockProblems(expandPackLines(cartItems), products, preorderMode) : []),
-    [activeTab, cartItems, products, preorderMode]
+    // no catalog yet — no stock to compare with: every line would read «больше нет в каталоге»
+    () => (activeTab === 'checkout' && productsLoaded ? orderStockProblems(expandPackLines(cartItems), products, preorderMode) : []),
+    [activeTab, cartItems, products, preorderMode, productsLoaded]
   );
 
   const handleCompleteOrder = async (orderData: CompleteOrderData): Promise<boolean> => {
@@ -334,6 +338,10 @@ export function useCheckout({
     // stops a 1-click order and a catalog that changed after the page was opened
     // a size pack becomes a line per size here (stage 19): the stock, the order and the journal go line by line
     const orderLines = expandPackLines(orderData.items);
+    if (!productsLoaded || !liveProductsRead(orderLines.map((line) => line.product.id))) {
+      addToast('Проверяем наличие на складе: нажмите «Подтвердить» ещё раз через пару секунд', 'info');
+      return false;
+    }
     const stockProblems = orderStockProblems(orderLines, products, preorderMode);
     if (stockProblems.length > 0) {
       addToast(`Не хватает на складе: ${stockProblems.map(stockProblemText).join('; ')}. Измените корзину.`, 'error');

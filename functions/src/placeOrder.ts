@@ -26,7 +26,7 @@ import {
   validatePromo,
   type PricingLine,
 } from '../../src/shared/orderPricing';
-import { brokenPackExcess, goesBrokenPack, isBrokenPackLine, priceCartLines, wholesaleLineProblems } from '../../src/shared/wholesalePricing';
+import { brokenPackExcess, goesBrokenPack, isBrokenPackLine, priceCartLines, saleChannelOf, wholesaleLineProblems } from '../../src/shared/wholesalePricing';
 import { extractColorName, extractSizeName, generateDefaultSKUs, getOrderableStock, isHiddenFromSale, skuCodeForLine } from '../../src/utils/inventory';
 import { orderStockMovements, STOCK_MOVEMENTS_COLLECTION } from '../../src/shared/stockMovements';
 import { deliveryKindOfMethod, estimatedDeliveryOf, initialStatusLog, type DeliveryKind } from '../../src/shared/orderFlow';
@@ -242,7 +242,8 @@ export async function placeOrderCore(
       }
       if (item.packId) {
         // a size pack: only a pack the product has, in one of its colours; sizes and price come from the product
-        const pack = productSizePacks(product).find((p) => p.id === item.packId);
+        // a product «Только в розницу» keeps its packs but does not sell them, as on the site (audit 29.10, finding 17)
+        const pack = saleChannelOf(product) === 'retail' ? undefined : productSizePacks(product).find((p) => p.id === item.packId);
         if (!pack || !sizePackColors(product, pack).some((c) => sameColor(c, item.color))) {
           throw new OrderError('failed-precondition', `Ростовка товара «${product.title}» больше не продаётся`);
         }

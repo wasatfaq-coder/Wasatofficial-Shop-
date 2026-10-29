@@ -304,6 +304,9 @@ export const isCartPackLine = (item: Pick<CartItem, 'priceKind' | 'packId' | 'pa
 
 /** The product sells the pack in this colour: the pack, or null (a pack the owner removed or a colour taken off it) */
 export function soldPack(product: Product | undefined, packId: string | undefined, color: string) {
+  // a product «Только в розницу» keeps its packs but sells none: the cart, the checkout and the server agree (audit
+  // 29.10, finding 17)
+  if (product?.saleChannel === 'retail') return null;
   const pack = productSizePacks(product).find((p) => p.id === packId);
   if (!pack || !product) return null;
   return sizePackColors(product, pack).some((c) => sameColor(c, color)) ? pack : null;
