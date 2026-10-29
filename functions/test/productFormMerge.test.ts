@@ -18,12 +18,12 @@ const product = (over: Partial<Product> = {}): Product =>
 describe('mergeFormIntoLive', () => {
   test('a price changed meanwhile («Курсы → Применить») stays when the form did not touch the price', () => {
     const opened = product();
-    const live = product({ price: 6490, priceHistory: [{ price: 5990, until: 1 }] } as Partial<Product>);
+    const live = product({ price: 6490, priceHistory: [{ price: 5990, until: '2026-10-29T08:00:00.000Z' }] });
     const edited = product({ title: 'Куртка утеплённая' });
     const saved = mergeFormIntoLive(opened, edited, live);
     expect(saved.title).toBe('Куртка утеплённая');
     expect(saved.price).toBe(6490);
-    expect((saved as Product & { priceHistory?: unknown }).priceHistory).toEqual([{ price: 5990, until: 1 }]);
+    expect(saved.priceHistory).toEqual([{ price: 5990, until: '2026-10-29T08:00:00.000Z' }]);
   });
 
   test('the price the owner typed wins over the one changed meanwhile', () => {
