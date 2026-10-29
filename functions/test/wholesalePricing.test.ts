@@ -90,8 +90,11 @@ describe('the volume discount', () => {
     expect(volumeDiscountedPrice(1000, { minPacks: 10, value: 5 }, 'percent')).toBe(950);
     expect(volumeDiscountedPrice(999, { minPacks: 10, value: 5 }, 'percent')).toBe(949);
     expect(volumeDiscountedPrice(1000, { minPacks: 5, value: 50 }, 'fixed')).toBe(950);
-    // a fixed step larger than the price never makes it negative
-    expect(volumeDiscountedPrice(40, { minPacks: 5, value: 50 }, 'fixed')).toBe(0);
+    // a fixed step larger than the price (the wholesale price lowered after the step was saved) leaves 1 ₽, not a free
+    // line (audit 29.10, finding 3)
+    expect(volumeDiscountedPrice(40, { minPacks: 5, value: 50 }, 'fixed')).toBe(1);
+    expect(volumeDiscountedPrice(50, { minPacks: 5, value: 50 }, 'fixed')).toBe(1);
+    expect(volumeDiscountedPrice(1, { minPacks: 5, value: 100 }, 'percent')).toBe(1);
   });
 
   test('a stored scale is checked: bad steps dropped, sorted, duplicates by the last', () => {

@@ -1,7 +1,7 @@
 import type { AddressParts } from './shared/personName';
 import type { DeliveryKind, OrderStatusLogEntry } from './shared/orderFlow';
 import type { ProductPurchase } from './utils/currencyPricing';
-import type { BrokenPackDiscount, SaleChannel, WholesaleSettings } from './shared/wholesalePricing';
+import type { BrokenPackDiscount, SaleChannel, VolumeDiscountScale, WholesaleSettings } from './shared/wholesalePricing';
 import type { SizePack } from './shared/sizePacks';
 export interface BodyMeasurements {
   height: number;
@@ -907,6 +907,19 @@ export interface StorefrontSettings {
   /** Admin → «Опт»: the volume discount of wholesale lines (src/shared/wholesalePricing.ts); absent — none */
   wholesale?: WholesaleSettings;
   /** Admin → «Опт»: discount on broken size packs (% or ₽ per item off wholesalePrice; stage 14 of docs/unified-plan.md) */
+  brokenPackDiscount?: BrokenPackDiscount;
+  /**
+   * Admin → «Опт»: the volume and broken pack discounts that were in effect before each change, with the moment they
+   * ended (audit 29.10, finding 16): «Цены не совпадают с каталогом» checks an unpaid order by the discounts of its time,
+   * as `priceHistory` does for prices. Written by `withWholesaleSettingsChange`, read by `wholesaleSettingsAtOrderTime`
+   */
+  wholesaleHistory?: WholesaleSettingsChange[];
+}
+
+/** The «Опт» discounts that ended at `until` (ISO) */
+export interface WholesaleSettingsChange {
+  until: string;
+  volumeDiscount?: VolumeDiscountScale;
   brokenPackDiscount?: BrokenPackDiscount;
 }
 

@@ -2,7 +2,7 @@ import type { DeliveryMethod, Order, Product, PromoCode, StorefrontSettings } fr
 import { calcPromoDiscount, getAvailableDeliveryMethods, isQuickOrderDelivery, type PricingLine } from '../shared/orderPricing';
 import { linePrice } from '../shared/orderLine';
 import { orderTimestamp } from '../shared/orderDate';
-import { pricesAtOrderTime, wholesalePricesAtOrderTime } from './priceHistory';
+import { pricesAtOrderTime, wholesalePricesAtOrderTime, wholesaleSettingsAtOrderTime } from './priceHistory';
 import { isBrokenPackLine, isWholesaleLine, priceCartLines, sellsWholesale } from '../shared/wholesalePricing';
 import { groupOrderLines, isPackLine, packGroupCompositionText, soldPack } from '../shared/packLines';
 import { sizePackPrice } from '../shared/sizePacks';
@@ -11,7 +11,7 @@ import { sizePackPrice } from '../shared/sizePacks';
 export interface OrderCheckContext {
   promos?: PromoCode[];
   deliveryMethods?: DeliveryMethod[];
-  settings?: Partial<Pick<StorefrontSettings, 'paymentMethods' | 'freeDeliveryThreshold' | 'isExpressEnabled' | 'wholesale' | 'brokenPackDiscount'>>;
+  settings?: Partial<Pick<StorefrontSettings, 'paymentMethods' | 'freeDeliveryThreshold' | 'isExpressEnabled' | 'wholesale' | 'brokenPackDiscount' | 'wholesaleHistory'>>;
 }
 
 /** A 1-click order and an old one without a choice: the manager agrees payment with the buyer */
@@ -69,6 +69,9 @@ export function orderPriceIssues(order: Order, products: Product[], shop: OrderC
   const wholesaleSettings = shop.settings?.brokenPackDiscount
     ? { ...shop.settings.wholesale, brokenPackDiscount: shop.settings.brokenPackDiscount }
     : shop.settings?.wholesale;
+  // the volume and broken pack discounts of the order's time too (audit 29.10, finding 16): today's alone flagged every
+  // unpaid order after «Опт» changed
+  const settingsThen = wholesaleSettingsAtOrderTime(wholesaleSettings, shop.settings?.wholesaleHistory, orderTime);
   const expectedWholesale = priceCartLines(
     items.map((item) => {
       const catalog = item.product?.id ? byId.get(item.product.id) : undefined;
@@ -106,17 +109,19 @@ export function orderPriceIssues(order: Order, products: Product[], shop: OrderC
           bases.length > 0
             ? Array.from(
                 new Set(
-                  bases.map((wp) => {
-                    const priced = priceCartLines(
-                      items.map((it) => {
-                        const cat = it.product?.id ? byId.get(it.product.id) : undefined;
-                        if (!cat) return it;
-                        return { ...it, product: cat.id === catalog.id ? { ...cat, wholesalePrice: wp } : cat };
-                      }),
-                      wholesaleSettings
-                    );
-                    return linePrice(priced[i]);
-                  })
+                  bases.flatMap((wp) =>
+                    settingsThen.map((then) => {
+                      const priced = priceCartLines(
+                        items.map((it) => {
+                          const cat = it.product?.id ? byId.get(it.product.id) : undefined;
+                          if (!cat) return it;
+                          return { ...it, product: cat.id === catalog.id ? { ...cat, wholesalePrice: wp } : cat };
+                        }),
+                        then
+                      );
+                      return linePrice(priced[i]);
+                    })
+                  )
                 )
               )
             : [linePrice(expectedWholesale[i])];

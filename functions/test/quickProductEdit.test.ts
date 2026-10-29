@@ -2,7 +2,7 @@
 // и товары, у которых цена ниже закупки
 import { describe, expect, test } from 'bun:test';
 import type { Product } from '../../src/types';
-import { belowCostLines, quickPriceError, quickStockChanges, quickStockVariants, withQuickPrice } from '../../src/utils/quickProductEdit';
+import { belowCostLines, quickPriceError, quickStockChanges, quickStockVariants, seasonalDiscountPrice, withQuickPrice } from '../../src/utils/quickProductEdit';
 
 const product = (over: Partial<Product> = {}): Product =>
   ({
@@ -68,5 +68,28 @@ describe('остаток из списка', () => {
     const variants = quickStockVariants(p);
     expect(variants.map((s) => `${s.color} ${s.size} ${s.stock}`)).toContain('Черный S 0');
     expect(quickStockChanges(p, variants, { 'Черный|S': '4' }).changes[0]).toMatchObject({ color: 'Черный', delta: 4 });
+  });
+});
+
+describe('«Сезонная скидка» (audit 29.10, finding 14)', () => {
+  test('ends in …90 when that stays close to the discount', () => {
+    expect(seasonalDiscountPrice(3000, 20)).toEqual({ price: 2390, discountPercent: 20 });
+    expect(seasonalDiscountPrice(5990, 10)).toEqual({ price: 5390, discountPercent: 10 });
+  });
+
+  test('never above the old price: 1480 −1 % is not 1490', () => {
+    const r = seasonalDiscountPrice(1480, 1)!;
+    expect(r.price).toBeLessThan(1480);
+    expect(r.price).toBe(1465);
+  });
+
+  test('a small price keeps the computed discount, not 44 % off', () => {
+    expect(seasonalDiscountPrice(160, 10)).toEqual({ price: 144, discountPercent: 10 });
+  });
+
+  test('no discount to give — null, the product keeps its price', () => {
+    expect(seasonalDiscountPrice(1, 10)).toBeNull();
+    expect(seasonalDiscountPrice(1000, 0)).toBeNull();
+    expect(seasonalDiscountPrice(0, 10)).toBeNull();
   });
 });

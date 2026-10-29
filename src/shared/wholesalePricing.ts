@@ -249,11 +249,15 @@ export function volumeTierFor(packs: number, scale: VolumeDiscountScale | undefi
   return reached;
 }
 
-/** One item's price after the step: whole roubles, never below zero */
+/**
+ * One item's price after the step: whole roubles, not below 1 ₽, as the broken pack (audit 29.10, finding 3): «Опт»
+ * checks a step only when it is saved, and a wholesale price lowered later (the form, «Курсы → Применить») made a fixed
+ * step reach 0 ₽ — the browser and `placeOrder` took the line for free
+ */
 export function volumeDiscountedPrice(base: number, tier: VolumeDiscountTier | null, kind: VolumeDiscountKind): number {
   if (!tier) return base;
   const price = kind === 'fixed' ? base - tier.value : Math.round((base * (100 - tier.value)) / 100);
-  return Math.max(0, price);
+  return Math.max(1, price);
 }
 
 /**

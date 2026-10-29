@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { AlertTriangle, Check, Loader2, Plus, Trash2, Download, FileText } from 'lucide-react';
+import { withWholesaleSettingsChange } from '../../utils/priceHistory';
 import type { Product, SaveStorefrontSettings, StorefrontSettings } from '../../types';
 import {
   brokenPackDiscountErrors,
@@ -207,9 +208,16 @@ export const AdminWholesaleTab: React.FC<AdminWholesaleTabProps> = ({ settings, 
     const sorted = { ...scale, tiers: [...scale.tiers].sort((a, b) => a.minPacks - b.minPacks) };
     const { volumeDiscount: _old, minOrderAmount: _oldMin, brokenPackDiscount: _oldBroken, ...restWholesale } = settings.wholesale ?? {};
     const { brokenPackDiscount: _topBroken, ...restSettings } = settings;
+    // the discounts it had end now: unpaid orders are checked by the discounts of their time (audit 29.10, finding 16)
+    const wholesaleHistory = withWholesaleSettingsChange(
+      settings.wholesaleHistory,
+      { volumeDiscount: settings.wholesale?.volumeDiscount, brokenPackDiscount: settings.brokenPackDiscount ?? settings.wholesale?.brokenPackDiscount },
+      { volumeDiscount: sorted.tiers.length ? sorted : undefined, brokenPackDiscount: brokenDraft ?? undefined }
+    );
     setSaving(true);
     const ok = await onUpdateSettings({
       ...restSettings,
+      ...(wholesaleHistory ? { wholesaleHistory } : {}),
       ...(brokenDraft ? { brokenPackDiscount: brokenDraft } : {}),
       wholesale: {
         ...restWholesale,

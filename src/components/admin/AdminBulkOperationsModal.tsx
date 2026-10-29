@@ -7,7 +7,7 @@ import { m, AnimatePresence } from 'motion/react';
 import { NotConfigured } from '../NotConfigured';
 import { useDialogA11y } from '../../utils/useDialogA11y';
 import { pluralRu } from '../../utils/pluralize';
-import { belowCostLines } from '../../utils/quickProductEdit';
+import { belowCostLines, seasonalDiscountPrice } from '../../utils/quickProductEdit';
 import { PURCHASE_CURRENCIES, parseDecimal, readPurchase, type ProductPurchase, type PurchaseCurrency } from '../../utils/currencyPricing';
 
 /** «12,5 $», «—» */
@@ -162,13 +162,14 @@ export const AdminBulkOperationsModal: React.FC<AdminBulkOperationsModalProps> =
         } else {
           // Apply seasonal discount
           const basePrice = p.originalPrice || p.price;
-          const discountedPrice = Math.round(basePrice * ((100 - discountPercent) / 100));
-          const roundedPrice = roundPrice(discountedPrice, 'round90');
+          // …90 only while it stays below the old price and close to the discount (audit 29.10, finding 14)
+          const discounted = seasonalDiscountPrice(basePrice, discountPercent);
+          if (!discounted) return p;
           return {
             ...p,
-            price: roundedPrice,
+            price: discounted.price,
             originalPrice: basePrice,
-            discountPercent,
+            discountPercent: discounted.discountPercent,
             badge: discountBadge === 'Без бейджа' ? undefined : discountBadge,
           };
         }

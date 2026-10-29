@@ -33,6 +33,25 @@ describe('adjustedOrderTotals', () => {
     expect(adjustedOrderTotals(order, [line(shirt, 1)], [promo]).total).toBe(3600);
   });
 
+  // audit 29.10, finding 15: a promo applies to retail lines only — its share is of the retail part
+  test('a percent promo scales over the retail lines, not the wholesale ones', () => {
+    const promo = { id: 'x', code: 'SALE10', discountType: 'percent', discountValue: 10, active: true, usedCount: 0 } as PromoCode;
+    const wholesale = (p: Product, quantity: number): CartItem => ({ ...line(p, quantity), id: `${p.id}-w`, priceKind: 'wholesale', unitPrice: 1000 }) as CartItem;
+    const opt = product('p3', 1500, 500);
+    // retail 4000 (10 % → 400 off) + wholesale 90 × 1000
+    const order = { items: [line(shirt, 1), wholesale(opt, 90)], totalPrice: 93600, deliveryFee: 0, discountAmount: 400, promoCode: 'SALE10' };
+    // half of the wholesale goes: the retail is the same, so is the discount
+    expect(adjustedOrderTotals(order, [line(shirt, 1), wholesale(opt, 45)], [promo]).discount).toBe(400);
+    // the retail goes: a wholesale-only order has no promo discount
+    expect(adjustedOrderTotals(order, [wholesale(opt, 90)], [promo]).discount).toBe(0);
+  });
+
+  test('an old code without a type and with a value up to 100 is a percent, as at the checkout', () => {
+    const legacy = { id: 'y', code: 'OLD10', discountValue: 10, active: true, usedCount: 0 } as PromoCode;
+    const order = { items: [line(shirt, 1), line(polo, 1)], totalPrice: 5400, deliveryFee: 0, discountAmount: 600, promoCode: 'OLD10' };
+    expect(adjustedOrderTotals(order, [line(shirt, 1)], [legacy]).discount).toBe(400);
+  });
+
   test('an old order without stored delivery keeps the difference between its total and items', () => {
     const order = { items: [line(shirt, 1)], totalPrice: 4350 };
     expect(adjustedOrderTotals(order, [line(shirt, 2)]).total).toBe(8350);

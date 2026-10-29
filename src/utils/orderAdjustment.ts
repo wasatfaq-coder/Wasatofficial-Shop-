@@ -1,5 +1,5 @@
 import type { CartItem, Order, PromoCode } from '../types';
-import { calcSubtotal, isQuickOrderDelivery, toPricingLine } from '../shared/orderPricing';
+import { calcRetailSubtotal, calcSubtotal, isQuickOrderDelivery, promoDiscountKind, toPricingLine } from '../shared/orderPricing';
 import { linePrice } from '../shared/orderLine';
 import { extractColorName, extractSizeName } from './inventory';
 
@@ -72,11 +72,15 @@ export function adjustedOrderTotals(
     : undefined;
   // A percent promo keeps the order's own share (its discount to its items): the code in «Промокоды» may have been
   // changed since, and the order must not get another percent (audit 02.10, finding 11). A fixed one stays the same sum.
-  const isPercent = promo ? (promo.discountType ?? (promo.discountPercent ? 'percent' : 'fixed')) === 'percent' : false;
+  // A promo applies to retail lines only, so the share is of the retail part and a wholesale-only order keeps no
+  // discount; the kind is read as the checkout reads it (audit 29.10, finding 15)
+  const isPercent = promo ? promoDiscountKind(promo) === 'percent' : false;
+  const oldRetail = calcRetailSubtotal((order.items ?? []).map(toPricingLine));
+  const retail = calcRetailSubtotal(items.map(toPricingLine));
   const discount =
-    isPercent && oldSubtotal > 0
-      ? Math.min(subtotal, Math.round((oldDiscount * subtotal) / oldSubtotal))
-      : Math.min(oldDiscount, subtotal);
+    isPercent && oldRetail > 0
+      ? Math.min(retail, Math.round((oldDiscount * retail) / oldRetail))
+      : Math.min(oldDiscount, retail);
 
   return { subtotal, discount, deliveryFee, total: Math.max(0, subtotal - discount + deliveryFee) };
 }
