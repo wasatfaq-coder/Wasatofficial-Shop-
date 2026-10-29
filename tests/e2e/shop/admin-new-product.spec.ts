@@ -5,6 +5,9 @@ import { queryDocs } from '../emulator';
 import { ADMIN } from '../store';
 
 test('новый товар: состав и страна чипами, уход значками, описание из характеристик', async ({ page, phone, signIn }) => {
+  // the whole form in one scenario takes 25–29 s on a runner, next to the 30 s default: in CI it ran out on the last
+  // click «Создать товар» (29.10, and earlier — admin-wholesale-plan.md, stage 8); the same allowance as reviews.spec.ts
+  test.setTimeout(60_000);
   // phone and desktop run at the same time: each creates its own product
   const title = `Футболка базовая ${phone ? '390' : '1280'}`;
 

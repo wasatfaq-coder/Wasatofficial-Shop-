@@ -276,15 +276,20 @@ service cloud.firestore {
 
     // Заказ, по которому написан отзыв: заказ автора, полученный («Получен») и не отменённый (задание владельца 11.10).
     // orderId необязателен: открытая вкладка прежнего сайта пишет отзыв без него; обязательным он станет вторым PR.
-    // get() заказа один: его же читают обе проверки
-    function isReceivedOrderOf(orderId, uid) {
+    // get() заказа один: его же читают все проверки.
+    // Товар отзыва — среди товаров заказа (productIds, ревью 11.10, находка 2). Заказ без productIds — старый, записанный
+    // до #228: его пускаем, как раньше, чтобы «Покупка подтверждена» не пропала, пока сессия владельца не допишет поле
+    // (решение владельца 29.10, единый план, этап 3)
+    function isReceivedOrderOf(orderId, uid, productId) {
       let path = /databases/$(database)/documents/orders/$(orderId);
       return orderId is string && orderId.size() > 0 && orderId.size() <= 40
         && orderId.matches('^[A-Za-z0-9_-]+$')
         && exists(path)
         && get(path).data.get('customerUid', '') == uid
         && get(path).data.get('status', '') == 'delivered'
-        && get(path).data.get('isCancelled', false) != true;
+        && get(path).data.get('isCancelled', false) != true
+        && (!('productIds' in get(path).data)
+          || (get(path).data.productIds is list && productId in get(path).data.productIds));
     }
 
     // «Проверять отзывы перед публикацией» (settings/storefront.reviewPremoderation)
@@ -329,7 +334,7 @@ service cloud.firestore {
         && isOptionalText(data, 'colorPurchased', 60)
         && isReviewStamp(data)
         && isAuthorReviewHidden(data, reviewId)
-        && (!('orderId' in data) || isReceivedOrderOf(data.orderId, request.auth.uid));
+        && (!('orderId' in data) || isReceivedOrderOf(data.orderId, request.auth.uid, data.productId));
     }
 
     match /reviews/{reviewId} {
