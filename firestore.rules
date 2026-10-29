@@ -477,7 +477,9 @@ service cloud.firestore {
       // курсы и наценка (exchange_rates) по наценке выдают маржу магазина — только администратору;
       // шаблоны ответов чата (chat_templates) — тоже рабочие тексты сотрудников (аудит админки 09.10, этап 7);
       // дата последней резервной копии (backup) — служебная отметка владельца (этап 6 плана админки, находка 20)
-      allow read: if !(settingId in ['quick_phrases', 'exchange_rates', 'chat_templates', 'backup']) || isAdmin();
+      // покупателю — только документы, которые читает сайт (аудит 29.10): новый документ настроек закрыт, пока его не
+      // добавят сюда, а не открыт всем по умолчанию
+      allow read: if settingId in ['storefront', 'legal', 'server', 'analytics'] || isAdmin();
       allow write: if isAdmin() && isValidId(settingId)
         && (settingId != 'backup' || isBackupMark(request.resource.data));
     }
@@ -650,6 +652,41 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // chat_rate/{uid}: время последнего сообщения покупателя и последнего фото (аудит 29.10, находка 4) — пишется в
+    // одном пакете с сообщением, не чаще раза в секунду и фото не чаще раза в 10 с. Обязательной для сообщения отметка
+    // станет вторым PR: открытые вкладки прежнего сайта её не пишут
+    match /chat_rate/{uid} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+      allow create, update: if isSignedIn() && request.auth.uid == uid && isChatRateStamp(uid);
+      allow delete: if isAdmin();
+    }
+
+    function isChatRateStamp(uid) {
+      let data = request.resource.data;
+      let message = getAfter(/databases/$(database)/documents/chat_messages/$(data.messageId)).data;
+      let photo = 'imageId' in message;
+      return data.keys().hasOnly(['lastMessageAt', 'messageId', 'lastPhotoAt'])
+        && data.lastMessageAt == request.time
+        && data.messageId is string && data.messageId.size() > 0 && data.messageId.size() <= 120
+        && !exists(/databases/$(database)/documents/chat_messages/$(data.messageId))
+        && message.threadId == uid && message.sender == 'user'
+        && (resource == null || request.time > resource.data.lastMessageAt + duration.value(1, 's'))
+        && (photo
+          ? data.lastPhotoAt == request.time
+            && (resource == null || !('lastPhotoAt' in resource.data)
+              || request.time > resource.data.lastPhotoAt + duration.value(10, 's'))
+          : data.get('lastPhotoAt', null) == (resource == null ? null : resource.data.get('lastPhotoAt', null)));
+    }
+
+    // Фото чека до 900 000 знаков — только к своему заказу (аудит 29.10, находка 4): любой номер в receiptOrderId
+    // открывал крупный потолок, и фото с анонимного входа без ограничения расходовали квоту базы
+    function isOwnReceiptPhoto(imageId) {
+      let orderId = getAfter(/databases/$(database)/documents/chat_messages/$(imageId)).data.get('receiptOrderId', '');
+      return orderId is string && orderId != '' && orderId.matches('^[A-Za-z0-9_-]{1,40}$')
+        && exists(/databases/$(database)/documents/orders/$(orderId))
+        && get(/databases/$(database)/documents/orders/$(orderId)).data.get('customerUid', '') == request.auth.uid;
+    }
+
     // Покупатель отменяет свой заказ (вход через Google) до начала сборки («Принят»), один раз и с причиной
     // («Доработки 3»): заказ, который магазин отменял и вернул, отменяется через чат — его товар уже возвращали.
     // Меняются только поля отмены; оплату, состав и суммы покупатель не трогает.
@@ -684,7 +721,11 @@ service cloud.firestore {
         && resource.data.get('customerUid', null) == request.auth.uid
         && resource.data.get('isCancelled', false) == false
         && resource.data.status in ['in_transit', 'ready']
-        && resource.data.get('deliveryKind', 'carrier') == 'carrier'
+        // a carrier's order; an old one without deliveryKind — unless it is a 1-click order: those are written without
+        // the field, and the buyer could close them «Получен» before the hand-over (audit 29.10, finding 22)
+        && (resource.data.get('deliveryKind', '') == 'carrier'
+          || (!('deliveryKind' in resource.data)
+            && !resource.data.get('deliveryMethod', '').matches('.*1 клик.*')))
         && onlyChanges(['status', 'statusLog', 'updatedAt'])
         && isOrderStampFresh()
         && data.status == 'delivered'
@@ -824,9 +865,7 @@ service cloud.firestore {
         isSignedIn()
         && request.resource.data.keys().hasOnly(['data'])
         && request.resource.data.data is string
-        && request.resource.data.data.size() <= (
-          getAfter(/databases/$(database)/documents/chat_messages/$(imageId)).data.get('receiptOrderId', '') != ''
-            ? 900000 : 420000)
+        && request.resource.data.data.size() <= (isOwnReceiptPhoto(imageId) ? 900000 : 420000)
         && request.resource.data.data.matches('^data:image/(png|jpe?g|webp|gif);base64,.*')
         && isOwnVisibleMessage(getAfter(/databases/$(database)/documents/chat_messages/$(imageId)))
         && getAfter(/databases/$(database)/documents/chat_messages/$(imageId)).data.sender == 'user'

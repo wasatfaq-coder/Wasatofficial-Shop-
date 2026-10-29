@@ -76,6 +76,9 @@ export function useSupportChat({
   // Delivery state of the customer's own chat messages (a failed one stays on screen with «повторить»)
   const [pendingChatIds, setPendingChatIds] = useState<ReadonlySet<string>>(() => new Set());
   const [failedChatMessages, setFailedChatMessages] = useState<ChatMessage[]>([]);
+  // Messages on their way: the buyer's next message waits for the previous one and the rules' gap
+  // (saveChatMessageToFirestore), and a snapshot of the thread in between must not take it off the screen
+  const [sendingChatMessages, setSendingChatMessages] = useState<ChatMessage[]>([]);
   const [chatIdentity, setChatIdentity] = useState<ChatIdentity | null>(null);
   // The chat's sign-in is known: a signed-in customer's at once, a guest's once the earlier anonymous session is
   // restored or found missing. Until then the cached thread stays on screen (audit 07.10, finding 26)
@@ -195,6 +198,7 @@ export function useSupportChat({
   const deliverChatMessage = async (msg: ChatMessage, targetDb: ChatIdentity['db']) => {
     setPendingChatIds((prev) => new Set(prev).add(msg.id));
     setFailedChatMessages((prev) => prev.filter((m) => m.id !== msg.id));
+    setSendingChatMessages((prev) => [...prev.filter((m) => m.id !== msg.id), msg]);
     try {
       await saveChatMessageToFirestore(msg, targetDb);
     } catch (err) {
@@ -202,6 +206,7 @@ export function useSupportChat({
       setFailedChatMessages((prev) => [...prev.filter((m) => m.id !== msg.id), msg]);
       addToast('Сообщение не отправлено. Проверьте соединение и нажмите «повторить»', 'error');
     } finally {
+      setSendingChatMessages((prev) => prev.filter((m) => m.id !== msg.id));
       setPendingChatIds((prev) => {
         const next = new Set(prev);
         next.delete(msg.id);
@@ -358,10 +363,13 @@ export function useSupportChat({
   const ownUid = currentUser?.uid;
   const customerChatMessages = React.useMemo(() => {
     const ownThread = isAdmin ? chatMessages.filter((m) => m.threadId === ownUid) : chatMessages;
-    return [...ownThread.filter((m) => !failedChatMessages.some((f) => f.id === m.id)), ...failedChatMessages].sort(
+    // only the current sign-in's: after «Выйти» the next person on the phone does not see them
+    const local = [...failedChatMessages, ...sendingChatMessages.filter((m) => !ownThread.some((o) => o.id === m.id))]
+      .filter((m) => m.threadId === chatIdentity?.uid);
+    return [...ownThread.filter((m) => !failedChatMessages.some((f) => f.id === m.id)), ...local].sort(
       (a, b) => chatMessageOrder(a) - chatMessageOrder(b)
     );
-  }, [chatMessages, failedChatMessages, isAdmin, ownUid]);
+  }, [chatMessages, failedChatMessages, sendingChatMessages, isAdmin, ownUid, chatIdentity]);
 
 
   return {

@@ -147,7 +147,10 @@ export interface ReviewModeration {
    * new text (review audit 11.10, finding 1). Absent in decisions made before — compared by time then
    */
   reviewedVersion?: number;
-  /** Who decided (the admin's email) */
+  /**
+   * Who decided (the admin's email) in old decisions. No longer written: everyone reads the decisions (audit 29.10,
+   * finding 19), and the admin's session removes it from old ones (`useAdminReviews`)
+   */
   by?: string;
 }
 

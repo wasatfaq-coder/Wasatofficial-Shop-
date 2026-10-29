@@ -1,6 +1,9 @@
 import React from 'react';
 import type { ReviewModeration, StoredReview } from '../types';
-import { subscribeToReviewModeration, subscribeToReviews } from './firebaseSync';
+import { removeReviewModerationAuthors, subscribeToReviewModeration, subscribeToReviews } from './firebaseSync';
+
+/** Old decisions lose the admin's email once per visit (audit 29.10, finding 19) */
+let authorsRemoval: Promise<void> | null = null;
 
 export interface AdminReviewsData {
   reviews: StoredReview[];
@@ -52,5 +55,14 @@ export function useAdminReviews(enabled = true): AdminReviewsData {
       unsubDecisions();
     };
   }, [enabled]);
+  React.useEffect(() => {
+    if (!enabled || authorsRemoval || !decisions) return;
+    const ids = decisions.filter((d) => d.by !== undefined).map((d) => d.id);
+    if (ids.length === 0) return;
+    authorsRemoval = removeReviewModerationAuthors(ids).catch((error) => {
+      // the next visit tries again; the decisions themselves are not affected
+      console.warn('The admin email was not removed from review decisions:', error);
+    });
+  }, [enabled, decisions]);
   return { reviews: reviews ?? [], decisions: decisions ?? [], loaded: reviews !== null && decisions !== null, failed, decisionsFailed };
 }
