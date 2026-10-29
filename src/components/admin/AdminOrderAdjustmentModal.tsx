@@ -49,7 +49,8 @@ interface AdminOrderAdjustmentModalProps {
   products: Product[];
   isOpen: boolean;
   onClose: () => void;
-  onSaveAdjustment: (updatedOrder: Order, adjustmentLog: OrderAdjustmentLog | null) => void;
+  /** Resolves with false when the database refused the order: the window then stays open with the edits */
+  onSaveAdjustment: (updatedOrder: Order, adjustmentLog: OrderAdjustmentLog | null) => Promise<boolean>;
   /** Promo codes: tells a percent code of the order (it keeps the order's own percent) from a fixed one */
   promos?: PromoCode[];
   /** Optional packGroup to immediately prompt for «Разобрать упаковку» when opened from the order card */
@@ -241,7 +242,12 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
   /** Added goods that are not in stock: the admin sees the list and decides (audit 02.10, finding 6) */
   const [pendingShortages, setPendingShortages] = useState<StockShortage[] | null>(null);
 
-  const handleConfirmAdjustment = (acceptShortages = false) => {
+  // the order is saved first and the stock changes only after the database accepted it (audit 29.10, finding 1):
+  // a refused save (the buyer cancelled meanwhile, no network) used to leave the stock changed and the order not
+  const [saving, setSaving] = useState(false);
+
+  const handleConfirmAdjustment = async (acceptShortages = false) => {
+    if (saving) return;
     if (items.length === 0) {
       onShowToast('Заказ не может быть пустым. Если заказ отменен полностью, измените статус на отменен.', 'error');
       return;
@@ -252,8 +258,10 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
 
     // Only the track number changed: the items, the sum and the history stay as they were
     if (!changed) {
-      onSaveAdjustment({ ...order, trackingNumber: effectiveTrackingNumber }, null);
-      onClose();
+      setSaving(true);
+      const saved = await onSaveAdjustment({ ...order, trackingNumber: effectiveTrackingNumber }, null);
+      setSaving(false);
+      if (saved) onClose();
       return;
     }
 
@@ -323,20 +331,26 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
       ...returnedItems.filter((it) => !it.isPreorder).map((it) => toChange(it, 1)),
       ...addedItems.filter((it) => !it.isPreorder).map((it) => toChange(it, -1)),
     ];
-    if (stockChanges.length > 0) {
+    const applyStock = () => {
+      if (stockChanges.length === 0) return;
       void applyAdminStockChanges(stockChanges, {
         orderId: order.id,
         reason: `Корректировка состава заказа: ${reason}`,
         operator: 'Администратор',
-      }).then(({ failed }) => {
-        if (failed.length > 0) {
-          onShowToast(
-            `Не изменён остаток: ${failed.map((c) => `${c.productTitle ?? c.productId} (${c.color}, ${c.size})`).join('; ')}. Проверьте «Склад и SKU».`,
-            'error'
-          );
-        }
-      });
-    }
+      })
+        .then(({ failed }) => {
+          if (failed.length > 0) {
+            onShowToast(
+              `Не изменён остаток: ${failed.map((c) => `${c.productTitle ?? c.productId} (${c.color}, ${c.size})`).join('; ')}. Проверьте «Склад и SKU».`,
+              'error'
+            );
+          }
+        })
+        .catch((err) => {
+          console.error(`Stock of the adjusted order ${order.id} was not changed:`, err);
+          onShowToast('Заказ сохранён, но остатки не изменились. Проверьте «Склад и SKU»', 'error');
+        });
+    };
 
     const updatedOrder: Order = {
       ...order,
@@ -355,7 +369,14 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
       historySteps: updatedHistorySteps,
     };
 
-    onSaveAdjustment(updatedOrder, log);
+    setSaving(true);
+    const saved = await onSaveAdjustment(updatedOrder, log);
+    setSaving(false);
+    if (!saved) return;
+    // the order is in the database: what it holds is the sum of its journal entries (orderHeldStock). An added line that
+    // failed here is shown as not taken and taken later with «Списать со склада»; a removed one stays held by the order
+    // until it is returned in «Склад и SKU» (the toast names it)
+    applyStock();
     onClose();
   };
 
@@ -944,12 +965,16 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
           </button>
           <button
             type="button"
-            onClick={() => handleConfirmAdjustment()}
-            className="w-full sm:w-auto h-10 sm:h-11 px-4 sm:px-5 neu-button-accent rounded-xl text-xs font-extrabold text-white cursor-pointer transition-all flex items-center justify-center gap-2"
+            onClick={() => void handleConfirmAdjustment()}
+            disabled={saving}
+            aria-busy={saving}
+            className="w-full sm:w-auto h-10 sm:h-11 px-4 sm:px-5 neu-button-accent rounded-xl text-xs font-extrabold text-white cursor-pointer transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait"
           >
             <Check className="w-4 h-4 stroke-[3]" />
             <span>
-              {!changed
+              {saving
+                ? 'Сохраняем…'
+                : !changed
                 ? 'Сохранить'
                 : isRefund
                 ? `Сохранить (к возврату ${delta.toLocaleString('ru-RU')} ₽)`
@@ -981,7 +1006,7 @@ export const AdminOrderAdjustmentModal: React.FC<AdminOrderAdjustmentModalProps>
   }
   onConfirm={() => {
     setPendingShortages(null);
-    handleConfirmAdjustment(true);
+    void handleConfirmAdjustment(true);
   }}
   onClose={() => setPendingShortages(null)}
 />

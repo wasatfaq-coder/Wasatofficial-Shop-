@@ -81,7 +81,8 @@ export interface ProfileScreenProps {
   onOpenSupportChat?: (orderId?: string) => void;
   /** Resolves to false when the database refused the write (the error toast is already shown) */
   onUpdateProducts?: (products: Product[]) => Promise<boolean> | void;
-  onUpdateOrders?: (orders: Order[]) => Promise<boolean> | void;
+  /** `seen` — orders as the screen knows the database has them now, when that is newer than the list shown */
+  onUpdateOrders?: (orders: Order[], seen?: Order[]) => Promise<boolean> | void;
   promos?: PromoCode[];
   /** Resolves to false when the database refused the write (the error toast is already shown) */
   onUpdatePromos?: (promos: PromoCode[]) => Promise<boolean> | void;

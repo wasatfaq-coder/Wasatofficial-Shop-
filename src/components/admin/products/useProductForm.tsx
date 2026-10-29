@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { Product, ProductSKU, StockMovementLog } from '../../../types';
 import { deleteProductPhotos, productWithPreviews, saveProductPhotos, saveStockMovements } from '../../../utils/firebaseSync';
 import { previewsMoved } from '../../../utils/productPreviews';
+import { mergeFormIntoLive } from '../../../utils/productFormMerge';
 import { formatOrderDate } from '../../../shared/orderDate';
 import {
   generateDefaultSKUs,
@@ -671,7 +672,7 @@ export function useProductForm({ categories, products, settings, onUpdateProduct
     const withPacks = (draft: Product): Product => productWithSizePacks(draft, formPacks, products);
 
     if (editingProduct) {
-      const updated: Product = withPacks({
+      const edited: Product = withPacks({
         ...editingProduct,
         title: formTitle.trim(),
         category: formCategory,
@@ -697,6 +698,8 @@ export function useProductForm({ categories, products, settings, onUpdateProduct
         hiddenFromSale: !formInStock,
         ...cardFields,
       });
+      // only what the form changed goes onto the product as the database has it now (audit 29.10, finding 9)
+      const updated = mergeFormIntoLive(editingProduct, edited, live);
 
       const saved = await finishSave(
         products.map((p) => (p.id === editingProduct.id ? updated : p)),
@@ -705,8 +708,9 @@ export function useProductForm({ categories, products, settings, onUpdateProduct
       );
       // photos the product no longer shows: their documents go after the product was saved
       // a copy made before 04.10.2026 shares documents with its original: those stay
+      // against the photos the product keeps: ones added meanwhile (the form left its photos as they were) are not dropped
       const dropped = unusedPhotoIds(
-        droppedPhotoIds(storedProduct, photos.photoIds),
+        droppedPhotoIds(storedProduct, updated.photoIds ?? []),
         products.filter((p) => p.id !== editingProduct.id)
       );
       if (saved && dropped.length > 0) {

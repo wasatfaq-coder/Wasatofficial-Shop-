@@ -1775,9 +1775,29 @@ export async function retakeOrderPromoUse(orderId: string, promoId: string): Pro
   });
 }
 
-export async function syncAllPromosToFirestore(promos: PromoCode[]) {
+/**
+ * Admin writes of promo codes. A code in `previous` (what «Промокоды» showed) gets only the fields the admin changed, and
+ * never its use counters: `usedCount` and `lastOrderId` are the buyers' (`recordPromoUsageInFirestore`) and the return of
+ * a cancelled order's use (audit 29.10, finding 10: a whole `set` of the admin's copy wrote back an older `usedCount`,
+ * and a one-time code worked again). A new code is written whole.
+ */
+const PROMO_USE_FIELDS = ['usedCount', 'lastOrderId'];
+
+export async function syncAllPromosToFirestore(promos: PromoCode[], previous: PromoCode[] = []) {
+  const before = new Map(previous.map((p) => [p.id, p]));
   try {
-    await setDocs('promos', promos);
+    await commitInChunks(promos, (batch, promo) => {
+      const ref = doc(db, 'promos', promo.id);
+      const next = sanitizeForFirestore(promo) as unknown as Record<string, unknown>;
+      const seenPromo = before.get(promo.id);
+      if (!seenPromo) {
+        batch.set(ref, next);
+        return;
+      }
+      const seen = sanitizeForFirestore(seenPromo) as unknown as Record<string, unknown>;
+      const changes = changedFields(seen, next, PROMO_USE_FIELDS);
+      if (hasFieldChanges(changes)) batch.update(ref, fieldUpdate(changes));
+    });
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, 'promos');
   }

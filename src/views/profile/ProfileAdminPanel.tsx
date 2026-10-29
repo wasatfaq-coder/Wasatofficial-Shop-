@@ -226,7 +226,7 @@ export const ProfileAdminPanel = ({
     return saved;
   };
 
-  const handleUpdateOrders = (updated: Order[]) => onUpdateOrders?.(updated);
+  const handleUpdateOrders = (updated: Order[], seen?: Order[]) => onUpdateOrders?.(updated, seen);
 
   // Support inbox: one dialog per customer (AdminSupportInbox groups messages by threadId)
   const handleSendAdminMessage = (thread: { threadId: string; threadName: string }, payload: AdminChatPayload) => {
