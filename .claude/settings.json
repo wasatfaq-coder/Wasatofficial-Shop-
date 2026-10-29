@@ -17,6 +17,14 @@
       "mcp__github__actions_run_trigger",
       "mcp__github__delete_file"
     ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Edit(./.env)",
+      "Edit(./.env.*)",
+      "Write(./.env)",
+      "Write(./.env.*)"
+    ],
     "allow": [
       "Bash(bun run lint)",
       "Bash(bun run build)",

@@ -1,3 +1,9 @@
+---
+paths:
+  - ".claude/skills/**"
+  - ".claude/rules/models.md"
+---
+
 # Выбор модели по задаче
 
 Правило для Claude Code в этом репозитории. Таблица — по официальным рекомендациям Anthropic: [выбор модели](https://platform.claude.com/docs/en/about-claude/models/choosing-a-model), [обзор моделей](https://platform.claude.com/docs/en/models/overview), [промптинг Opus 5.5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5-5), [настройка моделей Claude Code](https://code.claude.com/docs/en/model-config). Сверено 29.10.
