@@ -1337,9 +1337,29 @@ describe('review moderation and purchase check', () => {
   });
 
   // Review 11.10, finding 2: the rule checks that `productId` is in the delivered order's `productIds`
-  test('a review for an order without this product is refused', { todo: 'ревью 11.10, находка 2: правило не видит товары заказа' }, async () => {
-    await seed('orders/WS-D9', order({ id: 'WS-D9', status: 'delivered', customerUid: 'alice', items: [] }));
-    await assertFails(setDoc(doc(customer('alice'), 'reviews/p1_alice'), review('alice', { orderId: 'WS-D9' })));
+  test('a review for an order without this product is refused', async () => {
+    const other = [{ id: 'cart-1', product: { id: 'p2', title: 'Шарф', price: 2000 }, quantity: 1, selectedSize: 'M' }];
+    await seed('orders/WS-D9', order({ id: 'WS-D9', status: 'delivered', customerUid: 'alice', items: other }));
+    await seed('orders/WS-D10', order({ id: 'WS-D10', status: 'delivered', customerUid: 'alice', items: other, productIds: [] }));
+    await seed('orders/WS-D11', order({ id: 'WS-D11', status: 'delivered', customerUid: 'alice', productIds: 'p1' }));
+    const db = customer('alice');
+    await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { orderId: 'WS-D9' })));
+    await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { orderId: 'WS-D10' })));
+    await assertFails(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { orderId: 'WS-D11' })));
+    // the product is among several of the order
+    await seed('orders/WS-D12', order({ id: 'WS-D12', status: 'delivered', customerUid: 'alice', productIds: ['p2', 'p1'] }));
+    await assertSucceeds(setDoc(doc(db, 'reviews/p1_alice'), review('alice', { orderId: 'WS-D12' })));
+  });
+
+  // Owner's decision 29.10: an order written before productIds (#228) still confirms the purchase until the owner's
+  // session writes the field — otherwise «Покупка подтверждена» would disappear from the old reviews
+  test('an old order without productIds still confirms the purchase', async () => {
+    const legacy = order({ id: 'WS-D13', status: 'delivered', customerUid: 'alice' });
+    delete legacy.productIds;
+    await seed('orders/WS-D13', legacy);
+    await assertSucceeds(setDoc(doc(customer('alice'), 'reviews/p1_alice'), review('alice', { orderId: 'WS-D13' })));
+    // but only the author's own delivered order, as before
+    await assertFails(setDoc(doc(customer('bob'), 'reviews/p1_bob'), review('bob', { orderId: 'WS-D13' })));
   });
 
   test('the save time of a review is the server\'s', async () => {
