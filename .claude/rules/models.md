@@ -1,29 +1,31 @@
 # Выбор модели по задаче
 
-Правило для Claude Code в этом репозитории. Таблица — по официальным рекомендациям Anthropic: [выбор модели](https://platform.claude.com/docs/en/about-claude/models/choosing-a-model), [обзор моделей](https://platform.claude.com/docs/en/models/overview), [промптинг Opus 5.5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5-5). Сверено 08.10.
+Правило для Claude Code в этом репозитории. Таблица — по официальным рекомендациям Anthropic: [выбор модели](https://platform.claude.com/docs/en/about-claude/models/choosing-a-model), [обзор моделей](https://platform.claude.com/docs/en/models/overview), [промптинг Opus 5.5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5-5), [настройка моделей Claude Code](https://code.claude.com/docs/en/model-config). Сверено 29.10.
 
 ## Как правило применяется
 
 - **Главная сессия** работает на модели, которую выбирает владелец командой `/model`. Правило её не переключает. Для большой работы
   рекомендуем `claude-opus-5-5`: Anthropic советует начинать с него для большинства задач.
 - **Субагенты** (инструмент Agent): модель передаётся параметром `model` при вызове (`opus`, `sonnet`, `haiku`). Этот параметр важнее поля
-  `model` в файле агента. Агенты ECC лежат в плагине, их файлы не меняем, модель задаём при вызове.
+  `model` в файле агента.
 - **Скиллы** репозитория: поле `model` в шапке скилла действует на один ход. Если поля нет, модель остаётся основной.
-- **Уровень усилия (effort)**: по умолчанию. Для Opus 5.5 и Haiku 5.5 это `medium`, для Sonnet 5.5 — `high`. `xhigh` и `max`
-  ставим, только когда замер показал выигрыш. Anthropic: настройка усилия — основной рычаг, и его стоит трогать раньше смены модели.
+- **Уровень усилия (effort)**: по умолчанию. По умолчанию у Opus 5.5, Sonnet 5.5 и Haiku 5.5 — `medium`, у Fable 5.1 — `high`.
+  Где в таблице стоит `high`, это выбор на задачу: включаем его явно (`/effort high` или поле `effort` в файле агента или скилла),
+  а не глобально. `xhigh` и `max` ставим, только когда замер показал выигрыш. Anthropic: настройка усилия — основной рычаг,
+  и его стоит трогать раньше смены модели.
 
 ## Таблица: задача → модель → агент или скилл
 
 | Задача | Модель | Усилие | Агент или скилл |
 |---|---|---|---|
-| Большая задача: план, архитектура, миграция, правка многих файлов | Opus 5.5 | medium | `ecc:planner`, `ecc:architect`; план в `docs/` по шаблону |
-| Ревью после каждой правки кода (решение владельца 08.10), перед PR, поиск багов и уязвимостей | Opus 5.5 | medium | `ecc:code-reviewer`, `ecc:security-reviewer`, скилл `shipping-prs` |
+| Большая задача: план, архитектура, миграция, правка многих файлов | Opus 5.5 | medium | субагент `general-purpose` (модель `opus`); план в `docs/` по шаблону |
+| Ревью после каждой правки кода (решение владельца 08.10), перед PR, поиск багов и уязвимостей | Opus 5.5 | medium | субагент `general-purpose` (модель `opus`), скилл `shipping-prs` |
 | Правка, которая касается денег, цен, склада, заказов, правил Firestore | Opus 5.5 | medium | `changing-firestore-data`, `.claude/rules/orders.md` |
 | Обычная разработка: экран, компонент, тест, небольшая фича | Sonnet 5.5 | high | основная сессия или субагент `sonnet` |
-| Сборка или типы сломаны | Sonnet 5.5 | high | `ecc:build-error-resolver` |
-| Сценарии в браузере (Playwright) | Sonnet 5.5 | high | `writing-e2e-scenarios`, `ecc:e2e-runner` |
-| Документация, описание PR, отчёт по-русски | Sonnet 5.5 | high | `ecc:doc-updater` |
-| Поиск по коду, чтение файлов, сбор фактов для ответа | Haiku 5.5 | medium | `Explore`, `ecc:code-explorer` |
+| Сборка или типы сломаны | Sonnet 5.5 | high | субагент `general-purpose` (модель `sonnet`) |
+| Сценарии в браузере (Playwright) | Sonnet 5.5 | high | `writing-e2e-scenarios` |
+| Документация, описание PR, отчёт по-русски | Sonnet 5.5 | high | субагент `general-purpose` (модель `sonnet`) |
+| Поиск по коду, чтение файлов, сбор фактов для ответа | Haiku 5.5 | medium | `Explore` |
 | Классификация, извлечение данных, разбор списков, маршрутизация по правилу | Haiku 5.5 | medium | субагент `haiku` без отдельного файла |
 | Частые короткие проверки: формат, наличие строки, подсчёт | Haiku 5.5 | low или medium | субагент `haiku` |
 | Задача, где Opus 5.5 на `xhigh` или `max` не проходит замеры | Fable 5.1 | high | только с согласия владельца: цена вдвое выше Opus 5.5 |
