@@ -6,7 +6,7 @@ paths:
   - "src/components/*Chat*"
   - "src/utils/*[Cc]hat*"
   - "src/utils/*[Ss]upport*"
-  - "src/utils/*[Pp]hoto*"
+  - "src/utils/imageUpload.ts"
 ---
 
 # Чат поддержки
