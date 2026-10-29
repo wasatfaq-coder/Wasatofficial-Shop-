@@ -5,9 +5,15 @@ import type { ChatMessage, Order } from '../../src/types';
 
 // supportThreads.ts берёт порядок сообщений из firebaseSync.ts, а тот — базу из src/firebase.ts. Настоящий firebase.ts
 // запустил бы приложение Firebase с настройками боевого проекта: в тесте вместо него — заглушка без базы
+// Заглушка называет всё, что импортирует firebaseSync.ts: свежий Bun отказывается связывать модуль, если имени нет,
+// и заглушка действует на весь прогон — падали и соседние файлы (adminToday.test.ts)
 mock.module('../../src/firebase', () => ({
   db: null,
   auth: null,
+  getFirestoreById: () => null,
+  FIRESTORE_DATABASE_ID: 'test',
+  NAMED_FIRESTORE_DATABASE_ID: 'test',
+  DEFAULT_FIRESTORE_DATABASE_ID: '(default)',
   OperationType: { CREATE: 'create', UPDATE: 'update', DELETE: 'delete', LIST: 'list', GET: 'get', WRITE: 'write' },
   handleFirestoreError: (error: unknown) => {
     throw error;
