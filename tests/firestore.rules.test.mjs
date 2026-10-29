@@ -35,6 +35,7 @@ import {
   cancelOrderAsCustomer,
   confirmOrderReceipt,
   handOverGuestData,
+  saveChatMessageToFirestore,
   returnCancelledOrderStock,
   saveReviewToFirestore,
   submitPaymentReceipt,
@@ -330,6 +331,11 @@ describe('catalog', () => {
     await assertFails(getDoc(doc(customer(), 'settings/exchange_rates')));
     // the storefront settings stay public
     await assertSucceeds(getDoc(doc(guest(), 'settings/storefront')));
+    // only the documents the site reads (audit 29.10): a new settings document is closed until it is listed
+    for (const id of ['legal', 'server', 'analytics']) await assertSucceeds(getDoc(doc(guest(), `settings/${id}`)));
+    await assertFails(getDoc(doc(guest(), 'settings/some_new_secret')));
+    await assertFails(getDoc(doc(customer(), 'settings/some_new_secret')));
+    await assertSucceeds(getDoc(doc(owner(), 'settings/some_new_secret')));
   });
 
   test('chat reply templates are read and written only by admins (admin audit 09.10, stage 7)', async () => {
@@ -1080,6 +1086,16 @@ describe('receipt confirmation by the buyer', () => {
     await assertFails(confirm(customer('alice')));
   });
 
+  test('an old order without deliveryKind: a carrier\'s yes, a 1-click order no (audit 29.10, finding 22)', async () => {
+    const set = (fields) => env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), 'orders/WS-30'), fields));
+    await set({ deliveryKind: deleteField(), deliveryMethod: 'Заказ в 1 клик' });
+    await assertFails(confirm(customer('alice')));
+    await set({ deliveryMethod: 'Экспресс курьер (1 клик)' });
+    await assertFails(confirm(customer('alice')));
+    await set({ deliveryMethod: 'Почта России' });
+    await assertSucceeds(confirm(customer('alice')));
+  });
+
   test('the site\'s own code: «Я получил заказ» (finding 40, 07.10)', async () => {
     const at = new Date('2026-10-03T08:00:00.000Z');
     await assertFails(confirmOrderReceipt({ id: 'WS-30', statusLog: log }, at, customer('bob')));
@@ -1299,6 +1315,9 @@ describe('review moderation and purchase check', () => {
     await assertSucceeds(setDoc(doc(owner(), 'review_moderation/p1_bob'), decision({ status: 'published', reason: '' })));
     await assertSucceeds(updateDoc(doc(owner(), 'review_moderation/p1_alice'), { status: 'published', at: Date.now() }));
     await assertSucceeds(deleteDoc(doc(owner(), 'review_moderation/p1_bob')));
+    // the admin's session removes the email of old decisions (audit 29.10, finding 19), as removeReviewModerationAuthors does
+    await assertSucceeds(updateDoc(doc(owner(), 'review_moderation/p1_alice'), { by: deleteField() }));
+    assert.equal('by' in (await read('review_moderation/p1_alice')), false);
     // the author, another customer and a guest cannot decide on their own review
     await assertFails(setDoc(doc(customer('alice'), 'review_moderation/p1_alice'), decision({ status: 'published' })));
     await assertFails(updateDoc(doc(customer('alice'), 'review_moderation/p1_alice'), { status: 'published' }));
@@ -1894,7 +1913,15 @@ describe('chat photos apart from messages', () => {
 
   test('a receipt photo may be larger than a chat photo (check 04.10, finding 13)', async () => {
     const large = 'data:image/jpeg;base64,' + 'A'.repeat(800_000);
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'orders/WS-1'), order({ id: 'WS-1', customerUid: 'alice' }));
+      await setDoc(doc(ctx.firestore(), 'orders/WS-2'), order({ id: 'WS-2', customerUid: 'bob' }));
+    });
     await assertFails(sendWithPhoto(customer('alice'), 'm8', 'alice', {}, large));
+    // only for the sender's own order (audit 29.10, finding 4): a made-up or someone else's number gets the chat cap
+    await assertFails(sendWithPhoto(customer('alice'), 'm8b', 'alice', { receiptOrderId: 'WS-2' }, large));
+    await assertFails(sendWithPhoto(customer('alice'), 'm8c', 'alice', { receiptOrderId: 'NO-SUCH' }, large));
+    await assertSucceeds(sendWithPhoto(customer('alice'), 'm8d', 'alice', { receiptOrderId: 'WS-2' }));
     await assertSucceeds(sendWithPhoto(customer('alice'), 'm9', 'alice', { receiptOrderId: 'WS-1' }, large));
     await assertFails(sendWithPhoto(customer('alice'), 'm10', 'alice', { receiptOrderId: 'WS-1' }, large + 'A'.repeat(100_001)));
   });
@@ -1912,6 +1939,81 @@ describe('chat photos apart from messages', () => {
 
 // Журнал ошибок у покупателей (docs/ops-plan.md, этап 2): отчёт создаёт любой посетитель, но только в одной из 30 ячеек
 // текущего часа, без перезаписи и с полями ограниченной длины; читает и удаляет только администратор
+// Аудит 29.10, находка 4: отметка chat_rate/{uid} в одном пакете с сообщением покупателя — не чаще раза в секунду,
+// фото не чаще раза в 10 с. Пока отметка необязательна (второй PR сделает её обязательной)
+describe('chat rate stamp', () => {
+  const chat = (id, uid, extra = {}) => ({ id, sender: 'user', text: 'Привет', threadId: uid, isInternalNote: false, ...extra });
+  const photo = 'data:image/jpeg;base64,AAAA';
+  const stampAt = (millis, extra = {}, uid = 'alice') => env.withSecurityRulesDisabled((ctx) =>
+    setDoc(doc(ctx.firestore(), 'chat_rate', uid), { lastMessageAt: Timestamp.fromMillis(millis), messageId: 'old', ...extra }));
+
+  test('the site\'s own code stamps the message, the photo and reads it back', async () => {
+    await assertSucceeds(saveChatMessageToFirestore(chat('r1', 'alice'), customer('alice')));
+    const stamp = await read('chat_rate/alice');
+    assert.equal(stamp.messageId, 'r1');
+    assert.ok(stamp.lastMessageAt instanceof Timestamp);
+    assert.equal('lastPhotoAt' in stamp, false);
+    await stampAt(Date.now() - 60_000);
+    await assertSucceeds(saveChatMessageToFirestore(chat('r2', 'alice', { imageUrl: photo }), customer('alice')));
+    assert.ok((await read('chat_rate/alice')).lastPhotoAt instanceof Timestamp);
+    await assertSucceeds(getDoc(doc(customer('alice'), 'chat_rate/alice')));
+    await assertFails(getDoc(doc(customer('bob'), 'chat_rate/alice')));
+    // the staff's reply stamps nothing
+    await assertSucceeds(saveChatMessageToFirestore({ ...chat('r3', 'alice'), sender: 'admin' }, owner()));
+    assert.equal((await read('chat_rate/alice')).messageId, 'r2');
+  });
+
+  test('the rules: not more often than once a second, a photo once in 10 s', async () => {
+    // each step its own buyer: the site itself waits out the gap of its own last send (chatSendQueues)
+    const send = (uid, extra) => saveChatMessageToFirestore(chat(`q-${uid}`, uid, extra), customer(uid));
+    const recent = { lastPhotoAt: Timestamp.fromMillis(Date.now() - 5_000) };
+    await stampAt(Date.now(), {}, 'q1');
+    await assertFails(send('q1'));
+    await stampAt(Date.now() - 5_000, recent, 'q2');
+    await assertSucceeds(send('q2'));
+    await stampAt(Date.now() - 5_000, recent, 'q3');
+    await assertFails(send('q3', { imageUrl: photo }));
+    await stampAt(Date.now() - 5_000, { lastPhotoAt: Timestamp.fromMillis(Date.now() - 11_000) }, 'q4');
+    await assertSucceeds(send('q4', { imageUrl: photo }));
+  });
+
+  test('the site waits out the gap instead of being refused (two quick messages)', async () => {
+    await assertSucceeds(saveChatMessageToFirestore(chat('w1', 'walt'), customer('walt')));
+    const started = Date.now();
+    await assertSucceeds(saveChatMessageToFirestore(chat('w2', 'walt'), customer('walt')));
+    assert.ok(Date.now() - started >= 1_000);
+    assert.equal((await read('chat_rate/walt')).messageId, 'w2');
+    // sent at once (a photo, then a text while it is prepared): both go, one after the other, in the order sent
+    await Promise.all([
+      assertSucceeds(saveChatMessageToFirestore(chat('w3', 'wren', { imageUrl: photo }), customer('wren'))),
+      assertSucceeds(saveChatMessageToFirestore(chat('w4', 'wren'), customer('wren'))),
+    ]);
+    const [w3, w4] = [await read('chat_messages/w3'), await read('chat_messages/w4')];
+    assert.ok(w4.sentAt.toMillis() - w3.sentAt.toMillis() >= 1_000);
+  });
+
+  test('a stamp only with a new message of one\'s own thread, at the server\'s time', async () => {
+    const stamp = (db, uid, data) => setDoc(doc(db, 'chat_rate', uid), data);
+    // without a message in the same batch, for someone else, with a foreign or old message, with a made-up time
+    await assertFails(stamp(customer('alice'), 'alice', { lastMessageAt: serverTimestamp(), messageId: 'none' }));
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'chat_messages/old'), { ...chat('old', 'alice'), sentAt: Timestamp.now() }));
+    await assertFails(stamp(customer('alice'), 'alice', { lastMessageAt: serverTimestamp(), messageId: 'old' }));
+    await assertFails(stamp(customer('bob'), 'alice', { lastMessageAt: serverTimestamp(), messageId: 'old' }));
+    const send = (fields) => {
+      const db = customer('alice');
+      const batch = writeBatch(db);
+      batch.set(doc(db, 'chat_messages/s1'), { ...chat('s1', 'alice'), sentAt: serverTimestamp() });
+      batch.set(doc(db, 'chat_rate/alice'), fields);
+      return batch.commit();
+    };
+    await assertFails(send({ lastMessageAt: Timestamp.fromMillis(1), messageId: 's1' }));
+    await assertFails(send({ lastMessageAt: serverTimestamp(), messageId: 's1', lastPhotoAt: serverTimestamp() }));
+    await assertFails(send({ lastMessageAt: serverTimestamp(), messageId: 's1', note: 'x' }));
+    await assertSucceeds(send({ lastMessageAt: serverTimestamp(), messageId: 's1' }));
+    await assertFails(deleteDoc(doc(customer('alice'), 'chat_rate/alice')));
+  });
+});
+
 describe('errors on customers\' screens', () => {
   const hour = () => Math.floor(Date.now() / 3_600_000);
   const report = (overrides = {}) => ({

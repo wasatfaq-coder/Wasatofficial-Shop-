@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { BadgeCheck, Check, Search, Star, X } from 'lucide-react';
 import type { StorefrontSettings } from '../../types';
-import { useAuth } from '../../context/AuthContext';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { ModalPortal } from '../ModalPortal';
 import { NeumorphicSwitch } from '../NeumorphicSwitch';
@@ -142,7 +141,6 @@ const RejectDialog: React.FC<{
  * the authors' own `reviews` documents are not touched, except by «Удалить».
  */
 export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({ settings, onUpdateSettings, products, onShowToast }) => {
-  const { currentUser } = useAuth();
   const { reviews, decisions, loaded, failed } = useAdminReviews();
   const premoderation = settings.reviewPremoderation === true;
   const [status, setStatus] = useState<AdminReviewStatusFilter>('pending');
@@ -178,7 +176,6 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({ settings, onUp
             status: 'published',
             at: decisionTime(row.review),
             reviewedVersion: reviewVersion(row.review),
-            ...(currentUser?.email ? { by: currentUser.email } : {}),
           })
         )
       );
@@ -205,7 +202,6 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({ settings, onUp
         at: decisionTime(row.review),
         // the decision is for the text the owner sees now: another version of the review waits again
         reviewedVersion: reviewVersion(row.review),
-        ...(currentUser?.email ? { by: currentUser.email } : {}),
       });
       onShowToast(next === 'published' ? 'Отзыв опубликован' : 'Отзыв отклонён', 'success');
     } catch (err) {
@@ -255,8 +251,7 @@ export const AdminReviewsTab: React.FC<AdminReviewsTabProps> = ({ settings, onUp
                 status: 'published',
                 at: decisionTime(row.review),
                 reviewedVersion: reviewVersion(row.review),
-                ...(currentUser?.email ? { by: currentUser.email } : {}),
-              })
+                  })
             )
           );
         } catch (err) {
