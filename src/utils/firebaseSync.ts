@@ -2067,6 +2067,15 @@ export async function saveReviewModerationToFirestore(decision: ReviewModeration
   await setDoc(doc(db, 'review_moderation', id), sanitizeForFirestore(fields));
 }
 
+/** Removes the admin's email (`by`) from old decisions (audit 29.10, finding 19): the decisions are public */
+export async function removeReviewModerationAuthors(ids: string[]): Promise<void> {
+  for (let start = 0; start < ids.length; start += 400) {
+    const batch = writeBatch(db);
+    for (const id of ids.slice(start, start + 400)) batch.update(doc(db, 'review_moderation', id), { by: deleteField() });
+    await batch.commit();
+  }
+}
+
 /** The owner deletes a review: its decision goes with it (the author may write the review again, a new one) */
 export async function deleteReviewAsAdmin(reviewId: string) {
   const batch = writeBatch(db);
@@ -2208,7 +2217,31 @@ export async function loadChatImage(imageId: string, targetDb: Firestore = db): 
   }
 }
 
-export async function saveChatMessageToFirestore(msg: ChatMessage, targetDb: Firestore = db) {
+/**
+ * The buyer's messages of a thread go one after another (`chatSendQueues`), each after the database answered the
+ * previous one (`chatAckTimes`, ms): the rules let a message through not more often than once a second and a photo
+ * once in 10 s by the server's time (`chat_rate`), so the next one waits out the gap from that answer instead of being
+ * refused — two quick messages, messages queued while offline, a receipt sent again — and keeps its place in the order
+ */
+const chatSendQueues = new Map<string, Promise<unknown>>();
+const chatAckTimes = new Map<string, { message: number; photo: number }>();
+const CHAT_MESSAGE_GAP_MS = 1_200;
+const CHAT_PHOTO_GAP_MS = 10_500;
+
+export function saveChatMessageToFirestore(msg: ChatMessage, targetDb: Firestore = db): Promise<void> {
+  const thread = msg.sender === 'user' && msg.threadId ? msg.threadId : null;
+  if (!thread) return writeChatMessage(msg, targetDb, null);
+  // queued synchronously, before any await: a text sent while a photo is compressed goes after the photo
+  const previous = chatSendQueues.get(thread) ?? Promise.resolve();
+  const run = previous.catch(() => undefined).then(() => writeChatMessage(msg, targetDb, thread));
+  chatSendQueues.set(thread, run);
+  void run.catch(() => undefined).then(() => {
+    if (chatSendQueues.get(thread) === run) chatSendQueues.delete(thread);
+  });
+  return run;
+}
+
+async function writeChatMessage(msg: ChatMessage, targetDb: Firestore, thread: string | null) {
   try {
     // isInternalNote must always be present: customers query their thread by isInternalNote == false
     let sanitizedMsg = { ...msg, isInternalNote: msg.isInternalNote === true };
@@ -2231,7 +2264,23 @@ export async function saveChatMessageToFirestore(msg: ChatMessage, targetDb: Fir
       ...sanitizeForFirestore(photo ? { ...fields, imageId: msg.id } : fields),
       sentAt: serverTimestamp(),
     });
+    if (thread) {
+      // the buyer's message stamps chat_rate/{uid} in the same batch (audit 29.10, finding 4)
+      const last = chatAckTimes.get(thread) ?? { message: 0, photo: 0 };
+      const wait = Math.max(last.message + CHAT_MESSAGE_GAP_MS, photo ? last.photo + CHAT_PHOTO_GAP_MS : 0) - Date.now();
+      if (wait > 0) await new Promise<void>((resolve) => setTimeout(resolve, wait));
+      batch.set(
+        doc(targetDb, 'chat_rate', thread),
+        { lastMessageAt: serverTimestamp(), messageId: msg.id, ...(photo ? { lastPhotoAt: serverTimestamp() } : {}) },
+        { merge: true }
+      );
+    }
     await batch.commit();
+    if (thread) {
+      const answered = Date.now();
+      const last = chatAckTimes.get(thread);
+      chatAckTimes.set(thread, { message: answered, photo: photo ? answered : last?.photo ?? 0 });
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `chat_messages/${msg.id}`);
   }
