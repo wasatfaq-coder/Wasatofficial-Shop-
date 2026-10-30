@@ -20,29 +20,29 @@
     "measure:admin": "VITE_USE_EMULATORS=true vite build --outDir dist-e2e --emptyOutDir && JAVA_TOOL_OPTIONS=\"$JAVA_TOOL_OPTIONS -Xmx4g\" firebase emulators:exec --only auth,firestore --project ai-studio-applet-webapp-e9574 'VISIT_ORDERS=1 bun tests/visit/seed.ts && VISIT_ORDERS=1 playwright test -c playwright.visit.config.ts tests/visit/admin.spec.ts'"
   },
   "dependencies": {
-    "@base-ui/react": "1.8.0",
+    "@base-ui/react": "1.9.0",
     "@fontsource/manrope": "^5.3.0",
     "@tailwindcss/vite": "^4.1.14",
-    "@vitejs/plugin-react": "^6.1.1",
+    "@vitejs/plugin-react": "^6.1.2",
     "firebase": "^12.19.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
-    "lucide-react": "^1.49.0",
+    "lucide-react": "^1.62.0",
     "motion": "^13.4.6",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "recharts": "^3.10.1"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",
-    "@playwright/test": "~1.56.1",
-    "@types/node": "^22.20.4",
+    "@playwright/test": "~1.64.1",
+    "@types/node": "^22.20.5",
     "@types/react": "19",
     "@types/react-dom": "19",
-    "firebase-tools": "^15.32.0",
+    "firebase-tools": "^15.34.1",
     "tailwindcss": "^4.1.14",
     "typescript": "~5.9.3",
-    "vite": "^8.3.0"
+    "vite": "^8.3.5"
   },
   "overrides": {
     "@grpc/grpc-js": "^1.14.5",
