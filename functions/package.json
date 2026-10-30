@@ -16,8 +16,8 @@
     "firebase-functions": "^7.4.0"
   },
   "devDependencies": {
-    "@types/bun": "^1.4.2",
-    "@types/node": "^22.14.0",
+    "@types/bun": "^1.4.4",
+    "@types/node": "^22.20.5",
     "esbuild": "^0.28.2",
     "typescript": "~5.9.3"
   }
