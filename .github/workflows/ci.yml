@@ -98,7 +98,7 @@ jobs:
       - run: bun run test:e2e
       - name: Screenshots and traces of failed scenarios
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-failures
           path: |
