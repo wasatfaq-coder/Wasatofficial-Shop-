@@ -67,7 +67,7 @@ jobs:
           done
       # Full photos for the preview pages between runs: a photo never changes, so the script reads only new ones from the
       # database (docs/catalog-scale-plan.md, stage 1)
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         with:
           path: .share-cache
           key: share-photos-none
@@ -86,7 +86,7 @@ jobs:
           SITE_URL="$site" bun run build:share
           echo "SHARE_SITE_URL=$site" >> "$GITHUB_ENV"
       - if: hashFiles('.share-cache/ids.txt') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: .share-cache
           key: share-photos-${{ hashFiles('.share-cache/ids.txt') }}
@@ -145,7 +145,7 @@ jobs:
           VITE_RECAPTCHA_SITE_KEY: ${{ vars.RECAPTCHA_SITE_KEY }}
       # Full photos for the preview pages between runs: a photo never changes, so the script reads only new ones from the
       # database (docs/catalog-scale-plan.md, stage 1)
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         with:
           path: .share-cache
           key: share-photos-none
@@ -156,7 +156,7 @@ jobs:
         env:
           SITE_URL: ${{ vars.SITE_URL }}
       - if: hashFiles('.share-cache/ids.txt') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: .share-cache
           key: share-photos-${{ hashFiles('.share-cache/ids.txt') }}
